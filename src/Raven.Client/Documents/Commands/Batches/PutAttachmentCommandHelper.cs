@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
+using Raven.Client.Documents.Attachments;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
@@ -35,14 +37,22 @@ namespace Raven.Client.Documents.Commands.Batches
             stream.Position = 0;
         }
 
-        public static void ValidateStream(Stream stream)
+        public static bool TryValidateStream(AttachmentFlags flags, Stream stream)
         {
+            if (flags == AttachmentFlags.Retired)
+            {
+                Debug.Assert(stream == null, "stream == null");
+                return false;
+            }
+
             if (stream.CanRead == false)
                 ThrowNotReadableStream();
             if (stream.CanSeek == false)
                 ThrowNotSeekableStream();
             if (stream.Position != 0)
                 ThrowPositionNotZero(stream.Position);
+
+            return true;
         }
     }
 }

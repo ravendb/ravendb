@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
@@ -12,11 +11,12 @@ namespace Raven.Client.Documents.Commands.Batches
     public sealed class PutAttachmentCommandData : ICommandData
     {
         public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector)
-            : this(documentId, name, stream, contentType, changeVector, retireAt: null, stream.Length, flags: AttachmentFlags.None, hash: null, fromEtl: false)
+            : this(documentId, name, stream, contentType, changeVector, retireAt: null, size: null, flags: AttachmentFlags.None, hash: null, fromEtl: false)
         {
+            Size = stream.Length;
         }
 
-        internal PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, DateTime? retireAt, long size, AttachmentFlags flags, string hash, bool fromEtl)
+        internal PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, DateTime? retireAt, long? size, AttachmentFlags flags, string hash, bool fromEtl)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
@@ -30,17 +30,13 @@ namespace Raven.Client.Documents.Commands.Batches
             ChangeVector = changeVector;
             FromEtl = fromEtl;
             RetiredAt = retireAt;
-            Size = size;
             Flags = flags;
             Hash = hash;
-            if (Flags == AttachmentFlags.Retired)
-            {
-                Debug.Assert(Stream == null, "Stream == null");
-            }
-            else
-            {
-                PutAttachmentCommandHelper.ValidateStream(stream);
-            }
+
+            if (size != null)
+                Size = size.Value;
+
+            PutAttachmentCommandHelper.TryValidateStream(flags, stream);
         }
 
         public string Id { get; }

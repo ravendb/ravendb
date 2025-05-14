@@ -143,31 +143,28 @@ namespace Raven.Client.Documents.Attachments
         {
             var databaseNameStr = string.IsNullOrEmpty(databaseName) ? string.Empty : $" for database '{databaseName}'";
 
-            if (Disabled == false)
-            {
-                if (RetireFrequencyInSec == null)
-                    throw new InvalidOperationException($"{nameof(RetireFrequencyInSec)}{databaseNameStr} must have a value when {nameof(Disabled)} is false.");
+            if (RetireFrequencyInSec == null)
+                throw new InvalidOperationException($"{nameof(RetireFrequencyInSec)}{databaseNameStr} must have a value.");
 
-                if (RetireFrequencyInSec <= 0)
-                    throw new InvalidOperationException($"Retire attachments frequency{databaseNameStr} must be greater than 0.");
-                if(MaxItemsToProcess <= 0)
-                    throw new InvalidOperationException($"Max items to process{databaseNameStr} must be greater than 0.");
+            if (RetireFrequencyInSec <= 0)
+                throw new InvalidOperationException($"Retire attachments frequency{databaseNameStr} must be greater than 0.");
+            if (MaxItemsToProcess <= 0)
+                throw new InvalidOperationException($"Max items to process{databaseNameStr} must be greater than 0.");
 
-                if (_retirePeriods == null || _retirePeriods.Count == 0)
-                    throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr} must have a value when {nameof(Disabled)} is false.");
+            if (_retirePeriods == null || _retirePeriods.Count == 0)
+                throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr} must have a value when {nameof(Disabled)} is false.");
 
-                if (_retirePeriods.Keys.Any(string.IsNullOrWhiteSpace))
-                    throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr}  must have non empty keys.");
+            if (_retirePeriods.Keys.Any(string.IsNullOrWhiteSpace))
+                throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr}  must have non empty keys.");
 
-                if (_retirePeriods.Values.Any(x => x.TotalSeconds <= 0))
-                    throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr} must have positive TimeSpan values.");
+            if (_retirePeriods.Values.Any(x => x.TotalSeconds <= 0))
+                throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr} must have positive TimeSpan values.");
 
-                if (HasUploader() == false)
-                    throw new InvalidOperationException($"Exactly one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} must be configured when {nameof(Disabled)} is false.");
+            if (HasUploader() == false)
+                throw new InvalidOperationException($"Exactly one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} must be configured when {nameof(Disabled)} is false.");
 
-                if (BackupConfiguration.CanBackupUsing(S3Settings) && BackupConfiguration.CanBackupUsing(AzureSettings))
-                    throw new InvalidOperationException($"Only one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} can be configured when {nameof(Disabled)} is false.");
-            }
+            if (BackupConfiguration.CanBackupUsing(S3Settings) && BackupConfiguration.CanBackupUsing(AzureSettings))
+                throw new InvalidOperationException($"Only one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} can be configured when {nameof(Disabled)} is false.");
         }
     }
 }

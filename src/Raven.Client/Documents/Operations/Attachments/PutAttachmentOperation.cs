@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Net.Http;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -76,7 +77,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                 _validateStream = validateStream;
 
                 if (_validateStream)
-                    PutAttachmentCommandHelper.ValidateStream(stream);
+                    PutAttachmentCommandHelper.TryValidateStream(AttachmentFlags.None, stream);
             }
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)

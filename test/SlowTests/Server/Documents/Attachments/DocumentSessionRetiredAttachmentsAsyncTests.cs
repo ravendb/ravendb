@@ -15,6 +15,7 @@ namespace SlowTests.Server.Documents.Attachments
 {
     public class DocumentSessionRetiredAttachmentsTests : RetiredAttachmentsS3Base
     {
+        //TODO: egor add cluster wide session test
         public DocumentSessionRetiredAttachmentsTests(ITestOutputHelper output) : base(output)
         {
         }

@@ -49,8 +49,10 @@ namespace FastTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
-        public async Task CanAssertRetiredAttachmentsConfiguration()
+        [RavenTheory(RavenTestCategory.Attachments)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanAssertRetiredAttachmentsConfiguration(bool disabled)
         {
             using (var store = GetDocumentStore())
             {
@@ -58,22 +60,22 @@ namespace FastTests.Server.Documents.Attachments
                 {
                     S3Settings = new S3Settings() { BucketName = "testS3Bucket" },
                     AzureSettings = new AzureSettings() { AccountName = "testAzureAccount", StorageContainer = "testAzureContainer" },
-                    Disabled = false,
+                    Disabled = disabled,
                     RetirePeriods = new Dictionary<string, TimeSpan>() { { "Orders", TimeSpan.FromDays(14) }, { "Products", TimeSpan.FromDays(322) } },
                     RetireFrequencyInSec = 1000
                 })));
-                Assert.Contains("Only one uploader for RetiredAttachmentsConfiguration can be configured when Disabled is false.", e.Message);
+                Assert.Contains("Only one uploader for RetiredAttachmentsConfiguration can be configured", e.Message);
                 e = await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
                 {
                     S3Settings = new S3Settings() { BucketName = "testS3Bucket" },
-                    Disabled = false,
+                    Disabled = disabled,
                     RetireFrequencyInSec = 0
                 })));
                 Assert.Contains("Retire attachments frequency must be greater than 0.", e.Message);
                 e = await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
                 {
                     S3Settings = new S3Settings() { BucketName = "testS3Bucket" },
-                    Disabled = false,
+                    Disabled = disabled,
                     RetireFrequencyInSec = 1,
                     MaxItemsToProcess = 0
                 })));
@@ -81,7 +83,7 @@ namespace FastTests.Server.Documents.Attachments
                 e = await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
                 {
                     S3Settings = new S3Settings() { BucketName = "testS3Bucket" },
-                    Disabled = false,
+                    Disabled = disabled,
                     RetireFrequencyInSec = 1,
                     MaxItemsToProcess = 1
                 })));
@@ -89,12 +91,21 @@ namespace FastTests.Server.Documents.Attachments
                 e = await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
                 {
                     S3Settings = new S3Settings() { BucketName = "testS3Bucket" },
-                    Disabled = false,
+                    Disabled = disabled,
                     RetireFrequencyInSec = 1,
                     MaxItemsToProcess = 1,
                     RetirePeriods = new Dictionary<string, TimeSpan>() { { "Orders", TimeSpan.FromDays(14) }, { "Products", TimeSpan.FromDays(-322) } }
                 })));
                 Assert.Contains("RetirePeriods must have positive TimeSpan values.", e.Message);
+
+                e = await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
+                {
+                    S3Settings = new S3Settings() { BucketName = "testS3Bucket" },
+                    Disabled = disabled,
+                    MaxItemsToProcess = 1,
+                    RetirePeriods = new Dictionary<string, TimeSpan>() { { "Orders", TimeSpan.FromDays(14) }, { "Products", TimeSpan.FromDays(322) } }
+                })));
+                Assert.Contains($"RetireFrequencyInSec must have a value.", e.Message);
             }
         }
 

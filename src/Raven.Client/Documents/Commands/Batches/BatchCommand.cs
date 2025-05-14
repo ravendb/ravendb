@@ -39,8 +39,7 @@ namespace Raven.Client.Documents.Commands.Batches
     {
         private BlittableJsonReaderObject[] _commandsAsJson;
         private bool? _supportsAtomicWrites;
-        private readonly List<Stream> _attachmentStreams;
-        private readonly HashSet<Stream> _uniqueAttachmentStreams;
+        private HashSet<Stream> _uniqueAttachmentStreams;
         private readonly DocumentConventions _conventions;
         private readonly IList<ICommandData> _commands;
         private readonly BatchOptions _options;
@@ -54,28 +53,22 @@ namespace Raven.Client.Documents.Commands.Batches
             _mode = mode;
 
             _commandsAsJson = new BlittableJsonReaderObject[_commands.Count];
-            foreach (var command in commands)
-            {
-                if (command is PutAttachmentCommandData putAttachmentCommandData)
-                {
-                    if (putAttachmentCommandData.Flags == AttachmentFlags.Retired)
-                        continue;
-
-                    if (_attachmentStreams == null)
-                    {
-                        _attachmentStreams = new List<Stream>();
-                        _uniqueAttachmentStreams = new HashSet<Stream>();
-                    }
-
-                    var stream = putAttachmentCommandData.Stream;
-                    PutAttachmentCommandHelper.ValidateStream(stream);
-                    if (_uniqueAttachmentStreams.Add(stream) == false)
-                        PutAttachmentCommandHelper.ThrowStreamWasAlreadyUsed();
-                    _attachmentStreams.Add(stream);
-                }
-            }
-
             Timeout = options?.RequestTimeout;
+        }
+
+        private void HandlePutAttachmentCommandData(ICommandData command)
+        {
+            if (command is not PutAttachmentCommandData putAttachmentCommandData) 
+                return;
+
+            if (PutAttachmentCommandHelper.TryValidateStream(putAttachmentCommandData.Flags, putAttachmentCommandData.Stream) == false)
+                return;
+
+            _uniqueAttachmentStreams ??= new HashSet<Stream>();
+
+            var stream = putAttachmentCommandData.Stream;
+            if (_uniqueAttachmentStreams.Add(stream) == false)
+                PutAttachmentCommandHelper.ThrowStreamWasAlreadyUsed();
         }
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
@@ -85,6 +78,8 @@ namespace Raven.Client.Documents.Commands.Batches
                 _supportsAtomicWrites = node.SupportsAtomicClusterWrites;
                 for (var i = 0; i < _commands.Count; i++)
                 {
+                    HandlePutAttachmentCommandData(_commands[i]);
+
                     var command = _commands[i];
 
                     var json = command.ToJson(_conventions, ctx);
@@ -117,10 +112,10 @@ namespace Raven.Client.Documents.Commands.Batches
                 }, _conventions)
             };
 
-            if (_attachmentStreams != null && _attachmentStreams.Count > 0)
+            if (_uniqueAttachmentStreams != null && _uniqueAttachmentStreams.Count > 0)
             {
                 var multipartContent = new MultipartContent { request.Content };
-                foreach (var stream in _attachmentStreams)
+                foreach (var stream in _uniqueAttachmentStreams)
                 {
                     PutAttachmentCommandHelper.PrepareStream(stream);
                     var streamContent = new AttachmentStreamContent(stream, CancellationToken);
