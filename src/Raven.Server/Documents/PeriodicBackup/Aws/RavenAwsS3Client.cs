@@ -194,16 +194,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         {
             try
             {
-                var response = await _client.ListObjectsV2Async(new ListObjectsV2Request
-                {
-                    BucketName = _bucketName,
-                    ContinuationToken = continuationToken,
-                    Delimiter = delimiter,
-                    Prefix = prefix,
-                    StartAfter = startAfter
-                }, _cancellationToken);
+                var response = await _client.ListObjectsV2Async(
+                    new ListObjectsV2Request
+                    {
+                        BucketName = _bucketName,
+                        ContinuationToken = continuationToken,
+                        Delimiter = delimiter,
+                        Prefix = prefix,
+                        StartAfter = startAfter
+                    }, _cancellationToken);
 
-                var result = new ListObjectsResult
+                var result = new ListObjectsResult 
                 {
                     ContinuationToken = response.NextContinuationToken,
                 };
@@ -217,10 +218,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 }
                 else
                 {
-                    result.FileInfoDetails = response
-                        .S3Objects
-                        .Select(x => new S3FileInfoDetails { FullPath = x.Key, LastModified = x.LastModified })
-                        .ToList();
+                    if (response.KeyCount > 0)
+                    {
+                        result.FileInfoDetails = response
+                            .S3Objects
+                            .Select(x => new S3FileInfoDetails { FullPath = x.Key, LastModified = x.LastModified.GetValueOrDefault() })
+                            .ToList();
+                    }
+                    else
+                    {
+                        result.FileInfoDetails = new List<S3FileInfoDetails>();
+                    }
                 }
 
                 return result;
@@ -326,9 +334,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             using (var cancellationToken = new CancellationTokenSource(5000))
             using (var cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken.Token, _cancellationToken))
             {
-                var aclResponse = await _client.GetACLAsync(_bucketName, cts.Token);
+                var aclResponse = await _client.GetBucketAclAsync(new GetBucketAclRequest { BucketName = _bucketName }, cts.Token);
                 var permissions = aclResponse
-                    .AccessControlList
                     .Grants
                     .Select(x => x.Permission.Value)
                     .ToHashSet();
