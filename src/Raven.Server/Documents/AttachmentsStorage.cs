@@ -883,7 +883,7 @@ namespace Raven.Server.Documents
                         [nameof(AttachmentName.ContentType)] = attachment.ContentType,
                         [nameof(AttachmentName.Size)] = attachment.Size,
                         [nameof(AttachmentName.Flags)] = attachment.Flags.ToString(),
-                        [nameof(AttachmentName.RetireAt)] = attachment.RetiredAt,
+                        [nameof(AttachmentName.RetireAt)] = attachment.RetireAt,
                         [nameof(AttachmentName.Collection)] = attachment.Collection,
 
 
@@ -909,7 +909,7 @@ namespace Raven.Server.Documents
                         ChangeVector = attachment.ChangeVector,
                         DocumentId = lowerDocumentId.ToString(),
                         Flags = attachment.Flags,
-                        RetireAt = attachment.RetiredAt,
+                        RetireAt = attachment.RetireAt,
                         Collection = attachment.Collection
                     });
                 }
@@ -1271,7 +1271,7 @@ namespace Raven.Server.Documents
                 ContentType = TableValueToId(context, (int)AttachmentsTable.ContentType, ref tvr),
                 Size = TableValueToLong((int)AttachmentsTable.Size, ref tvr),
                 Flags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref tvr),
-                RetiredAt = TableValueToNullableDateTime((int)AttachmentsTable.RetireAt, ref tvr),
+                RetireAt = TableValueToNullableDateTime((int)AttachmentsTable.RetireAt, ref tvr),
                 Collection = TableValueToId(context, (int)AttachmentsTable.Collection, ref tvr)
             };
 
@@ -1329,7 +1329,7 @@ namespace Raven.Server.Documents
                 AttachmentDoesNotExistException.ThrowFor(documentId, name);
 
             var hash = attachment.Base64Hash.ToString();
-            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, attachment.Flags, attachment.Size, attachment.RetiredAt, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
+            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, attachment.Flags, attachment.Size, attachment.RetireAt, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
         }
 
         public MoveAttachmentDetailsServer MoveAttachment(DocumentsOperationContext context, string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, LazyStringValue changeVector, string hash = null, string contentType = null, bool usePartialKey = true, bool updateDocument = true, bool extractCollectionName = false)

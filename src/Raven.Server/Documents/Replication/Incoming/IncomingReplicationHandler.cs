@@ -429,7 +429,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 if (newChangeVector != null)
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, attachment.RetiredAtUtc, collectionSlice, attachment.Flags, attachment.AttachmentSize,isRevision, newChangeVector);
+                                        contentType, attachment.Base64Hash, attachment.RetireAtUtc, collectionSlice, attachment.Flags, attachment.AttachmentSize,isRevision, newChangeVector);
                                 }
 
                                 break;

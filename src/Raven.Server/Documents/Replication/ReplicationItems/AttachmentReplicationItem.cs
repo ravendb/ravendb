@@ -23,7 +23,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public Stream Stream;
         public long AttachmentSize;
         public AttachmentFlags Flags;
-        public DateTime? RetiredAtUtc;
+        public DateTime? RetireAtUtc;
         public LazyStringValue Collection;
 
         public override long Size => base.Size + // common
@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                                      + sizeof(long)
                                      + sizeof(int)
-                                     + (RetiredAtUtc == null ? 0 : sizeof(long))
+                                     + (RetireAtUtc == null ? 0 : sizeof(long))
                                      + sizeof(int)
                                      + Collection.Size
                               ;
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             djv[nameof(Base64Hash)] = Base64Hash.ToString();
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
             djv[nameof(Flags)] = Flags.ToString();
-            djv[nameof(RetiredAtUtc)] = RetiredAtUtc;
+            djv[nameof(RetireAtUtc)] = RetireAtUtc;
             djv[nameof(Collection)] = Collection.ToString();
             return djv;
         }
@@ -83,7 +83,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 TransactionMarker = attachment.TransactionMarker,
                 AttachmentSize = attachment.Size,
                 Flags = attachment.Flags,
-                RetiredAtUtc = attachment.RetiredAt,
+                RetireAtUtc = attachment.RetireAt,
                 Collection = attachment.Collection
             };
 
@@ -124,9 +124,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
                 *(long*)(pTemp + tempBufferPos) = AttachmentSize;
                 tempBufferPos += sizeof(long);
-                if (RetiredAtUtc.HasValue)
+                if (RetireAtUtc.HasValue)
                 {
-                    *(long*)(pTemp + tempBufferPos) = RetiredAtUtc.Value.Ticks;
+                    *(long*)(pTemp + tempBufferPos) = RetireAtUtc.Value.Ticks;
                     tempBufferPos += sizeof(long);
                 }
                 else
@@ -167,7 +167,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 AttachmentSize = *(long*)Reader.ReadExactly(sizeof(long));
                 var ticks = *(long*)Reader.ReadExactly(sizeof(long));
                 if (ticks != -1)
-                    RetiredAtUtc = new DateTime(ticks, DateTimeKind.Utc);
+                    RetireAtUtc = new DateTime(ticks, DateTimeKind.Utc);
 
                 Flags = *(AttachmentFlags*)Reader.ReadExactly(sizeof(AttachmentFlags)) | AttachmentFlags.None;
                 SetLazyStringValueFromString(context, out Collection);
@@ -200,7 +200,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             item.Key = Key.Clone(allocator);
 
             item.AttachmentSize = AttachmentSize;
-            item.RetiredAtUtc = RetiredAtUtc;
+            item.RetireAtUtc = RetireAtUtc;
             item.Flags = Flags;
             item.Collection = Collection.Clone(context);
             item.ToDispose(new DisposableAction(() =>

@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Attachments
         Compressed = 0x2
     }
 
-    public static class EnumExtensions
+    internal static class EnumExtensions
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool Contain(this AttachmentFlags current, AttachmentFlags flag)

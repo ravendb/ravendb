@@ -138,7 +138,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     Attachments.Remove(t);
                     t.Key = attachment.Key;
                     t.Hash = attachment.Base64Hash.ToString();
-                    t.RetireAt = attachment.RetiredAt;
+                    t.RetireAt = attachment.RetireAt;
                     t.Flags = attachment.Flags;
                     //TODO: egor I can use getcollecton method here
                     t.RetiredKey =
@@ -1233,7 +1233,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     AttachmentContent = attachment.GetContentAsString(),
                     //AttachmentStream = attachment.GetContentAsStream(),
                     AttachmentFlags = attachment.Flags,
-                    AttachmentRetiredAt = attachment.RetiredAt
+                    AttachmentRetiredAt = attachment.RetireAt
                 };
         }
     }

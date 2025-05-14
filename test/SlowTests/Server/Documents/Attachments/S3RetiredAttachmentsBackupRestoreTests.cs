@@ -309,7 +309,7 @@ namespace SlowTests.Server.Documents.Attachments
                             Attachments.Remove(t);
                             t.Key = attachment.Key;
                             t.Hash = attachment.Base64Hash.ToString();
-                            t.RetireAt = attachment.RetiredAt;
+                            t.RetireAt = attachment.RetireAt;
                             t.Flags = attachment.Flags;
                             t.RetiredKey = $"{Settings.RemoteFolderName}/{t.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(attachment.Key))}";
                             Attachments.Add(t);
@@ -351,7 +351,7 @@ namespace SlowTests.Server.Documents.Attachments
                             Attachments.Remove(t);
                             t.Key = attachment.Key;
                             t.Hash = attachment.Base64Hash.ToString();
-                            t.RetireAt = attachment.RetiredAt;
+                            t.RetireAt = attachment.RetireAt;
                             t.Flags = attachment.Flags;
                             t.RetiredKey = $"{Settings.RemoteFolderName}/{t.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(attachment.Key))}";
                             Attachments.Add(t);

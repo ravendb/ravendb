@@ -67,8 +67,8 @@ namespace Raven.Server.Documents.Handlers.Batches
             public string ContentType;
             public AttachmentType AttachmentType;
             public AttachmentFlags Flags;
-            public long Size;
-            public DateTime? RetiredAt;
+            public long SizeInBytes;
+            public DateTime? RetireAt;
             public string Hash;
             public bool StorageOnly;
             public MergedBatchCommand.AttachmentStream AttachmentStream { get; set; }// used for bulk insert only
@@ -344,27 +344,27 @@ namespace Raven.Server.Documents.Handlers.Batches
                         }
                         commandData.Flags = GetAttachmentFlag(state, ctx);
                         break;
-                    case CommandPropertyName.Size:
+                    case CommandPropertyName.SizeInBytes:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         if (state.CurrentTokenType != JsonParserToken.Integer)
                         {
                             ThrowUnexpectedToken(JsonParserToken.Integer, state);
                         }
-                        commandData.Size = state.Long;
+                        commandData.SizeInBytes = state.Long;
 
                         break;
-                    case CommandPropertyName.RetiredAt:
+                    case CommandPropertyName.RetireAt:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
-                                commandData.RetiredAt = null;
+                                commandData.RetireAt = null;
                                 break;
 
                             case JsonParserToken.String:
-                                commandData.RetiredAt = DateTime.Parse(GetStringPropertyValue(state)).ToUniversalTime();
+                                commandData.RetireAt = DateTime.Parse(GetStringPropertyValue(state)).ToUniversalTime();
                                 break;
 
                             default:
@@ -773,8 +773,8 @@ namespace Raven.Server.Documents.Handlers.Batches
             ContentType,
             AttachmentType,
             Flags,
-            Size,
-            RetiredAt,
+            SizeInBytes,
+            RetireAt,
             Hash,
             StorageOnly,
             #endregion Attachment
@@ -833,6 +833,8 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     if ("Counters"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Counters;
+                    if ("RetireAt"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.RetireAt;
 
                     return CommandPropertyName.NoSuchProperty;
 
@@ -843,8 +845,6 @@ namespace Raven.Server.Documents.Handlers.Batches
                         return CommandPropertyName.Name;
                     if ("From"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.From;
-                    if ("Size"u8.IsEqualConstant(state.StringBuffer))
-                        return CommandPropertyName.Size;
                     if ("Hash"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Hash;
                     return CommandPropertyName.NoSuchProperty;
@@ -874,7 +874,8 @@ namespace Raven.Server.Documents.Handlers.Batches
                         return CommandPropertyName.ContentType;
                     if ("StorageOnly"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.StorageOnly;
-
+                    if ("SizeInBytes"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.SizeInBytes;
                     return CommandPropertyName.NoSuchProperty;
 
                 case 12:
@@ -935,8 +936,6 @@ namespace Raven.Server.Documents.Handlers.Batches
                 case 9:
                     if ("JsonPatch"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.JsonPatch;
-                    if ("RetiredAt"u8.IsEqualConstant(state.StringBuffer))
-                        return CommandPropertyName.RetiredAt;
 
                     return CommandPropertyName.NoSuchProperty;
                 default:

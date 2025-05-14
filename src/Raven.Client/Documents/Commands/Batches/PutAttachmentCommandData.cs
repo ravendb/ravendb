@@ -13,7 +13,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector)
             : this(documentId, name, stream, contentType, changeVector, retireAt: null, size: null, flags: AttachmentFlags.None, hash: null, fromEtl: false)
         {
-            Size = stream.Length;
+            SizeInBytes = stream.Length;
         }
 
         internal PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, DateTime? retireAt, long? size, AttachmentFlags flags, string hash, bool fromEtl)
@@ -29,12 +29,12 @@ namespace Raven.Client.Documents.Commands.Batches
             ContentType = contentType;
             ChangeVector = changeVector;
             FromEtl = fromEtl;
-            RetiredAt = retireAt;
+            RetireAt = retireAt;
             Flags = flags;
             Hash = hash;
 
             if (size != null)
-                Size = size.Value;
+                SizeInBytes = size.Value;
 
             PutAttachmentCommandHelper.TryValidateStream(flags, stream);
         }
@@ -46,8 +46,8 @@ namespace Raven.Client.Documents.Commands.Batches
         public string ContentType { get; }
         public CommandType Type { get; } = CommandType.AttachmentPUT;
         internal bool FromEtl { get; }
-        public DateTime? RetiredAt { get; }
-        public long Size { get; }
+        public DateTime? RetireAt { get; }
+        public long SizeInBytes { get; }
         internal AttachmentFlags Flags { get; }
         public string Hash { get; }
 
@@ -61,8 +61,8 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Type)] = Type.ToString(),
                 [nameof(FromEtl)] = FromEtl,
-                [nameof(RetiredAt)] = RetiredAt,
-                [nameof(Size)] = Size,
+                [nameof(RetireAt)] = RetireAt,
+                [nameof(SizeInBytes)] = SizeInBytes,
                 [nameof(Flags)] = Flags.ToString(),
                 [nameof(Hash)] = Hash
 

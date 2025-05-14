@@ -64,17 +64,17 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public DateTime? RetiredAt
+        public DateTime? RetireAt
         {
             get
             {
-                if (_attachment.RetiredAt.HasValue == false)
+                if (_attachment.RetireAt.HasValue == false)
                 {
                     return null;
                     // TODO: egor can I return simply null here? or return DynamicNullObject.Null; ? (also in GetContentAsStream)
                 }
 
-                return _attachment.RetiredAt.Value;
+                return _attachment.RetireAt.Value;
             }
         }
 

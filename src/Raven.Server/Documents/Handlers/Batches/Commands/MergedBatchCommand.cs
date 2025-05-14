@@ -173,12 +173,12 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                         {
                             AttachmentStream attachmentStream = GetAttachmentStream(attachmentIterator, out Stream stream);
                             attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
-                                cmd.ContentType, attachmentStream.Hash, cmd.Flags, cmd.Size, cmd.RetiredAt, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
+                                cmd.ContentType, attachmentStream.Hash, cmd.Flags, cmd.SizeInBytes, cmd.RetireAt, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
                         }
                         else
                         {
                             attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
-                                cmd.ContentType, cmd.Hash, cmd.Flags, cmd.Size, cmd.RetiredAt, cmd.ChangeVector, stream: null, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
+                                cmd.ContentType, cmd.Hash, cmd.Flags, cmd.SizeInBytes, cmd.RetireAt, cmd.ChangeVector, stream: null, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
                         }
                     }
                     else

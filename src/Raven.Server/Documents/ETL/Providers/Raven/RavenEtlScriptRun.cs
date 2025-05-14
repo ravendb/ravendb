@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 foreach (var attachment in attachments)
                 {
-                    commands.Add(new PutAttachmentCommandData(remoteDocumentId, attachment.Name, attachment.Stream, attachment.ContentType, null, attachment.RetiredAt, attachment.Size, attachment.Flags, attachment.Base64Hash.ToString(), fromEtl: true));
+                    commands.Add(new PutAttachmentCommandData(remoteDocumentId, attachment.Name, attachment.Stream, attachment.ContentType, null, attachment.RetireAt, attachment.Size, attachment.Flags, attachment.Base64Hash.ToString(), fromEtl: true));
 
                     if (attachment.Stream == null)
                     {
@@ -316,7 +316,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         foreach (var addAttachment in putAttachments)
                         {
                             commands.Add(new PutAttachmentCommandData(remoteDocumentId, addAttachment.Name, addAttachment.Attachment.Stream, addAttachment.Attachment.ContentType,
-                                null, addAttachment.Attachment.RetiredAt, addAttachment.Attachment.Size, addAttachment.Attachment.Flags, addAttachment.Attachment.Base64Hash.ToString(), fromEtl: true));
+                                null, addAttachment.Attachment.RetireAt, addAttachment.Attachment.Size, addAttachment.Attachment.Flags, addAttachment.Attachment.Base64Hash.ToString(), fromEtl: true));
                         }
                     }
 

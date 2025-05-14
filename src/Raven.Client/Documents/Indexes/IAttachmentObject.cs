@@ -15,7 +15,7 @@ namespace Raven.Client.Documents.Indexes
 
         public long Size { get; }
 
-        public DateTime? RetiredAt { get; }
+        public DateTime? RetireAt { get; }
 
         public AttachmentFlags Flags { get; }
 

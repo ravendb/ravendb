@@ -134,7 +134,7 @@ namespace Raven.Server.Documents
                             await _database.TxMerger.Enqueue(cmd);
 
                             if (Logger.IsInfoEnabled)
-                                Logger.Info($"Successfully added '{nameof(Attachment.RetiredAt)}' value to '{cmd.ProcessedCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms.");
+                                Logger.Info($"Successfully added '{nameof(Attachment.RetireAt)}' value to '{cmd.ProcessedCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms.");
                             continue;
                         }
 

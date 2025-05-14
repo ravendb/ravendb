@@ -19,7 +19,7 @@ namespace Raven.Server.Documents
         public short TransactionMarker;
         public long Size;
         public AttachmentFlags Flags;
-        public DateTime? RetiredAt;
+        public DateTime? RetireAt;
         public LazyStringValue Collection;
     }
 }
