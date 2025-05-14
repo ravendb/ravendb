@@ -651,10 +651,11 @@ namespace Raven.Server.Smuggler.Documents
                                     var attachmentId = key.Content.Substring(idEnd);
                                     idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(attachmentId);
 
-                                    //TODO: egor what if I backup/restore retired attachment? need to do same logic as ETL/Replication?
                                     _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirectDocumentOrRetiredCloudAndStorage(
                                         context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks);
-
+                                    
+                                    
+                                    //TODO: egor 
                                     //if (tombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
                                     //{
                                     //    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, attachmentTombstone.Key, false, "$fromReplication", null,

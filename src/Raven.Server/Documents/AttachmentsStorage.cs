@@ -390,12 +390,6 @@ namespace Raven.Server.Documents
                                     }
                                 }
 
-
-                                if (retiredAttachmentExists)
-                                {
-
-                                }
-
                                 // Delete the attachment stream only if we have a different hash
                                 using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref partialTvr, out Slice existingHash))
                                 {

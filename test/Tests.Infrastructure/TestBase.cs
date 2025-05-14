@@ -122,11 +122,7 @@ namespace FastTests
             //DocumentConventions.DefaultHttpVersionPolicy = HttpVersionPolicy.RequestVersionExact;
             //DefaultHttpProtocols = HttpProtocols.Http2;
 
-#if NETCOREAPP
-            Console.WriteLine("I AM NETCOREAPP");
-#endif
-
-        Console.WriteLine($"Default HTTP Compression Algorithm: {DocumentConventions.DefaultHttpCompressionAlgorithm}");
+            Console.WriteLine($"Default HTTP Compression Algorithm: {DocumentConventions.DefaultHttpCompressionAlgorithm}");
             Console.WriteLine($"Default HTTP Pooled Connection Idle Timeout: {DocumentConventions.DefaultHttpPooledConnectionIdleTimeout}");
             Console.WriteLine($"Default HTTP Version Policy: {DocumentConventions.DefaultHttpVersionPolicy}");
 

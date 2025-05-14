@@ -1592,7 +1592,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     else if(flags == AttachmentFlags.Retired)
                     {
-                        
+                        //TODO: egor     progress.Attachments.RetiredCount++; 
                     }
 
 
