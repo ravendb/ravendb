@@ -23,12 +23,21 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public virtual DynamicJsonValue ToAuditJson()
         {
-            return new DynamicJsonValue { [nameof(Disabled)] = Disabled, [nameof(GetBackupConfigurationScript)] = GetBackupConfigurationScript?.ToAuditJson() };
+            return new DynamicJsonValue
+            {
+                [nameof(Disabled)] = Disabled,
+                [nameof(GetBackupConfigurationScript)] = GetBackupConfigurationScript?.ToAuditJson()
+
+            };
         }
 
         public virtual DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue { [nameof(Disabled)] = Disabled, [nameof(GetBackupConfigurationScript)] = GetBackupConfigurationScript?.ToJson() };
+            return new DynamicJsonValue
+            {
+                [nameof(Disabled)] = Disabled,
+                [nameof(GetBackupConfigurationScript)] = GetBackupConfigurationScript?.ToJson()
+            };
         }
     }
 
@@ -59,12 +68,22 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public DynamicJsonValue ToAuditJson()
         {
-            return new DynamicJsonValue { [nameof(Exec)] = Exec, [nameof(TimeoutInMs)] = TimeoutInMs };
+
+            return new DynamicJsonValue
+            {
+                [nameof(Exec)] = Exec,
+                [nameof(TimeoutInMs)] = TimeoutInMs
+            };
         }
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue { [nameof(Exec)] = Exec, [nameof(Arguments)] = Arguments, [nameof(TimeoutInMs)] = TimeoutInMs };
+            return new DynamicJsonValue
+            {
+                [nameof(Exec)] = Exec,
+                [nameof(Arguments)] = Arguments,
+                [nameof(TimeoutInMs)] = TimeoutInMs
+            };
         }
     }
 
@@ -158,6 +177,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
             return djv;
         }
+
     }
 
     public sealed class S3Settings : AmazonSettings
@@ -274,6 +294,7 @@ namespace Raven.Client.Documents.Operations.Backups
 
         public GlacierSettings()
         {
+
         }
 
         internal GlacierSettings(GlacierSettings settings)
