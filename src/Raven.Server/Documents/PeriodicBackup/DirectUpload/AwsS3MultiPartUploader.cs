@@ -87,7 +87,7 @@ public class AwsS3MultiPartUploader : IMultiPartUploader
                 }
             }, _cancellationToken);
 
-        _partEtags.Add(new PartETag(uploadResponse.PartNumber, uploadResponse.ETag));
+        _partEtags.Add(new PartETag(uploadResponse.PartNumber.GetValueOrDefault(), uploadResponse.ETag));
     }
 
     public void CompleteUpload()
