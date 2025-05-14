@@ -33,6 +33,17 @@ namespace Sparrow.Json
         private Dictionary<StringSegment, object> _objectsPathCache;
         private Dictionary<int, object> _objectsPathCacheByIndex;
 
+        public Reference<bool> Disposed = new Reference<bool>();
+
+        public class Reference<T>
+        {
+            /// <summary>
+            /// Gets or sets the value.
+            /// </summary>
+            /// <value>The value.</value>
+            public T Value { get; set; }
+        }
+
         public override string ToString()
         {
             AssertContextNotDisposed();
@@ -1063,6 +1074,8 @@ namespace Sparrow.Json
             }
 
             _buffer.Dispose();
+
+            Disposed.Value = true;
         }
 
         public void CopyTo(byte* ptr)

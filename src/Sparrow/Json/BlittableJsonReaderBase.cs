@@ -295,6 +295,12 @@ namespace Sparrow.Json
             {
                 throw new ObjectDisposedException("blittable's context has been disposed, blittable should not be used now in that case!");
             }
+
+            if (HasParent && _parent.Disposed.Value)
+            {
+                Console.WriteLine("blittable parent was disposed, blittable should not be used now in that case!");
+                throw new ObjectDisposedException("blittable parent was disposed, blittable should not be used now in that case!");
+            }
         }
     }
 }
