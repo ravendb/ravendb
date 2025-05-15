@@ -173,11 +173,12 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                     return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
                 }
 
-                if (options.DatabaseRecord.RetiredAttachments.RetirePeriods.ContainsKey(collectionStr) == false)
-                {
-                    // we don't care about this collection, it was removed from the configuration
-                    return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
-                }
+                //TODO: egor this needs new handing
+                //if (options.DatabaseRecord.RetiredAttachments.RetirePeriods.ContainsKey(collectionStr) == false)
+                //{
+                //    // we don't care about this collection, it was removed from the configuration
+                //    return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+                //}
             }
         }
 
@@ -223,16 +224,17 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                 // no configuration, we don't care about this collection
                 return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
             }
-            if (options.DatabaseRecord.RetiredAttachments.RetirePeriods.ContainsKey(collectionStr) == false)
-            {
-                // we don't care about this collection, it was removed from the configuration
-                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
-            }
-            if (options.DatabaseRecord.RetiredAttachments.PurgeOnDelete == false)
-            {
-                // purge on delete is false, we don't care about this collection
-                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
-            }
+            //TODO: egor handle new logic
+            //if (options.DatabaseRecord.RetiredAttachments.RetirePeriods.ContainsKey(collectionStr) == false)
+            //{
+            //    // we don't care about this collection, it was removed from the configuration
+            //    return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+            //}
+            //if (options.DatabaseRecord.RetiredAttachments.PurgeOnDelete == false)
+            //{
+            //    // purge on delete is false, we don't care about this collection
+            //    return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+            //}
 
             return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionStr);
         }

@@ -336,7 +336,7 @@ namespace Raven.Server.Documents
                                     Debug.Assert(collectionName != null, "collectionName != null");
                                     Debug.Assert(flags == AttachmentFlags.None, "flags == AttachmentFlags.None");
 
-                                    TryPutRetiredAttachment(context, collectionName, keySlice, out retireAt);
+                                    TryPutRetiredAttachment(context, collectionName, keySlice, retireAtDt, out retireAt);
                                 }
                             }
                         }
@@ -445,7 +445,7 @@ namespace Raven.Server.Documents
                                 }
                                 else
                                 {
-                                    TryPutRetiredAttachment(context, collectionName, keySlice, out retireAt);
+                                    TryPutRetiredAttachment(context, collectionName, keySlice, retireAtDt, out retireAt);
                                 }
                             }
                         }
@@ -490,25 +490,16 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void TryPutRetiredAttachment(DocumentsOperationContext context, CollectionName collectionName, Slice keySlice, out long retireAt)
+        private void TryPutRetiredAttachment(DocumentsOperationContext context, CollectionName collectionName, Slice keySlice, DateTime? retireAtDt, out long retireAt)
         {
-            if (RetiredAttachmentsStorage.Configuration is { Disabled: false })
-            {
-                if (RetiredAttachmentsStorage.Configuration.RetirePeriods.TryGetValue(collectionName.Name, out var timeSpan))
-                {
-                    var retire = DateTime.UtcNow + timeSpan;
-                    retireAt = retire.Ticks;
-                    RetiredAttachmentsStorage.Put(context, keySlice, retire.GetDefaultRavenFormat());
-                }
-                else
-                {
-                    retireAt = -1L;
-                }
-            }
-            else
+            if (retireAtDt.HasValue == false)
             {
                 retireAt = -1L;
+                return;
             }
+
+            retireAt = retireAtDt.Value.Ticks;
+            RetiredAttachmentsStorage.Put(context, keySlice, retireAtDt.Value.GetDefaultRavenFormat());
         }
 
         private void TryDeleteRetiredAttachment(DocumentsOperationContext context, Slice keySlice, string collection)
@@ -1684,15 +1675,20 @@ namespace Raven.Server.Documents
 
                 if (RetiredAttachmentsStorage.Configuration is { Disabled: false })
                 {
-                    if (RetiredAttachmentsStorage.Configuration.PurgeOnDelete == false)
-                    {
-                        // we cannot delete from cloud since PurgeOnDelete is false
-                        state = DeleteAttachmentState.DocumentRetiredAttachmentStorage;
-                    }
-                    else
-                    {
-                        state = DeleteAttachmentState.DocumentRetiredAttachmentCloudStorage;
-                    }
+                    //TODO: egor we don't delete retired anymore
+
+                    //if (RetiredAttachmentsStorage.Configuration.PurgeOnDelete == false)
+                    //{
+                    //    // we cannot delete from cloud since PurgeOnDelete is false
+                    //    state = DeleteAttachmentState.DocumentRetiredAttachmentStorage;
+                    //}
+                    //else
+                    //{
+                    //    state = DeleteAttachmentState.DocumentRetiredAttachmentCloudStorage;
+                    //}
+                    // place holder
+                    state = DeleteAttachmentState.DocumentRetiredAttachmentStorage;
+
                 }
                 else
                 {

@@ -1,6 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Sparrow.Json.Parsing;
 
@@ -8,59 +6,21 @@ namespace Raven.Client.Documents.Attachments
 {
     public sealed class RetiredAttachmentsConfiguration : IDynamicJson
     {
-        private Dictionary<string, TimeSpan> _retirePeriods;
         public bool Disabled { get; set; }
         public S3Settings S3Settings { get; set; }
         public AzureSettings AzureSettings { get; set; }
 
-        public Dictionary<string, TimeSpan> RetirePeriods
-        {
-            get => _retirePeriods;
-            set
-            {
-                _retirePeriods = new Dictionary<string, TimeSpan>(StringComparer.OrdinalIgnoreCase);
-
-                foreach (var kvp in value)
-                {
-                    _retirePeriods.Add(kvp.Key, kvp.Value);
-                }
-            }
-        }
-
         public long? RetireFrequencyInSec { get; set; }
         public long? MaxItemsToProcess { get; set; }
-
-        // TODO: egor we need to make those setting per collection
-        /// <summary>
-        /// Purge the retired attachments when the document is deleted.
-        /// Default: false
-        /// </summary>
-        public bool PurgeOnDelete { get; set; }
-
-        /// <summary>
-        /// Retire existing attachments when the configuration is added.
-        /// Default: false
-        /// </summary>
-        public bool RetireExistingAttachments { get; set; }
 
         public override int GetHashCode()
         {
             var hashCode = new HashCode();
-
             hashCode.Add(Disabled);
             hashCode.Add(S3Settings);
             hashCode.Add(AzureSettings);
-
-            foreach (var kvp in _retirePeriods)
-            {
-                hashCode.Add(kvp.Key, StringComparer.OrdinalIgnoreCase);
-                hashCode.Add(kvp.Value);
-            }
-  
             hashCode.Add(RetireFrequencyInSec);
             hashCode.Add(MaxItemsToProcess);
-            hashCode.Add(PurgeOnDelete);
-            hashCode.Add(RetireExistingAttachments);
 
             return hashCode.ToHashCode();
         }
@@ -80,10 +40,6 @@ namespace Raven.Client.Documents.Attachments
             if (RetireFrequencyInSec != other.RetireFrequencyInSec)
                 return false;
             if (MaxItemsToProcess != other.MaxItemsToProcess)
-                return false;
-            if (PurgeOnDelete != other.PurgeOnDelete)
-                return false;
-            if (RetireExistingAttachments != other.RetireExistingAttachments)
                 return false;
             
             if (S3Settings != null)
@@ -110,15 +66,7 @@ namespace Raven.Client.Documents.Attachments
                 return false;
             }
 
-            var d1 = _retirePeriods;
-            var d2 = other._retirePeriods;
-
-            bool dic = d1.Count == d2.Count && d1.All(
-                (d1Kv) => d2.TryGetValue(d1Kv.Key, out var d2Value) && (
-                    d1Kv.Value == d2Value ||
-                    d1Kv.Value.Equals(d2Value)));
-
-            return dic;
+            return true;
         }
 
         internal bool HasUploader() => BackupConfiguration.CanBackupUsing(S3Settings) ||
@@ -131,11 +79,8 @@ namespace Raven.Client.Documents.Attachments
                 [nameof(Disabled)] = Disabled,
                 [nameof(RetireFrequencyInSec)] = RetireFrequencyInSec,
                 [nameof(MaxItemsToProcess)] = MaxItemsToProcess,
-                [nameof(RetirePeriods)] = DynamicJsonValue.Convert(_retirePeriods),
                 [nameof(S3Settings)] = S3Settings?.ToJson(),
                 [nameof(AzureSettings)] = AzureSettings?.ToJson(),
-                [nameof(PurgeOnDelete)] = PurgeOnDelete,
-                [nameof(RetireExistingAttachments)] = RetireExistingAttachments
             };
         }
 
@@ -150,15 +95,6 @@ namespace Raven.Client.Documents.Attachments
                 throw new InvalidOperationException($"Retire attachments frequency{databaseNameStr} must be greater than 0.");
             if (MaxItemsToProcess <= 0)
                 throw new InvalidOperationException($"Max items to process{databaseNameStr} must be greater than 0.");
-
-            if (_retirePeriods == null || _retirePeriods.Count == 0)
-                throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr} must have a value when {nameof(Disabled)} is false.");
-
-            if (_retirePeriods.Keys.Any(string.IsNullOrWhiteSpace))
-                throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr}  must have non empty keys.");
-
-            if (_retirePeriods.Values.Any(x => x.TotalSeconds <= 0))
-                throw new InvalidOperationException($"{nameof(RetirePeriods)}{databaseNameStr} must have positive TimeSpan values.");
 
             if (HasUploader() == false)
                 throw new InvalidOperationException($"Exactly one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} must be configured when {nameof(Disabled)} is false.");

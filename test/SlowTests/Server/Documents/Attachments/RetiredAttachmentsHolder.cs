@@ -100,9 +100,11 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
                 var profileStream = new MemoryStream(b);
                 var name = $"test_{i + start}.png";
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, name, profileStream, "image/png"));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters(name, profileStream)
+                {
+                    RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png"
+                }));
                 profileStream.Position = 0;
-
                 using AttachmentResult a = await store.Operations.SendAsync(new GetAttachmentOperation(id, name, AttachmentType.Document, null));
 
                 Attachments.Add(new RetiredAttachment()

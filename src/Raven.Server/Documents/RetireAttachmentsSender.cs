@@ -114,28 +114,7 @@ namespace Raven.Server.Documents
 
                         if (toRetire == null || toRetire.Count == 0)
                         {
-                            if (Configuration.RetireExistingAttachments == false)
-                            {
-                                return totalCount;
-                            }
-
-                            var existing =
-                                _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetExistingAttachmentsToAddRetireAdd(options, ref totalCount, out duration,
-                                    CancellationToken);
-
-                            if (existing == null || existing.Count == 0)
-                            {
-                                return totalCount;
-                            }
-
-                            tx.Dispose();
-
-                            var cmd = new UpdateExistingAttachmentsCommand(existing, _database);
-                            await _database.TxMerger.Enqueue(cmd);
-
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info($"Successfully added '{nameof(Attachment.RetireAt)}' value to '{cmd.ProcessedCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms.");
-                            continue;
+                            return totalCount;
                         }
 
                         var directUpload = lazyDirectUpload.Value;

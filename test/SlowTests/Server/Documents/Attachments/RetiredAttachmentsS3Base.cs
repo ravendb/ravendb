@@ -40,14 +40,12 @@ public abstract class RetiredAttachmentsS3Base : RetiredAttachmentsHolder<S3Sett
 
     public override async Task PutRetireAttachmentsConfiguration(IDocumentStore store, S3Settings settings, List<string> collections = null, string database = null)
     {
-        if (collections == null)
-            collections = new List<string> { "Orders" };
         if (string.IsNullOrEmpty(database))
             database = store.Database;
 
         var config = new RetiredAttachmentsConfiguration()
         {
-            S3Settings = settings, Disabled = false, RetirePeriods = collections.ToDictionary(x => x, x => TimeSpan.FromMinutes(3)), RetireFrequencyInSec = 1000
+            S3Settings = settings, Disabled = false, RetireFrequencyInSec = 1000
         };
         ModifyRetiredAttachmentsConfig?.Invoke(config);
         await store.Maintenance.ForDatabase(database).SendAsync(new ConfigureRetiredAttachmentsOperation(config));

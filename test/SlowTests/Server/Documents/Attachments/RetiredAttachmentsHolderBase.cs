@@ -72,7 +72,7 @@ public abstract class RetiredAttachmentsHolderBase : ReplicationTestBase
 
     public static async Task GetAndCompareRetiredAttachment(IDocumentStore store, string id, string attachmentName, string hash, string contentType, MemoryStream stream, int streamSize)
     {
-        var retired = await store.Operations.SendAsync(new GetRetiredAttachmentOperation(id, attachmentName));
+        var retired = await store.Operations.SendAsync(new GetAttachmentOperation(id, attachmentName, AttachmentType.Document, null));
         Assert.NotNull(retired);
         Assert.Equal(hash, retired.Details.Hash);
         Assert.Equal(contentType, retired.Details.ContentType);

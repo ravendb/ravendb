@@ -4,6 +4,7 @@
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using System;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -95,10 +96,11 @@ namespace Raven.Server.Documents.Handlers
             public string ContentType;
             public Stream Stream;
             public string Hash;
+            public DateTime? RetireAt;
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, flags: AttachmentFlags.None, Stream.Length, retireAtDt: null, ExpectedChangeVector, Stream);
+                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, flags: AttachmentFlags.None, Stream.Length, RetireAt, ExpectedChangeVector, Stream);
                 return 1;
             }
 
@@ -111,7 +113,8 @@ namespace Raven.Server.Documents.Handlers
                     ExpectedChangeVector = ExpectedChangeVector,
                     ContentType = ContentType,
                     Stream = Stream,
-                    Hash = Hash
+                    Hash = Hash,
+                    RetireAt = RetireAt
                 };
             }
         }
@@ -149,6 +152,7 @@ namespace Raven.Server.Documents.Handlers
         public string ContentType;
         public Stream Stream;
         public string Hash;
+        public DateTime? RetireAt;
 
         public AttachmentHandler.MergedPutAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
@@ -160,7 +164,8 @@ namespace Raven.Server.Documents.Handlers
                 ContentType = ContentType,
                 Stream = Stream,
                 Hash = Hash,
-                Database = database
+                Database = database,
+                RetireAt = RetireAt
             };
         }
     }

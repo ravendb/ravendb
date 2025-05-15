@@ -6,11 +6,19 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
+using Raven.Server.Documents.Handlers.Processors.Attachments.Retired;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
+    //internal class AttachmentHandlerProcessorForGetRegularAttachment : AttachmentHandlerProcessorForGetAttachment
+    //{
+    //    public AttachmentHandlerProcessorForGetRegularAttachment([NotNull] DatabaseRequestHandler requestHandler, bool isDocument) : base(requestHandler, isDocument)
+    //    {
+    //    }
+    //}
+
     internal class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHandlerProcessorForGetAttachment<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public AttachmentHandlerProcessorForGetAttachment([NotNull] DatabaseRequestHandler requestHandler, bool isDocument) : base(requestHandler, isDocument)
@@ -29,49 +37,63 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     return;
                 }
 
-                var collection = CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(context, attachment, documentId, name);
-
-                var attachmentChangeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-                if (attachmentChangeVector == attachment.ChangeVector)
+                if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
                 {
-                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
-                    return;
+                    var handler = new RetiredAttachmentHandlerProcessorForGet(RequestHandler, _isDocument);
+                    await handler.GetAttachmentInternalAsync(context, documentId, name, attachment, tx, token);
                 }
-
-                try
+                else
                 {
-                    var fileName = Path.GetFileName(attachment.Name);
-                    fileName = Uri.EscapeDataString(fileName);
-                    HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{fileName}";
+                    await GetAttachmentInternalAsync(context, documentId, name, attachment, tx, token);
                 }
-                catch (ArgumentException e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Skip Content-Disposition header because of not valid file name: {attachment.Name}", e);
-                }
-
-                try
-                {
-                    HttpContext.Response.Headers[Constants.Headers.ContentType] = attachment.ContentType.ToString();
-                }
-                catch (InvalidOperationException e)
-                {
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Skip Content-Type header because of not valid content type: {attachment.ContentType}", e);
-                    if (HttpContext.Response.Headers.ContainsKey(Constants.Headers.ContentType))
-                        HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
-                }
-
-                HttpContext.Response.Headers[Constants.Headers.AttachmentHash] = attachment.Base64Hash.ToString();
-                HttpContext.Response.Headers[Constants.Headers.AttachmentSize] = attachment.Size.ToString();
-                HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
-                HttpContext.Response.Headers[Constants.Headers.AttachmentRetireAt] = attachment.RetireAt?.GetDefaultRavenFormat();
-                HttpContext.Response.Headers[Constants.Headers.AttachmentFlags] = ((int)attachment.Flags).ToString();
-                HttpContext.Response.Headers[Constants.Headers.AttachmentCollection] = attachment.Collection.ToString();
-                DisposeReadTransactionIfNeeded(tx);
-
-                await WriteResponseStream(context, attachment, collection, token);
             }
+        }
+
+        protected async ValueTask GetAttachmentInternalAsync(DocumentsOperationContext context, string documentId, string name, Attachment attachment,
+            DocumentsTransaction tx, CancellationToken token)
+        {
+            var collection = CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(context, attachment, documentId, name);
+
+            var attachmentChangeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+            if (attachmentChangeVector == attachment.ChangeVector)
+            {
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                return;
+            }
+
+            try
+            {
+                var fileName = Path.GetFileName(attachment.Name);
+                fileName = Uri.EscapeDataString(fileName);
+                HttpContext.Response.Headers[Constants.Headers.ContentDisposition] = $"attachment; filename=\"{fileName}\"; filename*=UTF-8''{fileName}";
+            }
+            catch (ArgumentException e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Skip Content-Disposition header because of not valid file name: {attachment.Name}", e);
+            }
+
+            try
+            {
+                HttpContext.Response.Headers[Constants.Headers.ContentType] = attachment.ContentType.ToString();
+            }
+            catch (InvalidOperationException e)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Skip Content-Type header because of not valid content type: {attachment.ContentType}", e);
+                if (HttpContext.Response.Headers.ContainsKey(Constants.Headers.ContentType))
+                    HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
+            }
+
+            HttpContext.Response.Headers[Constants.Headers.AttachmentHash] = attachment.Base64Hash.ToString();
+            HttpContext.Response.Headers[Constants.Headers.AttachmentSize] = attachment.Size.ToString();
+            HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
+            HttpContext.Response.Headers[Constants.Headers.AttachmentRetireAt] = attachment.RetireAt?.GetDefaultRavenFormat();
+            HttpContext.Response.Headers[Constants.Headers.AttachmentFlags] = ((int)attachment.Flags).ToString();
+            HttpContext.Response.Headers[Constants.Headers.AttachmentCollection] = attachment.Collection.ToString();
+            DisposeReadTransactionIfNeeded(tx);
+
+            await WriteResponseStream(context, attachment, collection, token);
         }
 
         public virtual void DisposeReadTransactionIfNeeded(DocumentsTransaction tx)

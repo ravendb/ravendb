@@ -47,7 +47,7 @@ public abstract class RetiredAttachmentsAzureBase : RetiredAttachmentsHolder<Azu
 
         var config = new RetiredAttachmentsConfiguration()
         {
-            AzureSettings = settings, Disabled = false, RetirePeriods = collections.ToDictionary(x => x, x => TimeSpan.FromMinutes(3)), RetireFrequencyInSec = 1000
+            AzureSettings = settings, Disabled = false, RetireFrequencyInSec = 1000
         };
         ModifyRetiredAttachmentsConfig?.Invoke(config);
         await store.Maintenance.ForDatabase(database).SendAsync(new ConfigureRetiredAttachmentsOperation(config));

@@ -65,10 +65,11 @@ namespace SlowTests.Server.Documents.Attachments
                 Assert.Null(res.Details.RetireAt);
                 await using (var holder = CreateCloudSettings())
                 {
-                    RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
-                    {
-                        config.RetireExistingAttachments = retireExistingAttachments;
-                    };
+                    throw new NotImplementedException();
+                    //RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
+                    //{
+                    //    config.RetireExistingAttachments = retireExistingAttachments;
+                    //};
                     await PutRetireAttachmentsConfiguration(store, Settings, collections:null);
 
                     using var profileStream2 = new MemoryStream([3, 2, 1]);
@@ -433,10 +434,11 @@ namespace SlowTests.Server.Documents.Attachments
                     int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                     var ids = new List<(string Id, string Collection)>();
 
-                    RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
-                    {
-                        config.PurgeOnDelete = purgeOnDelete;
-                    };
+                    throw new NotImplementedException();
+                    //RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
+                    //{
+                    //    config.PurgeOnDelete = purgeOnDelete;
+                    //};
 
                     await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, null);
 
@@ -495,10 +497,11 @@ namespace SlowTests.Server.Documents.Attachments
                     int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                     var ids = new List<(string Id, string Collection)>();
 
-                    RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
-                    {
-                        config.PurgeOnDelete = purgeOnDelete;
-                    };
+                    throw new NotImplementedException();
+                    //RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
+                    //{
+                    //    config.PurgeOnDelete = purgeOnDelete;
+                    //};
 
                     //TODO: egor /////////////////////// DUPLICATE CODE WITH CanUploadRetiredAttachmentToCloudInClusterAndDeleteInternal
                     await PutRetireAttachmentsConfiguration(store, Settings);

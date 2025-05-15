@@ -487,11 +487,11 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-
-                RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
-                {
-                    config.PurgeOnDelete = true;
-                };
+                throw new NotImplementedException();
+                //RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
+                //{
+                //    config.PurgeOnDelete = true;
+                //};
 
                 await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/1";
