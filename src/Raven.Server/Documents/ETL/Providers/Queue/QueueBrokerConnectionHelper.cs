@@ -86,7 +86,7 @@ public static class QueueBrokerConnectionHelper
     public static IConnection CreateRabbitMqConnection(RabbitMqConnectionSettings settings)
     {
         var connectionFactory = new ConnectionFactory { Uri = new Uri(settings.ConnectionString) };
-        return connectionFactory.CreateConnection();
+        return connectionFactory.CreateConnectionAsync().GetAwaiter().GetResult();
     }
 
     public static QueueClient CreateAzureQueueStorageClient(

@@ -53,7 +53,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
             using var channel = CreateRabbitMqChannel();
             var consumer = new TestRabbitMqConsumer(channel);
 
-            channel.BasicConsume(queue: DefaultExchanges.First().Name,
+            await channel.BasicConsumeAsync(queue: DefaultExchanges.First().Name,
                 autoAck: true,
                 consumer: consumer);
 
@@ -107,7 +107,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         using var channel = CreateRabbitMqChannel();
         var consumer = new TestRabbitMqConsumer(channel);
 
-        channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
+        await channel.BasicConsumeAsync(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
 
         var ea = consumer.Consume();
 
@@ -144,11 +144,11 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         var exchangeName = "Users" + ExchangeSuffix;
         var queueName = "MyPeople" + ExchangeSuffix;
 
-        consumer.Model.ExchangeDeclare(exchangeName, ExchangeType.Direct, true, true);
+        await consumer.Channel.ExchangeDeclareAsync(exchangeName, ExchangeType.Direct, true, true);
 
-        consumer.Model.QueueDeclare(queueName);
-        consumer.Model.QueueBind(queueName, exchangeName, "Users");
-        consumer.Model.QueueBind(queueName, exchangeName, "People");
+        await consumer.Channel.QueueDeclareAsync(queueName);
+        await consumer.Channel.QueueBindAsync(queueName, exchangeName, "Users");
+        await consumer.Channel.QueueBindAsync(queueName, exchangeName, "People");
 
         var config = SetupQueueEtlToRabbitMq(store,
             @"var userData = { UserId: id(this), Name: this.Name }; loadToUsers" + ExchangeSuffix + @"(userData, this['@metadata']['@collection'])",
@@ -165,7 +165,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
 
         await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), store.Database, config);
 
-        channel.BasicConsume(queue: queueName, autoAck: true, consumer: consumer);
+        await channel.BasicConsumeAsync(queue: queueName, autoAck: true, consumer: consumer);
 
         var ea = consumer.Consume();
 
@@ -213,7 +213,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         using var channel = CreateRabbitMqChannel();
         var consumer = new TestRabbitMqConsumer(channel);
 
-        channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
+        await channel.BasicConsumeAsync(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
 
         var ea = consumer.Consume();
 
@@ -255,7 +255,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
 
             var consumer = new TestRabbitMqConsumer(channel);
 
-            channel.BasicConsume(queue: DefaultExchanges.First().Name,
+            await channel.BasicConsumeAsync(queue: DefaultExchanges.First().Name,
                 autoAck: true,
                 consumer: consumer);
 
@@ -304,7 +304,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         using var channel = CreateRabbitMqChannel();
         var consumer = new TestRabbitMqConsumer(channel);
 
-        channel.BasicConsume(queue: DefaultExchanges.First().Name, autoAck: true, consumer: consumer);
+        await channel.BasicConsumeAsync(queue: DefaultExchanges.First().Name, autoAck: true, consumer: consumer);
 
         for (int counter = 0; counter < numberOfOrders; counter++)
         {
@@ -344,7 +344,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         using var channel = CreateRabbitMqChannel();
         var consumer = new TestRabbitMqConsumer(channel);
 
-        channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
+        await channel.BasicConsumeAsync(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
 
         var ea = consumer.Consume();
 
@@ -538,7 +538,7 @@ output('test output')"
             using var channel = CreateRabbitMqChannel();
             var consumer = new TestRabbitMqConsumer(channel);
 
-            channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
+            await channel.BasicConsumeAsync(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
 
             var ea = consumer.Consume();
 
@@ -581,7 +581,7 @@ output('test output')"
             using var channel = CreateRabbitMqChannel();
             var consumer = new TestRabbitMqConsumer(channel);
 
-            channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
+            await channel.BasicConsumeAsync(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
 
             var ea = consumer.Consume();
 

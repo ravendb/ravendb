@@ -52,7 +52,7 @@ public class RabbitMqConnectionString : IDisposable
             try
             {
                 var connectionFactory = new ConnectionFactory() { Uri = new Uri(connectionString), RequestedConnectionTimeout = TimeSpan.FromSeconds(2) };
-                var conn = connectionFactory.CreateConnection();
+                var conn = connectionFactory.CreateConnectionAsync().GetAwaiter().GetResult();
 
                 // connection succeeded register for disposable
                 AssemblyLoadContext.Default.Unloading += _ =>
@@ -76,10 +76,10 @@ public class RabbitMqConnectionString : IDisposable
         }
     }
 
-    public IModel CreateModel()
+    public IChannel CreateChannel()
     {
         _ = _canConnect.Value;
-        return _connection.CreateModel();
+        return _connection.CreateChannelAsync().GetAwaiter().GetResult();
     }
 
     public bool CanConnect => CanConnectInternal();
@@ -105,7 +105,7 @@ public class RabbitMqConnectionString : IDisposable
     {
         using (_connection)
         {
-            _connection?.Close();
+            _connection?.CloseAsync().GetAwaiter().GetResult();
         }
     }
 }

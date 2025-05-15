@@ -24,7 +24,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
     }
 
     [RequiresRabbitMqRetryFact]
-    public void SimpleScript()
+    public async Task SimpleScript()
     {
         var user1 = new User { Id = "users/1", FirstName = "John", LastName = "Doe" };
         var user2 = new User { Id = "users/2", FirstName = "Jane", LastName = "Smith" };
@@ -34,10 +34,8 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
 
         var producer = CreateRabbitMqProducer(UsersQueueName);
 
-        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
-            body: new ReadOnlyMemory<byte>(userBytes1));
-        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
-            body: new ReadOnlyMemory<byte>(userBytes2));
+        await producer.BasicPublishAsync(exchange: "", routingKey: UsersQueueName, body: new ReadOnlyMemory<byte>(userBytes1));
+        await producer.BasicPublishAsync(exchange: "", routingKey: UsersQueueName, body: new ReadOnlyMemory<byte>(userBytes2));
 
         using var store = GetDocumentStore();
         var config = SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
@@ -65,7 +63,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
     }
 
     [RequiresRabbitMqRetryFact]
-    public void SimpleScriptMultiQueues()
+    public async Task SimpleScriptMultiQueues()
     {
         var user1 = new User { Id = "users/1", FirstName = "John", LastName = "Doe" };
         var user2 = new User { Id = "users/2", FirstName = "Jane", LastName = "Smith" };
@@ -81,15 +79,11 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
 
         var producer = CreateRabbitMqProducer(UsersQueueName, developersQueueName);
 
-        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
-            body: new ReadOnlyMemory<byte>(userBytes1));
-        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
-            body: new ReadOnlyMemory<byte>(userBytes2));
+        await producer.BasicPublishAsync(exchange: "", routingKey: UsersQueueName, body: new ReadOnlyMemory<byte>(userBytes1));
+        await producer.BasicPublishAsync(exchange: "", routingKey: UsersQueueName, body: new ReadOnlyMemory<byte>(userBytes2));
 
-        producer.BasicPublish(exchange: "", routingKey: developersQueueName, basicProperties: null,
-            body: new ReadOnlyMemory<byte>(userBytes3));
-        producer.BasicPublish(exchange: "", routingKey: developersQueueName, basicProperties: null,
-            body: new ReadOnlyMemory<byte>(userBytes4));
+        await producer.BasicPublishAsync(exchange: "", routingKey: developersQueueName, body: new ReadOnlyMemory<byte>(userBytes3));
+        await producer.BasicPublishAsync(exchange: "", routingKey: developersQueueName, body: new ReadOnlyMemory<byte>(userBytes4));
 
         using var store = GetDocumentStore();
         var config = SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
@@ -129,7 +123,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
     }
 
     [RequiresRabbitMqRetryFact]
-    public void ComplexScript()
+    public async Task ComplexScript()
     {
         var script =
             @"var item = { Id : this.Id, FirstName : this.FirstName, LastName : this.LastName, FullName : this.FirstName + ' ' + this.LastName }
@@ -143,10 +137,8 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
 
         var producer = CreateRabbitMqProducer(UsersQueueName);
 
-        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
-            body: new ReadOnlyMemory<byte>(userBytes1));
-        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
-            body: new ReadOnlyMemory<byte>(userBytes2));
+        await producer.BasicPublishAsync(exchange: "", routingKey: UsersQueueName, body: new ReadOnlyMemory<byte>(userBytes1));
+        await producer.BasicPublishAsync(exchange: "", routingKey: UsersQueueName, body: new ReadOnlyMemory<byte>(userBytes2));
 
         using var store = GetDocumentStore();
         var config = SetupRabbitMqQueueSink(store, script, new List<string>() { UsersQueueName });
@@ -172,7 +164,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
     }
 
     [RequiresRabbitMqRetryFact]
-    public void SimpleScriptMultipleInserts()
+    public async Task SimpleScriptMultipleInserts()
     {
         var numberOfUsers = 10;
 
@@ -182,8 +174,7 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
         {
             var user = new User { Id = $"users/{i}", FirstName = $"firstname{i}", LastName = $"lastname{i}" };
             byte[] userBytes = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user));
-            producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
-                body: new ReadOnlyMemory<byte>(userBytes));
+            await producer.BasicPublishAsync(exchange: "", routingKey: UsersQueueName, body: new ReadOnlyMemory<byte>(userBytes));
         }
 
         using var store = GetDocumentStore();
@@ -248,10 +239,8 @@ public class RabbitMqSinkTests : RabbitMqQueueSinkTestBase
 
         var producer = CreateRabbitMqProducer(UsersQueueName);
 
-        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
-            body: new ReadOnlyMemory<byte>(userBytes1));
-        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
-            body: new ReadOnlyMemory<byte>(userBytes2));
+        await producer.BasicPublishAsync(exchange: "", routingKey: UsersQueueName, body: new ReadOnlyMemory<byte>(userBytes1));
+        await producer.BasicPublishAsync(exchange: "", routingKey: UsersQueueName, body: new ReadOnlyMemory<byte>(userBytes2));
 
         using var store = GetDocumentStore();
         var config = SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",

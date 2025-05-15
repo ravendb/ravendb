@@ -20,7 +20,7 @@ public sealed class RabbitMqQueueSink : QueueSinkProcess
         {
             foreach (string queue in Script.Queues)
             {
-                channel.BasicConsume(queue: queue, autoAck: false, consumer);
+                channel.BasicConsumeAsync(queue: queue, autoAck: false, consumer).GetAwaiter().GetResult();
             }
         }
         catch
@@ -32,11 +32,11 @@ public sealed class RabbitMqQueueSink : QueueSinkProcess
         return consumer;
     }
 
-    private IModel CreateRabbitMqChannel()
+    private IChannel CreateRabbitMqChannel()
     {
         var connectionFactory = new ConnectionFactory { Uri = new Uri(Configuration.Connection.RabbitMqConnectionSettings.ConnectionString) };
-        var connection = connectionFactory.CreateConnection();
-        var channel = connection.CreateModel();
+        var connection = connectionFactory.CreateConnectionAsync().GetAwaiter().GetResult();
+        var channel = connection.CreateChannelAsync().GetAwaiter().GetResult();
 
         return channel;
     }

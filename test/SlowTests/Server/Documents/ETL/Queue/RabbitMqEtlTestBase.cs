@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using RabbitMQ.Client;
 using RabbitMQ.Client.Events;
 using Raven.Client.Documents;
@@ -16,20 +17,22 @@ namespace SlowTests.Server.Documents.ETL.Queue;
 
 public class RabbitMqEtlTestBase : QueueEtlTestBase
 {
-    protected class TestRabbitMqConsumer : DefaultBasicConsumer
+    protected class TestRabbitMqConsumer : AsyncDefaultBasicConsumer
     {
-        private readonly BlockingCollection<(byte[] Body, IBasicProperties Properties)> _deliveries = new();
+        private readonly BlockingCollection<(byte[] Body, IReadOnlyBasicProperties Properties)> _deliveries = new();
 
-        public TestRabbitMqConsumer(IModel model) : base(model)
+        public TestRabbitMqConsumer(IChannel channel) : base(channel)
         {
         }
 
-        public override void HandleBasicDeliver(string consumerTag, ulong deliveryTag, bool redelivered, string exchange, string routingKey, IBasicProperties properties, ReadOnlyMemory<byte> body)
+        public override Task HandleBasicDeliverAsync(string consumerTag, ulong deliveryTag, bool redelivered, string exchange, string routingKey, IReadOnlyBasicProperties properties,
+            ReadOnlyMemory<byte> body, CancellationToken cancellationToken = default)
         {
             _deliveries.Add((body.ToArray(), properties));
+            return Task.CompletedTask;
         }
 
-        public (byte[] Body, IBasicProperties Properties) Consume()
+        public (byte[] Body, IReadOnlyBasicProperties Properties) Consume()
         {
             var result = _deliveries.TryTake(out var delivery, Timeout.Infinite, new CancellationToken());
 
@@ -110,7 +113,7 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
         return config;
     }
 
-    protected IModel CreateRabbitMqChannel() => RabbitMqConnectionString.Instance.CreateModel();
+    protected IChannel CreateRabbitMqChannel() => RabbitMqConnectionString.Instance.CreateChannel();
 
     private void CleanupExchangesAndQueues()
     {
@@ -118,12 +121,12 @@ loadToOrders" + ExchangeSuffix + @"(orderData);
             return;
 
         using var channel = CreateRabbitMqChannel();
-        var consumer = new EventingBasicConsumer(channel);
+        var consumer = new AsyncEventingBasicConsumer(channel);
 
         foreach (string definedExchangeAndQueue in _definedExchangesAndQueues)
         {
-            consumer.Model.ExchangeDelete(definedExchangeAndQueue);
-            consumer.Model.QueueDelete(definedExchangeAndQueue);
+            consumer.Channel.ExchangeDeleteAsync(definedExchangeAndQueue).GetAwaiter().GetResult();
+            consumer.Channel.QueueDeleteAsync(definedExchangeAndQueue).GetAwaiter().GetResult();
         }
     }
 

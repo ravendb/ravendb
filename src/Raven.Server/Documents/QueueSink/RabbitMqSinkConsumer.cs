@@ -1,26 +1,28 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Threading;
+using System.Threading.Tasks;
 using RabbitMQ.Client;
 
 namespace Raven.Server.Documents.QueueSink;
 
-public class RabbitMqSinkConsumer : DefaultBasicConsumer, IQueueSinkConsumer
+public class RabbitMqSinkConsumer : AsyncDefaultBasicConsumer, IQueueSinkConsumer
 {
-    private readonly IModel _channel;
-    private readonly BlockingCollection<(byte[] Body, IBasicProperties Properties, ulong deliveryTag)> _deliveries = new();
+    private readonly IChannel _channel;
+    private readonly BlockingCollection<(byte[] Body, IReadOnlyBasicProperties Properties, ulong deliveryTag)> _deliveries = new();
 
     private ulong _latestDeliveryTag;
 
-    public RabbitMqSinkConsumer(IModel channel) : base(channel)
+    public RabbitMqSinkConsumer(IChannel channel) : base(channel)
     {
         _channel = channel;
     }
 
-    public override void HandleBasicDeliver(string consumerTag, ulong deliveryTag, bool redelivered, string exchange,
-        string routingKey, IBasicProperties properties, ReadOnlyMemory<byte> body)
+    public override Task HandleBasicDeliverAsync(string consumerTag, ulong deliveryTag, bool redelivered, string exchange, string routingKey, IReadOnlyBasicProperties properties,
+        ReadOnlyMemory<byte> body, CancellationToken cancellationToken = default)
     {
         _deliveries.Add((body.ToArray(), properties, deliveryTag));
+        return Task.CompletedTask;
     }
 
     public byte[] Consume(CancellationToken cancellationToken)
@@ -51,7 +53,7 @@ public class RabbitMqSinkConsumer : DefaultBasicConsumer, IQueueSinkConsumer
     {
         if (_latestDeliveryTag > 0)
         {
-            _channel.BasicAck(_latestDeliveryTag, true);    
+            _channel.BasicAckAsync(_latestDeliveryTag, true).AsTask().GetAwaiter().GetResult();
         }
     }
     

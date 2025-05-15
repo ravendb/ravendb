@@ -42,7 +42,7 @@ public class RavenDB_21659_RabbitMq : RabbitMqEtlTestBase
             using var channel = CreateRabbitMqChannel();
             var consumer = new TestRabbitMqConsumer(channel);
 
-            channel.BasicConsume(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
+            await channel.BasicConsumeAsync(queue: $"Users{ExchangeSuffix}", autoAck: true, consumer: consumer);
 
             var ea = consumer.Consume();
 

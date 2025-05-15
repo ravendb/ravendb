@@ -54,15 +54,15 @@ public abstract class RabbitMqQueueSinkTestBase : QueueSinkTestBase
         return config;
     }
 
-    protected IModel CreateRabbitMqProducer(params string[] queuesToDeclare)
+    protected IChannel CreateRabbitMqProducer(params string[] queuesToDeclare)
     {
         var connectionFactory = new ConnectionFactory() { Uri = new Uri(RabbitMqConnectionString.Instance.VerifiedUrl.Value) };
-        var connection = connectionFactory.CreateConnection();
-        var producer = connection.CreateModel();
+        var connection = connectionFactory.CreateConnectionAsync().GetAwaiter().GetResult();
+        var producer = connection.CreateChannelAsync().GetAwaiter().GetResult();
 
         foreach (string queue in queuesToDeclare)
         {
-            producer.QueueDeclare(queue, exclusive: false);
+            producer.QueueDeclareAsync(queue, exclusive: false).GetAwaiter().GetResult();
             _definedQueues.Add(queue);
         }
 
@@ -75,11 +75,11 @@ public abstract class RabbitMqQueueSinkTestBase : QueueSinkTestBase
             return;
 
         using var channel = CreateRabbitMqProducer();
-        var consumer = new EventingBasicConsumer(channel);
+        var consumer = new AsyncEventingBasicConsumer(channel);
 
         foreach (string definedExchangeAndQueue in _definedQueues)
         {
-            consumer.Model.QueueDelete(definedExchangeAndQueue);
+            consumer.Channel.QueueDeleteAsync(definedExchangeAndQueue).GetAwaiter().GetResult();
         }
     }
 

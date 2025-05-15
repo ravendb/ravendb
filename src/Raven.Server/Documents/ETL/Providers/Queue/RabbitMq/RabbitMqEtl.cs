@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using CloudNative.CloudEvents;
 using CloudNative.CloudEvents.Amqp;
 using RabbitMQ.Client;
@@ -35,13 +36,19 @@ public sealed class RabbitMqEtl : QueueEtl<RabbitMqItem>
 
     protected override int PublishMessages(List<QueueWithItems<RabbitMqItem>> itemsPerExchange, BlittableJsonEventBinaryFormatter formatter, out List<string> idsToDelete)
     {
+        var result = PublishMessagesAsync(itemsPerExchange, formatter).GetAwaiter().GetResult();
+        idsToDelete = result.IdsToDelete;
+        return result.Count;
+    }
+
+    private async Task<(int Count, List<string> IdsToDelete)> PublishMessagesAsync(List<QueueWithItems<RabbitMqItem>> itemsPerExchange, BlittableJsonEventBinaryFormatter formatter)
+    {
         if (itemsPerExchange.Count == 0)
         {
-            idsToDelete = null;
-            return 0;
+            return (0, null);
         }
 
-        idsToDelete = new List<string>();
+        var idsToDelete = new List<string>();
 
         int count = 0;
 
@@ -51,7 +58,7 @@ public sealed class RabbitMqEtl : QueueEtl<RabbitMqItem>
         }
 
         if (Configuration.SkipAutomaticQueueDeclaration == false)
-            DeclareDefaultExchangesQueuesAndBindings(itemsPerExchange);
+            await DeclareDefaultExchangesQueuesAndBindingsAsync(itemsPerExchange);
 
         // withing a single transaction we can publish messages to the same exchange
 
@@ -59,17 +66,17 @@ public sealed class RabbitMqEtl : QueueEtl<RabbitMqItem>
         {
             var exchangeName = exchange.Name;
 
-            using var producer = _connection.CreateModel();
+            using var producer = await _connection.CreateChannelAsync();
 
-            producer.TxSelect();
+            await producer.TxSelectAsync();
 
-            var batch = producer.CreateBasicPublishBatch();
+            var batch = new List<Task>();
 
             foreach (var queueItem in exchange.Items)
             {
                 CancellationToken.ThrowIfCancellationRequested();
 
-                var properties = producer.CreateBasicProperties();
+                var properties = new BasicProperties();
 
                 properties.Headers = new Dictionary<string, object>();
 
@@ -88,24 +95,24 @@ public sealed class RabbitMqEtl : QueueEtl<RabbitMqItem>
                     }
                 }
 
-                batch.Add(exchangeName ?? DefaultExchange, queueItem.RoutingKey ?? DefaultRoutingKey, true, properties, new ReadOnlyMemory<byte>((byte[])rabbitMqMessage.Body));
+                batch.Add(producer.BasicPublishAsync(exchangeName ?? DefaultExchange, queueItem.RoutingKey ?? DefaultRoutingKey, true, properties, new ReadOnlyMemory<byte>((byte[])rabbitMqMessage.Body)).AsTask());
                 count++;
 
                 if (exchange.DeleteProcessedDocuments)
                     idsToDelete.Add(queueItem.DocumentId);
             }
-
-            batch.Publish();
+            
+            await Task.WhenAll(batch.ToArray());
             
             try
             {
-                producer.TxCommit();
+                await producer.TxCommitAsync();
             }
             catch (Exception ex)
             {
                 try
                 {
-                    producer.TxRollback();
+                    await producer.TxRollbackAsync();
                 }
                 catch (Exception e)
                 {
@@ -116,7 +123,7 @@ public sealed class RabbitMqEtl : QueueEtl<RabbitMqItem>
             }
         }
 
-        return count;
+        return (count, idsToDelete);
     }
 
     protected override void OnProcessStopped()
@@ -125,9 +132,9 @@ public sealed class RabbitMqEtl : QueueEtl<RabbitMqItem>
         _connection = null;
     }
 
-    private void DeclareDefaultExchangesQueuesAndBindings(List<QueueWithItems<RabbitMqItem>> itemsPerExchange)
+    private async Task DeclareDefaultExchangesQueuesAndBindingsAsync(List<QueueWithItems<RabbitMqItem>> itemsPerExchange)
     {
-        using var rabbitMqModel = _connection.CreateModel();
+        using var rabbitMqModel = await _connection.CreateChannelAsync();
 
         foreach (var item in itemsPerExchange)
         {
@@ -142,7 +149,7 @@ public sealed class RabbitMqEtl : QueueEtl<RabbitMqItem>
                     {
                         if (_alreadyCreatedQueues.Contains(message.RoutingKey) == false)
                         {
-                            rabbitMqModel.QueueDeclare(message.RoutingKey, true, false, false, null);
+                            await rabbitMqModel.QueueDeclareAsync(message.RoutingKey, true, false, false, null);
                             _alreadyCreatedQueues.Add(message.RoutingKey);
                         }
                     }
@@ -152,9 +159,9 @@ public sealed class RabbitMqEtl : QueueEtl<RabbitMqItem>
                     // in default configuration we create the exchange with Fanout types
                     // it means that routing keys will be ignored
 
-                    rabbitMqModel.ExchangeDeclare(exchangeName, ExchangeType.Fanout, true, false, null); 
-                    rabbitMqModel.QueueDeclare(exchangeName, true, false, false, null);
-                    rabbitMqModel.QueueBind(exchangeName, exchangeName, DefaultRoutingKey);
+                    await rabbitMqModel.ExchangeDeclareAsync(exchangeName, ExchangeType.Fanout, true, false, null); 
+                    await rabbitMqModel.QueueDeclareAsync(exchangeName, true, false, false, null);
+                    await rabbitMqModel.QueueBindAsync(exchangeName, exchangeName, DefaultRoutingKey);
 
                     _alreadyCreatedExchanges.Add(exchangeName);
                     _alreadyCreatedQueues.Add(exchangeName);

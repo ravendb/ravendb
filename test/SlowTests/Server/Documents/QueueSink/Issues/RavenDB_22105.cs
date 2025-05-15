@@ -35,8 +35,7 @@ public class RavenDB_22105 : RabbitMqQueueSinkTestBase
 
         var producer = CreateRabbitMqProducer(UsersQueueName);
 
-        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
-            body: new ReadOnlyMemory<byte>(userBytes1));
+        await producer.BasicPublishAsync(exchange: "", routingKey: UsersQueueName, body: new ReadOnlyMemory<byte>(userBytes1));
 
         var config = SetupRabbitMqQueueSink(store, "this['@metadata']['@collection'] = 'Users'; put(this.Id, this)",
             new List<string>() { UsersQueueName });
@@ -78,8 +77,7 @@ public class RavenDB_22105 : RabbitMqQueueSinkTestBase
 
         var user2 = new User { Id = "users/2", FirstName = "Jane", LastName = "Smith" };
         byte[] userBytes2 = Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(user2));
-        producer.BasicPublish(exchange: "", routingKey: UsersQueueName, basicProperties: null,
-            body: new ReadOnlyMemory<byte>(userBytes2));
+        await producer.BasicPublishAsync(exchange: "", routingKey: UsersQueueName, body: new ReadOnlyMemory<byte>(userBytes2));
 
         var etlDone2 = WaitForQueueSinkBatch(store, (n, statistics) => statistics.ConsumeSuccesses >= 1);
 
