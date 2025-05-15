@@ -38,7 +38,13 @@ public unsafe struct NativeList<T>
 
     public ref T this[int index]
     {
-        get => ref Unsafe.AsRef<T>((T*)_storage.Ptr + index);
+        get
+        {
+            if (index < 0 || index >= Count)
+                throw new ArgumentOutOfRangeException(nameof(index));
+            
+            return ref Unsafe.AsRef<T>((T*)_storage.Ptr + index);
+        }
     }
 
     public bool TryAdd(in T l)

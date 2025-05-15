@@ -669,8 +669,12 @@ namespace Corax.Indexing
                     RecordAndPrepareDocumentsIdsForDeletion(containerId, out var setsAreDisjoint, out var isSingleDocument);
                     entryId = isSingleDocument ? _entriesToDelete[0] : Constants.IndexSearcher.InvalidId;                        
                     ProcessCurrentDeletes();
-                    
-                    Debug.Assert(setsAreDisjoint, "The set scheduled for deletion shares common elements with the posting list. This should not be possible here.");
+
+                    if (setsAreDisjoint == false)
+                    {
+                        throw new InvalidOperationException("The set scheduled for deletion shares common elements with the posting list. This should not be possible here.");
+                    }
+   
                     return isSingleDocument;
                 }
                 entryId = Constants.IndexSearcher.InvalidId;
