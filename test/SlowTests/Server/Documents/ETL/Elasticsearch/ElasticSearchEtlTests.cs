@@ -222,7 +222,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 await client.Indices.RefreshAsync(OrderLinesIndexName);
 
                 var orderResponse = await client.SearchAsync<object>(d => d
-                    .Index(OrdersIndexName)
+                    .Indices(OrdersIndexName)
                     .Query(q => q
                         .Term(p => p
                             .Field("Id")
@@ -231,7 +231,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 );
 
                 var orderLineResponse = await client.SearchAsync<object>(d => d
-                    .Index(OrderLinesIndexName)
+                    .Indices(OrderLinesIndexName)
                     .Query(q => q
                         .Term(p => p
                             .Field("OrderId")
@@ -352,7 +352,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 await client.Indices.RefreshAsync(OrdersIndexName);
 
                 var orderResponse = await client.SearchAsync<object>(d => d
-                    .Index(OrdersIndexName)
+                    .Indices(OrdersIndexName)
                     .Query(q => q
                         .Term(p => p
                             .Field("Id")
@@ -389,7 +389,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 await client.Indices.RefreshAsync(OrdersIndexName);
 
                 var orderResponse1 = await client.SearchAsync<object>(d => d
-                    .Index(OrdersIndexName)
+                    .Indices(OrdersIndexName)
                     .Query(q => q
                         .Term(p => p
                             .Field("Id")
@@ -431,7 +431,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 await client.Indices.RefreshAsync(UsersIndexName);
 
                 var userResponse1 = await client.SearchAsync<object>(d => d
-                    .Index(UsersIndexName)
+                    .Indices(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
                             .Field("UserId")
@@ -448,7 +448,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 await client.Indices.RefreshAsync(UsersIndexName);
 
                 var userResponse2 = await client.SearchAsync<object>(d => d
-                    .Index(UsersIndexName)
+                    .Indices(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
                             .Field("UserId")
@@ -479,7 +479,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 await client.Indices.RefreshAsync(UsersIndexName);
 
                 var userResponse3 = await client.SearchAsync<object>(d => d
-                    .Index(UsersIndexName)
+                    .Indices(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
                             .Field("UserId")
@@ -495,7 +495,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 await client.Indices.RefreshAsync(UsersIndexName);
 
                 var userResponse4 = await client.SearchAsync<object>(d => d
-                    .Index(UsersIndexName)
+                    .Indices(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
                             .Field("UserId")
@@ -534,7 +534,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
 
                 var userResponse = await client.SearchAsync<object>(d => d
-                    .Index(UsersIndexName)
+                    .Indices(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
                             .Field("UserId")
@@ -569,7 +569,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
 
                 var userResponse = await client.SearchAsync<object>(d => d
-                    .Index(UsersIndexName)
+                    .Indices(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
                             .Field("UserId")
@@ -591,7 +591,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
 
                 userResponse = await client.SearchAsync<object>(d => d
-                    .Index("users")
+                    .Indices("users")
                     .Query(q => q
                         .Term(p => p
                             .Field("UserId")
@@ -714,7 +714,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
                 await AssertEtlDoneAsync(etlDone, TimeSpan.FromMinutes(1), src.Database, config);
 
                 var userResponse1 = await client.SearchAsync<object>(d => d
-                    .Index(UsersIndexName)
+                    .Indices(UsersIndexName)
                     .Query(q => q
                         .Term(p => p
                             .Field("UserId")
