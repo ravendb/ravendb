@@ -666,11 +666,13 @@ namespace Corax.Indexing
                     // note that the containerId may be a single value or many(!), if it is many items
                     // we'll delete them, but treat this as a _new_ entry, not an update to an existing
                     // one
-                    RecordAndPrepareDocumentsIdsForDeletion(containerId, out var setsAreDisjoint, out var isSingleDocument);
-                    entryId = isSingleDocument ? _entriesToDelete[0] : Constants.IndexSearcher.InvalidId;                        
-                    ProcessCurrentDeletes();
+                    RecordAndPrepareDocumentsIdsForDeletion(containerId, out var setsAreDisjoint, out var isSingleDocument, out var singleDocumentEntryId);
+                    entryId = isSingleDocument ? singleDocumentEntryId : Constants.IndexSearcher.InvalidId;
                     
-                    Debug.Assert(setsAreDisjoint, "The set scheduled for deletion shares common elements with the posting list. This should not be possible here.");
+                    Debug.Assert(isSingleDocument || setsAreDisjoint, $"A single document can be deleted twice (delete + update), however if it's not a single document, the sets are supposed to be disjoint.");
+
+                    
+                    ProcessCurrentDeletes();
                     return isSingleDocument;
                 }
                 entryId = Constants.IndexSearcher.InvalidId;
@@ -699,7 +701,7 @@ namespace Corax.Indexing
                     if (currentKey.Decoded().StartsWith(prefixSlice) == false)
                         break;
 
-                    RecordAndPrepareDocumentsIdsForDeletion(postingListId, out bool setsAreDisjoint, out _);
+                    RecordAndPrepareDocumentsIdsForDeletion(postingListId, out bool setsAreDisjoint, out _, out _);
                     ProcessCurrentDeletes();
                     requiresFlushingBatch = setsAreDisjoint == false;
                 }
@@ -789,7 +791,7 @@ namespace Corax.Indexing
                     return;
             }
 
-            RecordAndPrepareDocumentsIdsForDeletion(idInTree, out var setsAreDisjoint, out _);
+            RecordAndPrepareDocumentsIdsForDeletion(idInTree, out var setsAreDisjoint, out _, out _);
             ProcessCurrentDeletes();
             
             if (setsAreDisjoint == false)
@@ -805,7 +807,7 @@ namespace Corax.Indexing
         /// <param name="idInTree">With frequencies and container type.</param>
         /// <param name="setsAreDisjoint">Intersection between PostingList and _deletedEntries. We may use it as indicator for flushing batch.</param>
         [SkipLocalsInit]
-        private void RecordAndPrepareDocumentsIdsForDeletion(long postingListId, out bool setsAreDisjoint, out bool isSingleDocument)
+        private void RecordAndPrepareDocumentsIdsForDeletion(long postingListId, out bool setsAreDisjoint, out bool isSingleDocument, out long singleDocumentEntryId)
         {
             Debug.Assert(_entriesToDelete.Count == 0);
             
@@ -815,22 +817,23 @@ namespace Corax.Indexing
 
             if ((postingListId & (long)TermIdMask.EnsureIsSingleMask) == (long)TermIdMask.Single)
             {
-                var singleEntryId = containerId;
-                Debug.Assert(singleEntryId > 0);
+                singleDocumentEntryId = containerId;
+                Debug.Assert(singleDocumentEntryId > 0);
                 var isNewDocument = _deletedEntries.Add(containerId);
                 if (isNewDocument)
-                    _entriesToDelete.Add(singleEntryId);
+                    _entriesToDelete.Add(singleDocumentEntryId);
                 setsAreDisjoint &= isNewDocument;
                 _numberOfModifications -= _deletedEntries.Count - countOfAlreadyDeletedEntries;
                 isSingleDocument = true;
                 return;
             }
 
+            
             const int bufferSize = 1024;
             var bufferPtr = stackalloc long[bufferSize];
             var buffer = new Span<long>(bufferPtr, bufferSize);
             isSingleDocument = false;
-            
+            singleDocumentEntryId = Constants.IndexSearcher.InvalidId;
             if ((postingListId & (long)TermIdMask.PostingList) != 0)
             {
                 var setSpace = Container.GetMutable(_transaction.LowLevelTransaction, containerId);
