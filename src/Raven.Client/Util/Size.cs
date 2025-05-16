@@ -4,7 +4,7 @@ namespace Raven.Client.Util
 {
     public sealed class Size
     {
-        const double GB = 1024 * 1024 * 1024;
+        internal const double GB = 1024 * 1024 * 1024;
         const double MB = 1024 * 1024;
         const double KB = 1024;
         

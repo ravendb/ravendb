@@ -81,11 +81,10 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                 }
 
                 var databaseReports = new List<DebugPackageDatabaseReport>();
-                var databasesOverviewInfo = new DatabasesOverviewAnalysisInfo();
-                
+
                 foreach (var databaseName in packageContent.DatabaseNames)
                 {
-                    var generalInfoAnalyzer = new GeneralDatabaseInfoAnalyzer(databaseName, databasesOverviewInfo, errors, issues);
+                    var generalInfoAnalyzer = new GeneralDatabaseInfoAnalyzer(databaseName, errors, issues);
                     var indexesAnalyzer = new IndexesInfoAnalyzer(databaseName, errors, issues);
                     var tombstonesAnalyzer = new TombstonesInfoAnalyzer(databaseName, errors, issues);
                     var tasksAnalyzer = new TasksInfoAnalyzer(databaseName, errors, issues);
@@ -102,6 +101,9 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
    
                     foreach (var analyzer in databaseAnalyzers)
                     {
+                        if (generalInfoAnalyzer.Analyzed && generalInfoAnalyzer.DatabaseInfo.DatabaseRecord is { Disabled: true })
+                            continue;
+                            
                         try
                         {
                             analyzer.Analyze(databaseEntries);
@@ -138,7 +140,6 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                     Server = new ServerAnalysisInfo
                     {
                         BasicServerInfo = basicServerInfoAnalyzer.BasicServerInfo,
-                        DatabasesOverview = databasesOverviewInfo,
                         NetworkInfo = networkAnalyzer.NetworkInfo,
                         CpuUsageInfo = cpuUsageAnalyzer.CpuUsageInfo,
                         MemoryInfo = memoryAnalyzer.MemoryInfo,

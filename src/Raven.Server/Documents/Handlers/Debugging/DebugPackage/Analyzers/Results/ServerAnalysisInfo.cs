@@ -7,8 +7,6 @@ public class ServerAnalysisInfo
     public BasicServerInfo BasicServerInfo { get; set; }
     
     public NetworkAnalysisInfo NetworkInfo { get; set; }
-
-    public DatabasesOverviewAnalysisInfo DatabasesOverview { get; set; }
     
     public CpuUsageAnalysisInfo CpuUsageInfo { get; set; }
     

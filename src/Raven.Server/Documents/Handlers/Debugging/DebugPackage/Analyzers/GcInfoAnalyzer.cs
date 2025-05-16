@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Linq;
+using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Errors;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Memory;
@@ -22,7 +24,23 @@ public class GcInfoAnalyzer : AbstractDebugPackageAnalyzer
         
         if (serverEntries.TryGetValue<MemoryDebugHandler, GcInfoPerGcKind>(x => x.GcInfo(), out _latestGcPerGcKind))
         {
-            _memoryAnalyzer.MemoryInfo.Managed.LastGcInfo = _latestGcPerGcKind.Any;
+            var gcRunInfo = _latestGcPerGcKind.Any;
+
+            _memoryAnalyzer.MemoryInfo.Managed.LastGcInfo = new GcInfoPayload.GcMemoryInfo
+            {
+                Compacted = gcRunInfo.Compacted,
+                Concurrent = gcRunInfo.Concurrent,
+                Index = gcRunInfo.Index,
+                Generation = gcRunInfo.Generation,
+                PauseTimePercentage = gcRunInfo.PauseTimePercentage,
+                TotalHeapSizeAfterBytes = gcRunInfo.HeapSizeBytes,
+                PauseDurationsInMs = gcRunInfo.PauseDurations.Select(x => x.TotalMilliseconds).ToList(),
+                Gen0HeapSize = GenHeapSize(gcRunInfo, 0),
+                Gen1HeapSize = GenHeapSize(gcRunInfo, 1),
+                Gen2HeapSize = GenHeapSize(gcRunInfo, 2),
+                LargeObjectHeapSize = GenHeapSize(gcRunInfo, 3),
+                PinnedObjectHeapSize = GenHeapSize(gcRunInfo, 4),
+            };
         }
         else
         {
@@ -31,6 +49,17 @@ public class GcInfoAnalyzer : AbstractDebugPackageAnalyzer
         }
 
         return true;
+
+        GcInfoPayload.GenerationInfoSize GenHeapSize(GcRunInfo gcRunInfo, int index)
+        {
+            return new GcInfoPayload.GenerationInfoSize
+            {
+                FragmentationBeforeBytes = gcRunInfo.GenerationInfo[index].FragmentationBeforeBytes,
+                FragmentationAfterBytes = gcRunInfo.GenerationInfo[index].FragmentationAfterBytes,
+                SizeBeforeBytes = gcRunInfo.GenerationInfo[index].SizeBeforeBytes,
+                SizeAfterBytes = gcRunInfo.GenerationInfo[index].SizeAfterBytes 
+            };
+        }
     }
 
     protected override void DetectIssues(DebugPackageAnalysisIssues issues)

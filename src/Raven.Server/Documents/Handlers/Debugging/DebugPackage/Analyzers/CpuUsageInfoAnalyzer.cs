@@ -39,6 +39,8 @@ public class CpuUsageInfoAnalyzer : AbstractDebugPackageAnalyzer
                     TotalProcessorTime = cpuStats.TotalProcessorTime,
                     PrivilegedProcessorTime = cpuStats.PrivilegedProcessorTime,
                     UserProcessorTime = cpuStats.UserProcessorTime,
+                    NumberOfCores = _machineAnalyzer.MachineInfo.NumberOfCores,
+                    UtilizedCores = _machineAnalyzer.MachineInfo.UtilizedCores
                 };
 
                 if (_basicServerInfoAnalyzer.BasicServerInfo.UpTime != null && _machineAnalyzer.MachineInfo?.NumberOfCores != null)

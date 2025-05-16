@@ -39,10 +39,19 @@ public class TombstonesInfoAnalyzer(
     {
         foreach (var extendedInfo in TombstonesStateExtended)
         {
-            if (extendedInfo.NumberOfTombstoneLeft > 0)
+            if (extendedInfo.NumberOfTombstoneLeft > 1000)
             {
+                string tombstonesTypes = string.Empty;
+                
+                if (extendedInfo.Types.Documents > 0)
+                    tombstonesTypes += "document ";
+                if (extendedInfo.Types.Counters > 0)
+                    tombstonesTypes += "counter ";
+                if (extendedInfo.Types.TimeSeries > 0)
+                    tombstonesTypes += "time series ";
+                
                 issues.ForDatabase(DatabaseName).Add(new DetectedIssue(
-                    $"Blocking {extendedInfo.Types.ToString()!.ToLower()} tombstones by '{extendedInfo.Identifier}' {extendedInfo.Process}",
+                    $"Blocking {tombstonesTypes}tombstones by '{extendedInfo.Identifier}' {extendedInfo.Process}",
                     $"There are {extendedInfo.NumberOfTombstoneLeft} tombstones that are blocked from being deleted",
                     IssueSeverity.Warning,
                     IssueCategory.Database));

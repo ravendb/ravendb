@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using NuGet.Protocol;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Database;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues;
+using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Database;
 using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.Utils;

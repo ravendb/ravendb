@@ -119,13 +119,13 @@ public class MemoryInfoAnalyzer : AbstractDebugPackageAnalyzer
         var encryptionBuffersInUse = Size.Parse(MemoryInfo.Unmanaged.EncryptionBuffersInUse);
         var encryptionBuffersPool = Size.Parse(MemoryInfo.Unmanaged.EncryptionBuffersPool);
 
-        if (encryptionBuffersPool.SizeInBytes > 0 || encryptionBuffersInUse.SizeInBytes > 0)
+        if (encryptionBuffersPool.SizeInBytes + encryptionBuffersInUse.SizeInBytes > Size.GB)
         {
             issues.ServerIssues.Add(
-                new DetectedIssue("Encryption feature in use",
+                new DetectedIssue("Encryption feature is using more than 1GB of memory",
                     $"Database encryption is enabled - Buffers in use: {encryptionBuffersInUse.HumaneSize}, Pool size: {encryptionBuffersPool.HumaneSize}, " +
                     $"Locked memory: {MemoryInfo.Unmanaged.EncryptionLockedMemory}",
-                    IssueSeverity.Info, IssueCategory.Server));
+                    IssueSeverity.Warning, IssueCategory.Server));
         }
     }
 }

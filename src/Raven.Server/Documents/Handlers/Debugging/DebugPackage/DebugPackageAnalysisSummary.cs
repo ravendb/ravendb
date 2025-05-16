@@ -1,5 +1,12 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server.Dashboard;
+using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues;
 using Sparrow.Json.Parsing;
 
@@ -33,12 +40,83 @@ public class DebugPackageAnalysisSummary : IDynamicJson
 
     private DebugPackageNodeAnalysisSummary GetNodeSummary(DebugPackageNodeReport nodeReport)
     {
+        var databasesOverview = new DatabaseOverviewPayload()
+        {
+            Items = new List<DatabaseInfoItem>()
+        };
+
+        var databaseStorageUsage = new DatabaseStorageUsagePayload()
+        {
+            Items = new List<DatabaseDiskUsage>()
+        };
+        
+        var databasesTasks = new OngoingTasksPayload()
+        {
+            Items = new List<DatabaseOngoingTasksInfoItem>()
+        };
+        
+        foreach (var dbReport in nodeReport.Databases)
+        {
+            var databaseTopology = dbReport.DatabaseInfo.DatabaseRecord.Topology;
+
+            var irrelevant = databaseTopology == null ||
+                             databaseTopology.AllNodes.Contains(nodeReport.NodeTag) == false;
+            
+            var dbInfo = new DatabaseInfoItem
+            {
+                Database = dbReport.DatabaseName,
+                DocumentsCount = dbReport.DatabaseInfo.Stats?.CountOfDocuments ?? -1,
+                IndexesCount = dbReport.IndexesInfo?.Stats.Length ?? -1,
+                ErroredIndexesCount = dbReport.IndexesInfo?.Stats.Count(x => x.State == IndexState.Error) ?? -1,
+                IndexingErrorsCount = dbReport.IndexesInfo?.Errors.Sum(x => x.Errors.Length) ?? -1,
+                Disabled = dbReport.DatabaseInfo.DatabaseRecord.Disabled,
+                AlertsCount = -1,
+                PerformanceHintsCount = -1,
+                ReplicationFactor = dbReport.DatabaseInfo.DatabaseRecord.Topology?.ReplicationFactor ?? -1,
+                Online = true,
+                Irrelevant = irrelevant,
+                OngoingTasksCount = dbReport.TasksInfo?.TaskCounts?.Total ?? -1,
+                BackupInfo = dbReport.TasksInfo?.LastBackupInfo,
+            };
+            
+            databasesOverview.Items.Add(dbInfo);
+
+            if (dbReport.DatabaseInfo.Stats != null)
+            {
+                var dbDiskUsage = new DatabaseDiskUsage
+                {
+                    Database = dbReport.DatabaseName,
+                    Size = dbReport.DatabaseInfo.Stats.SizeOnDisk.SizeInBytes,
+                    TempBuffersSize = dbReport.DatabaseInfo.Stats.TempBuffersSizeOnDisk.SizeInBytes,
+                };
+            
+                databaseStorageUsage.Items.Add(dbDiskUsage);
+            }
+            
+            if (dbReport.TasksInfo is { TaskCounts: not null })
+                databasesTasks.Items.Add(dbReport.TasksInfo.TaskCounts);
+        }
+
         return new DebugPackageNodeAnalysisSummary
         {
-            BasicServerInfo = nodeReport.Server.BasicServerInfo,
-            DatabasesOverview = nodeReport.Server.DatabasesOverview,
-            MachineInfo = nodeReport.Machine,
-            BasicMemoryInfo = nodeReport.Server.MemoryInfo.GetBasicInfo(),
+            ClusterNodeInfo = new ClusterOverviewPayload
+            {
+                NodeState = nodeReport.ClusterNode.NodeStateInfo?.CurrentState ?? RachisState.Passive,
+                NodeTag = nodeReport.NodeTag,
+                NodeType = nodeReport.ClusterNode.NodeStateInfo?.Topology?.ServerRole.ToString(),
+                NodeUrl = "TODO arek",
+                OsName = nodeReport.Machine.OsInfo.FullName,
+                OsType = nodeReport.Machine.OsInfo.Type,
+                ServerVersion = nodeReport.Server.BasicServerInfo.Version,
+                StartTime = nodeReport.Server.BasicServerInfo.StartUpTime ?? DateTime.MinValue,
+                UpTime = nodeReport.Server.BasicServerInfo.UpTime
+            },
+            CpuUsageInfo = nodeReport.Server.CpuUsageInfo,
+            MemoryUsageInfo = nodeReport.Server.MemoryInfo,
+            GcInfo = nodeReport.Server.MemoryInfo.Managed.LastGcInfo,
+            DatabasesOverview = databasesOverview,
+            DatabaseStorageUsage = databaseStorageUsage,
+            DatabasesOngoingTasks = databasesTasks,
             DetectedIssues = nodeReport.DetectedIssues,
             AnalyzeErrors = nodeReport.AnalyzeErrors,
         };

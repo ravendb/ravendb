@@ -74,21 +74,35 @@ public class RavenDB_14548 : RavenTestBase
             Assert.Equal(57, timeWaitConnections.NumberOfConnectionsInState);
             Assert.NotEmpty(establishedConnections.TopConnectionsInState);
 
-            var databasesOverview = report.Server.DatabasesOverview;
+            var nodeSummary = packageReport.GetSummary().SummaryPerNode["A"];
 
-            Assert.Equal(3, databasesOverview.TotalNumberOfDatabases);
+            Assert.NotNull(nodeSummary.ClusterNodeInfo.UpTime);
+            Assert.Equal("A", nodeSummary.ClusterNodeInfo.NodeTag);
+            Assert.Equal(RachisState.Leader, nodeSummary.ClusterNodeInfo.NodeState);
+            Assert.NotNull(nodeSummary.ClusterNodeInfo.StartTime);
+            Assert.NotNull(nodeSummary.ClusterNodeInfo.OsType);
+            Assert.NotNull(nodeSummary.ClusterNodeInfo.ServerVersion);
+            
+            var databasesOverview = nodeSummary.DatabasesOverview;
 
-            Assert.Contains("aaa", databasesOverview.DatabaseNames);
-            Assert.Contains("DemoUser-8d208a62-2252-4bdb-84ec-acb5daee25c2", databasesOverview.DatabaseNames);
-            Assert.Contains("DemoUser-d25cbd4f-6b1c-4828-a868-25cf81bd783a", databasesOverview.DatabaseNames);
+            Assert.Equal(3, databasesOverview.Items.Count);
 
-            Assert.True(databasesOverview.TotalNumberOfDocuments > 0);
-            Assert.True(databasesOverview.TotalNumberOfIndexes > 0);
-            Assert.True(databasesOverview.TotalNumberOfAttachments > 0);
-            Assert.True(databasesOverview.TotalNumberOfRevisions > 0);
-            Assert.True(databasesOverview.TotalNumberOfCounterEntries > 0);
-            Assert.True(databasesOverview.TotalNumberOfTimeSeriesSegments > 0);
+            var databaseNames = databasesOverview.Items.Select(x => x.Database).ToList();
+            
+            Assert.Contains("aaa", databaseNames);
+            Assert.Contains("DemoUser-8d208a62-2252-4bdb-84ec-acb5daee25c2", databaseNames);
+            Assert.Contains("DemoUser-d25cbd4f-6b1c-4828-a868-25cf81bd783a", databaseNames);
 
+            foreach (DatabaseInfoItem dbInfo in databasesOverview.Items)
+            {
+                Assert.True(dbInfo.DocumentsCount > 0);
+                Assert.True(dbInfo.IndexesCount >= 0);
+                Assert.Equal(0, dbInfo.OngoingTasksCount);
+                Assert.Null(dbInfo.BackupInfo);
+                Assert.False(dbInfo.Disabled);
+                Assert.True(dbInfo.Online);
+            }
+            
             var memoryInfo = report.Server.MemoryInfo;
 
             Assert.Equal("293.9 MBytes", memoryInfo.AvailableMemory);
@@ -239,55 +253,47 @@ public class RavenDB_14548 : RavenTestBase
                     var nodeSummary = item.Value;
                     var nodeTag = item.Key;
 
-                    Assert.NotNull(nodeSummary.BasicServerInfo);
-                    Assert.Equal(nodeTag, nodeSummary.BasicServerInfo.NodeTag);
-                    Assert.Equal("6.2.5", nodeSummary.BasicServerInfo.Version);
-                    Assert.NotNull(nodeSummary.BasicServerInfo.ServerId);
-                    Assert.NotNull(nodeSummary.BasicServerInfo.StartUpTime);
-                    Assert.NotNull(nodeSummary.BasicServerInfo.UpTime);
+                    Assert.NotNull(nodeSummary.ClusterNodeInfo);
+                    Assert.Equal(nodeTag, nodeSummary.ClusterNodeInfo.NodeTag);
+                    Assert.Equal("6.2.5", nodeSummary.ClusterNodeInfo.ServerVersion);
+                    Assert.NotNull(nodeSummary.ClusterNodeInfo.UpTime);
+                    Assert.NotNull(nodeSummary.ClusterNodeInfo.StartTime);
+                    Assert.NotNull(nodeSummary.ClusterNodeInfo.UpTime);
 
                     Assert.NotNull(nodeSummary.DatabasesOverview);
 
+                    var databaseNames = nodeSummary.DatabasesOverview.Items.Select(x => x.Database).ToList();
                     if (nodeTag == "A")
                     {
-                        Assert.Equal(2, nodeSummary.DatabasesOverview.TotalNumberOfDatabases);
-                        Assert.Contains("Northwind", nodeSummary.DatabasesOverview.DatabaseNames);
-                        Assert.Contains("EastRain", nodeSummary.DatabasesOverview.DatabaseNames);
+                        Assert.Equal(2, nodeSummary.DatabasesOverview.Items.Count);
+                        Assert.Contains("Northwind", databaseNames);
+                        Assert.Contains("EastRain", databaseNames);
                     }
                     else
                     {
                         Debug.Assert(nodeTag == "B", "Unexpected node tag");
 
-                        Assert.Equal(2, nodeSummary.DatabasesOverview.TotalNumberOfDatabases);
-                        Assert.Contains("Northwind", nodeSummary.DatabasesOverview.DatabaseNames);
-                        Assert.Contains("WestCloud", nodeSummary.DatabasesOverview.DatabaseNames);
+                        Assert.Equal(2, nodeSummary.DatabasesOverview.Items.Count);
+                        Assert.Contains("Northwind", databaseNames);
+                        Assert.Contains("WestCloud", databaseNames);
                     }
 
-                    Assert.True(nodeSummary.DatabasesOverview.TotalNumberOfDocuments > 0);
-                    Assert.True(nodeSummary.DatabasesOverview.TotalNumberOfIndexes > 0);
-                    Assert.True(nodeSummary.DatabasesOverview.TotalNumberOfAttachments > 0);
-                    Assert.True(nodeSummary.DatabasesOverview.TotalNumberOfRevisions > 0);
-                    Assert.True(nodeSummary.DatabasesOverview.TotalNumberOfCounterEntries > 0);
-                    Assert.True(nodeSummary.DatabasesOverview.TotalNumberOfTimeSeriesSegments > 0);
+                    Assert.NotNull(nodeSummary.ClusterNodeInfo);
+                    Assert.Equal(2, nodeSummary.CpuUsageInfo.NumberOfCores);
+                    Assert.Equal(2, nodeSummary.CpuUsageInfo.UtilizedCores);
+                    Assert.NotNull(nodeSummary.MemoryUsageInfo.PhysicalMemory);
+                    Assert.NotNull(nodeSummary.MemoryUsageInfo.AvailableMemory);
+                    Assert.NotNull(nodeSummary.ClusterNodeInfo.OsName);
+                    Assert.Equal(OSType.Linux, nodeSummary.ClusterNodeInfo.OsType);
+                    Assert.Contains("Ubuntu", nodeSummary.ClusterNodeInfo.OsName);
 
-                    Assert.NotNull(nodeSummary.MachineInfo);
-                    Assert.Equal(2, nodeSummary.MachineInfo.NumberOfCores);
-                    Assert.Equal(2, nodeSummary.MachineInfo.UtilizedCores);
-                    Assert.NotNull(nodeSummary.MachineInfo.InstalledMemoryInGb);
-                    Assert.NotNull(nodeSummary.MachineInfo.UsableMemoryInGb);
-                    Assert.Equal(nodeSummary.MachineInfo.InstalledMemoryInGb.Value, 1.88, 0.1);
-                    Assert.Equal(nodeSummary.MachineInfo.UsableMemoryInGb.Value, 1.88, 0.1);
-                    Assert.NotNull(nodeSummary.MachineInfo.OsInfo);
-                    Assert.Equal(OSType.Linux, nodeSummary.MachineInfo.OsInfo.Type);
-                    Assert.Contains("Ubuntu", nodeSummary.MachineInfo.OsInfo.FullName);
-
-                    Assert.NotNull(nodeSummary.BasicMemoryInfo);
-                    Assert.NotNull(nodeSummary.BasicMemoryInfo.AvailableMemory);
-                    Assert.NotNull(nodeSummary.BasicMemoryInfo.AvailableMemoryForProcessing);
-                    Assert.NotNull(nodeSummary.BasicMemoryInfo.PhysicalMemory);
-                    Assert.NotNull(nodeSummary.BasicMemoryInfo.WorkingSet);
-                    Assert.NotNull(nodeSummary.BasicMemoryInfo.ManagedAllocations);
-                    Assert.NotNull(nodeSummary.BasicMemoryInfo.UnmanagedAllocations);
+                    Assert.NotNull(nodeSummary.MemoryUsageInfo);
+                    Assert.NotNull(nodeSummary.MemoryUsageInfo.AvailableMemory);
+                    Assert.NotNull(nodeSummary.MemoryUsageInfo.AvailableMemoryForProcessing);
+                    Assert.NotNull(nodeSummary.MemoryUsageInfo.PhysicalMemory);
+                    Assert.NotNull(nodeSummary.MemoryUsageInfo.WorkingSet);
+                    Assert.NotNull(nodeSummary.MemoryUsageInfo.Managed);
+                    Assert.NotNull(nodeSummary.MemoryUsageInfo.Unmanaged);
 
                     Assert.NotNull(nodeSummary.DetectedIssues);
 
@@ -310,6 +316,23 @@ public class RavenDB_14548 : RavenTestBase
 
                     Assert.NotNull(nodeSummary.AnalyzeErrors);
                     Assert.Equal(0, nodeSummary.AnalyzeErrors.Errors.Count);
+
+                    foreach (var dbInfo in nodeSummary.DatabasesOverview.Items)
+                    {
+                        Assert.True(dbInfo.DocumentsCount > 0);
+                        Assert.True(dbInfo.IndexesCount > 0);
+                        Assert.True(dbInfo.OngoingTasksCount > 0);
+                        Assert.True(dbInfo.AlertsCount == -1);
+                        Assert.True(dbInfo.PerformanceHintsCount == -1);
+                        Assert.True(dbInfo.ErroredIndexesCount >= 0);
+                        Assert.True(dbInfo.IndexingErrorsCount >= 0);
+                        Assert.True(dbInfo.ReplicationFactor >= 1);
+                        Assert.NotNull(dbInfo.Database);
+                        Assert.NotEmpty(dbInfo.Database);
+                        Assert.False(dbInfo.Disabled);
+                        Assert.True(dbInfo.Online);
+                        Assert.NotNull(dbInfo.BackupInfo);
+                    }
                 }
 
                 Assert.NotNull(summaryResult.ClusterWideIssues);
@@ -481,7 +504,6 @@ public class RavenDB_14548 : RavenTestBase
 
                 Assert.NotNull(memoryInfo.Managed);
                 Assert.NotNull(memoryInfo.Managed.ManagedAllocations);
-                Assert.NotNull(memoryInfo.Managed.LastGcInfo);
 
                 Assert.NotNull(memoryInfo.Unmanaged);
                 Assert.NotNull(memoryInfo.Unmanaged.UnmanagedAllocations);
@@ -499,61 +521,6 @@ public class RavenDB_14548 : RavenTestBase
                 Assert.NotNull(memoryInfo.AvailableMemoryForProcessing);
                 Assert.NotNull(memoryInfo.Managed.ManagedAllocations);
                 Assert.NotNull(memoryInfo.Unmanaged.UnmanagedAllocations);
-
-                var gcRunInfo = memoryInfo.Managed.LastGcInfo;
-                Assert.NotNull(gcRunInfo);
-
-                Assert.True(gcRunInfo.FragmentedBytes >= 0);
-                Assert.True(gcRunInfo.HeapSizeBytes > 0);
-                Assert.True(gcRunInfo.HighMemoryLoadThresholdBytes >= 0);
-                Assert.True(gcRunInfo.MemoryLoadBytes >= 0);
-                Assert.True(gcRunInfo.PromotedBytes >= 0);
-                Assert.True(gcRunInfo.TotalAvailableMemoryBytes >= 0);
-                Assert.True(gcRunInfo.TotalCommittedBytes > 0);
-
-                Assert.NotNull(gcRunInfo.FragmentedHumane);
-                Assert.NotNull(gcRunInfo.HeapSizeHumane);
-                Assert.NotNull(gcRunInfo.HighMemoryLoadThresholdHumane);
-                Assert.NotNull(gcRunInfo.MemoryLoadHumane);
-                Assert.NotNull(gcRunInfo.PromotedHumane);
-                Assert.NotNull(gcRunInfo.TotalAvailableMemoryHumane);
-                Assert.NotNull(gcRunInfo.TotalCommittedHumane);
-
-                var humanReadableSizeProperties = new[]
-                {
-                    gcRunInfo.FragmentedHumane, gcRunInfo.HeapSizeHumane, gcRunInfo.HighMemoryLoadThresholdHumane, gcRunInfo.MemoryLoadHumane,
-                    gcRunInfo.PromotedHumane, gcRunInfo.TotalAvailableMemoryHumane, gcRunInfo.TotalCommittedHumane
-                };
-
-                foreach (var sizeStr in humanReadableSizeProperties.Where(s => !string.IsNullOrEmpty(s)))
-                {
-                    Assert.True(
-                        sizeStr.Contains("Bytes") ||
-                        sizeStr.Contains("KBytes") ||
-                        sizeStr.Contains("MBytes") ||
-                        sizeStr.Contains("GBytes"),
-                        $"Size string '{sizeStr}' does not contain expected unit format");
-                }
-
-                Assert.True(gcRunInfo.PauseTimePercentage >= 0 && gcRunInfo.PauseTimePercentage <= 100);
-
-                Assert.NotNull(gcRunInfo.PauseDurations);
-                Assert.Equal(2, gcRunInfo.PauseDurations.Count);
-
-                foreach (var pauseDuration in gcRunInfo.PauseDurations)
-                {
-                    Assert.True(pauseDuration.TotalMilliseconds >= 0);
-                }
-
-                Assert.NotNull(gcRunInfo.GenerationInfo);
-                foreach (var genInfo in gcRunInfo.GenerationInfo)
-                {
-                    Assert.NotNull(genInfo);
-                    Assert.True(genInfo.SizeAfterBytes >= 0);
-                    Assert.True(genInfo.SizeBeforeBytes >= 0);
-                    Assert.NotNull(genInfo.SizeAfterHumane);
-                    Assert.NotNull(genInfo.SizeBeforeHumane);
-                }
             }
             finally
             {

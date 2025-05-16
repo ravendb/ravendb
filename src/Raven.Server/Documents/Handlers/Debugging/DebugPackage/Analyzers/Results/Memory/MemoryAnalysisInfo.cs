@@ -13,19 +13,6 @@ public class MemoryAnalysisInfo : IDynamicJson
     public string MemoryMapped { get; set; }
     public bool IsHighDirty { get; set; }
     public string DirtyMemory { get; set; }
-    
-    public MemoryAnalysisBasicInfo GetBasicInfo()
-    {
-        return new MemoryAnalysisBasicInfo
-        {
-            PhysicalMemory = PhysicalMemory,
-            WorkingSet = WorkingSet,
-            ManagedAllocations = Managed.ManagedAllocations,
-            UnmanagedAllocations = Unmanaged.UnmanagedAllocations,
-            AvailableMemory = AvailableMemory,
-            AvailableMemoryForProcessing = AvailableMemoryForProcessing,
-        };
-    }
 
     public DynamicJsonValue ToJson()
     {

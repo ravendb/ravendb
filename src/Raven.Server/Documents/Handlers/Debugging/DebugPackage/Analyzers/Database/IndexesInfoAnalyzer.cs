@@ -122,12 +122,12 @@ public class IndexesInfoAnalyzer(
                     idleIndexes.Add(stats.Name);
                 }
 
-                if (stats.ReferencedCollections?.Count > 1)
+                if (stats.ReferencedCollections?.Count >= 2)
                 {
                     issues.ForDatabase(DatabaseName).Add(new DetectedIssue(
                         $"Multi LoadDocument() usage in '{stats.Name}' index",
                         $"Index '{stats.Name}' references {stats.ReferencedCollections.Count} collections which can impact performance",
-                        stats.ReferencedCollections.Count > 3 ? IssueSeverity.Warning : IssueSeverity.Info,
+                        stats.ReferencedCollections.Count >= 4 ? IssueSeverity.Warning : IssueSeverity.Info,
                         IssueCategory.Indexes));
                 }
 

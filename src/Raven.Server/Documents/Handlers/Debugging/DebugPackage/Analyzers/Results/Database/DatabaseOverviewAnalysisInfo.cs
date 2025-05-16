@@ -2,7 +2,7 @@
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Database;
+namespace Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Database;
 
 public class DatabaseOverviewAnalysisInfo : IDynamicJson
 {
