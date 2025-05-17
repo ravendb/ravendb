@@ -17,6 +17,10 @@ namespace Raven.Server.Smuggler.Migration
         V5,
         [Description("v6.x")]
         V6,
+        [Description("v7.x")]
+        V7,
+        [Description("v8.x")]
+        V8,
         [Description("Greater than current")]
         GreaterThanCurrent
     }
