@@ -180,7 +180,7 @@ public class RavenDB_23464(ITestOutputHelper output) : RavenTestBase(output)
         var ravenException = Assert.Throws<RavenException>(indexDeployment);
         Assert.IsType<NotSupportedException>(ravenException.InnerException);
         Assert.Contains(
-            "Vector fields are supported only by the Corax search engine. This deployment requested 'Lucene' search engine. Read more at https://ravendb.net/l/Y4B762/7.0",
+            "Vector fields are supported only by the Corax search engine. This deployment requested 'Lucene' search engine. Read more at https://ravendb.net/l/Y4B762/",
             ravenException.InnerException.Message);
     }
 

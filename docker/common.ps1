@@ -37,7 +37,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
             return @(
                 "$($repo):ubuntu-latest",
 #                "$($repo):ubuntu-latest-lts",
-                "$($repo):7.0-ubuntu-latest",
+                "$($repo):7.1-ubuntu-latest",
                 "$($repo):$($version)-ubuntu.22.04-x64"
             )
             break;
@@ -46,7 +46,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
             return @(
                 "$($repo):ubuntu-arm32v7-latest",
 #                "$($repo):ubuntu-arm32v7-latest-lts",
-                "$($repo):7.0-ubuntu-arm32v7-latest",
+                "$($repo):7.1-ubuntu-arm32v7-latest",
                 "$($repo):$($version)-ubuntu.22.04-arm32v7"
             )
             break;
@@ -55,7 +55,7 @@ function GetUbuntuImageTags($repo, $version, $arch) {
             return @(
                 "$($repo):ubuntu-arm64v8-latest",
 #                "$($repo):ubuntu-arm64v8-latest-lts",
-                "$($repo):7.0-ubuntu-arm64v8-latest",
+                "$($repo):7.1-ubuntu-arm64v8-latest",
                 "$($repo):$($version)-ubuntu.22.04-arm64v8"
                 )
                 break;
@@ -74,7 +74,7 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
                 "$($repo):windows-1809-latest",
                 "$($repo):$($version)-windows-1809",
 #                "$($repo):windows-1809-latest-lts",
-                "$($repo):7.0-windows-1809-latest"
+                "$($repo):7.1-windows-1809-latest"
             )
             break;
         }
@@ -83,7 +83,7 @@ function GetWindowsImageTags($repo, $version, $WinVer) {
                 "$($repo):windows-ltsc2022-latest",
                 "$($repo):$($version)-windows-ltsc2022",
 #                "$($repo):windows-ltsc2022-latest-lts",
-                "$($repo):7.0-windows-ltsc2022-latest"
+                "$($repo):7.1-windows-ltsc2022-latest"
             )
             break;
         }
@@ -102,7 +102,7 @@ function GetManifestTags {
     return @(
         "${repo}:latest",
 #        "${repo}:latest-lts",
-        "${repo}:7.0-latest"
+        "${repo}:7.1-latest"
     )
 }
 
@@ -112,10 +112,10 @@ function GetImageTagsForManifest {
     )
 
     return @(
-        "${repo}:7.0-ubuntu-latest",
-        "${repo}:7.0-ubuntu-arm32v7-latest",
-        "${repo}:7.0-ubuntu-arm64v8-latest",
-        "${repo}:7.0-windows-1809-latest",
-        "${repo}:7.0-windows-ltsc2022-latest"
+        "${repo}:7.1-ubuntu-latest",
+        "${repo}:7.1-ubuntu-arm32v7-latest",
+        "${repo}:7.1-ubuntu-arm64v8-latest",
+        "${repo}:7.1-windows-1809-latest",
+        "${repo}:7.1-windows-ltsc2022-latest"
     )
 }

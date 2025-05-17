@@ -125,4 +125,4 @@ namespace RavenDBTestDriverFullExample
 ## Contributing
 - Submit an issue - https://github.com/ravendb/ravendb/issues
 - GitHub Discussions - https://github.com/ravendb/ravendb/discussions
-- Contributing rules - https://github.com/ravendb/ravendb/blob/v7.0/CONTRIBUTING.md
+- Contributing rules - https://github.com/ravendb/ravendb/blob/v7.1/CONTRIBUTING.md

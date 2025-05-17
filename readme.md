@@ -56,7 +56,7 @@ Modern ACID NoSQL Database</h1>
 
 
 #### .deb package 🐧
-- Install with `apt`! Manual is here - [.deb installation guide](https://ravendb.net/docs/article-page/7.0/csharp/start/installation/gnu-linux/deb)
+- Install with `apt`! Manual is here - [.deb installation guide](https://ravendb.net/docs/article-page/7.1/csharp/start/installation/gnu-linux/deb)
 
 
 #### More details 🎒💿
@@ -95,7 +95,7 @@ Modern ACID NoSQL Database</h1>
 
 
 ## Contributing & releases 
-- [Latest improvements](https://ravendb.net/docs/article-page/7.0/csharp/start/whats-new), updated weekly.
+- [Latest improvements](https://ravendb.net/docs/article-page/7.1/csharp/start/whats-new), updated weekly.
 - [Contribution guidelines](./CONTRIBUTING.md) for both issues and PRs.
 
 
