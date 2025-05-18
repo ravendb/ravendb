@@ -5,10 +5,14 @@ import FeatureAvailabilitySummaryWrapper, {
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "hooks/useAppUrls";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "hooks/useRavenLink";
 
 export function AiConnectionStringsInfoHub() {
     const { appUrl } = useAppUrls();
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    const aiConnectionStringsDocsLink = useRavenLink({ hash: "EAIKIA" });
 
     return (
         <AboutViewAnchored>
@@ -47,6 +51,11 @@ export function AiConnectionStringsInfoHub() {
                         </li>
                     </ul>
                 </div>
+                <hr />
+                <div className="small-label mb-2">useful links</div>
+                <a href={aiConnectionStringsDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - AI Connection Strings
+                </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper isUnlimited={true} data={defaultFeatureAvailability} />
         </AboutViewAnchored>

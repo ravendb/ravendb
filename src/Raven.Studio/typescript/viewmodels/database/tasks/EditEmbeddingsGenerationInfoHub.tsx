@@ -6,12 +6,17 @@ import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUti
 import { useAppUrls } from "hooks/useAppUrls";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { allAiExternalProviders } from "components/utils/common";
+import { Icon } from "components/common/Icon";
+import { useRavenLink } from "hooks/useRavenLink";
 
 export function EditEmbeddingsGenerationInfoHub() {
     const hasEmbeddingsGeneration = useAppSelector(licenseSelectors.statusValue("HasEmbeddingsGeneration"));
 
     const { appUrl } = useAppUrls();
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
+    const generatingEmbeddingsOverviewDocsLink = useRavenLink({ hash: "H6GDNY" });
+    const embeddingsGenerationTaskDocsLink = useRavenLink({ hash: "MKXRLR" });
     
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
@@ -82,6 +87,15 @@ export function EditEmbeddingsGenerationInfoHub() {
                     Whenever a document in the selected collection is modified, the task is triggered to extract the
                     updated text and regenerate its embeddings.
                 </div>
+                <hr />
+                <div className="small-label mb-2">useful links</div>
+                <a href={generatingEmbeddingsOverviewDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - Generating Embeddings Overview
+                </a>
+                <br />
+                <a href={embeddingsGenerationTaskDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - The Embeddings Generation Task
+                </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
                 isUnlimited={hasEmbeddingsGeneration}
