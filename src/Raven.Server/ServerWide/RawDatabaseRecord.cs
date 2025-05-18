@@ -1546,6 +1546,22 @@ namespace Raven.Server.ServerWide
         
         private Dictionary<string, AiConnectionString> _aiConnectionStrings;
 
+        public AiConnectionString GetAiConnectionString(string name)
+        {
+            if (_materializedRecord != null)
+                return _materializedRecord.AiConnectionStrings.GetValueOrDefault(name);
+            
+            if (_record.TryGet(nameof(DatabaseRecord.AiConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
+            {
+                if (obj.TryGet(name, out BlittableJsonReaderObject bjro))
+                {
+                    return JsonDeserializationCluster.AiConnectionString(bjro);
+                }
+            }
+
+            return null;
+        }
+        
         public Dictionary<string, AiConnectionString> AiConnectionStrings
         {
             get
