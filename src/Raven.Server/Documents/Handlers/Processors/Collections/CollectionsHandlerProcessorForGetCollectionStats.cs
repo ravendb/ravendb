@@ -28,7 +28,14 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
             {
                 [nameof(CollectionStatistics.CountOfDocuments)] = RequestHandler.Database.DocumentsStorage.GetNumberOfDocuments(context),
                 [nameof(CollectionStatistics.CountOfConflicts)] = RequestHandler.Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
-                [nameof(CollectionStatistics.Collections)] = collections
+                [nameof(CollectionStatistics.CountOfRevisionDocuments)] = RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetNumberOfRevisionDocuments(context),
+                [nameof(CollectionStatistics.CountOfTombstones)] = RequestHandler.Database.DocumentsStorage.GetNumberOfTombstones(context),
+                [nameof(CollectionStatistics.CountOfTimeSeriesDeletedRanges)] = RequestHandler.Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context),
+                [nameof(CollectionStatistics.CountOfDocumentsConflicts)] = RequestHandler.Database.DocumentsStorage.ConflictsStorage.GetNumberOfDocumentsConflicts(context),
+                [nameof(CollectionStatistics.CountOfAttachments)] = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(context).AttachmentCount,
+                [nameof(CollectionStatistics.CountOfCounterEntries)] = RequestHandler.Database.DocumentsStorage.CountersStorage.GetNumberOfCounterEntries(context),
+                [nameof(CollectionStatistics.CountOfTimeSeriesSegments)] = RequestHandler.Database.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesSegments(context),
+                [nameof(CollectionStatistics.Collections)] = collections,
             };
 
             foreach (var collection in RequestHandler.Database.DocumentsStorage.GetCollections(context))

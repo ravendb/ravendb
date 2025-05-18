@@ -88,6 +88,14 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
             {
                 stats.CountOfDocuments += result.Result.CountOfDocuments;
                 stats.CountOfConflicts += result.Result.CountOfConflicts;
+                stats.CountOfRevisionDocuments += result.Result.CountOfRevisionDocuments;
+                stats.CountOfTombstones += result.Result.CountOfTombstones;
+                stats.CountOfTimeSeriesDeletedRanges += result.Result.CountOfTimeSeriesDeletedRanges;
+                stats.CountOfDocumentsConflicts += result.Result.CountOfDocumentsConflicts;
+                stats.CountOfAttachments += result.Result.CountOfAttachments;
+                stats.CountOfCounterEntries += result.Result.CountOfCounterEntries;
+                stats.CountOfTimeSeriesSegments += result.Result.CountOfTimeSeriesSegments;
+
                 foreach (var collectionInfo in result.Result.Collections)
                 {
                     if (stats.Collections.ContainsKey(collectionInfo.Key))
@@ -96,6 +104,9 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
                         stats.Collections[collectionInfo.Key].DocumentsSize.SizeInBytes += collectionInfo.Value.DocumentsSize.SizeInBytes;
                         stats.Collections[collectionInfo.Key].RevisionsSize.SizeInBytes += collectionInfo.Value.RevisionsSize.SizeInBytes;
                         stats.Collections[collectionInfo.Key].TombstonesSize.SizeInBytes += collectionInfo.Value.TombstonesSize.SizeInBytes;
+                        stats.Collections[collectionInfo.Key].TimeSeriesDeletedRangesSize.SizeInBytes += collectionInfo.Value.TimeSeriesDeletedRangesSize.SizeInBytes;
+                        stats.Collections[collectionInfo.Key].CounterEntriesSize.SizeInBytes += collectionInfo.Value.CounterEntriesSize.SizeInBytes;
+                        stats.Collections[collectionInfo.Key].TimeSeriesSegmentsSize.SizeInBytes += collectionInfo.Value.TimeSeriesSegmentsSize.SizeInBytes;
                     }
                     else
                     {

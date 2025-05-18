@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
@@ -39,23 +40,50 @@ namespace SlowTests.Sharding.Client.Operations
                     session.Store(new Address() { City = "city1" }, "add/1");
 
                     session.SaveChanges();
+
+                    session.Advanced.Revisions.ForceRevisionCreationFor("users/1");
+                    session.Advanced.Revisions.ForceRevisionCreationFor("com/1");
+
+                    session.Delete("users/3");
+
+                    session.Advanced.Attachments.Store(
+                        "users/1", "hello.txt",
+                        new MemoryStream(Encoding.UTF8.GetBytes("hello")));
+
+                    session.CountersFor("users/1").Increment("likes", 5);
+                    session.CountersFor("com/1").Increment("views", 10);
+
+                    var tsTime = DateTime.UtcNow;
+                    var ts = session.TimeSeriesFor("users/1", "heartrate");
+                    ts.Append(tsTime, 72, "wrist");
+
+                    ts.Delete(tsTime.AddMinutes(-5), tsTime.AddMinutes(-1));
+
+
+                    session.SaveChanges();
                 }
 
                 var collectionStats = store.Maintenance.Send(new GetCollectionStatisticsOperation());
 
                 Assert.Equal(3, collectionStats.Collections.Count);
-                Assert.Equal(6, collectionStats.CountOfDocuments);
+                Assert.Equal(5, collectionStats.CountOfDocuments);
                 Assert.Equal(0, collectionStats.CountOfConflicts);
 
                 var detailedCollectionStats = store.Maintenance.Send(new GetDetailedCollectionStatisticsOperation());
 
                 Assert.Equal(3, detailedCollectionStats.Collections.Count);
-                Assert.Equal(6, detailedCollectionStats.CountOfDocuments);
+                Assert.Equal(5, detailedCollectionStats.CountOfDocuments);
                 Assert.Equal(0, detailedCollectionStats.CountOfConflicts);
-                Assert.Equal(3, detailedCollectionStats.Collections["Users"].CountOfDocuments);
+                Assert.Equal(2, detailedCollectionStats.CountOfRevisionDocuments);
+                Assert.Equal(1, detailedCollectionStats.CountOfTombstones);
+                Assert.Equal(1, detailedCollectionStats.CountOfAttachments);
+                Assert.Equal(2, detailedCollectionStats.CountOfCounterEntries);
+                Assert.Equal(1, detailedCollectionStats.CountOfTimeSeriesSegments);
+                Assert.Equal(1, detailedCollectionStats.CountOfTimeSeriesDeletedRanges);
+                Assert.Equal(0, detailedCollectionStats.CountOfDocumentsConflicts);
+                Assert.Equal(2, detailedCollectionStats.Collections["Users"].CountOfDocuments);
                 Assert.Equal(2, detailedCollectionStats.Collections["Companies"].CountOfDocuments);
                 Assert.Equal(1, detailedCollectionStats.Collections["Addresses"].CountOfDocuments);
-
             }
         }
 

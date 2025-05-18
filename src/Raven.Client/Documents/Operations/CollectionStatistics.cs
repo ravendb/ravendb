@@ -14,6 +14,13 @@ namespace Raven.Client.Documents.Operations
 
         public long CountOfDocuments { get; set; }
         public long CountOfConflicts { get; set; }
+        public long CountOfRevisionDocuments { get; set; }
+        public long CountOfTombstones { get; set; }
+        public long CountOfTimeSeriesDeletedRanges { get; set; }
+        public long CountOfDocumentsConflicts { get; set; }
+        public long CountOfAttachments { get; set; }
+        public long CountOfCounterEntries { get; set; }
+        public long CountOfTimeSeriesSegments { get; set; }
 
         public Dictionary<string, long> Collections { get; set; }
 
@@ -25,6 +32,13 @@ namespace Raven.Client.Documents.Operations
             {
                 [nameof(CollectionStatistics.CountOfDocuments)] = CountOfDocuments,
                 [nameof(CollectionStatistics.CountOfConflicts)] = CountOfConflicts,
+                [nameof(CollectionStatistics.CountOfRevisionDocuments)] = CountOfRevisionDocuments,
+                [nameof(CollectionStatistics.CountOfTombstones)] = CountOfTombstones,
+                [nameof(CollectionStatistics.CountOfTimeSeriesDeletedRanges)] = CountOfTimeSeriesDeletedRanges,
+                [nameof(CollectionStatistics.CountOfDocumentsConflicts)] = CountOfDocumentsConflicts,
+                [nameof(CollectionStatistics.CountOfAttachments)] = CountOfAttachments,
+                [nameof(CollectionStatistics.CountOfCounterEntries)] = CountOfCounterEntries,
+                [nameof(CollectionStatistics.CountOfTimeSeriesSegments)] = CountOfTimeSeriesSegments,
                 [nameof(CollectionStatistics.Collections)] = collections
             };
 
@@ -46,6 +60,13 @@ namespace Raven.Client.Documents.Operations
 
         public long CountOfDocuments { get; set; }
         public long CountOfConflicts { get; set; }
+        public long CountOfRevisionDocuments { get; set; }
+        public long CountOfTombstones { get; set; }
+        public long CountOfTimeSeriesDeletedRanges { get; set; }
+        public long CountOfDocumentsConflicts { get; set; }
+        public long CountOfAttachments { get; set; }
+        public long CountOfCounterEntries { get; set; }
+        public long CountOfTimeSeriesSegments { get; set; }
 
         public Dictionary<string, CollectionDetails> Collections { get; set; }
 
@@ -57,6 +78,13 @@ namespace Raven.Client.Documents.Operations
             {
                 [nameof(CollectionStatistics.CountOfDocuments)] = CountOfDocuments,
                 [nameof(CollectionStatistics.CountOfConflicts)] = CountOfConflicts,
+                [nameof(CollectionStatistics.CountOfRevisionDocuments)] = CountOfRevisionDocuments,
+                [nameof(CollectionStatistics.CountOfTombstones)] = CountOfTombstones,
+                [nameof(CollectionStatistics.CountOfTimeSeriesDeletedRanges)] = CountOfTimeSeriesDeletedRanges,
+                [nameof(CollectionStatistics.CountOfDocumentsConflicts)] = CountOfDocumentsConflicts,
+                [nameof(CollectionStatistics.CountOfAttachments)] = CountOfAttachments,
+                [nameof(CollectionStatistics.CountOfCounterEntries)] = CountOfCounterEntries,
+                [nameof(CollectionStatistics.CountOfTimeSeriesSegments)] = CountOfTimeSeriesSegments,
                 [nameof(CollectionStatistics.Collections)] = collections
             };
 
@@ -78,6 +106,11 @@ namespace Raven.Client.Documents.Operations
         public Size DocumentsSize { get; set; }
         public Size TombstonesSize { get; set; }
         public Size RevisionsSize { get; set; }
+        public Size TimeSeriesDeletedRangesSize { get; set; }
+        public Size DocumentsConflictsSize { get; set; }
+        public Size AttachmentsSize { get; set; }
+        public Size CounterEntriesSize { get; set; }
+        public Size TimeSeriesSegmentsSize { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -104,6 +137,21 @@ namespace Raven.Client.Documents.Operations
                 {
                     [nameof(RevisionsSize.HumaneSize)] = RevisionsSize.HumaneSize,
                     [nameof(RevisionsSize.SizeInBytes)] = RevisionsSize.SizeInBytes
+                },
+                [nameof(TimeSeriesDeletedRangesSize)] = new DynamicJsonValue
+                {
+                    [nameof(TimeSeriesDeletedRangesSize.HumaneSize)] = TimeSeriesDeletedRangesSize.HumaneSize,
+                    [nameof(TimeSeriesDeletedRangesSize.SizeInBytes)] = TimeSeriesDeletedRangesSize.SizeInBytes
+                },
+                [nameof(CounterEntriesSize)] = new DynamicJsonValue
+                {
+                    [nameof(CounterEntriesSize.HumaneSize)] = CounterEntriesSize.HumaneSize,
+                    [nameof(CounterEntriesSize.SizeInBytes)] = CounterEntriesSize.SizeInBytes
+                },
+                [nameof(TimeSeriesSegmentsSize)] = new DynamicJsonValue
+                {
+                    [nameof(TimeSeriesSegmentsSize.HumaneSize)] = TimeSeriesSegmentsSize.HumaneSize,
+                    [nameof(TimeSeriesSegmentsSize.SizeInBytes)] = TimeSeriesSegmentsSize.SizeInBytes
                 }
             };
         }
