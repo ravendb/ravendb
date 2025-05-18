@@ -10,6 +10,7 @@ using System.Net;
 using System.Net.Http;
 using FastTests;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Certificates;
@@ -92,7 +93,11 @@ namespace StressTests.Authentication
                 {
                     Urls = new[] { server.WebUrl },
                     Database = databaseName2,
-                    Certificate = adminCert
+                    Certificate = adminCert,
+                    Conventions =
+                    {
+                        DisposeCertificate = false
+                    }
                 }.Initialize())
                 {
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
@@ -224,7 +229,11 @@ namespace StressTests.Authentication
                 {
                     Urls = new[] { server.WebUrl },
                     Database = databaseName2,
-                    Certificate = adminCert
+                    Certificate = adminCert,
+                    Conventions =
+                    {
+                        DisposeCertificate = false
+                    }
                 }.Initialize())
                 {
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
@@ -349,7 +358,11 @@ namespace StressTests.Authentication
                 {
                     Urls = new[] { server.WebUrl },
                     Database = databaseName2,
-                    Certificate = adminCert
+                    Certificate = adminCert,
+                    Conventions =
+                    {
+                        DisposeCertificate = false
+                    }
                 }.Initialize())
                 {
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
@@ -473,7 +486,11 @@ namespace StressTests.Authentication
                 {
                     Urls = new[] { server.WebUrl },
                     Database = databaseName2,
-                    Certificate = adminCert
+                    Certificate = adminCert,
+                    Conventions =
+                    {
+                        DisposeCertificate = false
+                    }
                 }.Initialize())
                 {
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
@@ -591,7 +608,11 @@ namespace StressTests.Authentication
                 {
                     Urls = new[] { server.WebUrl },
                     Database = databaseName2,
-                    Certificate = adminCert
+                    Certificate = adminCert,
+                    Conventions =
+                    {
+                        DisposeCertificate = false
+                    }
                 }.Initialize())
                 {
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
