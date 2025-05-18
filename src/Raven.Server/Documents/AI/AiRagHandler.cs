@@ -41,6 +41,7 @@ public class AiRagHandler : DatabaseRequestHandler
         ];
         DynamicJsonArray tools = GenerateTools(cfg, context);
 
+        AiUsage usage = new();
         AiResponse result;
         while (true)
         {
@@ -48,6 +49,7 @@ public class AiRagHandler : DatabaseRequestHandler
                 context,
                 msgs,
                 tools,
+                usage,
                 token.Token
             );
             if (result.Type is AiResponseType.Result)
@@ -114,7 +116,7 @@ public class AiRagHandler : DatabaseRequestHandler
         writer.WriteObject(result.Result);
         writer.WriteComma();
         writer.WritePropertyName("Usage");
-        result.Usage.Write(writer);
+        usage.Write(writer);
         writer.WriteEndObject();
     }
 

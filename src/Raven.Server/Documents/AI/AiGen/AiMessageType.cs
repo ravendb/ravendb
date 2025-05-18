@@ -21,7 +21,7 @@ public enum AiResponseType
     Tool
 }
 
-public record AiResponse(AiResponseType Type, AiUsage Usage)
+public record AiResponse(AiResponseType Type)
 {
     public BlittableJsonReaderObject Result;
     public List<AiToolCall> ToolCalls;
