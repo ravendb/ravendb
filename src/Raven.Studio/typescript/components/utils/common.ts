@@ -124,3 +124,18 @@ export const availableS3Regions: SelectOption<string>[] = typeUtils.sortBy(
 export type OmitIndexSignature<T> = {
     [K in keyof T as string extends K ? never : K]: T[K];
 };
+
+export const storageClassOptions: SelectOption<Raven.Client.Documents.Operations.Backups.S3StorageClass>[] = [
+    { value: null, label: "None" },
+    { value: "Standard", label: "Standard" },
+    { value: "IntelligentTiering", label: "Intelligent Tiering" },
+    { value: "StandardInfrequentAccess", label: "Standard Infrequent Access" },
+    { value: "OneZoneInfrequentAccess", label: "One Zone Infrequent Access" },
+    { value: "GlacierInstantRetrieval", label: "Glacier Instant Retrieval" },
+    { value: "Glacier", label: "Glacier Flexible Retrieval" },
+    { value: "ReducedRedundancy", label: "Reduced Redundancy" },
+    { value: "DeepArchive", label: "Deep Archive" },
+    { value: "ExpressOneZone", label: "Express One Zone" },
+    { value: "Snow", label: "Snow" },
+    { value: "Outposts", label: "Outposts" },
+];

@@ -84,6 +84,7 @@ export const defaultS3FormData: S3Destination = {
     customServerUrl: null,
     forcePathStyle: false,
     bucketName: null,
+    storageClass: null,
 };
 
 function mapS3FromDto(dto: Raven.Client.Documents.Operations.Backups.S3Settings): S3Destination {
@@ -98,6 +99,7 @@ function mapS3FromDto(dto: Raven.Client.Documents.Operations.Backups.S3Settings)
         customServerUrl: dto.CustomServerUrl,
         forcePathStyle: dto.ForcePathStyle,
         bucketName: dto.BucketName,
+        storageClass: dto.StorageClass,
     };
 }
 

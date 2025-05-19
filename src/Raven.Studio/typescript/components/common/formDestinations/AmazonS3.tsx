@@ -4,7 +4,7 @@ import { FormDestinations } from "./utils/formDestinationsTypes";
 import Badge from "react-bootstrap/Badge";
 import Collapse from "react-bootstrap/Collapse";
 import Card from "react-bootstrap/Card";
-import { FormInput, FormSelectCreatable, FormSwitch } from "../Form";
+import { FormInput, FormSelect, FormSelectCreatable, FormSwitch } from "../Form";
 import OverrideConfiguration from "./OverrideConfiguration";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
@@ -12,7 +12,7 @@ import { mapS3ToDto } from "./utils/formDestinationsMapsToDto";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import ConnectionTestResult from "../connectionTests/ConnectionTestResult";
 import { FlexGrow } from "components/common/FlexGrow";
-import { availableS3Regions } from "components/utils/common";
+import { availableS3Regions, storageClassOptions } from "components/utils/common";
 import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 import { FormLabel } from "components/common/Form";
 
@@ -152,6 +152,14 @@ export default function AmazonS3() {
                                             placeholder="Enter a remote folder name"
                                             type="text"
                                             autoComplete="off"
+                                        />
+                                    </div>
+                                    <div className="mb-2">
+                                        <FormLabel>Storage class</FormLabel>
+                                        <FormSelect
+                                            control={control}
+                                            name={getName("storageClass")}
+                                            options={storageClassOptions}
                                         />
                                     </div>
                                     <div className="mb-2">

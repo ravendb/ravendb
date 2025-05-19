@@ -34,6 +34,19 @@
         <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
     </div>
 </div>
+<div class="row margin-bottom" data-bind="validationElement: storageClass">
+    <label class="control-label col-xs-12 col-sm-6 col-lg-4">Storage class</label>
+    <div class="col-xs-12 col-sm-6 col-lg-8">
+        <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Select storage class">
+            <span data-bind="text: storageClassLabel"></span>&nbsp;&nbsp;<span class="caret"></span>
+        </button>
+        <ul class="dropdown-menu margin-left-sm" data-bind="foreach: storageClassOptions">
+            <li data-bind="click: $parent.storageClass.bind($parent, value)">
+                <a href="#" data-bind="text: label"></a>
+            </li>
+        </ul>
+    </div>
+</div>
 <div class="row margin-bottom" data-bind="visible: useCustomS3Host">
     <label class="control-label col-xs-12 col-sm-6 col-lg-4">Region</label>
     <div class="col-xs-12 col-sm-6 col-lg-8">

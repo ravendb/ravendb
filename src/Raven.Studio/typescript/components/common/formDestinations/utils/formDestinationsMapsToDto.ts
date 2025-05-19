@@ -43,6 +43,7 @@ function mapAmazonToDto(destination: S3Destination | GlacierDestination) {
         AwsSecretKey: destination.awsSecretKey,
         AwsSessionToken: destination.awsSessionToken,
         RemoteFolderName: destination.remoteFolderName,
+        StorageClass: destination.storageClass,
     };
 }
 

@@ -20,6 +20,7 @@ export interface AmazonDestination {
     awsSecretKey?: string;
     awsSessionToken?: string;
     remoteFolderName?: string;
+    storageClass?: Raven.Client.Documents.Operations.Backups.S3StorageClass;
 }
 
 export interface S3Destination extends FormDestinationDataBase, AmazonDestination {
