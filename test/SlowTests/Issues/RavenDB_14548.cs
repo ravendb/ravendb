@@ -63,6 +63,8 @@ public class RavenDB_14548 : RavenTestBase
             Assert.NotNull(report.Server.CpuUsageInfo.AverageCpuUsage);
             Assert.Equal(report.Server.CpuUsageInfo.AverageCpuUsage.Value, 4.2, 0.1);
 
+            Assert.NotEmpty(report.Server.ServerSettings);
+            
             Assert.Equal(71, report.Server.NetworkInfo.TotalActiveTcpConnections);
             var networkInfoTcpConnections = report.Server.NetworkInfo.TcpConnections;
 
@@ -178,7 +180,7 @@ public class RavenDB_14548 : RavenTestBase
 
                 Assert.NotNull(db.IndexesInfo);
                 Assert.NotNull(db.IndexesInfo.Definitions);
-
+                
                 foreach (var index in db.IndexesInfo.Stats)
                 {
                     Assert.NotNull(index.Priority);
@@ -287,6 +289,8 @@ public class RavenDB_14548 : RavenTestBase
                     Assert.Equal(OSType.Linux, nodeSummary.ClusterNodeInfo.OsType);
                     Assert.Contains("Ubuntu", nodeSummary.ClusterNodeInfo.OsName);
 
+                    Assert.Contains("live-test", nodeSummary.ClusterNodeInfo.NodeUrl);
+                    
                     Assert.NotNull(nodeSummary.MemoryUsageInfo);
                     Assert.NotNull(nodeSummary.MemoryUsageInfo.AvailableMemory);
                     Assert.NotNull(nodeSummary.MemoryUsageInfo.AvailableMemoryForProcessing);

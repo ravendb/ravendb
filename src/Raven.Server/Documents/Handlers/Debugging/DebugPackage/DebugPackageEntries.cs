@@ -5,6 +5,7 @@ using System.Linq.Expressions;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.Web;
@@ -16,7 +17,11 @@ public class DebugPackageEntries
     public class Entry
     {
         private static JsonSerializerOptions DeserializeOptions =
-            new JsonSerializerOptions { IncludeFields = true, Converters = { new JsonStringEnumConverter(), new OngoingTasksConverter() } };
+            new JsonSerializerOptions { IncludeFields = true, Converters =
+            {
+                new JsonStringEnumConverter(), 
+                new OngoingTasksConverter()
+            } };
 
         public string Name { get; set; }
 
@@ -110,7 +115,7 @@ public class DebugPackageEntries
         return true;
     }
 
-    public class OngoingTasksConverter : JsonConverter<OngoingTask>
+    private class OngoingTasksConverter : JsonConverter<OngoingTask>
     {
         public override bool CanConvert(Type typeToConvert)
         {
@@ -166,6 +171,23 @@ public class DebugPackageEntries
         }
 
         public override void Write(Utf8JsonWriter writer, OngoingTask value, JsonSerializerOptions options)
+        {
+            throw new NotImplementedException();
+        }
+    }
+
+    private class ConfigurationEntryValueConverter : JsonConverter<ConfigurationEntryValue>
+    {
+        public override bool CanConvert(Type typeToConvert)
+        {
+            return typeToConvert == typeof(ConfigurationEntryValue);
+        }
+        public override ConfigurationEntryValue Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Write(Utf8JsonWriter writer, ConfigurationEntryValue value, JsonSerializerOptions options)
         {
             throw new NotImplementedException();
         }

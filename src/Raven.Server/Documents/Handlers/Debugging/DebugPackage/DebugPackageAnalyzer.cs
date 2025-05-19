@@ -4,6 +4,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Database;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Errors;
@@ -79,12 +80,29 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                         errors.AddAnalyzerError(analyzer.Name, "Exception when running server wide analyzer", AnalyzeErrorSeverity.Error, e);
                     }
                 }
-
+                
+                var serverAnalysisInfo = new ServerAnalysisInfo
+                {
+                    BasicServerInfo = basicServerInfoAnalyzer.BasicServerInfo,
+                    NetworkInfo = networkAnalyzer.NetworkInfo,
+                    CpuUsageInfo = cpuUsageAnalyzer.CpuUsageInfo,
+                    MemoryInfo = memoryAnalyzer.MemoryInfo,
+                    ThreadsInfo = threadsAnalyzer.ThreadsInfo,
+                };
+                
+                var clusterAnalysisInfo = new ClusterAnalysisInfo
+                {
+                    NodeStateInfo = clusterStateAnalyzer.ClusterNodeStateInfo, 
+                    NodeLogInfo = clusterLogAnalyzer.ClusterNodeLogInfo,
+                    ObserverInfo = clusterObserverAnalyzer.ObserverAnalysisInfo,
+                };
+                
                 var databaseReports = new List<DebugPackageDatabaseReport>();
-
+                
                 foreach (var databaseName in packageContent.DatabaseNames)
                 {
                     var generalInfoAnalyzer = new GeneralDatabaseInfoAnalyzer(databaseName, errors, issues);
+                    var configurationAnalyzer = new ConfigurationInfoAnalyzer(serverAnalysisInfo, clusterAnalysisInfo, databaseName, errors, issues);
                     var indexesAnalyzer = new IndexesInfoAnalyzer(databaseName, errors, issues);
                     var tombstonesAnalyzer = new TombstonesInfoAnalyzer(databaseName, errors, issues);
                     var tasksAnalyzer = new TasksInfoAnalyzer(databaseName, errors, issues);
@@ -94,7 +112,8 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                         generalInfoAnalyzer,
                         indexesAnalyzer,
                         tombstonesAnalyzer,
-                        tasksAnalyzer
+                        tasksAnalyzer,
+                        configurationAnalyzer
                     };
 
                     var databaseEntries = packageContent.ForDatabase(databaseName);
@@ -118,6 +137,7 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                     var databaseReport = new DebugPackageDatabaseReport(databaseName)
                     {
                         DatabaseInfo = generalInfoAnalyzer.DatabaseInfo,
+                        Settings = configurationAnalyzer.DatabaseSettings,
                         IndexesInfo = indexesAnalyzer.IndexesInfo,
                         TasksInfo = tasksAnalyzer.TasksInfo,
                     };
@@ -126,25 +146,11 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                 }
 
                 var nodeTag = basicServerInfoAnalyzer.BasicServerInfo?.NodeTag ?? clusterStateAnalyzer.ClusterNodeStateInfo?.Topology?.NodeTag ?? "A";
-
-                var clusterAnalysisInfo = new ClusterAnalysisInfo
-                {
-                    NodeStateInfo = clusterStateAnalyzer.ClusterNodeStateInfo, 
-                    NodeLogInfo = clusterLogAnalyzer.ClusterNodeLogInfo,
-                    ObserverInfo = clusterObserverAnalyzer.ObserverAnalysisInfo
-                };
-
+                
                 var report = new DebugPackageNodeReport(nodeTag)
                 {
                     Machine = machineAnalyzer.MachineInfo,
-                    Server = new ServerAnalysisInfo
-                    {
-                        BasicServerInfo = basicServerInfoAnalyzer.BasicServerInfo,
-                        NetworkInfo = networkAnalyzer.NetworkInfo,
-                        CpuUsageInfo = cpuUsageAnalyzer.CpuUsageInfo,
-                        MemoryInfo = memoryAnalyzer.MemoryInfo,
-                        ThreadsInfo = threadsAnalyzer.ThreadsInfo,
-                    },
+                    Server = serverAnalysisInfo,
                     ClusterNode = clusterAnalysisInfo,
                     Databases = databaseReports.ToArray(),
                     DetectedIssues = issues,

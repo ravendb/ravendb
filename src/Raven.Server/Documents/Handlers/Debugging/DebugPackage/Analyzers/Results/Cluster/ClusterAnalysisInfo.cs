@@ -1,4 +1,6 @@
-﻿namespace Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Cluster;
+﻿using System;
+
+namespace Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Cluster;
 
 public class ClusterAnalysisInfo
 {
@@ -7,4 +9,6 @@ public class ClusterAnalysisInfo
     public ClusterNodeLogAnalysisInfo NodeLogInfo { get; set; }
     
     public ClusterObserverAnalysisInfo ObserverInfo { get; set; }
+    
+    public TimeSpan? ElectionTimeout { get; set; }
 }

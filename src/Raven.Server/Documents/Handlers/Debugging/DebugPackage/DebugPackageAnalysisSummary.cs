@@ -126,7 +126,7 @@ public class DebugPackageAnalysisSummary : IDynamicJson
                 NodeState = nodeReport.ClusterNode.NodeStateInfo?.CurrentState ?? RachisState.Passive,
                 NodeTag = nodeReport.NodeTag,
                 NodeType = nodeReport.ClusterNode.NodeStateInfo?.Topology?.ServerRole.ToString(),
-                NodeUrl = "TODO arek",
+                NodeUrl = nodeReport.Server.PublicServerUrl ?? nodeReport.Server.ServerUrl ?? "unknown-node-url",
                 OsName = nodeReport.Machine.OsInfo.FullName,
                 OsType = nodeReport.Machine.OsInfo.Type,
                 ServerVersion = nodeReport.Server.BasicServerInfo.Version,
