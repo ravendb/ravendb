@@ -8,7 +8,6 @@ public class AiRagConfiguration
 {
     public string ConnectionStringName { get; set; }
     public string SystemPrompt { get; set; }
-    public string UserPrompt { get; set; }
     public string OutputSchema { get; set; }
     public List<ToolQuery> Queries { get; set; }= [];
     public List<ToolAction> Actions { get; set; } = [];

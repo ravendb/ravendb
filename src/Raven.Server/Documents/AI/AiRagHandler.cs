@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using Microsoft.IO;
+using NuGet.Common;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI.AiGen;
+using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Processors.MultiGet;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents.AI;
 
 public class AiRagHandler : DatabaseRequestHandler
 {
-    [RavenAction("/databases/*/ai/rag", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
+    [RavenAction("/databases/*/ai/rag/test", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
     public async Task Rag()
     {
         using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
@@ -34,12 +35,23 @@ public class AiRagHandler : DatabaseRequestHandler
         using var client = new AbstractChatCompletionClient(new Uri(url), model, apikey,
             schema);
 
-        List<AiMessage> msgs =
+        string userPrompt = GetStringQueryString("prompt");
+        string id = GetStringQueryString("id");
+
+        List<BlittableJsonReaderObject> msgs =
         [
-            new(AiMessageType.System){Message = cfg.SystemPrompt},
-            new(AiMessageType.User) { Message = cfg.UserPrompt},
+            context.ReadObject(new DynamicJsonValue
+            {
+                ["role"] = "system",
+                ["content"] = cfg.SystemPrompt
+            }, "system/msg"),
+            context.ReadObject(new DynamicJsonValue
+            {
+                ["role"] = "user",
+                ["content"] = userPrompt
+            }, "user/msg"),
         ];
-        DynamicJsonArray tools = GenerateTools(cfg, context);
+        var tools = GenerateTools(cfg, context);
 
         AiUsage usage = new();
         AiResponse result;
@@ -55,61 +67,83 @@ public class AiRagHandler : DatabaseRequestHandler
             if (result.Type is AiResponseType.Result)
                 break;
             
-            // add the call to the messages, so the model will know it called it
-            msgs.Add(new AiMessage(AiMessageType.Tool)
-            {
-                ToolCalls = result.ToolCalls
-            });
-
-            // TODO: handle a response that does both query & action
-            DynamicJsonArray reqs = [];
-            var queryUrl = $"/databases/{DatabaseName}/queries";
-            var index = msgs.Count;
-            foreach (var call in result.ToolCalls)
-            {
-                var q = cfg.FindQuery(call.Name);
-                msgs.Add(new AiMessage(AiMessageType.ToolReply)
-                {
-                    ToolCallId = call.Id,
-                });
-
-                reqs.Add(new DynamicJsonValue
-                {
-                    ["Url"] = queryUrl,
-                    ["Query"] = null,
-                    ["Method"] = "POST",
-                    ["Content"] = new DynamicJsonValue
-                    {
-                        ["Query"] = q.Query,
-                        // TODO: need to dispose this? Or maybe use a dedicated context per each tool call to avoid high memory?
-                        ["QueryParameters"] = CreateParameters(context, call, parameters)
-                    }
-                });
-            }
-
-            using var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-rag/multi-query");
-            using MultiGetHandlerProcessorForPost handler = new(this);
-            using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
-            {
-                await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
-                memoryStream.Position = 0;
-                // TODO: have to verify that we got a successful result here!
-                using var resp = context.Sync.ReadForMemory(memoryStream, "query/response");
-                if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false)// TODO: shouldn't happen, but add error handling
-                    throw new InvalidOperationException("Missing Results from multi-get reply");
-                for (int i = 0; i < results.Length; i++)
-                {
-                    var queryResponse = (BlittableJsonReaderObject)results[i];
-                    if(queryResponse.TryGet("Result", out BlittableJsonReaderObject queryResponseResult) is false)
-                        throw new InvalidOperationException("Missing Result from query request output"); // TODO: shouldn't happen, but add error handling
-                    if(queryResponseResult.TryGet("Results", out BlittableJsonReaderArray queryResult) is false)
-                        throw new InvalidOperationException("Missing Results from query output"); // TODO: shouldn't happen, but add error handling
-
-                    msgs[index + i].Message = queryResult.ToString();//YUCK: any better way? 
-                }
-            }
+            await HandleToolCalls(context, msgs, result, cfg, parameters);
         }
 
+        string conversationId = null;
+        if (cfg.Persistence is not null)
+        {
+            var metadata = new DynamicJsonValue
+            {
+                ["@collection"] = cfg.Persistence.Collection,
+            };
+            if (cfg.Persistence.Expires is { } expire)
+            {
+                metadata["@expires"] = DateTime.UtcNow.Add(expire);
+            }
+
+            foreach (var msg in msgs)
+            {
+                if(msg.TryGet("role", out string role) is false)
+                    continue;
+                switch (role)
+                {
+                    case "tool":
+                    { // TODO: assuming an array only here. 
+                        if(msg.TryGet("content", out string content) is false)
+                            continue;
+                        var array = context.ParseBufferToArray(content, "tool-response", BlittableJsonDocumentBuilder.UsageMode.None);
+                        msg.Modifications = new DynamicJsonValue(msg)
+                        {
+                            ["content"] = array
+                        };
+                        break;
+                    }
+                    case "assistant":
+                    {
+                        if (msg.TryGet("content", out string content) && content is not null)
+                        {
+                            //TODO: assuming an object only here
+                            var obj = context.Sync.ReadForMemory(content, "assistant-response");
+                            msg.Modifications = new DynamicJsonValue(msg)
+                            {
+                                ["content"] = obj
+                            };
+                        }
+
+                        if (msg.TryGet("tool_calls", out BlittableJsonReaderArray toolCalls) && toolCalls is not null)
+                        {
+                            foreach (BlittableJsonReaderObject call in toolCalls)
+                            {
+                                if (call.TryGet("function", out BlittableJsonReaderObject function) && function is not null)
+                                {
+                                    if (function.TryGet("arguments", out string args) && args is not null)
+                                    {
+                                        var obj = context.Sync.ReadForMemory(args, "tool-arguments");
+                                        function.Modifications = new DynamicJsonValue(function)
+                                        {
+                                            ["arguments"] = obj
+                                        };          
+                                    }
+                                }
+                            }
+                        }
+                        break;
+                    }
+                }
+            }
+            var conversation = new DynamicJsonValue
+            {
+                ["@metadata"] = metadata,
+                ["Messages"] = msgs,
+            };
+            
+            var docJson = context.ReadObject(conversation, id);
+            MergedPutCommand putCmd = new(docJson, id, null, Database);
+            await Database.TxMerger.Enqueue(putCmd);
+            conversationId = putCmd.PutResult.Id;
+        }
+        
         await using var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream());
         writer.WriteStartObject();
         writer.WritePropertyName("Result");
@@ -117,7 +151,66 @@ public class AiRagHandler : DatabaseRequestHandler
         writer.WriteComma();
         writer.WritePropertyName("Usage");
         usage.Write(writer);
+        writer.WriteComma();
+        writer.WritePropertyName("ConversationId");
+        writer.WriteString(conversationId);
         writer.WriteEndObject();
+    }
+
+    private async Task HandleToolCalls(DocumentsOperationContext context, List<BlittableJsonReaderObject> messages, AiResponse result, AiRagConfiguration cfg,
+        BlittableJsonReaderObject parameters)
+    {
+        // TODO: handle a response that does both query & action
+        DynamicJsonArray reqs = [];
+        List<string> toolCallsIds = [];
+        var queryUrl = $"/databases/{DatabaseName}/queries";
+        foreach (var call in result.ToolCalls)
+        {
+            var q = cfg.FindQuery(call.Name);
+            if(q is null)
+                continue;
+            
+            toolCallsIds .Add(call.Id);
+            reqs.Add(new DynamicJsonValue
+            {
+                ["Url"] = queryUrl,
+                ["Query"] = null,
+                ["Method"] = "POST",
+                ["Content"] = new DynamicJsonValue
+                {
+                    ["Query"] = q.Query,
+                    // TODO: need to dispose this? Or maybe use a dedicated context per each tool call to avoid high memory?
+                    ["QueryParameters"] = CreateParameters(context, call, parameters)
+                }
+            });
+        }
+
+        using var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-rag/multi-query");
+        using MultiGetHandlerProcessorForPost handler = new(this);
+        using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
+        {
+            await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
+            memoryStream.Position = 0;
+            // TODO: have to verify that we got a successful result here!
+            using var resp = context.Sync.ReadForMemory(memoryStream, "query/response");
+            if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false)// TODO: shouldn't happen, but add error handling
+                throw new InvalidOperationException("Missing Results from multi-get reply");
+            for (int i = 0; i < results.Length; i++)
+            {
+                var queryResponse = (BlittableJsonReaderObject)results[i];
+                if(queryResponse.TryGet("Result", out BlittableJsonReaderObject queryResponseResult) is false)
+                    throw new InvalidOperationException("Missing Result from query request output"); // TODO: shouldn't happen, but add error handling
+                if(queryResponseResult.TryGet("Results", out BlittableJsonReaderArray queryResult) is false)
+                    throw new InvalidOperationException("Missing Results from query output"); // TODO: shouldn't happen, but add error handling
+
+                messages.Add(context.ReadObject(new DynamicJsonValue
+                {
+                    ["tool_call_id"] = toolCallsIds[i],
+                    ["role"] = "tool",
+                    ["content"] = queryResult.ToString()
+                },"tool-call/response"));
+            }
+        }
     }
 
     private static BlittableJsonReaderObject CreateParameters(DocumentsOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)
@@ -138,7 +231,7 @@ public class AiRagHandler : DatabaseRequestHandler
         return args;
     }
 
-    private static DynamicJsonArray GenerateTools(AiRagConfiguration cfg, DocumentsOperationContext context)
+    private static BlittableJsonReaderArray GenerateTools(AiRagConfiguration cfg, DocumentsOperationContext context)
     {
         DynamicJsonArray tools = [];
         foreach (var q in cfg.Queries ?? [])
@@ -172,7 +265,10 @@ public class AiRagHandler : DatabaseRequestHandler
             });
         }
 
-        return tools;
+        var obj = context.ReadObject(new DynamicJsonValue { ["_"] = tools }, "ai-rag/tools");
+        BlittableJsonReaderObject.PropertyDetails prop = default;
+        obj.GetPropertyByIndex(0, ref prop);
+        return (BlittableJsonReaderArray)prop.Value;
     }
 
     private AiConnectionString GetAiConnectionString(string name)
