@@ -32,7 +32,7 @@ public class TasksInfoAnalyzer(
         {
             AddWarning("Failed to get ongoing tasks");
         }
-        
+
         if (entries.TryGetValue<OngoingTasksHandler, OngoingTasksResult>(x => x.GetOngoingTasks(), out var ongoingTasks) == false)
         {
             AddWarning("Failed to get ongoing tasks");
@@ -52,7 +52,7 @@ public class TasksInfoAnalyzer(
         {
             AddWarning("Failed to get progress of ETL tasks");
         }
-        
+
         if (ongoingTasksEntry.TryGetJson("@metadata", out JsonElement metadata) && metadata.TryGetProperty("DateTime", out var dateTimeField) &&
             dateTimeField.TryGetDateTime(out var retrievalInfoDateTime))
         {
@@ -66,7 +66,7 @@ public class TasksInfoAnalyzer(
         foreach (var ongoingTask in ongoingTasks.OngoingTasks)
         {
             taskCounts.Total++;
-            
+
             switch (ongoingTask.TaskType)
             {
                 case OngoingTaskType.Backup:
@@ -114,6 +114,7 @@ public class TasksInfoAnalyzer(
                         else
                             throw new NotSupportedException($"Unknown queue broker type: {queueSink.BrokerType}");
                     }
+
                     break;
                 case OngoingTaskType.PullReplicationAsHub:
                     // hub replications aren't listed here - there is ongoingTasks.PullReplications
@@ -160,11 +161,11 @@ public class TasksInfoAnalyzer(
                     Destinations = lastBackup.BackupDestinations,
                     IntervalUntilNextBackupInSec = intervalUntilNextBackupInSec
                 };
-                
+
                 if (_debugInfoCollectedAt != null)
                 {
                     var ago = _debugInfoCollectedAt - lastBackupDate;
-                    
+
                     if (ago > TimeSpan.FromDays(7))
                     {
                         issues.ForDatabase(DatabaseName).Add(new DetectedIssue(

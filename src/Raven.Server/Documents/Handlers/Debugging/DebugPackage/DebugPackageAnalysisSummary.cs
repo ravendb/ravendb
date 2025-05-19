@@ -55,6 +55,11 @@ public class DebugPackageAnalysisSummary : IDynamicJson
             Items = new List<DatabaseOngoingTasksInfoItem>()
         };
         
+        var databaseIndexingSpeed = new IndexingSpeedPayload()
+        {
+            IndexingSpeedPerDatabase = new List<IndexingSpeedItem>()
+        };
+        
         foreach (var dbReport in nodeReport.Databases)
         {
             var databaseTopology = dbReport.DatabaseInfo.DatabaseRecord.Topology;
@@ -95,6 +100,23 @@ public class DebugPackageAnalysisSummary : IDynamicJson
             
             if (dbReport.TasksInfo is { TaskCounts: not null })
                 databasesTasks.Items.Add(dbReport.TasksInfo.TaskCounts);
+
+            if (dbReport.IndexesInfo is { Stats: not null })
+            {
+                var indexingSpeed = new IndexingSpeedItem
+                {
+                    Database = dbReport.DatabaseName,
+                    IndexedPerSecond = dbReport.IndexesInfo.Stats
+                        .Where(x => x.Type.IsMap() || x.Type.IsAuto())
+                        .Sum(x => x.MappedPerSecondRate),
+                    MappedPerSecond = dbReport.IndexesInfo.Stats
+                        .Where(x => x.Type.IsMapReduce() || x.Type.IsAutoMapReduce())
+                        .Sum(x => x.MappedPerSecondRate),
+                    ReducedPerSecond = dbReport.IndexesInfo.Stats.Sum(x => x.ReducedPerSecondRate),
+                };
+                
+                databaseIndexingSpeed.IndexingSpeedPerDatabase.Add(indexingSpeed);
+            }
         }
 
         return new DebugPackageNodeAnalysisSummary
@@ -117,6 +139,7 @@ public class DebugPackageAnalysisSummary : IDynamicJson
             DatabasesOverview = databasesOverview,
             DatabaseStorageUsage = databaseStorageUsage,
             DatabasesOngoingTasks = databasesTasks,
+            DatabaseIndexingSpeed = databaseIndexingSpeed,
             DetectedIssues = nodeReport.DetectedIssues,
             AnalyzeErrors = nodeReport.AnalyzeErrors,
         };

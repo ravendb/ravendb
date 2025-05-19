@@ -22,6 +22,7 @@ public class DebugPackageNodeAnalysisSummary : IDynamicJson
     public DatabaseOverviewPayload DatabasesOverview { get; set; }
     public DatabaseStorageUsagePayload DatabaseStorageUsage { get; set; }
     public OngoingTasksPayload DatabasesOngoingTasks { get; set; } 
+    public IndexingSpeedPayload DatabaseIndexingSpeed { get; set; }
     
     public DebugPackageAnalysisIssues DetectedIssues  {  get; set; }
     public DebugPackageAnalyzeErrors AnalyzeErrors { get; set; }
@@ -37,6 +38,7 @@ public class DebugPackageNodeAnalysisSummary : IDynamicJson
             [nameof(DatabasesOverview)] = DatabasesOverview?.ToJson(),
             [nameof(DatabaseStorageUsage)] = DatabaseStorageUsage?.ToJson(),
             [nameof(DatabasesOngoingTasks)] = DatabasesOngoingTasks?.ToJson(),
+            [nameof(DatabaseIndexingSpeed)] = DatabaseIndexingSpeed?.ToJson(),
             [nameof(DetectedIssues)] = DetectedIssues?.ToJson(),
             [nameof(AnalyzeErrors)] = AnalyzeErrors?.ToJson()
         };

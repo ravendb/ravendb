@@ -301,7 +301,7 @@ public class RavenDB_14548 : RavenTestBase
                     {
                         Assert.NotNull(nodeSummary.DetectedIssues.ServerIssues);
 
-                        Assert.Equal(8, nodeSummary.DetectedIssues.ServerIssues.Count);
+                        Assert.Equal(7, nodeSummary.DetectedIssues.ServerIssues.Count);
                         Assert.Equal(2, nodeSummary.DetectedIssues.ClusterIssues.Count);
                     }
                     else
@@ -310,7 +310,7 @@ public class RavenDB_14548 : RavenTestBase
 
                         Assert.NotNull(nodeSummary.DetectedIssues.ServerIssues);
 
-                        Assert.Equal(8, nodeSummary.DetectedIssues.ServerIssues.Count);
+                        Assert.Equal(7, nodeSummary.DetectedIssues.ServerIssues.Count);
                         Assert.Equal(0, nodeSummary.DetectedIssues.ClusterIssues.Count);
                     }
 
