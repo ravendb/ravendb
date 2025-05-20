@@ -262,7 +262,7 @@ namespace Raven.Server.Utils
 
             ValidateNoPrivateKeyInServerCert(serverCertBytes);
 
-            Pkcs12Store store = new Pkcs12StoreBuilder().Build();
+            Pkcs12Store store = new Pkcs12StoreBuilder().SetEnableOracleTrustedKeyUsage(false).Build();
             var serverCert = DotNetUtilities.FromX509Certificate(certificateHolder.Certificate);
 
             store.Load(new MemoryStream(certBytes), Array.Empty<char>());
@@ -369,7 +369,7 @@ namespace Raven.Server.Utils
             certificateGenerator.SetPublicKey(subjectKeyPair.Public);
 
             X509Certificate certificate = certificateGenerator.Generate(signatureFactory);
-            var store = new Pkcs12StoreBuilder().Build();
+            var store = new Pkcs12StoreBuilder().SetEnableOracleTrustedKeyUsage(false).Build();
             string friendlyName = certificate.SubjectDN.ToString();
             var certificateEntry = new X509CertificateEntry(certificate);
             var keyEntry = new AsymmetricKeyEntry(subjectKeyPair.Private);
@@ -456,7 +456,7 @@ namespace Raven.Server.Utils
             ca = (issuerKeyPair.Private, issuerKeyPair.Public);
             name = certificate.SubjectDN;
 
-            var store = new Pkcs12StoreBuilder().Build();
+            var store = new Pkcs12StoreBuilder().SetEnableOracleTrustedKeyUsage(false).Build();
             string friendlyName = certificate.SubjectDN.ToString();
             var certificateEntry = new X509CertificateEntry(certificate);
             var keyEntry = new AsymmetricKeyEntry(subjectKeyPair.Private);
@@ -635,7 +635,7 @@ namespace Raven.Server.Utils
         {
             var certWithKey = certificate.CopyWithPrivateKey(privateKey);
 
-            Pkcs12Store store = new Pkcs12StoreBuilder().Build();
+            Pkcs12Store store = new Pkcs12StoreBuilder().SetEnableOracleTrustedKeyUsage(false).Build();
 
             var chain = new X509Chain();
             chain.ChainPolicy.DisableCertificateDownloads = true;

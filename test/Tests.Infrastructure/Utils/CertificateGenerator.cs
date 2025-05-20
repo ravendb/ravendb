@@ -124,7 +124,7 @@ public static class CertificateGenerator
     private static X509Certificate2 IncludePrivateKeyWithTheCertificate(X509Certificate certificate, AsymmetricCipherKeyPair keyPair)
     {
         var random = new SecureRandom();
-        var store = new Pkcs12StoreBuilder().Build();
+        var store = new Pkcs12StoreBuilder().SetEnableOracleTrustedKeyUsage(false).Build();
         string friendlyName = certificate.SubjectDN.ToString();
         var certificateEntry = new X509CertificateEntry(certificate);
         var keyEntry = new AsymmetricKeyEntry(keyPair.Private);
