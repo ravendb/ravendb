@@ -729,19 +729,19 @@ namespace Raven.Server.Web.Authentication
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (var certificateJson = await ctx.ReadForDiskAsync(RequestBodyStream(), "edit-certificate"))
             {
-                var newCertificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
+                var editedCertificate = JsonDeserializationServer.CertificateDefinition(certificateJson);
                 
                 certificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out string newTwoFactorAuthenticationKey);
 
-                ValidateCertificateDefinition(newCertificate, ServerStore);
+                ValidateCertificateDefinition(editedCertificate, ServerStore);
 
                 CertificateDefinition existingCertificate;
                 string twoFactorAuthenticationKey;
                 using (ctx.OpenWriteTransaction())
                 {
-                    var existingCertificateJson = ServerStore.Cluster.GetCertificateByThumbprint(ctx, newCertificate.Thumbprint);
+                    var existingCertificateJson = ServerStore.Cluster.GetCertificateByThumbprint(ctx, editedCertificate.Thumbprint);
                     if (existingCertificateJson == null)
-                        throw new InvalidOperationException($"Cannot edit permissions for certificate with thumbprint '{newCertificate.Thumbprint}'. It doesn't exist in the cluster.");
+                        throw new InvalidOperationException($"Cannot edit permissions for certificate with thumbprint '{editedCertificate.Thumbprint}'. It doesn't exist in the cluster.");
                     
                     existingCertificateJson.TryGet(nameof(PutCertificateCommand.TwoFactorAuthenticationKey), out twoFactorAuthenticationKey);
                     
@@ -762,32 +762,32 @@ namespace Raven.Server.Web.Authentication
                         throw new InvalidOperationException($"Cannot edit the certificate '{existingCertificate.Name}'. It has '{existingCertificate.SecurityClearance}' security clearance while the current client certificate being used has a lower clearance: {clientCertDef.SecurityClearance}");
                     }
 
-                    if ((newCertificate.SecurityClearance == SecurityClearance.ClusterAdmin || newCertificate.SecurityClearance == SecurityClearance.ClusterNode) && IsClusterAdmin() == false)
+                    if ((editedCertificate.SecurityClearance == SecurityClearance.ClusterAdmin || editedCertificate.SecurityClearance == SecurityClearance.ClusterNode) && IsClusterAdmin() == false)
                     {
                         var clientCertDef = ReadCertificateFromCluster(ctx, clientCert?.Thumbprint);
-                        throw new InvalidOperationException($"Cannot edit security clearance to '{newCertificate.SecurityClearance}' for certificate '{existingCertificate.Name}'. Only a 'Cluster Admin' can do that and your current client certificate has a lower clearance: {clientCertDef.SecurityClearance}");
+                        throw new InvalidOperationException($"Cannot edit security clearance to '{editedCertificate.SecurityClearance}' for certificate '{existingCertificate.Name}'. Only a 'Cluster Admin' can do that and your current client certificate has a lower clearance: {clientCertDef.SecurityClearance}");
                     }
 
-                    ServerStore.Cluster.DeleteLocalState(ctx, newCertificate.Thumbprint);
+                    ServerStore.Cluster.DeleteLocalState(ctx, editedCertificate.Thumbprint);
                 }
                 
                 if (LoggingSource.AuditLog.IsInfoEnabled)
                 {
-                    var permissions = FormatPermissions(newCertificate);
+                    var permissions = FormatPermissions(editedCertificate);
 
                     LogAuditFor("Certificates", "CHANGE", 
-                        $"Certificate {newCertificate?.Name}. Security Clearance: {newCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}. Not After: {newCertificate?.NotAfter}.)");
+                        $"Certificate {editedCertificate?.Name}. Security Clearance: {editedCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}. Not After: {editedCertificate?.NotAfter}.)");
                 }
 
-                var notAfter = newCertificate.NotAfter ?? existingCertificate.NotAfter;
+                var notAfter = editedCertificate.NotAfter ?? existingCertificate.NotAfter;
 
-                var cmd = new PutCertificateCommand(newCertificate.Thumbprint,
+                var cmd = new PutCertificateCommand(editedCertificate.Thumbprint,
                     new CertificateDefinition
                     {
-                        Name = newCertificate.Name,
+                        Name = editedCertificate.Name,
                         Certificate = existingCertificate.Certificate,
-                        Permissions = newCertificate.Permissions,
-                        SecurityClearance = newCertificate.SecurityClearance,
+                        Permissions = editedCertificate.Permissions,
+                        SecurityClearance = editedCertificate.SecurityClearance,
                         Thumbprint = existingCertificate.Thumbprint,
                         PublicKeyPinningHash = existingCertificate.PublicKeyPinningHash,
                         NotAfter = notAfter,

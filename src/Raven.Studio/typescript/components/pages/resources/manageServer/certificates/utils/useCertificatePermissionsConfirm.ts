@@ -7,7 +7,7 @@ export default function useCertificatePermissionsConfirm() {
     return async (formData: CertificatesGenerateFormData) => {
         if (formData.securityClearance === "ValidUser" && formData.databasePermissions.length === 0) {
             return await confirm({
-                title: "Did you forget about assigning database privileges?",
+                title: "Did you forget to assign database permissions?",
                 message:
                     "Leaving the database privileges section empty is going to prevent users from accessing the database.",
                 confirmText: "Save anyway",

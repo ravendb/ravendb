@@ -85,7 +85,7 @@ export default function CertificatesUploadModal() {
                             infoPopoverBody={
                                 <div>
                                     Select a <strong>.pfx file</strong> with single or multiple certificates. All
-                                    certificates will be imported under a single name.
+                                    certificates will be imported under a single certificate entry.
                                 </div>
                             }
                         />

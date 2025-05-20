@@ -70,11 +70,11 @@ export default function CertificatesReplaceServerModal() {
                                 <span>
                                     Replace all server certificates in the cluster without shutting down the servers.
                                     The update will happen when all nodes of the cluster confirm the replacement, or
-                                    when there are 3 days left for expiration.
+                                    when there is 3 days or less left until expiration.
                                 </span>
                                 <div className={classNames(asyncGetClusterDomains.result?.length ? "" : "d-none")}>
                                     Please verify that the new certificate contains all of the following domain names in
-                                    the CN or ASN properties of the certificate:
+                                    the Subject Alternative Names field (SAN) of the certificate:
                                     <ul className="mt-2">
                                         {asyncGetClusterDomains.result?.map((domain, idx) => (
                                             <li key={idx}>{domain}</li>
