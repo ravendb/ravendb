@@ -12,6 +12,7 @@
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.24.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
     <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.14.0" />
+    <PackageVersion Include="BouncyCastle.Cryptography" Version="2.6.0" />
     <PackageVersion Include="CloudNative.CloudEvents" Version="2.8.0" />
     <PackageVersion Include="CloudNative.CloudEvents.Amqp" Version="2.8.0" />
     <PackageVersion Include="CloudNative.CloudEvents.Kafka" Version="2.8.0" />
@@ -69,7 +70,6 @@
     <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.8.0" />
     <PackageVersion Include="Parquet.Net" Version="3.10.0" />
     <PackageVersion Include="Polly" Version="8.5.2" />
-    <PackageVersion Include="Portable.BouncyCastle" Version="1.9.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="6.8.1" />
     <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.11" />
     <PackageVersion Include="SourceLink.Create.CommandLine" Version="2.8.3" />

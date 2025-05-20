@@ -156,6 +156,7 @@
     <PackageReference Include="AWSSDK.S3" />
     <PackageReference Include="Azure.Identity" />
     <PackageReference Include="Azure.Storage.Blobs" />
+    <PackageReference Include="BouncyCastle.Cryptography" />
     <PackageReference Include="CloudNative.CloudEvents.NewtonsoftJson" />
     <PackageReference Include="CloudNative.CloudEvents" />
     <PackageReference Include="CloudNative.CloudEvents.Amqp" />
@@ -195,7 +196,6 @@
     <PackageReference Include="Oracle.ManagedDataAccess.Core" />
     <PackageReference Include="Parquet.Net" />
     <PackageReference Include="Polly" />
-    <PackageReference Include="Portable.BouncyCastle" />
     <PackageReference Include="RabbitMQ.Client" />
     <PackageReference Include="Raven.CodeAnalysis">
       <PrivateAssets>All</PrivateAssets>

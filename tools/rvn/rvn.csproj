@@ -154,12 +154,12 @@
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="BouncyCastle.Cryptography" />
     <PackageReference Include="DasMulli.Win32.ServiceUtils.Signed" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Abstractions" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Polly" />
-    <PackageReference Include="Portable.BouncyCastle" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="System.ServiceProcess.ServiceController" />
     <PackageReference Include="YamlDotNet" />
