@@ -515,6 +515,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of bytes written (documents, attachments, counters, timeseries)")]
             public const string DataWrittenPerSecond = "5.2.{0}.6.2";
 
+            [Description("Number of missing attachments")]
+            public const string CountOfMissingAttachments = "5.2.{0}.6.3";
+
             public class Indexes
             {
                 private Indexes()

@@ -62,6 +62,7 @@ namespace Raven.Server.Monitoring.Snmp
             _objectStore.Add(new DatabaseCountOfRevisionDocuments(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseCountOfAttachments(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseCountOfUniqueAttachments(_databaseName, _databaseLandlord, _databaseIndex));
+            _objectStore.Add(new DatabaseCountOfMissingAttachments(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseAlerts(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseId(_databaseName, _databaseLandlord, _databaseIndex));
             _objectStore.Add(new DatabaseUpTime(_databaseName, _databaseLandlord, _databaseIndex));
