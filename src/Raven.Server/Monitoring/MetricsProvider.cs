@@ -303,6 +303,7 @@ public class MetricsProvider
             var attachments = documentsStorage.AttachmentsStorage.GetNumberOfAttachments(context.Documents);
             result.Attachments = attachments.AttachmentCount;
             result.UniqueAttachments = attachments.StreamsCount;
+            result.MissingAttachments = documentsStorage.AttachmentsStorage.GetMissingAttachmentsCount();
         }
 
         result.Alerts = database.NotificationCenter.GetAlertCount();

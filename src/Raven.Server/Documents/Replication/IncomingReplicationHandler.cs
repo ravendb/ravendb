@@ -1327,12 +1327,9 @@ namespace Raven.Server.Documents.Replication
                                     {
                                         AssertAttachmentsFromReplication(context, doc);
                                     }
-                                    catch (MissingAttachmentException)
+                                    catch (MissingAttachmentException mea)
                                     {
-                                        if (_replicationInfo.SupportedFeatures.Replication.MissingAttachments)
-                                        {
-                                            throw;
-                                        }
+                                        context.DocumentDatabase.DocumentsStorage.AttachmentsStorage.IncrementMissingAttachmentsCount();
 
                                         database.NotificationCenter.Add(AlertRaised.Create(
                                             database.Name,
@@ -1341,6 +1338,14 @@ namespace Raven.Server.Documents.Replication
                                             $" ({string.Join(',', GetAttachmentsNameAndHash(document).Select(x => $"name: {x.Name}, hash: {x.Hash}"))}).",
                                             AlertType.ReplicationMissingAttachments,
                                             NotificationSeverity.Warning));
+
+                                        if (_replicationInfo.Logger.IsInfoEnabled)
+                                            _replicationInfo.Logger.Info("Detected missing attachment while processing incoming document.", mea);
+
+                                        if (_replicationInfo.SupportedFeatures.Replication.MissingAttachments)
+                                        {
+                                            throw;
+                                        }
                                     }
                                 }
 

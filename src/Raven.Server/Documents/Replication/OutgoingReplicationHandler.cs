@@ -1318,6 +1318,7 @@ namespace Raven.Server.Documents.Replication
             {
                 _parent.Database.NotificationCenter.Dismiss(_missingAttachmentsAlert.Id);
                 _missingAttachmentsAlert = null;
+                _parent.Database.DocumentsStorage.AttachmentsStorage.ResetMissingAttachmentsCount();
             }
          
             MissingAttachmentsRetries = 0;
