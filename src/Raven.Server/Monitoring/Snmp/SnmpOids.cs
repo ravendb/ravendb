@@ -434,6 +434,9 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Number of indexing errors")]
             public const string IndexingErrors = "5.2.{0}.1.16";
 
+            [Description("Number of missing attachments")]
+            public const string CountOfMissingAttachments = "5.2.{0}.1.17";
+
             [Description("Documents storage allocated size in MB")]
             public const string DocumentsStorageAllocatedSize = "5.2.{0}.2.1";
 
@@ -514,9 +517,6 @@ namespace Raven.Server.Monitoring.Snmp
 
             [Description("Number of bytes written (documents, attachments, counters, timeseries)")]
             public const string DataWrittenPerSecond = "5.2.{0}.6.2";
-
-            [Description("Number of missing attachments")]
-            public const string CountOfMissingAttachments = "5.2.{0}.6.3";
 
             public class Indexes
             {
