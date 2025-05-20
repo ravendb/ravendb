@@ -9,9 +9,9 @@ namespace Corax.Indexing;
 
 public partial class IndexWriter
 {
-    internal TestingInterface CreateTestingInterface() => new(this);
+    internal TestingStuff ForTestingPurposes() => new(this);
     
-    internal class TestingInterface(IndexWriter writer)
+    internal class TestingStuff(IndexWriter writer)
     {
         public unsafe bool ValidateIdTreeToEntries(out long numberOfEntriesLocation, out long numberOfEntriesCompactTreeId)
         {
