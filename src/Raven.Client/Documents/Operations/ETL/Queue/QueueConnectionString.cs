@@ -144,7 +144,16 @@ public sealed class QueueConnectionString : ConnectionString
                         return false;
             
                     return AzureQueueStorageConnectionSettings.Equals(queueConnectionString.AzureQueueStorageConnectionSettings);
-            
+                
+                case QueueBrokerType.AmazonSqs:
+                    if (AmazonSqsConnectionSettings == null && queueConnectionString.AmazonSqsConnectionSettings == null)
+                        return true;
+
+                    if (AmazonSqsConnectionSettings == null || queueConnectionString.AmazonSqsConnectionSettings == null)
+                        return false;
+
+                    return AmazonSqsConnectionSettings.Equals(queueConnectionString.AmazonSqsConnectionSettings);
+
                 default:
                     throw new NotSupportedException($"'{BrokerType}' broker is not supported");
             }

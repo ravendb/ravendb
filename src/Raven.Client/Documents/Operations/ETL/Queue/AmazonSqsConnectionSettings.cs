@@ -72,6 +72,21 @@ public sealed class AmazonSqsConnectionSettings
         // this is just static part of the url, dynamic parts are not accessible
         return UseEmulator ? Environment.GetEnvironmentVariable(EmulatorUrlEnvironmentVariable) : "https://queue.amazonaws.com/"; 
     }
+    
+    private bool Equals(AmazonSqsConnectionSettings other)
+    {
+        return Equals(Basic, other.Basic) && Passwordless == other.Passwordless && UseEmulator == other.UseEmulator;
+    }
+
+    public override bool Equals(object obj)
+    {
+        return ReferenceEquals(this, obj) || obj is AmazonSqsConnectionSettings other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(Basic, Passwordless, UseEmulator);
+    }
 }
 
 public class AmazonSqsCredentials
@@ -87,5 +102,23 @@ public class AmazonSqsCredentials
         return string.IsNullOrWhiteSpace(AccessKey) == false &&
                string.IsNullOrWhiteSpace(SecretKey) == false &&
                string.IsNullOrWhiteSpace(RegionName) == false;
+    }
+    
+    protected bool Equals(AmazonSqsCredentials other)
+    {
+        return AccessKey == other.AccessKey && SecretKey == other.SecretKey && RegionName == other.RegionName;
+    }
+
+    public override bool Equals(object obj)
+    {
+        if (obj is null) return false;
+        if (ReferenceEquals(this, obj)) return true;
+        if (obj.GetType() != GetType()) return false;
+        return Equals((AmazonSqsCredentials)obj);
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(AccessKey, SecretKey, RegionName);
     }
 }
