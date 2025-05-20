@@ -179,38 +179,65 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
 
         var customElectionTimeoutDetected = false;
         
+        var clusterLogQueueSize = new Dictionary<string, long>();
+        
         foreach (var report in reports)
         {
             var nodeTag = report.NodeTag;
             var clusterNodeAnalysis = report.ClusterNode;
-
-            if (clusterNodeAnalysis is null)
-                continue;
-
-            if (clusterNodeAnalysis.ElectionTimeoutInMs != null && clusterNodeAnalysis.DefaultElectionTimeoutInMs != null)
+            
+            if (clusterNodeAnalysis != null)
             {
-                if (customElectionTimeoutDetected == false)
+                if (clusterNodeAnalysis.ElectionTimeoutInMs != null && clusterNodeAnalysis.DefaultElectionTimeoutInMs != null)
                 {
-                    clusterWideIssues.Add(new DetectedIssue("Custom Election Timeout setting defined",
-                        $"The setting '{RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)}' is set to " +
-                        $"non default value: {clusterNodeAnalysis.ElectionTimeoutInMs.Value} ms",
-                        IssueSeverity.Warning, IssueCategory.Cluster));
-
-                    customElectionTimeoutDetected = true;
-                }
-
-                if (report.Server.NetworkInfo?.PingTestResults != null)
-                {
-                    foreach (var pingResult in report.Server.NetworkInfo.PingTestResults)
+                    if (customElectionTimeoutDetected == false)
                     {
-                        if (pingResult.TcpInfo.ReceiveTime > clusterNodeAnalysis.ElectionTimeoutInMs.Value + clusterNodeAnalysis.ElectionTimeoutInMs.Value / 10.0)
+                        clusterWideIssues.Add(new DetectedIssue("Custom Election Timeout setting defined",
+                            $"The setting '{RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)}' is set to " +
+                            $"non default value: {clusterNodeAnalysis.ElectionTimeoutInMs.Value} ms",
+                            IssueSeverity.Warning, IssueCategory.Cluster));
+
+                        customElectionTimeoutDetected = true;
+                    }
+
+                    if (report.Server.NetworkInfo?.PingTestResults != null)
+                    {
+                        foreach (var pingResult in report.Server.NetworkInfo.PingTestResults)
                         {
-                            clusterWideIssues.Add(new DetectedIssue("Ping times higher than Election Timeout", 
-                                $"Ping time between node {nodeTag} and '{pingResult.Url}' is {pingResult.TcpInfo.ReceiveTime} ms while " +
-                                $"the Election Timeout is {clusterNodeAnalysis.ElectionTimeoutInMs.Value} ms",
-                                IssueSeverity.Warning, IssueCategory.Cluster));
+                            if (pingResult.TcpInfo.ReceiveTime > clusterNodeAnalysis.ElectionTimeoutInMs.Value + clusterNodeAnalysis.ElectionTimeoutInMs.Value / 10.0)
+                            {
+                                clusterWideIssues.Add(new DetectedIssue("Ping times higher than Election Timeout",
+                                    $"Ping time between node {nodeTag} and '{pingResult.Url}' is {pingResult.TcpInfo.ReceiveTime} ms while " +
+                                    $"the Election Timeout is {clusterNodeAnalysis.ElectionTimeoutInMs.Value} ms",
+                                    IssueSeverity.Warning, IssueCategory.Cluster));
+                            }
                         }
                     }
+                }
+
+                if (clusterNodeAnalysis.NodeLogInfo?.LogSummary != null)
+                {
+                    clusterLogQueueSize.Add(nodeTag, clusterNodeAnalysis.NodeLogInfo.GetQueueSize());
+                }
+            }
+
+            if (clusterLogQueueSize.Count > 1)
+            {
+                var minCount = clusterLogQueueSize.Values.Min();
+                var maxCount = clusterLogQueueSize.Values.Max();
+
+                var diff = Math.Abs(maxCount - minCount);
+                
+                if (minCount != maxCount && (1.0 * diff / maxCount > 0.1 || diff > 1_000))
+                {
+                    var discrepancies = string.Join(", ", clusterLogQueueSize.Select(kvp => $"{kvp.Key}: {kvp.Value}"));
+
+                    clusterWideIssues.Add(new DetectedIssue(
+                        "Discrepancy in processing Cluster Log commands",
+                        $"There is very different number of Raft commands left to be committed across nodes: {discrepancies}",
+                        IssueSeverity.Warning,
+                        IssueCategory.Indexes
+                    ));
                 }
             }
         }

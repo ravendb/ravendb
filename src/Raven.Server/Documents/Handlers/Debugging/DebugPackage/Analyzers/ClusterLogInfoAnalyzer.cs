@@ -52,13 +52,11 @@ public class ClusterLogInfoAnalyzer : AbstractDebugPackageAnalyzer
 
     protected override void DetectIssues(DebugPackageAnalysisIssues issues)
     {
-        var log = ClusterNodeLogInfo.LogSummary;
-
-        var clusterLogQueueSize = GetQueueSize();
+        var clusterLogQueueSize = ClusterNodeLogInfo.GetQueueSize();
 
         if (ClusterNodeLogInfo.DebugInfoCollectedAt != null)
         {
-            var lastCommitAgo = ClusterNodeLogInfo.DebugInfoCollectedAt - log.LastCommitedTime;
+            var lastCommitAgo = ClusterNodeLogInfo.DebugInfoCollectedAt - ClusterNodeLogInfo.LogSummary.LastCommitedTime;
 
             if (clusterLogQueueSize >= 5 && lastCommitAgo > TimeSpan.FromMinutes(2))
             {
@@ -75,7 +73,7 @@ public class ClusterLogInfoAnalyzer : AbstractDebugPackageAnalyzer
                 IssueSeverity.Warning, IssueCategory.Cluster));
         }
 
-        var progress = GetProgress();
+        var progress = ClusterNodeLogInfo.GetProgress();
 
         if (progress < 95)
         {
@@ -97,30 +95,11 @@ public class ClusterLogInfoAnalyzer : AbstractDebugPackageAnalyzer
             }
         }
 
-        if (log.CriticalError != null)
+        if (ClusterNodeLogInfo.LogSummary.CriticalError != null)
         {
             issues.ClusterIssues.Add(new DetectedIssue("Critical error in Cluster Log",
-                $"This may indicate a critical operational issue in the cluster: {log.CriticalError}",
+                $"This may indicate a critical operational issue in the cluster: {ClusterNodeLogInfo.LogSummary.CriticalError}",
                 IssueSeverity.Error, IssueCategory.Cluster));
-        }
-
-        long GetQueueSize()
-        {
-            if (log.Logs.Any() == false)
-                return 0;
-
-            return log.LastLogEntryIndex - log.CommitIndex;
-        }
-
-        int GetProgress()
-        {
-            var first = log.FirstEntryIndex;
-            var last = log.LastLogEntryIndex;
-
-            var logLength = last - first + 1;
-            var queueLength = GetQueueSize();
-
-            return (int)Math.Ceiling(100d * (logLength - queueLength) / logLength);
         }
     }
 }
