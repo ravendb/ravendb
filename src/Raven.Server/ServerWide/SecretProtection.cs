@@ -15,16 +15,15 @@ using Org.BouncyCastle.Crypto;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.Utilities;
-using Org.BouncyCastle.Utilities.Collections;
 using Org.BouncyCastle.Utilities.Encoders;
 using Org.BouncyCastle.X509;
+using Org.BouncyCastle.X509.Extension;
 using Raven.Client;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Server;
 using Sparrow.Server.Platform.Posix;
 
 namespace Raven.Server.ServerWide
@@ -927,14 +926,14 @@ namespace Raven.Server.ServerWide
                 {
                     MacData mData = bag.MacData;
                     DigestInfo dInfo = mData.Mac;
-                    AlgorithmIdentifier algId = dInfo.AlgorithmID;
+                    AlgorithmIdentifier algId = dInfo.DigestAlgorithm;
                     byte[] salt = mData.GetSalt();
                     int itCount = mData.IterationCount.IntValue;
 
                     byte[] data = ((Asn1OctetString)info.Content).GetOctets();
 
                     byte[] mac = CalculatePbeMac(algId.Algorithm, salt, itCount, password, false, data);
-                    byte[] dig = dInfo.GetDigest();
+                    byte[] dig = dInfo.Digest.GetOctets();
 
                     if (!Arrays.FixedTimeEquals(mac, dig))
                     {
@@ -1172,7 +1171,7 @@ namespace Raven.Server.ServerWide
             private static SubjectKeyIdentifier CreateSubjectKeyID(
                 AsymmetricKeyParameter pubKey)
             {
-                return new SubjectKeyIdentifier(
+                return X509ExtensionUtilities.CreateSubjectKeyIdentifier(
                     SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(pubKey));
             }
 
