@@ -320,7 +320,7 @@ namespace Raven.Server.Utils
 
             // The Certificate Generator
             X509V3CertificateGenerator certificateGenerator = new X509V3CertificateGenerator();
-            var authorityKeyIdentifier = new AuthorityKeyIdentifierStructure(issuerKeyPair.PublicKey);
+            var authorityKeyIdentifier = X509ExtensionUtilities.CreateAuthorityKeyIdentifier(issuerKeyPair.PublicKey);
             certificateGenerator.AddExtension(X509Extensions.AuthorityKeyIdentifier.Id, false, authorityKeyIdentifier);
             certificateGenerator.AddExtension(X509Extensions.KeyUsage.Id, true, new KeyUsage(KeyUsage.DigitalSignature | KeyUsage.KeyEncipherment));
             if (isClientCertificate)
@@ -437,15 +437,15 @@ namespace Raven.Server.Utils
             ISignatureFactory signatureFactory = new Asn1SignatureFactory("SHA512WITHRSA", issuerKeyPair.Private, random);
 
             var authorityKeyIdentifier =
-                new AuthorityKeyIdentifier(
-                    SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(issuerKeyPair.Public),
+                X509ExtensionUtilities.CreateAuthorityKeyIdentifier(
+                    issuerKeyPair.Public,
                     new GeneralNames(new GeneralName(issuerDN)),
                     serialNumber);
             certificateGenerator.AddExtension(
                 X509Extensions.AuthorityKeyIdentifier.Id, false, authorityKeyIdentifier);
 
             var subjectKeyIdentifier =
-                new SubjectKeyIdentifier(
+                X509ExtensionUtilities.CreateSubjectKeyIdentifier(
                     SubjectPublicKeyInfoFactory.CreateSubjectPublicKeyInfo(subjectKeyPair.Public));
             certificateGenerator.AddExtension(
                 X509Extensions.SubjectKeyIdentifier.Id, false, subjectKeyIdentifier);
