@@ -44,7 +44,7 @@ public partial class Hnsw
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     private static float HammingDistance(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
     {
-        return TensorPrimitives.HammingBitDistance<byte>(a, b);
+        return Functions.HammingBitDistance(a, b);
     }
     
     internal static void DistanceToScoreHammingSimilarity(Span<float> scores, int vectorSizeInBytes)

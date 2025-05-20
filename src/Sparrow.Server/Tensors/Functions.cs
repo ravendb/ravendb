@@ -884,5 +884,61 @@ namespace Sparrow.Server.Tensors
                 return CosineSimilarityNormalize<TResult, TResult>(fab, fa2, fb2);
             }
         }
+
+        /// <summary>Computes the bitwise Hamming distance between two equal-length tensors of values.</summary>
+        /// <param name="x">The first tensor, represented as a span.</param>
+        /// <param name="y">The second tensor, represented as a span.</param>
+        /// <returns>The number of bits that differ between the two spans.</returns>
+        /// <exception cref="ArgumentException">Length of <paramref name="x" /> must be same as length of <paramref name="y" />.</exception>
+        /// <exception cref="ArgumentException"><paramref name="x" /> and <paramref name="y" /> must not be empty.</exception>
+        public static long HammingBitDistance<T>(ReadOnlySpan<T> x, ReadOnlySpan<T> y) where T : unmanaged, IBinaryInteger<T>
+        {
+            var xAsByte = MemoryMarshal.Cast<T, byte>(x);
+            var yAsByte = MemoryMarshal.Cast<T, byte>(y);
+
+            ref byte xRef = ref MemoryMarshal.GetReference(xAsByte);
+            ref byte yRef = ref MemoryMarshal.GetReference(yAsByte);
+
+            const int Word = sizeof(ulong);
+            const int N = Word * 3;     
+
+            ulong count1 = 0;
+            ulong count2 = 0;
+            ulong count3 = 0;
+
+            int offset = 0;
+            int length = xAsByte.Length;
+
+            // Process all full 24-byte blocks
+            while (offset + N <= length)
+            {
+                int byteOffset = offset;
+                ulong xBits1 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref xRef, byteOffset));
+                ulong yBits1 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref yRef, byteOffset));
+                count1 += ulong.PopCount(xBits1 ^ yBits1);
+
+                byteOffset = (offset + Word);
+                ulong xBits2 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref xRef, byteOffset));
+                ulong yBits2 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref yRef, byteOffset));
+                count2 += ulong.PopCount(xBits2 ^ yBits2);
+
+                byteOffset = (offset + 2 * Word);
+                ulong xBits3 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref xRef, byteOffset));
+                ulong yBits3 = Unsafe.ReadUnaligned<ulong>(ref Unsafe.AddByteOffset(ref yRef, byteOffset));
+                count3 += ulong.PopCount(xBits3 ^ yBits3);
+
+                offset += N;
+            }
+
+            ulong count = count1 + count2 + count3;
+
+            for (int i = offset; i < length; i++)
+            {
+                var xor = Unsafe.Add(ref xRef, i) ^ Unsafe.Add(ref yRef, i);
+                count += (ulong)int.PopCount(xor);
+            }
+
+            return (long)count;
+        }
     }
 }

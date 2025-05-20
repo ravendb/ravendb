@@ -35,6 +35,20 @@ namespace FastTests.Sparrow
             Assert.InRange(distance, (float)(expectedDistance - Eps), (float)(expectedDistance + Eps));
         }
 
+
+        // Test that for identical vectors, we get maximum similarity (and so a distance of zero).
+        [RavenFact(RavenTestCategory.Core)]
+        public void IdenticalVectors_ReturnsMaxHammingSimilarity_ZeroDistance()
+        {
+            byte[] vector = [218, 0, 55, 87, 97, 77, 10, 66, 255, 47];
+            var span = new ReadOnlySpan<byte>(vector);
+
+            float distance = Functions.HammingBitDistance(span, span);
+            float expectedDistance = TensorPrimitives.HammingBitDistance(span, span);
+
+            Assert.Equal(expectedDistance, distance);
+        }
+
         // Test for orthogonal vectors.
         // Conventionally, for orthogonal vectors, cosine similarity should be 0 and so distance should be 1.
         [RavenTheory(RavenTestCategory.Core)]
@@ -97,7 +111,7 @@ namespace FastTests.Sparrow
         // A randomized test to compare your implementation with a reference implementation.
         [RavenTheory(RavenTestCategory.Core)]
         [InlineDataWithRandomSeed]
-        public void RandomVectors_ReferenceComparison(int seed)
+        public void RandomVectors_ReferenceComparison(int seed = 1337)
         {
             var rnd = new Random(seed);
             int size = rnd.Next(1024) + 1;
@@ -290,6 +304,29 @@ namespace FastTests.Sparrow
             // NEON path
             if (AdvInstructionSet.Arm.IsSupported && Dp.IsSupported)
                 RunSimilarityTest(&Functions.Vectorized256.CosineSimilarityIntegersNeon);
+        }
+
+        // A randomized test to compare your implementation with a reference implementation.
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineDataWithRandomSeed]
+        public void RandomVectors_HammingBitReferenceComparison(int seed)
+        {
+            var rnd = new Random(seed);
+            int size = rnd.Next(1024) + 1;
+
+            // Generate two random vectors of the same size.
+            Span<byte> vector1 = new byte[size];
+            Span<byte> vector2 = new byte[size];
+            for (int i = 0; i < size; i++)
+            {
+                vector1[i] = (byte)rnd.Next(byte.MaxValue);
+                vector2[i] = (byte)rnd.Next(byte.MaxValue);
+            }
+
+            // Compute reference similarity (using conventional cosine similarity).
+            long expectedDistance = TensorPrimitives.HammingBitDistance<byte>(vector1, vector2);
+            long actualDistance = Functions.HammingBitDistance<byte>(vector1, vector2);
+            Assert.Equal(expectedDistance, actualDistance);
         }
     }
 }
