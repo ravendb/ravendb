@@ -199,6 +199,54 @@ namespace SlowTests.Issues
                 AssertCount<MyIndex_WithoutAnalyzer>(store);
             }
         }
+        
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void PrefixQueryWithOnlyStopWordWillNotThrowException(Options options)
+        {
+            string analyzerName = GetDatabaseName();
+
+            using (var store = GetDocumentStore(new Options
+                   {
+                       ModifyDatabaseName = _ => analyzerName,
+                       ModifyDatabaseRecord = record =>
+                       {
+                           options.ModifyDatabaseRecord(record);
+                           record.Analyzers = new Dictionary<string, AnalyzerDefinition>
+                           {
+                               {
+                                   analyzerName,
+                                   new AnalyzerDefinition { Name = analyzerName, Code = GetAnalyzer("RavenDB_14939.MyAnalyzer.cs", "MyAnalyzer", analyzerName) }
+                               }
+                           };
+
+                           record.Settings[RavenConfiguration.GetKey(x => x.Indexing.DefaultSearchAnalyzer)] = analyzerName;
+                       }
+                   }))
+            {
+                store.ExecuteIndex(new MyIndex(analyzerName));
+
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Customer() { Name = "Theodore" });
+                    session.SaveChanges();
+                }
+                Indexes.WaitForIndexing(store);
+
+                using (var session = store.OpenSession())
+                {
+                    var results = session.Query<Customer, MyIndex>()
+                        .Customize(x => x.NoCaching())
+                        .Search(x => x.Name, "The*");
+                    Assert.Equal(results.Count(), 0);
+                    
+                    results = session.Query<Customer, MyIndex>()
+                        .Customize(x => x.NoCaching())
+                        .Search(x => x.Name, "Theo*");
+                    Assert.Equal(results.Count(), 1);
+                }
+            }
+        }
 
         private static void Fill(IDocumentStore store)
         {
