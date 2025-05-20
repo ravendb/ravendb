@@ -66,7 +66,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
 
             writer.Commit();
 
-            Assert.True(writer.CreateTestingInterface().ValidateIdTreeToEntries(out _, out _));
+            Assert.True(writer.ForTestingPurposes().ValidateIdTreeToEntries(out _, out _));
         }
 
         using (var searcher = new IndexSearcher(Env, mapping))
@@ -150,7 +150,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
 
             writer.Commit();
             
-            Assert.True(writer.CreateTestingInterface().ValidateIdTreeToEntries(out _, out _));
+            Assert.True(writer.ForTestingPurposes().ValidateIdTreeToEntries(out _, out _));
         }
 
         using (var searcher = new IndexSearcher(Env, mapping))
@@ -200,7 +200,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
 
         using (var writer = new IndexWriter(Env, mapping, SupportedFeatures.All))
         {
-            var testing = writer.CreateTestingInterface();
+            var testing = writer.ForTestingPurposes();
             var result = testing.ValidateIdTreeToEntries(out var numberOfEntriesLocation, out var numberOfEntriesCompactTreeId);
             Assert.Equal(numberOfEntriesCompactTreeId, numberOfEntriesLocation);
             Assert.True(result);
@@ -267,7 +267,7 @@ public class RavenDB_24217(ITestOutputHelper output) : StorageTest(output)
 
             writer.Commit();
             
-            Assert.True(writer.CreateTestingInterface().ValidateIdTreeToEntries(out _, out _));
+            Assert.True(writer.ForTestingPurposes().ValidateIdTreeToEntries(out _, out _));
         }
 
 
