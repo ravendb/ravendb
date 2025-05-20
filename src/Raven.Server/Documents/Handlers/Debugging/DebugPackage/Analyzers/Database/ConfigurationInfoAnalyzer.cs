@@ -1,11 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Raven.Server.Config;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Errors;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Cluster;
+using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.Database;
 
 namespace Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Database;
 
@@ -16,9 +18,9 @@ public class ConfigurationInfoAnalyzer(
     DebugPackageAnalyzeErrors errors,
     DebugPackageAnalysisIssues issues) : AbstractDebugPackageDatabaseAnalyzer(databaseName, errors, issues)
 {
-    private ConfigurationEntrySingleValue _customizedElectionTimeoutSetting = null;
-    public Dictionary<string, ConfigurationEntrySingleValue> DatabaseSettings { get; set; } = new();
-
+    
+    public DatabaseSettingsAnalysisInfo SettingsInfo { get; set; }
+    
     protected override bool RetrieveAnalyzerInfo(DebugPackageEntries entries)
     {
         if (entries.TryGetEntry<AdminConfigurationHandler>(x => x.GetSettings(), out var settingsEntry) == false)
@@ -27,35 +29,47 @@ public class ConfigurationInfoAnalyzer(
             return false;
         }
 
+        SettingsInfo = new DatabaseSettingsAnalysisInfo()
+        {
+            Settings = new Dictionary<string, ConfigurationEntrySingleValue>(),
+            SettingsEntry = settingsEntry
+        };
+        
         if (settingsEntry.TryGetJsonValue(nameof(SettingsResult.Settings), out List<ConfigurationServerOrDatabaseValue> settings))
         {
             foreach (ConfigurationServerOrDatabaseValue setting in settings)
             {
+                if (setting.Metadata.Keys.Contains(RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)))
+                {
+                    if (clusterAnalysisInfo.ElectionTimeoutInMs == null && clusterAnalysisInfo.DefaultElectionTimeoutInMs == null)
+                    {
+                        // we get it from a _database_ setting, so we process it just once and store the value in the cluster analysis info
+
+                        if (long.TryParse(setting.Metadata.DefaultValue, out var defaultElectionTimeout))
+                        {
+                            clusterAnalysisInfo.DefaultElectionTimeoutInMs = defaultElectionTimeout;
+                        }                        
+                        
+                        if (setting.ServerValues is { Count: > 0 })
+                        {
+                            var entry = setting.ServerValues.First().Value;
+                            
+                            if (long.TryParse(entry.Value, out var electionTimeout))
+                            {
+                                clusterAnalysisInfo.ElectionTimeoutInMs = electionTimeout;
+                            }
+                        }
+                        else
+                            clusterAnalysisInfo.ElectionTimeoutInMs = defaultElectionTimeout;
+                    }
+                }
+                
                 if (setting.ServerValues is { Count: > 0 })
                 {
                     foreach (KeyValuePair<string, ConfigurationEntrySingleValue> entry in setting.ServerValues)
                     {
                         if (serverAnalysisInfo.ServerSettings.TryAdd(entry.Key, entry.Value))
                         {
-                            if (entry.Key.Equals(RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout),
-                                    StringComparison.OrdinalIgnoreCase) && entry.Value.HasValue)
-                            {
-                                // got customized Cluster.ElectionTimeoutInMs setting
-
-                                if (clusterAnalysisInfo.ElectionTimeout == null)
-                                {
-                                    // we get it from a database setting, so we process it just once and store the value in the cluster analysis info
-
-                                    if (TimeSpan.TryParse(entry.Value.Value, out var electionTimeout))
-                                    {
-                                        clusterAnalysisInfo.ElectionTimeout = electionTimeout;
-
-                                        if (setting.Metadata.DefaultValue != entry.Value.Value)
-                                            _customizedElectionTimeoutSetting = entry.Value;
-                                    }
-                                }
-                            }
-
                             if (entry.Key.Equals(RavenConfiguration.GetKey(x => x.Core.PublicServerUrl)) && 
                                 string.IsNullOrEmpty(serverAnalysisInfo.PublicServerUrl))
                             {
@@ -75,26 +89,13 @@ public class ConfigurationInfoAnalyzer(
                     foreach (KeyValuePair<string, ConfigurationEntrySingleValue> entry in setting.ServerValues)
                     {
                         if (entry.Value.HasValue && entry.Value.Value != setting.Metadata.DefaultValue)
-                            DatabaseSettings.TryAdd(entry.Key, entry.Value);
+                            SettingsInfo.Settings.TryAdd(entry.Key, entry.Value);
                     }
                 }
             }
         }
 
         return true;
-    }
-
-    protected override void DetectIssues(DebugPackageAnalysisIssues issues)
-    {
-        if (_customizedElectionTimeoutSetting != null)
-        {
-            // it's ensured we set it only the first time we read this value from a database setting
-
-            issues.ClusterIssues.Add(new DetectedIssue("Custom Election Timeout setting defined",
-                $"The setting '{RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)}' is set to " +
-                $"non default value: {_customizedElectionTimeoutSetting.Value} ms",
-                IssueSeverity.Warning, IssueCategory.Cluster));
-        }
     }
 
     private class ConfigurationServerOrDatabaseValue : ConfigurationEntryValue

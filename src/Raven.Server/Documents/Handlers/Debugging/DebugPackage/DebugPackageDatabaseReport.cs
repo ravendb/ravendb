@@ -8,7 +8,7 @@ public class DebugPackageDatabaseReport(string databaseName)
 {
     public string DatabaseName { get; } = databaseName;
     public DatabaseAnalysisInfo DatabaseInfo { get; set; }
-    public Dictionary<string, ConfigurationEntrySingleValue> Settings { get; set; }
+    public DatabaseSettingsAnalysisInfo Settings { get; set; }
     public IndexesAnalysisInfo IndexesInfo { get; set; }
     public TasksAnalysisInfo TasksInfo { get; set; }
 }

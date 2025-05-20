@@ -9,6 +9,8 @@ public class NetworkAnalysisInfo : IDynamicJson
     public int TotalActiveTcpConnections { get; set; }
     
     public List<TcpConnections> TcpConnections { get; set; } = [];
+    public List<NodeDebugHandler.PingResult> PingTestResults { get; set; }
+
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue

@@ -10,5 +10,8 @@ public class ClusterAnalysisInfo
     
     public ClusterObserverAnalysisInfo ObserverInfo { get; set; }
     
-    public TimeSpan? ElectionTimeout { get; set; }
+    public long? ElectionTimeoutInMs { get; set; }
+    
+    public long? DefaultElectionTimeoutInMs { get; set; }
+
 }

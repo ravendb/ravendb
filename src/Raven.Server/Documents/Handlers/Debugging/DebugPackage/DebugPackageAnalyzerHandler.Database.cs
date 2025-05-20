@@ -143,6 +143,21 @@ public partial class DebugPackageAnalyzerHandler : ServerRequestHandler
         await dbReport.IndexesInfo.ErrorsEntry.Content.CopyToAsync(responseStream);
     }
     
+    [RavenAction("/debug/info-package/analyzer/databases/configuration/settings", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+    public async Task GetSettings()
+    {
+        var packageId = GetQueryStringValueAndAssertIfSingleAndNotEmpty("packageId");
+        var nodeTag = GetQueryStringValueAndAssertIfSingleAndNotEmpty("nodeTag");
+        var dbName = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+        
+        if (TryGetDatabaseReportOrSetNotFound(packageId, nodeTag, dbName, out var dbReport) == false)
+            return;
+        
+        var responseStream = ResponseBodyStream();
+
+        await dbReport.Settings.SettingsEntry.Content.CopyToAsync(responseStream);
+    }
+    
     private bool TryGetDatabaseReportOrSetNotFound(string packageId, string nodeTag, string dbName, out DebugPackageDatabaseReport dbReport)
     {
         if (DebugPackageReportsContainer.TryGet(packageId, out var report) == false)

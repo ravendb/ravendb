@@ -55,6 +55,8 @@ public class RavenDB_14548 : RavenTestBase
             Assert.Equal(OSType.Linux, report.Machine.OsInfo.Type);
             Assert.Contains("Ubuntu", report.Machine.OsInfo.FullName);
 
+            Assert.Contains("live-test", report.Server.PublicServerUrl);
+            
             Assert.NotNull(report.Server.BasicServerInfo.UpTime);
             Assert.NotNull(report.Server.BasicServerInfo.StartUpTime);
             Assert.Equal("A", report.Server.BasicServerInfo.NodeTag);
@@ -135,6 +137,13 @@ public class RavenDB_14548 : RavenTestBase
             Assert.NotEmpty(report.Server.CpuUsageInfo.TopOverallCpuUsageThreads);
 
             Assert.NotNull(report.ClusterNode);
+            
+            Assert.NotNull(report.ClusterNode.DefaultElectionTimeoutInMs);
+            Assert.NotNull(report.ClusterNode.ElectionTimeoutInMs);
+            
+            Assert.Equal(300, report.ClusterNode.DefaultElectionTimeoutInMs);
+            Assert.Equal(300, report.ClusterNode.ElectionTimeoutInMs);
+            
             Assert.NotNull(report.ClusterNode.NodeStateInfo.CurrentTerm);
             Assert.NotNull(report.ClusterNode.NodeStateInfo.Topology.NodeTag);
             Assert.Equal("A", report.ClusterNode.NodeStateInfo.Topology.NodeTag);
@@ -289,7 +298,7 @@ public class RavenDB_14548 : RavenTestBase
                     Assert.Equal(OSType.Linux, nodeSummary.ClusterNodeInfo.OsType);
                     Assert.Contains("Ubuntu", nodeSummary.ClusterNodeInfo.OsName);
 
-                    Assert.Contains("live-test", nodeSummary.ClusterNodeInfo.NodeUrl);
+                    Assert.NotEmpty(nodeSummary.ClusterNodeInfo.NodeUrl);
                     
                     Assert.NotNull(nodeSummary.MemoryUsageInfo);
                     Assert.NotNull(nodeSummary.MemoryUsageInfo.AvailableMemory);
@@ -340,6 +349,13 @@ public class RavenDB_14548 : RavenTestBase
                 }
 
                 Assert.NotNull(summaryResult.ClusterWideIssues);
+                
+                Assert.Equal(1, summaryResult.ClusterWideIssues.ClusterIssues.Count);
+
+                Assert.Contains("Custom Election Timeout", summaryResult.ClusterWideIssues.ClusterIssues[0].Title);
+                
+                Assert.Equal(0, summaryResult.ClusterWideIssues.DatabaseIssues.Count);
+                Assert.Equal(0, summaryResult.ClusterWideIssues.ServerIssues.Count);
             }
             finally
             {
@@ -403,6 +419,8 @@ public class RavenDB_14548 : RavenTestBase
                              ($"databases/indexes/stats?packageId={summaryResult.PackageId}&nodeTag={node}&name={database}", typeof(GetIndexStatisticsResponse)),
                              ($"databases/indexes/performance?packageId={summaryResult.PackageId}&nodeTag={node}&name={database}", typeof(GetIndexPerformanceStatsResponse)),
                              ($"databases/indexes/errors?packageId={summaryResult.PackageId}&nodeTag={node}&name={database}", typeof(GetIndexErrorsResponse)),
+                             
+                             ($"databases/configuration/settings?packageId={summaryResult.PackageId}&nodeTag={node}&name={database}", null),
                          })
                 {
                     var getInfoCmd = new GetDebugPackageAnalysisInfoCommand<dynamic>(item.Endpoint)

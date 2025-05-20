@@ -137,7 +137,7 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                     var databaseReport = new DebugPackageDatabaseReport(databaseName)
                     {
                         DatabaseInfo = generalInfoAnalyzer.DatabaseInfo,
-                        Settings = configurationAnalyzer.DatabaseSettings,
+                        Settings = configurationAnalyzer.SettingsInfo,
                         IndexesInfo = indexesAnalyzer.IndexesInfo,
                         TasksInfo = tasksAnalyzer.TasksInfo,
                     };
@@ -161,7 +161,7 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
             }
         }
 
-        var clusterWideIssues = DetectClusterIssues(nodeReports);
+        var clusterWideIssues = DetectClusterWideIssues(nodeReports);
         var databaseGroupsIssues = DetectDatabaseGroupsIssues(nodeReports);
 
         return new DebugPackageReport(nodeReports.ToArray(), new DebugPackageAnalysisIssues
@@ -171,19 +171,46 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
         });
     }
 
-    private List<DetectedIssue> DetectClusterIssues(List<DebugPackageNodeReport> reports)
+    private List<DetectedIssue> DetectClusterWideIssues(List<DebugPackageNodeReport> reports)
     {
         var clusterWideIssues = new List<DetectedIssue>();
 
+        var customElectionTimeoutDetected = false;
+        
         foreach (var report in reports)
         {
             var nodeTag = report.NodeTag;
-            var nodeAnalysis = report.ClusterNode;
+            var clusterNodeAnalysis = report.ClusterNode;
 
-            if (nodeAnalysis != null)
+            if (clusterNodeAnalysis is null)
                 continue;
 
-            // TODO arek - check
+            if (clusterNodeAnalysis.ElectionTimeoutInMs != null && clusterNodeAnalysis.DefaultElectionTimeoutInMs != null)
+            {
+                if (customElectionTimeoutDetected == false)
+                {
+                    clusterWideIssues.Add(new DetectedIssue("Custom Election Timeout setting defined",
+                        $"The setting '{RavenConfiguration.GetKey(x => x.Cluster.ElectionTimeout)}' is set to " +
+                        $"non default value: {clusterNodeAnalysis.ElectionTimeoutInMs.Value} ms",
+                        IssueSeverity.Warning, IssueCategory.Cluster));
+
+                    customElectionTimeoutDetected = true;
+                }
+
+                if (report.Server.NetworkInfo?.PingTestResults != null)
+                {
+                    foreach (var pingResult in report.Server.NetworkInfo.PingTestResults)
+                    {
+                        if (pingResult.TcpInfo.ReceiveTime > clusterNodeAnalysis.ElectionTimeoutInMs.Value + clusterNodeAnalysis.ElectionTimeoutInMs.Value / 10.0)
+                        {
+                            clusterWideIssues.Add(new DetectedIssue("Ping times higher than Election Timeout", 
+                                $"Ping time between node {nodeTag} and '{pingResult.Url}' is {pingResult.TcpInfo.ReceiveTime} ms while " +
+                                $"the Election Timeout is {clusterNodeAnalysis.ElectionTimeoutInMs.Value} ms",
+                                IssueSeverity.Warning, IssueCategory.Cluster));
+                        }
+                    }
+                }
+            }
         }
 
         return clusterWideIssues;

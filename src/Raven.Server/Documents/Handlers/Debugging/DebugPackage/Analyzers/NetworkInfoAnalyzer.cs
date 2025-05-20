@@ -55,6 +55,19 @@ public class NetworkInfoAnalyzer : AbstractDebugPackageAnalyzer
 
             NetworkInfo.TcpConnections = connections;
         }
+        else
+        {
+            AddWarning("Failed to get active connections");    
+        }
+        
+        if (serverEntries.TryGetValue<NodeDebugHandler, List<NodeDebugHandler.PingResult>>(x => x.PingTest(), "Result", out var pingResults))
+        {
+            NetworkInfo.PingTestResults = pingResults;
+        }
+        else
+        {
+            AddWarning("Failed to get ping test results");
+        }
 
         return true;
     }
@@ -114,6 +127,39 @@ public class NetworkInfoAnalyzer : AbstractDebugPackageAnalyzer
                         "This could indicate a high volume of short-lived connections while it is generally expected " +
                         "to have a stable number of established connections with proper connection reuse.",
                         IssueSeverity.Warning, IssueCategory.Server));
+            }
+        }
+
+        if (NetworkInfo.PingTestResults != null)
+        {
+            foreach (var pingResult in NetworkInfo.PingTestResults)
+            {
+                if (pingResult.TcpInfo.ReceiveTime > 2000)
+                {
+                    string description = $"TCP ping time to {pingResult.Url} node is {pingResult.TcpInfo.ReceiveTime} ms.";
+
+                    if (pingResult.HasErrors)
+                    {
+                        if (pingResult.SetupAlive.Error != null)
+                        {
+                            description += $" Setup alive error: {pingResult.SetupAlive.Error}";
+                        }
+                        
+                        if (pingResult.TcpInfo.Error != null)
+                        {
+                            description += $" TCP info error: {pingResult.TcpInfo.Error}";
+                        }
+                    }
+                    
+                    issues.ServerIssues.Add(new DetectedIssue(
+                        "High TCP ping time between nodes",
+                        description,
+                        pingResult.TcpInfo.ReceiveTime > 5000 ? IssueSeverity.Error : IssueSeverity.Warning,
+                        IssueCategory.Server)
+                    {
+                        RecommendedAction = "Please check network connectivity and latency between cluster nodes"
+                    });
+                }
             }
         }
     }
