@@ -209,6 +209,17 @@ namespace Raven.Server.Documents.Queries
                 terms.Add(attribute.Term);
             }
 
+            if (terms.Count == 0)
+            {
+                // Backward compatibility for proximity search
+                query = new PhraseQuery
+                {
+                    Boost = boost.Value
+                };
+                
+                return false;
+            }
+            
             switch (type)
             {
                 case LuceneTermType.Prefix:
@@ -226,17 +237,7 @@ namespace Raven.Server.Documents.Queries
                     };
                     return true;
             }
-
-            if (terms.Count == 0)
-            {
-                // Backward compatibility for proximity search
-                query = new PhraseQuery
-                {
-                    Boost = boost.Value
-                };
-                return false;
-            }
-
+            
             if (terms.Count == 1)
             {
                 query = new TermQuery(new Term(fieldName, terms[0]))
