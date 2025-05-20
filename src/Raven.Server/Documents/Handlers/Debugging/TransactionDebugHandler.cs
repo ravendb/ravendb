@@ -16,10 +16,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public sealed class TransactionDebugHandler : DatabaseRequestHandler
     {
-        public sealed class TransactionInfo
+        internal sealed class TransactionInfo
         {
             public string Path;
-            public List<LowLevelTransaction> Information;
+            public List<TxInfoResult> Information;
         }
 
         [RavenAction("/databases/*/admin/debug/txinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
@@ -32,8 +32,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var txInfo = new TransactionInfo
                 {
                     Path = env.Environment.Options.BasePath.FullPath,
-                    Information = env.Environment.ActiveTransactions.AllTransactionsInstances
+                    Information = env.Environment.ActiveTransactions.AllTransactionsInstances.Select(ToTxInfoResult).ToList()
                 };
+                
                 results.Add(txInfo);
             }
 
@@ -45,6 +46,27 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     ["tx-info"] = ToJson(results)
                 });
             }
+        }
+
+        internal static TxInfoResult ToTxInfoResult(LowLevelTransaction lowLevelTransaction)
+        {
+            return new TxInfoResult
+            {
+                TransactionId = lowLevelTransaction.Id,
+                ThreadId = lowLevelTransaction.CurrentTransactionHolder?.ManagedThreadId,
+                ThreadName = lowLevelTransaction.CurrentTransactionHolder?.Name,
+                CallerName = lowLevelTransaction.CallerName,
+                StartTime = lowLevelTransaction.TxStartTime.GetDefaultRavenFormat(isUtc: true),
+                TotalTime = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).TotalMilliseconds} mSecs",
+                FlushInProgressLockTaken = lowLevelTransaction.FlushInProgressLockTaken,
+                Flags = lowLevelTransaction.Flags,
+                IsCloned = lowLevelTransaction.IsCloned,
+                NumberOfModifiedPages = lowLevelTransaction.NumberOfModifiedPages,
+                Committed = lowLevelTransaction.Committed,
+                TotalAllocatedSize = new Size(lowLevelTransaction.TotalAllocatedInBytes, SizeUnit.Bytes).ToString(),
+                DecompressedBufferSize = new Size(lowLevelTransaction.DecompressedBufferBytes, SizeUnit.Bytes).ToString(),
+                TotalEncryptionBufferSize = lowLevelTransaction.TotalEncryptionBufferInBytes.ToString(),
+            };
         }
 
         [RavenAction("/databases/*/admin/debug/cluster/txinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
@@ -68,7 +90,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             };
         }
 
-        private static DynamicJsonValue ToJson(LowLevelTransaction lowLevelTransaction)
+        private static DynamicJsonValue ToJson(TxInfoResult txInfo)
         {
             return new DynamicJsonValue
             {
@@ -93,12 +115,12 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
     internal sealed class TxInfoResult
     {
-        public int TransactionId;
-        public int ThreadId;
+        public long TransactionId;
+        public int? ThreadId;
         public string ThreadName;
         public string CallerName;
-        public int StartTime;
-        public int TotalTime;
+        public string StartTime;
+        public string TotalTime;
         public bool FlushInProgressLockTaken;
         public TransactionFlags Flags;
         public bool IsCloned;

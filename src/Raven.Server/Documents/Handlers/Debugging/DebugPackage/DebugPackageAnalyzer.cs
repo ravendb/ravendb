@@ -106,6 +106,7 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                     var indexesAnalyzer = new IndexesInfoAnalyzer(databaseName, errors, issues);
                     var tombstonesAnalyzer = new TombstonesInfoAnalyzer(databaseName, errors, issues);
                     var tasksAnalyzer = new TasksInfoAnalyzer(databaseName, errors, issues);
+                    var transactionInfoAnalyzer = new TransactionInfoAnalyzer(databaseName, errors, issues);
                     
                     var databaseAnalyzers = new AbstractDebugPackageDatabaseAnalyzer[]
                     {
@@ -113,7 +114,8 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                         indexesAnalyzer,
                         tombstonesAnalyzer,
                         tasksAnalyzer,
-                        configurationAnalyzer
+                        configurationAnalyzer,
+                        transactionInfoAnalyzer
                     };
 
                     var databaseEntries = packageContent.ForDatabase(databaseName);
