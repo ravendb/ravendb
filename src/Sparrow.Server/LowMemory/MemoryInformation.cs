@@ -581,6 +581,12 @@ namespace Sparrow.LowMemory
 
         public static long GetSharedCleanInBytes(out long workingSet, out long pageFileUsage)
         {
+            // The used space in scratch buffers represents dirty memory. While we cannot precisely determine how much
+            // of it resides in physical memory, this approach provides a highly reliable approximation of the shared
+            // dirty memory footprint.
+            var sharedDirty = GetTotalScratchAllocatedMemoryInBytes();
+            long privateUsage;
+
             if (WindowsSupportsMemoryCountersEx2)
             {
                 if (Win32MemoryMethods.GetProcessMemoryInfo(ProcessHandle, out Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2 memCounters, (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX2))) == false)
@@ -590,7 +596,7 @@ namespace Sparrow.LowMemory
 
                 workingSet = (long)memCounters.WorkingSetSize;
                 pageFileUsage = (long)memCounters.PagefileUsage;
-                return workingSet - (long)memCounters.PrivateWorkingSetSize;
+                privateUsage = (long)memCounters.PrivateWorkingSetSize;
             }
             else
             {
@@ -601,54 +607,10 @@ namespace Sparrow.LowMemory
 
                 workingSet = (long)memCounters.WorkingSetSize;
                 pageFileUsage = (long)memCounters.PagefileUsage;
-                return GetLegacySharedClean(workingSet);
-            }
-        }
-
-        private static long GetLegacySharedClean(long workingSet)
-        {
-            var mappedDirty = 0L;
-            foreach (var mapping in NativeMemory.FileMapping)
-            {
-                var fileMappingInfo = mapping.Value.Value;
-                var fileType = fileMappingInfo.FileType;
-                if (fileType == NativeMemory.FileType.Data)
-                    continue;
-
-                var totalMapped = GetTotalMapped(fileMappingInfo);
-                if (fileType == NativeMemory.FileType.ScratchBuffer)
-                {
-                    // for scratch buffers we have the allocated size
-                    var allocated = fileMappingInfo.GetAllocatedSizeFunc?.Invoke() ?? totalMapped;
-                    if (allocated < totalMapped / 2)
-                    {
-                        // using less than half of the size of the scratch buffer
-                        mappedDirty += allocated;
-                        continue;
-                    }
-                }
-
-                // we are counting the total mapped size of all the other buffers
-                mappedDirty += totalMapped;
+                privateUsage = AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes() + AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
             }
 
-            var sharedClean = workingSet - AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes() - AbstractLowMemoryMonitor.GetManagedMemoryInBytes() - mappedDirty;
-
-            // the shared dirty can be larger than the size of the working set
-            // this can happen when some of the buffers were paged out
-            return Math.Max(0, sharedClean);
-        }
-
-        private static long GetTotalMapped(NativeMemory.FileMappingInfo fileMappingInfo)
-        {
-            var totalMapped = 0L;
-
-            foreach (var singleMapping in fileMappingInfo.Info)
-            {
-                totalMapped += singleMapping.Value;
-            }
-
-            return totalMapped;
+            return workingSet - privateUsage - sharedDirty;
         }
 
         public static long GetWorkingSetInBytes()
