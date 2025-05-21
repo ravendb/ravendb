@@ -13,9 +13,10 @@ using Microsoft.SemanticKernel.Connectors.Onnx;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries.Vector;
 using Raven.Server.Config;
-using Raven.Server.Documents.AI.Embeddings;
 using Sparrow;
+using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Utils;
 using VectorValue = Corax.Utils.VectorValue;
 
 namespace Raven.Server.Documents.Indexes.VectorSearch;
@@ -42,8 +43,16 @@ public static class GenerateEmbeddings
     {
         if (Embedder.IsValueCreated)
             throw new InvalidOperationException("Embedder has already been initialized.");
-        
-        OnnxSessionOptions = new SessionOptions() { IntraOpNumThreads = configuration.Indexing.MaxNumberOfThreadsForLocalEmbeddingsGeneration };
+
+        try
+        {
+            OnnxSessionOptions = new SessionOptions { IntraOpNumThreads = configuration.Indexing.MaxNumberOfThreadsForLocalEmbeddingsGeneration };
+        }
+        catch (TypeInitializationException e) when (PlatformDetails.RunningOnWindows)
+        {
+            throw new IncorrectDllException("The initialization error is caused by missing 'Microsoft Visual C++ 2019 Redistributable Package' (or newer), " +
+                                            "you can download it here: https://aka.ms/vs/17/release/vc_redist.x64.exe", e);
+        }
     }
 
     [ThreadStatic]
