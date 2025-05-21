@@ -24,7 +24,6 @@ using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using static Lucene.Net.Documents.Field;
 
 namespace SlowTests.Server.Documents.Attachments
 {
@@ -670,6 +669,91 @@ namespace SlowTests.Server.Documents.Attachments
                     }
 
                     action?.Invoke(expired);
+                }
+            }
+        }
+
+        [AmazonS3RetryTheory]
+        [InlineData(1, new byte[] { 1, 2, 3, 4, 5 })]
+        [InlineData(5, new byte[] { 1, 2, 3, 4, 5 })]
+        public async Task CanRetireIdenticalAttachmentOnTwoDocuments_OnlyOneInCloud_AndGetFromBoth(int count, byte[] arr)
+        {
+            // Pseudocode:
+            // 1. Create cloud settings and document store.
+            // 2. Put retire attachments configuration.
+            // 3. Create two documents.
+            // 4. Add the same attachment (same content, name, content-type) to both documents.
+            // 5. Retire both attachments (move time forward and trigger retirement).
+            // 6. Assert only one blob in cloud.
+            // 7. Assert we can get the retired attachment from both documents.
+
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                await PutRetireAttachmentsConfiguration(store, Settings);
+
+                var contentType = "image/png";
+                var attachmentBytes = arr;
+                var docIds = new List<string>();
+
+                // Create two documents
+                using (var stream1 = new MemoryStream(attachmentBytes))
+                using (var session = store.OpenAsyncSession())
+                {
+                    for (int i = 0; i < count; i++)
+                    {
+                        var id = $"Orders/{i}";
+                        docIds.Add(id);
+                        await session.StoreAsync(new Order { Id = id });
+                        await session.SaveChangesAsync();
+
+                        await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters($"shared_{i}.png", stream1)
+                        {
+                            RetireAt = DateTime.UtcNow.AddMinutes(3),
+                            ContentType = contentType
+                        }));
+                        stream1.Position = 0;
+                    }
+
+                }
+
+                // Move time forward and retire attachments
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                // Assert only one blob in cloud
+                var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+
+
+                using (var ms1 = new MemoryStream())
+                {
+                    var retired1 = await store.Operations.SendAsync(new GetRetiredAttachmentOperation($"Orders/0", $"shared_0.png"));
+                    await retired1.Stream.CopyToAsync(ms1);
+                    Assert.Equal(attachmentBytes, ms1.ToArray());
+                    Assert.Equal($"shared_0.png", retired1.Details.Name);
+                    Assert.Equal(contentType, retired1.Details.ContentType);
+                    Assert.Equal(AttachmentFlags.Retired, retired1.Details.Flags);
+                    for (int i = 1; i < count; i++)
+                    {
+                        var retired2 = await store.Operations.SendAsync(new GetRetiredAttachmentOperation($"Orders/{i}", $"shared_{i}.png"));
+
+                        Assert.Equal($"shared_{i}.png", retired2.Details.Name);
+                        Assert.Equal(contentType, retired2.Details.ContentType);
+                        Assert.Equal(AttachmentFlags.Retired, retired2.Details.Flags);
+
+                        ms1.Position = 0;
+
+                        // Compare content
+                        using (var ms2 = new MemoryStream())
+                        {
+
+                            await retired2.Stream.CopyToAsync(ms2);
+                            Assert.Equal(ms1.ToArray(), ms2.ToArray());
+                            Assert.Equal(attachmentBytes, ms2.ToArray());
+                        }
+                    }
+
                 }
             }
         }

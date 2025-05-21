@@ -10,9 +10,11 @@ using Google.Apis.Upload;
 using Google.Cloud.Storage.V1;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Util;
 using Sparrow;
 using Sparrow.Server.Utils;
 using Object = Google.Apis.Storage.v1.Data.Object;
+using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
 {
@@ -221,6 +223,53 @@ namespace Raven.Server.Documents.PeriodicBackup.GoogleCloud
                 when (e.Error.Code == 404)
             {
                 throw new InvalidOperationException($"Bucket {_bucketName} not found", e);
+            }
+        }
+
+        public IDictionary<string, string> GetObjectMetadata(string key)
+        {
+            return AsyncHelpers.RunSync(() => GetObjectMetadataAsync(key));
+        }
+
+        public async Task<IDictionary<string, string>> GetObjectMetadataAsync(string key)
+        {
+            try
+            {
+                var obj = await _client.GetObjectAsync(
+                        _bucketName,
+                        key,
+                        cancellationToken: CancellationToken
+                    );
+
+                if (obj == null)
+                    return null;
+
+                var metadata = new Dictionary<string, string>();
+                if (obj.Metadata != null)
+                {
+                    foreach (var kvp in obj.Metadata)
+                    {
+                        metadata[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                // Optionally include standard properties as metadata
+                if (!string.IsNullOrEmpty(obj.ContentType))
+                    metadata["ContentType"] = obj.ContentType;
+                if (obj.Size != null)
+                    metadata["ContentLength"] = obj.Size.ToString();
+
+                return metadata;
+            }
+            catch (Google.GoogleApiException e)
+                when (e.Error.Code == 403)
+            {
+                throw new InvalidOperationException($"Google credentials json does not have access to project {_projectId ?? "N/A"}", e);
+            }
+            catch (Google.GoogleApiException e) 
+                when (e.HttpStatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return null;
             }
         }
 

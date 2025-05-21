@@ -10,11 +10,11 @@ using Sparrow.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectDownload;
 
-public sealed class DirectBackupDownloader : BackupUploaderBase, IDisposable
+public sealed class DirectFileDownloader : FileUploaderBase, IDisposable
 {
     private readonly BackupConfiguration.BackupDestination _destination;
     private IRestoreSource _restoreSource = null;
-    public DirectBackupDownloader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken) :
+    public DirectFileDownloader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken) :
         base(settings, retentionPolicyParameters, logger, backupResult, onProgress, taskCancelToken)
     {
         _destination = settings.Destination;
@@ -37,7 +37,7 @@ public sealed class DirectBackupDownloader : BackupUploaderBase, IDisposable
 
     public override string GetBackupDescription()
     {
-        return $"{nameof(DirectBackupDownloader)}";
+        return $"{nameof(DirectFileDownloader)}";
     }
 
     public void Dispose()

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
-using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Extensions;
@@ -18,14 +17,16 @@ using Sparrow.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
-public sealed class DirectBackupUploader : BackupUploaderBase
+public sealed class DirectFileUploader : FileUploaderBase
 {
+    private readonly short _concurrentThreads;
     private readonly BackupConfiguration.BackupDestination _destination;
 
-    public DirectBackupUploader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken) :
+    public DirectFileUploader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken) :
         base(settings, retentionPolicyParameters, logger, backupResult, onProgress, taskCancelToken)
     {
         _destination = settings.Destination;
+        _concurrentThreads = settings.ConcurrentThreads;
     }
 
     internal Stream StreamForBackupDestination(DocumentDatabase database, string folderName, string fileName)
@@ -67,7 +68,7 @@ public sealed class DirectBackupUploader : BackupUploaderBase
 
     public override string GetBackupDescription()
     {
-        return $"{nameof(DirectBackupUploader)}";
+        return $"{nameof(DirectFileUploader)}";
     }
 
     public void AddDelete(string folderName, string fileName)
@@ -89,12 +90,29 @@ public sealed class DirectBackupUploader : BackupUploaderBase
         }
     }
 
+    public IDictionary<string, string> GetObjectMetadata(string folderName, string objKeyName)
+    {
+        switch (_destination)
+        {
+            case BackupConfiguration.BackupDestination.AmazonS3:
+                return GetObjectMetadataFromS3(_settings.S3Settings, folderName, objKeyName);
+                break;
+
+            case BackupConfiguration.BackupDestination.Azure:
+                return GetObjectMetadataFromAzure(_settings.AzureSettings, folderName, objKeyName);
+                break;
+
+            default:
+                throw new ArgumentOutOfRangeException($"Missing implementation for direct upload destination '{_destination}'");
+        }
+    }
+
     private string ThreadName(string name)
     {
         return $"Delete retired attachment of database '{_settings.DatabaseName}' from {name} (task: '{_settings.TaskName}')";
     }
 
-    public void CreateUploadTask(DocumentDatabase database, Stream attachmentStream, string folderName, string objKeyName, CancellationToken token)
+    public void CreateUploadTask(DocumentDatabase database, Stream attachmentStream, string objKeyName, CancellationToken token)
     {
         var targetName = _destination == BackupConfiguration.BackupDestination.AmazonS3 ? S3Name : AzureName;
         var threadName = $"Upload retired attachment '{objKeyName}' of database '{_settings.DatabaseName}' from {targetName} (task: '{_settings.TaskName}')";
@@ -108,14 +126,14 @@ public sealed class DirectBackupUploader : BackupUploaderBase
                 AddInfo($"Starting the upload of retired attachment '{objKeyName}'.");
 
                 using (attachmentStream)
-                using (var stream = StreamForBackupDestination(database, folderName, objKeyName))
+                using (var stream = StreamForBackupDestination(database, string.Empty, objKeyName))
                     attachmentStream.CopyTo(stream);
 
             }
             catch (Exception e)
             {
                 var extracted = e.ExtractSingleInnerException();
-                var error = $"Failed to delete the backup file from {targetName}.";
+                var error = $"Failed the {threadName}.";
                 Exception exception = null;
                 if (extracted is OperationCanceledException)
                 {
@@ -132,7 +150,7 @@ public sealed class DirectBackupUploader : BackupUploaderBase
 
     public bool TryCleanFinishedThreads(Stopwatch sp, OperationCancelToken token)
     {
-        if (_threads.Count < 8)
+        if (_threads.Count < _concurrentThreads)
             return true;
 
         var cleaned = false;
@@ -178,4 +196,5 @@ public sealed class DirectBackupUploader : BackupUploaderBase
         Execute();
         _threads.Clear();
     }
+
 }

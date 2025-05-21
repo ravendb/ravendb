@@ -5,7 +5,6 @@ using System.Threading;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Extensions;
-using Raven.Server.Dashboard;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
@@ -19,7 +18,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup;
 
-public abstract class BackupUploaderBase
+public abstract class FileUploaderBase
 {
     public readonly OperationCancelToken TaskCancelToken;
 
@@ -38,7 +37,7 @@ public abstract class BackupUploaderBase
     protected const string GoogleCloudName = "Google Cloud";
     protected const string FtpName = "FTP";
 
-    protected BackupUploaderBase(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult,
+    protected FileUploaderBase(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, Logger logger, BackupResult backupResult,
         Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
     {
         _settings = settings ?? throw new ArgumentNullException(nameof(settings));
@@ -61,8 +60,9 @@ public abstract class BackupUploaderBase
             path = path[..^1];
 
         var prefix = string.IsNullOrWhiteSpace(path) == false ? $"{path}/" : string.Empty;
+        prefix = string.IsNullOrWhiteSpace(folderName) == false ? $"{prefix}{folderName}/" : prefix;
 
-        return $"{prefix}{folderName}/{fileName}";
+        return $"{prefix}{fileName}";
     }
 
     public virtual string GetBackupDescription()
@@ -170,6 +170,29 @@ public abstract class BackupUploaderBase
             if (_logger.IsInfoEnabled)
                 _logger.Info($"{ReportDeletion(GoogleCloudName)} storage bucket: {settings.BucketName}");
         }
+    }
+
+    protected IDictionary<string, string> GetObjectMetadataFromS3(S3Settings settings, string folderName, string fileName)
+    {
+        using (var client = new RavenAwsS3Client(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
+        {
+            var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
+            return client.GetObjectMetadata(key);
+        }
+    }
+
+    protected IDictionary<string, string> GetObjectMetadataFromAzure(AzureSettings settings, string folderName, string fileName)
+    {
+        using (IRavenAzureClient client = RavenAzureClient.Create(settings, _settings.Configuration, progress: null, TaskCancelToken.Token))
+        {
+            var key = CombinePathAndKey(settings.RemoteFolderName, folderName, fileName);
+            return client.GetObjectMetadata(key);
+        }
+    }
+
+    protected IDictionary<string, string> GetObjectMetadataFromGoogleCloud(GoogleCloudSettings settings, string folderName, string fileName)
+    {
+        throw new NotImplementedException();
     }
 
     private string ReportDeletion(string name)

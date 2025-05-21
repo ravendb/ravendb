@@ -20,11 +20,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
             return RetiredAttachmentHandlerProcessorForGet.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, "bulk");
         }
 
-        public override async Task<Stream> GetAttachmentStream(DirectBackupDownloader downloader, Attachment attachment, string collection)
+        public override async Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment, string collection)
         {
             return await RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(downloader, attachment, collection);
         }
-        public override DirectBackupDownloader GetAttachmentsDownloader(OperationCancelToken tcs)
+        public override DirectFileDownloader GetAttachmentsDownloader(OperationCancelToken tcs)
         {
             return RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(tcs);
         }

@@ -434,7 +434,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         private BackupResult GenerateBackupResult()
         {
-            var backupResult = BackupUploaderBase.GenerateUploadResult();
+            var backupResult = FileUploaderBase.GenerateUploadResult();
             backupResult.SnapshotBackup = new SmugglerProgressBase.Counts { Skipped = _isFullBackup == false || Configuration.BackupType == BackupType.Backup };
             return backupResult;
         }

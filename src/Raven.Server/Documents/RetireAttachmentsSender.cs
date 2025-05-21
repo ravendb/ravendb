@@ -12,13 +12,11 @@ using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.TransactionMerger.Commands;
-using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Logging;
 using Sparrow.Platform;
-using Sparrow.Server;
 using Voron;
 using Voron.Global;
 using static Raven.Server.Documents.AbstractBackgroundWorkStorage;
@@ -33,6 +31,7 @@ namespace Raven.Server.Documents
         internal static long BatchSizeInBytes = PlatformDetails.Is32Bits == false ? 1024 * Constants.Size.Megabyte : 4 * Constants.Size.Megabyte;
         internal static Size BatchSizeUnit = new Size(BatchSizeInBytes, SizeUnit.Bytes);
         internal static int BatchSize = PlatformDetails.Is32Bits == false ? 36 : 8;
+        internal static short ConcurrentThreadsNumber = PlatformDetails.Is32Bits == false ? (short)8 : (short)2;
 
         private readonly DocumentDatabase _database;
         private readonly TimeSpan _retirePeriod;
@@ -56,7 +55,7 @@ namespace Raven.Server.Documents
                 return Task.CompletedTask;
 
             _uploaderSettings = UploaderSettings.GenerateDirectUploaderSetting(_database, nameof(RetireAttachmentsSender),
-                Configuration.S3Settings, Configuration.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null);
+                Configuration.S3Settings, Configuration.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null, ConcurrentThreadsNumber);
 
             var t = Task.Run(async () =>
             {
@@ -84,8 +83,8 @@ namespace Raven.Server.Documents
             var currentTime = _database.Time.GetUtcNow();
             try
             {
-                var lazyDirectUpload = new Lazy<DirectBackupUploader>(() => new DirectBackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger,
-                    BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _token));
+                var lazyDirectUpload = new Lazy<DirectFileUploader>(() => new DirectFileUploader(_uploaderSettings, retentionPolicyParameters: null, Logger,
+                    FileUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _token));
 
                 using var _ = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
                 while (totalCount < maxItemsToProcess)
@@ -133,75 +132,44 @@ namespace Raven.Server.Documents
                                     break;
                                 }
 
-                                var type = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetRetireType(doc.LowerId);
-                                switch (type)
+                                if (string.IsNullOrEmpty(collection))
                                 {
-                                    case AttachmentRetireType.PutRetire:
-                                        if (string.IsNullOrEmpty(collection))
-                                        {
-                                            if (Logger.IsInfoEnabled)
-                                                Logger.Info($"Skipping '{nameof(AttachmentRetireType.PutRetire)}' of retired attachment with key: '{key}' because it's collection '{collection}' IsNullOrEmpty.");
+                                    if (Logger.IsInfoEnabled)
+                                        Logger.Info($"Skipping '{nameof(AttachmentRetireType.PutRetire)}' of retired attachment with key: '{key}' because it's collection '{collection}' IsNullOrEmpty.");
 
-                                            // document was deleted, need to remove it from retired tree
-                                            retired.Enqueue(doc);
-                                            continue;
-                                        }
-                       
-                                        using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.CleanRetiredAttachmentsKey(options.Context, doc.LowerId, out var keySlice))
-                                        {
-                                            // the attachment stream is disposed by the directUpload
-                                            var attachmentStream = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamByKey(context, keySlice);
-                                            if (attachmentStream == null)
-                                            {
-                                                // attachment was deleted, need to remote it from retired tree
-                                                retired.Enqueue(doc);
-                                                continue;
-                                            }
+                                    // document was deleted, need to remove it from retired tree
+                                    retired.Enqueue(doc);
+                                    continue;
+                                }
 
-                                            if (directUpload.TryCleanFinishedThreads(duration, _token))
-                                            {
-                                                string objKeyName = GetBlobDestination(keySlice, collection, out string folderName);
-                                                directUpload.CreateUploadTask(_database, attachmentStream, folderName, objKeyName, CancellationToken);
+                                var hash = _database.DocumentsStorage.AttachmentsStorage.ExtractHashFromAttachmentId(doc.LowerId);
 
-                                                totalUploaded += attachmentStream.Length;
-                                                retired.Enqueue(doc);
-                                            }
-                                            else
-                                            {
-                                                LogTimeoutIfNeeded(nameof(AttachmentRetireType.PutRetire), key, duration);
-                                            }
-                                        }
+                                if (directUpload.GetObjectMetadata(string.Empty, hash) != null)
+                                {
+                                    // the attachment already exists in the cloud, no need to upload it again
+                                    retired.Enqueue(doc);
+                                    continue;
+                                }
 
-                                        break;
-                                    case AttachmentRetireType.DeleteRetire:
-                                        if (string.IsNullOrEmpty(collection))
-                                        {
-                                            if (Logger.IsInfoEnabled)
-                                                Logger.Info($"Skipping '{nameof(AttachmentRetireType.DeleteRetire)}' of retired attachment with key: '{key}' because it's collection '{collection}' IsNullOrEmpty.");
+                                // the attachment stream is disposed by the directUpload
+                                var attachmentStream = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamByKey(context, doc.LowerId);
+                                if (attachmentStream == null)
+                                {
+                                    // attachment was deleted, need to remote it from retired tree
+                                    retired.Enqueue(doc);
+                                    continue;
+                                }
 
-                                            // configuration was changed, need to remove it from retired tree
-                                            retired.Enqueue(doc);
-                                            continue;
-                                        }
+                                if (directUpload.TryCleanFinishedThreads(duration, _token))
+                                {
+                                    directUpload.CreateUploadTask(_database, attachmentStream, hash, CancellationToken);
 
-                                        if (directUpload.TryCleanFinishedThreads(duration, _token))
-                                        {
-                                            using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.CleanRetiredAttachmentsKey(options.Context, doc.LowerId, out var keySlice))
-                                            {
-                                                string objKeyName = GetBlobDestination(keySlice, collection, out string folderName);
-                                                directUpload.AddDelete(folderName, objKeyName);
-                                            }
-
-                                            retired.Enqueue(doc);
-                                        }
-                                        else
-                                        {
-                                            LogTimeoutIfNeeded(nameof(AttachmentRetireType.DeleteRetire), key, duration);
-                                        }
-
-                                        break;
-                                    default:
-                                        throw new ArgumentOutOfRangeException(nameof(type));
+                                    totalUploaded += attachmentStream.Length;
+                                    retired.Enqueue(doc);
+                                }
+                                else
+                                {
+                                    LogTimeoutIfNeeded(nameof(AttachmentRetireType.PutRetire), key, duration);
                                 }
                             }
 
@@ -267,20 +235,6 @@ namespace Raven.Server.Documents
         {
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Timed out waiting for free thread to {method} retired attachments with '{key}', ReadTransactionMaxOpenTimeInMs: {sp.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs}, IsCancellationRequested: {_token.Token.IsCancellationRequested}, the {method} will happen on next iteration.");
-        }
-
-        private string GetBlobDestination(Slice keySlice, string collection, out string folderName)
-        {
-            var keyStr = keySlice.ToString();
-            var objKeyName = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(keyStr));
-
-            if (string.IsNullOrEmpty(collection))
-            {
-               throw new ArgumentException($"Collection is empty for key: {keyStr}");
-            }
-
-            folderName = $"{collection}";
-            return objKeyName;
         }
 
         private void ProgressNotification(IOperationProgress progress)

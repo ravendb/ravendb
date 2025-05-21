@@ -272,7 +272,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _uploaderSettings.FileName = uploadInfo.FileName;
             _uploaderSettings.FolderName = uploadInfo.FolderName;
             
-            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
+            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, FileUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
 
             try
             {
@@ -305,7 +305,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             _uploaderSettings.FileName = uploadInfo.FileName;
             _uploaderSettings.FolderName = uploadInfo.FolderName;
 
-            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, BackupUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
+            var backupUploader = new BackupUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, FileUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _operationCancelToken);
 
             try
             {

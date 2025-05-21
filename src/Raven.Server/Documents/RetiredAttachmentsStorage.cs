@@ -57,24 +57,24 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
     protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
     {
-        var type = GetRetireType(lowerId);
-        using var scope = CleanRetiredAttachmentsKey(context, lowerId, out var keySlice);
-        switch (type)
-        {
-            case AttachmentRetireType.PutRetire:
+        //var type = GetRetireType(lowerId);
+        //using var scope = CleanRetiredAttachmentsKey(context, lowerId, out var keySlice);
+        //switch (type)
+        //{
+        //    case AttachmentRetireType.PutRetire:
                 var collection = id; // for retire attachments, the id is the collection name
                 if (string.IsNullOrEmpty(collection))
                     throw new InvalidOperationException($"Couldn't retire the attachment. Document collection is null. Lower id is '{lowerId}'.");
-                ProcessDocumentForPutRetire(context, keySlice, collection, currentTime);
-                break;
+                ProcessDocumentForPutRetire(context, lowerId, collection, currentTime);
+        //        break;
 
-            case AttachmentRetireType.DeleteRetire:
-                ProcessDocumentForDeleteRetire(context, keySlice, id, currentTime);
-                break;
+        //    case AttachmentRetireType.DeleteRetire:
+        //        ProcessDocumentForDeleteRetire(context, keySlice, id, currentTime);
+        //        break;
 
-            default:
-                throw new ArgumentOutOfRangeException(nameof(type), type, null);
-        }
+        //    default:
+        //        throw new ArgumentOutOfRangeException(nameof(type), type, null);
+        //}
     }
 
     private void ProcessDocumentForPutRetire(DocumentsOperationContext context, Slice lowerId, string collection, DateTime currentTime)
@@ -122,26 +122,22 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         }
     }
 
-    private void ProcessDocumentForDeleteRetire(DocumentsOperationContext context, Slice outSlice, string id, DateTime currentTime)
-    {
-        // here we already deleted the attachment metadata from document,and put a DeleteRetire to RetireAttachmentsTree, now when we are here it means we deleted the attachment from cloud as well.
-    }
 
     protected override DocumentExpirationInfo GetDocumentAndIdOrCollection(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
     {
-        var type = GetRetireType(clonedId);
+        //var type = GetRetireType(clonedId);
 
-        switch (type)
-        {
-            case AttachmentRetireType.PutRetire:
+        //switch (type)
+        //{
+        //    case AttachmentRetireType.PutRetire:
                 return DocumentAndIdOrCollectionForPutRetire(options, clonedId, ticksSlice);
-            case AttachmentRetireType.DeleteRetire:
-                return DocumentAndIdOrCollectionForDeleteRetire(options, clonedId, ticksSlice);
-            case AttachmentRetireType.ExistingRetire:
-                return DocumentAndIdOrCollectionForExistingRetire(options, clonedId, ticksSlice);
-            default:
-                throw new ArgumentOutOfRangeException(nameof(type), type, null);
-        }
+        //    case AttachmentRetireType.DeleteRetire:
+        //        return DocumentAndIdOrCollectionForDeleteRetire(options, clonedId, ticksSlice);
+        //    case AttachmentRetireType.ExistingRetire:
+        //        return DocumentAndIdOrCollectionForExistingRetire(options, clonedId, ticksSlice);
+        //    default:
+        //        throw new ArgumentOutOfRangeException(nameof(type), type, null);
+        //}
     }
 
     private DocumentExpirationInfo DocumentAndIdOrCollectionInternal(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice, out Document document, out string id, out string collectionStr)
@@ -149,8 +145,8 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         document = null;
         collectionStr = null;
         //string id;
-        using var scope = CleanRetiredAttachmentsKey(options.Context, clonedId, out var keySlice);
-        using (var idLsv = _documentInfoHelper.GetDocumentId(keySlice))
+        //using var scope = CleanRetiredAttachmentsKey(options.Context, clonedId, out var keySlice);
+        using (var idLsv = _documentInfoHelper.GetDocumentId(clonedId))
         {
             id = idLsv;
             if (id == null)
@@ -260,11 +256,11 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         return scope;
     }
 
-    public override void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
-    {
-        using (CreateRetiredAttachmentsKeyWithType(context, lowerId, AttachmentRetireType.PutRetire, out Slice key))
-            base.Put(context, key, processDateString);
-    }
+    //public override void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
+    //{
+    //    using (CreateRetiredAttachmentsKeyWithType(context, lowerId, AttachmentRetireType.PutRetire, out Slice key))
+    //        base.Put(context, key, processDateString);
+    //}
 
     public unsafe void PutDelete(DocumentsOperationContext context, Slice lowerId, long ticks, string collection)
     {
@@ -384,40 +380,46 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
     public ByteStringContext<ByteStringMemoryCache>.ExternalScope CleanRetiredAttachmentsKey(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
     {
-        var type = GetRetireType(lowerId);
+        //var type = GetRetireType(lowerId);
 
-        switch (type)
-        {
-            case AttachmentRetireType.PutRetire:
-                return RemoveTypeFromRetiredAttachmentsKey2(context, lowerId, out outSlice);
+        //switch (type)
+        //{
+        //    case AttachmentRetireType.PutRetire:
+                return RemoveTypeFromRetiredAttachmentsKey3(context, lowerId, out outSlice);
 
-            case AttachmentRetireType.DeleteRetire:
-                return RemoveTypeAndCollectionFromRetiredAttachmentsKey(context, lowerId, out outSlice);
+        //    case AttachmentRetireType.DeleteRetire:
+        //        return RemoveTypeAndCollectionFromRetiredAttachmentsKey(context, lowerId, out outSlice);
 
-            case AttachmentRetireType.ExistingRetire:
-                return RemoveTypeFromRetiredAttachmentsKey2(context, lowerId, out outSlice);
+        //    case AttachmentRetireType.ExistingRetire:
+        //        return RemoveTypeFromRetiredAttachmentsKey2(context, lowerId, out outSlice);
 
-            default:
-                throw new ArgumentOutOfRangeException(nameof(type), type, null);
-        }
+        //    default:
+        //        throw new ArgumentOutOfRangeException(nameof(type), type, null);
+        //}
     }
 
-    public ByteStringContext<ByteStringMemoryCache>.ExternalScope RemoveTypeFromRetiredAttachmentsKey2(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
+    //public ByteStringContext<ByteStringMemoryCache>.ExternalScope RemoveTypeFromRetiredAttachmentsKey2(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
+    //{
+    //    var pos = 2;
+    //    var size = lowerId.Content.Length - pos; // retireType - record separator - lowerId 
+    //    return Slice.External(context.Allocator, lowerId.Content, pos, size, out outSlice);
+    //}
+
+    public ByteStringContext<ByteStringMemoryCache>.ExternalScope RemoveTypeFromRetiredAttachmentsKey3(DocumentsOperationContext context, Slice lowerId, out Slice outSlice)
     {
         var pos = 2;
         var size = lowerId.Content.Length - pos; // retireType - record separator - lowerId 
         return Slice.External(context.Allocator, lowerId.Content, pos, size, out outSlice);
     }
-
     protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
     {
         if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
             return;
 
-        using var scope = CleanRetiredAttachmentsKey(options.Context, clonedId, out Slice attachmentKey);
-        using (var docId = _documentInfoHelper.GetDocumentId(attachmentKey))
+        //using var scope = CleanRetiredAttachmentsKey(options.Context, clonedId, out Slice attachmentKey);
+        using (var docId = _documentInfoHelper.GetDocumentId(clonedId))
         {
-            (bool allExpired, string id) = GetConflictedRetiredAttachment(options.Context, options.CurrentTime, docId, attachmentKey);
+            (bool allExpired, string id) = GetConflictedRetiredAttachment(options.Context, options.CurrentTime, docId, clonedId);
 
             if (allExpired)
             {
@@ -480,26 +482,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         return (allExpired, collection);
     }
 
-    public AttachmentRetireType GetRetireType(Slice clonedId)
-    {
-        // this method get substring until record separator
-        using (var type = _documentInfoHelper.GetDocumentId(clonedId))
-        {
-            switch (type)
-            {
-                case "p":
-                    return AttachmentRetireType.PutRetire;
-                case "d":
-                    return AttachmentRetireType.DeleteRetire;
-                case "e":
-                    return AttachmentRetireType.ExistingRetire;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(type), type, $"Got unknown '{nameof(AttachmentRetireType)}' from retired key: '{clonedId}'. Should not happen and likely a bug!");
-            }
-        }
-    }
-
-    public DirectBackupDownloader GetDownloader(OperationCancelToken tcs)
+    public DirectFileDownloader GetDownloader(OperationCancelToken tcs)
     {
         if (Configuration == null)
             throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetiredAttachmentsConfiguration)} is not configured on {Database.Name}.");
@@ -507,10 +490,10 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetiredAttachmentsConfiguration)} is disabled.");
 
         var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(RetiredAttachmentHandlerProcessorForGet), Configuration.S3Settings, Configuration.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null);
-        return new DirectBackupDownloader(settings, retentionPolicyParameters: null, _logger, BackupUploaderBase.GenerateUploadResult(), progress => { }, tcs);
+        return new DirectFileDownloader(settings, retentionPolicyParameters: null, _logger, FileUploaderBase.GenerateUploadResult(), progress => { }, tcs);
     }
 
-    public Task<Stream> GetRetiredAttachmentFromCloud(DocumentsOperationContext context, DirectBackupDownloader downloader, Attachment attachment, OperationCancelToken tcs)
+    public Task<Stream> GetRetiredAttachmentFromCloud(DocumentsOperationContext context, DirectFileDownloader downloader, Attachment attachment, OperationCancelToken tcs)
     {
         string collection;
         using (var documentInfoHelper = new DocumentInfoHelper(context))
@@ -522,11 +505,10 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         return StreamForDownloadDestinationInternal(downloader, attachment, collection);
     }
 
-    public async Task<Stream> StreamForDownloadDestinationInternal(DirectBackupDownloader downloader, Attachment attachment, string collection)
+    public async Task<Stream> StreamForDownloadDestinationInternal(DirectFileDownloader downloader, Attachment attachment, string collection)
     {
-        var keyStr = attachment.Key.ToString();
-        var objKeyName = Convert.ToBase64String(Encoding.UTF8.GetBytes(keyStr));
-        var folderName = $"{collection}";
+        var objKeyName = attachment.Base64Hash.ToString();
+        var folderName = string.Empty;
 
         return await downloader.StreamForDownloadDestination(Database, folderName, objKeyName);
     }
@@ -583,20 +565,24 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
     public int ProcessAddRetiredAtToExistingAttachments(DocumentsOperationContext context, Queue<DocumentExpirationInfo> attachments)
     {
-        var retire = DateTime.MinValue.ToUniversalTime();
-        foreach (var info in attachments)
-        {
-            using (CleanRetiredAttachmentsKey(context, info.LowerId, out var keySlice))
-            {
-                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentByKey(context, keySlice);
+        return 0;
 
-                //TODO: egor I want to use the ticks I sent to command, and not the ticks from retire dt, need to handle that when I will refactor the AttachmentsStorage.PutAttachment() method 
-                Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, info.Id, attachment.Name, attachment.ContentType, attachment.Base64Hash.ToString(),
-                attachment.Flags, attachment.Size, retireAtDt: retire, forceRetireAt: true);
-            }
-        }
+        //TODO: egor
 
-        return attachments.Count;
+        //var retire = DateTime.MinValue.ToUniversalTime();
+        //foreach (var info in attachments)
+        //{
+        //    using (CleanRetiredAttachmentsKey(context, info.LowerId, out var keySlice))
+        //    {
+        //        var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentByKey(context, keySlice);
+
+        //        //TODO: egor I want to use the ticks I sent to command, and not the ticks from retire dt, need to handle that when I will refactor the AttachmentsStorage.PutAttachment() method 
+        //        Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, info.Id, attachment.Name, attachment.ContentType, attachment.Base64Hash.ToString(),
+        //        attachment.Flags, attachment.Size, retireAtDt: retire, forceRetireAt: true);
+        //    }
+        //}
+
+        //return attachments.Count;
     }
 
     public RetireAttachmentsSender UpdateRetiredAttachmentsFromDatabaseRecord(DatabaseRecord dbRecord, RetireAttachmentsSender retireAttachmentsSender)

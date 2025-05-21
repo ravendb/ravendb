@@ -144,7 +144,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     t.Flags = attachment.Flags;
                     //TODO: egor I can use getcollecton method here
                     t.RetiredKey =
-                        $"{settings.RemoteFolderName}/{t.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(attachment.Key))}";
+                        $"{settings.RemoteFolderName}/{t.Hash}";
                     //  $"{Settings.RemoteFolderName}/{database.Name}/{t.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(attachment.Key))}";
                     Attachments.Add(t);
                 }

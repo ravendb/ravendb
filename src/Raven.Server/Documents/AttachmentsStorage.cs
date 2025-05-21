@@ -56,6 +56,7 @@ namespace Raven.Server.Documents
     public unsafe partial class AttachmentsStorage
     {
         public RetiredAttachmentsStorage RetiredAttachmentsStorage;
+        internal static short AttachmentHashSize = 44;
 
         internal readonly TableSchema AttachmentsSchema;
         private readonly DocumentDatabase _documentDatabase;
@@ -273,7 +274,7 @@ namespace Raven.Server.Documents
                 using (GetAttachmentKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size, base64Hash,
                            lowerContentType.Content.Ptr, lowerContentType.Size, AttachmentType.Document, Slices.Empty, out Slice keySlice))
                 {
-                    Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {keySlice.Size}");
+                    Debug.Assert(base64Hash.Size == AttachmentHashSize, $"Hash size should be 44 but was: {keySlice.Size}");
 
 
                     DeleteTombstoneIfNeeded(context, keySlice);
@@ -336,7 +337,7 @@ namespace Raven.Server.Documents
                                     Debug.Assert(collectionName != null, "collectionName != null");
                                     Debug.Assert(flags == AttachmentFlags.None, "flags == AttachmentFlags.None");
 
-                                    TryPutRetiredAttachment(context, collectionName, keySlice, retireAtDt, out retireAt);
+                                    TryPutRetiredAttachment(context, keySlice, retireAtDt, out retireAt);
                                 }
                             }
                         }
@@ -445,7 +446,7 @@ namespace Raven.Server.Documents
                                 }
                                 else
                                 {
-                                    TryPutRetiredAttachment(context, collectionName, keySlice, retireAtDt, out retireAt);
+                                    TryPutRetiredAttachment(context, keySlice, retireAtDt, out retireAt);
                                 }
                             }
                         }
@@ -490,7 +491,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        private void TryPutRetiredAttachment(DocumentsOperationContext context, CollectionName collectionName, Slice keySlice, DateTime? retireAtDt, out long retireAt)
+        private void TryPutRetiredAttachment(DocumentsOperationContext context, Slice keySlice, DateTime? retireAtDt, out long retireAt)
         {
             if (retireAtDt.HasValue == false)
             {
@@ -502,35 +503,12 @@ namespace Raven.Server.Documents
             RetiredAttachmentsStorage.Put(context, keySlice, retireAtDt.Value.GetDefaultRavenFormat());
         }
 
-        private void TryDeleteRetiredAttachment(DocumentsOperationContext context, Slice keySlice, string collection)
-        {
-            if (RetiredAttachmentsStorage.Configuration is { Disabled: false })
-            {
-                if (RetiredAttachmentsStorage.Configuration.HasUploader() == false)
-                {
-                    var msg = $"Cannot delete attachment '{keySlice}' because {nameof(RetiredAttachmentsConfiguration)} does not have any uploader configured.";
-                    if (_logger.IsOperationsEnabled)
-                        _logger.Operations(msg);
-                    throw new InvalidOperationException(msg);
-                }
-
-                RetiredAttachmentsStorage.PutDelete(context, keySlice, DateTime.UtcNow.Ticks, collection);
-            }
-            else
-            {
-                var msg = $"Tried to delete retired attachment with key: '{keySlice}' but {nameof(RetiredAttachmentsConfiguration)} is disabled.";
-                if (_logger.IsOperationsEnabled)
-                    _logger.Operations(msg);
-                throw new InvalidOperationException(msg);
-            }
-        }
-
         /// <summary>
         /// Should be used only from replication or smuggler.
         /// </summary>
         public void PutDirect(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, Slice base64Hash, DateTime? retireAt, Slice collection, AttachmentFlags flags, long size, bool isRevision, string changeVector = null)
         {
-            Debug.Assert(base64Hash.Size == 44, $"Hash size should be 44 but was: {key.Size}");
+            Debug.Assert(base64Hash.Size == AttachmentHashSize, $"Hash size should be 44 but was: {key.Size}");
 
             var newEtag = _documentsStorage.GenerateNextEtag();
 
@@ -1723,7 +1701,7 @@ namespace Raven.Server.Documents
                     CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, (int)flags);
                     if (retireAtTicks != -1)
                     {
-                        RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
+                    //    RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
                     }
 
                     // We may have another operation in the same transaction that would cause us to re-create
@@ -1731,13 +1709,13 @@ namespace Raven.Server.Documents
                     context.Transaction.CheckIfShouldDeleteAttachmentStream(hash);
                     break;
                 case DeleteAttachmentState.DocumentRetiredAttachmentCloudStorage:
-                    RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
+                //    RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
                     CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, (int)flags);
-                    TryDeleteRetiredAttachment(context, key, collection);
+                  //  TryDeleteRetiredAttachment(context, key, collection);
                     //TODO: egor do I need to CreateTombstone() here?
                     break;
                 case DeleteAttachmentState.DocumentRetiredAttachmentStorage:
-                    RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
+                  //  RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
                     // TODO: egor write test that backup storageOnly=true attachment, it seems like its have to be retired first
 
                     // we create attachment tombstone with special flag to mark that we don't want to delete the attachment from cloud
@@ -1856,7 +1834,7 @@ namespace Raven.Server.Documents
             var p = attachmentKey.Buffer;
             var size = attachmentKey.Size;
 
-            ExtractDocIdAndAttachmentNameFromTombstone(p, size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName);
+            ExtractDocIdAndAttachmentNameFromTombstone(p, size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName, out _);
 
             var doc = context.AllocateStringValue(null, p, sizeOfDocId);
             var name = context.AllocateStringValue(null, p + attachmentNameIndex, sizeOfAttachmentName);
@@ -1869,7 +1847,7 @@ namespace Raven.Server.Documents
             var p = attachmentTombstoneId.Content.Ptr;
             var size = attachmentTombstoneId.Size;
 
-            ExtractDocIdAndAttachmentNameFromTombstone(p, size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName);
+            ExtractDocIdAndAttachmentNameFromTombstone(p, size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName, out _);
 
             var doc = Encodings.Utf8.GetString(p, sizeOfDocId);
             var name = Encodings.Utf8.GetString(p + attachmentNameIndex, sizeOfAttachmentName);
@@ -1877,6 +1855,15 @@ namespace Raven.Server.Documents
             return (doc, name);
         }
 
+        public  string ExtractHashFromAttachmentId(Slice attachmentId)
+        {
+            var p = attachmentId.Content.Ptr;
+            var size = attachmentId.Size;
+
+            ExtractDocIdAndAttachmentNameFromTombstone(p, size, out _, out _, out _, out int attachmentHashIndex);
+
+            return Encodings.Utf8.GetString(p + attachmentHashIndex, AttachmentHashSize);
+        }
 
         public static int GetSizeOfDocId(ReadOnlySpan<byte> key)
         {
@@ -1890,7 +1877,7 @@ namespace Raven.Server.Documents
             return sizeOfDocId;
         }
 
-        private static void ExtractDocIdAndAttachmentNameFromTombstone(byte* p, int size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName)
+        private static void ExtractDocIdAndAttachmentNameFromTombstone(byte* p, int size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName, out int attachmentHashIndex)
         {
             sizeOfDocId = GetSizeOfDocId(new ReadOnlySpan<byte>(p, size));
 
@@ -1906,6 +1893,10 @@ namespace Raven.Server.Documents
                 if (p[attachmentNameIndex + sizeOfAttachmentName] == SpecialChars.RecordSeparator)
                     break;
             }
+
+            attachmentHashIndex = attachmentNameIndex 
+                                  + sizeOfAttachmentName 
+                                  + 1; // sep
         }
 
         public static IEnumerable<BlittableJsonReaderObject> GetAttachmentsFromDocumentMetadata(BlittableJsonReaderObject document)

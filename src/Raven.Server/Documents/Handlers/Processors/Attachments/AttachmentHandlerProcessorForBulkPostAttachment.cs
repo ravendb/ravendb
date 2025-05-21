@@ -28,12 +28,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
             return null;
         }
-        public virtual Task<Stream> GetAttachmentStream(DirectBackupDownloader downloader, Attachment attachment, string collection)
+        public virtual Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment, string collection)
         {
             return Task.FromResult(attachment.Stream);
         }
 
-        public virtual DirectBackupDownloader GetAttachmentsDownloader(OperationCancelToken tcs)
+        public virtual DirectFileDownloader GetAttachmentsDownloader(OperationCancelToken tcs)
         {
              return null;
         }
