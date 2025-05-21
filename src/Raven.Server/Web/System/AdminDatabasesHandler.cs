@@ -532,6 +532,8 @@ namespace Raven.Server.Web.System
                 var configuration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
                 var restoreConfiguration = RestoreUtils.GetRestoreConfigurationAndSource(ServerStore, configuration, out var restoreSource, out var configurationJsonForAudit, out var restoreType, cancelToken);
 
+                await restoreSource.ValidateConfigurationFor(restoreConfiguration.LastFileNameToRestore);
+
                 if (restoreConfiguration.ShardRestoreSettings != null)
                 {
                     if (restoreConfiguration.ShardRestoreSettings.Shards == null ||

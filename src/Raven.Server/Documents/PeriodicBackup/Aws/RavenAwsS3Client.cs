@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                 credentials = new BasicAWSCredentials(s3Settings.AwsAccessKey, s3Settings.AwsSecretKey);
             else
                 credentials = new SessionAWSCredentials(s3Settings.AwsAccessKey, s3Settings.AwsSecretKey, s3Settings.AwsSessionToken);
-
+            
             _client = new AmazonS3Client(credentials, config);
 
             _bucketName = s3Settings.BucketName;
@@ -100,6 +100,28 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             _progress = progress;
             _cancellationToken = cancellationToken;
         }
+
+        public async Task ValidateConfigurationFor(string key)
+        {
+            var meta = await _client.GetObjectMetadataAsync(_bucketName, key: key, _cancellationToken);
+            if (!ArchiveClasses.Contains(meta.StorageClass))
+                return;
+
+            if (meta.RestoreInProgress.HasValue == false)
+                throw new InvalidOperationException(
+                    $"s3 is archived in {meta.StorageClass} but no " +
+                    "restore job was requested. Initiate the restore on S3 and wait for completion.");
+
+            if (meta.RestoreInProgress.Value)
+                throw new InvalidOperationException(
+                    $"Object s3 restoring is still in progress.");
+        }
+
+        private static readonly HashSet<string> ArchiveClasses = new(StringComparer.Ordinal)
+        {
+            "DEEP_ARCHIVE",
+            "GLACIER",
+        };
 
         public void PutObject(string key, Stream stream, Dictionary<string, string> metadata)
         {

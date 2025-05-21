@@ -52,6 +52,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return _backupLocation;
         }
 
+        public Task ValidateConfigurationFor(string key)
+        {
+            throw new NotImplementedException();
+        }
+
         public void Dispose()
         {
         }

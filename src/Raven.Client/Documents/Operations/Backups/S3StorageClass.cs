@@ -1,3 +1,5 @@
+using System;
+
 namespace Raven.Client.Documents.Operations.Backups;
 
 public enum S3StorageClass
@@ -44,6 +46,7 @@ public enum S3StorageClass
     /// <summary>
     /// The OUTPOSTS storage class for objects stored in a S3 Outpost
     /// </summary>
+    [Obsolete("Currently not supported")]
     Outposts,
 
     /// <summary>
@@ -74,6 +77,7 @@ public enum S3StorageClass
     /// The SNOW storage is for objects stored in Amazon S3 compatible object storage
     /// for Snow family devices.
     /// </summary>
+    [Obsolete("Currently not supported")]
     Snow,
 
     /// <summary>
