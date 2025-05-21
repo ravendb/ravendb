@@ -258,5 +258,43 @@ namespace Tests.Infrastructure
             if (IsRunningOnCI)
                 throw new InvalidOperationException($"Operation '{caller}' is forbidden, because tests are running on CI.");
         }
+
+        internal static HashSet<(string Method, string Path)> ServerEndpointsToIgnore = 
+        [
+            ("POST", "/admin/replication/conflicts/solver"),                          // access handled internally
+            ("POST", "/setup/dns-n-cert"),                                            // only available in setup mode
+            ("POST", "/setup/user-domains"),                                          // only available in setup mode
+            ("POST", "/setup/populate-ips"),                                          // only available in setup mode
+            ("GET", "/setup/parameters"),                                             // only available in setup mode
+            ("GET", "/setup/ips"),                                                    // only available in setup mode
+            ("POST", "/setup/hosts"),                                                 // only available in setup mode
+            ("POST", "/setup/unsecured"),                                             // only available in setup mode
+            ("POST", "/setup/unsecured/package"),                                     // only available in setup mode
+            ("POST", "/setup/continue/unsecured"),                                    // only available in setup mode
+            ("POST", "/setup/secured"),                                               // only available in setup mode
+            ("GET", "/setup/letsencrypt/agreement"),                                  // only available in setup mode
+            ("POST", "/setup/letsencrypt"),                                           // only available in setup mode
+            ("POST", "/setup/continue/extract"),                                      // only available in setup mode
+            ("POST", "/setup/continue"),                                              // only available in setup mode
+            ("POST", "/setup/finish"),                                                // only available in setup mode
+            ("POST", "/server/notification-center/dismiss"),                          // access handled internally
+            ("POST", "/server/notification-center/postpone"),                         // access handled internally
+            ("GET", "/admin/debug/cluster-info-package"),                             // heavy
+            ("GET", "/admin/debug/remote-cluster-info-package"),                      // heavy
+            ("GET", "/admin/debug/info-package"),                                     // heavy
+            ("GET", "/admin/debug/threads/contention"),                               // heavy
+            ("GET", "/admin/debug/gcdump"),                                           // heavy
+            ("GET", "/admin/debug/threads/stack-trace"),                              // heavy
+            ("GET", "/admin/debug/memory/gc-events"),                                 // heavy
+            ("GET", "/admin/debug/memory/allocations"),                               // heavy
+            ("GET", "/license/support"),                                              // heavy 
+            ("GET", "/admin/debug/threads/runaway"),                                  // heavy
+         ];
+
+        internal static HashSet<(string Method, string Path)> DatabaseEndpointsToIgnore = 
+        [
+            ("POST", "/databases/*/admin/pull-replication/generate-certificate"),     // heavy
+            ("POST", "/databases/*/studio/sample-data")                               // heavy
+        ];
     }
 }

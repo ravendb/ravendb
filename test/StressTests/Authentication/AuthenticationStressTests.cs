@@ -5,15 +5,10 @@
 // -----------------------------------------------------------------------
 
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using System.Net;
 using System.Net.Http;
 using FastTests;
-using Microsoft.VisualStudio.TestPlatform.Common;
-using NuGet.Configuration;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -103,45 +98,6 @@ namespace StressTests.Authentication
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
                 }
 
-                var serverEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/admin/replication/conflicts/solver"),    // access handled internally
-                    ("POST", "/setup/dns-n-cert"),                      // only available in setup mode
-                    ("POST", "/setup/user-domains"),                    // only available in setup mode
-                    ("POST", "/setup/populate-ips"),                    // only available in setup mode
-                    ("GET", "/setup/parameters"),                       // only available in setup mode
-                    ("GET", "/setup/ips"),                              // only available in setup mode
-                    ("POST", "/setup/hosts"),                           // only available in setup mode
-                    ("POST", "/setup/unsecured"),                       // only available in setup mode
-                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
-                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
-                    ("POST", "/setup/secured"),                         // only available in setup mode
-                    ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
-                    ("POST", "/setup/letsencrypt"),                     // only available in setup mode
-                    ("POST", "/setup/continue/extract"),                // only available in setup mode
-                    ("POST", "/setup/continue"),                        // only available in setup mode
-                    ("POST", "/setup/finish"),                          // only available in setup mode
-                    ("POST", "/server/notification-center/dismiss"),    // access handled internally
-                    ("POST", "/server/notification-center/postpone"),   // access handled internally
-                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
-                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
-                    ("GET", "/admin/debug/info-package"),               // heavy
-                    ("GET", "/admin/debug/threads/contention"),         // heavy
-                    ("GET", "/admin/debug/gcdump"),                     // heavy
-                    ("GET", "/admin/debug/threads/stack-trace"),        // heavy
-                    ("GET", "/admin/debug/memory/gc-events"),           // heavy
-                    ("GET", "/admin/debug/memory/allocations"),         // heavy
-                    ("GET", "/license/support"),                        // heavy
-                    ("GET", "/admin/debug/threads/runaway"),            // heavy
-
-                };
-
-                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
-                    ("POST", "/databases/*/studio/sample-data") // heavy
-                };
-
                 using (var httpClientHandler = new HttpClientHandler())
                 {
                     httpClientHandler.ClientCertificates.Add(userCert);
@@ -150,7 +106,7 @@ namespace StressTests.Authentication
                     var httpClient = new HttpClient(httpClientHandler);
                     httpClient.BaseAddress = new Uri(server.WebUrl);
 
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
+                    AssertServerRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.ServerEndpointsToIgnore, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
                         if (route.EndpointType == EndpointType.Write)
@@ -170,7 +126,7 @@ namespace StressTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
+                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.DatabaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
                         if (route.EndpointType == EndpointType.Write)
@@ -188,7 +144,7 @@ namespace StressTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
+                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.DatabaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = false;
 
@@ -235,44 +191,6 @@ namespace StressTests.Authentication
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
                 }
 
-                var serverEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/admin/replication/conflicts/solver"),    // access handled internally
-                    ("POST", "/setup/dns-n-cert"),                      // only available in setup mode
-                    ("POST", "/setup/user-domains"),                    // only available in setup mode
-                    ("POST", "/setup/populate-ips"),                    // only available in setup mode
-                    ("GET", "/setup/parameters"),                       // only available in setup mode
-                    ("GET", "/setup/ips"),                              // only available in setup mode
-                    ("POST", "/setup/hosts"),                           // only available in setup mode
-                    ("POST", "/setup/unsecured"),                       // only available in setup mode
-                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
-                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
-                    ("POST", "/setup/secured"),                         // only available in setup mode
-                    ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
-                    ("POST", "/setup/letsencrypt"),                     // only available in setup mode
-                    ("POST", "/setup/continue/extract"),                // only available in setup mode
-                    ("POST", "/setup/continue"),                        // only available in setup mode
-                    ("POST", "/setup/finish"),                          // only available in setup mode
-                    ("POST", "/server/notification-center/dismiss"),    // access handled internally
-                    ("POST", "/server/notification-center/postpone"),   // access handled internally
-                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
-                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
-                    ("GET", "/admin/debug/info-package"),               // heavy
-                    ("GET", "/admin/debug/threads/contention"),         // heavy
-                    ("GET", "/admin/debug/gcdump"),                     // heavy
-                    ("GET", "/admin/debug/threads/stack-trace"),        // heavy
-                    ("GET", "/admin/debug/memory/gc-events"),           // heavy
-                    ("GET", "/admin/debug/memory/allocations"),         // heavy
-                    ("GET", "/license/support"),                        // heavy
-                    ("GET", "/admin/debug/threads/runaway"),            // heavy
-                };
-
-                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
-                    ("POST", "/databases/*/studio/sample-data") // heavy
-                };
-
                 using (var httpClientHandler = new HttpClientHandler())
                 {
                     httpClientHandler.ClientCertificates.Add(userCert);
@@ -281,7 +199,7 @@ namespace StressTests.Authentication
                     var httpClient = new HttpClient(httpClientHandler);
                     httpClient.BaseAddress = new Uri(server.WebUrl);
 
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
+                    AssertServerRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.ServerEndpointsToIgnore, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
                         if (route.EndpointType == EndpointType.Write)
@@ -301,7 +219,7 @@ namespace StressTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
+                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.DatabaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = route.AuthorizationStatus == AuthorizationStatus.ValidUser;
 
@@ -313,7 +231,7 @@ namespace StressTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
+                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.DatabaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = false;
 
@@ -360,44 +278,6 @@ namespace StressTests.Authentication
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
                 }
 
-                var serverEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/admin/replication/conflicts/solver"),    // access handled internally
-                    ("POST", "/setup/dns-n-cert"),                      // only available in setup mode
-                    ("POST", "/setup/user-domains"),                    // only available in setup mode
-                    ("POST", "/setup/populate-ips"),                    // only available in setup mode
-                    ("GET", "/setup/parameters"),                       // only available in setup mode
-                    ("GET", "/setup/ips"),                              // only available in setup mode
-                    ("POST", "/setup/hosts"),                           // only available in setup mode
-                    ("POST", "/setup/unsecured"),                       // only available in setup mode
-                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
-                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
-                    ("POST", "/setup/secured"),                         // only available in setup mode
-                    ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
-                    ("POST", "/setup/letsencrypt"),                     // only available in setup mode
-                    ("POST", "/setup/continue/extract"),                // only available in setup mode
-                    ("POST", "/setup/continue"),                        // only available in setup mode
-                    ("POST", "/setup/finish"),                          // only available in setup mode
-                    ("POST", "/server/notification-center/dismiss"),    // access handled internally
-                    ("POST", "/server/notification-center/postpone"),   // access handled internally
-                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
-                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
-                    ("GET", "/admin/debug/info-package"),               // heavy
-                    ("GET", "/admin/debug/threads/contention"),         // heavy
-                    ("GET", "/admin/debug/gcdump"),                     // heavy
-                    ("GET", "/admin/debug/threads/stack-trace"),        // heavy
-                    ("GET", "/admin/debug/memory/gc-events"),           // heavy
-                    ("GET", "/admin/debug/memory/allocations"),         // heavy
-                    ("GET", "/license/support"),                        // heavy
-                    ("GET", "/admin/debug/threads/runaway"),            // heavy
-                };
-
-                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
-                    ("POST", "/databases/*/studio/sample-data") // heavy
-                };
-
                 using (var httpClientHandler = new HttpClientHandler())
                 {
                     httpClientHandler.ClientCertificates.Add(userCert);
@@ -406,7 +286,7 @@ namespace StressTests.Authentication
                     var httpClient = new HttpClient(httpClientHandler);
                     httpClient.BaseAddress = new Uri(server.WebUrl);
 
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
+                    AssertServerRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.ServerEndpointsToIgnore, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
                         if (route.EndpointType == EndpointType.Write)
@@ -426,7 +306,7 @@ namespace StressTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
+                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.DatabaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -438,7 +318,7 @@ namespace StressTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
+                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.DatabaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = false;
 
@@ -484,44 +364,6 @@ namespace StressTests.Authentication
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
                 }
 
-                var serverEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/admin/replication/conflicts/solver"),    // access handled internally
-                    ("POST", "/setup/dns-n-cert"),                      // only available in setup mode
-                    ("POST", "/setup/user-domains"),                    // only available in setup mode
-                    ("POST", "/setup/populate-ips"),                    // only available in setup mode
-                    ("GET", "/setup/parameters"),                       // only available in setup mode
-                    ("GET", "/setup/ips"),                              // only available in setup mode
-                    ("POST", "/setup/hosts"),                           // only available in setup mode
-                    ("POST", "/setup/unsecured"),                       // only available in setup mode
-                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
-                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
-                    ("POST", "/setup/secured"),                         // only available in setup mode
-                    ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
-                    ("POST", "/setup/letsencrypt"),                     // only available in setup mode
-                    ("POST", "/setup/continue/extract"),                // only available in setup mode
-                    ("POST", "/setup/continue"),                        // only available in setup mode
-                    ("POST", "/setup/finish"),                          // only available in setup mode
-                    ("POST", "/server/notification-center/dismiss"),    // access handled internally
-                    ("POST", "/server/notification-center/postpone"),   // access handled internally
-                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
-                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
-                    ("GET", "/admin/debug/info-package"),               // heavy
-                    ("GET", "/admin/debug/threads/contention"),         // heavy
-                    ("GET", "/admin/debug/gcdump"),                     // heavy
-                    ("GET", "/admin/debug/threads/stack-trace"),        // heavy
-                    ("GET", "/admin/debug/memory/gc-events"),           // heavy
-                    ("GET", "/admin/debug/memory/allocations"),         // heavy
-                    ("GET", "/license/support"),                        // heavy 
-                    ("GET", "/admin/debug/threads/runaway"),            // heavy
-                };
-
-                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
-                    ("POST", "/databases/*/studio/sample-data") // heavy
-                };
-
                 using (var httpClientHandler = new HttpClientHandler())
                 {
                     httpClientHandler.ClientCertificates.Add(userCert);
@@ -530,7 +372,7 @@ namespace StressTests.Authentication
                     var httpClient = new HttpClient(httpClientHandler);
                     httpClient.BaseAddress = new Uri(server.WebUrl);
 
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
+                    AssertServerRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.ServerEndpointsToIgnore, httpClient, (route, statusCode) =>
                     {
                         var canAccess = route.AuthorizationStatus == AuthorizationStatus.Operator
                             || route.AuthorizationStatus == AuthorizationStatus.ValidUser
@@ -545,7 +387,7 @@ namespace StressTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
+                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.DatabaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -557,7 +399,7 @@ namespace StressTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
+                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.DatabaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -602,37 +444,6 @@ namespace StressTests.Authentication
                     adminStore.Maintenance.Server.Send(new CreateDatabaseOperation(new DatabaseRecord(databaseName2)));
                 }
 
-                var serverEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/admin/replication/conflicts/solver"),    // access handled internally
-                    ("POST", "/setup/dns-n-cert"),                      // only available in setup mode
-                    ("POST", "/setup/user-domains"),                    // only available in setup mode
-                    ("POST", "/setup/populate-ips"),                    // only available in setup mode
-                    ("GET", "/setup/parameters"),                       // only available in setup mode
-                    ("GET", "/setup/ips"),                              // only available in setup mode
-                    ("POST", "/setup/hosts"),                           // only available in setup mode
-                    ("POST", "/setup/unsecured"),                       // only available in setup mode
-                    ("POST", "/setup/unsecured/package"),               // only available in setup mode
-                    ("POST", "/setup/continue/unsecured"),              // only available in setup mode
-                    ("POST", "/setup/secured"),                         // only available in setup mode
-                    ("GET", "/setup/letsencrypt/agreement"),            // only available in setup mode
-                    ("POST", "/setup/letsencrypt"),                     // only available in setup mode
-                    ("POST", "/setup/continue/extract"),                // only available in setup mode
-                    ("POST", "/setup/continue"),                        // only available in setup mode
-                    ("POST", "/setup/finish"),                          // only available in setup mode
-                    ("POST", "/server/notification-center/dismiss"),    // access handled internally
-                    ("POST", "/server/notification-center/postpone"),   // access handled internally
-                    ("GET", "/admin/debug/cluster-info-package"),       // heavy
-                    ("GET", "/admin/debug/remote-cluster-info-package"),// heavy
-                    ("GET", "/admin/debug/info-package"),               // heavy
-                };
-
-                var databaseEndpointsToIgnore = new HashSet<(string Method, string Path)>
-                {
-                    ("POST", "/databases/*/admin/pull-replication/generate-certificate"), // heavy
-                    ("POST", "/databases/*/studio/sample-data") // heavy
-                };
-
                 using (var httpClientHandler = new HttpClientHandler())
                 {
                     httpClientHandler.ClientCertificates.Add(userCert);
@@ -641,7 +452,7 @@ namespace StressTests.Authentication
                     var httpClient = new HttpClient(httpClientHandler);
                     httpClient.BaseAddress = new Uri(server.WebUrl);
 
-                    AssertServerRoutes(RouteScanner.AllRoutes.Values, serverEndpointsToIgnore, httpClient, (route, statusCode) =>
+                    AssertServerRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.ServerEndpointsToIgnore, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -653,7 +464,7 @@ namespace StressTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
+                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.DatabaseEndpointsToIgnore, databaseName1, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 
@@ -665,7 +476,7 @@ namespace StressTests.Authentication
                         }
                     });
 
-                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, databaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
+                    AssertDatabaseRoutes(RouteScanner.AllRoutes.Values, RavenTestHelper.DatabaseEndpointsToIgnore, databaseName2, httpClient, (route, statusCode) =>
                     {
                         var canAccess = true;
 

@@ -17,7 +17,7 @@ namespace SlowTests.Authentication
 {
     public class AuthenticationDebugPackageTests : RavenTestBase
     {
-        private readonly string[] _routesToSkip = new string[] { "/admin/debug/threads/stack-trace" };
+        private readonly string[] _routesToSkip = RavenTestHelper.ServerEndpointsToIgnore.Select(x => x.Path).Union(RavenTestHelper.DatabaseEndpointsToIgnore.Select(x => x.Path)).ToArray();
 
         public AuthenticationDebugPackageTests(ITestOutputHelper output) : base(output)
         {
