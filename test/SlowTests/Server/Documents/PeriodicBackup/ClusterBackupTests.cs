@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
 using Raven.Client.Documents.Operations;
@@ -10,7 +9,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.ServerWide.Operations;
-using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
@@ -18,7 +16,6 @@ using Raven.Server.ServerWide.Commands.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -26,7 +23,7 @@ using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    internal class ClusterBackupTests : ClusterTestBase
+    public class ClusterBackupTests : ClusterTestBase
     {
         public ClusterBackupTests(ITestOutputHelper output) : base(output)
         {
@@ -581,7 +578,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var originalNode = Backup.GetBackupResponsibleNode(leader, taskId, store.Database);
                 var originalNodeServer = nodes.Single(x => x.ServerStore.NodeTag == originalNode);
                 var otherNodeServer = nodes.First(x => x.ServerStore.NodeTag != originalNode);
-                var db = await Databases.GetDocumentDatabaseInstanceFor(originalNodeServer, store.Database);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(originalNodeServer, store);
 
                 var status = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
                 Assert.NotNull(status);
@@ -703,12 +700,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // setup config with full and incremental freq and do first full backup
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: fullBackupFrequency, incrementalBackupFrequency: incrementalFrequency);
-                var taskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(nodes, store, config, isFullBackup: false);
+                (long taskId, _) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(nodes, store, config, isFullBackup: false);
 
                 var originalNode = Backup.GetBackupResponsibleNode(leader, taskId, shardName);
                 var originalNodeServer = nodes.Single(x => x.ServerStore.NodeTag == originalNode);
                 var otherNodeServer = nodes.First(x => x.ServerStore.NodeTag != originalNode);
-                var db = await Databases.GetDocumentDatabaseInstanceFor(originalNodeServer, shardName);
+                var db = await Databases.GetDocumentDatabaseInstanceFor(originalNodeServer, store, shardName);
 
                 await WaitForAssertionAsync(async () =>
                 {
@@ -851,8 +848,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var originalNode = Backup.GetBackupResponsibleNode(leader, taskId, store.Database);
                 var originalNodeServer = nodes.Single(x => x.ServerStore.NodeTag == originalNode);
                 var otherNodeServer = nodes.First(x => x.ServerStore.NodeTag != originalNode);
-                var dbOriginal = await Databases.GetDocumentDatabaseInstanceFor(originalNodeServer, store.Database);
-                var dbOther = await Databases.GetDocumentDatabaseInstanceFor(otherNodeServer, store.Database);
+                var dbOriginal = await Databases.GetDocumentDatabaseInstanceFor(originalNodeServer, store);
+                var dbOther = await Databases.GetDocumentDatabaseInstanceFor(otherNodeServer, store);
 
                 var status = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
                 Assert.NotNull(status);
@@ -998,14 +995,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 // setup config with full and incremental freq and do first full backup
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: fullBackupFrequency, incrementalBackupFrequency: incrementalFrequency);
-                var taskId = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(nodes[0], store, config, isFullBackup: false);
+                (long taskId, _) = await Sharding.Backup.UpdateConfigurationAndRunBackupAsync(nodes[0], store, config, isFullBackup: false);
 
                 var shardName = ShardHelper.ToShardName(store.Database, 0);
                 var originalNode = Backup.GetBackupResponsibleNode(leader, taskId, shardName);
                 var originalNodeServer = nodes.Single(x => x.ServerStore.NodeTag == originalNode);
                 var otherNodeServer = nodes.First(x => x.ServerStore.NodeTag != originalNode);
-                var dbOriginal = await Databases.GetDocumentDatabaseInstanceFor(originalNodeServer, shardName);
-                var dbOther = await Databases.GetDocumentDatabaseInstanceFor(otherNodeServer, shardName);
+                var dbOriginal = await Databases.GetDocumentDatabaseInstanceFor(originalNodeServer, store, shardName);
+                var dbOther = await Databases.GetDocumentDatabaseInstanceFor(otherNodeServer, store, shardName);
 
                 await WaitForAssertionAsync(async () =>
                 {
@@ -1153,9 +1150,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task ChangingBackupConfigurationToAlsoIncrementalShouldNotCauseTombstoneLoss()
         {
             // have a full backup with only full frequency configuration, change config to include incremental frequency, make sure that cleaner did not rely on only having full backups to delete tombstones freely
-            var backupPath1 = NewDataPath(suffix: "BackupFolder1");
-            
-            using (var server = GetNewServer())
+            var backupPath = NewDataPath(suffix: "BackupFolder1");
+
+            using var server = GetNewServer();
+            string newDb;
             using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenSession())
@@ -1165,14 +1163,14 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 // full backup without incremental
-                var config = Backup.CreateBackupConfiguration(backupPath1);
+                var config = Backup.CreateBackupConfiguration(backupPath);
 
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                 Assert.NotNull(documentDatabase);
-                
+
                 // run full backup
                 var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
-                
+
                 // create tombstone
                 using (var session = store.OpenSession())
                 {
@@ -1181,7 +1179,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 // wait for tombstone cleaner
-                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                var numberOfTombstonesDeleted = await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                Assert.True(numberOfTombstonesDeleted == 0, $"There should be no tombstones deleted, but {numberOfTombstonesDeleted} were deleted");
 
                 var beforeChangeConfig = DateTime.UtcNow;
 
@@ -1195,7 +1194,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(1, record.PeriodicBackups.Count);
                 Assert.Equal("* * * * *", record.PeriodicBackups.First().IncrementalBackupFrequency);
 
-                // wait for next backup
+                // wait for the next backup
                 PeriodicBackupStatus status;
                 var res = await WaitForValueAsync(async () =>
                 {
@@ -1205,19 +1204,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(res, "Incremental backup didn't happen");
 
                 // restore from backup
-                var newDb = store.Database + "-restored";
-                var backupDir = Directory.GetDirectories(backupPath1).First();
+                newDb = $"Restored-{store.Database}";
+                var backupDir = Directory.GetDirectories(backupPath).First();
                 var restoreConfig = new RestoreBackupConfiguration { BackupLocation = backupDir, DatabaseName = newDb };
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
                 var o = await store.Maintenance.Server.SendAsync(restoreOperation);
                 await o.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+            }
 
-                // check the original document is not included in the restored db
-                using (var session = store.OpenSession(newDb))
-                {
-                    var user = session.Load<User>("users/1");
-                    Assert.Null(user);
-                }
+            // check the original document is not included in the restored db
+            using (var store = GetDocumentStore(new Options { Server = server, CreateDatabase = false, ModifyDatabaseName = _ => newDb }))
+            using (var session = store.OpenSession())
+            {
+                var user = session.Load<User>("users/1");
+                Assert.Null(user);
             }
         }
     }

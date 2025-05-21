@@ -637,7 +637,9 @@ namespace Raven.Server.ServerWide.Maintenance
             ForTestingPurposes?.OnDiagnosticLog?.Invoke("Sending cleanup command with details:");
             ForTestingPurposes?.OnDiagnosticLog?.Invoke($"databaseName: `{databaseName}`, maxEtag: `{maxEtag}`, amountToDelete: `{amountToDelete}`");
 
-            return new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId());
+            return cleanupState == CompareExchangeTombstonesCleanupState.HasMoreTombstones
+                ? new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId())
+                : null;
         }
 
         public enum CompareExchangeTombstonesCleanupState
@@ -648,78 +650,17 @@ namespace Raven.Server.ServerWide.Maintenance
             NoMoreTombstones
         }
 
-        private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete<TRavenTransaction>(TransactionOperationContext<TRavenTransaction> context, string databaseName, MergedDatabaseObservationState mergedState, out long maxEtag) where TRavenTransaction : RavenTransaction
+        private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete(ClusterOperationContext context, string databaseName, MergedDatabaseObservationState mergedState, out long maxEtag)
         {
             maxEtag = -1;
             long minClusterWideTransactionIndex = -1;
-
             ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Starting {nameof(GetMaxCompareExchangeTombstonesEtagToDelete)}...");
-            var periodicBackupTaskIds = mergedState.RawDatabase.PeriodicBackupsTaskIds;
             var isSharded = mergedState.RawDatabase.IsSharded;
 
             foreach (var (shardNumber, state) in mergedState.States)
             {
                 //if sharded, we have to get backup status by shard name
                 var shardName = isSharded ? ShardHelper.ToShardName(databaseName, shardNumber) : databaseName;
-                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Processing shard `{shardNumber}`, shardName: `{shardName}`");
-
-                if (periodicBackupTaskIds != null && periodicBackupTaskIds.Count > 0)
-                {
-                    foreach (var taskId in periodicBackupTaskIds)
-                    {
-                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Reading backup status for taskId: `{taskId}`");
-                        var singleBackupStatus = _server.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(shardName, taskId));
-                        if (singleBackupStatus == null)
-                        {
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke("Backup status is null, continuing...");
-                            continue;
-                        }
-
-                        if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastFullBackupInternal), out DateTime? lastFullBackupInternal) == false ||
-                            lastFullBackupInternal == null)
-                        {
-                            // never backed up yet
-                            if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastIncrementalBackupInternal), out DateTime? lastIncrementalBackupInternal) ==
-                                false || lastIncrementalBackupInternal == null)
-                            {
-                                ForTestingPurposes?.OnDiagnosticLog?.Invoke("No full or incremental backup found, continuing...");
-                                continue;
-                            }
-                        }
-
-                        if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) == false ||
-                            lastRaftIndexBlittable == null)
-                        {
-                            if (singleBackupStatus.TryGet(nameof(PeriodicBackupStatus.Error), out BlittableJsonReaderObject error) == false || error != null)
-                            {
-                                // backup errored on first run (lastRaftIndex == null) => cannot remove ANY tombstones
-                                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Backup errored on first run (lastRaftIndex == null) => cannot remove ANY tombstones, error: `{error}`");
-                                return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
-                            }
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke("No LastRaftIndex found, continuing...");
-                            continue;
-                        }
-
-                        if (lastRaftIndexBlittable.TryGet(nameof(PeriodicBackupStatus.LastEtag), out long? lastRaftIndex) == false || lastRaftIndex == null)
-                        {
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Could not retrieve {nameof(PeriodicBackupStatus.LastEtag)}, continuing...");
-                            continue;
-                        }
-
-                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Task `{taskId}`: LastEtag = `{lastRaftIndex}`");
-                        if (maxEtag == -1 || lastRaftIndex < maxEtag)
-                        {
-                            maxEtag = lastRaftIndex.Value;
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Updated {nameof(maxEtag)}: {maxEtag}");
-                        }
-
-                        if (maxEtag == 0)
-                        {
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"{nameof(maxEtag)} reached 0, returning `{nameof(CompareExchangeTombstonesCleanupState.NoMoreTombstones)}`.");
-                            return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
-                        }
-                    }
-                }
 
                 // we are checking this here, not in the main loop, to avoid returning 'NoMoreTombstones' when maxEtag is 0
                 foreach (var nodeTag in state.DatabaseTopology.AllNodes)
@@ -736,7 +677,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 foreach (var nodeTag in state.DatabaseTopology.AllNodes)
                 {
                     var hasState = state.Current.TryGetValue(nodeTag, out var nodeReport);
+
                     Debug.Assert(hasState, $"Could not find state for node '{nodeTag}' for database '{state.Name}'.");
+
                     // ReSharper disable once ConditionIsAlwaysTrueOrFalse
                     if (hasState == false)
                     {
@@ -754,12 +697,100 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
 
                     ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}': LastClusterWideTransactionRaftIndex = {report.LastClusterWideTransactionRaftIndex}");
-                    var clusterWideTransactionIndex = report.LastClusterWideTransactionRaftIndex;
-                    if (maxEtag == -1 || clusterWideTransactionIndex < maxEtag)
+                    if (report.BackupStatuses == null)
                     {
-                        maxEtag = clusterWideTransactionIndex;
-                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Updated maxEtag to {maxEtag} based on node '{nodeTag}' LastClusterWideTransactionRaftIndex");
+                        // the node wasn't updated to a version that supports it
+                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' doesn't have backup statuses.");
+                        return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
                     }
+
+                    foreach (var (taskId, status) in report.BackupStatuses)
+                    {
+                        if (status == null)
+                        {
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null status for taskId '{taskId}'");
+                            var clusterStatus = BackupUtils.GetBackupStatusFromClusterBlittable(_server, context, shardName, taskId);
+                            if (clusterStatus == null)
+                            {
+                                // existing backup hasn't run yet for the first time, we don't want to delete anything until we have a first status
+                                maxEtag = 0;
+                                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null status for taskId '{taskId}' and no cluster status.");
+                                return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+                            }
+
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null status for taskId '{taskId}' but has a cluster status.");
+                            continue;
+                        }
+
+                        var lastFullBackupInternal = status.LastFullBackupInternal;
+                        if (lastFullBackupInternal == null)
+                        {
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null lastFullBackupInternal for taskId '{taskId}'");
+                            // never backed up yet
+                            if (status.LastIncrementalBackupInternal == null)
+                            {
+                                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null lastIncrementalBackupInternal for taskId '{taskId}'");
+                                continue;
+                            }
+                        }
+
+                        var backupConfiguration = state.RawDatabase.GetPeriodicBackupConfiguration(taskId);
+
+                        if (backupConfiguration == null)
+                        {
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null backupConfiguration for taskId '{taskId}'");
+                            return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                        }
+
+                        if (backupConfiguration.FullBackupFrequency == null)
+                            if (backupConfiguration.IncrementalBackupFrequency == null)
+                            {
+                                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has no FullBackupFrequency and no IncrementalBackupFrequency for taskId '{taskId}'");
+                                continue; // not valid but possible, we treat it the same as if there is no backup at all
+                            }
+                            else
+                            {
+                                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has no FullBackupFrequency and has IncrementalBackupFrequency for taskId '{taskId}'");
+                                return CompareExchangeTombstonesCleanupState.NoMoreTombstones; // we only run incremental backups - never delete tombstones
+                            }
+
+                        if (status.LastRaftIndex == null)
+                        {
+                            if (status.Error)
+                            {
+                                // backup errored on first run (lastRaftIndex == null) => cannot remove ANY tombstones
+                                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has an errored backup on first run (lastRaftIndex == null) => cannot remove ANY tombstones");
+                                return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
+                            }
+
+                            continue;
+                        }
+
+                        var lastRaftIndex = status.LastRaftIndex.LastEtag;
+                        if (lastRaftIndex == null)
+                        {
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null lastRaftIndex for taskId '{taskId}'");
+                            continue;
+                        }
+
+                        if (maxEtag == -1 || lastRaftIndex < maxEtag)
+                            maxEtag = lastRaftIndex.Value;
+
+                        // there can't be a lower etag, we can stop checking here
+                        if (maxEtag == 0)
+                        {
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a maxEtag of 0, returning {CompareExchangeTombstonesCleanupState.NoMoreTombstones}");
+                            return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+                        }
+                    }
+
+                    var clusterWideTransactionIndex = report.LastClusterWideTransactionRaftIndex;
+
+                    if (_server.ForTestingPurposes?.IgnoreClusterTransactionIndexInCompareExchangeCleaner == true)
+                        clusterWideTransactionIndex = long.MaxValue;
+
+                    if (minClusterWideTransactionIndex == -1 || clusterWideTransactionIndex < minClusterWideTransactionIndex)
+                        minClusterWideTransactionIndex = clusterWideTransactionIndex;
 
                     foreach (var kvp in report.LastIndexStats)
                     {
@@ -771,15 +802,15 @@ namespace Raven.Server.ServerWide.Maintenance
                             continue;
                         }
 
-                        if (maxEtag == -1 || lastIndexedCompareExchangeReferenceTombstoneEtag < maxEtag)
+                        if (minClusterWideTransactionIndex == -1 || lastIndexedCompareExchangeReferenceTombstoneEtag < minClusterWideTransactionIndex)
                         {
-                            maxEtag = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Updated maxEtag to {maxEtag} based on node '{nodeTag}', index '{kvp.Key}'");
+                            minClusterWideTransactionIndex = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Updated {nameof(minClusterWideTransactionIndex)} to {minClusterWideTransactionIndex} based on node '{nodeTag}', index '{kvp.Key}'");
                         }
 
-                        if (maxEtag == 0)
+                        if (minClusterWideTransactionIndex == 0)
                         {
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"maxEtag reached 0 for node '{nodeTag}', index '{kvp.Key}', returning {CompareExchangeTombstonesCleanupState.NoMoreTombstones}.");
+                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a minClusterWideTransactionIndex of 0, returning {CompareExchangeTombstonesCleanupState.NoMoreTombstones}");
                             return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
                         }
                     }
