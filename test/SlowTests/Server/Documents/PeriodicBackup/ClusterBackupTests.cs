@@ -21,7 +21,7 @@ using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
-    internal class ClusterBackupTests : ClusterTestBase
+    public class ClusterBackupTests : ClusterTestBase
     {
         public ClusterBackupTests(ITestOutputHelper output) : base(output)
         {
@@ -546,9 +546,10 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task ChangingBackupConfigurationToAlsoIncrementalShouldNotCauseTombstoneLoss()
         {
             // have a full backup with only full frequency configuration, change config to include incremental frequency, make sure that cleaner did not rely on only having full backups to delete tombstones freely
-            var backupPath1 = NewDataPath(suffix: "BackupFolder1");
-            
-            using (var server = GetNewServer())
+            var backupPath = NewDataPath(suffix: "BackupFolder1");
+
+            using var server = GetNewServer();
+            string newDb;
             using (var store = GetDocumentStore(new Options { Server = server }))
             {
                 using (var session = store.OpenSession())
@@ -558,7 +559,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 // full backup without incremental
-                var config = Backup.CreateBackupConfiguration(backupPath1);
+                var config = Backup.CreateBackupConfiguration(backupPath);
 
                 var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
                 Assert.NotNull(documentDatabase);
@@ -574,7 +575,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 // wait for tombstone cleaner
-                await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                var numberOfTombstonesDeleted = await documentDatabase.TombstoneCleaner.ExecuteCleanup();
+                Assert.True(numberOfTombstonesDeleted == 0, $"There should be no tombstones deleted, but {numberOfTombstonesDeleted} were deleted");
 
                 var beforeChangeConfig = DateTime.UtcNow;
 
@@ -588,7 +590,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.Equal(1, record.PeriodicBackups.Count);
                 Assert.Equal("* * * * *", record.PeriodicBackups.First().IncrementalBackupFrequency);
 
-                // wait for next backup
+                // wait for the next backup
                 PeriodicBackupStatus status;
                 var res = await WaitForValueAsync(async () =>
                 {
@@ -598,19 +600,20 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.True(res, "Incremental backup didn't happen");
 
                 // restore from backup
-                var newDb = store.Database + "-restored";
-                var backupDir = Directory.GetDirectories(backupPath1).First();
+                newDb = $"Restored-{store.Database}";
+                var backupDir = Directory.GetDirectories(backupPath).First();
                 var restoreConfig = new RestoreBackupConfiguration { BackupLocation = backupDir, DatabaseName = newDb };
                 var restoreOperation = new RestoreBackupOperation(restoreConfig);
                 var o = await store.Maintenance.Server.SendAsync(restoreOperation);
                 await o.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
+            }
 
-                // check the original document is not included in the restored db
-                using (var session = store.OpenSession(newDb))
-                {
-                    var user = session.Load<User>("users/1");
-                    Assert.Null(user);
-                }
+            // check the original document is not included in the restored db
+            using (var store = GetDocumentStore(new Options { Server = server, CreateDatabase = false, ModifyDatabaseName = _ => newDb }))
+            using (var session = store.OpenSession())
+            {
+                var user = session.Load<User>("users/1");
+                Assert.Null(user);
             }
         }
     }

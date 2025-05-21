@@ -650,11 +650,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 foreach (var taskId in record.PeriodicBackupsTaskIds)
                 {
                     var config = record.GetPeriodicBackupConfiguration(taskId);
-                    if (config.IncrementalBackupFrequency == null)
-                    {
-                        // if there is no status for this, we don't need to take into account tombstones
-                        continue; // if the backup is always full, we don't need to take into account the tombstones, since we never back them up.
-                    }
 
                     var localStatus = BackupUtils.GetLocalBackupStatus(_serverStore, context, _database.Name, taskId);
                     var responsibleNode = BackupUtils.GetResponsibleNodeTag(_serverStore, _database.Name, taskId);
