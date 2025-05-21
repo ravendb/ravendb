@@ -85,5 +85,16 @@ namespace Sparrow.Platform
                 return false;
             }
         }
+
+        internal static string GetVcRedistLink()
+        {
+            if (RunningOnWindows == false)
+                return null;
+
+            if (Is32Bits)
+                return "https://aka.ms/vs/17/release/vc_redist.x86.exe";
+
+            return "https://aka.ms/vs/17/release/vc_redist.x64.exe";
+        }
     }
 }
