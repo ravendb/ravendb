@@ -23,7 +23,7 @@ namespace Sparrow.Platform
                 var errString = $"{LIBSODIUM} version might be invalid, missing or not usable on current platform.";
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
-                    errString += " Initialization error could also be caused by missing 'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://support.microsoft.com/en-us/help/2977003/the-latest-supported-visual-c-downloads.";
+                    errString += " Initialization error could also be caused by missing 'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from https://aka.ms/vs/17/release/vc_redist.x64.exe.";
 
                 errString += $" Arch: {RuntimeInformation.OSArchitecture}, OSDesc: {RuntimeInformation.OSDescription}";
 
