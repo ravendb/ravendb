@@ -188,7 +188,6 @@ public class RavenDB_23846 : RestoreFromS3
     [InlineData(S3StorageClass.IntelligentTiering)]
     [InlineData(S3StorageClass.GlacierInstantRetrieval)]
     [InlineData(S3StorageClass.ReducedRedundancy)]
-
     public async Task Can_backup_and_restore_with_various_storage_classes(S3StorageClass? storageClass)
     {
         var s3Settings = GetS3Settings();
