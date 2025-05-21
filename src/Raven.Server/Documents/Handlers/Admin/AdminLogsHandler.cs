@@ -84,7 +84,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                     AssertCanPersistConfiguration();
 
                 if (configuration.MicrosoftLogs != null && ServerStore.Configuration.Logs.MicrosoftEnabled == false)
-                    throw new InvalidOperationException($"Configuration cannot be persisted because Microsoft Logs are disabled. You can enable them by using '${RavenConfiguration.GetKey(x => x.Logs.MicrosoftEnabled)}' to true");
+                    throw new InvalidOperationException($"Configuration cannot be modified because Microsoft Logs are disabled. You can enable them by setting '${RavenConfiguration.GetKey(x => x.Logs.MicrosoftEnabled)}' configuration to true.");
 
                 RavenLogManager.Instance.ConfigureLogging(configuration);
 
