@@ -12,6 +12,7 @@ using Voron.Data.Fixed;
 using Voron.Impl;
 using Constants = Voron.Global.Constants;
 using System.Diagnostics.CodeAnalysis;
+using System.Numerics;
 
 namespace Voron.Data.Tables
 {
@@ -181,48 +182,49 @@ namespace Voron.Data.Tables
                         return page;
                     }
                 }
+
                 var startPage = it.CurrentKey;
-                while (true)
+                do
                 {
-                    using (it.Value(out Slice slice))
+                    using var _ = it.Value(out Slice slice);
+                    var bitmapPtr = (ulong*)(slice.Content.Ptr);
+                    if (TryFindFirstFreeBitInBitmap(bitmapPtr, out var bitPosition))
                     {
-                        var hasSpace = false;
-                        var buffer = (ulong*) (slice.Content.Ptr);
-                        for (int i = 0; i < BitmapSize / sizeof(ulong); i++)
-                        {
-                            if (buffer[i] != ulong.MaxValue)
-                            {
-                                hasSpace = true;
-                                break;
-                            }
-                        }
-
-                        if (hasSpace == false)
-                        {
-                            if (TryMoveNextCyclic(it, startPage) == false)
-                                break;
-
-                            continue;
-                        }
-
-                        for (int i = 0; i < BitmapSize*8; i++)
-                        {
-                            if (PtrBitVector.GetBitInPointer(buffer, i)) 
-                                continue;
-
-                            var currentSectionStart = it.CurrentKey;
-                            SetValue(fst, currentSectionStart, i);
-                                
-                            return _llt.ModifyPage(currentSectionStart + i);
-                        }
+                        var currentSectionStart = it.CurrentKey;
+                        SetValue(fst, currentSectionStart, bitPosition);
+                        return _llt.ModifyPage(currentSectionStart + bitPosition);
                     }
-                }
+                } while (TryMoveNextCyclic(it, startPage));
+                
                 page = AllocateMoreSpace(fst);
                 SetValue(fst, page.PageNumber, 0);
                 return page;
             }
         }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static unsafe bool TryFindFirstFreeBitInBitmap(ulong* bitmap, out int bitPosition)
+        {
+            Debug.Assert(BitmapSize / sizeof(ulong) == 4);
+            for (int currentBitmapChunkId = 0; currentBitmapChunkId < BitmapSize / sizeof(ulong); ++currentBitmapChunkId)
+            {
+                var currentBitmapChunk = bitmap[currentBitmapChunkId];
+                if (currentBitmapChunk == ulong.MaxValue)
+                    continue;
 
+                //We've to reverse endianness, since bitmap works on bytes, not ulongs.
+                var swapped = Bits.SwapBytes(currentBitmapChunk);
+                
+                bitPosition = BitVector.BitsPerByte * sizeof(ulong) * currentBitmapChunkId 
+                               + BitOperations.LeadingZeroCount(~swapped);
+
+                return true;
+            }
+
+            bitPosition = -1;
+            return false;
+        }
+        
         private static bool TryMoveNextCyclic(FixedSizeTree.IFixedSizeIterator it, long startPage)
         {
             if (it.MoveNext())
