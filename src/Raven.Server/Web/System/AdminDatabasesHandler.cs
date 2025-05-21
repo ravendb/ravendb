@@ -532,8 +532,10 @@ namespace Raven.Server.Web.System
                 var cancelToken = CreateBackgroundOperationToken();
                 var configuration = await context.ReadForMemoryAsync(RequestBodyStream(), "database-restore");
                 var restoreConfiguration = RestoreUtils.GetRestoreConfigurationAndSource(ServerStore, configuration, out var restoreSource, out var configurationJsonForAudit, out var restoreType, cancelToken);
-                if(restoreType == RestoreType.S3)
-                    await restoreSource.ValidateConfigurationFor(restoreConfiguration.LastFileNameToRestore);
+                if (restoreType == RestoreType.S3)
+                {
+                    await restoreSource.ValidateConfigurationFor();
+                }
 
                 if (restoreConfiguration.ShardRestoreSettings != null)
                 {

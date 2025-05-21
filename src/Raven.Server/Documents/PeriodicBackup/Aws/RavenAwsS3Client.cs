@@ -101,10 +101,25 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             _cancellationToken = cancellationToken;
         }
 
-        public async Task ValidateConfigurationFor(string key)
+        public async Task ValidateConfigurationFor()
+        {
+            var backups = await _client.ListObjectsV2Async(
+                new ListObjectsV2Request
+                {
+                    BucketName = _bucketName,
+                    Prefix = RemoteFolderName
+                });
+            foreach (var backup in backups.S3Objects)
+            {
+                await ValidateKey(backup.Key);
+            }
+        }
+
+        private async Task ValidateKey(string key)
         {
             var meta = await _client.GetObjectMetadataAsync(_bucketName, key: key, _cancellationToken);
-            if (!ArchiveClasses.Contains(meta.StorageClass))
+
+            if (ArchiveClasses.Contains(meta.StorageClass) == false)
                 return;
 
             if (meta.RestoreInProgress.HasValue == false)

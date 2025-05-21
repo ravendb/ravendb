@@ -18,6 +18,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
         string GetBackupLocation();
 
-        Task ValidateConfigurationFor(string key);
+        Task ValidateConfigurationFor();
     }
 }
