@@ -618,6 +618,16 @@ namespace Sparrow.LowMemory
             if (PlatformDetails.RunningOnLinux)
                 return GetMemoryUsageFromProcStatus().Rss;
 
+            if (PlatformDetails.RunningOnWindows)
+            {
+                if (Win32MemoryMethods.GetProcessMemoryInfoLegacy(ProcessHandle, out Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX memCounters, (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX))) == false)
+                {
+                    throw new InvalidOperationException("Failure when trying to read memory using the legacy GetProcessMemoryInfo, error code is: " + Marshal.GetLastWin32Error());
+                }
+
+                return (long)memCounters.WorkingSetSize;
+            }
+
             using (var currentProcess = Process.GetCurrentProcess())
             {
                 return currentProcess.WorkingSet64;
