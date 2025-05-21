@@ -46,15 +46,15 @@ namespace Sparrow.Json.Parsing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int FindEscapePositionsMaxSize(string str, out int escapedCount)
+        public static int FindMaxEscapePositionAndControlCharSize(string str, out int controlCount)
         {
-            return FindEscapePositionsMaxSize(str.AsSpan(), out escapedCount);
+            return FindMaxEscapePositionAndControlCharSize(str.AsSpan(), out controlCount);
         }
         
-        public static int FindEscapePositionsMaxSize(ReadOnlySpan<char> str, out int escapedCount)
+        public static int FindMaxEscapePositionAndControlCharSize(ReadOnlySpan<char> str, out int controlCount)
         {
             var count = 0;
-            var controlCount = 0;
+            controlCount = 0;
 
             for (int i = 0; i < str.Length; i++)
             {
@@ -82,7 +82,6 @@ namespace Sparrow.Json.Parsing
                 }
             }
 
-            escapedCount = controlCount;
             // we take 5 because that is the max number of bytes for variable size int
             // plus 1 for the actual number of positions
 
@@ -90,7 +89,7 @@ namespace Sparrow.Json.Parsing
             return (count + 1) * EscapePositionItemSize + controlCount * ControlCharacterItemSize;
         }
 
-        public static int FindEscapePositionsMaxSize(byte* str, int size, out int escapedCount)
+        public static int FindMaxEscapePositionAndControlCharSize(byte* str, int size, out int escapedCount)
         {
             var count = 0;
             var controlCount = 0;
@@ -131,18 +130,18 @@ namespace Sparrow.Json.Parsing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void FindEscapePositionsIn(byte* str, ref int len, int previousComputedMaxSize)
+        public void FindEscapePositionsAndEscapeControls(byte* str, ref int len, int previousComputedMaxSize)
         {
-            FindEscapePositionsIn(EscapePositions, str, ref len, previousComputedMaxSize);
+            FindEscapePositionsAndEscapeControls(EscapePositions, str, ref len, previousComputedMaxSize);
         }
 
-        public static void FindEscapePositionsIn(FastList<int> buffer, byte* str, ref int len, int previousComputedMaxSize)
+        public static void FindEscapePositionsAndEscapeControls(FastList<int> buffer, byte* str, ref int len, int previousComputedMaxSize)
         {
             var originalLen = len;
             buffer.Clear();
             if (previousComputedMaxSize == EscapePositionItemSize)
             {
-                // if the value is 5, then we got no escape positions, see: FindEscapePositionsMaxSize
+                // if the value is 5, then we got no escape positions, see: FindMaxEscapePositionAndControlCharSize
                 // and we don't have to do any work
                 return;
             }

@@ -1,6 +1,16 @@
-﻿using System.Threading.Tasks;
+﻿using System.IO;
+using System.Text;
+using System.Threading.Tasks;
+using Newtonsoft.Json;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Server;
+using Sparrow.Threading;
+using Tests.Infrastructure;
+using Voron;
+using Voron.Impl.Paging;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -99,6 +109,77 @@ namespace FastTests.Server.Documents
                     Assert.Equal(before, after);
                 }
             }
+        }
+
+        private class TestObj
+        {
+            public string Id { get; set; }
+        }
+
+        public static object[][] Ids =>
+            new object[][]
+            {
+                ["\0{\r\n>"], 
+                [new string('\0', AbstractPager.MaxKeySize / (JsonParserState.ControlCharacterItemSize + 1) - 2)], 
+                ['a' + new string('\r', AbstractPager.MaxKeySize / (JsonParserState.EscapePositionItemSize + 1) - 4)]
+            };
+
+        [RavenTheory(RavenTestCategory.Core)]
+        [MemberData(nameof(Ids))]
+        public async Task DocumentId_WhenWrite_ShouldBeAbleToRead(string id)
+        {
+            const char nonAscii = (char)(DocumentIdWorker.MaxAsciiCodePoint + 1);
+
+            using var memoryStream = new MemoryStream();
+
+            using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(allocator, id, out _, out Slice withoutAsciiSlice))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(allocator, id + nonAscii, out _, out Slice withAsciiSlice))
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, memoryStream))
+            {
+                var withoutAsciiLazyString = GetLazyStringValue(context, withoutAsciiSlice);
+                var withAsciiLazyString = GetLazyStringValue(context, withAsciiSlice);
+
+                Assert.True(withAsciiLazyString.StartsWith(withoutAsciiLazyString));
+
+                writer.WriteString(withoutAsciiLazyString);
+                writer.WriteString(withAsciiLazyString);
+            }
+
+            memoryStream.Seek(0, SeekOrigin.Begin);
+            using (var reader = new StreamReader(memoryStream, Encoding.UTF8))
+            {
+                var result = await reader.ReadToEndAsync();
+                string expected = JsonConvert.DeserializeObject<string>(JsonConvert.SerializeObject(result));
+                Assert.Equal(expected, result);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Core)]
+        [MemberData(nameof(Ids))]
+        public async Task DocumentId_WhenStore_ShouldBeAbleToLoad(string id)
+        {
+            var idWithNonAscii = (char)(DocumentIdWorker.MaxAsciiCodePoint + 1) + id;
+            
+            using var store = GetDocumentStore();
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new TestObj(), id);
+                await session.StoreAsync(new TestObj(), idWithNonAscii);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                Assert.NotNull(await session.LoadAsync<TestObj>(id));
+                Assert.NotNull(await session.LoadAsync<TestObj>(idWithNonAscii));
+            }
+        }
+
+        unsafe LazyStringValue GetLazyStringValue(JsonOperationContext context, Slice idSlice)
+        {
+            return context.GetLazyStringValue(idSlice.Content.Ptr);
         }
     }
 }

@@ -20,7 +20,7 @@ namespace Raven.Server.Documents
         private static JsonParserState _jsonParserState;
 
         public const int MaxIdSize = 512;
-
+        public const uint MaxAsciiCodePoint = 127;
         public const int RevisionMaxKeySize = MaxIdSize * 3;
 
         static DocumentIdWorker()
@@ -67,15 +67,15 @@ namespace Raven.Server.Documents
             var strLength = id.Length;
 
             var maxStrSize = Encoding.GetMaxByteCount(strLength);
-            var escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(id, out _);
+            var escapeAndControlSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(id, out _);
 
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(id.ToString());
 
             var internalScope = context.Allocator.Allocate(
-                maxStrSize // this buffer is allocated to also serve the GetSliceFromUnicodeKey
+                maxStrSize // this buffer is allocated to also serve the ReadFromUnicodeKey
                 + sizeof(char) * id.Length
-                + escapePositionsSize
+                + escapeAndControlSize
                 + (separator != null ? 1 : 0),
                 out var buffer);
 
@@ -96,7 +96,7 @@ namespace Raven.Server.Documents
                     buffer.Ptr[i] = (byte)ch;
             }
 
-            _jsonParserState.FindEscapePositionsIn(buffer.Ptr, ref strLength, escapePositionsSize);
+            _jsonParserState.FindEscapePositionsAndEscapeControls(buffer.Ptr, ref strLength, escapeAndControlSize);
             if (separator != null)
             {
                 buffer.Ptr[strLength] = separator.Value;
@@ -237,9 +237,16 @@ namespace Raven.Server.Documents
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext.InternalScope GetLowerIdSliceAndStorageKey<TTransaction>(
             TransactionOperationContext<TTransaction> context, string str, out Slice lowerIdSlice, out Slice idSlice)
             where TTransaction : RavenTransaction
+        {
+            return GetLowerIdSliceAndStorageKey(context.Allocator, str, out lowerIdSlice, out idSlice);
+        }
+
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLowerIdSliceAndStorageKey(ByteStringContext allocator, string str, out Slice lowerIdSlice,
+            out Slice idSlice)
         {
             // Because we need to also store escape positions for the key when we store it
             // we need to store it as a lazy string value.
@@ -265,7 +272,7 @@ namespace Raven.Server.Documents
             if (strLength > MaxIdSize)
                 ThrowDocumentIdTooBig(str);
 
-            int escapePositionsSize = JsonParserState.FindEscapePositionsMaxSize(str, out var escapedCount);
+            int escapePositionsSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(str, out var controlCount);
 
             /*
              *  add the size of all control characters
@@ -274,16 +281,15 @@ namespace Raven.Server.Documents
              *  For example: string with two control characters such as '\0\0' will be converted to '\u0000\u0000' (another example: '\b\b' => '\u000b\u000b')
              *  string size = 2, GetMaxByteCount = 9, converted string size = 12, maxStrSize = 19
              */
-            var maxStrSize = Encoding.GetMaxByteCount(strLength) + JsonParserState.ControlCharacterItemSize * escapedCount;
-            var originalMaxStrSize = maxStrSize;
+            var maxIdSize = Encoding.GetMaxByteCount(strLength) + JsonParserState.ControlCharacterItemSize * controlCount;
+            var originalMaxStrSize = maxIdSize;
 
-            int idSize = JsonParserState.VariableSizeIntSize(maxStrSize);
+            int maxIdLenSize = JsonParserState.VariableSizeIntSize(maxIdSize);
 
-            var scope = context.Allocator.Allocate(maxStrSize // lower key
-                                       + idSize // the size of var int for the len of the key
-                                       + maxStrSize // actual key
+            var scope = allocator.Allocate(maxIdSize // lower key
+                                       + maxIdLenSize // the size of var int for the len of the key
+                                       + maxIdSize // actual key
                                        + escapePositionsSize, out ByteString buffer);
-
 
             byte* ptr = buffer.Ptr;
 
@@ -300,20 +306,20 @@ namespace Raven.Server.Documents
                 }
                 else
                 {
-                    if (ch > 127) // not ASCII, use slower mode
+                    if (ch > MaxAsciiCodePoint) // not ASCII, use slower mode
                         goto UnlikelyUnicode;
 
                     ptr[i] = (byte)ch;
                 }
 
-                ptr[i + idSize + maxStrSize] = (byte)ch;
+                ptr[i + maxIdLenSize + maxIdSize] = (byte)ch;
             }
 
-            _jsonParserState.FindEscapePositionsIn(ptr, ref strLength, escapePositionsSize);
+            _jsonParserState.FindEscapePositionsAndEscapeControls(ptr, ref strLength, escapePositionsSize);
             if (strLength != originalStrLength)
             {
                 var anotherStrLength = originalStrLength;
-                _jsonParserState.FindEscapePositionsIn(ptr + idSize + maxStrSize, ref anotherStrLength, escapePositionsSize);
+                _jsonParserState.FindEscapePositionsAndEscapeControls(ptr + maxIdLenSize + maxIdSize, ref anotherStrLength, escapePositionsSize);
 
 #if DEBUG
                 if (strLength != anotherStrLength)
@@ -321,40 +327,39 @@ namespace Raven.Server.Documents
 #endif
             }
 
-            var writePos = ptr + maxStrSize;
+            var writePos = ptr + maxIdSize;
 
             Debug.Assert(strLength <= originalMaxStrSize, $"Calculated {nameof(originalMaxStrSize)} value {originalMaxStrSize}, was smaller than actually {nameof(strLength)} value {strLength}");
 
             // in case there were no control characters the idSize could be smaller
-            var sizeDifference = idSize - JsonParserState.VariableSizeIntSize(strLength);
+            var sizeDifference = maxIdLenSize - JsonParserState.VariableSizeIntSize(strLength);
             writePos += sizeDifference;
-            idSize -= sizeDifference;
+            maxIdLenSize -= sizeDifference;
 
             JsonParserState.WriteVariableSizeInt(ref writePos, strLength);
             escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + strLength);
-            idSize = escapePositionsSize + strLength + idSize;
+            maxIdLenSize = escapePositionsSize + strLength + maxIdLenSize;
 
-            Slice.External(context.Allocator, ptr + maxStrSize + sizeDifference, idSize, out idSlice);
-            Slice.External(context.Allocator, ptr, strLength, out lowerIdSlice);
+            Slice.External(allocator, ptr + maxIdSize + sizeDifference, maxIdLenSize, out idSlice);
+            Slice.External(allocator, ptr, strLength, out lowerIdSlice);
+
+            Debug.Assert(ptr + maxIdSize + sizeDifference + maxIdLenSize <= buffer.Ptr + buffer.Size, "Exceed buffer size");
             return scope;
 
         UnlikelyUnicode:
             scope.Dispose();
-            return UnicodeGetLowerIdAndStorageKey(context, str, out lowerIdSlice, out idSlice, maxStrSize, escapePositionsSize);
+            return UnicodeGetLowerIdAndStorageKey(allocator, str, out lowerIdSlice, out idSlice, maxIdSize, maxIdLenSize, escapePositionsSize);
         }
 
-        private static ByteStringContext.InternalScope UnicodeGetLowerIdAndStorageKey<TTransaction>(
-            TransactionOperationContext<TTransaction> context, string str,
-            out Slice lowerIdSlice, out Slice idSlice, int maxStrSize, int escapePositionsSize)
-            where TTransaction : RavenTransaction
+        private static ByteStringContext.InternalScope UnicodeGetLowerIdAndStorageKey(
+            ByteStringContext allocator, string str,
+            out Slice lowerIdSlice, out Slice idSlice, int maxStrSize, int maxIdLenSize, int escapePositionsSize)
         {
             // See comment in GetLowerIdSliceAndStorageKey for the format
 
-            var maxIdLenSize = JsonParserState.VariableSizeIntSize(maxStrSize);
-
             int strLength = str.Length;
 
-            var scope = context.Allocator.Allocate(
+            var scope = allocator.Allocate(
                 sizeof(char) * strLength // for the lower calls
                 + maxStrSize // lower ID
                 + maxIdLenSize // the size of var int for the len of the ID
@@ -363,9 +368,6 @@ namespace Raven.Server.Documents
 
             fixed (char* pChars = str)
             {
-                var size = Encoding.GetBytes(pChars, strLength, buffer.Ptr, maxStrSize);
-                _jsonParserState.FindEscapePositionsIn(buffer.Ptr, ref size, escapePositionsSize);
-
                 var destChars = (char*)buffer.Ptr;
                 for (var i = 0; i < strLength; i++)
                     destChars[i] = char.ToLowerInvariant(pChars[i]);
@@ -378,23 +380,25 @@ namespace Raven.Server.Documents
                     ThrowDocumentIdTooBig(str);
 
                 byte* id = buffer.Ptr + strLength * sizeof(char) + maxStrSize;
-                byte* writePos = id;
-                int idSize = Encoding.GetBytes(pChars, strLength, writePos + maxIdLenSize, maxStrSize);
+                int idSize = Encoding.GetBytes(pChars, strLength, id + maxIdLenSize, maxStrSize);
 
                 var actualIdLenSize = JsonParserState.VariableSizeIntSize(idSize);
                 if (actualIdLenSize < maxIdLenSize)
                 {
                     var movePtr = maxIdLenSize - actualIdLenSize;
                     id += movePtr;
-                    writePos += movePtr;
                 }
 
+                byte* writePos = id;
+                _jsonParserState.FindEscapePositionsAndEscapeControls(id + maxIdLenSize, ref idSize, escapePositionsSize);
                 JsonParserState.WriteVariableSizeInt(ref writePos, idSize);
                 escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + idSize);
-                idSize += escapePositionsSize + maxIdLenSize;
+                idSize += escapePositionsSize + actualIdLenSize;
 
-                Slice.External(context.Allocator, id, idSize, out idSlice);
-                Slice.External(context.Allocator, lowerId, lowerSize, out lowerIdSlice);
+                Slice.External(allocator, id, idSize, out idSlice);
+                Slice.External(allocator, lowerId, lowerSize, out lowerIdSlice);
+                
+                Debug.Assert(id + idSize <= buffer.Ptr + buffer.Size, "Exceed buffer size");
                 return scope;
             }
         }

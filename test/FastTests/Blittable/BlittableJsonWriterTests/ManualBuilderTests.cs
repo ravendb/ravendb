@@ -777,11 +777,11 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                     var lsvStringBytes = Encoding.UTF8.GetBytes(lsvString);
                     fixed (byte* b = lsvStringBytes)
                     {
-                        var escapePositionsMaxSize = JsonParserState.FindEscapePositionsMaxSize(lsvString, out _);
+                        var escapePositionsMaxSize = JsonParserState.FindMaxEscapePositionAndControlCharSize(lsvString, out _);
                         var lsv = context.AllocateStringValue(null, b, lsvStringBytes.Length);
                         var escapePositions = new FastList<int>();
                         var len = lsvStringBytes.Length;
-                        JsonParserState.FindEscapePositionsIn(escapePositions, b, ref len, escapePositionsMaxSize);
+                        JsonParserState.FindEscapePositionsAndEscapeControls(escapePositions, b, ref len, escapePositionsMaxSize);
                         lsv.EscapePositions = escapePositions.ToArray();
 
                         builder.WritePropertyName("LSVString");
