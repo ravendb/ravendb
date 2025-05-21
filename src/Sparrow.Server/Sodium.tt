@@ -315,7 +315,7 @@ namespace Sparrow
 		#region Windows
 		private sealed class Windows
 		{
-			private const string ErrString = $"'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from '{PlatformDetails.GetVcRedistLink()}'";
+			private const string ErrString = $"'Microsoft Visual C++ 2019 Redistributable Package' (or newer). It can be downloaded from '{PlatformDetails.GetVcRedistLink()}'";
 
 			private static readonly bool _is32bits;
 

@@ -50,8 +50,7 @@ public static class GenerateEmbeddings
         }
         catch (TypeInitializationException e) when (PlatformDetails.RunningOnWindows)
         {
-            throw new IncorrectDllException("The initialization error is caused by missing 'Microsoft Visual C++ 2019 Redistributable Package' (or newer), " +
-                                            "you can download it here: https://aka.ms/vs/17/release/vc_redist.x64.exe", e);
+            throw new IncorrectDllException($"Could not initialize 'ONNX Runtime'. Initialization error could be caused by missing 'Microsoft Visual C++ 2019 Redistributable Package' (or newer). It can be downloaded from '{PlatformDetails.GetVcRedistLink()}'.", e);
         }
     }
 

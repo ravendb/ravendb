@@ -36,7 +36,7 @@ namespace Sparrow.Server.Platform
 
                 if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                     errString +=
-                        $" Initialization error could also be caused by missing 'Microsoft Visual C++ 2015 Redistributable Package' (or newer). It can be downloaded from '{PlatformDetails.GetVcRedistLink()}'.";
+                        $" Initialization error could also be caused by missing 'Microsoft Visual C++ 2019 Redistributable Package' (or newer). It can be downloaded from '{PlatformDetails.GetVcRedistLink()}'.";
 
                 errString += $" Arch: {RuntimeInformation.OSArchitecture}, OSDesc: {RuntimeInformation.OSDescription}";
 
