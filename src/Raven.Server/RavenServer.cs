@@ -272,14 +272,6 @@ namespace Raven.Server
                 }
 
                 var webHostBuilder = new WebHostBuilder()
-                    .UseNLog(new NLogAspNetCoreOptions
-                    {
-                        IncludeScopes = false,
-                        CaptureMessageTemplates = false,
-                        RegisterHttpContextAccessor = false,
-                        IncludeActivityIdsWithBeginScope = false,
-                    })
-
                     .CaptureStartupErrors(captureStartupErrors: true)
                     .UseKestrel(ConfigureKestrel)
                     .UseUrls(Configuration.Core.ServerUrls)
@@ -320,6 +312,18 @@ namespace Raven.Server
                         services.AddSingleton(this);
                         services.Configure<FormOptions>(options => { options.MultipartBodyLengthLimit = long.MaxValue; });
                     });
+
+                if (Configuration.Logs.MicrosoftEnabled)
+                {
+                    webHostBuilder = webHostBuilder.UseNLog(
+                        new NLogAspNetCoreOptions
+                        {
+                            IncludeScopes = false, 
+                            CaptureMessageTemplates = false, 
+                            RegisterHttpContextAccessor = false, 
+                            IncludeActivityIdsWithBeginScope = false,
+                        });
+                }
 
                 _webHost = webHostBuilder.Build();
             }

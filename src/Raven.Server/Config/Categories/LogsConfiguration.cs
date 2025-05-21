@@ -71,6 +71,11 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Logs.Compress", ConfigurationEntryScope.ServerWideOnly)]
         public bool EnableArchiveFileCompression { get; set; }
 
+        [Description("Determines whether the Microsoft logs are active or not. Beware: enabling this is known to impact request latency on certain conditions.")]
+        [DefaultValue(false)]
+        [ConfigurationEntry("Logs.Microsoft.Enabled", ConfigurationEntryScope.ServerWideOnly)]
+        public bool MicrosoftEnabled { get; set; }
+
         [Description("The minimum logging level for Microsoft logs.")]
         [DefaultValue(LogLevel.Error)]
         [ConfigurationEntry("Logs.Microsoft.MinLevel", ConfigurationEntryScope.ServerWideOnly)]
