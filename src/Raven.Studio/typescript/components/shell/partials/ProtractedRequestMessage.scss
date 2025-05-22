@@ -17,10 +17,10 @@
     transition: opacity 0.3s ease;
 
     &.hidden {
-        opacity: 0 !important;
+        display: none !important;
     }
 
     &:not(.hidden) {
-        opacity: 1;
+        display: block;
     }
 }
