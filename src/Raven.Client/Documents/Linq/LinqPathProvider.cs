@@ -345,7 +345,15 @@ namespace Raven.Client.Documents.Linq
                 if (val == null)
                     return null;
                 if (_conventions.SaveEnumsAsIntegers == false)
-                    return Enum.GetName(enumType, val);
+                {
+                    var enumName = Enum.GetName(enumType, val);
+                    if (enumName == null) 
+                        return null;
+                    
+                    var field = enumType.GetField(enumName);
+                    var attr = field?.GetCustomAttribute<EnumMemberAttribute>();
+                    return attr?.Value ?? enumName;
+                }
                 return Convert.ToInt32(val);
             }
         }
