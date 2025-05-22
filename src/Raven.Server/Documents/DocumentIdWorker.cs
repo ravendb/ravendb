@@ -96,7 +96,7 @@ namespace Raven.Server.Documents
                     buffer.Ptr[i] = (byte)ch;
             }
 
-            _jsonParserState.FindEscapePositionsAndEscapeControls(buffer.Ptr, ref strLength, escapeAndControlSize);
+            _jsonParserState.FindEscapedPositionsAndEscapeControls(buffer.Ptr, ref strLength, escapeAndControlSize);
             if (separator != null)
             {
                 buffer.Ptr[strLength] = separator.Value;
@@ -315,11 +315,11 @@ namespace Raven.Server.Documents
                 ptr[i + maxIdLenSize + maxIdSize] = (byte)ch;
             }
 
-            _jsonParserState.FindEscapePositionsAndEscapeControls(ptr, ref strLength, escapePositionsSize);
+            _jsonParserState.FindEscapedPositionsAndEscapeControls(ptr, ref strLength, escapePositionsSize);
             if (strLength != originalStrLength)
             {
                 var anotherStrLength = originalStrLength;
-                _jsonParserState.FindEscapePositionsAndEscapeControls(ptr + maxIdLenSize + maxIdSize, ref anotherStrLength, escapePositionsSize);
+                _jsonParserState.FindEscapedPositionsAndEscapeControls(ptr + maxIdLenSize + maxIdSize, ref anotherStrLength, escapePositionsSize);
 
 #if DEBUG
                 if (strLength != anotherStrLength)
@@ -390,7 +390,7 @@ namespace Raven.Server.Documents
                 }
 
                 byte* writePos = id;
-                _jsonParserState.FindEscapePositionsAndEscapeControls(id + maxIdLenSize, ref idSize, escapePositionsSize);
+                _jsonParserState.FindEscapedPositionsAndEscapeControls(id + maxIdLenSize, ref idSize, escapePositionsSize);
                 JsonParserState.WriteVariableSizeInt(ref writePos, idSize);
                 escapePositionsSize = _jsonParserState.WriteEscapePositionsTo(writePos + idSize);
                 idSize += escapePositionsSize + actualIdLenSize;

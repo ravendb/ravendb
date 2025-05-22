@@ -657,7 +657,7 @@ namespace Sparrow.Json.Parsing
             {
                 _state.StringSize = Encodings.Utf8.GetBytes(pChars, str.Length, _state.StringBuffer, _currentStateBuffer.SizeInBytes);
                 _state.CompressedSize = null; // don't even try
-                _state.FindEscapePositionsAndEscapeControls(_state.StringBuffer, ref _state.StringSize, escapePositionsSize);
+                _state.FindEscapedPositionsAndEscapeControls(_state.StringBuffer, ref _state.StringSize, escapePositionsSize);
 
                 var escapePos = _state.StringBuffer + _state.StringSize;
                 _state.WriteEscapePositionsTo(escapePos);

@@ -460,7 +460,7 @@ namespace Sparrow.Json
                 buffer = _context.GetMemory(size);
 
                 var stringSize = Encodings.Utf8.GetBytes(str.AsSpan(), buffer.AsSpan());
-                JsonParserState.FindEscapePositionsAndEscapeControls(_intBuffer, buffer.Address, ref stringSize, escapePositionsMaxSize);
+                JsonParserState.FindEscapedPositionsAndEscapeControls(_intBuffer, buffer.Address, ref stringSize, escapePositionsMaxSize);
                 return WriteValue(buffer.Address, stringSize, _intBuffer, out token, mode, null);                
             }
             finally

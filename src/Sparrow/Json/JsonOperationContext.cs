@@ -494,7 +494,7 @@ namespace Sparrow.Json
                 var address = memory.Address;
                 var actualSize = Encodings.Utf8.GetBytes(pField + field.Offset, field.Length, address, memory.SizeInBytes);
 
-                state.FindEscapePositionsAndEscapeControls(address, ref actualSize, escapePositionsSize);
+                state.FindEscapedPositionsAndEscapeControls(address, ref actualSize, escapePositionsSize);
 
                 state.WriteEscapePositionsTo(address + actualSize);
                 LazyStringValue result = longLived == false ? AllocateStringValue(field.Value, address, actualSize) : new LazyStringValue(field.Value, address, actualSize, this);
@@ -522,7 +522,7 @@ namespace Sparrow.Json
 
             Memory.Copy(address, ptr, size);
 
-            state.FindEscapePositionsAndEscapeControls(address, ref size, escapePositionsSize);
+            state.FindEscapedPositionsAndEscapeControls(address, ref size, escapePositionsSize);
 
             state.WriteEscapePositionsTo(address + size);
             LazyStringValue result = longLived == false ? AllocateStringValue(null, address, size) : new LazyStringValue(null, address, size, this);

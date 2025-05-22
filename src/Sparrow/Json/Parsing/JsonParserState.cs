@@ -130,12 +130,12 @@ namespace Sparrow.Json.Parsing
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void FindEscapePositionsAndEscapeControls(byte* str, ref int len, int previousComputedMaxSize)
+        public void FindEscapedPositionsAndEscapeControls(byte* str, ref int len, int previousComputedMaxSize)
         {
-            FindEscapePositionsAndEscapeControls(EscapePositions, str, ref len, previousComputedMaxSize);
+            FindEscapedPositionsAndEscapeControls(EscapePositions, str, ref len, previousComputedMaxSize);
         }
 
-        public static void FindEscapePositionsAndEscapeControls(FastList<int> buffer, byte* str, ref int len, int previousComputedMaxSize)
+        public static void FindEscapedPositionsAndEscapeControls(FastList<int> buffer, byte* str, ref int len, int previousComputedMaxSize)
         {
             var originalLen = len;
             buffer.Clear();
