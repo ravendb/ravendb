@@ -308,7 +308,7 @@ export function FormSelectAutocomplete<
             components={{ Input: InputNotHidden }}
             tabSelectsValue
             controlShouldRenderValue={false}
-            closeMenuOnSelect={false}
+            closeMenuOnSelect
             {...props}
         />
     );

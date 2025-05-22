@@ -4,12 +4,12 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { useFormContext, useWatch } from "react-hook-form";
 import { CreateDatabaseFromBackupFormData as FormData } from "../../createDatabaseFromBackupValidation";
-import { FormInput, FormLabel, FormSelect, FormSelectAutocomplete, FormSwitch } from "components/common/Form";
+import { FormInput, FormLabel, FormSelectAutocomplete, FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
 import CreateDatabaseFromBackupRestorePoint from "components/pages/resources/databases/partials/create/formBackup/steps/source/RestorePointField";
 import { useRestorePointUtils } from "components/pages/resources/databases/partials/create/formBackup/steps/source/useRestorePointUtils";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
-import { availableS3Regions, storageClassOptions } from "components/utils/common";
+import { availableS3Regions } from "components/utils/common";
 import EncryptionField from "components/pages/resources/databases/partials/create/formBackup/steps/source/EncryptionField";
 import RestorePointsFields, {
     RestorePointElementProps,
@@ -165,18 +165,6 @@ export default function BackupSourceAmazonS3() {
                     />
                 </Col>
             </Row>
-            <Row className="mt-2">
-                <Col lg="3">
-                    <FormLabel className="col-form-label">Storage class</FormLabel>
-                </Col>
-                <Col>
-                    <FormSelect
-                        control={control}
-                        name="sourceStep.sourceData.amazonS3.storageClass"
-                        options={storageClassOptions}
-                    />
-                </Col>
-            </Row>
             <RestorePointsFields restorePointElement={SourceRestorePoint} />
             <EncryptionField sourceType="amazonS3" />
         </div>
@@ -215,7 +203,6 @@ function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
                 ForcePathStyle: amazonS3Data.isUseCustomHost && amazonS3Data.isForcePathStyle,
                 Disabled: false,
                 GetBackupConfigurationScript: null,
-                StorageClass: amazonS3Data.storageClass,
             },
             true,
             isSharded ? index : undefined
@@ -230,7 +217,6 @@ function SourceRestorePoint({ index, remove }: RestorePointElementProps) {
         amazonS3Data.isUseCustomHost,
         amazonS3Data.customHost,
         amazonS3Data.isForcePathStyle,
-        amazonS3Data.storageClass,
         isSharded,
     ]);
 

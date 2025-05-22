@@ -116,7 +116,6 @@ const amazonS3Source = yup.object({
         then: (schema) => schema.trim().strict().required(),
     }),
     remoteFolderName: yup.string().trim().strict(),
-    storageClass: yup.string<Raven.Client.Documents.Operations.Backups.S3StorageClass>().nullable(),
     pointsWithTags: getPointsWithTagsSchema("amazonS3"),
     encryptionKey: getEncryptionKeySchema("amazonS3"),
 });

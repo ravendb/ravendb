@@ -48,7 +48,7 @@ const destinationBaseSchema = yupObjectSchema<FormDestinationDataBase>({
 type WithoutBase<T extends FormDestinationDataBase> = Omit<T, "isEnabled" | "isOverrideConfig" | "config">;
 type WithoutAmazonAndBase<T extends S3Destination | GlacierDestination> = Omit<
     WithoutBase<T>,
-    "awsAccessKey" | "awsRegionName" | "awsSecretKey" | "remoteFolderName" | "awsSessionToken" | "storageClass"
+    "awsAccessKey" | "awsRegionName" | "awsSecretKey" | "remoteFolderName" | "awsSessionToken"
 >;
 
 const yupRequiredStringForEnabled = yup
@@ -83,7 +83,6 @@ const amazonSchema = yupObjectSchema<AmazonDestination>({
     awsAccessKey: yupRequiredStringForEnabled,
     awsSecretKey: yupRequiredStringForEnabled,
     awsSessionToken: yup.string().nullable(),
-    storageClass: yup.string<Raven.Client.Documents.Operations.Backups.S3StorageClass>().nullable(),
 });
 
 const s3Schema = yupObjectSchema<WithoutAmazonAndBase<S3Destination>>({

@@ -126,7 +126,6 @@ export type OmitIndexSignature<T> = {
 };
 
 export const storageClassOptions: SelectOption<Raven.Client.Documents.Operations.Backups.S3StorageClass>[] = [
-    { value: null, label: "None" },
     { value: "Standard", label: "Standard" },
     { value: "IntelligentTiering", label: "Intelligent Tiering" },
     { value: "StandardInfrequentAccess", label: "Standard Infrequent Access" },
@@ -136,6 +135,7 @@ export const storageClassOptions: SelectOption<Raven.Client.Documents.Operations
     { value: "ReducedRedundancy", label: "Reduced Redundancy" },
     { value: "DeepArchive", label: "Deep Archive" },
     { value: "ExpressOneZone", label: "Express One Zone" },
-    { value: "Snow", label: "Snow" },
-    { value: "Outposts", label: "Outposts" },
+    // Marked as obsolete for now
+    // { value: "Snow", label: "Snow" },
+    // { value: "Outposts", label: "Outposts" },
 ];

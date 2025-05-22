@@ -43,7 +43,6 @@ const defaultValues: FormData = {
                 awsRegion: "",
                 bucketName: "",
                 remoteFolderName: "",
-                storageClass: null,
                 pointsWithTags: defaultPointsWithTags,
             },
             azure: {
@@ -238,7 +237,6 @@ function getSourceDto(
                     GetBackupConfigurationScript: null,
                     CustomServerUrl: data.isUseCustomHost ? data.customHost : null,
                     ForcePathStyle: data.isUseCustomHost && data.isForcePathStyle,
-                    StorageClass: data.storageClass,
                 } satisfies S3Settings,
             };
         }

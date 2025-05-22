@@ -22,8 +22,8 @@ class s3Settings extends amazonSettings {
     targetOperation: string;
 
     storageClassOptions = common.storageClassOptions;
-    storageClass = ko.observable<S3StorageClass>(this.storageClassOptions[0].value);
-    storageClassLabel = ko.computed(() => this.storageClassOptions.find(option => option.value === this.storageClass())?.label);
+    storageClass = ko.observable<S3StorageClass>("Standard");
+    storageClassLabel: KnockoutComputed<string>;
 
     constructor(dto: Raven.Client.Documents.Operations.Backups.S3Settings, allowedRegions: Array<string>, targetOperation: string) {
         super(dto, "S3", allowedRegions);
@@ -33,7 +33,7 @@ class s3Settings extends amazonSettings {
         this.forcePathStyle(dto.ForcePathStyle);
         this.useCustomS3Host(!!dto.CustomServerUrl);
         this.targetOperation = targetOperation;
-        this.storageClass(dto.StorageClass);
+        this.storageClass(dto.StorageClass ?? "Standard");
         
         this.initValidation();
 
@@ -61,6 +61,7 @@ class s3Settings extends amazonSettings {
 
         this.accessKeyPropertyName = ko.pureComputed(() => s3Settings.getAccessKeyPropertyName(this.useCustomS3Host(), this.customServerUrl()));
         this.secretKeyPropertyName = ko.pureComputed(() => s3Settings.getSecretKeyPropertyName(this.useCustomS3Host(), this.customServerUrl()));
+        this.storageClassLabel = ko.computed(() => this.storageClassOptions.find(option => option.value === this.storageClass())?.label);
     }
 
     static getAccessKeyPropertyName(useCustomS3Host: boolean, customServerUrl: string) {
@@ -177,7 +178,7 @@ class s3Settings extends amazonSettings {
             GetBackupConfigurationScript: null,
             ForcePathStyle: false,
             CustomServerUrl: null,
-            StorageClass: null,
+            StorageClass: "Standard",
         }, allowedRegions, targetOperation);
     }
     

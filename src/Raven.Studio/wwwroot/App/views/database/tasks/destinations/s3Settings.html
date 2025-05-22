@@ -34,7 +34,7 @@
         <input data-bind="textInput: remoteFolderName" type="text" class="form-control" />
     </div>
 </div>
-<div class="row margin-bottom" data-bind="validationElement: storageClass">
+<div class="row margin-bottom" data-bind="validationElement: storageClass, visible: targetOperation !== 'OLAP'">
     <label class="control-label col-xs-12 col-sm-6 col-lg-4">Storage class</label>
     <div class="col-xs-12 col-sm-6 col-lg-8">
         <button type="button" class="btn btn-default dropdown-toggle" data-toggle="dropdown" title="Select storage class">
