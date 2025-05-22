@@ -316,6 +316,9 @@ public class RavenDB_14548 : RavenTestBase
 
                         Assert.Equal(7, nodeSummary.DetectedIssues.ServerIssues.Count);
                         Assert.Equal(2, nodeSummary.DetectedIssues.ClusterIssues.Count);
+                        
+                        Assert.Equal(6, nodeSummary.DetectedIssues.DatabaseIssues["Northwind"].Count);
+                        Assert.Equal(2, nodeSummary.DetectedIssues.DatabaseIssues["EastRain"].Count);
                     }
                     else
                     {
@@ -325,6 +328,8 @@ public class RavenDB_14548 : RavenTestBase
 
                         Assert.Equal(7, nodeSummary.DetectedIssues.ServerIssues.Count);
                         Assert.Equal(0, nodeSummary.DetectedIssues.ClusterIssues.Count);
+                        
+                        Assert.Equal(5, nodeSummary.DetectedIssues.DatabaseIssues["Northwind"].Count);
                     }
 
                     Assert.NotNull(nodeSummary.AnalyzeErrors);

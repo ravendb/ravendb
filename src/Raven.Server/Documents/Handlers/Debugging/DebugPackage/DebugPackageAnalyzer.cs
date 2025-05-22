@@ -107,6 +107,7 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                     var tombstonesAnalyzer = new TombstonesInfoAnalyzer(databaseName, errors, issues);
                     var tasksAnalyzer = new TasksInfoAnalyzer(databaseName, errors, issues);
                     var transactionInfoAnalyzer = new TransactionInfoAnalyzer(databaseName, errors, issues);
+                    var storageReportInfoAnalyzer = new StorageReportInfoAnalyzer(databaseName, errors, issues);
                     
                     var databaseAnalyzers = new AbstractDebugPackageDatabaseAnalyzer[]
                     {
@@ -115,7 +116,8 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                         tombstonesAnalyzer,
                         tasksAnalyzer,
                         configurationAnalyzer,
-                        transactionInfoAnalyzer
+                        transactionInfoAnalyzer,
+                        storageReportInfoAnalyzer
                     };
 
                     var databaseEntries = packageContent.ForDatabase(databaseName);
@@ -135,6 +137,8 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                                 AnalyzeErrorSeverity.Error, e);
                         }
                     }
+                    
+                    generalInfoAnalyzer.DatabaseInfo.StorageReport = storageReportInfoAnalyzer.StorageReport;
                     
                     var databaseReport = new DebugPackageDatabaseReport(databaseName)
                     {

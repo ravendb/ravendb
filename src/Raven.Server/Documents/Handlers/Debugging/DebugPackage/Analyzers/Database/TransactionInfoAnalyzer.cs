@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Errors;
 using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Issues;
+using Raven.Server.ServerWide.Commands;
 using Voron;
 
 namespace Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Database;
@@ -17,16 +18,17 @@ public class TransactionInfoAnalyzer(
     protected override bool RetrieveAnalyzerInfo(DebugPackageEntries entries)
     {
         if (entries.TryGetValue<TransactionDebugHandler, List<TransactionDebugHandler.TransactionInfo>>(x => x.TxInfo(), "tx-info",
-                out _activeStorageTransactions))
+                out _activeStorageTransactions) == false)
         {
-            foreach (var activeStorageTransaction in _activeStorageTransactions)
-            {
-                foreach (var tx in activeStorageTransaction.Information)
-                {
-                }
-            }
+            AddWarning("Failed to get active transactions");
         }
 
+        // TODO arek
+        // if (entries.TryGetValue<TransactionDebugHandler, List<ClusterTransactionCommand.SingleClusterDatabaseCommand>>(x => x.ClusterTxInfo(), "Results",
+        //         out _))
+        // {
+        //    
+        // }
         return true;
     }
 
