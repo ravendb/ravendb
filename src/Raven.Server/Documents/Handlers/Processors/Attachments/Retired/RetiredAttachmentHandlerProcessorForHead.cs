@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
 
         public override string CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
         {
-            return RetiredAttachmentHandlerProcessorForGet.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, "head");
+            return RetiredAttachmentHandlerProcessorForGetAttachment.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, "head");
         }
     }
 }

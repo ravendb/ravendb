@@ -7,9 +7,9 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
 {
-    internal class RetiredAttachmentHandlerProcessorForGet : AttachmentHandlerProcessorForGetAttachment
+    internal class RetiredAttachmentHandlerProcessorForGetAttachment : AttachmentHandlerBaseProcessorForGetAttachment
     {
-        public RetiredAttachmentHandlerProcessorForGet([NotNull] DatabaseRequestHandler requestHandler, bool isDocument) : base(requestHandler, isDocument)
+        public RetiredAttachmentHandlerProcessorForGetAttachment([NotNull] DatabaseRequestHandler requestHandler, bool isDocument) : base(requestHandler, isDocument)
         {
 
         }
@@ -59,6 +59,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
         {
             tx.Dispose();
         }
+
         protected override async Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, string collection, CancellationToken token)
         {
             var tcs = RequestHandler.CreateHttpRequestBoundOperationToken(token);
@@ -66,5 +67,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
             await using var stream = await RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(downloader, attachment, collection);
             await WriteAttachmentToResponseStream(context, stream, token);
         }
+
     }
 }

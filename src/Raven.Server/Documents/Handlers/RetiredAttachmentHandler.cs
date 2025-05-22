@@ -20,12 +20,11 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/attachments/retire", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
-        public async Task Get()
-        {
-            using (var processor = new RetiredAttachmentHandlerProcessorForGet(this, isDocument: true))
-                await processor.ExecuteAsync();
-        }
+        //public async Task Get()
+        //{
+        //    using (var processor = new RetiredAttachmentHandlerProcessorForGet(this, isDocument: true))
+        //        await processor.ExecuteAsync();
+        //}
 
         [RavenAction("/databases/*/attachments/retire/bulk", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetAttachments()

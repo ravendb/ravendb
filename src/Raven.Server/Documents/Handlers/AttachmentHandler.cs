@@ -17,6 +17,8 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
+
+
     public sealed class AttachmentHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/attachments", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -29,7 +31,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/attachments", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
-            using (var processor = new AttachmentHandlerProcessorForGetAttachment(this, isDocument: true))
+            using (var processor = new AttachmentHandlerDispatcherProcessorForGetAttachment(this, isDocument: true))
                 await processor.ExecuteAsync();
         }
 
