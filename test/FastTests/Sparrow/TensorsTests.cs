@@ -1,6 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Numerics.Tensors;
+using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.Arm;
 using System.Runtime.Intrinsics.X86;
 using FastTests.Voron.FixedSize;
@@ -77,6 +77,191 @@ namespace FastTests.Sparrow
             // (If your implementation were really computing similarity, this is what you’d expect.)
             Assert.InRange(similarity, (float)(expectedSim - Eps), (float)(expectedSim + Eps));
             Assert.InRange(distance, (float)(expectedDistance - Eps), (float)(expectedDistance + Eps));
+        }
+
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineDataWithRandomSeed]
+        public void Ensure_NoBufferOverflow_Float(int seed)
+        {
+            var generator = new Random(seed);
+
+            float[] a = new float[1024];
+            float[] b = new float[1024];
+
+            for (int i = 0; i < 32; i++)
+            {
+                // We are testing vectorized versions, which won't be called if we call the public versions. 
+                var size = generator.Next(Vector512<float>.Count, 512);
+                for (int j = 0; j < a.Length; j++)
+                {
+                    a[j] = 0;
+                    b[j] = 0;
+                }
+
+                var location = generator.Next(128) + 1;
+
+                a[location - 1] = 0.5f;
+                b[location - 1] = 1f;
+                a[location + size + 1] = 0.5f;
+                b[location + size + 1] = 1f;
+
+                void RunFunc(delegate* managed<ReadOnlySpan<float>, ReadOnlySpan<float>, float> func)
+                {
+                    Span<float> aSpan = a.AsSpan().Slice(location, size);
+                    Span<float> bSpan = b.AsSpan().Slice(location,  size);
+                    Assert.Equal(func(aSpan, bSpan), float.NaN);
+
+                    aSpan = a.AsSpan().Slice(location - 1, size + 1);
+                    bSpan = b.AsSpan().Slice(location - 1, size + 1);
+                    Assert.NotEqual(func(aSpan, bSpan), float.NaN);
+                }
+
+                void RunWithMagnitudeFunc(delegate* managed<ReadOnlySpan<float>, float, ReadOnlySpan<float>, float, float> func)
+                {
+                    Span<float> aSpan = a.AsSpan().Slice(location,size);
+                    Span<float> bSpan = b.AsSpan().Slice(location, size);
+                    Assert.Equal(func(aSpan, 1.0f, bSpan, 1.0f), float.NaN);
+
+                    // Verify they match within a small tolerance.
+                    aSpan = a.AsSpan().Slice(location - 1, size + 1);
+                    bSpan = b.AsSpan().Slice(location - 1, size + 1);
+                    Assert.NotEqual(func(aSpan, 1.0f, bSpan, 1.0f), float.NaN);
+                }
+
+                // These are the normal functions.
+                RunFunc(&Functions.CosineSimilarity);
+                RunFunc(&Functions.CosineDistance);
+                RunWithMagnitudeFunc(&Functions.CosineSimilarity);
+                RunWithMagnitudeFunc(&Functions.CosineDistance);
+                RunWithMagnitudeFunc(&Functions.Vectorized512.CosineSimilarity);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineDataWithRandomSeed]
+        public void Ensure_NoBufferOverflow_Double(int seed)
+        {
+            var generator = new Random(seed);
+
+            double[] a = new double[1024];
+            double[] b = new double[1024];
+
+            for (int i = 0; i < 32; i++)
+            {
+                // We are testing vectorized versions, which won't be called if we call the public versions. 
+                var size = generator.Next(Vector512<double>.Count, 512);
+                for (int j = 0; j < a.Length; j++)
+                {
+                    a[j] = 0;
+                    b[j] = 0;
+                }
+
+                var location = generator.Next(128) + 1;
+
+                a[location - 1] = 0.5f;
+                b[location - 1] = 1f;
+                a[location + size + 1] = 0.5f;
+                b[location + size + 1] = 1f;
+
+                void RunFunc(delegate* managed<ReadOnlySpan<double>, ReadOnlySpan<double>, double> func)
+                {
+                    Span<double> aSpan = a.AsSpan().Slice(location, size);
+                    Span<double> bSpan = b.AsSpan().Slice(location, size);
+                    Assert.Equal(func(aSpan, bSpan), float.NaN);
+
+                    aSpan = a.AsSpan().Slice(location - 1, size + 1);
+                    bSpan = b.AsSpan().Slice(location - 1, size + 1);
+                    Assert.NotEqual(func(aSpan, bSpan), float.NaN);
+                }
+
+                void RunWithMagnitudeFunc(delegate* managed<ReadOnlySpan<double>, float, ReadOnlySpan<double>, float, float> func)
+                {
+                    Span<double> aSpan = a.AsSpan().Slice(location, size);
+                    Span<double> bSpan = b.AsSpan().Slice(location, size);
+                    Assert.Equal(func(aSpan, 1.0f, bSpan, 1.0f), float.NaN);
+
+                    // Verify they match within a small tolerance.
+                    aSpan = a.AsSpan().Slice(location - 1, size + 1);
+                    bSpan = b.AsSpan().Slice(location - 1, size + 1);
+                    Assert.NotEqual(func(aSpan, 1.0f, bSpan, 1.0f), float.NaN);
+                }
+
+                // These are the normal functions.
+                RunFunc(&Functions.CosineSimilarity);
+                RunFunc(&Functions.CosineDistance);
+                RunWithMagnitudeFunc(&Functions.CosineSimilarity);
+                RunWithMagnitudeFunc(&Functions.CosineDistance);
+                RunWithMagnitudeFunc(&Functions.Vectorized512.CosineSimilarity);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineDataWithRandomSeed]
+        public void Ensure_NoBufferOverflow_Integers(int seed)
+        {
+            var generator = new Random(seed);
+
+            for (int i = 0; i < 32; i++)
+            {
+                sbyte[] a = new sbyte[1024];
+                sbyte[] b = new sbyte[1024];
+
+                // We are testing vectorized versions, which won't be called if we call the public versions. 
+                var size = generator.Next(Vector512<sbyte>.Count, 512);
+                for (int j = 0; j < a.Length; j++)
+                {
+                    a[j] = 0;
+                    b[j] = 0;
+                }
+
+                var location = generator.Next(128) + 1;
+
+                a[location - 1] = 55;
+                b[location - 1] = 45;
+                a[location + size + 1] = 55;
+                b[location + size + 1] = 45;
+
+                void RunFunc(delegate* managed<ReadOnlySpan<sbyte>, float, ReadOnlySpan<sbyte>, float, float> func)
+                {
+                    Span<sbyte> aSpan = a.AsSpan().Slice(location, size);
+                    Span<sbyte> bSpan = b.AsSpan().Slice(location, size);
+                    Assert.Equal(func(aSpan, 1.0f, bSpan, 1.0f), float.NaN);
+
+                    aSpan = a.AsSpan().Slice(location - 1, size + 1);
+                    bSpan = b.AsSpan().Slice(location - 1, size + 1);
+                    Assert.NotEqual(func(aSpan, 1.0f, bSpan, 1.0f), float.NaN);
+                }
+
+                void RunWithMagnitudeFunc(delegate* managed<ReadOnlySpan<sbyte>, float, ReadOnlySpan<sbyte>, float, float> func)
+                {
+                    Span<sbyte> aSpan = a.AsSpan().Slice(location, size);
+                    Span<sbyte> bSpan = b.AsSpan().Slice(location, size);
+                    Assert.Equal(func(aSpan, 1.0f, bSpan, 1.0f), float.NaN);
+
+                    // Verify they match within a small tolerance.
+                    aSpan = a.AsSpan().Slice(location - 1, size + 1);
+                    bSpan = b.AsSpan().Slice(location - 1, size + 1);
+                    Assert.NotEqual(func(aSpan, 1.0f, bSpan, 1.0f), float.NaN);
+                }
+
+
+                // These are the normal functions.
+                RunFunc(&Functions.CosineSimilarity);
+                RunFunc(&Functions.CosineDistance);
+                RunWithMagnitudeFunc(&Functions.CosineSimilarity);
+                RunWithMagnitudeFunc(&Functions.CosineDistance);
+
+                // AVX-2 path
+                if (AdvInstructionSet.X86.IsSupportedAvx256)
+                    RunWithMagnitudeFunc(&Functions.Vectorized256.CosineSimilarityIntegersAvx2);
+
+                if (AdvInstructionSet.Arm.IsSupported && Dp.IsSupported)
+                    RunWithMagnitudeFunc(&Functions.Vectorized256.CosineSimilarityIntegersNeon);
+
+                // AVX-512 path
+                if (Avx512BW.IsSupported && Avx512F.IsSupported)
+                    RunWithMagnitudeFunc(&Functions.Vectorized512.CosineSimilarityIntegersAvx512);
+            }
         }
 
         // Test for vectors that are both zero.
@@ -327,6 +512,42 @@ namespace FastTests.Sparrow
             long expectedDistance = TensorPrimitives.HammingBitDistance<byte>(vector1, vector2);
             long actualDistance = Functions.HammingBitDistance<byte>(vector1, vector2);
             Assert.Equal(expectedDistance, actualDistance);
+        }
+
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineDataWithRandomSeed]
+        public void Ensure_NoBufferOverflow_HammingBit(int seed)
+        {
+            var generator = new Random(seed);
+
+            for (int i = 0; i < 32; i++)
+            {
+                byte[] a = new byte[1024];
+                byte[] b = new byte[1024];
+
+                // We are testing vectorized versions, which won't be called if we call the public versions. 
+                var size = generator.Next(Vector512<sbyte>.Count, 512);
+                for (int j = 0; j < a.Length; j++)
+                {
+                    a[j] = 0;
+                    b[j] = 0;
+                }
+
+                var location = generator.Next(128) + 1;
+
+                a[location - 1] = 55;
+                b[location - 1] = 45;
+                a[location + size + 1] = 55;
+                b[location + size + 1] = 45;
+
+                Span<byte> aSpan = a.AsSpan().Slice(location, size);
+                Span<byte> bSpan = b.AsSpan().Slice(location, size);
+                Assert.Equal(Functions.HammingBitDistance<byte>(aSpan, bSpan), 0);
+
+                aSpan = a.AsSpan().Slice(location - 1, size + 1);
+                bSpan = b.AsSpan().Slice(location - 1, size + 1);
+                Assert.NotEqual(Functions.HammingBitDistance<byte>(aSpan, bSpan), 0);
+            }
         }
     }
 }
