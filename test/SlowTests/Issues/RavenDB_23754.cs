@@ -1,11 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Net.Http;
 using System.Text;
-using FastTests;
+using System.Threading.Tasks;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Raven.Client.ServerWide;
+using Raven.Client.ServerWide.Operations;
+using Raven.Server;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Entities.Faceted;
 using Tests.Infrastructure;
@@ -14,10 +20,82 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
-    public class RavenDB_23754 : RavenTestBase
+    public class RavenDB_23754 : ReplicationTestBase
     {
         public RavenDB_23754(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [RavenFact(RavenTestCategory.ClientApi)]
+        public async Task Test()
+        {
+            var (nodes, leader) = await CreateRaftCluster(2);
+            using var store = GetDocumentStore(new Options()
+            {
+                ReplicationFactor = 2,
+                Server = leader
+            });
+
+            var usersCollection = store.Conventions.FindCollectionName(typeof(User));
+            var scriptResolver = new ScriptResolver
+            {
+                Script = "return doc[10];"
+            };
+            var op = new ModifyConflictSolverOperation(
+                database: store.Database,
+                collectionByScript: new Dictionary<string, ScriptResolver>
+                {
+                    [usersCollection] = scriptResolver
+                },
+                resolveToLatest: false
+            );
+            store.Maintenance.Server.Send(op);
+
+            using var store1 = GetStoreForServer(nodes[0], store.Database);
+            using var store2 = GetStoreForServer(nodes[1], store.Database);
+
+            var r1 = BreakReplication(nodes[0].ServerStore, store.Database);
+            var r2 = BreakReplication(nodes[1].ServerStore, store.Database);
+
+            using (var session = store1.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User()
+                {
+                    Name = "Golan1"
+                }, UsersId);
+                await session.SaveChangesAsync();
+            }
+
+            using (var session = store2.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User()
+                {
+                    Name = "Golan2"
+                }, UsersId);
+                await session.SaveChangesAsync();
+            }
+
+            r1.Result.Mend();
+            r2.Result.Mend();
+
+            await WaitAndAssertForValueAsync(() =>
+                {
+                    var detailedCollectionStats = store1.Maintenance.Send(new GetDetailedCollectionStatisticsOperation());
+                    return (detailedCollectionStats.CountOfConflicts, detailedCollectionStats.CountOfDocumentsConflicts);
+                }, 
+                expectedVal: (2, 1),
+                timeout: 5000,
+                interval: 500);
+        }
+
+        private IDocumentStore GetStoreForServer(RavenServer server, string database)
+        {
+            return new DocumentStore
+            {
+                Database = database,
+                Urls = new[] { server.WebUrl },
+                Conventions = new DocumentConventions { DisableTopologyUpdates = true }
+            }.Initialize();
         }
 
         private const string UsersId = "Users/1";

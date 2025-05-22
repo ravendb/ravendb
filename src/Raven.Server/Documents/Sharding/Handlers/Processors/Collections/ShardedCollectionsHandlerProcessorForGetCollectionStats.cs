@@ -103,10 +103,16 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
                         stats.Collections[collectionInfo.Key].CountOfDocuments += collectionInfo.Value.CountOfDocuments;
                         stats.Collections[collectionInfo.Key].DocumentsSize.SizeInBytes += collectionInfo.Value.DocumentsSize.SizeInBytes;
                         stats.Collections[collectionInfo.Key].RevisionsSize.SizeInBytes += collectionInfo.Value.RevisionsSize.SizeInBytes;
+                        stats.Collections[collectionInfo.Key].CountOfRevisions += collectionInfo.Value.CountOfRevisions;
                         stats.Collections[collectionInfo.Key].TombstonesSize.SizeInBytes += collectionInfo.Value.TombstonesSize.SizeInBytes;
+                        stats.Collections[collectionInfo.Key].CountOfTombstones += collectionInfo.Value.CountOfTombstones;
                         stats.Collections[collectionInfo.Key].TimeSeriesDeletedRangesSize.SizeInBytes += collectionInfo.Value.TimeSeriesDeletedRangesSize.SizeInBytes;
+                        stats.Collections[collectionInfo.Key].CountOfTimeSeriesDeletedRanges += collectionInfo.Value.CountOfTimeSeriesDeletedRanges;
                         stats.Collections[collectionInfo.Key].CounterEntriesSize.SizeInBytes += collectionInfo.Value.CounterEntriesSize.SizeInBytes;
+                        stats.Collections[collectionInfo.Key].CountOfCounterEntries += collectionInfo.Value.CountOfCounterEntries;
                         stats.Collections[collectionInfo.Key].TimeSeriesSegmentsSize.SizeInBytes += collectionInfo.Value.TimeSeriesSegmentsSize.SizeInBytes;
+                        stats.Collections[collectionInfo.Key].CountOfTimeSeriesSegments += collectionInfo.Value.CountOfTimeSeriesSegments;
+                        stats.Collections[collectionInfo.Key].CountOfAttachments += collectionInfo.Value.CountOfAttachments;
                     }
                     else
                     {

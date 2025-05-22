@@ -2381,6 +2381,11 @@ namespace Raven.Server.Documents
                 TableReport collectionTableReport = GetReportForTable(context, DocsSchema, collectionName.GetTableName(CollectionTableType.Documents));
 
                 collectionDetails.CountOfDocuments = collectionTableReport.NumberOfEntries;
+                collectionDetails.CountOfRevisions = RevisionsStorage.GetNumberOfRevisionDocumentsForCollection(context, collection);
+                collectionDetails.CountOfTombstones = TombstonesCountForCollection(context, collection);
+                collectionDetails.CountOfCounterEntries = CountersStorage.GetNumberOfCountersDocumentsForCollection(context, collection);
+                collectionDetails.CountOfTimeSeriesDeletedRanges = TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRangesForCollection(context, collection);
+                collectionDetails.CountOfTimeSeriesSegments = TimeSeriesStorage.GetNumberOfTimeSeriesSegmentsForCollection(context, collection);
 
                 var documentsSize = collectionTableReport.DataSizeInBytes;
                 var revisionsSize = GetReportForTable(context, RevisionsStorage.RevisionsSchema, collectionName.GetTableName(CollectionTableType.Revisions))

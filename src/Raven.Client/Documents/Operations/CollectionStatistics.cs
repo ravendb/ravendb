@@ -102,15 +102,19 @@ namespace Raven.Client.Documents.Operations
     {
         public string Name { get; set; }
         public long CountOfDocuments { get; set; }
+        public long CountOfTombstones { get; set; }
+        public long CountOfRevisions { get; set; }
+        public long CountOfTimeSeriesDeletedRanges { get; set; }
+        public long CountOfAttachments { get; set; }
+        public long CountOfCounterEntries { get; set; }
+        public long CountOfTimeSeriesSegments { get; set; }
+        public Size TimeSeriesSegmentsSize { get; set; }
         public Size Size { get; set; }
         public Size DocumentsSize { get; set; }
         public Size TombstonesSize { get; set; }
         public Size RevisionsSize { get; set; }
         public Size TimeSeriesDeletedRangesSize { get; set; }
-        public Size DocumentsConflictsSize { get; set; }
-        public Size AttachmentsSize { get; set; }
         public Size CounterEntriesSize { get; set; }
-        public Size TimeSeriesSegmentsSize { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -128,26 +132,31 @@ namespace Raven.Client.Documents.Operations
                     [nameof(DocumentsSize.HumaneSize)] = DocumentsSize.HumaneSize,
                     [nameof(DocumentsSize.SizeInBytes)] = DocumentsSize.SizeInBytes
                 },
+                [nameof(CountOfTombstones)] = CountOfTombstones,
                 [nameof(TombstonesSize)] = new DynamicJsonValue
                 {
                     [nameof(TombstonesSize.HumaneSize)] = TombstonesSize.HumaneSize,
                     [nameof(TombstonesSize.SizeInBytes)] = TombstonesSize.SizeInBytes
                 },
+                [nameof(CountOfRevisions)] = CountOfRevisions,
                 [nameof(RevisionsSize)] = new DynamicJsonValue
                 {
                     [nameof(RevisionsSize.HumaneSize)] = RevisionsSize.HumaneSize,
                     [nameof(RevisionsSize.SizeInBytes)] = RevisionsSize.SizeInBytes
                 },
+                [nameof(CountOfTimeSeriesDeletedRanges)] = CountOfTimeSeriesDeletedRanges,
                 [nameof(TimeSeriesDeletedRangesSize)] = new DynamicJsonValue
                 {
                     [nameof(TimeSeriesDeletedRangesSize.HumaneSize)] = TimeSeriesDeletedRangesSize.HumaneSize,
                     [nameof(TimeSeriesDeletedRangesSize.SizeInBytes)] = TimeSeriesDeletedRangesSize.SizeInBytes
                 },
+                [nameof(CountOfCounterEntries)] = CountOfCounterEntries,
                 [nameof(CounterEntriesSize)] = new DynamicJsonValue
                 {
                     [nameof(CounterEntriesSize.HumaneSize)] = CounterEntriesSize.HumaneSize,
                     [nameof(CounterEntriesSize.SizeInBytes)] = CounterEntriesSize.SizeInBytes
                 },
+                [nameof(CountOfTimeSeriesSegments)] = CountOfTimeSeriesSegments,
                 [nameof(TimeSeriesSegmentsSize)] = new DynamicJsonValue
                 {
                     [nameof(TimeSeriesSegmentsSize.HumaneSize)] = TimeSeriesSegmentsSize.HumaneSize,
