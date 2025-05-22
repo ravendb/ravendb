@@ -304,7 +304,7 @@ namespace SlowTests.Server.Documents.Counters
         }
 
         [Fact]
-        public async Task CleanCounterTombstonesInTheClusterWithOnlyFullBackup()
+        public async Task KeepCounterTombstonesInTheClusterWithOnlyFullBackup()
         {
             var cluster = await CreateRaftCluster(3);
             var database = GetDatabaseName();
@@ -375,7 +375,7 @@ namespace SlowTests.Server.Documents.Counters
                     }
                 }
 
-                var res = await WaitForValueAsync(async () =>
+                await WaitAndAssertForValueAsync(async () =>
                 {
                     var c = 0L;
                     foreach (var server in cluster.Nodes)
@@ -389,8 +389,9 @@ namespace SlowTests.Server.Documents.Counters
                         }
                     }
                     return c;
-                }, 0, interval: 333);
-                Assert.Equal(0, res);
+                },
+                    expectedVal: 1,
+                    interval: (int) TimeSpan.FromSeconds(1).TotalMilliseconds);
             }
         }
 
