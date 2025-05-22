@@ -592,7 +592,7 @@ namespace Sparrow.LowMemory
             workingSet = workingSetInBytes;
             pageFileUsage = pageFileUsageInBytes;
 
-            return workingSet - privateUsage - sharedDirty;
+            return Math.Max(0, workingSet - privateUsage - sharedDirty);
         }
 
         private static (long WorkingSetInBytes, long PageFileUsageInBytes, long? PrivateUsageInBytes) GetProcessMemoryInfoForWindows()
