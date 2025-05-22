@@ -585,7 +585,21 @@ namespace Sparrow.LowMemory
             // of it resides in physical memory, this approach provides a highly reliable approximation of the shared
             // dirty memory footprint.
             var sharedDirty = GetTotalScratchAllocatedMemoryInBytes();
-            long privateUsage;
+
+            (long workingSetInBytes, long pageFileUsageInBytes, long? privateUsageInBytes) = GetProcessMemoryInfoForWindows();
+            var privateUsage = privateUsageInBytes ?? AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes() + AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
+
+            workingSet = workingSetInBytes;
+            pageFileUsage = pageFileUsageInBytes;
+
+            return workingSet - privateUsage - sharedDirty;
+        }
+
+        private static (long WorkingSetInBytes, long PageFileUsageInBytes, long? PrivateUsageInBytes) GetProcessMemoryInfoForWindows()
+        {
+            long workingSet;
+            long pageFileUsage;
+            long? privateUsage;
 
             if (WindowsSupportsMemoryCountersEx2)
             {
@@ -607,10 +621,10 @@ namespace Sparrow.LowMemory
 
                 workingSet = (long)memCounters.WorkingSetSize;
                 pageFileUsage = (long)memCounters.PagefileUsage;
-                privateUsage = AbstractLowMemoryMonitor.GetUnmanagedAllocationsInBytes() + AbstractLowMemoryMonitor.GetManagedMemoryInBytes();
+                privateUsage = null;
             }
 
-            return workingSet - privateUsage - sharedDirty;
+            return (workingSet, pageFileUsage, privateUsage);
         }
 
         public static long GetWorkingSetInBytes()
@@ -620,12 +634,8 @@ namespace Sparrow.LowMemory
 
             if (PlatformDetails.RunningOnWindows)
             {
-                if (Win32MemoryMethods.GetProcessMemoryInfoLegacy(ProcessHandle, out Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX memCounters, (uint)Marshal.SizeOf(typeof(Win32MemoryMethods.PROCESS_MEMORY_COUNTERS_EX))) == false)
-                {
-                    throw new InvalidOperationException("Failure when trying to read memory using the legacy GetProcessMemoryInfo, error code is: " + Marshal.GetLastWin32Error());
-                }
-
-                return (long)memCounters.WorkingSetSize;
+                (long workingSetInBytes, _, _) = GetProcessMemoryInfoForWindows();
+                return workingSetInBytes;
             }
 
             using (var currentProcess = Process.GetCurrentProcess())
