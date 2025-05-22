@@ -218,7 +218,7 @@ namespace SlowTests.Server.Replication
                 // wait for CV to merge after replication
                 Assert.True(await WaitForChangeVectorInClusterAsync(cluster.Nodes, databaseName));
 
-                var res = await WaitForValueAsync(async () =>
+                await WaitAndAssertForValueAsync(async () =>
                 {
                     var numberOfTombstones = 0L;
                     foreach (var server in cluster.Nodes)
