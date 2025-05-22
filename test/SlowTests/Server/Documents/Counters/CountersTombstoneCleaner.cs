@@ -314,7 +314,7 @@ namespace SlowTests.Server.Documents.Counters
 
         [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster | RavenTestCategory.Replication)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task CleanCounterTombstonesInTheClusterWithOnlyFullBackup(Options options)
+        public async Task KeepCounterTombstonesInTheClusterWithOnlyFullBackup(Options options)
         {
             var cluster = await CreateRaftCluster(3);
             var database = GetDatabaseName();
@@ -385,7 +385,7 @@ namespace SlowTests.Server.Documents.Counters
                     }
                 }
 
-                var res = await WaitForValueAsync(async () =>
+                await WaitAndAssertForValueAsync(async () =>
                 {
                     var c = 0L;
                     foreach (var server in cluster.Nodes)
@@ -399,8 +399,9 @@ namespace SlowTests.Server.Documents.Counters
                         }
                     }
                     return c;
-                }, 0, interval: 333);
-                Assert.Equal(0, res);
+                },
+                    expectedVal: 1,
+                    interval: (int) TimeSpan.FromSeconds(1).TotalMilliseconds);
             }
         }
 
