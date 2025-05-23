@@ -808,7 +808,7 @@ namespace Raven.Server.ServerWide
             {
                 try
                 {
-                    var store = new Pkcs12StoreBuilder().SetEnableOracleTrustedKeyUsage(false).Build();
+                    var store = new Pkcs12StoreBuilder().BuildWithoutOracleOids();
                     store.Load(new MemoryStream(rawData), certificatePassword?.ToCharArray() ?? Array.Empty<char>());
 
                     getKey = store.GetKey;

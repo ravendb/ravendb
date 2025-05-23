@@ -10,6 +10,7 @@ using Org.BouncyCastle.Math;
 using Org.BouncyCastle.Pkcs;
 using Org.BouncyCastle.Security;
 using Org.BouncyCastle.X509;
+using Raven.Server.Utils;
 using X509Certificate = Org.BouncyCastle.X509.X509Certificate;
 
 namespace Tests.Infrastructure.Utils;
@@ -124,7 +125,7 @@ public static class CertificateGenerator
     private static X509Certificate2 IncludePrivateKeyWithTheCertificate(X509Certificate certificate, AsymmetricCipherKeyPair keyPair)
     {
         var random = new SecureRandom();
-        var store = new Pkcs12StoreBuilder().SetEnableOracleTrustedKeyUsage(false).Build();
+        var store = new Pkcs12StoreBuilder().BuildWithoutOracleOids();
         string friendlyName = certificate.SubjectDN.ToString();
         var certificateEntry = new X509CertificateEntry(certificate);
         var keyEntry = new AsymmetricKeyEntry(keyPair.Private);
