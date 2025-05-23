@@ -18,6 +18,7 @@ public class TransactionInfoAnalyzer(
                 out _activeStorageTransactions) == false)
         {
             AddWarning("Failed to get active transactions");
+            return false;
         }
 
         return true;
@@ -27,11 +28,11 @@ public class TransactionInfoAnalyzer(
     {
         if (_activeStorageTransactions != null)
         {
-            DetectLongRunningTransaction(_activeStorageTransactions, "Long running transaction detected in System storage", issues.ServerIssues);
+            DetectLongRunningTransaction(_activeStorageTransactions, "Long running transaction detected in System storage", issues.ServerIssues, IssueCategory.Server);
         }
     }
 
-    internal static void DetectLongRunningTransaction(List<TransactionDebugHandler.TransactionInfo> transactions, string issueTitle, List<DetectedIssue> issues)
+    internal static void DetectLongRunningTransaction(List<TransactionDebugHandler.TransactionInfo> transactions, string issueTitle, List<DetectedIssue> issues, IssueCategory category)
     {
         foreach (var transactionInfo in transactions)
         {
@@ -46,7 +47,7 @@ public class TransactionInfoAnalyzer(
                     issues.Add(new DetectedIssue(
                         issueTitle,
                         $"{(tx.Flags == TransactionFlags.ReadWrite ? "Write" : "Read")} transaction opened by '{tx.ThreadName}' thread is active for {txDuration:g}",
-                        IssueSeverity.Warning, IssueCategory.Database));
+                        IssueSeverity.Warning, category));
                 }
             }
         }

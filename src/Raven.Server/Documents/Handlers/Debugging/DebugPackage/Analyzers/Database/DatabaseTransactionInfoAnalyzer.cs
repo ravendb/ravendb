@@ -17,6 +17,7 @@ public class DatabaseTransactionInfoAnalyzer(
                 out _activeStorageTransactions) == false)
         {
             AddWarning("Failed to get active transactions");
+            return false;
         }
 
         return true;
@@ -25,6 +26,6 @@ public class DatabaseTransactionInfoAnalyzer(
     protected override void DetectIssues(DebugPackageAnalysisIssues issues)
     {
         TransactionInfoAnalyzer.DetectLongRunningTransaction(_activeStorageTransactions, $"Long running transaction detected in '{DatabaseName}' database",
-            issues.ForDatabase(DatabaseName));
+            issues.ForDatabase(DatabaseName), IssueCategory.Database);
     }
 }

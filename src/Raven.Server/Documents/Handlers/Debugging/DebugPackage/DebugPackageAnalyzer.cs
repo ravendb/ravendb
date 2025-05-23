@@ -112,6 +112,7 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                     var tasksAnalyzer = new TasksInfoAnalyzer(databaseName, errors, issues);
                     var databaseTxInfoAnalyzer = new DatabaseTransactionInfoAnalyzer(databaseName, errors, issues);
                     var storageReportInfoAnalyzer = new StorageReportInfoAnalyzer(databaseName, errors, issues);
+                    var notificationsAnalyzer = new NotificationsInfoAnalyzer(databaseName, errors, issues);
                     
                     var databaseAnalyzers = new AbstractDebugPackageDatabaseAnalyzer[]
                     {
@@ -121,7 +122,8 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                         tasksAnalyzer,
                         configurationAnalyzer,
                         databaseTxInfoAnalyzer,
-                        storageReportInfoAnalyzer
+                        storageReportInfoAnalyzer,
+                        notificationsAnalyzer
                     };
 
                     var databaseEntries = packageContent.ForDatabase(databaseName);

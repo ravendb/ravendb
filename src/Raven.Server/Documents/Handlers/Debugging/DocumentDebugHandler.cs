@@ -39,17 +39,18 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName("Id");
+                    writer.WritePropertyName(nameof(HugeDocumentInfo.Id));
                     writer.WriteString(pair.Key.Item1);
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName("Size");
+                    writer.WritePropertyName(nameof(HugeDocumentInfo.Size));
+                    ;
                     writer.WriteInteger(pair.Value);
 
                     writer.WriteComma();
 
-                    writer.WritePropertyName("LastAccess");
+                    writer.WritePropertyName(nameof(HugeDocumentInfo.LastAccess));
                     writer.WriteString(pair.Key.Item2.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite, CultureInfo.InvariantCulture));
 
                     writer.WriteEndObject();
@@ -59,6 +60,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 writer.WriteEndObject();
             }
+        }
+
+        internal class HugeDocumentInfo
+        {
+            public string Id { get; set; }
+
+            public long Size { get; set; }
+
+            public string LastAccess { get; set; }
         }
 
         [RavenAction("/databases/*/debug/documents/scan-corrupted-ids", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -170,7 +180,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var mergedEnumerator = new MergedEnumerator<Document>(DocumentsEtagComparer.Instance);
             mergedEnumerator.AddEnumerator(documentsEnumerator);
             mergedEnumerator.AddEnumerator(revisionsEnumerator);
-            
+
             while (mergedEnumerator.MoveNext())
             {
                 yield return mergedEnumerator.Current;
