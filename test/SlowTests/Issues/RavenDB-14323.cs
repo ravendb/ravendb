@@ -50,15 +50,20 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store, allowErrors: true);
 
-                Assert.True(SpinWait.SpinUntil(() =>
+                Assert.True(WaitForValue(() =>
                 {
                     var stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
                     return stats.IsInvalidIndex;
-                }, TimeSpan.FromSeconds(10))); //precaution
+                }, true)); //precaution
 
-                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                IndexStats indexStats = null;
 
-                Assert.True(indexStats.IsInvalidIndex);
+                Assert.Equal(IndexState.Error, WaitForValue(() =>
+                {
+                    indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                    return indexStats.State;
+                }, IndexState.Error));;
+
                 Assert.Equal(IndexState.Error, indexStats.State);
 
                 Assert.Equal(numberOfReferencedDocuments, indexStats.MapAttempts);
@@ -121,15 +126,20 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store, allowErrors: true);
 
-                Assert.True(SpinWait.SpinUntil(() =>
+                Assert.True(WaitForValue(() =>
                 {
                     var stats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
                     return stats.IsInvalidIndex;
-                }, TimeSpan.FromSeconds(10))); //precaution
+                }, true)); //precaution
 
-                var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                IndexStats indexStats = null;
 
-                Assert.True(indexStats.IsInvalidIndex);
+                Assert.Equal(IndexState.Error, WaitForValue(() =>
+                {
+                    indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
+                    return indexStats.State;
+                }, IndexState.Error));;
+
                 Assert.Equal(IndexState.Error, indexStats.State);
 
                 Assert.Equal(numberOfReferencedDocuments, indexStats.MapAttempts);
