@@ -240,10 +240,11 @@ namespace SlowTests.Issues
                         Query = "from Users"
                     };
                     var subsId = await store.Subscriptions.CreateAsync(subscriptionCreationParams);
+                    var timeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5);
                     using (var subscription = store.Subscriptions.GetSubscriptionWorker<User>(new SubscriptionWorkerOptions(subsId)
-                    {
-                        TimeToWaitBeforeConnectionRetry = TimeSpan.FromSeconds(5)
-                    }))
+                           {
+                               TimeToWaitBeforeConnectionRetry = timeToWaitBeforeConnectionRetry
+                           }))
                     {
                         var list = new BlockingCollection<User>();
                         GC.KeepAlive(subscription.Run(u =>
@@ -256,7 +257,7 @@ namespace SlowTests.Issues
                         User user;
                         for (var i = 0; i < 10; i++)
                         {
-                            Assert.True(list.TryTake(out user, 1000));
+                            Assert.True(list.TryTake(out user, timeToWaitBeforeConnectionRetry * 2));
                         }
                         Assert.False(list.TryTake(out user, 50));
                         List<TcpConnectionOptions> tcpConnections;
