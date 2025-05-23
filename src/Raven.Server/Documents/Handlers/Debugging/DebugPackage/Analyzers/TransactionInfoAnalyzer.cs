@@ -38,7 +38,7 @@ public class TransactionInfoAnalyzer(
         {
             foreach (var tx in transactionInfo.Information)
             {
-                var txDurationInMs = double.Parse(tx.TotalTime.TrimEnd(TransactionDebugHandler.TotalTimeMSecondsSuffix));
+                var txDurationInMs = double.Parse(tx.TotalTime.Replace(TransactionDebugHandler.TotalTimeMSecondsSuffix, string.Empty));
 
                 var txDuration = TimeSpan.FromMilliseconds(txDurationInMs);
 
