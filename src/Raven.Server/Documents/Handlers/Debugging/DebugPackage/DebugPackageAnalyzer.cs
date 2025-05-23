@@ -53,6 +53,8 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                 var clusterLogAnalyzer = new ClusterLogInfoAnalyzer(errors, issues);
                 var clusterObserverAnalyzer = new ClusterObserverInfoAnalyzer(errors, issues);
 
+                var txInfoAnalyzer = new TransactionInfoAnalyzer(errors, issues);
+                
                 var serverWideAnalyzers = new AbstractDebugPackageAnalyzer[]
                 {
                     // the order matters here e.g., we want to run the machine analysis first, so we can check the machine details in other analyzers
@@ -66,7 +68,9 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                     
                     clusterStateAnalyzer, 
                     clusterLogAnalyzer,
-                    clusterObserverAnalyzer
+                    clusterObserverAnalyzer,
+                    
+                    txInfoAnalyzer,
                 };
 
                 foreach (var analyzer in serverWideAnalyzers)
@@ -106,7 +110,7 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                     var indexesAnalyzer = new IndexesInfoAnalyzer(databaseName, errors, issues);
                     var tombstonesAnalyzer = new TombstonesInfoAnalyzer(databaseName, errors, issues);
                     var tasksAnalyzer = new TasksInfoAnalyzer(databaseName, errors, issues);
-                    var transactionInfoAnalyzer = new TransactionInfoAnalyzer(databaseName, errors, issues);
+                    var databaseTxInfoAnalyzer = new DatabaseTransactionInfoAnalyzer(databaseName, errors, issues);
                     var storageReportInfoAnalyzer = new StorageReportInfoAnalyzer(databaseName, errors, issues);
                     
                     var databaseAnalyzers = new AbstractDebugPackageDatabaseAnalyzer[]
@@ -116,7 +120,7 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                         tombstonesAnalyzer,
                         tasksAnalyzer,
                         configurationAnalyzer,
-                        transactionInfoAnalyzer,
+                        databaseTxInfoAnalyzer,
                         storageReportInfoAnalyzer
                     };
 

@@ -22,6 +22,8 @@ namespace Raven.Server.Documents.Handlers.Debugging
             public List<TxInfoResult> Information;
         }
 
+        public const string TotalTimeMSecondsSuffix = "mSecs";
+        
         [RavenAction("/databases/*/admin/debug/txinfo", "GET", AuthorizationStatus.DatabaseAdmin, IsDebugInformationEndpoint = true)]
         public async Task TxInfo()
         {
@@ -57,7 +59,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 ThreadName = lowLevelTransaction.CurrentTransactionHolder?.Name,
                 CallerName = lowLevelTransaction.CallerName,
                 StartTime = lowLevelTransaction.TxStartTime.GetDefaultRavenFormat(isUtc: true),
-                TotalTime = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).TotalMilliseconds} mSecs",
+                TotalTime = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).TotalMilliseconds} {TotalTimeMSecondsSuffix}",
                 FlushInProgressLockTaken = lowLevelTransaction.FlushInProgressLockTaken,
                 Flags = lowLevelTransaction.Flags,
                 IsCloned = lowLevelTransaction.IsCloned,
