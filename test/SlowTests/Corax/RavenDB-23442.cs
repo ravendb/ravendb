@@ -99,7 +99,7 @@ public class RavenDB_23442(ITestOutputHelper output) : RavenTestBase(output)
         var originalArray = Enumerable.Range(0, size).Select(x => random.NextSingle()).ToArray();
         var clonedArray = originalArray.ToArray();
 
-        Hnsw.DistanceToScoreCosineSimilarity(clonedArray);
+        Hnsw.DistanceToScoreCosine(clonedArray);
         for (int i = 0; i < originalArray.Length; i++)
             Assert.Equal(1f - originalArray[i], clonedArray[i], float.Epsilon);
     }
@@ -113,7 +113,7 @@ public class RavenDB_23442(ITestOutputHelper output) : RavenTestBase(output)
         var originalArray = Enumerable.Range(0, size).Select(x => (float)random.Next(0, 64)).ToArray();
         var clonedArray = originalArray.ToArray();
 
-        Hnsw.DistanceToScoreHammingSimilarity(clonedArray, 8);
+        Hnsw.DistanceToScoreHamming(clonedArray, 8);
         for (int i = 0; i < originalArray.Length; i++)
             Assert.Equal(1f - (originalArray[i] / 64f), clonedArray[i], float.Epsilon);
     }

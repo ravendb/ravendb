@@ -19,7 +19,7 @@ public partial class Hnsw
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static float CosineSimilaritySingles(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
+    internal static float CosineDistanceSingles(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
     {
         var aSingles = MemoryMarshal.Cast<byte, float>(a);
         var bSingles = MemoryMarshal.Cast<byte, float>(b);
@@ -27,7 +27,7 @@ public partial class Hnsw
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    internal static float CosineSimilarityI8(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
+    internal static float CosineDistanceI8(ReadOnlySpan<byte> a, ReadOnlySpan<byte> b)
     {
         Debug.Assert(a.Length == b.Length, "a.Length == b.Length");
         var vectorLength = a.Length - sizeof(float);
@@ -47,7 +47,7 @@ public partial class Hnsw
         return Functions.HammingBitDistance(a, b);
     }
     
-    internal static void DistanceToScoreHammingSimilarity(Span<float> scores, int vectorSizeInBytes)
+    internal static void DistanceToScoreHamming(Span<float> scores, int vectorSizeInBytes)
     {
         var pos = 0;
         ref float bufferRef = ref MemoryMarshal.GetReference(scores);
@@ -102,7 +102,7 @@ public partial class Hnsw
             Unsafe.Add(ref bufferRef, pos) = 1f - (Unsafe.Add(ref bufferRef, pos) / (8f * vectorSizeInBytes));
     }
 
-    internal static void DistanceToScoreCosineSimilarity(Span<float> scores)
+    internal static void DistanceToScoreCosine(Span<float> scores)
     {
         var pos = 0;
         ref float bufferRef = ref MemoryMarshal.GetReference(scores);

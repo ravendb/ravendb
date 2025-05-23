@@ -304,8 +304,8 @@ public unsafe partial class Hnsw
             Options = Unsafe.Read<Options>(options);
             SimilarityCalc = Options.SimilarityMethod switch
             {
-                SimilarityMethod.CosineSimilaritySingles => &CosineSimilaritySingles,
-                SimilarityMethod.CosineSimilarityI8 => &CosineSimilarityI8,
+                SimilarityMethod.CosineSimilaritySingles => &CosineDistanceSingles,
+                SimilarityMethod.CosineSimilarityI8 => &CosineDistanceI8,
                 SimilarityMethod.HammingDistance => &HammingDistance,
                 _ => throw new ArgumentOutOfRangeException(nameof(Options.SimilarityMethod), Options.SimilarityMethod, null)
             };
@@ -347,10 +347,10 @@ public unsafe partial class Hnsw
             {
                 case SimilarityMethod.CosineSimilaritySingles:
                 case SimilarityMethod.CosineSimilarityI8:
-                    DistanceToScoreCosineSimilarity(distances);
+                    DistanceToScoreCosine(distances);
                     break;
                 case SimilarityMethod.HammingDistance:
-                    DistanceToScoreHammingSimilarity(distances, Options.VectorSizeBytes);
+                    DistanceToScoreHamming(distances, Options.VectorSizeBytes);
                     break;
                 default:
                     throw new InvalidDataException($"Unknown similarity method {Options.SimilarityMethod}");

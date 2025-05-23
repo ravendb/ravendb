@@ -289,10 +289,10 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             Assert.Equal(2, read);
             var v1Pos = matches.AsSpan().Slice(0, read).IndexOf(1L);
             Assert.True(int.IsPositive(v1Pos));
-            Assert.Equal(Hnsw.CosineSimilaritySingles(v1.GetEmbedding(), vQ.GetEmbedding()), distances[v1Pos]);
+            Assert.Equal(Hnsw.CosineDistanceSingles(v1.GetEmbedding(), vQ.GetEmbedding()), distances[v1Pos]);
             var v2Pos = matches.AsSpan().Slice(0, read).IndexOf(2L);
             Assert.True(int.IsPositive(v2Pos));
-            Assert.Equal(Hnsw.CosineSimilaritySingles(v2.GetEmbedding(), vQ.GetEmbedding()), distances[v2Pos]);
+            Assert.Equal(Hnsw.CosineDistanceSingles(v2.GetEmbedding(), vQ.GetEmbedding()), distances[v2Pos]);
         }
     }
     

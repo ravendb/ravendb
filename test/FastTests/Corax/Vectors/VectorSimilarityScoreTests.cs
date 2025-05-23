@@ -129,7 +129,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         Assert.NotNull(streamResults.Current.Metadata[Constants.Documents.Metadata.IndexScore]);
         var similarity = (float)streamResults.Current.Metadata.GetDouble(Constants.Documents.Metadata.IndexScore);
         
-        var expectedSimilarity = 1 - Hnsw.CosineSimilarityI8(MemoryMarshal.Cast<sbyte, byte>(queryVector), MemoryMarshal.Cast<sbyte, byte>(doc.Int8));
+        var expectedSimilarity = 1 - Hnsw.CosineDistanceI8(MemoryMarshal.Cast<sbyte, byte>(queryVector), MemoryMarshal.Cast<sbyte, byte>(doc.Int8));
         Assert.Equal(expectedSimilarity, similarity, 0.0001f);
     }
     
