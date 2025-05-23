@@ -302,7 +302,7 @@ namespace Sparrow.Server.Tensors
             ];
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static double CosineSimilarityInternal(ref float aRef, float aMagnitude, ref float bRef, float bMagnitude, nuint size)
+            internal static double CosineSimilarityInternalX64(ref float aRef, float aMagnitude, ref float bRef, float bMagnitude, nuint size)
             {
                 Vector512<float> abVec = Vector512<float>.Zero;
                 Vector512<float> a2Vec = Vector512<float>.Zero;
@@ -388,11 +388,86 @@ namespace Sparrow.Server.Tensors
                 double b2Reciprocal = rsqrts.ToScalar(); // lane 0
                 double a2Reciprocal = Sse2.UnpackHigh(rsqrts, rsqrts).ToScalar(); // lane 1
                 return  ab * a2Reciprocal * b2Reciprocal;
-           }
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static double CosineSimilarityInternalNeon(ref float aRef, float aMagnitude, ref float bRef, float bMagnitude, nuint size)
+            {
+                Vector512<float> abVec = Vector512<float>.Zero;
+                Vector512<float> a2Vec = Vector512<float>.Zero;
+                Vector512<float> b2Vec = Vector512<float>.Zero;
+
+                nuint i = 0;
+                nuint oneVectorFromEnd = size - (nuint)Vector512<float>.Count;
+
+            Loop:
+
+                // PERF: The reason why this would work on hardware not supporting 512-bit vectors is
+                // that it will effectively create 2 lanes (xmm and ymm) of 256-bit vectors. And because
+                // there are no overlapping lanes, there will be less pipeline dependencies hiding latency
+                // of the instructions themselves.
+                Vector512<float> aVec = Vector512.LoadUnsafe(ref aRef, i);
+                Vector512<float> bVec = Vector512.LoadUnsafe(ref bRef, i);
+
+                i += (nuint)Vector512<float>.Count;
+
+            LoopWithoutLoad:
+
+                abVec = Arithmetics.MultiplyAddEstimate(aVec, bVec, abVec);
+                a2Vec = Arithmetics.MultiplyAddEstimate(aVec, aVec, a2Vec);
+                b2Vec = Arithmetics.MultiplyAddEstimate(bVec, bVec, b2Vec);
+
+                if (i <= oneVectorFromEnd)
+                    goto Loop;
+
+                if (i != (nuint)size)
+                {
+                    nuint offset = size - i;
+                    Debug.Assert((int)offset * sizeof(float) + Vector512<byte>.Count <= MoveMaskTable.Length);
+
+                    var mask = Vector512.LoadUnsafe<float>(
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, float>(MoveMaskTable)), (nuint)offset);
+
+                    aVec = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref aRef, oneVectorFromEnd), mask);
+                    bVec = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref bRef, oneVectorFromEnd), mask);
+
+                    i = (nuint)size;
+                    goto LoopWithoutLoad;
+                }
+
+                float ab = aMagnitude * bMagnitude * Vector512.Sum(abVec);
+                float a2 = aMagnitude * aMagnitude * Vector512.Sum(a2Vec);
+                float b2 = bMagnitude * bMagnitude * Vector512.Sum(b2Vec);
+
+                // Special cases
+                if (a2 == 0 && b2 == 0)
+                    return double.NaN; // Both zero vectors: nan
+                if (ab == 0)
+                    return 0; // Orthogonal or one zero: distance = 1, similarity 0
+
+                // Create vector with the squared magnitudes
+                var squares = Vector64.Create(float.CreateTruncating(b2), float.CreateTruncating(a2));
+
+                // Compute reciprocal square root approximation
+                Vector64<float> rsqrts = AdvSimd.ReciprocalSquareRootEstimate(squares);
+
+                // Perform two rounds of Newton-Raphson refinement for better accuracy
+                // Formula: rsqrt_new = rsqrt * (1.5 - 0.5 * x * rsqrt^2)
+                // Which can be rewritten as: rsqrt * vrsqrts(x * rsqrt, rsqrt)
+                rsqrts = AdvSimd.Multiply(rsqrts, AdvSimd.ReciprocalSquareRootStep(AdvSimd.Multiply(squares, rsqrts), rsqrts));
+                rsqrts = AdvSimd.Multiply(rsqrts, AdvSimd.ReciprocalSquareRootStep(AdvSimd.Multiply(squares, rsqrts), rsqrts));
+
+                // Extract the refined reciprocal square roots
+                float rsqrtA = rsqrts.GetElement(0);
+                float rsqrtB = rsqrts.GetElement(1);
+
+                // Compute the cosine similarity
+                return ab * rsqrtA * rsqrtB;
+            }
 
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static double CosineSimilarityInternal(ref double aRef, double aMagnitude, ref double bRef, double bMagnitude, nuint size)
+            internal static double CosineSimilarityInternalX64(ref double aRef, double aMagnitude, ref double bRef, double bMagnitude, nuint size)
             {
                 Vector512<double> abVec = Vector512<double>.Zero;
                 Vector512<double> a2Vec = Vector512<double>.Zero;
@@ -480,6 +555,81 @@ namespace Sparrow.Server.Tensors
                 return ab * a2Reciprocal * b2Reciprocal;
             }
 
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static double CosineSimilarityInternalNeon(ref double aRef, double aMagnitude, ref double bRef, double bMagnitude, nuint size)
+            {
+                Vector512<double> abVec = Vector512<double>.Zero;
+                Vector512<double> a2Vec = Vector512<double>.Zero;
+                Vector512<double> b2Vec = Vector512<double>.Zero;
+
+                nuint i = 0;
+                nuint oneVectorFromEnd = size - (nuint)Vector512<double>.Count;
+
+            Loop:
+
+                // PERF: The reason why this would work on hardware not supporting 512-bit vectors is
+                // that it will effectively create 2 lanes (xmm and ymm) of 256-bit vectors. And because
+                // there are no overlapping lanes, there will be less pipeline dependencies hiding latency
+                // of the instructions themselves.
+                Vector512<double> aVec = Vector512.LoadUnsafe(ref aRef, i);
+                Vector512<double> bVec = Vector512.LoadUnsafe(ref bRef, i);
+
+                i += (nuint)Vector512<double>.Count;
+
+            LoopWithoutLoad:
+
+                abVec = Arithmetics.MultiplyAddEstimate(aVec, bVec, abVec);
+                a2Vec = Arithmetics.MultiplyAddEstimate(aVec, aVec, a2Vec);
+                b2Vec = Arithmetics.MultiplyAddEstimate(bVec, bVec, b2Vec);
+
+                if (i <= oneVectorFromEnd)
+                    goto Loop;
+
+                if (i != (nuint)size)
+                {
+                    nuint offset = (nuint)size - i;
+                    Debug.Assert((int)offset * sizeof(double) + Vector512<byte>.Count <= MoveMaskTable.Length);
+
+                    var mask = Vector512.LoadUnsafe<double>(
+                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<byte, double>(MoveMaskTable)), (nuint)offset);
+
+                    aVec = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref aRef, oneVectorFromEnd), mask);
+                    bVec = Vector512.BitwiseAnd(Vector512.LoadUnsafe(ref bRef, oneVectorFromEnd), mask);
+
+                    i = (nuint)size;
+                    goto LoopWithoutLoad;
+                }
+
+                double ab = aMagnitude * bMagnitude * Vector512.Sum(abVec);
+                double a2 = aMagnitude * aMagnitude * Vector512.Sum(a2Vec);
+                double b2 = bMagnitude * bMagnitude * Vector512.Sum(b2Vec);
+
+                // Special cases
+                if (a2 == 0 && b2 == 0)
+                    return double.NaN; // Both zero vectors: nan
+                if (ab == 0)
+                    return 0; // Orthogonal or one zero: distance = 1, similarity 0
+
+                // Create vector with the squared magnitudes
+                var squares = Vector64.Create(float.CreateTruncating(b2), float.CreateTruncating(a2));
+
+                // Compute reciprocal square root approximation
+                Vector64<float> rsqrts = AdvSimd.ReciprocalSquareRootEstimate(squares);
+
+                // Perform two rounds of Newton-Raphson refinement for better accuracy
+                // Formula: rsqrt_new = rsqrt * (1.5 - 0.5 * x * rsqrt^2)
+                // Which can be rewritten as: rsqrt * vrsqrts(x * rsqrt, rsqrt)
+                rsqrts = AdvSimd.Multiply(rsqrts, AdvSimd.ReciprocalSquareRootStep(AdvSimd.Multiply(squares, rsqrts), rsqrts));
+                rsqrts = AdvSimd.Multiply(rsqrts, AdvSimd.ReciprocalSquareRootStep(AdvSimd.Multiply(squares, rsqrts), rsqrts));
+
+                // Extract the refined reciprocal square roots
+                float rsqrtA = rsqrts.GetElement(0);
+                float rsqrtB = rsqrts.GetElement(1);
+
+                // Compute the cosine similarity
+                return ab * rsqrtA * rsqrtB;
+            }
+
 
             [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
             public static TResult CosineSimilarity<T, TResult>(ReadOnlySpan<T> a, ReadOnlySpan<T> b)
@@ -492,17 +642,33 @@ namespace Sparrow.Server.Tensors
                 double similarity;
                 if (typeof(T) == typeof(float))
                 {
-                    similarity = CosineSimilarityInternal(
-                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(a)), 1.0f,
-                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(b)), 1.0f,
-                        (nuint)a.Length);
+                    ref var afRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(a));
+                    ref var bfRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(b));
+
+                    if (Sse2.IsSupported)
+                    {
+                        similarity = CosineSimilarityInternalX64(ref afRef, 1.0f, ref bfRef, 1.0f, (nuint)a.Length);
+                    }
+                    else if (AdvInstructionSet.Arm.IsSupported)
+                    {
+                        similarity = CosineSimilarityInternalNeon(ref afRef, 1.0f, ref bfRef, 1.0f, (nuint)a.Length);
+                    }
+                    else throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
                 } 
                 else if (typeof(T) == typeof(double))
                 {
-                    similarity = CosineSimilarityInternal(
-                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, double>(a)), 1.0d,
-                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, double>(b)), 1.0d,
-                        (nuint)a.Length);
+                    ref var adRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, double>(a));
+                    ref var bdRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, double>(b));
+
+                    if (Sse2.IsSupported)
+                    {
+                        similarity = CosineSimilarityInternalX64(ref adRef, 1.0d, ref bdRef, 1.0d, (nuint)a.Length);
+                    }
+                    else if (AdvInstructionSet.Arm.IsSupported)
+                    {
+                        similarity = CosineSimilarityInternalNeon(ref adRef, 1.0d, ref bdRef, 1.0d, (nuint)a.Length);
+                    }
+                    else throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
                 }
                 else throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
 
@@ -536,13 +702,20 @@ namespace Sparrow.Server.Tensors
                         aMag = (float)(double)(object)aMagnitude;
                         bMag = (float)(double)(object)bMagnitude;
                     }
-                    else
-                        throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
+                    else throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
 
-                    similarity = CosineSimilarityInternal(
-                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(a)), aMag,
-                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(b)), bMag,
-                        (nuint)a.Length);
+                    ref var adRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(a));
+                    ref var bdRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(b));
+
+                    if (Sse2.IsSupported)
+                    {
+                        similarity = CosineSimilarityInternalX64(ref adRef, aMag, ref bdRef, bMag, (nuint)a.Length);
+                    }
+                    else if (AdvInstructionSet.Arm.IsSupported)
+                    {
+                        similarity = CosineSimilarityInternalNeon(ref adRef, aMag, ref bdRef, bMag, (nuint)a.Length);
+                    }
+                    else throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
                 }
                 else if (typeof(T) == typeof(double))
                 {
@@ -557,16 +730,22 @@ namespace Sparrow.Server.Tensors
                         aMag = (double)(object)aMagnitude;
                         bMag = (double)(object)bMagnitude;
                     }
-                    else
-                        throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
+                    else throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
 
-                    similarity = CosineSimilarityInternal(
-                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, double>(a)), aMag,
-                        ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, double>(b)), bMag,
-                        (nuint)a.Length);
+                    ref var adRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, double>(a));
+                    ref var bdRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, double>(b));
+
+                    if (Sse2.IsSupported)
+                    {
+                        similarity = CosineSimilarityInternalX64(ref adRef, aMag, ref bdRef, bMag, (nuint)a.Length);
+                    }
+                    else if (AdvInstructionSet.Arm.IsSupported)
+                    {
+                        similarity = CosineSimilarityInternalNeon(ref adRef, aMag, ref bdRef, bMag, (nuint)a.Length);
+                    }
+                    else throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
                 }
-                else
-                    throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
+                else throw new NotSupportedException($"Type {typeof(T).Name} is not supported.");
 
                 if (typeof(TResult) == typeof(float))
                 {
@@ -645,17 +824,12 @@ namespace Sparrow.Server.Tensors
 
         public static class Vectorized256
         {
+
             [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-            internal static TResult CosineSimilarityNormalize<T, TResult>(T ab, T a2, T b2)
+            internal static TResult CosineSimilarityNormalizeSse<T, TResult>(T ab, T a2, T b2)
                 where T : unmanaged, IRootFunctions<T>, INumber<T>
                 where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
             {
-                if (!Sse.IsSupported || !Sse2.IsSupported)
-                {
-                    // Fallback to the serial implementation if SIMD is not supported
-                    return Serial.CosineSimilarityNormalize<T, TResult>(ab, a2, b2);
-                }
-
                 // Create a 128-bit vector with a2 in the high lane and b2 in the low lane.
                 // Note: _mm_set_pd(a2, b2) in C sets lane1=a2 and lane0=b2.
                 // In .NET, Vector128.Create(x, y) sets lane0 = x and lane1 = y.
@@ -689,6 +863,46 @@ namespace Sparrow.Server.Tensors
 
                 return TResult.CreateTruncating(double.CreateTruncating(ab) * a2Reciprocal * b2Reciprocal);
             }
+
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+            internal static TResult CosineSimilarityNormalizeNeon<T, TResult>(T ab, T a2, T b2)
+                where T : unmanaged, IRootFunctions<T>, INumber<T>
+                where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
+            {
+                // Create vector with the squared magnitudes
+                var squares = Vector64.Create(float.CreateTruncating(b2), float.CreateTruncating(a2));
+
+                // Compute reciprocal square root approximation
+                Vector64<float> rsqrts = AdvSimd.ReciprocalSquareRootEstimate(squares);
+
+                // Perform two rounds of Newton-Raphson refinement for better accuracy
+                // Formula: rsqrt_new = rsqrt * (1.5 - 0.5 * x * rsqrt^2)
+                // Which can be rewritten as: rsqrt * vrsqrts(x * rsqrt, rsqrt)
+                rsqrts = AdvSimd.Multiply(rsqrts, AdvSimd.ReciprocalSquareRootStep(AdvSimd.Multiply(squares, rsqrts), rsqrts));
+                rsqrts = AdvSimd.Multiply(rsqrts, AdvSimd.ReciprocalSquareRootStep(AdvSimd.Multiply(squares, rsqrts), rsqrts));
+
+                // Extract the refined reciprocal square roots
+                float a2Reciprocal = rsqrts.GetElement(0);
+                float b2Reciprocal = rsqrts.GetElement(1);
+
+                return TResult.CreateTruncating(float.CreateTruncating(ab) * a2Reciprocal * b2Reciprocal);
+            }
+
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+            internal static TResult CosineSimilarityNormalize<T, TResult>(T ab, T a2, T b2)
+                where T : unmanaged, IRootFunctions<T>, INumber<T>
+                where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
+            {
+                if (Sse2.IsSupported)
+                    return CosineSimilarityNormalizeSse<T, TResult>(ab, a2, b2);
+
+                if (AdvInstructionSet.Arm.IsSupported)
+                    return CosineSimilarityNormalizeNeon<T, TResult>(ab, a2, b2);
+
+                // Fallback to the serial implementation if SIMD is not supported
+                return Serial.CosineSimilarityNormalize<T, TResult>(ab, a2, b2);
+            }
+
 
             [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
             public static TResult CosineSimilarity<T, TResult>(ReadOnlySpan<T> a, ReadOnlySpan<T> b)
