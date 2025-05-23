@@ -40,7 +40,7 @@ public sealed class LetsEncryptCertificateUtil
 
     public static async Task WriteCertificateAsPemToZipArchiveAsync(string name, byte[] rawBytes, string exportPassword, ZipArchive archive)
     {
-        var a = new Pkcs12StoreBuilder().SetEnableOracleTrustedKeyUsage(false).Build();
+        var a = new Pkcs12StoreBuilder().BuildWithoutOracleOids();
         a.Load(new MemoryStream(rawBytes), Array.Empty<char>());
 
         X509CertificateEntry entry = null;
