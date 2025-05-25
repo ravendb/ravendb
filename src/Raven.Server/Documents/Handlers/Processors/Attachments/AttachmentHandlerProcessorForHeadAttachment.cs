@@ -36,8 +36,6 @@ internal class AttachmentHandlerProcessorForHeadAttachment : AbstractAttachmentH
                 return ValueTask.CompletedTask;
             }
 
-            CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(context, attachment, documentId, name);
-
             if (changeVector == attachment.ChangeVector)
             {
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;

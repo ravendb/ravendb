@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
+using Raven.Server.Documents.Handlers.Processors.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Retired;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
@@ -489,7 +490,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         if (Configuration.Disabled)
             throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetiredAttachmentsConfiguration)} is disabled.");
 
-        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(RetiredAttachmentHandlerProcessorForGetAttachment), Configuration.S3Settings, Configuration.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null);
+        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(AttachmentHandlerProcessorForGetAttachment), Configuration.S3Settings, Configuration.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null, concurrentThreads: 8);
         return new DirectFileDownloader(settings, retentionPolicyParameters: null, _logger, FileUploaderBase.GenerateUploadResult(), progress => { }, tcs);
     }
 

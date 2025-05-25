@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
@@ -19,39 +19,17 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
-        public virtual string CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
-        {
-            if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
-            {
-                throw new InvalidOperationException($"Cannot bulk get attachment '{name}' on document '{documentId}' because it is retired. Please use dedicated API.");
-            }
-
-            return null;
-        }
-        public virtual Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment, string collection)
-        {
-            return Task.FromResult(attachment.Stream);
-        }
-
-        public virtual DirectFileDownloader GetAttachmentsDownloader(OperationCancelToken tcs)
-        {
-             return null;
-        }
-
-        public virtual void DisposeReadTransactionIfNeeded(DocumentsTransaction tx)
-        {
-            // noop
-        }
 
         protected override async ValueTask GetAttachmentsAsync(DocumentsOperationContext context, BlittableJsonReaderArray attachments, AttachmentType type,
             OperationCancelToken tcs)
         {
             var tasks = new List<Task<Stream>>();
             var attachmentsStreams = new List<Stream>();
-
-            using DocumentsTransaction tx = context.OpenReadTransaction();
-            using (var downloader = GetAttachmentsDownloader(tcs))
-            using (var stream = new MemoryStream())
+            DirectFileDownloader downloader = null;
+            bool canDisposeReadTransaction = true;
+            DocumentsTransaction tx = context.OpenReadTransaction();
+            var stream = new MemoryStream();
+            try
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
                 {
@@ -71,16 +49,29 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                         if (attachment == null)
                             continue;
 
-                        var collection = CheckAttachmentFlagAndThrowIfNeeded(context, attachment, id, name);
+                        IBulkPostAttachmentStrategy strategy;
+                        if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+                        {
+                            strategy = new RetiredBulkPostAttachmentStrategyProcessor(RequestHandler);
+                            downloader ??= strategy.GetAttachmentsDownloader(tcs);
+                        }
+                        else
+                        {
+                            strategy = new RegularBulkPostAttachmentStrategyProcessor(RequestHandler);
+                            canDisposeReadTransaction = false;
+                        }
+
+                        var collection = strategy.CheckAttachmentFlagAndThrowIfNeeded(context, attachment, id, name);
+
 
                         if (first == false)
                             writer.WriteComma();
                         first = false;
 
-                        var attachmentStream = GetAttachmentStream(downloader, attachment, collection);
+                        var attachmentStream = strategy.GetAttachmentStream(downloader, attachment, collection);
                         tasks.Add(attachmentStream);
 
-                        WriteAttachmentDetails(writer, attachment, id);
+                        strategy.WriteAttachmentDetails(writer, attachment, id);
 
                         await writer.MaybeFlushAsync(tcs.Token);
                     }
@@ -91,7 +82,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     await writer.MaybeFlushAsync(tcs.Token);
                 }
 
-                DisposeReadTransactionIfNeeded(tx);
+                if (canDisposeReadTransaction)
+                {
+                    // all requested attachments were retired, we can dispose the read transaction
+                    tx.Dispose();
+                }
 
                 foreach (var t in tasks)
                 {
@@ -102,13 +97,19 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 stream.Position = 0;
                 await stream.CopyToAsync(RequestHandler.ResponseBodyStream(), tcs.Token);
             }
+            finally
+            {
+                downloader?.Dispose();
+                await stream.DisposeAsync();
+                tx.Dispose();
+            }
 
             using (context.GetMemoryBuffer(out var buffer))
-            {   
+            {
                 var responseStream = RequestHandler.ResponseBodyStream();
-                foreach (var stream in attachmentsStreams)
+                foreach (var stream2 in attachmentsStreams)
                 {
-                    await using (var tmpStream = stream)
+                    await using (var tmpStream = stream2)
                     {
                         var count = await tmpStream.ReadAsync(buffer.Memory.Memory, tcs.Token);
                         while (count > 0)
@@ -119,13 +120,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     }
                 }
             }
-        }
-
-        protected override void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
-        {
-            writer.WriteStartObject();
-            WriteAttachmentDetailsInternal(writer, attachment, documentId);
-            writer.WriteEndObject();
         }
     }
 }

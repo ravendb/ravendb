@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Mail;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -19,6 +21,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
         protected override async ValueTask DeleteAttachmentAsync(DocumentsOperationContext context, BlittableJsonReaderArray attachments, OperationCancelToken operationCancelToken)
         {
+                        IBulkDeleteAttachmentsStrategy strategy;
             var attachmentRequests = new List<AttachmentRequest>();
             using (context.OpenReadTransaction())
             {
@@ -31,8 +34,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                         if (bjro.TryGet(nameof(AttachmentRequest.Name), out string name) == false)
                             throw new ArgumentException($"Could not parse {nameof(AttachmentRequest.Name)}");
 
-
-                        CheckAttachmentFlagAndThrowIfNeeded(context, docId, name);
+                        //TODO: egor here I need to rework this logic, so same merged command will delete both regular and retired attachments, and if its retired then delete from storage only!
+                        strategy = new RegularBulkDeleteAttachmentsStrategyProcessor(RequestHandler);
+                            strategy = new RetiredBulkDeleteAttachmentsStrategyProcessor(RequestHandler);
+                        //TODO: egor make this compile for now
+                        //strategy.CheckAttachmentFlagAndThrowIfNeeded(context, docId, name);
                         attachmentRequests.Add(new AttachmentRequest(docId, name));
                     }
                 }
@@ -40,56 +46,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
             if (attachmentRequests.Count == 0)
                 return;
+            //TODO: egor make this compile for now
+            //MergedDeleteAttachmentsCommand cmd = strategy.MergedDeleteAttachmentsCommand(attachmentRequests);
 
-            MergedDeleteAttachmentsCommand cmd = MergedDeleteAttachmentsCommand(attachmentRequests);
-
-            await RequestHandler.Database.TxMerger.Enqueue(cmd);
+            //await RequestHandler.Database.TxMerger.Enqueue(cmd);
         }
 
-        protected virtual MergedDeleteAttachmentsCommand MergedDeleteAttachmentsCommand(List<AttachmentRequest> attachmentRequests)
-        {
-            var cmd = new MergedDeleteAttachmentsCommand
-            {
-                Database = RequestHandler.Database,
-                Deletes = attachmentRequests
-            };
-            return cmd;
-        }
-
-        protected virtual void CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, string docId, string name)
-        {
-            AttachmentHandlerProcessorForDeleteAttachment.CheckAttachmentFlagAndThrowIfNeededInternal(context, RequestHandler.Database, docId, name);
-        }
     }
 
-    internal class MergedDeleteAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
-    {
-        public List<AttachmentRequest> Deletes;
-        public DocumentDatabase Database;
-
-        protected override long ExecuteCmd(DocumentsOperationContext context)
-        {
-            foreach (var delete in Deletes)
-            {
-                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, delete.DocumentId, delete.Name, null, collectionName: out _);
-            }
-
-            return 1;
-        }
-
-        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction,
-            MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
-        {
-            return new MergedDeleteAttachmentsCommandDto { Deletes = Deletes };
-        }
-    }
-
-    internal class MergedDeleteAttachmentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedDeleteAttachmentsCommand>
-    {
-        public List<AttachmentRequest> Deletes;
-        public virtual MergedDeleteAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
-        {
-            return new MergedDeleteAttachmentsCommand { Deletes = Deletes, Database = database };
-        }
-    }
 }

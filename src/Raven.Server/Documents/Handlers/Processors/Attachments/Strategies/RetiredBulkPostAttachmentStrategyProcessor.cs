@@ -7,41 +7,38 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
-namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired
+namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
 {
-    internal class RetiredAttachmentHandlerProcessorForBulkPost : AttachmentHandlerProcessorForBulkPostAttachment
+    internal class RetiredBulkPostAttachmentStrategyProcessor : AbstractBulkPostAttachmentStrategyProcessor<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public RetiredAttachmentHandlerProcessorForBulkPost([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+        public RetiredBulkPostAttachmentStrategyProcessor([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
         public override string CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
         {
-            return RetiredAttachmentHandlerProcessorForGetAttachment.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, "bulk");
+            return IGetAttachmentStrategy.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name,
+                "bulk");
         }
 
         public override async Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment, string collection)
         {
-            return await RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(downloader, attachment, collection);
+            return await RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(downloader,
+                attachment, collection);
         }
+
         public override DirectFileDownloader GetAttachmentsDownloader(OperationCancelToken tcs)
         {
             return RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(tcs);
         }
 
-        public override void DisposeReadTransactionIfNeeded(DocumentsTransaction tx)
-        {
-            tx.Dispose();
-        }
-
-        protected override void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
+        public override void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
         {
             writer.WriteStartObject();
             WriteAttachmentDetailsInternal(writer, attachment, documentId);
             writer.WriteComma();
             writer.WritePropertyName(nameof(AttachmentDetails.Flags));
             writer.WriteInteger((int)attachment.Flags);
-            writer.WriteEndObject();
         }
     }
 }

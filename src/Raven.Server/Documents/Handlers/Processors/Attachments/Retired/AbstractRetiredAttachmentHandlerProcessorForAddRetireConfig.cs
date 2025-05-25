@@ -1,5 +1,4 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Databases;

@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
+using Elastic.Clients.Elasticsearch;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
@@ -11,10 +12,12 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Handlers.Processors.Attachments;
+using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
+using Raven.Server.Web;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Batches.Commands;
@@ -231,17 +234,16 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                             {
                                 // keep the retired attachment on cloud storage
                                 Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
-
                             }
                             else
                             {
                                 Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentCloudStorage, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
-
                             }
                         }
                         else
                         {
-                            AttachmentHandlerProcessorForDeleteAttachment.CheckAttachmentFlagAndThrowIfNeededInternal(context, Database, cmd.Id, cmd.Name);
+                            Attachment attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, cmd.Id, cmd.Name, AttachmentType.Document, changeVector: null);
+                            RegularDeleteAttachmentStrategyProcessor.CheckAttachmentFlagAndThrowIfNeededInternal(context, attachment, Database, cmd.Id, cmd.Name);
                             Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
 
                         }

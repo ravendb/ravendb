@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
@@ -14,6 +15,7 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using static Raven.Server.Documents.AttachmentsStorage;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -31,7 +33,7 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/attachments", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
-            using (var processor = new AttachmentHandlerDispatcherProcessorForGetAttachment(this, isDocument: true))
+            using (var processor = new AttachmentHandlerProcessorForGetAttachment(this, isDocument: true))
                 await processor.ExecuteAsync();
         }
 
@@ -120,7 +122,44 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        internal class MergedDeleteAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        public class MergedDeleteRetiredAttachmentCommand : AttachmentHandler.MergedDeleteAttachmentCommand
+        {
+            public AttachmentsStorage.DeleteAttachmentState DeleteState;
+
+            protected override long ExecuteCmd(DocumentsOperationContext context)
+            {
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(DeleteState, context, DocumentId, Name, ExpectedChangeVector, collectionName: out _);
+                return 1;
+            }
+
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+            {
+                return new MergedDeleteRetiredAttachmentCommandDto
+                {
+                    DocumentId = DocumentId,
+                    Name = Name,
+                    ExpectedChangeVector = ExpectedChangeVector,
+                    DeleteState = DeleteState
+                };
+            }
+
+            internal sealed class MergedDeleteRetiredAttachmentCommandDto : MergedDeleteAttachmentCommandDto
+            {
+                public AttachmentsStorage.DeleteAttachmentState DeleteState;
+                public override MergedDeleteRetiredAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+                {
+                    return new MergedDeleteRetiredAttachmentCommand
+                    {
+                        DocumentId = DocumentId,
+                        Name = Name,
+                        ExpectedChangeVector = ExpectedChangeVector,
+                        DeleteState = DeleteState,
+                        Database = database
+                    };
+                }
+            }
+        }
+        public class MergedDeleteAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public string DocumentId;
             public string Name;
@@ -186,6 +225,69 @@ namespace Raven.Server.Documents.Handlers
                 ExpectedChangeVector = ExpectedChangeVector,
                 Database = database
             };
+        }
+    }
+
+    public class MergedDeleteAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+    {
+        public List<AttachmentRequest> Deletes;
+        public DocumentDatabase Database;
+
+        protected override long ExecuteCmd(DocumentsOperationContext context)
+        {
+            foreach (var delete in Deletes)
+            {
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, delete.DocumentId, delete.Name, null, collectionName: out _);
+            }
+
+            return 1;
+        }
+
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction,
+            MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+        {
+            return new MergedDeleteAttachmentsCommandDto { Deletes = Deletes };
+        }
+    }
+
+    internal class MergedDeleteAttachmentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedDeleteAttachmentsCommand>
+    {
+        public List<AttachmentRequest> Deletes;
+        public virtual MergedDeleteAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            return new MergedDeleteAttachmentsCommand { Deletes = Deletes, Database = database };
+        }
+    }
+
+
+    internal sealed class MergedDeleteRetiredAttachmentsCommand : MergedDeleteAttachmentsCommand
+    {
+        public DeleteAttachmentState DeleteState;
+
+        protected override long ExecuteCmd(DocumentsOperationContext context)
+        {
+            foreach (var delete in Deletes)
+            {
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(DeleteState, context, delete.DocumentId, delete.Name, null, collectionName: out _);
+            }
+
+            return 1;
+        }
+
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction,
+            MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+        {
+            return new MergedDeleteRetiredAttachmentsCommandDto { Deletes = Deletes, DeleteState = DeleteState };
+        }
+
+        internal sealed class MergedDeleteRetiredAttachmentsCommandDto : MergedDeleteAttachmentsCommandDto
+        {
+            public DeleteAttachmentState DeleteState;
+
+            public override MergedDeleteRetiredAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            {
+                return new MergedDeleteRetiredAttachmentsCommand { Deletes = Deletes, Database = database };
+            }
         }
     }
 }

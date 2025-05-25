@@ -1,7 +1,7 @@
-﻿using System;
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
+using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -15,43 +15,26 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
         protected override async ValueTask DeleteAttachmentAsync(DocumentsOperationContext context, string docId, string name, LazyStringValue changeVector)
         {
-            CheckAttachmentFlagAndThrowIfNeeded(context, docId, name);
+            Attachment attachment = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, docId, name, AttachmentType.Document, changeVector: null);
 
-            var cmd = CreateMergedDeleteAttachmentCommand(docId, name, changeVector);
-            await RequestHandler.Database.TxMerger.Enqueue(cmd);
-        }
-
-        protected virtual AttachmentHandler.MergedDeleteAttachmentCommand CreateMergedDeleteAttachmentCommand(string docId, string name, LazyStringValue changeVector)
-        {
-            var cmd = new AttachmentHandler.MergedDeleteAttachmentCommand
-            {
-                Database = RequestHandler.Database,
-                ExpectedChangeVector = changeVector,
-                DocumentId = docId,
-                Name = name
-            };
-            return cmd;
-        }
-
-        protected virtual void CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, string docId, string name)
-        {
-            using (context.OpenReadTransaction())
-            {
-                CheckAttachmentFlagAndThrowIfNeededInternal(context, RequestHandler.Database, docId, name);
-            }
-        }
-
-        public static void CheckAttachmentFlagAndThrowIfNeededInternal(DocumentsOperationContext context, DocumentDatabase database, string docId, string name)
-        {
-            var attachment = database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, docId, name, AttachmentType.Document, changeVector: null);
+            IDeleteAttachmentStrategy strategy;
             if (attachment == null)
-                return;
-            using var _ = attachment.Stream;
-
-            if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
             {
-                throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{docId}' because it is retired. Please use dedicated API.");
+                strategy = new RegularDeleteAttachmentStrategyProcessor(RequestHandler);
             }
+            else if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+            {
+                strategy = new RetiredDeleteAttachmentStrategyProcessor(RequestHandler);
+            }
+            else
+            {
+                strategy = new RegularDeleteAttachmentStrategyProcessor(RequestHandler);
+            }
+
+            strategy.CheckAttachmentFlagAndThrowIfNeeded(context, attachment, docId, name);
+
+            var cmd = strategy.CreateMergedDeleteAttachmentCommand(docId, name, changeVector);
+            await RequestHandler.Database.TxMerger.Enqueue(cmd);
         }
     }
 }
