@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         private static readonly Size TotalBlocksSizeLimit = new Size(5, SizeUnit.Terabytes);
 
         private AmazonS3Client _client;
-        private readonly string _bucketName;
+        internal readonly string _bucketName;
         private readonly bool _usingCustomServerUrl;
         public readonly string RemoteFolderName;
 
@@ -101,42 +101,10 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             _cancellationToken = cancellationToken;
         }
 
-        public async Task ValidateConfigurationFor()
+        public async Task<GetObjectMetadataResponse> GetMetaDataAsync(string key)
         {
-            var backups = await _client.ListObjectsV2Async(
-                new ListObjectsV2Request
-                {
-                    BucketName = _bucketName,
-                    Prefix = RemoteFolderName
-                });
-            foreach (var backup in backups.S3Objects)
-            {
-                await ValidateKey(backup.Key);
-            }
+            return await _client.GetObjectMetadataAsync(_bucketName, key: key, _cancellationToken);
         }
-
-        private async Task ValidateKey(string key)
-        {
-            var meta = await _client.GetObjectMetadataAsync(_bucketName, key: key, _cancellationToken);
-
-            if (ArchiveClasses.Contains(meta.StorageClass) == false)
-                return;
-
-            if (meta.RestoreInProgress.HasValue == false)
-                throw new InvalidOperationException(
-                    $"s3 is archived in {meta.StorageClass} but no " +
-                    "restore job was requested. Initiate the restore on S3 and wait for completion.");
-
-            if (meta.RestoreInProgress.Value)
-                throw new InvalidOperationException(
-                    $"Object s3 restoring is still in progress.");
-        }
-
-        private static readonly HashSet<string> ArchiveClasses = new(StringComparer.Ordinal)
-        {
-            "DEEP_ARCHIVE",
-            "GLACIER",
-        };
 
         public void PutObject(string key, Stream stream, Dictionary<string, string> metadata)
         {

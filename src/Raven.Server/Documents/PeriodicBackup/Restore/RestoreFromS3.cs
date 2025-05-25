@@ -58,10 +58,30 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             return _remoteFolderName;
         }
 
-        public async Task ValidateConfigurationFor()
+        public async Task ValidateConfigurationsAsync()
         {
-            await _client.ValidateConfigurationFor();
+            var files = await GetFilesForRestore();
+            foreach (var file in files)
+            {
+                var meta = await _client.GetMetaDataAsync(file);
+                if (ArchiveClasses.Contains(meta.StorageClass) == false)
+                    return;
+                
+                if (meta.RestoreInProgress.HasValue == false)
+                    throw new InvalidOperationException(
+                        $"Object '{file}' in bucket '{_client._bucketName}' is stored in the S3 '{meta.StorageClass?.Value}' storage class, but no restore job is in progress. Initiate a restore in S3 and wait until it completes.");
+
+                if (meta.RestoreInProgress.Value)
+                    throw new InvalidOperationException(
+                        $"Object '{file}' in bucket '{_client._bucketName}' is stored in the S3 '{meta.StorageClass?.Value}' storage class, and its restore is still in progress. Wait until the restore completes before retrying.");
+            }
         }
+
+        private static readonly HashSet<string> ArchiveClasses = new(StringComparer.Ordinal)
+        {
+            "DEEP_ARCHIVE",
+            "GLACIER",
+        };
 
         public void Dispose()
         {
