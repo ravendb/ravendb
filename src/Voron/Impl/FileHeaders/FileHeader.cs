@@ -1,5 +1,4 @@
-﻿﻿using System;
- using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 using Voron.Data.BTrees;
 using Voron.Impl.Backup;
 using Voron.Impl.Journal;
@@ -72,17 +71,9 @@ namespace Voron.Impl.FileHeaders
         public int PageSize;
 
         /// <summary>
-        /// The journal id for all the transactions in shared journals
-        /// for this environment that allows to tell which transactions
-        /// belong to this environment or to others
-        /// </summary>
-        [FieldOffset(154)]
-        public Guid JournalId;
-        
-        /// <summary>
         /// Hash of the header used for validation
         /// </summary>
-        [FieldOffset(170)]
+        [FieldOffset(154)]
         public ulong Hash;
  
         public override string ToString()
@@ -90,7 +81,7 @@ namespace Voron.Impl.FileHeaders
             return
                 $"{nameof(Version)}: {Version}, {nameof(HeaderRevision)}: {HeaderRevision}, {nameof(TransactionId)}: {TransactionId}, {nameof(LastPageNumber)}: {LastPageNumber}, " +
                 $"{nameof(Root.RootPageNumber)}: {Root.RootPageNumber}, " +
-                $"{nameof(JournalId)}: {JournalId},  {nameof(Journal.LastSyncedJournal)}: {Journal.LastSyncedJournal},  {nameof(Journal.LastSyncedTransactionId)}: {Journal.LastSyncedJournal}, {nameof(Journal.Flags)}: {Journal.Flags}";
+                $"{nameof(Journal.LastSyncedJournal)}: {Journal.LastSyncedJournal},  {nameof(Journal.LastSyncedTransactionId)}: {Journal.LastSyncedJournal}, {nameof(Journal.Flags)}: {Journal.Flags}";
         }
     }
 }

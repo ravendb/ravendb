@@ -125,6 +125,15 @@ namespace Voron.Impl.Backup
                     env.HeaderAccessor.CopyHeaders(package, copier, env.Options, basePath);
 
                     env._forTestingPurposes?.ActionToCallDuringFullBackupRighAfterCopyHeaders?.Invoke();
+                    
+                    if (env.Options.ReadValidMetadata(MetadataAccessor.MetadataName, out var metadataHeader))
+                    {
+                        var metadata = package.CreateEntry(Path.Combine(basePath, MetadataAccessor.MetadataName));
+                        using (var metadataStream = metadata.Open())
+                        {
+                            copier.ToStream((byte*)&metadataHeader, sizeof(MetadataFile), metadataStream);
+                        }
+                    }
 
                     // journal files snapshot
                     var files = env.Journal.Files; // thread safety copy

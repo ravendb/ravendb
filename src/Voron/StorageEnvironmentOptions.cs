@@ -11,6 +11,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using Microsoft.Win32.SafeHandles;
 using Sparrow;
+using Sparrow.Binary;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server;
@@ -543,8 +544,6 @@ namespace Voron
                 return JournalPath.Combine(name);
             }
 
-
-
             protected override void Disposing()
             {
                 if (Disposed)
@@ -604,6 +603,50 @@ namespace Voron
                 }
 
                 return true;
+            }
+
+            public override unsafe bool ReadValidMetadata(string filename, out MetadataFile metadata)
+            {
+                metadata = default;
+                var path = _basePath.Combine(filename);
+                if (File.Exists(path.FullPath) == false)
+                {
+                    return false;
+                }
+
+                using (var fs = SafeFileStream.Create(path.FullPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))
+                {
+                    var metadataBuf = stackalloc MetadataFile[1];
+
+                    Span<byte> sizeBuffer = stackalloc byte[sizeof(int)];
+                    fs.ReadExactly(sizeBuffer);
+                    var size = metadataBuf[0].DataSize = BitConverter.ToInt32(sizeBuffer);
+
+                    Span<byte> bodyBuffer = new ((byte*)metadataBuf + sizeof(int), size - sizeof(int));
+                    var totalRead = 0;
+                    while (totalRead < bodyBuffer.Length)
+                    {
+                        var read = fs.Read(bodyBuffer[totalRead..]);
+                        if (read == 0)
+                            break;
+                        totalRead += read;
+                    }
+
+                    ulong hash = Hashing.XXHash64.CalculateInline(bodyBuffer[sizeof(ulong)..]);
+                    if (metadataBuf->Hash != hash)
+                        return false;
+
+                    metadata = metadataBuf[0];
+                    return true;
+                }
+            }
+
+            public override unsafe void WriteMetadata(string filename, MetadataFile metadata)
+            {
+                var path = _basePath.Combine(filename);
+                var rc = Pal.rvn_write_header(path.FullPath, (byte*)&metadata, metadata.DataSize, out var errorCode);
+                if (rc != PalFlags.FailCodes.Success)
+                    PalHelper.ThrowLastError(rc, errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FailCodes)rc).ToString()}");
             }
 
             public override bool ReadValidHeader(string filename, out FileHeader header)
@@ -807,6 +850,7 @@ namespace Voron
             private readonly Dictionary<string, JournalWriter> _logs = new(StringComparer.OrdinalIgnoreCase);
             private readonly HashSet<SafeFileHandle> _handles = [];
             private readonly Dictionary<string, FileHeader> _headers = new(StringComparer.OrdinalIgnoreCase);
+            private MetadataFile _metadata;
             private readonly int _instanceId;
 
 
@@ -960,6 +1004,23 @@ namespace Voron
                 return true;
             }
 
+            public override bool ReadValidMetadata(string filename, out MetadataFile metadata)
+            {
+                if (Disposed)
+                    throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
+
+                metadata = _metadata;
+                return _metadata.DataSize != 0;
+            }
+
+            public override void WriteMetadata(string filename, MetadataFile metadata)
+            {
+                if (Disposed)
+                    throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
+
+                _metadata = metadata;
+            }
+
             public override bool ReadValidHeader(string filename, out FileHeader header)
             {
                 if (Disposed)
@@ -1062,16 +1123,12 @@ namespace Voron
 
         public abstract bool JournalExists(long number);
 
-
         public bool TryGetJournalId(string basePath, out Guid journalId)
         {
-            foreach (var fileHeader in HeaderAccessor.HeaderFileNames)
+            if (ReadValidMetadata(Path.Combine(basePath, MetadataAccessor.MetadataName), out var metadata))
             {
-                if (ReadValidHeader(Path.Combine(basePath, fileHeader), out var header))
-                {
-                    journalId = header.JournalId;
-                    return true;
-                }       
+                journalId = metadata.JournalId;
+                return true;
             }
 
             journalId = Guid.Empty;
@@ -1079,6 +1136,10 @@ namespace Voron
         }
 
         public abstract bool TryDeleteJournal(long number);
+
+        public abstract bool ReadValidMetadata(string filename, out MetadataFile metadata);
+        
+        public abstract void WriteMetadata(string filename, MetadataFile metadata);
 
         public abstract bool ReadValidHeader(string filename, out FileHeader header);
 

@@ -53,6 +53,18 @@ namespace Voron.Impl.Journal
         public long Next4Kb => _next4Kb;
 
         public JournalReader(StorageEnvironment environment, long journalNumber, Pager journalPager, Pager.State journalPagerState, Pager dataPager, Pager recoveryPager,
+            TransactionHeader* lastTxHeader, long lastTxId) : this(environment, journalNumber, journalPager, journalPagerState, dataPager, recoveryPager, new HashSet<long>(),
+            new JournalInfo { LastSyncedTransactionId = lastTxId }, new FileHeader { HeaderRevision = -1}, lastTxHeader)
+        {
+            // We create a completely new environment... 
+            // The journal id should come from the first
+            // real transaction that is being applies here
+
+            if (environment.CurrentReadTransactionId == 1)
+                JournalId = Guid.Empty;
+        }
+
+        public JournalReader(StorageEnvironment environment, long journalNumber, Pager journalPager, Pager.State journalPagerState, Pager dataPager, Pager recoveryPager,
             HashSet<long> modifiedPages, JournalInfo journalInfo, FileHeader currentFileHeader, TransactionHeader* previous)
         {
             RequireHeaderUpdate = false;
@@ -68,7 +80,9 @@ namespace Voron.Impl.Journal
             _readAt4Kb = 0;
             LastTransactionHeader = previous;
             _journalPagerNumberOfAllocated4Kb = _journalPagerState.TotalAllocatedSize / (4 * Constants.Size.Kilobyte);
-            JournalId = _currentFileHeader.JournalId;
+            
+            JournalId = environment.HeaderAccessor.MetadataAccessor.JournalId;
+
             if (journalPager.Options.Encryption.IsEnabled)
                 _encryptionBuffers = new List<Pager.EncryptionBuffer>();
             _log = RavenLogManager.Instance.GetLoggerForVoron<StorageEnvironment>(_environment.Options, _journalPager.FileName);

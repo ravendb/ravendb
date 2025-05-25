@@ -262,17 +262,6 @@ namespace Voron.Impl.Backup
                 options.ManualFlushing = true;
                 using (var env = new StorageEnvironment(options))
                 {
-                    // We create a completely new environment... 
-                    if (env.CurrentReadTransactionId is 1)
-                    {
-                        env.HeaderAccessor.Modify((ref FileHeader header) =>
-                        {
-                            // The journal id should come from the first
-                            // real transaction that is being applies here
-                            header.JournalId = Guid.Empty;
-                        });
-                    }
-
                     foreach (var backupPath in backupPaths)
                     {
                         Restore(env, backupPath);
@@ -339,13 +328,13 @@ namespace Voron.Impl.Backup
                 var lastTxHeaderStackLocation = stackalloc TransactionHeader[1];
                 var envHeader = env.HeaderAccessor.CopyHeader();
                 var lastTxId = envHeader.TransactionId;
-                var journalId = envHeader.JournalId;
 
-                long journalNumber = -1;
                 var rc = Pal.rvn_pager_get_file_handle(txw.DataPagerState.Handle, out var fileHandle, out int errorCode);
                 if(rc != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(rc, errorCode, "Failed to get a file handle to " + txw.DataPager.FileName);
                 using var _ = fileHandle;
+                var journalId = Guid.Empty;
+
                 foreach (var entry in entries)
                 {
                     switch (Path.GetExtension(entry.Name))
@@ -364,7 +353,7 @@ namespace Voron.Impl.Backup
                             var (journalPager, journalPagerState) = env.Options.OpenJournalPager(jounalFileName.FullPath);
                             toDispose.Add(journalPager);
 
-                            if (long.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out journalNumber) == false)
+                            if (long.TryParse(Path.GetFileNameWithoutExtension(entry.Name), out var journalNumber) == false)
                             {
                                 throw new InvalidOperationException("Cannot parse journal file number");
                             }
@@ -376,9 +365,7 @@ namespace Voron.Impl.Backup
                                     env.Options.Encryption.IsEnabled);
                             toDispose.Add(recoveryPager);
 
-                            var reader = new JournalReader(env, journalNumber, journalPager, journalPagerState, txw.DataPager, recoveryPager, new HashSet<long>(),
-                                       new JournalInfo { LastSyncedTransactionId = lastTxId }, new FileHeader { HeaderRevision = -1, JournalId = journalId},
-                                       lastTxHeader);
+                            var reader = new JournalReader(env, journalNumber, journalPager, journalPagerState, txw.DataPager, recoveryPager, lastTxHeader, lastTxId);
                             try
                             {
                                 while (reader.ReadOneTransactionToDataFile(ref txw.DataPagerState, ref recoverPagerState, ref txw.PagerTransactionState, fileHandle,
@@ -420,12 +407,12 @@ namespace Voron.Impl.Backup
                 txw.SetNextPageNumber(lastTxHeader->LastPageNumber + 1);
                 
                 txw.Commit();
-                
+
+                env.HeaderAccessor.MetadataAccessor.Modify((ref MetadataFile header) => header.JournalId = journalId, persist: true);
                 env.HeaderAccessor.Modify((ref FileHeader header) => 
                 {
                     header.TransactionId = lastTxHeader->TransactionId;
                     header.LastPageNumber = lastTxHeader->LastPageNumber;
-                    header.JournalId = journalId;
                     header.Journal.LastSyncedTransactionId = lastTxHeader->TransactionId;
                 
                     header.Root = lastTxHeader->Root;

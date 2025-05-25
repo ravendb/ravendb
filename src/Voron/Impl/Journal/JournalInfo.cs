@@ -15,7 +15,7 @@ namespace Voron.Impl.Journal
         public const int NumberOfReservedBytes = 3;
 
         /// <summary>
-        /// Up until version 7.1 - this used to be CurrentJournal,
+        /// Up until version 8.0 - this used to be CurrentJournal,
         /// this is no longer needed since we are using the existence
         /// of the actual journal file instead...
         /// </summary>

@@ -28,6 +28,7 @@ namespace Voron.Impl.FileHeaders
     {
         private readonly ReaderWriterLockSlim _locker = new();
         private long _revision;
+        public readonly MetadataAccessor MetadataAccessor = new (env);
 
         private FileHeader _theHeader;
         private bool _disposed;
@@ -42,6 +43,8 @@ namespace Voron.Impl.FileHeaders
                 if (_disposed)
                     throw new ObjectDisposedException("Cannot access the header after it was disposed");
 
+                MetadataAccessor.Initialize();
+
                 var hasOne = env.Options.ReadValidHeader(HeaderFileNames[0], out var headerOne);
                 var hasTwo = env.Options.ReadValidHeader(HeaderFileNames[1], out var headerTwo);
                 if (hasOne is false && hasTwo is false)
@@ -50,7 +53,6 @@ namespace Voron.Impl.FileHeaders
                     FillInEmptyHeader(ref headerOne);
                     env.Options.WriteHeader(HeaderFileNames[0], headerOne);
                     env.Options.WriteHeader(HeaderFileNames[1], headerOne);
-
                     _theHeader = headerOne;
                     return true; // new
                 }
@@ -128,7 +130,7 @@ namespace Voron.Impl.FileHeaders
             }
         }
 
-        public Guid JournalId => _theHeader.JournalId;
+        public Guid JournalId => MetadataAccessor.JournalId;
 
         public T Get<T>(GetDataFromHeaderAction<T> action)
         {
@@ -189,7 +191,6 @@ namespace Voron.Impl.FileHeaders
             header.IncrementalBackup.LastBackedUpJournal = -1;
             header.IncrementalBackup.LastBackedUpJournalPage = -1;
             header.PageSize = env.Options.PageSize;
-            header.JournalId = Guid.NewGuid();
             var buffer = MemoryMarshal.AsBytes(new Span<FileHeader>(ref header));
             header.Hash = Hashing.XXHash64.CalculateInline(buffer[..^sizeof(ulong)], (ulong)header.TransactionId);
         }
@@ -220,6 +221,7 @@ namespace Voron.Impl.FileHeaders
             {
                 if (_disposed)
                     throw new ObjectDisposedException("Cannot access the header after it was disposed");
+
                 var success = false;
                 foreach (var headerFileName in HeaderFileNames)
                 {

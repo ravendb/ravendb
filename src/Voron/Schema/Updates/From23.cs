@@ -21,12 +21,7 @@ public class From23  : IVoronSchemaUpdate
             }
         }
         
-        headerAccessor.Modify((ref FileHeader header) =>
-        {
-            // We are moving from a legacy system with no journals 
-            // to having a dedicated journal id for each env
-            header.JournalId = Guid.NewGuid();
-        });
+        headerAccessor.MetadataAccessor.Modify(headerAccessor.MetadataAccessor.FillMetadata, persist: false);
 
         versionAfterUpgrade = 24;
         return true;
