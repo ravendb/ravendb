@@ -57,7 +57,6 @@ public class AnalyzersIntegration : RavenTestBase
         {
             using var session = store.OpenSession();
             var items = session.Query<Record>().Search(x => x.Data, "*tion").ToList();
-            WaitForUserToContinueTheTest(store);
             Assert.Equal(2, items.Count);
         }
     }

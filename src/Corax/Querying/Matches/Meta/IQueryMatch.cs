@@ -35,8 +35,7 @@ public static class QueryConfidenceExtensions
 public interface IQueryMatch
 {
     long Count { get; }
-
-
+    
     /// <summary>
     /// This is called when the call is not interested in getting
     /// the results in sorted order (may want to do its own sorting, etc)

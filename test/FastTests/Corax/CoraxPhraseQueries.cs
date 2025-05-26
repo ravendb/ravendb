@@ -26,8 +26,6 @@ public class CoraxPhraseQueries : RavenTestBase
         session.Store(new Item(){FtsField = "dog puppy cat puppy horse"});
         session.SaveChanges();
         new Index().Execute(store);
-        WaitForUserToContinueTheTest(store);
-        
     }
     
     [RavenTheory(RavenTestCategory.Querying)]

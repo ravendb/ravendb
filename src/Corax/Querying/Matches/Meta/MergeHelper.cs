@@ -45,7 +45,7 @@ namespace Corax.Querying.Matches.Meta
             long* smallerEndPtr, largerEndPtr;
 
             bool applyVectorization;
-            if ( leftLength < rightLength)
+            if (leftLength < rightLength)
             {
                 smallerPtr = left;
                 smallerEndPtr = left + leftLength;
