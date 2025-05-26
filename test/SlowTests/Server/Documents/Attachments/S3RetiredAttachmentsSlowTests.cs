@@ -93,7 +93,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         await GetBlobsFromCloudAndAssertForCount(Settings, 2, 15_000);
 
-                        var res4 = await store.Operations.SendAsync(new GetRetiredAttachmentOperation(res3.Details.DocumentId, res3.Details.Name));
+                        var res4 = await store.Operations.SendAsync(new GetAttachmentOperation(res3.Details.DocumentId, res3.Details.Name, AttachmentType.Document, null));
                         Assert.Equal("test.png", res4.Details.Name);
                         Assert.Equal(AttachmentFlags.Retired, res4.Details.Flags);
                         Assert.NotNull(res4.Details.RetireAt);
@@ -168,7 +168,7 @@ namespace SlowTests.Server.Documents.Attachments
                         }
 
                         // this would put a Delete retired attachment task in the queue, that should happen immediately
-                        session.Advanced.RetiredAttachments.Delete(doc, data.Name, storageOnly);
+                        session.Advanced.Attachments.Delete(doc, data.Name);
                         session.SaveChanges();
                     }
                     if (storageOnly == false)
@@ -728,7 +728,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                 using (var ms1 = new MemoryStream())
                 {
-                    var retired1 = await store.Operations.SendAsync(new GetRetiredAttachmentOperation($"Orders/0", $"shared_0.png"));
+                    var retired1 = await store.Operations.SendAsync(new GetAttachmentOperation($"Orders/0", $"shared_0.png", AttachmentType.Document, null));
                     await retired1.Stream.CopyToAsync(ms1);
                     Assert.Equal(attachmentBytes, ms1.ToArray());
                     Assert.Equal($"shared_0.png", retired1.Details.Name);
@@ -736,7 +736,7 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.Equal(AttachmentFlags.Retired, retired1.Details.Flags);
                     for (int i = 1; i < count; i++)
                     {
-                        var retired2 = await store.Operations.SendAsync(new GetRetiredAttachmentOperation($"Orders/{i}", $"shared_{i}.png"));
+                        var retired2 = await store.Operations.SendAsync(new GetAttachmentOperation($"Orders/{i}", $"shared_{i}.png", AttachmentType.Document, null));
 
                         Assert.Equal($"shared_{i}.png", retired2.Details.Name);
                         Assert.Equal(contentType, retired2.Details.ContentType);
@@ -972,7 +972,7 @@ namespace SlowTests.Server.Documents.Attachments
                             {
                                 Assert.True(attachment.Flags == AttachmentFlags.Retired);
                                 // we cannot receive it using source retired attachment configuration
-                                await Assert.ThrowsAsync<RavenException>(async () => await store1.Operations.SendAsync(new GetRetiredAttachmentOperation(ids.First().Id, attachment.Name)));
+                                await Assert.ThrowsAsync<RavenException>(async () => await store1.Operations.SendAsync(new GetAttachmentOperation(ids.First().Id, attachment.Name, AttachmentType.Document, null)));
                             });
 
                             // update the retired attachments configuration to be same as destination
@@ -984,7 +984,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 Assert.NotNull(a);
                                 attachment.Stream = a.Stream;
 
-                                // this sends GetRetiredAttachmentOperation and compares the result
+                                // this sends GetAttachmentOperation and compares the result
                                 await GetAndCompareRetiredAttachment(store1, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
                             });
                         }
@@ -1084,7 +1084,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                     foreach (var attachment in Attachments)
                     {
-                        await store.Operations.SendAsync(new DeleteRetiredAttachmentOperation(attachment.DocumentId, attachment.Name, storageOnly: storageOnly));
+                        await store.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
                     }
 
                     //etlDone = Etl.WaitForEtlToComplete(store);
@@ -1183,7 +1183,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                     foreach (var attachment in Attachments)
                     {
-                        await store1.Operations.SendAsync(new DeleteRetiredAttachmentOperation(attachment.DocumentId, attachment.Name, storageOnly: storageOnly));
+                        await store1.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
                     }
 
                     if (storageOnly == false)

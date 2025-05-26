@@ -94,41 +94,6 @@ namespace Raven.Client.Documents.Session
     /// <summary>
     /// Abstract implementation for in memory session operations
     /// </summary>
-    public abstract class DocumentSessionRetiredAttachmentsBase : DocumentSessionAttachmentsBaseOfTheBase
-    {
-        protected DocumentSessionRetiredAttachmentsBase(InMemoryDocumentSessionOperations session) : base(session)
-        {
-        }
-
-        protected override void CanContinueRetiredAttachmentDelete(string documentId, string name, DocumentInfo documentInfo)
-        {
-            if (documentInfo.Metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == true)
-            {
-                for (var i = 0; i < attachments.Length; i++)
-                {
-                    var attachment = JsonDeserializationClient.AttachmentName((BlittableJsonReaderObject)attachments[i]);
-                    if (attachment.Name == name)
-                    {
-                        var x = attachment.Flags & AttachmentFlags.None;
-                        var xx = attachment.Flags & AttachmentFlags.Retired;
-                        var xxx = attachment.Flags & AttachmentFlags.Compressed;
-
-                        if (attachment.Flags == AttachmentFlags.None)
-                        {
-                            throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{documentId}' because it is not retired. Please use dedicated API.");
-                        }
-
-                        break;
-                    }
-
-                }
-            }
-        }
-    }
-
-    /// <summary>
-    /// Abstract implementation for in memory session operations
-    /// </summary>
     public abstract class DocumentSessionAttachmentsBase : DocumentSessionAttachmentsBaseOfTheBase
     {
         protected DocumentSessionAttachmentsBase(InMemoryDocumentSessionOperations session) : base(session)

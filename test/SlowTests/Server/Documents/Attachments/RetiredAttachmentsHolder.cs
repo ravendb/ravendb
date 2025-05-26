@@ -218,7 +218,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
                 foreach (var attachment in Attachments)
                 {
-                    await store.Operations.SendAsync(new DeleteRetiredAttachmentOperation(attachment.DocumentId, attachment.Name, storageOnly: storageOnly));
+                    await store.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
                 }
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
@@ -264,7 +264,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         {
             attachmentRequests.Add(new AttachmentRequest(attachment.DocumentId, attachment.Name));
         }
-        var attachmentsEnumerator = await store.Operations.SendAsync(new GetRetiredAttachmentsOperation(attachmentRequests));
+        var attachmentsEnumerator = await store.Operations.SendAsync(new GetAttachmentsOperation(attachmentRequests, AttachmentType.Document));
 
         var attachmentsCount = 0;
         while (attachmentsEnumerator.MoveNext())
@@ -307,7 +307,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         {
             attachmentRequests.Add(new AttachmentRequest(attachment.DocumentId, attachment.Name));
         }
-        await store.Operations.SendAsync(new DeleteRetiredAttachmentsOperation(attachmentRequests));
+        await store.Operations.SendAsync(new DeleteAttachmentsOperation(attachmentRequests));
 
         var database = await Databases.GetDocumentDatabaseInstanceFor(store);
         await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
@@ -453,7 +453,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 {
                     foreach (var attachment in list)
                     {
-                        await store.Operations.SendAsync(new DeleteRetiredAttachmentOperation(attachment.DocumentId, attachment.Name));
+                        await store.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
                     }
                 });
                 // TODO: egor check if this is bad since I might skip deletes in the retire sender, but adds I always do in order... del, retire, del, retire, del
@@ -468,7 +468,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 list2.RemoveAll(x => list.Contains(x));
                 foreach (var attachment in list2)
                 {
-                    await store.Operations.SendAsync(new DeleteRetiredAttachmentOperation(attachment.DocumentId, attachment.Name));
+                    await store.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
                 }
 
                 await WaitAndAssertForValueAsync(async () =>
@@ -609,7 +609,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 await AssertAllRetiredAttachments(store, cloudObjects, size);
                 foreach (var attachment in Attachments)
                 {
-                    await store.Operations.SendAsync(new DeleteRetiredAttachmentOperation(attachment.DocumentId, attachment.Name));
+                    await store.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
                 }
 
                 await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
@@ -782,11 +782,11 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 await DeleteObjects(Settings);
                 await GetBlobsFromCloudAndAssertForCount(Settings, 0);
 
-                await store.Operations.SendAsync(new DeleteRetiredAttachmentOperation(id, "test.png"));
+                await store.Operations.SendAsync(new DeleteAttachmentOperation(id, "test.png"));
 
                 await expiredDocumentsCleaner.RetireAttachments(int.MaxValue, int.MaxValue);
                 await GetBlobsFromCloudAndAssertForCount(Settings, 0);
-                var retired = await store.Operations.SendAsync(new GetRetiredAttachmentOperation(id, "test.png"));
+                var retired = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test.png", AttachmentType.Document, null));
                 Assert.Null(retired);
             }
         }

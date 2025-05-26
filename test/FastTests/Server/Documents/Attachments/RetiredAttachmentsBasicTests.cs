@@ -110,40 +110,5 @@ namespace FastTests.Server.Documents.Attachments
             //    Assert.Contains($"RetireFrequencyInSec must have a value.", e.Message);
             //}
         }
-
-        [RavenFact(RavenTestCategory.Attachments)]
-        public async Task ShouldThrowUsingRetiredAttachmentsApiOnRegularAttachment()
-        {
-            using (var store = GetDocumentStore())
-            {
-                var id = "Orders/3";
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new Query.Order
-                    {
-                        Id = id,
-                        OrderedAt = new DateTime(2024, 1, 1),
-                        ShipVia = $"Shippers/2",
-                        Company = $"Companies/2"
-                    });
-
-                    await session.SaveChangesAsync();
-                }
-
-                using var profileStream = new MemoryStream([1, 2, 3]);
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
-
-                var res = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test.png", AttachmentType.Document, null));
-                Assert.Equal("test.png", res.Details.Name);
-
-                await Assert.ThrowsAsync(typeof(RavenException),
-                    async () => await store.Operations.SendAsync(new GetRetiredAttachmentOperation(id, "test.png")));
-                await Assert.ThrowsAsync(typeof(RavenException),
-                    async () => await store.Operations.SendAsync(new DeleteRetiredAttachmentOperation(id, "test.png")));
-                await Assert.ThrowsAsync(typeof(RavenException),
-                    async () => await store.Operations.SendAsync(new GetRetiredAttachmentsOperation(new List<AttachmentRequest> { new(id, "test.png") })));
-            }
-        }
-
     }
 }

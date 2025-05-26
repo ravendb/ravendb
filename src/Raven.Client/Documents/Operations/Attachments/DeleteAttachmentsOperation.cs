@@ -7,48 +7,40 @@ using Raven.Client.Json;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations.Attachments.Retired
+namespace Raven.Client.Documents.Operations.Attachments
 {
-    public sealed class DeleteRetiredAttachmentsOperation : IOperation
+    public sealed class DeleteAttachmentsOperation : IOperation
     {
         private readonly IEnumerable<AttachmentRequest> _attachments;
-        private readonly bool _storageOnly;
 
-        public DeleteRetiredAttachmentsOperation(IEnumerable<AttachmentRequest> attachments, bool storageOnly = false)
+        public DeleteAttachmentsOperation(IEnumerable<AttachmentRequest> attachments)
         {
             _attachments = attachments;
-            _storageOnly = storageOnly;
         }
 
         public RavenCommand GetCommand(IDocumentStore store, DocumentConventions conventions, JsonOperationContext context, HttpCache cache)
         {
-            return new DeleteRetiredAttachmentsCommand(conventions, context, _attachments, _storageOnly);
+            return new DeleteAttachmentsCommand(conventions, context, _attachments);
         }
 
-        internal sealed class DeleteRetiredAttachmentsCommand : RavenCommand
+        internal sealed class DeleteAttachmentsCommand : RavenCommand
         {
             private readonly DocumentConventions _conventions;
             private readonly JsonOperationContext _context;
             internal IEnumerable<AttachmentRequest> Attachments { get; }
             internal List<AttachmentDetails> AttachmentsMetadata { get; } = new List<AttachmentDetails>();
-            private readonly bool _storageOnly;
 
-            public DeleteRetiredAttachmentsCommand(DocumentConventions conventions, JsonOperationContext context, IEnumerable<AttachmentRequest> attachments, bool storageOnly)
+            public DeleteAttachmentsCommand(DocumentConventions conventions, JsonOperationContext context, IEnumerable<AttachmentRequest> attachments)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _context = context;
                 Attachments = attachments;
                 ResponseType = RavenCommandResponseType.Empty;
-                _storageOnly = storageOnly;
             }
 
             public string GetUrl(ServerNode node)
             {
-                var url = $"{node.Url}/databases/{node.Database}/attachments/retire/bulk";
-                if (_storageOnly)
-                {
-                    url += "&storageOnly=true";
-                }
+                var url = $"{node.Url}/databases/{node.Database}/attachments/bulk";
 
                 return url;
             }

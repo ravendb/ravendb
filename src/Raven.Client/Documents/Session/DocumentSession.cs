@@ -49,12 +49,6 @@ namespace Raven.Client.Documents.Session
         public IAttachmentsSessionOperations Attachments => _attachments ?? (_attachments = new DocumentSessionAttachments(this));
         private IAttachmentsSessionOperations _attachments;
 
-        /// <summary>
-        /// Access the retired attachments operations
-        /// </summary>
-        public IRetiredAttachmentsSessionOperations RetiredAttachments => _retiredAttachments ??= new DocumentSessionRetiredAttachments(this);
-        private IRetiredAttachmentsSessionOperations _retiredAttachments;
-
         /// <summary>        
         /// Access the revisions operations
         /// </summary>

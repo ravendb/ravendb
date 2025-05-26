@@ -16,7 +16,7 @@ namespace SlowTests.Server.Documents.Attachments
         /* maybe overloads for 1. new List<AttachmentRequest>()
          2. Collection name
          *
-           var attachmentsEnumerator = await store.Operations.SendAsync(new DeleteRetiredAttachmentsOperation(new List<AttachmentRequest>()
+           var attachmentsEnumerator = await store.Operations.SendAsync(new DeleteAttachmentsOperation(new List<AttachmentRequest>()
            {
                new AttachmentRequest(id1, "test1.png"),
                new AttachmentRequest(id2, "test2.png"),

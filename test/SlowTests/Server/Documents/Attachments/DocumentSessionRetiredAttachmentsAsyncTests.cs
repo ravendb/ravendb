@@ -51,7 +51,7 @@ namespace SlowTests.Server.Documents.Attachments
                 {
                     Assert.Throws<InvalidOperationException>(() => session.Advanced.Attachments.Exists(id, "test.png"));
 
-                    var retiredExists = session.Advanced.RetiredAttachments.Exists(id, "test.png");
+                    var retiredExists = session.Advanced.Attachments.Exists(id, "test.png");
                     Assert.True(retiredExists);
                 }
             }
@@ -80,7 +80,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                 using (var session = store.OpenSession())
                 {
-                    var attachment = session.Advanced.RetiredAttachments.Get(id, "test.png");
+                    var attachment = session.Advanced.Attachments.Get(id, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
                     Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);
@@ -115,7 +115,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenSession())
                 {
                     var order = session.Load<Order>(id);
-                    var attachment = session.Advanced.RetiredAttachments.Get(order, "test.png");
+                    var attachment = session.Advanced.Attachments.Get(order, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
                     Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);
@@ -146,7 +146,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                 using (var session = store.OpenSession())
                 {
-                    var attachments = session.Advanced.RetiredAttachments.Get(new List<AttachmentRequest> { new AttachmentRequest(id, "test.png") });
+                    var attachments = session.Advanced.Attachments.Get(new List<AttachmentRequest> { new AttachmentRequest(id, "test.png") });
                     Assert.NotNull(attachments);
                     Assert.True(attachments.MoveNext());
                     var attachment = attachments.Current;
@@ -182,10 +182,10 @@ namespace SlowTests.Server.Documents.Attachments
                 await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.RetiredAttachments.Delete(id, "test.png", storageOnly);
+                    session.Advanced.Attachments.Delete(id, "test.png");
                     session.SaveChanges();
 
-                    var exists = session.Advanced.RetiredAttachments.Exists(id, "test.png");
+                    var exists = session.Advanced.Attachments.Exists(id, "test.png");
                     Assert.False(exists);
                 }
 
@@ -230,10 +230,10 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenSession())
                 {
                     var order = session.Load<Order>(id);
-                    session.Advanced.RetiredAttachments.Delete(order, "test.png", storageOnly);
+                    session.Advanced.Attachments.Delete(order, "test.png");
                     session.SaveChanges();
 
-                    var exists = session.Advanced.RetiredAttachments.Exists(id, "test.png");
+                    var exists = session.Advanced.Attachments.Exists(id, "test.png");
                     Assert.False(exists);
                 }
 
@@ -280,7 +280,7 @@ namespace SlowTests.Server.Documents.Attachments
                 {
                     await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.Advanced.Attachments.ExistsAsync(id, "test.png"));
 
-                    var retiredExists = await session.Advanced.RetiredAttachments.ExistsAsync(id, "test.png");
+                    var retiredExists = await session.Advanced.Attachments.ExistsAsync(id, "test.png");
                     Assert.True(retiredExists);
                 }
             }
@@ -309,7 +309,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var attachment = await session.Advanced.RetiredAttachments.GetAsync(id, "test.png");
+                    var attachment = await session.Advanced.Attachments.GetAsync(id, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
                     Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);
@@ -343,7 +343,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     var order = await session.LoadAsync<Order>(id);
-                    var attachment = await session.Advanced.RetiredAttachments.GetAsync(order, "test.png");
+                    var attachment = await session.Advanced.Attachments.GetAsync(order, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
                     Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);
@@ -374,7 +374,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    var attachments = await session.Advanced.RetiredAttachments.GetAsync(new List<AttachmentRequest> { new AttachmentRequest(id, "test.png") });
+                    var attachments = await session.Advanced.Attachments.GetAsync(new List<AttachmentRequest> { new AttachmentRequest(id, "test.png") });
                     Assert.NotNull(attachments);
                     //TODO: egor think if we can return async enumerator
                     //Assert.True(await attachments.MoveNextAsync());
@@ -412,10 +412,10 @@ namespace SlowTests.Server.Documents.Attachments
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.Advanced.RetiredAttachments.DeleteAsync(id, "test.png", storageOnly);
+                    await session.Advanced.Attachments.DeleteAsync(id, "test.png");
                     await session.SaveChangesAsync();
 
-                    var exists = await session.Advanced.RetiredAttachments.ExistsAsync(id, "test.png");
+                    var exists = await session.Advanced.Attachments.ExistsAsync(id, "test.png");
                     Assert.False(exists);
                 }
 
@@ -459,10 +459,10 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     var order = await session.LoadAsync<Order>(id);
-                    await session.Advanced.RetiredAttachments.DeleteAsync(order, "test.png", storageOnly);
+                    await session.Advanced.Attachments.DeleteAsync(order, "test.png");
                     await session.SaveChangesAsync();
 
-                    var exists = await session.Advanced.RetiredAttachments.ExistsAsync(id, "test.png");
+                    var exists = await session.Advanced.Attachments.ExistsAsync(id, "test.png");
                     Assert.False(exists);
                 }
 
@@ -533,7 +533,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var exists = session.Advanced.Attachments.Exists(id, "test.png");
                     Assert.True(exists);
 
-                    await Assert.ThrowsAsync<InvalidOperationException>(() => Task.FromResult(session.Advanced.RetiredAttachments.Exists(id, "test.png")));
+                    await Assert.ThrowsAsync<InvalidOperationException>(() => Task.FromResult(session.Advanced.Attachments.Exists(id, "test.png")));
 
                     var attachment = session.Advanced.Attachments.Get(id, "test.png");
                     using var ms = new MemoryStream();
@@ -587,10 +587,10 @@ namespace SlowTests.Server.Documents.Attachments
                 await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
                 using (var session = store.OpenSession())
                 {
-                    session.Advanced.RetiredAttachments.Delete(id, "test.png", storageOnly);
+                    session.Advanced.Attachments.Delete(id, "test.png");
                     session.SaveChanges();
 
-                    var exists = session.Advanced.RetiredAttachments.Exists(id, "test.png");
+                    var exists = session.Advanced.Attachments.Exists(id, "test.png");
                     Assert.False(exists);
                 }
 
@@ -623,10 +623,10 @@ namespace SlowTests.Server.Documents.Attachments
 
                 using (var session = store.OpenSession())
                 {
-                    var retiredExists = session.Advanced.RetiredAttachments.Exists(id, "test.png");
+                    var retiredExists = session.Advanced.Attachments.Exists(id, "test.png");
                     Assert.True(retiredExists);
 
-                    var attachment = session.Advanced.RetiredAttachments.Get(id, "test.png");
+                    var attachment = session.Advanced.Attachments.Get(id, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
                     Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);

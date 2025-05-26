@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.Replication;
@@ -42,7 +43,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                     foreach (var attachment in Attachments)
                     {
-                        await store.Operations.SendAsync(new DeleteRetiredAttachmentOperation(attachment.DocumentId, attachment.Name, storageOnly: storageOnly));
+                        await store.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
                     }
 
                     var database = await Databases.GetDocumentDatabaseInstanceFor(store);
@@ -140,7 +141,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 Assert.NotNull(a);
                                 attachment.Stream = a.Stream;
 
-                                // this sends GetRetiredAttachmentOperation and compares the result
+                                // this sends GetAttachmentOperation and compares the result
                                 await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
                             });
 
@@ -202,7 +203,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 Assert.NotNull(a);
                                 attachment.Stream = a.Stream;
 
-                                // this sends GetRetiredAttachmentOperation and compares the result
+                                // this sends GetAttachmentOperation and compares the result
                                 await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
                             });
 
@@ -264,7 +265,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 Assert.NotNull(a);
                                 attachment.Stream = a.Stream;
 
-                                // this sends GetRetiredAttachmentOperation and compares the result
+                                // this sends GetAttachmentOperation and compares the result
                                 await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
                             });
 
@@ -397,7 +398,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 Assert.NotNull(a);
                                 attachment.Stream = a.Stream;
 
-                                // this sends GetRetiredAttachmentOperation and compares the result
+                                // this sends GetAttachmentOperation and compares the result
                                 await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
                             });
                         }
@@ -475,7 +476,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 Assert.NotNull(a);
                                 attachment.Stream = a.Stream;
 
-                                // this sends GetRetiredAttachmentOperation and compares the result
+                                // this sends GetAttachmentOperation and compares the result
                                 await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
                             });
                         }

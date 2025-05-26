@@ -126,9 +126,6 @@ namespace Raven.Client.Documents.Session
         public IAttachmentsSessionOperationsAsync Attachments => _attachments ?? (_attachments = new DocumentSessionAttachmentsAsync(this));
         private IAttachmentsSessionOperationsAsync _attachments;
 
-        public IRetiredAttachmentsSessionOperationsAsync RetiredAttachments => _retiredAttachments ??= new DocumentSessionRetiredAttachmentsAsync(this);
-        private IRetiredAttachmentsSessionOperationsAsync _retiredAttachments;
-
         public IRevisionsSessionOperationsAsync Revisions => _revisions ?? (_revisions = new DocumentSessionRevisionsAsync(this));
         private IRevisionsSessionOperationsAsync _revisions;
 
