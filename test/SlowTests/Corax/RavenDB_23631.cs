@@ -56,7 +56,7 @@ public class RavenDB_23631(ITestOutputHelper output) : StorageTest(output)
     }
     
     [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Corax)]
-    public void Temp()
+    public void MultiTermMatchProperlyHandlesDuplicatesWhenPerformingAndWith()
     {
         using var mapping = IndexFieldsMappingBuilder.CreateForWriter(false)
             .AddBinding(0, "id()")
