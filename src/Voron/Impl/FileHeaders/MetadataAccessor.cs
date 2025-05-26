@@ -30,7 +30,6 @@ public sealed class MetadataAccessor(StorageEnvironment env)
     {
         metadata.JournalId = Guid.NewGuid();
         metadata.Version = Constants.CurrentVersion;
-        _metadata = metadata;
     }
 
     public void Modify(ModifyMetadataAction modifyAction)

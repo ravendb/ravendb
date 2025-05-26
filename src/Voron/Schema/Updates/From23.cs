@@ -21,8 +21,7 @@ public class From23  : IVoronSchemaUpdate
             }
         }
 
-        Span<MetadataFile> metadata = stackalloc MetadataFile[1];
-        headerAccessor.MetadataAccessor.FillMetadata(ref metadata[0]);
+        headerAccessor.MetadataAccessor.Modify(headerAccessor.MetadataAccessor.FillMetadata);
 
         versionAfterUpgrade = 24;
         return true;

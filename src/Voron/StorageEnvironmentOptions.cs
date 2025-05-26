@@ -617,7 +617,7 @@ namespace Voron
                 var fileSize = new FileInfo(path.FullPath).Length;
                 using (var fs = SafeFileStream.Create(path.FullPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))
                 {
-                    Span<byte> buffer = stackalloc byte[(int)fileSize];
+                    Span<byte> buffer = stackalloc byte[checked((int)fileSize)];
                     var totalRead = 0;
                     while (totalRead < buffer.Length)
                     {
