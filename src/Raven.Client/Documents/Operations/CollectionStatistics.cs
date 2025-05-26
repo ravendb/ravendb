@@ -105,7 +105,6 @@ namespace Raven.Client.Documents.Operations
         public long CountOfTombstones { get; set; }
         public long CountOfRevisions { get; set; }
         public long CountOfTimeSeriesDeletedRanges { get; set; }
-        public long CountOfAttachments { get; set; }
         public long CountOfCounterEntries { get; set; }
         public long CountOfTimeSeriesSegments { get; set; }
         public Size TimeSeriesSegmentsSize { get; set; }

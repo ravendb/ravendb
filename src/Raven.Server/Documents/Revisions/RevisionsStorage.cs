@@ -2949,7 +2949,7 @@ namespace Raven.Server.Documents.Revisions
             var table = GetExistingTable(context.Transaction.InnerTransaction, new CollectionName(collection));
             if (table == null)
                 return 0;
-            return table.GetNumberOfEntriesFor(RevisionsSchema.FixedSizeIndexes[CollectionRevisionsEtagsSlice]);
+            return table.NumberOfEntries;
         }
 
         private Table GetExistingTable(Transaction tx, CollectionName collection)

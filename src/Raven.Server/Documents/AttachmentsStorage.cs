@@ -1442,19 +1442,5 @@ namespace Raven.Server.Documents
                 return key.Length;
             }
         }
-
-        public long GetNumberOfAttachmentsDocumentsForCollection(DocumentsOperationContext context, string collection)
-        {
-            var table = GetExistingTable(context.Transaction.InnerTransaction, new CollectionName(collection));
-            if (table == null)
-                return 0;
-            return table.GetNumberOfEntriesFor(AttachmentsSchema.FixedSizeIndexes[AttachmentsEtagSlice]);
-        }
-
-        private Table GetExistingTable(Transaction tx, CollectionName collection)
-        {
-            string tableName = collection.GetTableName(CollectionTableType.CounterGroups);
-            return tx.OpenTable(AttachmentsSchema, tableName);
-        }
     }
 }

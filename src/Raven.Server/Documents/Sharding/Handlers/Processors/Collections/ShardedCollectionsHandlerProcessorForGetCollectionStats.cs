@@ -112,7 +112,6 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Collections
                         stats.Collections[collectionInfo.Key].CountOfCounterEntries += collectionInfo.Value.CountOfCounterEntries;
                         stats.Collections[collectionInfo.Key].TimeSeriesSegmentsSize.SizeInBytes += collectionInfo.Value.TimeSeriesSegmentsSize.SizeInBytes;
                         stats.Collections[collectionInfo.Key].CountOfTimeSeriesSegments += collectionInfo.Value.CountOfTimeSeriesSegments;
-                        stats.Collections[collectionInfo.Key].CountOfAttachments += collectionInfo.Value.CountOfAttachments;
                     }
                     else
                     {

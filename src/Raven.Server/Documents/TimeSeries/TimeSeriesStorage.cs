@@ -3013,30 +3013,24 @@ namespace Raven.Server.Documents.TimeSeries
 
         public long GetNumberOfTimeSeriesDeletedRangesForCollection(DocumentsOperationContext context, string collection)
         {
-            var table = GetExistingTable1(context.Transaction.InnerTransaction, new CollectionName(collection));
+            var table = GetExistingTable(context.Transaction.InnerTransaction, new CollectionName(collection), CollectionTableType.TimeSeriesDeletedRanges, DeleteRangesSchema);
             if (table == null)
                 return 0;
-            return table.GetNumberOfEntriesFor(DeleteRangesSchema.FixedSizeIndexes[CollectionDeletedRangesEtagsSlice]);
+            return table.NumberOfEntries;
         }
 
         public long GetNumberOfTimeSeriesSegmentsForCollection(DocumentsOperationContext context, string collection)
         {
-            var table = GetExistingTable2(context.Transaction.InnerTransaction, new CollectionName(collection));
+            var table = GetExistingTable(context.Transaction.InnerTransaction, new CollectionName(collection), CollectionTableType.TimeSeries, TimeSeriesSchema);
             if (table == null)
                 return 0;
-            return table.GetNumberOfEntriesFor(TimeSeriesSchema.FixedSizeIndexes[CollectionTimeSeriesEtagsSlice]);
+            return table.NumberOfEntries;
         }
 
-        private Table GetExistingTable1(Transaction tx, CollectionName collection)
+        private Table GetExistingTable(Transaction tx, CollectionName collection, CollectionTableType type, TableSchema tableSchema)
         {
-            string tableName = collection.GetTableName(CollectionTableType.TimeSeriesDeletedRanges);
-            return tx.OpenTable(DeleteRangesSchema, tableName);
-        }
-
-        private Table GetExistingTable2(Transaction tx, CollectionName collection)
-        {
-            string tableName = collection.GetTableName(CollectionTableType.TimeSeries);
-            return tx.OpenTable(TimeSeriesSchema, tableName);
+            string tableName = collection.GetTableName(type);
+            return tx.OpenTable(tableSchema, tableName);
         }
     }
 

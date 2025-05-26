@@ -254,7 +254,7 @@ namespace Raven.Server.Documents
             var table = GetExistingTable(context.Transaction.InnerTransaction, new CollectionName(collection));
             if (table == null)
                 return 0;
-            return table.GetNumberOfEntriesFor(CountersSchema.FixedSizeIndexes[CollectionCountersEtagsSlice]);
+            return table.NumberOfEntries;
         }
 
         private Table GetExistingTable(Transaction tx, CollectionName collection)

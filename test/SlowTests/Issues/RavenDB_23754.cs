@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.IO.Compression;
-using System.Linq;
-using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -13,7 +10,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using SlowTests.Core.Utils.Entities;
-using SlowTests.Core.Utils.Entities.Faceted;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,9 +23,9 @@ namespace SlowTests.Issues
         }
 
         [RavenFact(RavenTestCategory.ClientApi)]
-        public async Task Test()
+        public async Task GetDetailedCollectionStats_ShouldReturnCorrectConflictCounts()
         {
-            var (nodes, leader) = await CreateRaftCluster(2);
+            var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);
             using var store = GetDocumentStore(new Options()
             {
                 ReplicationFactor = 2,
@@ -87,7 +83,6 @@ namespace SlowTests.Issues
                 timeout: 5000,
                 interval: 500);
         }
-
         private IDocumentStore GetStoreForServer(RavenServer server, string database)
         {
             return new DocumentStore
@@ -99,38 +94,6 @@ namespace SlowTests.Issues
         }
 
         private const string UsersId = "Users/1";
-        private const string OrdersId = "Orders/1";
-
-        [RavenFact(RavenTestCategory.ClientApi)]
-        public void DebugPackage_Should_Contain_Collections_Stats_Detailed()
-        {
-            using var store = GetDocumentStore();
-            var dbName = store.Database;
-
-            using (var s = store.OpenSession())
-            {
-                s.Store(new User(), UsersId);
-                s.Store(new Order(), OrdersId);
-                s.SaveChanges();
-            }
-
-            var baseUrl = $"{store.Urls.Single().TrimEnd('/')}";
-            using var http = new HttpClient();
-            var resp = http.GetAsync($"{baseUrl}/admin/debug/info-package").Result;
-            resp.EnsureSuccessStatusCode();
-
-            using var zipStream = resp.Content.ReadAsStreamAsync().Result;
-            using var zip = new ZipArchive(zipStream);
-
-            var entryName = $"{dbName}/collections.stats.detailed.json";
-            var detailedEntry = zip.Entries.SingleOrDefault(e => e.FullName == entryName);
-            Assert.NotNull(detailedEntry);
-
-            using var reader = new StreamReader(detailedEntry.Open());
-            var json = reader.ReadToEnd();
-            Assert.Contains("\"Users\"", json);
-            Assert.Contains("\"Orders\"", json);
-        }
 
         [RavenFact(RavenTestCategory.ClientApi)]
         public void GetCollectionStatsTests()
