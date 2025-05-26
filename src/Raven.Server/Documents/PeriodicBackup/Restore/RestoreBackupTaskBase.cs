@@ -45,6 +45,8 @@ using BackupUtils = Raven.Client.Documents.Smuggler.BackupUtils;
 using Index = Raven.Server.Documents.Indexes.Index;
 using RavenServerBackupUtils = Raven.Server.Utils.BackupUtils;
 using System.Threading;
+using Raven.Client.ServerWide.Operations.Configuration;
+using Raven.Client.ServerWide.Operations.OngoingTasks;
 using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
@@ -513,6 +515,31 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             }
         }
 
+        private static void FilterOutServerWideTasks(DatabaseRecord databaseRecord)
+        {
+            if (databaseRecord.PeriodicBackups.Count > 0)
+            {
+                var filtered = new List<PeriodicBackupConfiguration>();
+                foreach (var backup in databaseRecord.PeriodicBackups)
+                {
+                    if (backup.Name.StartsWith(ServerWideBackupConfiguration.NamePrefix, StringComparison.OrdinalIgnoreCase) == false)
+                        filtered.Add(backup);
+                }
+                databaseRecord.PeriodicBackups = filtered;
+            }
+
+            if (databaseRecord.ExternalReplications.Count > 0)
+            {
+                var filtered = new List<Client.Documents.Operations.Replication.ExternalReplication>();
+                foreach (var replication in databaseRecord.ExternalReplications)
+                {
+                    if (replication.Name.StartsWith(ServerWideExternalReplication.NamePrefix, StringComparison.OrdinalIgnoreCase) == false)
+                        filtered.Add(replication);
+                }
+                databaseRecord.ExternalReplications = filtered;
+            }
+        }
+
         private static void RemoveSubscriptionFromDatabaseValues(RestoreSettings restoreSettings)
         {
             foreach (var keyValue in restoreSettings.DatabaseValues)
@@ -650,9 +677,11 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                                     json.BlittableValidation();
 
                                     restoreSettings = JsonDeserializationServer.RestoreSettings(json);
+                                    FilterOutServerWideTasks(restoreSettings.DatabaseRecord);
                                     // It's necessary to modify the subscriptionId to prevent collisions with the current database index.
                                     //we will handle subscription with smuggler
                                     RemoveSubscriptionFromDatabaseValues(restoreSettings);
+
                                     restoreSettings.DatabaseRecord.DatabaseName = RestoreFromConfiguration.DatabaseName;
                                     DatabaseHelper.Validate(RestoreFromConfiguration.DatabaseName, restoreSettings.DatabaseRecord, _serverStore.Configuration);
 
