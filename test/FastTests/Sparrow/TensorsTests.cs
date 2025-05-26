@@ -73,7 +73,7 @@ namespace FastTests.Sparrow
             float expectedSim = TensorPrimitives.CosineSimilarity(a, b);
             float expectedDistance = 1.0f - expectedSim;
 
-            // Expected behavior: identical vectors yield similarity==1.0 so distance==0.0.
+            // Expected behavior: orthogonal vectors yield similarity==0.0
             // (If your implementation were really computing similarity, this is what you’d expect.)
             Assert.InRange(similarity, (float)(expectedSim - Eps), (float)(expectedSim + Eps));
             Assert.InRange(distance, (float)(expectedDistance - Eps), (float)(expectedDistance + Eps));
