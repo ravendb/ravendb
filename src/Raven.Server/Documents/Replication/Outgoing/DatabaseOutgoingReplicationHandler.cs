@@ -433,6 +433,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             SuccessfulTwoWaysCommunication?.Invoke(this);
             MissingAttachmentsRetries = 0;
+            _parent.Database.DocumentsStorage.AttachmentsStorage.ResetMissingAttachmentsCount();
         }
 
         protected override void OnFailed(Exception e) => Failed?.Invoke(this, e);

@@ -232,6 +232,7 @@ namespace Raven.Server.Web.System
                     WriteGauges(writer, "Number of performance hints", "database_performance_hints_count", metrics, x => x.Counts.PerformanceHints, cachedTags);
                     WriteGauges(writer, "Database replication factor", "database_replication_factor", metrics, x => x.Counts.ReplicationFactor,
                         cachedTags);
+                    WriteGauges(writer, "Number of missing attachments", "database_missing_attachments_count", metrics, x => x.Counts.MissingAttachments, cachedTags);
 
                     // statistics 
                     

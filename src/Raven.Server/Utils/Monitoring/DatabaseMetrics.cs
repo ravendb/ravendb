@@ -73,6 +73,7 @@ namespace Raven.Server.Utils.Monitoring
         public int Rehabs { get; set; }
         public long PerformanceHints { get; set; }
         public int ReplicationFactor { get; set; }
+        public long MissingAttachments { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -85,7 +86,8 @@ namespace Raven.Server.Utils.Monitoring
                 [nameof(Alerts)] = Alerts,
                 [nameof(Rehabs)] = Rehabs,
                 [nameof(PerformanceHints)] = PerformanceHints,
-                [nameof(ReplicationFactor)] = ReplicationFactor
+                [nameof(ReplicationFactor)] = ReplicationFactor,
+                [nameof(MissingAttachments)] = MissingAttachments
             };
         }
     }

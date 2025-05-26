@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Runtime.CompilerServices;
+using System.Threading;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
@@ -50,6 +51,8 @@ namespace Raven.Server.Documents
         private readonly DocumentDatabase _documentDatabase;
         private readonly DocumentsStorage _documentsStorage;
 
+        private long _missingAttachmentsCount;
+
         public AttachmentsStorage([NotNull] DocumentDatabase database, [NotNull] Transaction tx, [NotNull] TableSchema schema)
         {
             if (tx == null)
@@ -63,6 +66,8 @@ namespace Raven.Server.Documents
             tx.CreateTree(AttachmentsSlice);
             AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 44);
             _documentDatabase.DocumentsStorage.TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
+
+            _missingAttachmentsCount = 0;
         }
 
         public static long ReadLastEtag(Transaction tx)
@@ -1435,5 +1440,14 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, AttachmentsTombstones);
             return table?.NumberOfEntries ?? 0;
         }
+
+        public void IncrementMissingAttachmentsCount() =>
+            Interlocked.Increment(ref _missingAttachmentsCount);
+
+        public void ResetMissingAttachmentsCount() =>
+            Interlocked.Exchange(ref _missingAttachmentsCount, 0);
+
+        public long GetMissingAttachmentsCount() =>
+            Interlocked.Read(ref _missingAttachmentsCount);
     }
 }
