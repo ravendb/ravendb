@@ -108,7 +108,7 @@ namespace Corax.Querying.Matches
             
             int results = _termReader.Read(ref this, buffer, _maxNumberOfTerms - _readTerms, out var termsRead);
             _readTerms += termsRead;
-            if(results == 0)
+            if (results == 0)
                 _termReader.Dispose();
             _totalResults += results;
             return results;
@@ -365,44 +365,72 @@ namespace Corax.Querying.Matches
 
         private int AndWithFill(Span<long> buffer, int matches)
         {
-            using var _ = _context.Allocate(3 * sizeof(long) * buffer.Length, out var bufferHolder);
-            var longBuffer = MemoryMarshal.Cast<byte, long>(bufferHolder.ToSpan());
+            var incomingMatches = buffer.Slice(0, matches);
+            using var _ = _context.Allocate(2 * sizeof(long) * buffer.Length, out var bufferHolder);
+            var innerMatchesBuffer = bufferHolder.ToSpan<long>()[..buffer.Length];
+            var workingMatches = bufferHolder.ToSpan<long>()[buffer.Length..];
+            
+            // We store all results in a single list - the motivation for this is that we may get the same result from multiple Fill calls
+            // (e.g. in case of WhereIn with multiple matching terms). In such case it will be deduplicated.
+            var allResults = new NativeList<long>();
+            allResults.Initialize(_context);
+            
             _termReader.Reset(ref this);
             
-            Span<long> results = longBuffer.Slice(0, buffer.Length);
-            Span<long> incomingMatches = longBuffer.Slice(buffer.Length, buffer.Length);
-            Span<long> localMatches = longBuffer.Slice(2 * buffer.Length, buffer.Length);
-
-            var actualMatches = buffer.Slice(0, matches);
-            actualMatches.CopyTo(incomingMatches);
-            
-            var currentMatchCount = 0;
-            _totalResults = 0;
-            
-            //The results returned by the Fill method are sorted within one call. If we make multiple calls, we have no
-            //guarantee that concatenated results are sorted, which can lead to invalid results since the AND operation guarantees a sorted result.
-            int fillCounter = 0;
-            //ensure we're not out of range
-            while (results.Length > 0 && Fill(localMatches) is var read and > 0)
+            var fillCounter = 0;
+            bool alreadySorted = false;
+            while (Fill(innerMatchesBuffer) is var read and > 0)
             {
-                fillCounter++;
                 _token.ThrowIfCancellationRequested();
-                _totalResults += read;
-                var common = MergeHelper.And(
-                    dst: results, 
-                    left: localMatches.Slice(0, read),
-                    right: incomingMatches.Slice(0, matches));
                 
-                results = results.Slice(common);
-                currentMatchCount += common;
+                fillCounter++;
+                _totalResults += read;
+
+                var innerMatches = innerMatchesBuffer[..read];
+                
+                var common = MergeHelper.And(
+                    dst: workingMatches, 
+                    left: innerMatches,
+                    right: incomingMatches);
+                
+                if (allResults.HasCapacityFor(common) == false)
+                    allResults.EnsureCapacityFor(_context, common);
+                allResults.AddRangeUnsafe(workingMatches[..common]);
+                
+                // Because we're performing AND operation, we want to do sorting and deduplication when we're sure there are duplicates (allResults.Count > matches)
+                // or (possibly) got all results (allResults.Count == matches).
+                if (allResults.Count >= matches)
+                {
+                    if (fillCounter > 1)
+                    {
+                        var newCount = Sorting.SortAndRemoveDuplicates(allResults.ToSpan());
+                        allResults.Count = newCount;
+                    }
+
+                    // If we matched all results, we can stop processing.
+                    // At this point the results are either sorted, or come from a single Fill call, which guarantees sorted results.
+                    if (allResults.Count == matches)
+                    {
+                        alreadySorted = true;
+                        break;
+                    }
+                }
+            }
+            
+            // The results returned by the Fill method are sorted within one call. If we make multiple calls, we have no
+            // guarantee that concatenated results are sorted, which can lead to invalid results since the AND operation guarantees a sorted result.
+            if (alreadySorted == false && fillCounter > 1)
+            {
+                var newCount = Sorting.SortAndRemoveDuplicates(allResults.ToSpan());
+                allResults.Count = newCount;
             }
 
-            longBuffer.Slice(0, currentMatchCount).CopyTo(buffer);
+            Debug.Assert(allResults.Count <= matches);
+            allResults.CopyTo(buffer, 0);
+            var resultCount = allResults.Count;
+            allResults.Dispose(_context);
             
-            if (fillCounter > 1)
-                currentMatchCount = Sorting.SortAndRemoveDuplicates(buffer[..currentMatchCount]);
-            
-            return currentMatchCount;
+            return resultCount;
         }
 
 #if !DEBUG
