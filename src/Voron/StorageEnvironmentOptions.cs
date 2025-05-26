@@ -614,29 +614,24 @@ namespace Voron
                     return false;
                 }
 
+                var fileSize = new FileInfo(path.FullPath).Length;
                 using (var fs = SafeFileStream.Create(path.FullPath, FileMode.Open, FileAccess.ReadWrite, FileShare.Read, 4096, FileOptions.None))
                 {
-                    var metadataBuf = stackalloc MetadataFile[1];
-
-                    Span<byte> sizeBuffer = stackalloc byte[sizeof(int)];
-                    fs.ReadExactly(sizeBuffer);
-                    var size = metadataBuf[0].DataSize = BitConverter.ToInt32(sizeBuffer);
-
-                    Span<byte> bodyBuffer = new ((byte*)metadataBuf + sizeof(int), size - sizeof(int));
+                    Span<byte> buffer = stackalloc byte[(int)fileSize];
                     var totalRead = 0;
-                    while (totalRead < bodyBuffer.Length)
+                    while (totalRead < buffer.Length)
                     {
-                        var read = fs.Read(bodyBuffer[totalRead..]);
+                        var read = fs.Read(buffer[totalRead..]);
                         if (read == 0)
                             break;
                         totalRead += read;
                     }
 
-                    ulong hash = Hashing.XXHash64.CalculateInline(bodyBuffer[sizeof(ulong)..]);
-                    if (metadataBuf->Hash != hash)
+                    ulong hash = Hashing.XXHash64.CalculateInline(buffer[sizeof(ulong)..]);
+                    if (BitConverter.ToUInt64(buffer[..sizeof(ulong)]) != hash)
                         return false;
 
-                    metadata = metadataBuf[0];
+                    metadata = MemoryMarshal.Cast<byte, MetadataFile>(buffer)[0];
                     return true;
                 }
             }
@@ -644,7 +639,7 @@ namespace Voron
             public override unsafe void WriteMetadata(string filename, MetadataFile metadata)
             {
                 var path = _basePath.Combine(filename);
-                var rc = Pal.rvn_write_header(path.FullPath, (byte*)&metadata, metadata.DataSize, out var errorCode);
+                var rc = Pal.rvn_write_header(path.FullPath, (byte*)&metadata, sizeof(MetadataFile), out var errorCode);
                 if (rc != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(rc, errorCode, $"Failed to rvn_write_header '{filename}', reason : {((PalFlags.FailCodes)rc).ToString()}");
             }
@@ -1010,7 +1005,7 @@ namespace Voron
                     throw new ObjectDisposedException("PureMemoryStorageEnvironmentOptions");
 
                 metadata = _metadata;
-                return _metadata.DataSize != 0;
+                return _metadata.Version != 0;
             }
 
             public override void WriteMetadata(string filename, MetadataFile metadata)

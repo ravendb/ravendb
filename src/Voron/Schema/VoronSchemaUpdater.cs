@@ -32,7 +32,7 @@ namespace Voron.Schema
                     break;
 
                 _headerAccessor.Modify((ref FileHeader header) => header.Version = versionAfterUpdate);
-                _headerAccessor.MetadataAccessor.Modify((ref MetadataFile metadata) => metadata.Version = versionAfterUpdate, persist: true);
+                _headerAccessor.MetadataAccessor.Modify((ref MetadataFile metadata) => metadata.Version = versionAfterUpdate);
             }
         }
     }

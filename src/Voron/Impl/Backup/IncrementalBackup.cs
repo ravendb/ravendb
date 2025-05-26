@@ -408,7 +408,7 @@ namespace Voron.Impl.Backup
                 
                 txw.Commit();
 
-                env.HeaderAccessor.MetadataAccessor.Modify((ref MetadataFile header) => header.JournalId = journalId, persist: true);
+                env.HeaderAccessor.MetadataAccessor.Modify((ref MetadataFile header) => header.JournalId = journalId);
                 env.HeaderAccessor.Modify((ref FileHeader header) => 
                 {
                     header.TransactionId = lastTxHeader->TransactionId;

@@ -20,8 +20,9 @@ public class From23  : IVoronSchemaUpdate
                 // to recover some disk space, and everything will still functions fine with this
             }
         }
-        
-        headerAccessor.MetadataAccessor.Modify(headerAccessor.MetadataAccessor.FillMetadata, persist: false);
+
+        Span<MetadataFile> metadata = stackalloc MetadataFile[1];
+        headerAccessor.MetadataAccessor.FillMetadata(ref metadata[0]);
 
         versionAfterUpgrade = 24;
         return true;
