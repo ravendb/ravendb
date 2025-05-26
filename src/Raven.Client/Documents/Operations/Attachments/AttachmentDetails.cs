@@ -193,5 +193,8 @@ namespace Raven.Client.Documents.Operations.Attachments
         /// Gets the ID of the document associated with the attachment.
         /// </summary>
         public string DocumentId { get; }
+
+
+        internal AttachmentFlags Flags;
     }
 }

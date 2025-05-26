@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Mail;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
-using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -34,22 +33,28 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                         if (bjro.TryGet(nameof(AttachmentRequest.Name), out string name) == false)
                             throw new ArgumentException($"Could not parse {nameof(AttachmentRequest.Name)}");
 
-                        //TODO: egor here I need to rework this logic, so same merged command will delete both regular and retired attachments, and if its retired then delete from storage only!
-                        strategy = new RegularBulkDeleteAttachmentsStrategyProcessor(RequestHandler);
-                            strategy = new RetiredBulkDeleteAttachmentsStrategyProcessor(RequestHandler);
-                        //TODO: egor make this compile for now
-                        //strategy.CheckAttachmentFlagAndThrowIfNeeded(context, docId, name);
-                        attachmentRequests.Add(new AttachmentRequest(docId, name));
+                        var attachment = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, docId, name, AttachmentType.Document, changeVector: null);
+                        if (attachment == null)
+                            continue;
+
+                        attachmentRequests.Add(new AttachmentRequest(docId, name)
+                        {
+                            Flags = attachment.Flags,
+                        });
                     }
                 }
             }
 
             if (attachmentRequests.Count == 0)
                 return;
-            //TODO: egor make this compile for now
-            //MergedDeleteAttachmentsCommand cmd = strategy.MergedDeleteAttachmentsCommand(attachmentRequests);
 
-            //await RequestHandler.Database.TxMerger.Enqueue(cmd);
+            MergedDeleteAttachmentsCommand cmd = new MergedDeleteAttachmentsCommand
+            {
+                Database = RequestHandler.Database,
+                Deletes = attachmentRequests
+            };
+
+            await RequestHandler.Database.TxMerger.Enqueue(cmd);
         }
 
     }
