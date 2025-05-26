@@ -513,7 +513,7 @@ namespace Raven.Server.Commercial
             {
                 var responseString = await response.Content.ReadAsStringAsync(_serverStore.ServerShutdown).ConfigureAwait(false);
                 throw GenerateLicenseLimit(LimitType.InvalidLicense, 
-                    $"Failed to activate the license. The license update for Let's Encrypt encountered an issue: {responseString}");
+                    $"Failed to activate the license. The license update for Let's Encrypt encountered an issue: {responseString}", addNotification: false);
             }
         }
 
