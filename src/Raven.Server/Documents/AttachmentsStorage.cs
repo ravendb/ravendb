@@ -1314,7 +1314,7 @@ namespace Raven.Server.Documents
 
             var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Flags,attachment.Size, retireAtDt: null, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
             Debug.Assert(attachment.Flags != AttachmentFlags.Retired, "attachment.Flags != AttachmentFlags.Retired");
-            DeleteAttachment(DeleteAttachmentState.DocumentAttachment, context, sourceDocumentId, sourceName, changeVector, out var sourceCollectionName, updateDocument, hash, contentType, usePartialKey, extractCollectionName: extractCollectionName);
+            DeleteAttachment(context, sourceDocumentId, sourceName, changeVector, out var sourceCollectionName, updateDocument, hash, contentType, usePartialKey, extractCollectionName: extractCollectionName);
 
             return new MoveAttachmentDetailsServer()
             {
@@ -1346,7 +1346,7 @@ namespace Raven.Server.Documents
             return newName;
         }
 
-        public void DeleteAttachment(DeleteAttachmentState deleteState, DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, out CollectionName collectionName, bool updateDocument = true,
+        public void DeleteAttachment(DocumentsOperationContext context, string documentId, string name, LazyStringValue expectedChangeVector, out CollectionName collectionName, bool updateDocument = true,
             string hash = null, string contentType = null, bool usePartialKey = true, bool extractCollectionName = false)
         {
             if (string.IsNullOrWhiteSpace(documentId))
@@ -1400,7 +1400,7 @@ namespace Raven.Server.Documents
                     using (scope)
                     {
                         var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
-                        DeleteAttachmentDirect(deleteState, context, keySlice, usePartialKey, name, expectedChangeVector, changeVector, lastModifiedTicks);
+                        DeleteAttachmentDirect(context, keySlice, usePartialKey, name, expectedChangeVector, changeVector, lastModifiedTicks);
                     }
                 }
 
@@ -1488,11 +1488,11 @@ namespace Raven.Server.Documents
 
                 if (conflictFlags == AttachmentFlags.Retired)
                 {
-                    DeleteAttachmentDirect(DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, keySlice, false, null, null, changeVector, lastModifiedTicks);
+                    DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
                 }
                 else
                 {
-                    DeleteAttachmentDirect(DeleteAttachmentState.DocumentAttachment, context, keySlice, false, null, null, changeVector, lastModifiedTicks);
+                    DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
                 }
             }
         }
@@ -1514,7 +1514,7 @@ namespace Raven.Server.Documents
             return null;
         }
 
-        public void DeleteAttachmentDirect(DeleteAttachmentState deleteState, DocumentsOperationContext context, Slice key, bool isPartialKey, string name,
+        public void DeleteAttachmentDirect(DocumentsOperationContext context, Slice key, bool isPartialKey, string name,
             string expectedChangeVector, string changeVector, long lastModifiedTicks)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
@@ -1566,10 +1566,19 @@ namespace Raven.Server.Documents
                     };
                 }
 
-               // var attachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref tvr);
+                var attachmentFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref tvr);
                 var retireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref tvr);
                 var collection = TableValueToId(context, (int)AttachmentsTable.Collection, ref tvr);
-                DeleteInternal2(deleteState, context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, retireAtTicks, collection);
+
+                if (attachmentFlags.HasFlag(AttachmentFlags.Retired))
+                {
+                    DeleteInternal2(DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, retireAtTicks, collection);
+                }
+                else
+                {
+                    DeleteInternal2(DeleteAttachmentState.DocumentAttachment, context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, retireAtTicks, collection);
+
+                }
             }
 
             table.Delete(tvr.Id);
@@ -1632,7 +1641,7 @@ namespace Raven.Server.Documents
 
                 if (attachmentFlags == AttachmentFlags.Retired)
                 {
-                    DeleteInternal2(DeleteAttachmentState.DocumentRetiredAttachmentCloudStorage, context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, retireAtTicks, collection);
+                    DeleteInternal2(DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, key, etag, hash, changeVector, lastModifiedTicks, flags: DocumentFlags.None, retireAtTicks, collection);
                 }
                 else
                 {
@@ -1701,21 +1710,15 @@ namespace Raven.Server.Documents
                     CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, (int)flags);
                     if (retireAtTicks != -1)
                     {
-                    //    RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
+                        RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
                     }
 
                     // We may have another operation in the same transaction that would cause us to re-create
                     // the missing references, let's move the actual stream delete to the end of the transaction
                     context.Transaction.CheckIfShouldDeleteAttachmentStream(hash);
                     break;
-                case DeleteAttachmentState.DocumentRetiredAttachmentCloudStorage:
-                //    RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
-                    CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, (int)flags);
-                  //  TryDeleteRetiredAttachment(context, key, collection);
-                    //TODO: egor do I need to CreateTombstone() here?
-                    break;
                 case DeleteAttachmentState.DocumentRetiredAttachmentStorage:
-                  //  RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
+               RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, retireAtTicks);
                     // TODO: egor write test that backup storageOnly=true attachment, it seems like its have to be retired first
 
                     // we create attachment tombstone with special flag to mark that we don't want to delete the attachment from cloud

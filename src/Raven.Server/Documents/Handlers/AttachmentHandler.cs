@@ -128,7 +128,7 @@ namespace Raven.Server.Documents.Handlers
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(DeleteState, context, DocumentId, Name, ExpectedChangeVector, collectionName: out _);
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedChangeVector, collectionName: out _);
                 return 1;
             }
 
@@ -168,7 +168,7 @@ namespace Raven.Server.Documents.Handlers
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, DocumentId, Name, ExpectedChangeVector, collectionName: out _);
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedChangeVector, collectionName: out _);
                 return 1;
             }
 
@@ -237,7 +237,7 @@ namespace Raven.Server.Documents.Handlers
         {
             foreach (var delete in Deletes)
             {
-                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, delete.DocumentId, delete.Name, null, collectionName: out _);
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment( context, delete.DocumentId, delete.Name, null, collectionName: out _);
             }
 
             return 1;
@@ -268,7 +268,7 @@ namespace Raven.Server.Documents.Handlers
         {
             foreach (var delete in Deletes)
             {
-                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(DeleteState, context, delete.DocumentId, delete.Name, null, collectionName: out _);
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, delete.DocumentId, delete.Name, null, collectionName: out _);
             }
 
             return 1;

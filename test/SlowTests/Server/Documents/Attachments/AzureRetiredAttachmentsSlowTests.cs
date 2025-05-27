@@ -62,13 +62,11 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AzureRetryTheory]
-        [InlineData(1, 3, true)]
-        [InlineData(64, 3, true)]
-        [InlineData(1, 3, false)]
-        [InlineData(64, 3, false)]
-        public async Task CanUploadRetiredAttachmentToAzureAndDelete(int attachmentsCount, int size, bool storageOnly)
+        [InlineData(1, 3)]
+        [InlineData(64, 3)]
+        public async Task CanUploadRetiredAttachmentToAzureAndDelete(int attachmentsCount, int size)
         {
-            await CanUploadRetiredAttachmentToCloudAndDeleteInternal(attachmentsCount, size, storageOnly: storageOnly);
+            await CanUploadRetiredAttachmentToCloudAndDeleteInternal(attachmentsCount, size);
         }
 
         [AzureRetryTheory]
@@ -86,9 +84,9 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AzureRetryFact]
-        public async Task ShouldThrowUsingRegularAttachmentsApiOnRetiredAttachmentToAzure()
+        public async Task ShouldNotThrowUsingRegularAttachmentsApiOnRetiredAttachmentToAzure()
         {
-            await ShouldThrowUsingRegularAttachmentsApiOnRetiredAttachmentInternal();
+            await ShouldNotThrowUsingRegularAttachmentsApiOnRetiredAttachmentInternal();
         }
 
         [AzureRetryTheory]
@@ -118,9 +116,9 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AzureRetryFact]
-        public async Task CanUploadRetiredAttachmentToAzureIfItAlreadyExists()
+        public async Task CanUploadRetiredAttachmentToAzureIfItAlreadyExists_ShouldNotOverwrite()
         {
-            await CanUploadRetiredAttachmentToCloudIfItAlreadyExistsInternal();
+            await CanUploadRetiredAttachmentToCloudIfItAlreadyExists_ShouldNotOverwriteInternal();
         }
 
         protected override async Task WaitForTaskDelayIfNeeded()

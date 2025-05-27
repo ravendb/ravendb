@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
 using FastTests.Client;
 using Orders;
 using Raven.Client;
@@ -13,9 +12,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -56,7 +53,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream([1, 2, 3]);
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { /*RetireAt = DateTime.UtcNow.AddMinutes(3),*/ ContentType = "image/png" }));
 
                 var res = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test.png", AttachmentType.Document, null));
                 Assert.Equal("test.png", res.Details.Name);
@@ -64,16 +61,16 @@ namespace SlowTests.Server.Documents.Attachments
                 Assert.Null(res.Details.RetireAt);
                 await using (var holder = CreateCloudSettings())
                 {
-                    throw new NotImplementedException();
+
                     //RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
                     //{
                     //    config.RetireExistingAttachments = retireExistingAttachments;
                     //};
-                    await PutRetireAttachmentsConfiguration(store, Settings, collections:null);
+                    await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
 
                     using var profileStream2 = new MemoryStream([3, 2, 1]);
-                    await store.Operations.SendAsync(new PutAttachmentOperation(id, "test2.png", profileStream2, "image/png"));
 
+                    await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test2.png", profileStream2) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
                     var res2 = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test2.png", AttachmentType.Document, null));
                     Assert.Equal("test2.png", res2.Details.Name);
 
@@ -86,11 +83,13 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.Null(res3.Details.RetireAt);
 
                     var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
-                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
 
                     if (retireExistingAttachments)
                     {
+                        profileStream.Position = 0;
+                        await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+                        database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                        await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
                         await GetBlobsFromCloudAndAssertForCount(Settings, 2, 15_000);
 
                         var res4 = await store.Operations.SendAsync(new GetAttachmentOperation(res3.Details.DocumentId, res3.Details.Name, AttachmentType.Document, null));
@@ -100,7 +99,11 @@ namespace SlowTests.Server.Documents.Attachments
                     }
                     else
                     {
+                        database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                        await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
                         await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+
                         var res4 = await store.Operations.SendAsync(new GetAttachmentOperation(res3.Details.DocumentId, res3.Details.Name, AttachmentType.Document, null));
                         Assert.Equal("test.png", res4.Details.Name);
                         Assert.Equal(AttachmentFlags.None, res4.Details.Flags);
@@ -110,10 +113,8 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments)]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task CanCrudAttachmentWhenHaveRetiredAttachment(bool storageOnly)
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task CanCrudAttachmentWhenHaveRetiredAttachment()
         {
             var attachmentsCount = 1;
             var size = 3;
@@ -132,7 +133,7 @@ namespace SlowTests.Server.Documents.Attachments
                     using (var profileStream = new MemoryStream(new byte[] { 3, 2, 2 }))
                     {
                         // retire of this attachment should happen in baseline + 40 mins
-                        var result = store.Operations.Send(new PutAttachmentOperation(data.DocumentId, "profile.png", profileStream, "image/png"));
+                        var result = store.Operations.Send(new PutAttachmentOperation(data.DocumentId, new StoreAttachmentParameters("profile.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
                         Assert.Equal("profile.png", result.Name);
                         Assert.Equal(data.DocumentId, result.DocumentId);
                         Assert.Equal("image/png", result.ContentType);
@@ -171,47 +172,20 @@ namespace SlowTests.Server.Documents.Attachments
                         session.Advanced.Attachments.Delete(doc, data.Name);
                         session.SaveChanges();
                     }
-                    if (storageOnly == false)
+
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    var key = string.Empty;
+                    GetToRetireAttachmentsCount(database, 1, infos =>
                     {
-                        var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
-                      //  var key = string.Empty;
+                        if (infos == null)
+                            return;
 
-                        var keys = new List<string>();
-                        S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 2, infos =>
-                        {
-                            if (infos == null)
-                                return;
+                        key = infos.First().LowerId.ToString();
+                    });
 
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
 
-                            keys = infos.Select(x=> x.LowerId.ToString()).ToList();
-                        });
-
-                        var expected = $"d\u001eOrders\u001eorders/0\u001ed\u001etest_0.png\u001e{data.Hash}\u001eimage/png";
-
-                        Assert.Contains(expected, keys);
-                        Assert.Contains($"p\u001eorders/0\u001ed\u001eprofile.png\u001ebucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=\u001eimage/png", keys);
-                        await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
-
-                        database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(1);
-                        await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                        await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
-                    }
-                    else
-                    {
-                        var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
-                        var key = string.Empty;
-                        S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 1, infos =>
-                        {
-                            if (infos == null)
-                                return;
-
-                            key = infos.First().LowerId.ToString();
-                        });
-
-                        await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
-
-                        Assert.Equal("p\u001eorders/0\u001ed\u001eprofile.png\u001ebucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=\u001eimage/png", key);
-                    }
+                    Assert.Equal("orders/0\u001ed\u001eprofile.png\u001ebucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=\u001eimage/png", key);
 
                     using (var session = store.OpenSession())
                     {
@@ -226,7 +200,6 @@ namespace SlowTests.Server.Documents.Attachments
                         Assert.Equal("image/png", a.GetString(nameof(AttachmentName.ContentType)));
                         Assert.Equal("bucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=", a.GetString(nameof(AttachmentName.Hash)));
 
-
                         session.Advanced.Attachments.Delete(doc, "profile.png");
                         session.SaveChanges();
                     }
@@ -239,7 +212,7 @@ namespace SlowTests.Server.Documents.Attachments
                         Assert.False(metadata.ContainsKey(Constants.Documents.Metadata.Attachments));
                     }
 
-                    S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(await Databases.GetDocumentDatabaseInstanceFor(Server, store), 0);
+                    GetToRetireAttachmentsCount(await Databases.GetDocumentDatabaseInstanceFor(Server, store), 0);
                 }
             }
         }
@@ -270,25 +243,18 @@ namespace SlowTests.Server.Documents.Attachments
                     }
 
                     using var profileStream = new MemoryStream([1, 2, 3]);
-                    await store.Operations.SendAsync(new PutAttachmentOperation(docId, "test.png", profileStream, "image/png"));
-
+                    await store.Operations.SendAsync(
+                        new PutAttachmentOperation(docId,
+                            new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
                     var res = await store.Operations.SendAsync(new GetAttachmentOperation(docId, "test.png", AttachmentType.Document, null));
                     Assert.Equal("test.png", res.Details.Name);
 
                     int count = 0;
                     DocumentDatabase database = null;
-                    //Assert.Equal(1, await WaitForValueAsync(async () =>
-                    //{
-                    //  
-                    //    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-
-                    //    count += await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                    //    return count;
-                    //}, 1, interval: 1000));
-
+         
                     var key = string.Empty;
                     database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
-                    S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 1, infos =>
+                    GetToRetireAttachmentsCount(database, 1, infos =>
                     {
                         if (infos == null)
                             return;
@@ -296,8 +262,8 @@ namespace SlowTests.Server.Documents.Attachments
                         key = infos.First().LowerId.ToString();
                     });
 
-                    Assert.Equal("p\u001eorders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
-                       
+                    Assert.Equal("orders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
+
                     PatchOperation operation = new PatchOperation(id: docId, changeVector: null, patch: new PatchRequest
                     {
                         Script = @$"
@@ -313,27 +279,6 @@ namespace SlowTests.Server.Documents.Attachments
                         Assert.Equal(0, q.Count);
                     }
 
-                    //var key = string.Empty;
-                    //S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 1, infos =>
-                    //{
-                    //    if(infos == null)
-                    //        return;
-
-                    //    key = infos.First().LowerId.ToString();
-                    //});
-
-                    //Console.WriteLine();
-
-
-                    //count = 0;
-                    //Assert.Equal(0, await WaitForValueAsync(async () =>
-                    //{
-                    //    database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
-                    //    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-
-                    //    count += await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                    //    return count;
-                    //}, 0, interval: 1000));
                     GetToRetireAttachmentsCount(database, 0);
                 }
             }
@@ -371,8 +316,10 @@ namespace SlowTests.Server.Documents.Attachments
                     }
 
                     using var profileStream = new MemoryStream([1, 2, 3]);
-                    await store.Operations.SendAsync(new PutAttachmentOperation(docId, "test.png", profileStream, "image/png"));
+                    await store.Operations.SendAsync(
 
+                    new PutAttachmentOperation(docId,
+                        new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
                     var res = await store.Operations.SendAsync(new GetAttachmentOperation(docId, "test.png", AttachmentType.Document, null));
                     Assert.Equal("test.png", res.Details.Name);
                     Assert.Equal(true, await WaitForChangeVectorInClusterAsync(srcNodes.Servers, srcDb));
@@ -391,7 +338,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                             key = arr.First().LowerId.ToString();
                         });
-                        Assert.Equal("p\u001eorders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
+                        Assert.Equal("orders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
                     }
 
                     PatchOperation operation = new PatchOperation(id: docId, changeVector: null, patch: new PatchRequest
@@ -419,10 +366,8 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments)]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task DeletingDocumentWithRetiredAttachmentShouldKeepRetiredAttachmentByDefault(bool purgeOnDelete)
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task DeletingDocumentWithRetiredAttachmentShouldKeepRetiredAttachmentByDefault()
         {
             var attachmentsCount = 1;
             var size = 3;
@@ -432,12 +377,6 @@ namespace SlowTests.Server.Documents.Attachments
                 {
                     int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                     var ids = new List<(string Id, string Collection)>();
-
-                    throw new NotImplementedException();
-                    //RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
-                    //{
-                    //    config.PurgeOnDelete = purgeOnDelete;
-                    //};
 
                     await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, null);
 
@@ -459,27 +398,15 @@ namespace SlowTests.Server.Documents.Attachments
                         Assert.Equal(0, q.Count);
                     }
 
-                    if (purgeOnDelete)
-                    {
-                        var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
-                        database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                        await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                        await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
-                    }
-                    else
-                    {
-                        var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
-                        GetToRetireAttachmentsCount(database, 0);
-                        await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
-                    }
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    GetToRetireAttachmentsCount(database, 0);
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
                 }
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments)]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task DeletingDocumentWithRetiredAttachmentShouldKeepRetiredAttachmentByDefaultInCluster(bool purgeOnDelete)
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task DeletingDocumentWithRetiredAttachmentShouldKeepRetiredAttachmentByDefaultInCluster()
         {
             var attachmentsCount = 1;
             var size = 3;
@@ -495,12 +422,6 @@ namespace SlowTests.Server.Documents.Attachments
                 {
                     int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                     var ids = new List<(string Id, string Collection)>();
-
-                    throw new NotImplementedException();
-                    //RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
-                    //{
-                    //    config.PurgeOnDelete = purgeOnDelete;
-                    //};
 
                     //TODO: egor /////////////////////// DUPLICATE CODE WITH CanUploadRetiredAttachmentToCloudInClusterAndDeleteInternal
                     await PutRetireAttachmentsConfiguration(store, Settings);
@@ -526,7 +447,6 @@ namespace SlowTests.Server.Documents.Attachments
 
                         return count;
                     }, attachmentsCount, interval: 1000);
-
 
                     Assert.Equal(attachmentsCount, retired);
 
@@ -560,38 +480,15 @@ namespace SlowTests.Server.Documents.Attachments
                             Assert.Equal(0, q.Count);
 
                         }
-                 //       Assert.Equal(true, await WaitForChangeVectorInClusterAsync(srcNodes.Servers, srcDb));
-                        if (purgeOnDelete)
+
+                        foreach (var node in srcRaft.Nodes)
                         {
-
-                            var record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database)).ConfigureAwait(false);
-                            var f = record.Topology.AllNodes.FirstOrDefault();
-
-                            foreach (var node in srcRaft.Nodes)
-                            {
-                                database = await Databases.GetDocumentDatabaseInstanceFor(node, store);
-
-                                GetToRetireAttachmentsCount(database, 1);
-                                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                            }
-                            await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
+                            database = await Databases.GetDocumentDatabaseInstanceFor(node, store);
+                            GetToRetireAttachmentsCount(database, 0);
                         }
-                        else
-                        {
-                            foreach (var node in srcRaft.Nodes)
-                            {
-                                database = await Databases.GetDocumentDatabaseInstanceFor(node, store);
-                                //var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
-                                GetToRetireAttachmentsCount(database, 0);
 
-                                // nothing should happen
-                                //database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                                //await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                            }
+                        await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
 
-                            await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
-                        }
                     }
                     finally
                     {
@@ -791,13 +688,11 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AmazonS3RetryTheory]
-        [InlineData(1, 3, true)]
-        [InlineData(64, 3, true)]
-        [InlineData(1, 3, false)]
-        [InlineData(64, 3, false)]
-        public async Task CanUploadRetiredAttachmentToS3AndDelete(int attachmentsCount, int size, bool storageOnly)
+        [InlineData(1, 3)]
+        [InlineData(64, 3)]
+        public async Task CanUploadRetiredAttachmentToS3AndDelete(int attachmentsCount, int size)
         {
-            await CanUploadRetiredAttachmentToCloudAndDeleteInternal(attachmentsCount, size, storageOnly: storageOnly);
+            await CanUploadRetiredAttachmentToCloudAndDeleteInternal(attachmentsCount, size);
         }
 
         [AmazonS3RetryTheory]
@@ -815,16 +710,14 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AmazonS3RetryFact]
-        public async Task ShouldThrowUsingRegularAttachmentsApiOnRetiredAttachmentToS3()
+        public async Task ShouldNotThrowUsingRegularAttachmentsApiOnRetiredAttachmentToS3()
         {
-            await ShouldThrowUsingRegularAttachmentsApiOnRetiredAttachmentInternal();
+            await ShouldNotThrowUsingRegularAttachmentsApiOnRetiredAttachmentInternal();
         }
-
 
         [AmazonS3RetryTheory]
         [InlineData(3, 3, 1)]
         [InlineData(16, 3, 4)]
-        //[InlineData(128, 3)]
         public async Task CanUploadRetiredAttachmentsFromDifferentCollectionsToS3AndGetInBulk(int attachmentsCount, int size, int attachmentsPerDoc)
         {
             var collections = new List<string> { "Orders", "Products" };
@@ -849,9 +742,9 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AmazonS3RetryFact]
-        public async Task CanUploadRetiredAttachmentToS3IfItAlreadyExists()
+        public async Task CanUploadRetiredAttachmentToS3IfItAlreadyExists_ShouldNotOverwrite()
         {
-            await CanUploadRetiredAttachmentToCloudIfItAlreadyExistsInternal();
+            await CanUploadRetiredAttachmentToCloudIfItAlreadyExists_ShouldNotOverwriteInternal();
         }
 
         [AmazonS3RetryFact]
@@ -1038,24 +931,22 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AmazonS3RetryTheory]
-        [InlineData(1, 3, true)]
-        [InlineData(64, 3, true)]
-        [InlineData(1, 3, false)]
-        [InlineData(64, 3, false)]
-        public async Task CanEtlDeletedRetiredAttachmentsToDestination(int attachmentsCount, int size, bool storageOnly)
+        [InlineData(1, 3)]
+        [InlineData(64, 3)]
+        public async Task CanEtlDeletedRetiredAttachmentsToDestination(int attachmentsCount, int size)
         {
             await using (var holder = CreateCloudSettings())
             {
                 int docsCount = RetiredAttachmentsHolderBase.GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                 var ids = new List<(string Id, string Collection)>();
                 using (var store = GetDocumentStore(new Options
-                       {
-                           ModifyDatabaseName = s => $"{s}_source"
-                       }))
+                {
+                    ModifyDatabaseName = s => $"{s}_source"
+                }))
                 using (var replica = GetDocumentStore(new Options
-                       {
-                           ModifyDatabaseName = s => $"{s}_destination"
-                       }))
+                {
+                    ModifyDatabaseName = s => $"{s}_destination"
+                }))
                 {
                     await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
                     var taskName = "etl-test";
@@ -1087,23 +978,9 @@ namespace SlowTests.Server.Documents.Attachments
                         await store.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
                     }
 
-                    //etlDone = Etl.WaitForEtlToComplete(store);
-                    //etlDone.Wait(TimeSpan.FromSeconds(15));
-
-
-                 //   WaitForUserToContinueTheTest(store);
-
                     var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                     await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-
-                    if (storageOnly == false)
-                    {
-                        await GetBlobsFromCloudAndAssertForCount(Settings, 0);
-                    }
-                    else
-                    {
-                        await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
-                    }
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
 
                     etlDone = Etl.WaitForEtlToComplete(store);
                     etlDone.Wait(TimeSpan.FromSeconds(15));
@@ -1125,16 +1002,13 @@ namespace SlowTests.Server.Documents.Attachments
                         Assert.Equal(0, c);
                     }
                 }
-
             }
         }
 
         [AmazonS3RetryTheory]
-        [InlineData(1, 3, true)]
-        [InlineData(64, 3, true)]
-        [InlineData(1, 3, false)]
-        [InlineData(64, 3, false)]
-        public async Task CanExternalReplicateDeletedRetiredAttachmentsToDestination(int attachmentsCount, int size, bool storageOnly)
+        [InlineData(1, 3)]
+        [InlineData(64, 3)]
+        public async Task CanExternalReplicateDeletedRetiredAttachmentsToDestination(int attachmentsCount, int size)
         {
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
@@ -1161,8 +1035,7 @@ namespace SlowTests.Server.Documents.Attachments
                     // I don't have retire attachments config. but as in other background task features, I populate the retire attachment tree after replicating it
                     GetToRetireAttachmentsCount(database2, attachmentsCount);
 
-
-                    var database = await Databases.GetDocumentDatabaseInstanceFor( store1);
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(store1);
                     GetStorageAttachmentsMetadataFromAllAttachments(database);
                     Assert.Equal(attachmentsCount, Attachments.Count);
 
@@ -1179,31 +1052,18 @@ namespace SlowTests.Server.Documents.Attachments
                     var stats = store1.Maintenance.Send(new GetDetailedStatisticsOperation());
                     Assert.Equal(attachmentsCount, stats.CountOfRetiredAttachments);
                     await PutRetireAttachmentsConfiguration(store2, Settings);
-           
 
                     foreach (var attachment in Attachments)
                     {
                         await store1.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
                     }
 
-                    if (storageOnly == false)
-                    {
-                        database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
-                        //  var sp = Stopwatch.StartNew();
-                        //Console.WriteLine("Start Retire Attachments");
-                        await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                        await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
 
-
-                    }
-                    else
-                    {
-                        await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
-           
-                    }
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
 
                     await EnsureReplicatingAsync(store1, store2);
-
 
                     var stats11 = store1.Maintenance.Send(new GetDetailedStatisticsOperation());
                     Assert.Equal(0, stats11.CountOfRetiredAttachments);

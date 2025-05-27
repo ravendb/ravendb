@@ -71,7 +71,7 @@ namespace FastTests.Client
                 "PutDatabaseClientConfigurationCommand", "PutDatabaseSettingsCommand", "PutDatabaseStudioConfigurationCommand", "GetTcpInfoForReplicationCommand",
                 "AddQueueSinkCommand", "UpdateQueueSinkCommand", "ConfigureDataArchivalCommand",
                 "AdoptOrphanedRevisionsCommand", "ConfigureAttachmentsRetireCommand",
-                "DeleteRetiredAttachmentCommand", "GetRetiredAttachmentCommand", "GetRetiredAttachmentsCommand", "DeleteRetiredAttachmentsCommand", "GetRetireAttachmentsConfigurationCommand", "HeadRetiredAttachmentCommand"
+                "GetRetireAttachmentsConfigurationCommand", "DeleteAttachmentsCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);

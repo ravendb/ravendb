@@ -1088,11 +1088,11 @@ namespace Raven.Server.Smuggler.Documents
 
                             if (toRemove.Flags == AttachmentFlags.Retired)
                             {
-                                _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage,context, id, toRemove.Name, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
+                                _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove.Name, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
                             }
                             else
                             {
-                                _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, id, toRemove.Name, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
+                                _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove.Name, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
                             }
 
                         }

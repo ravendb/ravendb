@@ -287,9 +287,8 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             _logger.Operations(msg);
 
         var tree = context.Transaction.InnerTransaction.ReadTree(_treeName);
-        using (CreateRetiredAttachmentsKeyWithType(context, lowerId, AttachmentRetireType.PutRetire, out Slice key))
         using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
-            tree.MultiDelete(ticksSlice, key);
+            tree.MultiDelete(ticksSlice, lowerId);
     }
 
     private unsafe ByteStringContext.InternalScope CreateRetiredAttachmentsKeyWithTypeAndCollection(DocumentsOperationContext context, Slice lowerId, AttachmentRetireType retireType, string collection, out Slice outSlice)

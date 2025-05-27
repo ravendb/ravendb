@@ -530,13 +530,13 @@ namespace Raven.Server.Documents.Replication
 
                         if (attachment.Flags == AttachmentFlags.Retired)
                         {
-                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, resolved.LowerId, attachment.Name, expectedChangeVector: null, collectionName: out _,
+                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, collectionName: out _,
                                 updateDocument: false,
                                 attachment.Hash, attachment.ContentType, usePartialKey: false);
                         }
                         else
                         {
-                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, resolved.LowerId, attachment.Name, expectedChangeVector: null, collectionName: out _,
+                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, collectionName: out _,
                                 updateDocument: false,
                                 attachment.Hash, attachment.ContentType, usePartialKey: false);
                         }

@@ -455,7 +455,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 if (attachmentTombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
                                 {
-                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
                                         newChangeVector,
                                         attachmentTombstone.LastModifiedTicks);
                                 }

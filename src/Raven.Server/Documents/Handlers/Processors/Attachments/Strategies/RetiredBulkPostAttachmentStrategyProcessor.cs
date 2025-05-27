@@ -39,6 +39,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
             writer.WriteComma();
             writer.WritePropertyName(nameof(AttachmentDetails.Flags));
             writer.WriteInteger((int)attachment.Flags);
+            writer.WriteEndObject();
         }
     }
 }

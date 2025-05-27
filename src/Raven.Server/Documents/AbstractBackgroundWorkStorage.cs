@@ -32,7 +32,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         MetadataPropertyName = metadataPropertyName;
     }
 
-    public virtual void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
+    public void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
     {
         if (DateTime.TryParseExact(processDateString, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind,
                 out DateTime processDate) == false)

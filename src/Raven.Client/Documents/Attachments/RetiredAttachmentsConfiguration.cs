@@ -97,10 +97,10 @@ namespace Raven.Client.Documents.Attachments
                 throw new InvalidOperationException($"Max items to process{databaseNameStr} must be greater than 0.");
 
             if (HasUploader() == false)
-                throw new InvalidOperationException($"Exactly one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} must be configured when {nameof(Disabled)} is false.");
+                throw new InvalidOperationException($"Exactly one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} must be configured.");
 
             if (BackupConfiguration.CanBackupUsing(S3Settings) && BackupConfiguration.CanBackupUsing(AzureSettings))
-                throw new InvalidOperationException($"Only one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} can be configured when {nameof(Disabled)} is false.");
+                throw new InvalidOperationException($"Only one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} can be configured.");
         }
     }
 }

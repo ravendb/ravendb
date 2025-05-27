@@ -35,7 +35,11 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                store.Operations.Send(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream)
+                {
+                    RetireAt = DateTime.UtcNow.AddMinutes(3),
+                    ContentType = "image/png"
+                }));
 
                 using (var session = store.OpenSession())
                 {
@@ -49,8 +53,6 @@ namespace SlowTests.Server.Documents.Attachments
 
                 using (var session = store.OpenSession())
                 {
-                    Assert.Throws<InvalidOperationException>(() => session.Advanced.Attachments.Exists(id, "test.png"));
-
                     var retiredExists = session.Advanced.Attachments.Exists(id, "test.png");
                     Assert.True(retiredExists);
                 }
@@ -72,7 +74,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                store.Operations.Send(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                store.Operations.Send(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -104,7 +106,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                store.Operations.Send(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                store.Operations.Send(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
 
 
@@ -138,7 +140,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                store.Operations.Send(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                store.Operations.Send(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -157,10 +159,8 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments)]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task CanDeleteRetiredAttachmentByDocumentIdAndName(bool storageOnly)
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task CanDeleteRetiredAttachmentByDocumentIdAndName()
         {
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
@@ -174,7 +174,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                store.Operations.Send(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                store.Operations.Send(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
@@ -189,22 +189,12 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.False(exists);
                 }
 
-                if (storageOnly)
-                {
-                    await GetBlobsFromCloudAndAssertForCount(Settings, 1);
-                }
-                else
-                {
-                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
-                }
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1);
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments)]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task CanDeleteRetiredAttachmentByEntityAndName(bool storageOnly)
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task CanDeleteRetiredAttachmentByEntityAndName()
         {
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
@@ -219,7 +209,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                store.Operations.Send(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                store.Operations.Send(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -237,15 +227,7 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.False(exists);
                 }
 
-                if (storageOnly)
-                {
-                    await GetBlobsFromCloudAndAssertForCount(Settings, 1);
-                }
-                else
-                {
-                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
-                }
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1);
             }
         }
 
@@ -264,7 +246,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
                 using (var session = store.OpenAsyncSession())
                 {
@@ -278,8 +260,6 @@ namespace SlowTests.Server.Documents.Attachments
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await Assert.ThrowsAsync<InvalidOperationException>(async () => await session.Advanced.Attachments.ExistsAsync(id, "test.png"));
-
                     var retiredExists = await session.Advanced.Attachments.ExistsAsync(id, "test.png");
                     Assert.True(retiredExists);
                 }
@@ -301,7 +281,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -333,7 +313,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
@@ -366,7 +346,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -387,10 +367,8 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments)]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task CanDeleteRetiredAttachmentByDocumentIdAndNameAsync(bool storageOnly)
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task CanDeleteRetiredAttachmentByDocumentIdAndNameAsync()
         {
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
@@ -404,7 +382,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -419,23 +397,13 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.False(exists);
                 }
 
-                if (storageOnly)
-                {
-                    await GetBlobsFromCloudAndAssertForCount(Settings, 1);
-                }
-                else
-                {
-                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
-                }
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1);
             }
         }
 
 
-        [RavenTheory(RavenTestCategory.Attachments)]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task CanDeleteRetiredAttachmentByEntityAndNameAsync(bool storageOnly)
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task CanDeleteRetiredAttachmentByEntityAndNameAsync()
         {
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
@@ -450,7 +418,7 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -466,16 +434,7 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.False(exists);
                 }
 
-
-                if (storageOnly)
-                {
-                    await GetBlobsFromCloudAndAssertForCount(Settings, 1);
-                }
-                else
-                {
-                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
-                }
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1);
             }
         }
 
@@ -487,12 +446,6 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                throw new NotImplementedException();
-                //RetiredAttachments.ModifyRetiredAttachmentsConfig = config =>
-                //{
-                //    config.PurgeOnDelete = true;
-                //};
-
                 await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/1";
                 using (var session = store.OpenSession())
@@ -501,7 +454,8 @@ namespace SlowTests.Server.Documents.Attachments
                     session.SaveChanges();
                 }
 
-                using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
+                var buf = new byte[] { 1, 2, 3 };
+                using var profileStream = new MemoryStream(buf);
                 await PutAttachmentForTests(store, id, "test.png", profileStream, "Orders");
                 using (var session = store.OpenSession())
                 {
@@ -516,24 +470,24 @@ namespace SlowTests.Server.Documents.Attachments
 
                 GetStorageAttachmentsMetadataFromAllAttachments(database);
                 var a = Attachments.First();
-                var retireKey = $"{Settings.RemoteFolderName}/{a.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(a.Key))}";
+                var retireKey = $"{Settings.RemoteFolderName}/{a.Hash}";
 
                 Assert.Equal(blobs1.First().FullPath, retireKey);
                 using var profileStream2 = new MemoryStream(buffer);
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, "test.png", profileStream2, "image/png"));
-                S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 2);
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream2) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+
+                // we should still have the retired attachment stream in the cloud
+                S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 1);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(1);
-                // delete retire attachment is processed
+                // nothing should happen
                 await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
                 S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 1);
 
                 using (var session = store.OpenSession())
                 {
                     var exists = session.Advanced.Attachments.Exists(id, "test.png");
                     Assert.True(exists);
-
-                    await Assert.ThrowsAsync<InvalidOperationException>(() => Task.FromResult(session.Advanced.Attachments.Exists(id, "test.png")));
 
                     var attachment = session.Advanced.Attachments.Get(id, "test.png");
                     using var ms = new MemoryStream();
@@ -544,23 +498,27 @@ namespace SlowTests.Server.Documents.Attachments
                 // put retire attachment is processed
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(5);
                 await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                List<FileInfoDetails> blobs2;
+                if (buf.SequenceEqual(buffer))
+                {
+                    blobs2 = await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+                }
+                else
+                {
+                    blobs2 = await GetBlobsFromCloudAndAssertForCount(Settings, 2, 15_000);
+                }
 
-                var blobs2 = await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
                 S3RetiredAttachmentsSlowTests.GetToRetireAttachmentsCount(database, 0);
-
                 GetStorageAttachmentsMetadataFromAllAttachments(database);
 
                 a = Attachments.First();
-
-                Assert.Equal(blobs2.First().FullPath, $"{Settings.RemoteFolderName}/{a.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(a.Key))}");
+                Assert.Equal(blobs2.First().FullPath, $"{Settings.RemoteFolderName}/{a.Hash}");
                 Assert.Equal(1, Attachments.Count);
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments)]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task CanDeleteRetiredAttachmentByDocumentIdAndNameAndRead(bool storageOnly)
+        [RavenFact(RavenTestCategory.Attachments)]
+        public async Task CanDeleteRetiredAttachmentByDocumentIdAndNameAndRead()
         {
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
@@ -573,14 +531,12 @@ namespace SlowTests.Server.Documents.Attachments
                     session.SaveChanges();
                 }
 
-
                 var rnd = new Random();
                 var b = new byte[3];
                 rnd.NextBytes(b);
 
                 var profileStream = new MemoryStream(b);
-                store.Operations.Send(new PutAttachmentOperation(id, "test.png", profileStream, "image/png"));
-
+                store.Operations.Send(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -594,25 +550,16 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.False(exists);
                 }
 
-                if (storageOnly)
-                {
-                    await GetBlobsFromCloudAndAssertForCount(Settings, 1);
-                }
-                else
-                {
-                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
-                }
+
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1);
 
                 // add attachment with same name but different
-
                 rnd = new Random();
                 b = new byte[3];
                 rnd.NextBytes(b);
 
                 var newProfileStream = new MemoryStream(b);
-                store.Operations.Send(new PutAttachmentOperation(id, "test.png", newProfileStream, "image/png"));
-
+                store.Operations.Send(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", newProfileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
                 using (var session = store.OpenSession())
                 {
                     var exists = session.Advanced.Attachments.Exists(id, "test.png");
@@ -636,21 +583,14 @@ namespace SlowTests.Server.Documents.Attachments
                     await attachment.Stream.CopyToAsync(ms);
                     Assert.Equal(b, ms.ToArray());
 
-                    if (storageOnly)
-                    {
-                        await GetBlobsFromCloudAndAssertForCount(Settings, 2);
-                    }
-                    else
-                    {
-                        await GetBlobsFromCloudAndAssertForCount(Settings, 1);
-                    }
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 2);
                 }
             }
         }
 
         private async Task PutAttachmentForTests(DocumentStore store, string id, string name, MemoryStream profileStream, string collection)
         {
-            await store.Operations.SendAsync(new PutAttachmentOperation(id, name, profileStream, "image/png"));
+            await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
 
             profileStream.Position = 0;
 

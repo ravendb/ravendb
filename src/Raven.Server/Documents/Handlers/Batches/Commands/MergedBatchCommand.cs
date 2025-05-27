@@ -233,18 +233,19 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                             if (cmd.StorageOnly)
                             {
                                 // keep the retired attachment on cloud storage
-                                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
                             }
                             else
                             {
-                                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentCloudStorage, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
                             }
                         }
                         else
                         {
-                            Attachment attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, cmd.Id, cmd.Name, AttachmentType.Document, changeVector: null);
-                            RegularDeleteAttachmentStrategyProcessor.CheckAttachmentFlagAndThrowIfNeededInternal(context, attachment, Database, cmd.Id, cmd.Name);
-                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                            //TODO: egor we can remove this check, because we never delete attachments from cloud storage
+                            //Attachment attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, cmd.Id, cmd.Name, AttachmentType.Document, changeVector: null);
+                            //RegularDeleteAttachmentStrategyProcessor.CheckAttachmentFlagAndThrowIfNeededInternal(context, attachment, Database, cmd.Id, cmd.Name);
+                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
 
                         }
                     }
@@ -252,11 +253,11 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     {
                         if (cmd.Flags == AttachmentFlags.Retired)
                         {
-                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
                         }
                         else
                         {
-                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(AttachmentsStorage.DeleteAttachmentState.DocumentAttachment, context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
                         }
                     }
 

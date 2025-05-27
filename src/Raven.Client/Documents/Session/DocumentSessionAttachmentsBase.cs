@@ -273,11 +273,6 @@ namespace Raven.Client.Documents.Session
                     var attachment = JsonDeserializationClient.AttachmentName((BlittableJsonReaderObject)attachments[i]);
                     if (attachment.Name == name)
                     {
-                        if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
-                        {
-                            throw new InvalidOperationException($"Cannot delete attachment '{name}' on document '{documentId}' because it is retired. Please use dedicated API.");
-                        }
-
                         break;
                     }
 
