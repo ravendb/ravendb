@@ -1282,7 +1282,29 @@ public unsafe partial class Hnsw
             SearchState.NearestEdgesFlags.StartingPointAsEdge | SearchState.NearestEdgesFlags.FilterNodesWithEmptyPostingLists);
         return new NearestSearch(searchState, nearestNodesByLevel, vector, minimumSimilarity);
     }
+    
+    public class IndexedVectorsRetriever(LowLevelTransaction llt, string name) : IIndexedTermsRetriever
+    {
+        private readonly SearchState _searchState = new(llt, name);
+        private long _lastReadNodeId = 1;
 
+        public bool GetNextTerm(out ReadOnlySpan<byte> term)
+        {
+            if (_lastReadNodeId > _searchState.Options.CountOfVectors)
+            {
+                term = [];
+                return false;
+            }
+
+            _searchState.ReadNode(_lastReadNodeId, out var reader);
+            term = reader.ReadVector(in _searchState).ToReadOnlySpan();
+            _lastReadNodeId++;
+            return true;
+        }
+
+        public ConvertTo Type => ConvertTo.Base64;
+    }
+    
     public struct NearestSearch : IDisposable
     {
         public NearestSearch(SearchState searchState, ContextBoundNativeList<int> indexes, ReadOnlySpan<byte> vector, float minimumSimilarity)

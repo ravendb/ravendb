@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using Corax.Indexing;
 using Corax.Mappings;
 using Corax.Querying.Matches.Meta;
@@ -10,12 +9,13 @@ using Sparrow;
 using Sparrow.Compression;
 using Sparrow.Server;
 using Voron.Data.CompactTrees;
+using Voron.Data.Graphs;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 
 namespace Corax.Querying.Matches.TermProviders
 {
-    public struct ExistsTermProvider<TLookupIterator> : ITermProvider, IAggregationProvider
+    public struct ExistsTermProvider<TLookupIterator> : ITermProvider, IAggregationProvider, IIndexedTermsRetriever
         where TLookupIterator : struct, ILookupIterator
     {
         private readonly long _numberOfTerms;
@@ -134,7 +134,9 @@ namespace Corax.Querying.Matches.TermProviders
             term = Span<byte>.Empty;
             return false;
         }
-        
+
+        public ConvertTo Type => ConvertTo.String;
+
         public QueryInspectionNode Inspect()
         {
             return new QueryInspectionNode($"{nameof(ExistsTermProvider<TLookupIterator>)}",

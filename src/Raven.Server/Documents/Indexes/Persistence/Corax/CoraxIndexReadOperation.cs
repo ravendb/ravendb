@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq;
 using System.Threading;
 using Corax.Querying;
 using Corax.Mappings;
@@ -28,7 +29,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.Server;
 using Voron;
 using Voron.Impl;
@@ -37,6 +37,7 @@ using CoraxConstants = Corax.Constants;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using CoraxSpatialResult = global::Corax.Utils.Spatial.SpatialResult;
 using Sparrow.Server.Logging;
+using Voron.Data.Graphs;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
@@ -1138,34 +1139,66 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             throw new NotImplementedException($"{nameof(Corax)} does not support intersect queries.");
         }
 
-        public override SortedSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
+        public override List<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
         {
-            SortedSet<string> results = new();
+            if (IndexSearcher.TryGetVectorsOfField(field, out var vectorsRetriever))
+            {
+                List<string> terms = new();
+                return TermsInternal(fromValue, pageSize, vectorsRetriever, terms, token);
+            }
 
-            if (IndexSearcher.TryGetTermsOfField(IndexSearcher.FieldMetadataBuilder(field), out var terms) == false)
-                return results;
+            if (IndexSearcher.TryGetTermsOfField(IndexSearcher.FieldMetadataBuilder(field), out var termsRetriever))
+            {
+                SortedSet<string> terms = new(StringComparer.Ordinal);
+                return TermsInternal(fromValue, pageSize, termsRetriever, terms, token).ToList();
+            }
 
+            return [];
+        }
+
+        private TResult TermsInternal<TRetriever, TResult>(string fromValue, long pageSize, TRetriever retriever, TResult results, CancellationToken token)
+            where TRetriever : IIndexedTermsRetriever
+            where TResult : ICollection<string> 
+        {
             if (string.IsNullOrEmpty(fromValue) == false)
             {
-                Span<byte> fromValueBytes = Encodings.Utf8.GetBytes(fromValue);
-                while (terms.GetNextTerm(out var termSlice))
+                Span<byte> fromValueBytes = StringToValue(fromValue);
+                while (retriever.GetNextTerm(out var currentTerm) && currentTerm.SequenceEqual(fromValueBytes) == false)
                 {
                     token.ThrowIfCancellationRequested();
-                    if (termSlice.SequenceEqual(fromValueBytes))
-                        break;
                 }
             }
 
-            while (pageSize > 0 && terms.GetNextTerm(out var termSlice))
+            while (pageSize > 0 && retriever.GetNextTerm(out var currentTerm))
             {
                 token.ThrowIfCancellationRequested();
-                results.Add(Encodings.Utf8.GetString(termSlice));
+                results.Add(ValueToString(currentTerm));
                 pageSize--;
             }
 
             return results;
-        }
+            
+            string ValueToString(ReadOnlySpan<byte> bytes)
+            {
+                return retriever.Type switch
+                {
+                    ConvertTo.Base64 => Convert.ToBase64String(bytes),
+                    ConvertTo.String => Encodings.Utf8.GetString(bytes),
+                    _ => throw new NotSupportedException($"The type {retriever.Type} is not supported.")
+                };
+            }
 
+            Span<byte> StringToValue(string value)
+            {
+                return retriever.Type switch
+                {
+                    ConvertTo.Base64 => Convert.FromBase64String(value),
+                    ConvertTo.String => Encodings.Utf8.GetBytes(value),
+                    _ => throw new NotSupportedException($"The type {retriever.Type} is not supported.")
+                };
+            }
+        }
+        
         public override IEnumerable<QueryResult> MoreLikeThis(IndexQueryServerSide query, IQueryResultRetriever retriever, DocumentsOperationContext context,
             CancellationToken token)
         {

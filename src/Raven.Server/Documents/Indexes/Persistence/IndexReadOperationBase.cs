@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
             Reference<long> skippedResults, Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
             CancellationToken token);
 
-        public abstract SortedSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token);
+        public abstract List<string> Terms(string field, string fromValue, long pageSize, CancellationToken token);
 
         public abstract IEnumerable<QueryResult> MoreLikeThis(
             IndexQueryServerSide query,

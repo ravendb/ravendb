@@ -19,6 +19,7 @@ using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
 using Voron.Data.Fixed;
+using Voron.Data.Graphs;
 using Voron.Data.Lookups;
 using Voron.Impl;
 using InvalidOperationException = System.InvalidOperationException;
@@ -571,6 +572,24 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         }
 
         _vectorFieldsMarkers ??= _metadataTree?.Read(Constants.IndexWriter.VectorFieldsRootPagesSlice)?.Reader.ToUnmanagedSpan<long>().ToSpan().ToArray() ?? [];
+    }
+
+    public bool TryGetVectorsOfField(string fieldName, out Hnsw.IndexedVectorsRetriever retriever)
+    {
+        using var _ = Slice.From(Allocator, fieldName, out var fieldNameAsSlice);
+        var exists = TryGetRootPageByFieldName(fieldNameAsSlice, out var fieldRootPage);
+        
+        if (_vectorFieldsMarkers is null)
+            InitializeSpecialTermsMarkers();
+
+        if (_vectorFieldsMarkers.AsSpan().Contains(fieldRootPage) == false)
+        {
+            retriever = null;
+            return false;
+        }
+        
+        retriever = new Hnsw.IndexedVectorsRetriever(_transaction.LowLevelTransaction, fieldName);
+        return true;
     }
     
     public static void LoadSpecialTermMarkers(Tree postingList, out HashSet<long> termsMarkers)

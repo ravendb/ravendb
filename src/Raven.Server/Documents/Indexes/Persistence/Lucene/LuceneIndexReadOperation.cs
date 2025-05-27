@@ -756,7 +756,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public override SortedSet<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
+        public override List<string> Terms(string field, string fromValue, long pageSize, CancellationToken token)
         {
             var results = new SortedSet<string>(StringComparer.Ordinal);
             using (var termDocs = _searcher.IndexReader.HasDeletions ? _searcher.IndexReader.TermDocs(_state) : null)
@@ -769,7 +769,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                         token.ThrowIfCancellationRequested();
 
                         if (termEnum.Next(_state) == false)
-                            return results;
+                            return results.ToList();
                     }
                 }
                 while (termEnum.Term == null ||
@@ -800,7 +800,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 }
             }
 
-            return results;
+            return results.ToList();
         }
 
         public override IEnumerable<QueryResult> MoreLikeThis(
