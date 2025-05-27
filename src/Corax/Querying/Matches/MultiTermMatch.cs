@@ -367,8 +367,8 @@ namespace Corax.Querying.Matches
         {
             var incomingMatches = buffer.Slice(0, matches);
             using var _ = _context.Allocate(2 * sizeof(long) * buffer.Length, out var bufferHolder);
-            var innerMatchesBuffer = bufferHolder.ToSpan<long>()[..buffer.Length];
-            var workingMatches = bufferHolder.ToSpan<long>()[buffer.Length..];
+            var innerMatchesBuffer = bufferHolder.ToSpan<long>()[matches..];
+            var workingMatches = bufferHolder.ToSpan<long>()[..matches];
             
             // We store all results in a single list - the motivation for this is that we may get the same result from multiple Fill calls
             // (e.g. in case of WhereIn with multiple matching terms). In such case it will be deduplicated.
