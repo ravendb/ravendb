@@ -135,7 +135,4 @@ export const storageClassOptions: SelectOption<Raven.Client.Documents.Operations
     { value: "ReducedRedundancy", label: "Reduced Redundancy" },
     { value: "DeepArchive", label: "Deep Archive" },
     { value: "ExpressOneZone", label: "Express One Zone" },
-    // Marked as obsolete for now
-    // { value: "Snow", label: "Snow" },
-    // { value: "Outposts", label: "Outposts" },
 ];
