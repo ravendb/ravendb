@@ -309,7 +309,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
     private void ApplyUpdateScript(DocumentsOperationContext context, List<GenAiResultItem> results)
     {
         PatchRequest req = new(Configuration.UpdateScript, PatchRequestType.GenAi);
-        var cmd = new GenAiBatchPatchCommand(context, results, req, Configuration.Name, Logger, Statistics);
+        var cmd = new GenAiBatchPatchCommand(context, results, req, Configuration.Identifier, Logger, Statistics);
 
         Database.TxMerger.EnqueueSync(cmd);
     }
@@ -448,7 +448,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     }
 
                     if (lastPatch?.PatchResult?.ModifiedDocument != null)
-                        outputDocument = GenAiBatchPatchCommand.UpdateHashesInMetadata(document.Id, lastPatch.PatchResult.ModifiedDocument, Configuration.Name, hashes, context);
+                        outputDocument = GenAiBatchPatchCommand.UpdateHashesInMetadata(document.Id, lastPatch.PatchResult.ModifiedDocument, Configuration.Identifier, hashes, context);
 
                     break;
                 }

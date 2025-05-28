@@ -21,6 +21,16 @@ public sealed class AddGenAiCommand : AddEtlCommand<GenAiConfiguration, AiConnec
 
     public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
     {
+        try
+        {
+            if (string.IsNullOrEmpty(Configuration.Identifier))
+                Configuration.Identifier = Configuration.GenerateIdentifier();
+        }
+        catch (Exception e)
+        {
+            throw new RachisApplyException("Failed to generate GenAI task identifier", e);
+        }
+
         Validate(record);
 
         Add(ref record.GenAis, record, etag);
@@ -28,9 +38,6 @@ public sealed class AddGenAiCommand : AddEtlCommand<GenAiConfiguration, AiConnec
 
     private void Validate(DatabaseRecord databaseRecord)
     {
-        return;
-
-        // TODO
         if (databaseRecord == null)
             throw new RachisApplyException("Failed to get database record, but it is required for further validation");
 

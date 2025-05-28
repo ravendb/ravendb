@@ -18,7 +18,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
 {
     private readonly List<GenAiResultItem> _items;
     private readonly PatchRequest _patchRequest;
-    private readonly string _taskName;
+    private readonly string _taskIdentifier;
     private readonly RavenLogger _logger;
     private readonly EtlProcessStatistics _statistics;
     private readonly DocumentDatabase _database;
@@ -26,7 +26,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
     public GenAiBatchPatchCommand(DocumentsOperationContext context,
         List<GenAiResultItem> items,
         PatchRequest patchRequest,
-        string taskName,
+        string taskIdentifier,
         RavenLogger logger, 
         EtlProcessStatistics statistics)
     {
@@ -35,9 +35,9 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
         _logger = logger ?? throw new ArgumentException(nameof(logger));
         _statistics = statistics ?? throw new ArgumentException(nameof(statistics));
 
-        if (string.IsNullOrEmpty(taskName))
-            throw new ArgumentException(nameof(taskName));
-        _taskName = taskName;
+        if (string.IsNullOrEmpty(taskIdentifier))
+            throw new ArgumentException(nameof(taskIdentifier));
+        _taskIdentifier = taskIdentifier;
 
         if (context == null)
             throw new ArgumentNullException(nameof(context));
@@ -101,7 +101,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
             if (allHashes.Count is 0)
                 continue;
 
-            UpdateHashesInMetadata(id, doc, _taskName, allHashes, context);
+            UpdateHashesInMetadata(id, doc, _taskIdentifier, allHashes, context);
         }
 
         return _items.Count;
@@ -118,7 +118,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
         return context.ReadObject(djv, item.DocId);
     }
 
-    internal static BlittableJsonReaderObject UpdateHashesInMetadata(string id, BlittableJsonReaderObject doc, string taskName, List<string> allHashes, DocumentsOperationContext context)
+    internal static BlittableJsonReaderObject UpdateHashesInMetadata(string id, BlittableJsonReaderObject doc, string taskIdentifier, List<string> allHashes, DocumentsOperationContext context)
     {
         if (doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false)
         {
@@ -130,7 +130,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                 {
                     [Constants.Documents.Metadata.GenAiHashes] = new DynamicJsonValue
                     {
-                        [taskName] = allHashes
+                        [taskIdentifier] = allHashes
                     }
                 }
             };
@@ -144,7 +144,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
             {
                 [Constants.Documents.Metadata.GenAiHashes] = new DynamicJsonValue
                 {
-                    [taskName] = allHashes
+                    [taskIdentifier] = allHashes
                 }
             };
             doc.Modifications = new DynamicJsonValue(doc)
@@ -157,7 +157,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
         {
             // we already have the hashes section, need to modify it
 
-            if (hashes.TryGet(taskName, out BlittableJsonReaderArray existingHashes) && existingHashes != null && 
+            if (hashes.TryGet(taskIdentifier, out BlittableJsonReaderArray existingHashes) && existingHashes != null && 
                 existingHashes.Length == allHashes.Count)
             {
                 bool needToUpdate = false;
@@ -179,7 +179,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
 
             hashes.Modifications = new DynamicJsonValue(hashes)
             {
-                [taskName] = allHashes
+                [taskIdentifier] = allHashes
             };
 
             metadata.Modifications = new DynamicJsonValue(metadata)

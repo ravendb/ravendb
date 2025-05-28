@@ -9,8 +9,8 @@ namespace Raven.Client.Documents.Operations.AI;
 
 public class GenAiConfiguration : AbstractAiIntegrationConfiguration
 {
-    public override string GetDestination() => Name;
-    public override string GetDefaultTaskName() => Name;
+    public override string GetDestination() => Identifier;
+    public override string GetDefaultTaskName() => Identifier;
 
     public string Identifier { get; set; }
     public string Collection { get; set; }
@@ -95,6 +95,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     {
         var json = base.ToJson();
 
+        json[nameof(Identifier)] = Identifier;
         json[nameof(AiConnectorType)] = AiConnectorType;
         json[nameof(Identifier)] = Identifier;
         json[nameof(Collection)] = Collection;
