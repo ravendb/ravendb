@@ -62,9 +62,13 @@ namespace Sparrow
 
         public static class X86
         {
-            public static readonly bool IsSupportedSse;
-            public static readonly bool IsSupportedAvx256;
-            public static readonly bool IsSupportedAvx512;
+            public static readonly bool IsSupportedSse; // SSE 4.2 + POPCNT
+            public static readonly bool IsSupportedAvx256; // Avx2 + FMA
+            
+            // AVX-512 profile flags
+            public static readonly bool IsSupportedAvx512; // All Supported AVX-512 extensions
+            public static readonly bool IsSupportedAvx512Basic; // F|BW|VL|DQ (Skylake, Zen 3)
+            public static readonly bool IsSupportedAvx512Advanced; // Basic + VBMI (Tiger Lake, Zen 4c AVX-512)
 
             static X86()
             {
@@ -76,11 +80,30 @@ namespace Sparrow
                 IsSupportedSse = false;
                 IsSupportedAvx256 = false;
 #endif
+                
+#if NET9_0_OR_GREATER
+                // Basic AVX-512 (F|BW|VL|DQ)
+                IsSupportedAvx512Basic = IsSupportedAvx256 & Avx512F.IsSupported & Avx512BW.IsSupported & Avx512CD.VL.IsSupported & Avx512DQ.IsSupported;
 
-#if NET8_0_OR_GREATER
-                // We require the full set of instructions set to be enabled in order to support AVX-512
-                IsSupportedAvx512 = IsSupportedAvx256 & Avx512CD.IsSupported & Avx512BW.IsSupported & Avx512DQ.IsSupported & Avx512Vbmi.IsSupported & Avx512F.IsSupported;
+                // Advanced AVX-512 (Basic + CD|VBMI)
+                IsSupportedAvx512Advanced = IsSupportedAvx512Basic & Avx512Vbmi.IsSupported & Avx512CD.IsSupported;
+
+                // Full AVX-512 support check (all extensions).
+                IsSupportedAvx512 = IsSupportedAvx512Advanced & AvxVnni.IsSupported;
+                
+#elif NET8_0_OR_GREATER
+                // Basic AVX-512 (F|BW|VL|DQ)
+                IsSupportedAvx512Basic = IsSupportedAvx256 & Avx512F.IsSupported & Avx512BW.IsSupported & Avx512CD.VL.IsSupported & Avx512DQ.IsSupported;
+                
+                // Advanced AVX-512 (Basic + CD|VBMI)
+                IsSupportedAvx512Advanced = IsSupportedAvx512Basic & Avx512Vbmi.IsSupported & Avx512CD.IsSupported;
+                
+                // Full AVX-512 support check (all extensions). Right now this is equal to Advanced, but it is not guaranteed
+                // to stay that way.
+                IsSupportedAvx512 = IsSupportedAvx512Advanced;
 #else
+                IsSupportedAvx512Basic = false;
+                IsSupportedAvx512Advanced = false;
                 IsSupportedAvx512 = false;
 #endif
 
@@ -92,6 +115,8 @@ namespace Sparrow
                     IsSupportedSse = false;
                     IsSupportedAvx256 = false;
                     IsSupportedAvx512 = false;
+                    IsSupportedAvx512Basic = false;
+                    IsSupportedAvx512Advanced = false;
                 }
 
                 // We assume for simplicity in the testing matrix and to simplify our life that whenever AVX512 also is AVX2, etc.
@@ -103,8 +128,18 @@ namespace Sparrow
                         goto case "avx256";
                     case "avx256":
                         IsSupportedAvx256 = false;
-                        goto case "avx512";
-                    case "avx512":
+                        goto case "avx512-basic";
+                    case "avx512": // This is an alias whose objective is to remain backward compatible
+                    case "avx512-basic":
+                        IsSupportedAvx512Basic = false;
+                        IsSupportedAvx512Advanced = false; // Advanced depends on Basic
+                        IsSupportedAvx512 = false; // Full depends on Advanced
+                        break;
+                    case "avx512-advanced":
+                        IsSupportedAvx512Advanced = false;
+                        IsSupportedAvx512 = false; // Full depends on Advanced
+                        break;                    
+                    case "avx512-full":
                         IsSupportedAvx512 = false;
                         break;
                 }

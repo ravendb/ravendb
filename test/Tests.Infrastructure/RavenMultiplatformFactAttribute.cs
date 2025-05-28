@@ -38,11 +38,13 @@ public enum RavenIntrinsics
     Arm64 = 1 << 2,
     Sse = 1 << 3,
     Avx256 = 1 << 4,
-    Avx512 = 1 << 5,
+    Avx512Basic = 1 << 5,
+    Avx512Advanced = 1 << 6,
+    Avx512Full = 1 << 7,
 
-    Vector128 = 1 << 7,
-    Vector256 = 1 << 8,
-    Vector512 = 1 << 9
+    Vector128 = 1 << 8,
+    Vector256 = 1 << 9,
+    Vector512 = 1 << 10
 }
 
 public class RavenMultiplatformFactAttribute : RavenFactAttribute
@@ -181,7 +183,13 @@ public class RavenMultiplatformFactAttribute : RavenFactAttribute
         if (intrinsics.HasFlag(RavenIntrinsics.Avx256) && AdvInstructionSet.X86.IsSupportedAvx256 == false)
             return false;
 
-        if (intrinsics.HasFlag(RavenIntrinsics.Avx512) && AdvInstructionSet.X86.IsSupportedAvx512 == false)
+        if (intrinsics.HasFlag(RavenIntrinsics.Avx512Basic) && AdvInstructionSet.X86.IsSupportedAvx512Basic == false)
+            return false;
+
+        if (intrinsics.HasFlag(RavenIntrinsics.Avx512Advanced) && AdvInstructionSet.X86.IsSupportedAvx512Advanced == false)
+            return false;
+
+        if (intrinsics.HasFlag(RavenIntrinsics.Avx512Full) && AdvInstructionSet.X86.IsSupportedAvx512 == false)
             return false;
 
         return true;

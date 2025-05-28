@@ -111,7 +111,7 @@ namespace Sparrow.Server.Tensors
             {
                 if (a.Length >= Vector256<sbyte>.Count && AdvInstructionSet.X86.IsSupportedAvx256)
                 {
-                    if (Avx512BW.IsSupported && Avx512F.IsSupported)
+                    if (AdvInstructionSet.X86.IsSupportedAvx512Basic)
                     {
                         return Vectorized512.CosineSimilarityIntegersAvx512(
                             MemoryMarshal.Cast<T, sbyte>(a), aMagnitude,
@@ -135,20 +135,20 @@ namespace Sparrow.Server.Tensors
             {
                 if (typeof(T) == typeof(float))
                 {
-                    return Vectorized512.CosineSimilarity(
+                    return Vectorized512.CosineSimilarity<float, TResult>(
                         MemoryMarshal.Cast<T, float>(a), aMagnitude,
                         MemoryMarshal.Cast<T, float>(b), bMagnitude);
                 }
 
                 if (typeof(T) == typeof(double))
                 {
-                    return Vectorized512.CosineSimilarity(
+                    return Vectorized512.CosineSimilarity<double, TResult>(
                         MemoryMarshal.Cast<T, double>(a), aMagnitude,
                         MemoryMarshal.Cast<T, double>(b), bMagnitude);
                 }
             }
 
-            return Serial.CosineSimilarity(a, aMagnitude, b, bMagnitude);
+            return Serial.CosineSimilarity<T, TResult>(a, aMagnitude, b, bMagnitude);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -645,7 +645,7 @@ namespace Sparrow.Server.Tensors
                     ref var afRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(a));
                     ref var bfRef = ref MemoryMarshal.GetReference(MemoryMarshal.Cast<T, float>(b));
 
-                    if (Sse2.IsSupported)
+                    if (AdvInstructionSet.X86.IsSupportedSse)
                     {
                         similarity = CosineSimilarityInternalX64(ref afRef, 1.0f, ref bfRef, 1.0f, (nuint)a.Length);
                     }

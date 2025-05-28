@@ -54,7 +54,7 @@ namespace Sparrow.Server.Tensors
                 return Vector512.MultiplyAddEstimate(x.AsSingle(), y.AsSingle(), z.AsSingle()).As<float, T>();
             }
 #else
-            if (Avx512F.IsSupported)
+            if (AdvInstructionSet.X86.IsSupportedAvx512Basic)
             {
                 if (typeof(T) == typeof(float))
                     return Avx512F.FusedMultiplyAdd(x.AsSingle(), y.AsSingle(), z.AsSingle()).As<float, T>();
@@ -62,7 +62,7 @@ namespace Sparrow.Server.Tensors
                     return Avx512F.FusedMultiplyAdd(x.AsDouble(), y.AsDouble(), z.AsDouble()).As<double, T>();
             }
 
-            if (Fma.IsSupported)
+            if (AdvInstructionSet.X86.IsSupportedAvx256)
             {
                 // PERF: we do the FMA on the upper and lower lanes separately
                 if (typeof(T) == typeof(float))
