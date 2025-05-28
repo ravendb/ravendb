@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             var attachmentsStreams = new List<Stream>();
             DirectFileDownloader downloader = null;
             bool canDisposeReadTransaction = true;
-            DocumentsTransaction tx = context.OpenReadTransaction();
+            using DocumentsTransaction tx = context.OpenReadTransaction();
             var stream = new MemoryStream();
             try
             {
@@ -101,7 +101,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             {
                 downloader?.Dispose();
                 await stream.DisposeAsync();
-                tx.Dispose();
             }
 
             using (context.GetMemoryBuffer(out var buffer))

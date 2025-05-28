@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
 using System.Text;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
@@ -53,6 +52,10 @@ namespace Raven.Client.Documents.Commands.Batches
             _mode = mode;
 
             _commandsAsJson = new BlittableJsonReaderObject[_commands.Count];
+            foreach (var command in commands)
+            {
+                HandlePutAttachmentCommandData(command);
+            }
             Timeout = options?.RequestTimeout;
         }
 
@@ -78,8 +81,6 @@ namespace Raven.Client.Documents.Commands.Batches
                 _supportsAtomicWrites = node.SupportsAtomicClusterWrites;
                 for (var i = 0; i < _commands.Count; i++)
                 {
-                    HandlePutAttachmentCommandData(_commands[i]);
-
                     var command = _commands[i];
 
                     var json = command.ToJson(_conventions, ctx);
