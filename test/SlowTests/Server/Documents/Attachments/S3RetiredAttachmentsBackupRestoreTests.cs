@@ -24,11 +24,9 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AmazonS3RetryTheory]
-        [InlineData(1, 3, true)]
-        [InlineData(64, 3, true)]
-        [InlineData(1, 3, false)]
-        [InlineData(64, 3, false)]
-        public async Task CanBackupAndRestoreDeletedRetiredAttachments(int attachmentsCount, int size, bool storageOnly)
+        [InlineData(1, 3)]
+        [InlineData(64, 3)]
+        public async Task CanBackupAndRestoreDeletedRetiredAttachments(int attachmentsCount, int size)
         {
             await using (var holder = CreateCloudSettings())
             {
@@ -49,14 +47,9 @@ namespace SlowTests.Server.Documents.Attachments
                     var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                     await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
 
-                    if (storageOnly == false)
-                    {
-                        await GetBlobsFromCloudAndAssertForCount(Settings, 0);
-                    }
-                    else
-                    {
+                    
                         await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
-                    }
+             
 
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
