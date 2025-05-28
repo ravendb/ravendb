@@ -65,8 +65,7 @@ namespace Raven.Server.Documents.Queries
                         if (scope == null)
                             sw = Stopwatch.StartNew();
 
-                        result = await GetRunner(query).ExecuteQuery(query, queryContext, existingResultEtag, token)
-                                                       .ConfigureAwait(false);
+                        result = await GetRunner(query).ExecuteQuery(query, queryContext, existingResultEtag, token);
                     }
 
                     result.DurationInMs = sw != null ? (long)sw.Elapsed.TotalMilliseconds : (long)scope.Duration.TotalMilliseconds;

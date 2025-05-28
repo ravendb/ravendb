@@ -104,7 +104,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                 using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
                 {
                     var parameters = QueryStringParameters.Create(HttpContext.Request);
-                    var indexQuery = await GetIndexQueryAsync(context, QueryMethod, tracker, parameters.AddSpatialProperties);
+                    var indexQuery = await GetIndexQueryAsync(context, QueryMethod, tracker, parameters.AddSpatialProperties).AsTask();
 
                     indexQuery.Diagnostics = parameters.Diagnostics ? new List<string>() : null;
                     indexQuery.AddTimeSeriesNames = parameters.AddTimeSeriesNames;
@@ -146,7 +146,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
                     QueryResultServerSide<TQueryResult> result = null;
                     try
                     {
-                        result = await GetQueryResultsAsync(indexQuery, queryContext, existingResultEtag, parameters.MetadataOnly, token);
+                        result = await GetQueryResultsAsync(indexQuery, queryContext, existingResultEtag, parameters.MetadataOnly, token).AsTask();
                     }
                     catch (IndexDoesNotExistException)
                     {

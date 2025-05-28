@@ -196,7 +196,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
     {
         var clusterWideTx = parameters.TxMode == TransactionMode.ClusterWide;
         var result = await GetDocumentsByIdImplAsync(context, parameters.Ids, parameters.IncludePaths, revisions, parameters.Counters, timeSeries, parameters.CompareExchange, parameters.MetadataOnly, clusterWideTx, etag)
-                                .ConfigureAwait(false);
+                                .AsTask();
 
         if (result.StatusCode == HttpStatusCode.NotFound)
         {
@@ -218,7 +218,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + result.Etag + "\"";
 
         return await WriteDocumentsByIdResultAsync(context, parameters.MetadataOnly, clusterWideTx, result)
-                        .ConfigureAwait(false);
+                        .AsTask();
     }
 
     private async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsByIdResultAsync(

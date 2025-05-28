@@ -49,7 +49,7 @@ internal sealed class DatabaseQueriesHandlerProcessorForGet : AbstractQueriesHan
     protected override async ValueTask<QueryResultServerSide<Document>> GetQueryResultsAsync(IndexQueryServerSide query, QueryOperationContext queryContext,
         long? existingResultEtag, bool metadataOnly, OperationCancelToken token)
     {
-        return await RequestHandler.Database.QueryRunner.ExecuteQuery(query, queryContext, existingResultEtag, token).ConfigureAwait(false);
+        return await RequestHandler.Database.QueryRunner.ExecuteQuery(query, queryContext, existingResultEtag, token);
     }
 
     protected override void EnsureQueryContextInitialized(QueryOperationContext queryContext, IndexQueryServerSide indexQuery)
