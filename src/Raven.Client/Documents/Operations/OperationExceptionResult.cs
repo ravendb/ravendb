@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Net;
+using Raven.Client.Exceptions.Commercial;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations
@@ -7,6 +8,8 @@ namespace Raven.Client.Documents.Operations
     public sealed class OperationExceptionResult : IOperationResult
     {
         public string Type { get; set; }
+
+        public LimitType? LicenseLimitSubType { get; set; }
 
         public string Message { get; set; }
 
@@ -23,6 +26,8 @@ namespace Raven.Client.Documents.Operations
         {
             ShouldPersist = shouldBePersistent;
             Type = exception.GetType().FullName;
+            if (exception is LicenseLimitException lle)
+                LicenseLimitSubType = lle.Type;
             Message = exception.Message;
             Error = ExceptionToString(exception);
             StatusCode = statusCode;
@@ -33,6 +38,7 @@ namespace Raven.Client.Documents.Operations
             return new DynamicJsonValue(GetType())
             {
                 [nameof(Type)] = Type,
+                [nameof(LicenseLimitSubType)] = LicenseLimitSubType?.ToString(),
                 [nameof(Message)] = Message,
                 [nameof(Error)] = Error,
                 [nameof(StatusCode)] = (int)StatusCode

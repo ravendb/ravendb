@@ -215,6 +215,11 @@ namespace Raven.Server
                             [nameof(ExceptionDispatcher.ExceptionSchema.Message)] = e.Message,
                             [nameof(ExceptionDispatcher.ExceptionSchema.Error)] = e.ToString()
                         };
+                        if (e is LicenseLimitException licenseLimitException)
+                        {
+                            djv[nameof(ExceptionDispatcher.ExceptionSchema.LicenseLimitSubType)] = licenseLimitException.Type;
+                        }
+
 
 #if EXCEPTION_ERROR_HUNT
                     var f = Guid.NewGuid() + ".error";

@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Raven.Client.Exceptions.Commercial;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Compilation;
@@ -23,6 +24,8 @@ namespace Raven.Client.Exceptions
             public string Url { get; set; }
 
             public string Type { get; set; }
+
+            public LimitType? LicenseLimitSubType { get; set; }
 
             public string Message { get; set; }
 
@@ -105,8 +108,21 @@ namespace Raven.Client.Exceptions
                 try
                 {
                     var message = schema.Error;
-
-                    exception = (Exception)Activator.CreateInstance(type, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { message }, null, null);
+                    if (type == typeof(LicenseLimitException) && schema.LicenseLimitSubType != null)
+                    {
+                         exception = (Exception)Activator.CreateInstance(
+                             type,
+                             BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,
+                             null,
+                             new object[] { schema.LicenseLimitSubType.Value, message },
+                             null,
+                             null
+                          );
+                    }
+                    else
+                    {
+                        exception = (Exception)Activator.CreateInstance(type, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { message }, null, null);
+                    }
                 }
                 catch (Exception)
                 {
