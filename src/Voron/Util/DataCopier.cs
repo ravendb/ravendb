@@ -61,7 +61,11 @@ namespace Voron.Util
                 {
                     cancellationToken.ThrowIfCancellationRequested();
 
-                    _rateGate?.WaitToProceed();
+                    if (_rateGate != null)
+                    {
+                        ForTestingPurposes?.OnBeforeRateGateWaitToProceed?.Invoke();
+                        _rateGate.WaitToProceed();
+                    }
 
                     var pagesToCopy = (int) (i + steps > numberOfPages ? numberOfPages - i : steps);
                     src.EnsureMapped(tempTx, i, pagesToCopy);
@@ -135,6 +139,21 @@ namespace Voron.Util
                                 $"{new Size((long)(totalCopied / totalSecElapsed), SizeUnit.Bytes)}/sec");
 
             Debug.Assert(numberOf4KbsToCopy == 0);
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal sealed class TestingStuff
+        {
+            internal Action OnBeforeRateGateWaitToProceed;
         }
     }
 }

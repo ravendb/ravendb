@@ -85,6 +85,10 @@ namespace Voron.Impl.Backup
                 var env = e.Env;
                 var dataPager = env.Options.DataPager;
                 var copier = new DataCopier(Constants.Storage.PageSize * 16, rateGate);
+
+                if (ForTestingPurposes?.OnBeforeRateGateWaitToProceed != null)
+                    copier.ForTestingPurposesOnly().OnBeforeRateGateWaitToProceed = ForTestingPurposes?.OnBeforeRateGateWaitToProceed;
+
                 Backup(env, compressionAlgorithm, compressionLevel, dataPager, archive, basePath, copier, infoNotify, cancellationToken);
             }
 
@@ -365,6 +369,21 @@ namespace Voron.Impl.Backup
                 return ZstdStream.Decompress(backupStream);
 
             return backupStream;
+        }
+
+        internal TestingStuff ForTestingPurposes;
+
+        internal TestingStuff ForTestingPurposesOnly()
+        {
+            if (ForTestingPurposes != null)
+                return ForTestingPurposes;
+
+            return ForTestingPurposes = new TestingStuff();
+        }
+
+        internal sealed class TestingStuff
+        {
+            internal Action OnBeforeRateGateWaitToProceed;
         }
     }
 }

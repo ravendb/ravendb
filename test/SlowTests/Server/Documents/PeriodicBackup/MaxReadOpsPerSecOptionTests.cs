@@ -3,14 +3,17 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Google.Apis.Util;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
+using Voron.Impl.Backup;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,6 +22,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup;
 public class MaxReadOpsPerSecOptionTests : ClusterTestBase
 {
     private readonly ITestOutputHelper _output;
+    private static readonly string ProcessArchitecture = RuntimeInformation.ProcessArchitecture.ToString();
 
     public MaxReadOpsPerSecOptionTests(ITestOutputHelper output) : base(output)
     {
@@ -70,7 +74,7 @@ public class MaxReadOpsPerSecOptionTests : ClusterTestBase
         var backupDurationWithMaxReadOps = await scenario.MeasurePeriodicBackupDurationAsync();
 
         scenario.AssertResults(backupDurationWithDefaults, backupDurationWithMaxReadOps);
-        _output.WriteLine($"Backup duration with defaults: {backupDurationWithDefaults}, Backup duration with MaxReadOpsPerSec: {backupDurationWithMaxReadOps}");
+        _output.WriteLine($"Backup duration with defaults: {backupDurationWithDefaults}, Backup duration with MaxReadOpsPerSec: {backupDurationWithMaxReadOps}, process architecture: {ProcessArchitecture}");
     }
 
     [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
@@ -94,7 +98,7 @@ public class MaxReadOpsPerSecOptionTests : ClusterTestBase
         var backupDurationWithMaxReadOps = await scenario.MeasureOneTimeBackupDurationAsync();
 
         scenario.AssertResults(backupDurationWithDefaults, backupDurationWithMaxReadOps);
-        _output.WriteLine($"Backup duration with defaults: {backupDurationWithDefaults}, Backup duration with MaxReadOpsPerSec: {backupDurationWithMaxReadOps}");
+        _output.WriteLine($"Backup duration with defaults: {backupDurationWithDefaults}, Backup duration with MaxReadOpsPerSec: {backupDurationWithMaxReadOps}, process architecture: {ProcessArchitecture}");
     }
 
     [RavenTheory(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
@@ -115,7 +119,7 @@ public class MaxReadOpsPerSecOptionTests : ClusterTestBase
         var restoreDurationWithMaxReadOps = scenario.MeasureShardedDatabaseRestoreDuration();
 
         scenario.AssertResults(restoreDurationWithDefaults, restoreDurationWithMaxReadOps);
-        _output.WriteLine($"Restore duration with defaults: {restoreDurationWithDefaults}, Restore duration with MaxReadOpsPerSec: {restoreDurationWithMaxReadOps}");
+        _output.WriteLine($"Restore duration with defaults: {restoreDurationWithDefaults}, Restore duration with MaxReadOpsPerSec: {restoreDurationWithMaxReadOps}, process architecture: {ProcessArchitecture}");
     }
 
     public enum BackupScope
@@ -191,15 +195,15 @@ public class MaxReadOpsPerSecOptionTests : ClusterTestBase
         {
             Assert.True(rateControlledDuration > defaultDuration,
                 $"{OperationName} with MaxReadOpsPerSecond = {MaxReadOpsPerSecToTest} should take more time than {OperationName} with default value, " +
-                $"but it took '{rateControlledDuration}', while with default value took '{defaultDuration}'");
+                $"but it took '{rateControlledDuration}', while with default value took '{defaultDuration}', process architecture: {ProcessArchitecture}");
 
             Assert.True(defaultDuration.TotalSeconds < ExpectedMinimumOperationDurationInSeconds,
                 $"{OperationName} with default options should take less than '{ExpectedMinimumOperationDurationInSeconds}' seconds, but it took " +
-                $"'{defaultDuration}' despite MaxReadOpsPerSecond was not set");
+                $"'{defaultDuration}' despite MaxReadOpsPerSecond was not set, process architecture: {ProcessArchitecture}");
 
             Assert.True(rateControlledDuration.TotalSeconds > ExpectedMinimumOperationDurationInSeconds,
                 $"{OperationName} with MaxReadOpsPerSecond = {MaxReadOpsPerSecToTest} should take more than " +
-                $"'{ExpectedMinimumOperationDurationInSeconds}' seconds, but it took '{rateControlledDuration}'");
+                $"'{ExpectedMinimumOperationDurationInSeconds}' seconds, but it took '{rateControlledDuration}', process architecture: {ProcessArchitecture}");
         }
 
         public void Dispose()
@@ -222,9 +226,40 @@ public class MaxReadOpsPerSecOptionTests : ClusterTestBase
         private PeriodicBackupConfiguration PeriodicBackupConfiguration { get; set; }
         private ServerWideBackupConfiguration ServerWideBackupConfiguration { get; set; }
         internal BackupConfiguration OneTimeBackupConfiguration { get; private set; }
+        private int NumberOfRateGateWaitsToProceed { get; set; }
 
-        protected override int DocumentsToCreate => BackupType == BackupType.Snapshot ? 200 : 150;
-        protected internal override int MaxReadOpsPerSecToTest => BackupType == BackupType.Snapshot ? 16 : 10;
+        private int? _documentsToCreate;
+        protected override int DocumentsToCreate
+        {
+            get
+            {
+                _documentsToCreate ??= RuntimeInformation.ProcessArchitecture switch
+                {
+                    Architecture.X86 or Architecture.Arm => BackupType == BackupType.Snapshot && BackupKind == BackupKind.Full ? 500 : 150,
+                    Architecture.X64 or Architecture.Arm64 => BackupType == BackupType.Snapshot && BackupKind == BackupKind.Full ? 200 : 150,
+                    _ => throw new ArgumentOutOfRangeException(nameof(RuntimeInformation.ProcessArchitecture), "Unsupported architecture.")
+                };
+                return _documentsToCreate.Value;
+            }
+        }
+
+        protected internal override int MaxReadOpsPerSecToTest
+        {
+            get
+            {
+                switch (RuntimeInformation.ProcessArchitecture)
+                {
+                    case Architecture.X86 or Architecture.Arm:
+                        return BackupType == BackupType.Snapshot && BackupKind == BackupKind.Full ? 5 : 10;
+
+                    case Architecture.X64 or Architecture.Arm64:
+                        return BackupType == BackupType.Snapshot && BackupKind == BackupKind.Full ? 16 : 10;
+                    default:
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+        }
+
 
         protected override string OperationName => $"{BackupKind} {(BackupType == BackupType.Backup ? "Logical" : nameof(BackupType.Snapshot))} backup of {DatabaseMode} database";
 
@@ -233,10 +268,7 @@ public class MaxReadOpsPerSecOptionTests : ClusterTestBase
             switch (BackupType)
             {
                 case BackupType.Snapshot when BackupKind == BackupKind.Full:
-                    // Snapshots are created by copying data page by page, rather than one document at a time. Due to specific data storage characteristics,
-                    // creating 200 documents results in 257 pages for the document data. (value obtained experimentally)
-                    // And minus `MaxReadOpsPerSecToTest` because rateGate will not wait after the last operation
-                    return (257 - MaxReadOpsPerSecToTest) / MaxReadOpsPerSecToTest;
+                    return (NumberOfRateGateWaitsToProceed - MaxReadOpsPerSecToTest) / MaxReadOpsPerSecToTest;
 
                 case BackupType.Snapshot when BackupKind == BackupKind.Incremental: // Incremental for snapshot is a logical backup
                 case BackupType.Backup:
@@ -254,6 +286,9 @@ public class MaxReadOpsPerSecOptionTests : ClusterTestBase
             {
                 case RavenDatabaseMode.Single when BackupKind == BackupKind.Full:
                     await CreateDocumentsForNonShardedDatabaseAsync();
+
+                    if (BackupType == BackupType.Snapshot)
+                        BackupMethods.Full.ForTestingPurposesOnly().OnBeforeRateGateWaitToProceed = () => NumberOfRateGateWaitsToProceed++;
                     break;
 
                 case RavenDatabaseMode.Sharded when BackupKind == BackupKind.Full:
@@ -356,8 +391,6 @@ public class MaxReadOpsPerSecOptionTests : ClusterTestBase
                     case RavenDatabaseMode.Single:
                         var database = await ClusterTestBase.Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(Store.Database);
                         database.Configuration.Backup.MaxReadOpsPerSecond = MaxReadOpsPerSecToTest;
-
-
                         break;
 
                     case RavenDatabaseMode.Sharded:
@@ -564,9 +597,10 @@ public class MaxReadOpsPerSecOptionTests : ClusterTestBase
             var cw = Stopwatch.StartNew();
 
             using (ClusterTestBase.Sharding.Backup.ReadOnly(BackupPath))
-            using (ClusterTestBase.Backup.RestoreDatabase(Store, RestoreBackupConfiguration));
-
-            return cw.Elapsed;
+            using (ClusterTestBase.Backup.RestoreDatabase(Store, RestoreBackupConfiguration, timeout: TimeSpan.FromMinutes(5)))
+            {
+                return cw.Elapsed;
+            }
         }
 
         public void SetMaxReadOpsPerSecond()
