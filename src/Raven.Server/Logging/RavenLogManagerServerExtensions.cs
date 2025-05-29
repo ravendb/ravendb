@@ -192,6 +192,14 @@ internal static class RavenLogManagerServerExtensions
 
         return GetLoggerForIndexInternal(logManager, type.FullName, index.DocumentDatabase.Name, index.Name);
     }
+    
+    public static RavenLogger GetLoggerForIndex(this RavenLogManager logManager, [NotNull] Type type, string databaseName, string indexName)
+    {
+        if (type == null)
+            throw new ArgumentNullException(nameof(type));
+
+        return GetLoggerForIndexInternal(logManager, type.FullName, databaseName, indexName);
+    }
 
     public static RavenAuditLogger GetAuditLoggerForServer(this RavenLogManager logManager)
     {

@@ -107,7 +107,7 @@ zig cc -Wall -O3 -g -shared  -fPIC -Iinc -target aarch64-macos-none -o runtimes/
 mkdir artifacts  -ErrorAction Ignore  > $null
 Move-Item .\runtimes artifacts  -ErrorAction Ignore
 $PalNuspec = (Get-Content pal.nuspec.template)
-$NuspecVersion = "$($PalVerStr[0]).$($PalVerStr[1]).$($PalVerStr.Substring(2).TrimStart('0'))"
+$NuspecVersion = "$($PalVerStr[0]).$($PalVerStr[1]).$([convert]::ToInt32($PalVerStr.Substring(2)))"
 $PalNuspec = $PalNuspec.Replace("NUGET_PACKAGE_VERSION", $NuspecVersion)
 Set-Content artifacts\pal.nuspec  -Value $PalNuspec
 

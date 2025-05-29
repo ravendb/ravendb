@@ -287,7 +287,7 @@ namespace Raven.Server.Web.System
                         if (ServerStore.DatabasesLandlord.IsDatabaseLoaded(rawDatabaseRecord.DatabaseName) == false)
                         {
                             using (await ServerStore.DatabasesLandlord.UnloadAndLockDatabase(rawDatabaseRecord.DatabaseName, "Checking if we need to recreate indexes"))
-                                await RecreateIndexes(rawDatabaseRecord.DatabaseName, databaseRecord);
+                                await RecreateIndexesAsync(rawDatabaseRecord.DatabaseName, databaseRecord);
                         }
                     }
                 }
@@ -349,7 +349,7 @@ namespace Raven.Server.Web.System
             return false;
         }
 
-        private async Task RecreateIndexes(string databaseName, DatabaseRecord databaseRecord)
+        private async Task RecreateIndexesAsync(string databaseName, DatabaseRecord databaseRecord)
         {
             var databaseConfiguration = ServerStore.DatabasesLandlord.CreateDatabaseConfiguration(databaseName, true, true, true, databaseRecord);
             if (databaseConfiguration.Indexing.RunInMemory ||

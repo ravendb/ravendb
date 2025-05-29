@@ -614,7 +614,7 @@ namespace Raven.Server.Documents.Indexes
                 return;
             }
 
-            var logger = documentDatabase.Loggers.GetLogger(typeof(Index));
+            var logger = RavenLogManager.Instance.GetLoggerForIndex(typeof(Index), documentDatabase.Name, name);
             if (logger.IsWarnEnabled)
             {
                 logger.Warn($"Unable to create hard links between '{documentDatabase.DocumentsStorage.Environment.Options.JournalPath}' and '{indexOptions.JournalPath}'." +
@@ -686,7 +686,7 @@ namespace Raven.Server.Documents.Indexes
         {
             InitializeMetrics(configuration);
 
-            _logger = documentDatabase.Loggers.GetLogger(GetType());
+            _logger = RavenLogManager.Instance.GetLoggerForIndex(GetType(), documentDatabase.Name, Name);
             using (DrainRunningQueries())
             {
                 if (_initialized)

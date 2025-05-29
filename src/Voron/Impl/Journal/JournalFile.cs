@@ -74,7 +74,10 @@ namespace Voron.Impl.Journal
                 if(_transactionHeaders[i].JournalId != journalId)
                     continue;
                 count++;
-                first = Math.Min(_transactionHeaders[i].TransactionId, first);
+                
+                if (first == long.MaxValue) 
+                    first = _transactionHeaders[i].TransactionId;
+                
                 last = _transactionHeaders[i].TransactionId;
             }
 

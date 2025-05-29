@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Raven.Server.Config.Categories;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Server.Logging;
@@ -19,7 +20,7 @@ public class SharedIndexJournals : IJournalMerger, IDisposable
     {
         _documentDatabase = documentDatabase;
         string sharedJournalsPath = documentDatabase.Configuration.Indexing.SharedJournalsPath.FullPath;
-        string documentDatabaseName = documentDatabase.Name + ".JournalsForIndexing";
+        string documentDatabaseName = $"{documentDatabase.Name}.Indexes.{IndexingConfiguration.SharedJournalsStorageName}";
         var options = documentDatabase.Configuration.Indexing.RunInMemory
             ? StorageEnvironmentOptions.CreateMemoryOnly(sharedJournalsPath, Path.Combine(sharedJournalsPath, "Temp"),
                 documentDatabase.IoChanges, documentDatabase.CatastrophicFailureNotification, LoggingResource.Database(documentDatabaseName),
@@ -51,8 +52,8 @@ public class SharedIndexJournals : IJournalMerger, IDisposable
         options.MaxLogFileSize = documentDatabase.Configuration.Storage.MaxJournalFileSize.GetValue(SizeUnit.Bytes);
 
         options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;
-        options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError("JournalsForIndexing", s, e);
-        options.OnIntegrityErrorOfAlreadySyncedData += (s, e) => documentDatabase.HandleOnIndexIntegrityErrorOfAlreadySyncedData("JournalsForIndexing", s, e);
+        options.OnRecoveryError += (s, e) => documentDatabase.HandleOnIndexRecoveryError(IndexingConfiguration.SharedJournalsStorageName, s, e);
+        options.OnIntegrityErrorOfAlreadySyncedData += (s, e) => documentDatabase.HandleOnIndexIntegrityErrorOfAlreadySyncedData(IndexingConfiguration.SharedJournalsStorageName, s, e);
         options.OnRecoverableFailure += documentDatabase.HandleRecoverableFailure;
 
         _env = new StorageEnvironment(options);

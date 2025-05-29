@@ -25,6 +25,7 @@ namespace Raven.Server.Config.Categories
     [ConfigurationCategory(ConfigurationCategoryType.Indexing)]
     public class IndexingConfiguration : ConfigurationCategory
     {
+        public const string SharedJournalsStorageName = "@SharedJournals";
         private bool? _runInMemory;
 
         private readonly RavenConfiguration _root;
@@ -170,7 +171,7 @@ namespace Raven.Server.Config.Categories
         public virtual PathSetting StoragePath => field ??= _root.ResourceType == ResourceType.Server ? null : _root.Core.DataDirectory.Combine("Indexes");
 
         [ReadOnlyPath]
-        public virtual PathSetting SharedJournalsPath => field ??= _root.ResourceType == ResourceType.Server ? null : _root.Core.DataDirectory.Combine("JournalsForIndexing");
+        public virtual PathSetting SharedJournalsPath => field ??= _root.ResourceType == ResourceType.Server ? null : _root.Core.DataDirectory.Combine("Indexes").Combine(SharedJournalsStorageName);
         
         [Description("Use this setting to specify a different path for the indexes' temporary files. By default, temporary files are created under the Temp folder inside the index data directory.")]
         [DefaultValue(null)]

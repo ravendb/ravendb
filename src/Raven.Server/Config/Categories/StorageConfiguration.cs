@@ -180,7 +180,6 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Storage.LowPriorityFlushAndSync", ConfigurationEntryScope.ServerWideOnly)]
         public bool LowPriorityFlushAndSync { get; set; }
         
-        
         [Description("EXPERT: The queue size to use for I/O ring operations, using -1 will disable I/O ring entirely")]
         [DefaultValue(1024)]
         [ConfigurationEntry("Storage.IoRingQueueSize", ConfigurationEntryScope.ServerWideOnly)]
