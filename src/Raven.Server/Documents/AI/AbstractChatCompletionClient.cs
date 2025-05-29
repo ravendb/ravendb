@@ -59,7 +59,7 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
             }
         });
 
-        _structuredOutputSchema = structuredOutputSchema ?? string.Empty;
+        _structuredOutputSchema = structuredOutputSchema ?? GetSchemaFor("{}");
         _contextPool = contextPool;
     }
 

@@ -203,4 +203,27 @@ public sealed class AiConnectionString : ConnectionString
                HuggingFaceSettings ??
                (AbstractAiSettings)MistralAiSettings;
     }
+
+    internal bool TryGetParametersForGenAiTesting(out string uri, out string apiKey, out string model)
+    {
+        uri = null;
+        apiKey = null;
+        model = null;
+
+        var provider = GetActiveProvider();
+        switch (provider)
+        {
+            case AiConnectorType.OpenAi:
+                uri = OpenAiSettings.Endpoint;
+                apiKey = OpenAiSettings.ApiKey;
+                model = OpenAiSettings.Model;
+                return true;
+            case AiConnectorType.Ollama:
+                uri = OllamaSettings.Uri; 
+                model = OllamaSettings.Model;
+                return true;
+        }
+
+        return false;
+    }
 }

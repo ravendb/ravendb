@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI.GenAi
 {
@@ -20,6 +21,12 @@ namespace Raven.Server.Documents.AI.GenAi
             model: configuration.Connection.OllamaSettings.Model, apiKey: null, structuredOutputSchema: configuration.JsonSchema, contextPool, conventions)
         {
         }
+    }
 
+    public class GenericChatCompletionClientForTesting : AbstractChatCompletionClient<TransactionOperationContext>
+    {
+        public GenericChatCompletionClientForTesting(string uri, string model, string apiKey, JsonContextPoolBase<TransactionOperationContext> contextPool) : base(new Uri(uri), model, apiKey, structuredOutputSchema: null, contextPool, conventions: DocumentConventions.DefaultForServer)
+        {
+        }
     }
 }
