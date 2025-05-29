@@ -7,6 +7,7 @@ import DatabaseUtils from "components/utils/DatabaseUtils";
 import { useState } from "react";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { compareSets } from "common/typeUtils";
+import * as yup from "yup";
 
 interface LocationStats {
     databaseId: string;
@@ -29,10 +30,29 @@ export function useUnusedDatabaseIds() {
     const { databasesService } = useServices();
 
     const [unusedIds, setUnusedIds] = useState<string[]>([]);
+    const [databaseTopologyIdBase64, setDatabaseTopologyIdBase64] = useState<string>("");
 
     const asyncGetUnusedIds = useAsync(
         async () => {
             const databaseRecordDto = await databasesService.getDatabaseRecord(db.name);
+
+            // It's just a document so we need to check if it has Topology.DatabaseTopologyIdBase64
+            try {
+                const dto = yup
+                    .object({
+                        Topology: yup
+                            .object({
+                                DatabaseTopologyIdBase64: yup.string().required(),
+                            })
+                            .required(),
+                    })
+                    .validateSync(databaseRecordDto);
+
+                setDatabaseTopologyIdBase64(dto.Topology.DatabaseTopologyIdBase64);
+            } catch (e) {
+                // ignore
+            }
+
             if ("UnusedDatabaseIds" in databaseRecordDto && Array.isArray(databaseRecordDto.UnusedDatabaseIds)) {
                 return databaseRecordDto.UnusedDatabaseIds;
             }
@@ -102,7 +122,9 @@ export function useUnusedDatabaseIds() {
     );
 
     const usedIds = asyncGetStats.result?.usedIds ?? [];
-    const potentialUnusedId = asyncGetStats.result?.potentialUnusedId ?? [];
+    const potentialUnusedId = (asyncGetStats.result?.potentialUnusedId ?? []).filter(
+        (x) => x !== databaseTopologyIdBase64
+    );
 
     const addUnusedId = (idToAdd: string): boolean => {
         if (unusedIds.includes(idToAdd)) {
