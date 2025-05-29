@@ -268,12 +268,13 @@ public class MaxReadOpsPerSecOptionTests : ClusterTestBase
             switch (BackupType)
             {
                 case BackupType.Snapshot when BackupKind == BackupKind.Full:
-                    return (NumberOfRateGateWaitsToProceed - MaxReadOpsPerSecToTest) / MaxReadOpsPerSecToTest;
+                    // Minus `MaxReadOpsPerSecToTest` * 2 because rateGate will not wait after the last operation, and we want to have some additional tolerance
+                    return (NumberOfRateGateWaitsToProceed - MaxReadOpsPerSecToTest * 2) / MaxReadOpsPerSecToTest;
 
                 case BackupType.Snapshot when BackupKind == BackupKind.Incremental: // Incremental for snapshot is a logical backup
                 case BackupType.Backup:
-                    // Minus `MaxReadOpsPerSecToTest` because rateGate will not wait after the last operation
-                    return (DocumentsToCreate - MaxReadOpsPerSecToTest) / MaxReadOpsPerSecToTest;
+                    // Minus `MaxReadOpsPerSecToTest` * 2 because rateGate will not wait after the last operation, and we want to have some additional tolerance
+                    return (DocumentsToCreate - MaxReadOpsPerSecToTest * 2) / MaxReadOpsPerSecToTest;
 
                 default:
                     throw new ArgumentOutOfRangeException(nameof(BackupType), BackupType, null);
