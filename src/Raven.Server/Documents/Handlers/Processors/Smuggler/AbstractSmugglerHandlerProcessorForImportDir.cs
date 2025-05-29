@@ -40,11 +40,12 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportDir<TRequestHan
 
         files.CompleteAdding();
         operationId ??= GetOperationId();
-        await BulkImport(files, directory, operationId.Value);
 
         if (LoggingSource.AuditLog.IsInfoEnabled)
             RequestHandler.LogAuditFor(RequestHandler.DatabaseName, "IMPORT", $"{EnumHelper.GetDescription(Operations.OperationType.DatabaseImport)} " +
-                                                 $"from directory: '{directory}', files count: '{files.Count}'");
+                                                                              $"from directory: '{directory}', files count: '{files.Count}'");
+
+        await BulkImport(files, directory, operationId.Value);
     }
 
     private async Task BulkImport(BlockingCollection<Func<Task<Stream>>> files, string directory, long operationId)

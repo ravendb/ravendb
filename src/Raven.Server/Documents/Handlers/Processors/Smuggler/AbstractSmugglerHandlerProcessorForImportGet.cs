@@ -1,14 +1,18 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.Http;
+using Raven.Server.Documents.Operations;
 using Raven.Server.Smuggler.Documents.Data;
 using Raven.Server.Smuggler.Documents.Handlers;
 using Raven.Server.Utils;
+using Raven.Server.Web.System;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Smuggler;
 
@@ -32,7 +36,15 @@ internal abstract class AbstractSmugglerHandlerProcessorForImportGet<TRequestHan
             throw new ArgumentException("'file' or 'url' are mandatory when using GET /smuggler/import");
         }
 
+        var fileParam = HttpContext.Request.Query["file"].FirstOrDefault();
+        var urlParam = HttpContext.Request.Query["url"].FirstOrDefault();
+        var source = fileParam ?? urlParam;
+
         operationId ??= GetOperationId();
+
+        if (LoggingSource.Instance.IsInfoEnabled)
+            RequestHandler.LogAuditFor(
+                RequestHandler.DatabaseName, "IMPORT", $"{EnumHelper.GetDescription(OperationType.DatabaseImport)} from '{source}'");
 
         var options = DatabaseSmugglerOptionsServerSide.Create(HttpContext, RequestHandler.GetAuthorizationStatusForSmuggler(RequestHandler.DatabaseName));
         await using (var file = await GetImportStream())

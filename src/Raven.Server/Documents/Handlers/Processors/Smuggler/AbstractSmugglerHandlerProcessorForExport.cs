@@ -35,6 +35,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
 
             var operationId = RequestHandler.GetLongQueryString("operationId", required: false) ?? GetNextOperationId();
 
+            RequestHandler.LogTaskToAudit(Operations.OperationType.DatabaseExport.ToString(), operationId, configuration: null);
+
             try
             {
                 var startDocumentEtag = RequestHandler.GetLongQueryString("startEtag", false) ?? 0;
@@ -88,8 +90,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
 
                 HttpContext.Abort();
             }
-
-            RequestHandler.LogTaskToAudit(Operations.OperationType.DatabaseExport.ToString(), operationId, configuration: null);
         }
     }
 }

@@ -67,6 +67,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
             var result = new SmugglerResult();
             BlittableJsonReaderObject blittableJson = null;
 
+            RequestHandler.LogTaskToAudit(OperationType.DatabaseImport.ToString(), operationId, configuration: null);
+
             await operations.AddLocalOperation(
                 operationId,
                 OperationType.DatabaseImport,
@@ -134,8 +136,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Smuggler
                 token: token).ConfigureAwait(false);
 
             await WriteSmugglerResultAsync(context, result, RequestHandler.ResponseBodyStream());
-
-            RequestHandler.LogTaskToAudit(OperationType.DatabaseImport.ToString(), operationId, configuration: null);
         }
 
         private void IgnoreDatabaseItemTypesIfCurrentVersionIsOlderThenClientVersion(JsonOperationContext context, ref BlittableJsonReaderObject blittableJson)
