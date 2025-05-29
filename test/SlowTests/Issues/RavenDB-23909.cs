@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
-using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions;
 using SlowTests.Server.Documents.AI.Embeddings;
 using Tests.Infrastructure;
 using Xunit;
@@ -59,18 +60,27 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.SaveChanges();
                 
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                
-                _ = session.Query<Dto>()
-                    .Statistics(out var stats)
-                    .VectorSearch(x => 
-                            x.WithText("Name")
-                                .UsingTask(configuration.Identifier)
-                                .TargetQuantization(VectorEmbeddingType.Binary), 
-                        factory => factory.ByText("fruit"))
-                    .ToList();
-                
-                var indexErrors = store.Maintenance.Send(new GetIndexErrorsOperation(new[] { stats.IndexName }));
 
+                try
+                {
+                    _ = session.Query<Dto>()
+                        .Customize(x => x.WaitForNonStaleResults())
+                        .VectorSearch(x =>
+                                x.WithText("Name")
+                                    .UsingTask(configuration.Identifier)
+                                    .TargetQuantization(VectorEmbeddingType.Binary),
+                            factory => factory.ByText("fruit"))
+                        .ToList();
+                }
+                catch (Exception ex) when (ex is RavenException { InnerException: InvalidOperationException innerEx }
+                                           && innerEx.Message.Contains("is marked as errored"))
+                {
+                    // Expected exception
+                }
+                
+                Indexes.WaitForIndexing(store, allowErrors: true);
+                var indexErrors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: true);
+                
                 Assert.Single(indexErrors);
                 Assert.Contains("Quantization cannot be performed on already quantized vector.", indexErrors[0].Errors.First().Error);
             }
