@@ -23,14 +23,14 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "prop";
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue { [SVC.Type] = "object", [SVC.Required] = new DynamicJsonArray { prop } };
         if (withAdditionalRestriction)
         {
             schemaDefinition[SVC.Properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SVC.Type] = "string" } };
         }
 
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -55,7 +55,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     {
         const string prop = "prop";
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Properties] = new DynamicJsonValue
@@ -63,7 +63,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
                 [prop] = new DynamicJsonValue { [SVC.Properties] = new DynamicJsonValue { [prop] = new DynamicJsonValue { [SVC.Const] = 123 } } }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -86,9 +86,9 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnMinProperties()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue { [SVC.MinProperties] = 2 };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -117,9 +117,9 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnMaxProperties()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue { [SVC.MaxProperties] = 3 };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }

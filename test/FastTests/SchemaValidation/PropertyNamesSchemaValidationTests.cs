@@ -18,7 +18,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictPropertyNamesPattern()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.PropertyNames] = new DynamicJsonValue
@@ -26,7 +26,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
                 [SVC.Pattern] = "^[A-Z]+$"
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -55,7 +55,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictPropertyNamesMinLength()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.PropertyNames] = new DynamicJsonValue
@@ -63,7 +63,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
                 [SVC.MinLength] = 3
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -101,7 +101,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictPropertyNamesMaxLength()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.PropertyNames] = new DynamicJsonValue
@@ -109,7 +109,7 @@ public class PropertyNamesSchemaValidationTests : SchemaValidationTestsBase
                 [SVC.MaxLength] = 5
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
