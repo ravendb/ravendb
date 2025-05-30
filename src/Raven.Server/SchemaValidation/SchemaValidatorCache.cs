@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Server.Documents;
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -73,8 +74,13 @@ public class SchemaValidatorCache : IDisposable
             _schemaValidatorsPerCollection = newSchemaValidators;
     }
 
-    public void Validate(string collection, BlittableJsonReaderObject document, DocumentsOperationContext context)
+    public void Validate(string collection, BlittableJsonReaderObject document, NonPersistentDocumentFlags nonPersistentFlags, DocumentsOperationContext context)
     {
+        // TODO: check if we need to add more flags here
+        if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) ||
+            nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResharding))
+            return;
+
         if (_schemaValidatorsPerCollection == null || _disabled)
             return;
 
