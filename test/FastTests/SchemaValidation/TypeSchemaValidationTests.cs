@@ -26,10 +26,8 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
         {
             [SVC.Type] = "object",
         };
-        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        using var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition");
+        schemaValidator.Init(blitSchemaDefinition);
         using var obj = context.ReadObject(new DynamicJsonValue(), "test object");
         Assert.True(schemaValidator.Validate(obj, out var errors), errors);
     }
@@ -51,10 +49,8 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        using var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition");
+        schemaValidator.Init(blitSchemaDefinition);
         
         using var obj = context.ReadObject(new DynamicJsonValue
         {
@@ -81,10 +77,8 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        using var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition");
+        schemaValidator.Init(blitSchemaDefinition);
         
         using var testObj = context.ReadObject(new DynamicJsonValue
         {
@@ -112,10 +106,8 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        using var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition");
+        schemaValidator.Init(blitSchemaDefinition);
         using var testObj = context.ReadObject(new DynamicJsonValue
         {
             ["prop"] = "some string"
@@ -141,10 +133,8 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        using var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition");
+        schemaValidator.Init(blitSchemaDefinition);
         using var obj = context.ReadObject(new DynamicJsonValue
         {
             ["prop"] = new DynamicJsonValue()
@@ -171,10 +161,8 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        using var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition");
+        schemaValidator.Init(blitSchemaDefinition);
         using var obj = context.ReadObject(new DynamicJsonValue
         {
             ["prop"] = 1
@@ -200,10 +188,8 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        using var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition");
+        schemaValidator.Init(blitSchemaDefinition);
         var obj = context.ReadObject(new DynamicJsonValue
         {
             ["prop"] = new DynamicJsonValue()
@@ -230,10 +216,8 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition"))
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        using var blitSchemaDefinition = context.ReadObject(schemaDefinition, "schema Definition");
+        schemaValidator.Init(blitSchemaDefinition);
         using var testObj = context.ReadObject(new DynamicJsonValue
         {
             ["prop"] = 3.14
@@ -258,9 +242,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
             {
@@ -298,9 +280,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
             {
@@ -332,9 +312,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
             {
@@ -370,9 +348,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
             {
@@ -408,9 +384,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
             {
@@ -433,9 +407,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
             {

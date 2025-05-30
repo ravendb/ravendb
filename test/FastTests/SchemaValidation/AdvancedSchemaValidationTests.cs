@@ -38,9 +38,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaValidator = new SchemaValidator();
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(
             () =>
@@ -70,7 +68,8 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
                     }
                 }, out var obj);
 
-                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
+                Assert.False(schemaValidator.Validate(obj, out var errors), errors);
+                AssertError("The required property 'zip' is missing at 'address'.", errors);
             });
     }
 
@@ -92,9 +91,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaValidator = new SchemaValidator();
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(
             () =>
@@ -137,9 +134,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaValidator = new SchemaValidator();
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(
             () =>
@@ -175,9 +170,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaValidator = new SchemaValidator();
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(
             () =>
@@ -211,9 +204,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaValidator = new SchemaValidator();
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(
             () =>
@@ -251,9 +242,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaValidator = new SchemaValidator();
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(
             () =>
@@ -291,9 +280,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaValidator = new SchemaValidator();
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(
             () =>
@@ -335,9 +322,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaValidator = new SchemaValidator();
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(
             () =>
@@ -377,9 +362,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaValidator = new SchemaValidator();
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(
             () =>
@@ -431,9 +414,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
 
         var schemaValidator = new SchemaValidator();
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
         
         await AssertMultipleParallel(
             () =>
