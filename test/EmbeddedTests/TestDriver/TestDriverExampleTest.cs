@@ -185,11 +185,11 @@ namespace EmbeddedTests.TestDriver
                     var indexesDirectoryPath = Path.Combine(databaseDirectoryPath, "Indexes");
 
                     Assert.True(Directory.Exists(indexesDirectoryPath));
-                    Assert.Equal(2, Directory.GetDirectories(indexesDirectoryPath).Length);
+                    Assert.Equal(2, Directory.GetDirectories(indexesDirectoryPath).Length - 1); // -1 because of @SharedJournals
 
                     documentStore.Maintenance.Send(new DeleteIndexOperation(stats1.IndexName));
 
-                    Assert.Equal(1, Directory.GetDirectories(indexesDirectoryPath).Length);
+                    Assert.Equal(1, Directory.GetDirectories(indexesDirectoryPath).Length -1); // -1 because of @SharedJournals
                 }
             }
 

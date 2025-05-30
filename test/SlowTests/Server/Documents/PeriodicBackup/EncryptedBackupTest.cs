@@ -911,7 +911,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var indexesPath = restoredDatabase.Configuration.Indexing.StoragePath;
                     var indexesDirectory = new DirectoryInfo(indexesPath.FullPath);
                     Assert.True(indexesDirectory.Exists);
-                    Assert.Equal(afterRestoreStats.CountOfIndexes, indexesDirectory.GetDirectories().Length);
+                    Assert.Equal(afterRestoreStats.CountOfIndexes, indexesDirectory.GetDirectories().Length - 1); // -1 because of @SharedJournals
 
                     Assert.NotEqual(beforeBackupStats.DatabaseId, afterRestoreStats.DatabaseId);
                     Assert.Equal(beforeBackupStats.CountOfAttachments, afterRestoreStats.CountOfAttachments);
