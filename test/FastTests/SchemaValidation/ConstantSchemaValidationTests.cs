@@ -20,7 +20,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object",
@@ -29,7 +29,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 ["stringProp"] = new DynamicJsonValue { [SVC.Const] = "somevalue" },
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -54,7 +54,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object",
@@ -63,7 +63,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 ["intProp"] = new DynamicJsonValue { [SVC.Const] = 21 },
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -88,7 +88,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object",
@@ -97,7 +97,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 ["doubleProp"] = new DynamicJsonValue { [SVC.Const] = 3.14 },
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -122,7 +122,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object",
@@ -131,7 +131,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 ["objectProp"] = new DynamicJsonValue { [SVC.Const] = new DynamicJsonValue{["prop"] = 44} }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }

@@ -15,12 +15,9 @@ namespace FastTests.SchemaValidation;
 
 public abstract class SchemaValidationTestsBase : ParallelTestBase
 {
-    protected JsonContextPool ContextPool { get; }
-
     // ReSharper disable once ConvertToPrimaryConstructor
     protected SchemaValidationTestsBase(ITestOutputHelper output, [CallerFilePath] string sourceFile = "") : base(output, sourceFile)
     {
-        ContextPool = new JsonContextPool();
     }
 
 
@@ -47,12 +44,6 @@ public abstract class SchemaValidationTestsBase : ParallelTestBase
     }
 
     protected static string Regex([StringSyntax(StringSyntaxAttribute.Regex)] string pattern) => pattern;
-
-    public override void Dispose()
-    {
-        ContextPool.Dispose();
-        base.Dispose();
-    }
 }
 
 public static class SchemaValidationTestsHelper

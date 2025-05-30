@@ -16,7 +16,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public void SchemaValidationPatternProperties_WhenPatternMatchAndJsonValid_ShouldSucceed()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -28,7 +28,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
                 },
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -44,7 +44,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public void SchemaValidationPatternProperties_WhenPatternMatchAndJsonInvalid_ShouldFail()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -56,7 +56,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
                 },
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -73,7 +73,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public void SchemaValidationPatternProperties_WhenPatternDoesntMatch_ShouldSucceed()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -85,7 +85,7 @@ public class PatternPropertiesSchemaValidationTests : SchemaValidationTestsBase
                 },
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }

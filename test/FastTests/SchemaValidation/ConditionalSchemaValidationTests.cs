@@ -22,7 +22,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
         const string thenProp = "thenProp";
         const string elseProp = "elseProp";
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         
         var schemaDefinition = new DynamicJsonValue
         {
@@ -40,7 +40,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
             }
         };
 
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -111,7 +111,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
     {
         const string stringProp = "stringProp";
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -131,7 +131,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
             }
         };
 
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -160,9 +160,9 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnDependentRequired()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue { [SVC.DependentRequired] = new DynamicJsonValue { ["prop1"] = new[] { "prop2", "prop3" } } };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -198,7 +198,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnDependentSchemas()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue 
         { 
             [SVC.DependentSchemas] = new DynamicJsonValue 
@@ -216,10 +216,8 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
             } 
         };
         
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
             {
@@ -245,7 +243,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictObjectOnNot()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue 
         { 
             [SVC.Not] = new DynamicJsonValue 
@@ -257,7 +255,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
             } 
         };
         
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -286,7 +284,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictStringOnNot()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue 
         { 
             [SVC.Properties] = new DynamicJsonValue
@@ -301,7 +299,7 @@ public class ConditionalSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }

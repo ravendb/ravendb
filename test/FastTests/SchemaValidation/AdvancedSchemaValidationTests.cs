@@ -36,8 +36,8 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             [SVC.Required] = new[] { "name", "age", "address" }
         };
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        var schemaValidator = new SchemaValidator();
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -90,8 +90,8 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             }
         };
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        var schemaValidator = new SchemaValidator();
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -135,8 +135,8 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             }
         };
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        var schemaValidator = new SchemaValidator();
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -173,8 +173,8 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             }
         };
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        var schemaValidator = new SchemaValidator();
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -209,8 +209,8 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             }
         };
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        var schemaValidator = new SchemaValidator();
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -249,8 +249,8 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             }
         };
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        var schemaValidator = new SchemaValidator();
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -289,8 +289,8 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             }
         };
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        var schemaValidator = new SchemaValidator();
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -333,8 +333,8 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             }
         };
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        var schemaValidator = new SchemaValidator();
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -375,8 +375,8 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             }
         };
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        var schemaValidator = new SchemaValidator();
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -429,8 +429,8 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             }
         };
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        var schemaValidator = new SchemaValidator();
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }

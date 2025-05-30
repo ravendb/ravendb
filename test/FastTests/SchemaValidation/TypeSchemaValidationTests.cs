@@ -20,7 +20,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateObject_ShouldSuccess()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -38,7 +38,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateNestedObjAndTrue_ShouldSuccess()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -68,7 +68,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateNestedObjAndString_ShouldFail()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -99,7 +99,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateStringPropertyAndTrue_ShouldSuccess()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         
         var schemaDefinition = new DynamicJsonValue
         {
@@ -128,7 +128,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateStringPropertyAndObject_ShouldSuccess()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -158,7 +158,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateIntPropertyAndTrue_ShouldSuccess()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -187,7 +187,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateIntPropertyAndObject_ShouldFail()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -217,7 +217,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     public void SchemaValidation_WhenValidateIntPropertyAndFloat_ShouldFail()
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -248,7 +248,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object",
@@ -257,7 +257,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { [SVC.Type] = "boolean" }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -288,7 +288,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object",
@@ -297,7 +297,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { [SVC.Type] = "null" }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -322,7 +322,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     {
         using var context = JsonOperationContext.ShortTermSingleUse();
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object",
@@ -331,7 +331,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { [SVC.Type] = "array" }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -360,7 +360,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateObjectOrNull()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object",
@@ -369,7 +369,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { [SVC.Type] = new DynamicJsonArray{"null", "object"} }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -398,7 +398,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenTypeRuleIsEmptyArray_ShouldAllowAllTypes()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object",
@@ -407,7 +407,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { [SVC.Type] = new DynamicJsonArray{} }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -423,7 +423,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateEnum()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object",
@@ -432,7 +432,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { [SVC.Enum] = new object[] { 15, "somevalue", new DynamicJsonValue { ["prop"] = 8 } } }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -485,7 +485,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
     [InlineData(true, "Expected a value of type 'string' for 'type', but received 'boolean' of type 'True' at path '#/properties/prop/type'.")]
     public void InvalidSchema_WhenTypeIsNotValid_ShouldThrow(object type, string error)
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Properties] = new DynamicJsonValue
@@ -493,7 +493,7 @@ public class TypeSchemaValidationTests : SchemaValidationTestsBase
                 ["prop"] = new DynamicJsonValue { [SVC.Type] = type }
             },
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             var e = Assert.Throws<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(blitSchemaDefinition));
             AssertError(error, e.Message);

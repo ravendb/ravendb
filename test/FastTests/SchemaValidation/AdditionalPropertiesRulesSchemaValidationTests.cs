@@ -22,7 +22,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
         const string definedProp = "definedProp";
         const string notDefinedProp = "notDefinedProp";
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var jsonSchemaValidator = new DynamicJsonValue
         {
             [SVC.AdditionalProperties] = false
@@ -32,10 +32,8 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
             jsonSchemaValidator[SVC.Properties] = new DynamicJsonValue { [definedProp] = new DynamicJsonValue { } };
         }
 
-        using (ReadObjectOnNewCtx(jsonSchemaValidator, out var schemaDefinition))
-        {
-            schemaValidator.Init(schemaDefinition);
-        }
+        using var _ = ReadObjectOnNewCtx(jsonSchemaValidator, out var schemaDefinition);
+        schemaValidator.Init(schemaDefinition);
 
         await AssertMultipleParallel(() =>
             {
@@ -63,7 +61,7 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
         const string definedProp = "definedProp";
         const string notDefinedProp = "notDefinedProp";
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var jsonSchemaValidator = new DynamicJsonValue
         {
             [SVC.AdditionalProperties] = new DynamicJsonValue
@@ -76,10 +74,8 @@ public class AdditionalPropertiesRulesSchemaValidationTests : SchemaValidationTe
             jsonSchemaValidator[SVC.Properties] = new DynamicJsonValue { [definedProp] = new DynamicJsonValue { } };
         }
 
-        using (ReadObjectOnNewCtx(jsonSchemaValidator, out var schemaDefinition))
-        {
-            schemaValidator.Init(schemaDefinition);
-        }
+        using var _ = ReadObjectOnNewCtx(jsonSchemaValidator, out var schemaDefinition);
+        schemaValidator.Init(schemaDefinition);
 
         await AssertMultipleParallel(() =>
             {

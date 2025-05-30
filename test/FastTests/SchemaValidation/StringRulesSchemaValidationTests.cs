@@ -18,7 +18,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateMinStringLength()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object", 
@@ -30,10 +30,9 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
+        schemaValidator.Init(blitSchemaDefinition);
         
         await AssertMultipleParallel(() =>
         {
@@ -59,7 +58,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateMaxStringLength()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object", 
@@ -71,7 +70,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -99,7 +98,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateForRegexPattern()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SVC.Type] = "object", 
@@ -111,7 +110,7 @@ public class StringRulesSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }

@@ -18,7 +18,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnStringWithReferenced()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -40,7 +40,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -80,7 +80,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnNumberWithReferenced()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -102,7 +102,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -133,7 +133,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnBooleanWithReferenced()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -155,7 +155,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -186,7 +186,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnNullWithReferenced()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -208,7 +208,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -239,7 +239,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnObjectWithReferenced()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -257,7 +257,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -289,7 +289,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnArrayWithReferenced()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -307,7 +307,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -336,7 +336,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public void RefSchema_WhenHasCircularReferences_ShouldFail()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Defs] = new DynamicJsonValue
@@ -363,7 +363,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             var exception = Assert.ThrowsAny<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(blitSchemaDefinition));
             AssertError("A circular reference was detected at '#/$defs/firstSchema/properties/prop1/$ref/properties/prop1/$ref/properties/prop1/$ref'.", exception.Message);
@@ -373,7 +373,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnAllOf()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -405,7 +405,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -434,7 +434,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictOnOneOf()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -466,7 +466,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -504,7 +504,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenRestrictAnyOneOf()
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue
         {
             [SchemaValidatorConstants.Properties] = new DynamicJsonValue
@@ -544,7 +544,7 @@ public class RefDefSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }

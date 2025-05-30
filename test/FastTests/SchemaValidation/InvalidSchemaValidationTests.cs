@@ -83,9 +83,9 @@ public class InvalidSchemaValidationTests : SchemaValidationTestsBase
 
     private void AssertInvalidSchemaThrow(DynamicJsonValue schemaDefinition, string error)
     {
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             var exception = Assert.Throws<InvalidSchemaValidationDefinitionException>(() => schemaValidator.Init(blitSchemaDefinition));
             AssertError(error, exception.Message);

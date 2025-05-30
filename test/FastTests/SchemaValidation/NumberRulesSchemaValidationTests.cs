@@ -21,7 +21,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -38,7 +38,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -109,7 +109,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -128,7 +128,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -181,7 +181,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -198,7 +198,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 },
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -268,7 +268,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -287,7 +287,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
@@ -358,7 +358,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
         const string longProp = "longProp";
         const string doubleProp = "doubleProp";
 
-        using var schemaValidator = new SchemaValidator(ContextPool);
+        var schemaValidator = new SchemaValidator();
 
         var schemaDefinition = new DynamicJsonValue
         {
@@ -375,7 +375,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
                 }
             }
         };
-        using (ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition))
+        using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
         {
             schemaValidator.Init(blitSchemaDefinition);
         }
