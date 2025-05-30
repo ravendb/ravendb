@@ -41,7 +41,7 @@ public class ConfigureSchemaValidationOperation : IMaintenanceOperation<Configur
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/admin/data-archival/config";
+            url = $"{node.Url}/databases/{node.Database}/admin/schema-validation/config";
 
             var request = new HttpRequestMessage
             {
