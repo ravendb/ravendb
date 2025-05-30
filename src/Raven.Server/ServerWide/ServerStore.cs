@@ -2071,6 +2071,14 @@ namespace Raven.Server.ServerWide
             return SendToLeaderAsync(editDocumentsCompression);
         }
 
+        public Task<(long Index, object Result)> ModifySchemaValidation(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
+        {
+            var schemaValidationConfiguration = JsonDeserializationCluster.SchemaValidationConfiguration(configurationJson);
+
+            var editSchemaValidation = new EditSchemaValidationConfigurationCommand(schemaValidationConfiguration, databaseName, raftRequestId);
+            return SendToLeaderAsync(editSchemaValidation);
+        }
+
         public Task<(long Index, object Result)> ModifyPostgreSqlConfiguration(TransactionOperationContext context, string databaseName, BlittableJsonReaderObject configurationJson, string raftRequestId)
         {
             var config = JsonDeserializationCluster.PostgreSqlConfiguration(configurationJson);
