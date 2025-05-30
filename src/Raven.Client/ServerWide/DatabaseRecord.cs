@@ -21,6 +21,7 @@ using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Exceptions.Documents.Indexes;
@@ -75,6 +76,8 @@ namespace Raven.Client.ServerWide
         // list backup.. list sub .. list etl.. list repl(watchers).. list sql
 
         public ConflictSolver ConflictSolverConfig;
+
+        public SchemaValidationConfiguration SchemaValidation;
 
         public DocumentsCompressionConfiguration DocumentsCompression;
 
