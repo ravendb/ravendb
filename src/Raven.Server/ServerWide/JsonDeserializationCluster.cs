@@ -322,7 +322,8 @@ namespace Raven.Server.ServerWide
             [nameof(UpdatePrefixedShardingSettingCommand)] = GenerateJsonDeserializationRoutine<UpdatePrefixedShardingSettingCommand>(),
             [nameof(RevisionsBinConfigurationCommand)] = GenerateJsonDeserializationRoutine<RevisionsBinConfigurationCommand>(),
             [nameof(AddOrUpdateAiAgentCommand)] = GenerateJsonDeserializationRoutine<AddOrUpdateAiAgentCommand>(),
-            [nameof(DeleteAiAgentCommand)] = GenerateJsonDeserializationRoutine<DeleteAiAgentCommand>()
+            [nameof(DeleteAiAgentCommand)] = GenerateJsonDeserializationRoutine<DeleteAiAgentCommand>(),
+            [nameof(EditSchemaValidationConfigurationCommand)] = GenerateJsonDeserializationRoutine<EditSchemaValidationConfigurationCommand>()
         };
     }
 }
