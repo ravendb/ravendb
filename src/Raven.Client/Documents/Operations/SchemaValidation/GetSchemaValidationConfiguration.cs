@@ -19,7 +19,7 @@ public sealed class GetSchemaValidationConfiguration : IMaintenanceOperation<Get
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/configuration/client";
+            url = $"{node.Url}/databases/{node.Database}/schema-validation/config";
 
             var request = new HttpRequestMessage
             {
