@@ -12,5 +12,9 @@ namespace Raven.Client.Documents.Identity
         Task<long> GenerateNextIdForAsync(string database, string collectionName);
 
         Task<string> GenerateDocumentIdAsync(string database, object entity);
+
+        Task<string> GenerateDocumentIdAsync(string database, Type type);
+
+        Task<string> GenerateDocumentIdAsync(string database, string collectionName);
     }
 }

@@ -152,38 +152,40 @@ namespace FastTests.Client
                 Assert.Equal(count * 4, productsIds.Count);
             }
         }
-        
+
         [RavenFact(RavenTestCategory.ClientApi)]
         public async Task GenerateNextIdAndGenerateDocumentIdUseTheSameHiLoRange()
         {
             using (var store = GetDocumentStore())
             {
-                    // Call GenerateNextIdForAsync methods:
-                    var id1 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, new User());
-                    Assert.Equal(1, id1);
-                    
-                    var id2 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, typeof(User)); 
-                    Assert.Equal(2, id2);
+                // Call GenerateNextIdForAsync methods:
+                var id1 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, new User());
+                Assert.Equal(1, id1);
 
-                    var id3 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Users"); 
-                    Assert.Equal(3, id3);
-                    
-                    // Call GenerateDocumentIdAsync:
-                    var fullDocumentId = await store.HiLoIdGenerator.GenerateDocumentIdAsync(null, new User());
-                    Assert.Equal("users/4-A", fullDocumentId);
+                var id2 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, typeof(User));
+                Assert.Equal(2, id2);
 
-                    using (var session = store.OpenSession())
-                    {
-                        var user = new User();
-                        session.Store(user);
-                        var userId = session.Advanced.GetDocumentId(user); 
-                        Assert.Equal("users/5-A", userId);
-                    }
+                var id3 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Users");
+                Assert.Equal(3, id3);
 
-                    var id4 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, new User());
-                    var id5 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, typeof(User)); 
-                    var id6 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Users"); 
-                    Assert.Equal(8, id6);
+                // Call GenerateDocumentIdAsync:
+                var fullDocumentId4 = await store.HiLoIdGenerator.GenerateDocumentIdAsync(null, new User());
+                var fullDocumentId5 = await store.HiLoIdGenerator.GenerateDocumentIdAsync(null, typeof(User));
+                var fullDocumentId6 = await store.HiLoIdGenerator.GenerateDocumentIdAsync(null, "Users");
+                Assert.Equal("users/4-A", fullDocumentId4);
+
+                using (var session = store.OpenSession())
+                {
+                    var user = new User();
+                    session.Store(user);
+                    var userId = session.Advanced.GetDocumentId(user);
+                    Assert.Equal("users/7-A", userId);
+                }
+
+                var id8 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, new User());
+                var id9 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, typeof(User));
+                var id10 = await store.HiLoIdGenerator.GenerateNextIdForAsync(null, "Users");
+                Assert.Equal(10, id10);
             }
         }
 
@@ -206,7 +208,7 @@ namespace FastTests.Client
                     session.SaveChanges();
 
                     for (var i = 0; i < 32; i++)
-                        await hiLoKeyGenerator.GenerateDocumentIdAsync(new User());
+                        await hiLoKeyGenerator.GenerateDocumentIdAsync("Users");
                 }
 
                 using (var session = store.OpenSession())
@@ -216,7 +218,7 @@ namespace FastTests.Client
                     Assert.Equal(max, 96);
 
                     //we should be receiving a range of 64 now
-                    await hiLoKeyGenerator.GenerateDocumentIdAsync(new User());
+                    await hiLoKeyGenerator.GenerateDocumentIdAsync("Users");
                 }
 
                 using (var session = store.OpenSession())

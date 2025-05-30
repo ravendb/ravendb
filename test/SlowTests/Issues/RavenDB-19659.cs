@@ -5,7 +5,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Identity;
 using Raven.Server;
 using Raven.Server.Config;
-using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -61,7 +60,7 @@ namespace SlowTests.Issues
                 for (var i = 0; i < 32; i++)
                 {
 
-                    var id = await hiLoKeyGenerator1.GenerateDocumentIdAsync(new User());
+                    var id = await hiLoKeyGenerator1.GenerateDocumentIdAsync("Users");
                     uniqueIds.Add(id);
                 }
 
@@ -83,7 +82,7 @@ namespace SlowTests.Issues
                 {
                     for (var i = 0; i < 31; i++)
                     {
-                        var id = await hiLoKeyGenerator2.GenerateDocumentIdAsync(new User());
+                        var id = await hiLoKeyGenerator2.GenerateDocumentIdAsync("Users");
                         uniqueIds.Add(id);
                     }
                 }
@@ -95,7 +94,7 @@ namespace SlowTests.Issues
                     mre.WaitOne();
                 };
 
-                var generateIdTask = Task.Run(async () => await hiLoKeyGenerator2.GenerateDocumentIdAsync(new User()));
+                var generateIdTask = Task.Run(async () => await hiLoKeyGenerator2.GenerateDocumentIdAsync("Users"));
 
                 using (GetNewServer(new ServerCreationOptions
                 {
@@ -105,7 +104,7 @@ namespace SlowTests.Issues
                     CustomSettings = settings1
                 }))
                 {
-                    var id = await hiLoKeyGenerator2.GenerateDocumentIdAsync(new User());
+                    var id = await hiLoKeyGenerator2.GenerateDocumentIdAsync("Users");
                     uniqueIds.Add(id);
                     mre.Set();
                 }

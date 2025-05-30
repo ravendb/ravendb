@@ -25,9 +25,21 @@ namespace Raven.Client.Documents.Identity
 
         public Task<string> GenerateDocumentIdAsync(string database, object entity)
         {
+            var collectionName = Store.Conventions.GetCollectionName(entity);
+            return GenerateDocumentIdAsync(database, collectionName);
+        }
+
+        public Task<string> GenerateDocumentIdAsync(string database, Type type)
+        {
+            var collectionName = Store.Conventions.GetCollectionName(type);
+            return GenerateDocumentIdAsync(database, collectionName);
+        }
+
+        public Task<string> GenerateDocumentIdAsync(string database, string collectionName)
+        {
             database = Store.GetDatabase(database);
             var generator = _generators.GetOrAdd(database, GenerateAsyncMultiTypeHiLoFunc);
-            return generator.GenerateDocumentIdAsync(entity);
+            return generator.GenerateDocumentIdAsync(collectionName);
         }
 
         public Task<long> GenerateNextIdForAsync(string database, object entity)

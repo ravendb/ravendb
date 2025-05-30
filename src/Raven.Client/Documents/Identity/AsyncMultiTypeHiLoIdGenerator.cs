@@ -33,28 +33,27 @@ namespace Raven.Client.Documents.Identity
             _identityPartsSeparator = Conventions.IdentityPartsSeparator;
         }
 
-        public async Task<string> GenerateDocumentIdAsync(object entity)
+        public async Task<string> GenerateDocumentIdAsync(string collectionName)
         {
             var identityPartsSeparator = Conventions.IdentityPartsSeparator;
             if (_identityPartsSeparator != identityPartsSeparator)
                 await MaybeRefresh(identityPartsSeparator).ConfigureAwait(false);
 
-            var typeTagName = Conventions.GetCollectionName(entity);
-            if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
+            if (string.IsNullOrEmpty(collectionName)) //ignore empty tags
             {
                 return null;
             }
-            var tag = Conventions.TransformTypeCollectionNameToDocumentIdPrefix(typeTagName);
+            var tag = Conventions.TransformTypeCollectionNameToDocumentIdPrefix(collectionName);
             if (_idGeneratorsByTag.TryGetValue(tag, out var value))
             {
-                return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
+                return await value.GenerateDocumentIdAsync(collectionName).ConfigureAwait(false);
             }
 
             await _generatorLock.WaitAsync().ConfigureAwait(false);
             try
             {
                 if (_idGeneratorsByTag.TryGetValue(tag, out value))
-                    return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
+                    return await value.GenerateDocumentIdAsync(collectionName).ConfigureAwait(false);
 
                 value = CreateGeneratorFor(tag);
                 _idGeneratorsByTag.TryAdd(tag, value);
@@ -64,7 +63,7 @@ namespace Raven.Client.Documents.Identity
                 _generatorLock.Release();
             }
 
-            return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
+            return await value.GenerateDocumentIdAsync(collectionName).ConfigureAwait(false);
         }
 
         private async Task MaybeRefresh(char identityPartsSeparator)
@@ -102,7 +101,7 @@ namespace Raven.Client.Documents.Identity
         public async Task<long> GenerateNextIdForAsync(string collectionName)
         {
             collectionName = Conventions.TransformTypeCollectionNameToDocumentIdPrefix(collectionName);
-            
+
             if (_idGeneratorsByTag.TryGetValue(collectionName, out var value))
             {
                 return (await value.GetNextIdAsync().ConfigureAwait(false)).Id;
