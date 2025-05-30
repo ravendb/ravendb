@@ -39,9 +39,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
         
         await AssertMultipleParallel(() =>
         {
@@ -129,9 +127,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
         {
@@ -199,9 +195,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
         {
@@ -288,9 +282,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
         
         
         await AssertMultipleParallel(() =>
@@ -376,9 +368,7 @@ public class NumberRulesSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
         
         
         await AssertMultipleParallel(() =>

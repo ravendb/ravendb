@@ -17,10 +17,12 @@ public class EnumSchemaRuleValidator : FixedValueSchemaRuleValidator
 
     public override bool Validate(object value, ErrorBuilder errorBuilder)
     {
-        if (_enums.Any(x => Equals(x, value))) 
+        //The order here is extremely important since when comparing between blittable objects the function uses the first object context and _constantValue is used concurrently 
+        if (_enums.Any(x => Equals(value, x))) 
             return true;
         
-        errorBuilder?.AddError($"The value '{WrapStringWithQuotationMarks(value)}' at '{errorBuilder.Path}' is not an allowed value. Expected one of: '{_enums:', '}'.");
+        var quoteIfString = IsString(value) ? "\"" : "";
+        errorBuilder?.AddError($"The value '{quoteIfString}{value}{quoteIfString}' at '{errorBuilder.Path}' is not an allowed value. Expected one of: '{_enums:', '}'.");
         return false;
     }
     

@@ -31,9 +31,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
         }
 
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
             {
@@ -64,9 +62,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
             }
         };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
             {
@@ -89,9 +85,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue { [SVC.MinProperties] = 2 };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
             {
@@ -120,9 +114,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
         var schemaValidator = new SchemaValidator();
         var schemaDefinition = new DynamicJsonValue { [SVC.MaxProperties] = 3 };
         using var _ = ReadObjectOnNewCtx(schemaDefinition, out var blitSchemaDefinition);
-        {
-            schemaValidator.Init(blitSchemaDefinition);
-        }
+        schemaValidator.Init(blitSchemaDefinition);
 
         await AssertMultipleParallel(() =>
             {

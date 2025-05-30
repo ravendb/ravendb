@@ -466,6 +466,12 @@ namespace Sparrow.Json
             if (IsDisposed)
                 ThrowAlreadyDisposed();
 
+            if (destination.Length < Length)
+            {
+                charsWritten = 0;
+                return false;
+            }
+            
             if (_string != null)
             {
                 if (_string.AsSpan().TryCopyTo(destination))
@@ -474,7 +480,7 @@ namespace Sparrow.Json
                     return true;
                 }
             }
-            else
+            else 
             {
                 fixed (char* pDestination = destination)
                 {

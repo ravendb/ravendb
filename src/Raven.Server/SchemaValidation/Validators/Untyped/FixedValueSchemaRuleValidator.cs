@@ -11,18 +11,19 @@ public abstract class FixedValueSchemaRuleValidator : SchemaRuleValidator<object
         {
             LazyNumberValue lnv => (decimal)lnv,
             long lv => (decimal)lv,
-            decimal => v,
-            LazyStringValue  => v,
-            LazyCompressedStringValue lcsv => lcsv.ToLazyStringValue(),
-            BlittableJsonReaderObject or BlittableJsonReaderArray => v,
-            bool => v,
-            null => null,
+            decimal 
+                or LazyStringValue 
+                or LazyCompressedStringValue 
+                or BlittableJsonReaderObject 
+                or BlittableJsonReaderArray 
+                or bool 
+                or null => v,
             _ => throw new InvalidOperationException($"The type {v.GetType()} is not supported.")
         };
     }
 
-    protected static object WrapStringWithQuotationMarks(object constantValue)
+    protected static bool IsString(object constantValue)
     {
-        return SchemaValidationHelper.GetPublicTypeOfObj(constantValue) == SchemaValidationHelper.String ? $"\"{constantValue}\"" : constantValue;
+        return SchemaValidationHelper.GetPublicTypeOfObj(constantValue) == SchemaValidationHelper.String;
     }
 }
