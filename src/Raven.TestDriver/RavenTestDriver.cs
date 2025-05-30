@@ -60,7 +60,7 @@ namespace Raven.TestDriver
 
         protected bool IsDisposed { get; private set; }
 
-        internal RavenTestDriver()
+        public RavenTestDriver()
         {
             _scopedDocumentStore = new Lazy<IDocumentStore>(CreateScopeDocumentStore, LazyThreadSafetyMode.ExecutionAndPublication);
         }
