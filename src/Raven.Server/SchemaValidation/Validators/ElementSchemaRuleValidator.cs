@@ -47,7 +47,7 @@ public class ElementSchemaRuleValidator
         foreach (var ruleValidator in _ruleValidators)
         {
             isValid &= ruleValidator.Validate(value, errorBuilder);
-            if(errorBuilder == null && isValid == false)
+            if (errorBuilder == null && isValid == false)
                 return false;
         }
         return isValid;
