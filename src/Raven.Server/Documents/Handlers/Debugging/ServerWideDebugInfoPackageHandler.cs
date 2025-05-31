@@ -64,6 +64,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             nameof(DatabaseRecord.Analyzers),
             nameof(DatabaseRecord.TimeSeries),
             nameof(DatabaseRecord.SupportedFeatures),
+            nameof(DatabaseRecord.SchemaValidation),
 
             nameof(DatabaseRecord.Sharding),
             nameof(DatabaseRecord.RevisionsBin),
