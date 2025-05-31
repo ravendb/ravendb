@@ -209,6 +209,7 @@ namespace Raven.Server.ServerWide
             [nameof(AddOrUpdateAiAgentCommand)] = 71_001,
             [nameof(DeleteAiAgentCommand)] = 71_001,
 
+            [nameof(EditSchemaValidationConfigurationCommand)] = 72_000
         };
 
         public bool CanPutCommand(string command)
