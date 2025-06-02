@@ -1,4 +1,5 @@
-﻿using System.Threading.Tasks;
+﻿using System;
+using System.Threading.Tasks;
 using Raven.Server.SchemaValidation;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -167,8 +168,7 @@ public class ArraySchemaValidationTests : SchemaValidationTestsBase
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { [prop] = new DynamicJsonArray { 1, "", 2 } }, out var obj);
 
                 Assert.False(schemaValidator.Validate(obj, out var errors));
-                AssertError(@"'somepropname[0]' should be of type 'string' but actual type is 'integer'.
-'somepropname[2]' should be of type 'string' but actual type is 'integer'", errors);
+                AssertError($"'somepropname[0]' should be of type 'string' but actual type is 'integer'.{Environment.NewLine}'somepropname[2]' should be of type 'string' but actual type is 'integer'", errors);
             });
     }
 

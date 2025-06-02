@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Server.SchemaValidation;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
@@ -12,7 +13,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
 {
     public ComplexSchemaValidationTests(ITestOutputHelper output) : base(output) { }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task PersonObjectWithAddressAndAgeValidation()
     {
         var schemaDefinition = new DynamicJsonValue
@@ -73,7 +74,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             });
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task ArrayWithUniqueItemsValidation()
     {
         var schemaDefinition = new DynamicJsonValue
@@ -117,7 +118,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             });
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task EnumConstraintOnString()
     {
         var schemaDefinition = new DynamicJsonValue
@@ -150,7 +151,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             });
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task OneOfConstraint()
     {
         var schemaDefinition = new DynamicJsonValue
@@ -190,7 +191,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             });
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task StringPatternValidation()
     {
         var schemaDefinition = new DynamicJsonValue
@@ -220,7 +221,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             });
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task NestedObjectValidation()
     {
         var schemaDefinition = new DynamicJsonValue
@@ -266,7 +267,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             });
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task DependentRequiredValidation()
     {
         var schemaDefinition = new DynamicJsonValue
@@ -305,7 +306,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             });
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task AllOfWithTypeConstraints()
     {
         var schemaDefinition = new DynamicJsonValue
@@ -339,7 +340,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             });
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task ArrayOfObjectsWithRequiredProperties()
     {
         var schemaDefinition = new DynamicJsonValue
@@ -394,7 +395,7 @@ public class ComplexSchemaValidationTests : SchemaValidationTestsBase
             });
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.JavaScript)]
     public async Task AnyOfWithConflictingTypes()
     {
         var schemaDefinition = new DynamicJsonValue
