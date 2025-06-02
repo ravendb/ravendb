@@ -82,6 +82,11 @@ public struct Int64LookupKey : ILookupKey
         return ToString();
     }
 
+    public int GetTermRefCount<T>(Lookup<T> parent) where T : struct, ILookupKey
+    {
+        return 1;
+    }
+
     public Int64LookupKey(long value)
     {
         Value = value;

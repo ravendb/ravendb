@@ -337,7 +337,7 @@ namespace Voron.Debugging
                 {
                     if (i % steps == 0)
                     {
-                        sw.Write($"<li>{lookupKey.ToString(tree)} --> {val}</li>");
+                        sw.Write($"<li>{lookupKey.ToString(tree)} --> {val} (RefCount: {lookupKey.GetTermRefCount(tree)})</li>");
                     }
                 }
                 else

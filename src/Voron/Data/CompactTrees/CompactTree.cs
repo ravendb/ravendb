@@ -189,6 +189,17 @@ public sealed partial class CompactTree : IPrepareForCommit
             return GetKey(parent).ToString();
         }
 
+        public int GetTermRefCount<T>(Lookup<T> parent) where T : struct, ILookupKey
+        {
+            if (ContainerId < 0)
+            {
+                return -1;
+            }
+
+            var term = Container.Get(parent.Llt, ContainerId);
+            return term.ToSpan()[0] & 0xF;
+        }
+
         public override string ToString()
         {
             return Key?.ToString() ?? "ContainerId: " + ContainerId;

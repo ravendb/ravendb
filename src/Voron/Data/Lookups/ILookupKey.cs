@@ -26,4 +26,6 @@ public interface ILookupKey
     void OnKeyRemoval<T>(Lookup<T> parent) where T : struct, ILookupKey;
     
     string ToString<T>(Lookup<T> parent) where T : struct, ILookupKey;
+
+    int GetTermRefCount<T>(Lookup<T> parent) where T : struct, ILookupKey;
 }
