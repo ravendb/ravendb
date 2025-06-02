@@ -107,7 +107,7 @@ public struct CoraxBooleanItem : IQueryMatch
                 var existsQuery = indexSearcher.ExistsQuery(field, streamingEnabled: false, forward: true);
                 
                 // matching lucene results, nulls included
-                return indexSearcher.IncludeNullMatch(field, existsQuery, forward: false);
+                return indexSearcher.Or(indexSearcher.TermQuery(field, null), existsQuery);
             }
             
             case (IsLeftUnbounded: true, IsRightUnbounded: false):
@@ -129,7 +129,7 @@ public struct CoraxBooleanItem : IQueryMatch
                     _ => query
                 };
                 
-                return indexSearcher.IncludeNullMatch(field, materializedQuery, false);
+                return indexSearcher.Or(indexSearcher.TermQuery(field, null), materializedQuery);
             }
 
             case (IsLeftUnbounded: false, IsRightUnbounded: false):

@@ -106,7 +106,6 @@ public class RavenDB_23642(ITestOutputHelper output) : RavenTestBase(output)
             .WhereBetween(x => x.Textual, null, "aa")
             .ToList();
 
-        WaitForUserToContinueTheTest(store);
         Assert.Equal(3, results.Count);
         Assert.Equal(u0.Id, results[0].Id);
         Assert.Equal(u1.Id, results[1].Id);
@@ -128,6 +127,21 @@ public class RavenDB_23642(ITestOutputHelper output) : RavenTestBase(output)
         results = session.Advanced
             .DocumentQuery<User>()
             .WaitForNonStaleResults()
+            .WhereBetween(x => x.Textual, null, null)
+            .ToList();
+        
+        Assert.Equal(5, results.Count);
+        Assert.Equal(u0.Id, results[0].Id);
+        Assert.Equal(u1.Id, results[1].Id);
+        Assert.Equal(u2.Id, results[2].Id);
+        Assert.Equal(u3.Id, results[3].Id);
+        Assert.Equal(u4.Id, results[4].Id);
+        
+        results = session.Advanced
+            .DocumentQuery<User>()
+            .WaitForNonStaleResults()
+            .WhereExists(x => x.Textual)
+            .AndAlso()
             .WhereBetween(x => x.Textual, null, null)
             .ToList();
         
