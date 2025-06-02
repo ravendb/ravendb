@@ -28,4 +28,6 @@ public interface ILookupKey
     string ToString<T>(Lookup<T> parent) where T : struct, ILookupKey;
 
     int GetTermRefCount<T>(Lookup<T> parent) where T : struct, ILookupKey;
+    
+    T Clone<T>(Lookup<T> parent) where T : struct, ILookupKey;
 }

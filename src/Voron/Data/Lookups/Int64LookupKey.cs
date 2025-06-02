@@ -86,6 +86,11 @@ public struct Int64LookupKey : ILookupKey
     {
         return 1;
     }
+    
+    public T Clone<T>(Lookup<T> parent) where T : struct, ILookupKey
+    {
+        return (T)(object)new Int64LookupKey(Value);
+    }
 
     public Int64LookupKey(long value)
     {

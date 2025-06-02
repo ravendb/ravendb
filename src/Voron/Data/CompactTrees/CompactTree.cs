@@ -200,6 +200,12 @@ public sealed partial class CompactTree : IPrepareForCommit
             return term.ToSpan()[0] & 0xF;
         }
 
+        public T Clone<T>(Lookup<T> parent) where T : struct, ILookupKey
+        {
+            var key = this.GetKey(parent);
+            return (T)(object)(new CompactKeyLookup(key));
+        }
+
         public override string ToString()
         {
             return Key?.ToString() ?? "ContainerId: " + ContainerId;
