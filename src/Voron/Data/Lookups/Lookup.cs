@@ -674,7 +674,6 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
 
     private void RemovePageFromParent(ref CursorState destinationState, ref CursorState parent)
     {
-        
         // can just remove the whole thing
         int position = parent.LastSearchPosition == 0 ? 1 : parent.LastSearchPosition - 1;
         if (position < 0 || position >= parent.Header->NumberOfEntries)
@@ -994,15 +993,31 @@ public sealed unsafe partial class Lookup<TLookupKey> : IPrepareForCommit
             
             if (state.Header->IsBranch) // we cannot allow a branch with a single element, steal another one
             {
-                DecodeEntry(ref state, state.Header->NumberOfEntries - 1, out var k, out var v);
-                RemoveFromPage(allowRecurse: false, state.Header->NumberOfEntries - 1, isExplicitRemove: false);
+                var entryPosition = state.Header->NumberOfEntries - 1;
+                DecodeEntry(ref state, entryPosition, out var k, out var v);
+                splitMarker = TLookupKey.FromLong<TLookupKey>(k);
+
+                if (splitMarker.GetTermRefCount(this) == 1)
+                {
+                    // When we're using CompactKeys, we need to ensure that the key won't be lost
+                    // after calling RemoveFromPage down below.
+                    // This may happen when our term has only 1 term reference (exists only as leaf/branch key
+                    // but actual Key-Value is already removed).
+                    // The `Clone` method itself does not clone the key on the disk
+                    // but rather reads the actual data into the memory.
+                    // In such a scenario, the upper caller will take care of writing it to disk
+                    // again (since ContainerId is invalid).
+                    // This is not duplicating the key it since it's removed in this method.
+                    splitMarker = splitMarker.Clone(this);
+                }
+                
+                RemoveFromPage(allowRecurse: false, entryPosition, isExplicitRemove: false);
                 // the first item in a branch is always the smallest
                 var prevEntryLen = EncodeEntry(newPageState.Header, TLookupKey.MinValue, v, entryBufferPtr);
                 AddEntryToPage(ref newPageState, prevEntryLen, entryBufferPtr, isUpdate: false);
          
                 newPageState.LastSearchPosition++;
                 
-                splitMarker = TLookupKey.FromLong<TLookupKey>(k);
             }
             
             var entryLength = EncodeEntry(newPageState.Header, causeForSplit.ToLong(), valueForSplit, entryBufferPtr);

@@ -96,6 +96,11 @@ public struct DoubleLookupKey : ILookupKey
         return 1;
     }
 
+    public T Clone<T>(Lookup<T> parent) where T : struct, ILookupKey
+    {
+        return (T)(object)new DoubleLookupKey(Value);
+    }
+
     public int CompareTo<T>(T l) where T : ILookupKey
     {
         if (typeof(T) != typeof(DoubleLookupKey))
