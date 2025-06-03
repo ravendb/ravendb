@@ -1452,15 +1452,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
             
             var fieldsInIndex = IndexSearcher.GetFields();
-            foreach (var field in fieldsInIndex)
+            foreach (var fieldName in fieldsInIndex)
             {
-                if (fields.Select(x => x.Name).Contains(field))
+                if (fields.Select(x => x.Name).Contains(fieldName))
                     continue;
-                var termType = IndexSearcher.IsVectorField(field) ? 
+                
+                if (IsDynamicFieldKnownAsStatic(fieldName))
+                    continue;
+                
+                var termType = IndexSearcher.IsVectorField(fieldName) ? 
                     IndexedValueType.Vector 
                     : IndexedValueType.Term;
                 
-                fields.Add(new (field, IndexFieldType.Dynamic, termType));
+                fields.Add(new (fieldName, IndexFieldType.Dynamic, termType));
             }
 
             return fields;

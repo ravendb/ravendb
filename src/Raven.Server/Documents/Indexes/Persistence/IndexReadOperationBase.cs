@@ -67,6 +67,16 @@ namespace Raven.Server.Documents.Indexes.Persistence
 
         public abstract HashSet<FieldDebugInfo> GetEntriesFields(ICollection<string> unknownTypeStaticFields);
 
+        protected static bool IsDynamicFieldKnownAsStatic(string fieldName)
+        {
+            return fieldName
+                is Client.Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName 
+                or Client.Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
+                or Client.Constants.Documents.Indexing.Fields.ValueFieldName
+                or Client.Constants.Documents.Indexing.Fields.DocumentIdFieldName
+                or Client.Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName;
+        }
+
         public override void Dispose()
         {
             if ((_logger.IsInfoEnabled || (_logger.IsWarnEnabled && _index.IsLowMemory)) &&

@@ -990,11 +990,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
                 if (fields.Select(x => x.Name).Contains(fieldName))
                     continue;
 
-                if (fieldName == Constants.Documents.Indexing.Fields.ReduceKeyHashFieldName
-                    || fieldName == Constants.Documents.Indexing.Fields.ReduceKeyValueFieldName
-                    || fieldName == Constants.Documents.Indexing.Fields.ValueFieldName
-                    || fieldName == Constants.Documents.Indexing.Fields.DocumentIdFieldName
-                    || fieldName == Constants.Documents.Indexing.Fields.SourceDocumentIdFieldName)
+                if (IsDynamicFieldKnownAsStatic(fieldName))
                     continue;
 
                 if (fieldName.EndsWith(LuceneDocumentConverterBase.ConvertToJsonSuffix) ||

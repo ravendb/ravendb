@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Server.Documents.Indexes.Debugging;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
@@ -55,15 +57,16 @@ public class RavenDB_21889 : RavenTestBase
             await Indexes.WaitForIndexingAsync(store, databaseName);
             var fields = await GetFieldsAsync();
 
-            Assert.DoesNotContain(fieldName, fields.Dynamic);
-            Assert.DoesNotContain(fieldName, fields.Static);
+            Assert.DoesNotContain(fieldName, fields.Select(x => x.Name));
 
             await store.Maintenance.ForDatabase(databaseName).SendAsync(new ResetIndexOperation(new Index().IndexName));
             await Indexes.WaitForIndexingAsync(store, databaseName: databaseName);
 
             fields = await GetFieldsAsync();
-            Assert.Contains(fieldName, fields.Dynamic);
-
+            Assert.Contains(fieldName, fields.Select(x=> x.Name));
+            Assert.Equal(IndexFieldType.Dynamic, fields.First(x => x.Name == fieldName).FieldType);
+            
+            
             query = session.Query<Item, Index>()
                 .Customize(x => x.WaitForNonStaleResults())
                 .Search(x => x.FtsField, "\"word3 word2\"")
@@ -72,19 +75,13 @@ public class RavenDB_21889 : RavenTestBase
             Assert.Equal(0, query.Count);
         }
 
-        async Task<Response> GetFieldsAsync()
+        async Task<List<FieldDebugInfo>> GetFieldsAsync()
         {
             var response = (await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, url))).Content;
             var data = await response.ReadAsByteArrayAsync();
             Assert.NotNull(data);
-            return JsonConvert.DeserializeObject<Response>(Encodings.Utf8.GetString(data));
+            return JsonConvert.DeserializeObject<List<FieldDebugInfo>>(Encodings.Utf8.GetString(data));
         }
-    }
-
-    private class Response
-    {
-        public string[] Static { get; set; }
-        public string[] Dynamic { get; set; }
     }
 
     private class Item

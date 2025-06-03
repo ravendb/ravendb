@@ -1,9 +1,11 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
+using Raven.Server.Documents.Indexes.Debugging;
 using Sparrow;
 using Tests.Infrastructure;
 using Xunit;
@@ -11,16 +13,13 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_23710 : RavenTestBase
+public class RavenDB_23710(ITestOutputHelper output) : RavenTestBase(output)
 {
-    public RavenDB_23710(ITestOutputHelper output) : base(output)
+    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public async Task IdFieldShouldBeDisplayedAsStatic(Options options)
     {
-    }
-
-    [RavenFact(RavenTestCategory.Indexes)]
-    public async Task IdFieldShouldBeDisplayedAsStatic()
-    {
-        using (var store = GetDocumentStore())
+        using (var store = GetDocumentStore(options))
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -39,23 +38,18 @@ public class RavenDB_23710 : RavenTestBase
                     var response = (await client.SendAsync(new HttpRequestMessage(HttpMethod.Get, url))).Content;
                     var data = await response.ReadAsByteArrayAsync();
                     Assert.NotNull(data);
-                    var indexFields = JsonConvert.DeserializeObject<Response>(Encodings.Utf8.GetString(data));
+                    var indexFields = JsonConvert.DeserializeObject<List<FieldDebugInfo>>(Encodings.Utf8.GetString(data));
 
-                    Assert.Equal(2, indexFields.Static.Length);
-                    Assert.Equal(0, indexFields.Dynamic.Length);
-                    
-                    Assert.Contains("id()", indexFields.Static);
+                    Assert.Equal(2, indexFields.Count(x => x.FieldType == IndexFieldType.Static));
+                    Assert.Equal(0, indexFields.Count(x => x.FieldType == IndexFieldType.Dynamic));
+                    var idField = indexFields.FirstOrDefault(x => x.Name == "id()");
+                    Assert.NotNull(idField);
+                    Assert.Equal(IndexFieldType.Static, idField.FieldType);
                 }
             }
         }
     }
     
-    private class Response
-    {
-        public string[] Static { get; set; }
-        public string[] Dynamic { get; set; }
-    }
-
     private class Dto
     {
         public string Name { get; set; }   
