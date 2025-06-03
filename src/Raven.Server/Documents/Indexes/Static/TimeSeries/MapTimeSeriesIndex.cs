@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Configuration;
+using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.Cleanup;
@@ -203,13 +204,11 @@ namespace Raven.Server.Documents.Indexes.Static.TimeSeries
             return DocumentDatabase.DocumentsStorage.TimeSeriesStorage.GetLastTimeSeriesDeletedRangesEtag(queryContext.Documents, collection);
         }
 
-        public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+        public override HashSet<FieldDebugInfo> GetEntriesFields()
         {
-            var staticEntries = _compiled.OutputFields.ToHashSet();
-
-            var dynamicEntries = GetDynamicEntriesFields(staticEntries);
-
-            return (staticEntries, dynamicEntries);
+            var staticEntries = _compiled.OutputFields;
+            var allEntries = GetEntriesFields(staticEntries);
+            return allEntries;
         }
 
         public override IIndexedItemEnumerator GetMapEnumerator(IEnumerable<IndexItem> items, string collection, TransactionOperationContext indexContext, IndexingStatsScope stats, IndexType type)

@@ -7,12 +7,14 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.AI.Embeddings;
+using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.Cleanup;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Voron;
+using IndexFieldType = Raven.Server.Documents.Indexes.Debugging.IndexFieldType;
 
 namespace Raven.Server.Documents.Indexes.Auto
 {
@@ -151,18 +153,11 @@ namespace Raven.Server.Documents.Indexes.Auto
             Definition.State = state;
         }
 
-        public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+        public override HashSet<FieldDebugInfo> GetEntriesFields()
         {
-            var staticEntries = Definition
-                .IndexFields
-                .Keys
-                .ToHashSet();
-            
-            staticEntries.Add(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
-
-            var dynamicEntries = GetDynamicEntriesFields(staticEntries);
-
-            return (staticEntries, dynamicEntries);
+            var allFields = GetEntriesFields(Definition.IndexFields.Keys);
+            allFields.Add(new(Constants.Documents.Indexing.Fields.DocumentIdFieldName, IndexFieldType.Static, IndexedValueType.Term));
+            return allFields;
         }
 
         protected override void LoadValues()

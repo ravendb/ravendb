@@ -14,6 +14,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
+using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -454,15 +455,10 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Static
             return StaticIndexHelper.IsStaleDueToReferences(this, queryContext, indexContext, referenceCutoff, compareExchangeReferenceCutoff, stalenessReasons) || isStale;
         }
 
-        public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+        public override HashSet<FieldDebugInfo> GetEntriesFields()
         {
-            var staticEntries = _compiled.OutputFields.ToHashSet();
-
-            var dynamicEntries = GetDynamicEntriesFields(staticEntries)
-                .Except(staticEntries)
-                .ToArray();
-
-            return (staticEntries, dynamicEntries);
+            var staticEntries = _compiled.OutputFields;
+            return GetEntriesFields(staticEntries);
         }
 
         protected override long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale)

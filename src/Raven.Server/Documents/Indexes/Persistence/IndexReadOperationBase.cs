@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading;
+using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Explanation;
@@ -64,7 +65,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         public abstract IEnumerable<BlittableJsonReaderObject> IndexEntries(IndexQueryServerSide query, Reference<long> totalResults, DocumentsOperationContext documentsContext,
             Func<string, SpatialField> getSpatialField, bool ignoreLimit, CancellationToken token);
 
-        public abstract IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields);
+        public abstract HashSet<FieldDebugInfo> GetEntriesFields(ICollection<string> unknownTypeStaticFields);
 
         public override void Dispose()
         {

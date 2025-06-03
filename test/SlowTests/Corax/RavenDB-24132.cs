@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
@@ -20,7 +21,7 @@ public class RavenDB_24132(ITestOutputHelper output) : RavenTestBase(output)
         {
             for (int i = 0; i < 1000; i++)
             {
-                bulkInsert.Store(new Dto(i));
+                bulkInsert.Store(new Dto(i.ToString()));
             }
         }
         
@@ -40,16 +41,21 @@ public class RavenDB_24132(ITestOutputHelper output) : RavenTestBase(output)
         
         Assert.Equal(1000, all.Count);
         Assert.Distinct(all);
+
+        using (var session = store.OpenSession())
+            session.Query<Dto>().VectorSearch(x => x.WithText(p => p.Number), v => v.ByText("0")).ToList();
+        
+        WaitForUserToContinueTheTest(store);
     }
     
-    private record Dto(int Number, string Id = null);
+    private record Dto(string Number, string Id = null);
 
     private class Index : AbstractIndexCreationTask<Dto>
     {
         public Index()
         {
             Map = dtos => from dto in dtos
-                select new { Vector = CreateVector(dto.Number.ToString()) };
+                select new { Vector = CreateVector(dto.Number) };
         }
     }
 }

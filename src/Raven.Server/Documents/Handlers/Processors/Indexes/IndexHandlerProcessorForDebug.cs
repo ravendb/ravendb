@@ -76,16 +76,33 @@ internal sealed class IndexHandlerProcessorForDebug : AbstractIndexHandlerProces
             if (string.Equals(operation, "entries-fields", StringComparison.OrdinalIgnoreCase))
             {
                 var fields = index.GetEntriesFields();
+                
+                bool isFirst = true;
+                writer.WriteStartArray();
+                foreach (var field in fields)
+                {
+                    if (isFirst == false)
+                        writer.WriteComma();
+                    isFirst = false;
 
-                writer.WriteStartObject();
-
-                writer.WriteArray(nameof(fields.Static), fields.Static);
-                writer.WriteComma();
-
-                writer.WriteArray(nameof(fields.Dynamic), fields.Dynamic);
-
-                writer.WriteEndObject();
-
+                    writer.WriteStartObject();
+                    
+                    writer.WritePropertyName(nameof(field.Name));
+                    writer.WriteString(field.Name);
+                    writer.WriteComma();
+                    
+                    writer.WritePropertyName(nameof(field.FieldType));
+                    writer.WriteString(field.FieldType.ToString());
+                    writer.WriteComma();
+                    
+                    writer.WritePropertyName(nameof(field.ValueType));
+                    writer.WriteString(field.ValueType.ToString());
+                    
+                    writer.WriteEndObject();
+                }
+                
+                writer.WriteEndArray();
+                
                 return;
             }
             

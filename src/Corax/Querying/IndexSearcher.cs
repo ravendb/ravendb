@@ -574,7 +574,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         _vectorFieldsMarkers ??= _metadataTree?.Read(Constants.IndexWriter.VectorFieldsRootPagesSlice)?.Reader.ToUnmanagedSpan<long>().ToSpan().ToArray() ?? [];
     }
 
-    public bool TryGetVectorsOfField(string fieldName, out Hnsw.IndexedVectorsRetriever retriever)
+    public bool IsVectorField(string fieldName)
     {
         using var _ = Slice.From(Allocator, fieldName, out var fieldNameAsSlice);
         var exists = TryGetRootPageByFieldName(fieldNameAsSlice, out var fieldRootPage);
@@ -583,6 +583,16 @@ public sealed unsafe partial class IndexSearcher : IDisposable
             InitializeSpecialTermsMarkers();
 
         if (_vectorFieldsMarkers.AsSpan().Contains(fieldRootPage) == false)
+        {
+            return false;
+        }
+
+        return true;
+    }
+    
+    public bool TryGetVectorsOfField(string fieldName, out Hnsw.IndexedVectorsRetriever retriever)
+    {
+        if (IsVectorField(fieldName) == false)
         {
             retriever = null;
             return false;

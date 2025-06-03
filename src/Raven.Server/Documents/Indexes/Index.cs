@@ -30,6 +30,7 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Handlers.Admin;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
@@ -3913,15 +3914,15 @@ namespace Raven.Server.Documents.Indexes
             return result;
         }
 
-        public abstract (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields();
+        public abstract ICollection<FieldDebugInfo> GetEntriesFields();
 
-        protected List<string> GetDynamicEntriesFields(HashSet<string> staticFields)
+        protected HashSet<FieldDebugInfo> GetEntriesFields(ICollection<string> unknownTypeStaticFields)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
             using (var indexTx = indexContext.OpenReadTransaction())
             using (var reader = IndexPersistence.OpenIndexReader(indexTx.InnerTransaction))
             {
-                return reader.DynamicEntriesFields(staticFields).ToList();
+                return reader.GetEntriesFields(unknownTypeStaticFields);
             }
         }
 

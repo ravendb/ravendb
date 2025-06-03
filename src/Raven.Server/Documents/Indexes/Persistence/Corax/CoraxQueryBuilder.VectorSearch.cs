@@ -58,26 +58,30 @@ public static partial class CoraxQueryBuilder
         var fieldMetadata = QueryBuilderHelper.GetFieldMetadata(builderParameters, fieldName, hasBoost: builderParameters.HasBoost);
         QueryExpression srcVector = me.Arguments[1];
 
-        if (srcVector is MethodExpression forId) // embedding.forDoc(docId) ...
+        if (srcVector is MethodExpression methodValue) // embedding.forDoc(docId) ...
         {
-            PortableExceptions.ThrowIf<InvalidDataException>(forId.Name != Constants.VectorSearch.EmbeddingForDocument,
-                $"Expected {Constants.VectorSearch.EmbeddingForDocument}() method call, but got: {forId.Name}");
+            PortableExceptions.ThrowIf<InvalidDataException>(methodValue.Name != Constants.VectorSearch.EmbeddingForDocument && methodValue.Name != Constants.VectorSearch.EmbeddingForRaw,
+                $"Expected {Constants.VectorSearch.EmbeddingForDocument}() method call, but got: {methodValue.Name}");
 
-            var (forIdValue, _) = QueryBuilderHelper.GetValue(metadata.Query, metadata, builderParameters.QueryParameters, (ValueExpression)forId.Arguments[0],
+            var (methodParameter, _) = QueryBuilderHelper.GetValue(metadata.Query, metadata, builderParameters.QueryParameters, (ValueExpression)methodValue.Arguments[0],
                 allowObjectsInParameters: false, allowArraysInParameters: true);
             
-            switch (forIdValue)
+            var isForDoc = methodValue.Name == Constants.VectorSearch.EmbeddingForDocument;
+
+            return (isForDoc, methodParameter) switch
             {
-                case string docId:
-                    return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, docId, minimumMatch, numberOfCandidates, exact,
-                        builderParameters.IsVectorSingleClause);
-                case StringSegment docIdSegment:
-                    return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, docIdSegment.Value, minimumMatch, numberOfCandidates, exact,
-                        builderParameters.IsVectorSingleClause);
-                case BlittableJsonReaderArray {Length:> 0} arr:
-                    break;
-            }
-            
+                (isForDoc: true, string docId) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata, docId, minimumMatch, numberOfCandidates, exact,
+                    builderParameters.IsVectorSingleClause),
+                (isForDoc: true, StringSegment docIdSegment) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata, docIdSegment.Value, minimumMatch,
+                    numberOfCandidates, exact, builderParameters.IsVectorSingleClause),
+                (isForDoc: false, string vectorAsBase64) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata,
+                    GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, vectorAsBase64, false), minimumMatch, numberOfCandidates,
+                    exact, builderParameters.IsVectorSingleClause),
+                (isForDoc: false, StringSegment stringSegmentAsBase64) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata,
+                    GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, stringSegmentAsBase64.ToString(), false), minimumMatch,
+                    numberOfCandidates, exact, builderParameters.IsVectorSingleClause),
+                (_, BlittableJsonReaderArray { Length: > 0 }) => throw new InvalidDataException("Cannot perform search on empty value.")
+            };
         }
         
         var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, builderParameters.QueryParameters, (ValueExpression)srcVector,

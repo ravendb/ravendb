@@ -8,6 +8,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Includes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Persistence.Lucene;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
@@ -503,7 +504,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             {
             }
 
-            public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+            public override HashSet<FieldDebugInfo> GetEntriesFields()
             {
                 throw new System.NotImplementedException();
             }

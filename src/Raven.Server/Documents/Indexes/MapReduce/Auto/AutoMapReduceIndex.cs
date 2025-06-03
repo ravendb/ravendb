@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Auto;
+using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.Cleanup;
@@ -95,16 +96,9 @@ namespace Raven.Server.Documents.Indexes.MapReduce.Auto
             Definition.State = state;
         }
 
-        public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+        public override ICollection<FieldDebugInfo> GetEntriesFields()
         {
-            var staticEntries = Definition
-                .IndexFields
-                .Keys
-                .ToHashSet();
-
-            var dynamicEntries = GetDynamicEntriesFields(staticEntries);
-
-            return (staticEntries, dynamicEntries);
+            return GetEntriesFields(Definition.IndexFields.Keys);
         }
 
         protected override void LoadValues()

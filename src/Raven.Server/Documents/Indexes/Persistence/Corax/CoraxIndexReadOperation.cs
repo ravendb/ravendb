@@ -17,6 +17,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Explanation;
 using Raven.Client.Documents.Queries.MoreLikeThis;
 using Raven.Client.Exceptions.Corax;
+using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
@@ -38,6 +39,7 @@ using IndexSearcher = Corax.Querying.IndexSearcher;
 using CoraxSpatialResult = global::Corax.Utils.Spatial.SpatialResult;
 using Sparrow.Server.Logging;
 using Voron.Data.Graphs;
+using IndexFieldType = Raven.Server.Documents.Indexes.Debugging.IndexFieldType;
 
 namespace Raven.Server.Documents.Indexes.Persistence.Corax
 {
@@ -1437,15 +1439,31 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        public override IEnumerable<string> DynamicEntriesFields(HashSet<string> staticFields)
+        public override HashSet<FieldDebugInfo> GetEntriesFields(ICollection<string> unknownTypeStaticFields)
         {
+            var fields = new HashSet<FieldDebugInfo>();
+            foreach (var staticField in unknownTypeStaticFields)
+            {
+                var termType = IndexSearcher.IsVectorField(staticField) ? 
+                    IndexedValueType.Vector 
+                    : IndexedValueType.Term;
+                
+                fields.Add(new FieldDebugInfo(staticField, IndexFieldType.Static, termType));
+            }
+            
             var fieldsInIndex = IndexSearcher.GetFields();
             foreach (var field in fieldsInIndex)
             {
-                if (staticFields.Contains(field))
+                if (fields.Select(x => x.Name).Contains(field))
                     continue;
-                yield return field;
+                var termType = IndexSearcher.IsVectorField(field) ? 
+                    IndexedValueType.Vector 
+                    : IndexedValueType.Term;
+                
+                fields.Add(new (field, IndexFieldType.Dynamic, termType));
             }
+
+            return fields;
         }
 
         public override void Dispose()

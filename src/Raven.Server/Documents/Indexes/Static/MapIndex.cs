@@ -7,12 +7,14 @@ using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Configuration;
+using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Documents.Indexes.Persistence;
 using Raven.Server.Documents.Indexes.Workers;
 using Raven.Server.Documents.Indexes.Workers.Cleanup;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide.Context;
 using Voron;
+using IndexFieldType = Raven.Server.Documents.Indexes.Debugging.IndexFieldType;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -124,14 +126,12 @@ namespace Raven.Server.Documents.Indexes.Static
             _mre.Set();
         }
 
-        public override (ICollection<string> Static, ICollection<string> Dynamic) GetEntriesFields()
+        public override HashSet<FieldDebugInfo> GetEntriesFields()
         {
-            var staticEntries = _compiled.OutputFields.ToHashSet();
-            staticEntries.Add(Constants.Documents.Indexing.Fields.DocumentIdFieldName);
-
-            var dynamicEntries = GetDynamicEntriesFields(staticEntries);
-
-            return (staticEntries, dynamicEntries);
+            var allFields = GetEntriesFields(_compiled.OutputFields);
+            allFields.Add(new(Constants.Documents.Indexing.Fields.DocumentIdFieldName, IndexFieldType.Static, IndexedValueType.Term));
+            
+            return allFields;
         }
 
         protected override long CalculateIndexEtag(QueryOperationContext queryContext, TransactionOperationContext indexContext, QueryMetadata query, bool isStale)
