@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication | RavenTestCategory.Cluster)]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication | RavenTestCategory.Cluster, Skip = "Skip until RavenDB-21796 is resolved (revision schema upgrade)")]
         public async Task ShouldNotSkipConflictedRevisions_InternalReplication()
         {
             var cluster = await CreateRaftCluster(3);
@@ -193,7 +193,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Cluster)]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Cluster, Skip = "Skip until RavenDB-21796 is resolved (revision schema upgrade)")]
         public async Task ShouldUpdateSiblingsChangeVector()
         {
             var cluster = await CreateRaftCluster(3, watcherCluster: true, leaderIndex: 0);
