@@ -4,6 +4,7 @@ using Raven.Server.Documents;
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.SchemaValidation;
 
@@ -42,8 +43,15 @@ public class SchemaValidatorCache : IDisposable
                     continue;
             }
 
-            var schemaValidator = new SchemaValidator(validator.Disabled);
-            schemaValidator.Init(validator.SchemaDefinition.Clone(_context.Value));
+            var schemaValidator = new SchemaValidator(validator.Disabled)
+            {
+                SchemaDefinition = validator.SchemaDefinition
+            };
+
+            //TODO: don't throw if it fails here
+            var blittable = _context.Value.Sync.ReadForMemory(validator.SchemaDefinition, "my-raw-json");
+            schemaValidator.Init(blittable);
+
             schemaValidatorsToAdd ??= new List<(string, SchemaValidator)>();
             schemaValidatorsToAdd.Add((collection, schemaValidator));
         }

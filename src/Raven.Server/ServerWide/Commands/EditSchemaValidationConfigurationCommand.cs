@@ -31,6 +31,6 @@ public class EditSchemaValidationConfigurationCommand : UpdateDatabaseCommand
 
     public override void FillJson(DynamicJsonValue json)
     {
-        json[nameof(Configuration)] = TypeConverter.ToBlittableSupportedType(Configuration);
+        json[nameof(Configuration)] = Configuration.ToJson();
     }
 }

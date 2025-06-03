@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.SchemaValidation;
@@ -34,11 +33,11 @@ public sealed class SchemaValidationConfiguration
     {
         public bool Disabled { get; set; }
 
-        public BlittableJsonReaderObject SchemaDefinition { get; set; }
+        public string SchemaDefinition { get; set; }
 
         public DateTime LastModifiedTime { get; private set; } = DateTime.UtcNow;
 
-        public object ToJson()
+        public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
