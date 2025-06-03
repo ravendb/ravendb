@@ -31,7 +31,7 @@ public class ElementSchemaRuleValidator
     {
         if (IsOfRequiredType(value) == false)
         {
-            errorBuilder?.AddError($"'{errorBuilder.Path}' should be of type '{_publicTypesRestriction:' or '}' but actual type is '{SchemaValidationHelper.GetPublicType(value.GetType())}'.");
+            errorBuilder?.AddError($"'{errorBuilder.Path}' should be of type '{_publicTypesRestriction:' or '}' but actual type is '{SchemaValidationHelper.GetPublicType(value?.GetType())}'.");
             return false;
         }
         
