@@ -14,7 +14,7 @@ public class SchemaValidator
     //The context is only written during the initialization phase. During validation, it is used for reading only and can be used in parallel.
     private readonly SingleUseFlag _disposing = new SingleUseFlag();
     
-    public BlittableJsonReaderObject SchemaDefinition => _root.SchemaDefinition;
+    public string SchemaDefinition { get; set; }
 
     public SchemaValidator(bool disabled = false)
     {
@@ -26,7 +26,7 @@ public class SchemaValidator
     {
         var refSchemas = new RefSchemas();
         refSchemas.Init(schemaDefinition);
-        
+
         _root = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(schemaDefinition, new SchemaPath(), refSchemas);
     }
 
