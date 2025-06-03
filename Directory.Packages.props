@@ -90,6 +90,7 @@
     <PackageVersion Include="Nito.AsyncEx.Coordination" Version="5.1.2" />
     <PackageVersion Include="NLog" Version="5.5.1" />
     <PackageVersion Include="NLog.Web.AspNetCore" Version="5.5.0" />
+    <PackageVersion Include="NJsonSchema" Version="11.3.2" />
     <PackageVersion Include="NodaTime" Version="3.2.2" />
     <PackageVersion Include="Npgsql" Version="9.0.4" />
     <PackageVersion Include="NuGet.Commands" Version="7.0.1" />
