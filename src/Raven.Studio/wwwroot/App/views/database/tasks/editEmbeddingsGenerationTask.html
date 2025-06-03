@@ -30,8 +30,8 @@
                                 </div>
                             </div>
                             <div class="form-group" data-bind="validationElement: identifier">
-                                <label for="identifier" class="control-label">
-                                    Identifier <i class="icon-info text-info" title="A unique identifier used in document paths. If not specified, it will be auto-generated from the task name."></i>
+                                <label for="identifier" class="control-label task-identifier">
+                                    Identifier <i class="icon-info text-info"></i>
                                 </label>
                                 <div class="flex-horizontal w-100">
                                     <div class="flex-grow">
@@ -226,8 +226,7 @@
                             </div>
                         </div>
                     </div>
-
-                    <div data-bind="if: embeddingsSource() === 'script'">
+                    <div data-bind="visible: embeddingsSource() === 'script'">
                         <div class="form-group">
                             <label>Script</label>
                             <span class="pull-right"><a href="#" data-bind="click: $root.syntaxHelp"><small>Syntax <i class="icon-help"></i></small></a></span>
@@ -242,7 +241,7 @@
                         <div class="form-group">
                             <label class="control-label">
                                 Chunking Method
-                                <i class="icon-info text-info" title="This chunking method will be used as the default when no specific method is used in the script"></i>
+                                <i class="icon-info text-info chunking-method"></i>
                             </label>
                             <div class="flex-grow">
                                 <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: transformationChunkingMethodLabel">
@@ -257,7 +256,7 @@
                         <div class="form-group" data-bind="validationElement: transformationMaxTokensPerChunk">
                             <label class="control-label">
                                 Max Tokens per Chunk
-                                <i class="icon-info text-info" title="This value will be used as the default when no specific value is set in the script"></i>
+                                <i class="icon-info text-info max-tokens-per-chunk"></i>
                             </label>
                             <div class="flex-grow">
                                 <input type="number" class="form-control" data-bind="value: transformationMaxTokensPerChunk, attr: { placeholder: `Default: ${maxTokensPerChunkDefaultValue()}` }" min="1"/>
@@ -265,7 +264,9 @@
                         </div>
                     </div>
                     <div class="margin-top-sm">
-                        <label class="control-label">Quantization</label>
+                        <label class="control-label">Quantization
+                            <i class="icon-info text-info quantization"></i>
+                        </label>
                         <div class="flex-grow">
                             <button class="btn btn-block dropdown-toggle text-left" type="button" data-toggle="dropdown" data-bind="textInput: quantizationTypeLabel">
                                 <span data-bind="text: quantizationTypeLabel"></span>
@@ -278,7 +279,9 @@
                     </div>
                     <div class="margin-top-sm">
                         <div>
-                            <label class="control-label">Embeddings Cache Expiration</label>
+                            <label class="control-label">Embeddings Cache Expiration
+                                <i class="icon-info text-info embeddings-cache-expiration"></i>
+                            </label>
                         </div>
                         <div class="flex-grow" data-bind="validationElement: $root.editedEmbeddingsGeneration().embeddingsCacheExpiration">
                             <input type="text" class="form-control" data-bind="durationPicker: $root.editedEmbeddingsGeneration().embeddingsCacheExpiration, durationPickerOptions: { showDays: true, showSeconds: true }" />
@@ -294,7 +297,7 @@
                     <div class="panel-heading padding" data-bind="click: toggleQueryingAccordion" style="cursor: pointer;">
                         <h3 class="panel-title">
                             Querying
-                            <i class="icon-info text-info" title="When making a vector search query, embeddings are also generated from the provided search term to compare against stored vectors."></i>
+                            <i class="icon-info text-info querying"></i>
                             <span class="pull-right toggle-icon" data-bind="css: { 'icon-chevron-down': !isQueryingOpen(), 'icon-chevron-up': isQueryingOpen() }"></span>
                         </h3>
                     </div>

@@ -17,6 +17,8 @@ export function EditEmbeddingsGenerationInfoHub() {
 
     const generatingEmbeddingsOverviewDocsLink = useRavenLink({ hash: "H6GDNY" });
     const embeddingsGenerationTaskDocsLink = useRavenLink({ hash: "MKXRLR" });
+    const chunkingMethodsDocsLink = useRavenLink({ hash: "TLJF56" });
+    const quantizationOptionsDocsLink = useRavenLink({ hash: "JWJPZE" });
     
     const featureAvailability = useLimitedFeatureAvailability({
         defaultFeatureAvailability,
@@ -95,6 +97,14 @@ export function EditEmbeddingsGenerationInfoHub() {
                 <br />
                 <a href={embeddingsGenerationTaskDocsLink} target="_blank">
                     <Icon icon="newtab" /> Docs - The Embeddings Generation Task
+                </a>
+                <br />
+                <a href={chunkingMethodsDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - Chunking methods and tokens
+                </a>
+                <br />
+                <a href={quantizationOptionsDocsLink} target="_blank">
+                    <Icon icon="newtab" /> Docs - Quantization options
                 </a>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper
