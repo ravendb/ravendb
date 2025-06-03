@@ -29,7 +29,7 @@ export default function DatabaseCustomSorters() {
 
     const { databasesService, manageServerService } = useServices();
 
-    const { sorters, setSorters, addNewSorter, removeSorter, mapFromDto } = useCustomSorters();
+    const { sorters, setSorters, addNewSorter, removeSorter, mapFromDto, markAsSaved } = useCustomSorters();
 
     // Changing the database causes re-mount
     const asyncGetDatabaseSorters = useAsync(() => databasesService.getCustomSorters(db.name), [], {
@@ -53,7 +53,7 @@ export default function DatabaseCustomSorters() {
     const numberOfCustomSortersInCluster = useAppSelector(licenseSelectors.limitsUsage).NumberOfCustomSortersInCluster;
     const hasServerWideCustomSorters = useAppSelector(licenseSelectors.statusValue("HasServerWideCustomSorters"));
 
-    const databaseResultsCount = sorters.length;
+    const databaseResultsCount = sorters.filter((x) => x.isSaved).length;
     const serverWideResultsCount = asyncGetServerWideSorters.result?.length ?? null;
 
     const databaseLimitReachStatus = getLicenseLimitReachStatus(databaseResultsCount, licenseDatabaseLimit);
@@ -119,6 +119,7 @@ export default function DatabaseCustomSorters() {
                     reload={asyncGetDatabaseSorters.execute}
                     serverWideSorterNames={asyncGetServerWideSorters.result?.map((x) => x.Name) ?? []}
                     remove={removeSorter}
+                    markAsSaved={markAsSaved}
                 />
 
                 <HrHeader

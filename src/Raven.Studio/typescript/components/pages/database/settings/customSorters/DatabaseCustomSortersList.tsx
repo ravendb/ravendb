@@ -12,10 +12,11 @@ interface DatabaseCustomSortersListProps {
     reload: () => void;
     serverWideSorterNames: string[];
     remove: (idx: number) => void;
+    markAsSaved: (idx: number) => void;
 }
 
 export default function DatabaseCustomSortersList(props: DatabaseCustomSortersListProps) {
-    const { sorters, fetchStatus, reload, remove, serverWideSorterNames } = props;
+    const { sorters, fetchStatus, reload, remove, serverWideSorterNames, markAsSaved } = props;
 
     if (fetchStatus === "loading") {
         return <LoadingView />;
@@ -35,6 +36,7 @@ export default function DatabaseCustomSortersList(props: DatabaseCustomSortersLi
             initialSorter={sorter}
             serverWideSorterNames={serverWideSorterNames}
             remove={() => remove(idx)}
+            markAsSaved={() => markAsSaved(idx)}
         />
     ));
 }

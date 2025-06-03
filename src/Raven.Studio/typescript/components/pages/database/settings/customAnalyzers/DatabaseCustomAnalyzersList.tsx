@@ -12,10 +12,11 @@ interface DatabaseCustomAnalyzersListProps {
     reload: () => void;
     serverWideAnalyzerNames: string[];
     remove: (idx: number) => void;
+    markAsSaved: (idx: number) => void;
 }
 
 export default function DatabaseCustomAnalyzersList(props: DatabaseCustomAnalyzersListProps) {
-    const { analyzers, fetchStatus, reload, remove, serverWideAnalyzerNames } = props;
+    const { analyzers, fetchStatus, reload, remove, serverWideAnalyzerNames, markAsSaved } = props;
 
     if (fetchStatus === "loading") {
         return <LoadingView />;
@@ -35,6 +36,7 @@ export default function DatabaseCustomAnalyzersList(props: DatabaseCustomAnalyze
             initialAnalyzer={analyzer}
             serverWideAnalyzerNames={serverWideAnalyzerNames}
             remove={() => remove(idx)}
+            markAsSaved={() => markAsSaved(idx)}
         />
     ));
 }

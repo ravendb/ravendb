@@ -41,10 +41,11 @@ interface DatabaseCustomSortersListItemProps {
     initialSorter: CustomSorterFormData;
     serverWideSorterNames: string[];
     remove: () => void;
+    markAsSaved: () => void;
 }
 
 export default function DatabaseCustomSortersListItem(props: DatabaseCustomSortersListItemProps) {
-    const { initialSorter, serverWideSorterNames, remove } = props;
+    const { initialSorter, serverWideSorterNames, remove, markAsSaved } = props;
 
     const form = useForm<CustomSorterFormData>({
         resolver: customSorterYupResolver,
@@ -83,7 +84,7 @@ export default function DatabaseCustomSortersListItem(props: DatabaseCustomSorte
                 Name: formData.name,
                 Code: formData.code,
             });
-
+            markAsSaved();
             toggleIsEditMode();
             reset(formData);
             throttledUpdateLicenseLimitsUsage();

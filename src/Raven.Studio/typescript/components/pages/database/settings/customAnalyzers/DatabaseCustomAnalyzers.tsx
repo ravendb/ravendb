@@ -28,7 +28,7 @@ export default function DatabaseCustomAnalyzers() {
 
     const { databasesService, manageServerService } = useServices();
 
-    const { analyzers, setAnalyzers, addNewAnalyzer, removeAnalyzer, mapFromDto } = useCustomAnalyzers();
+    const { analyzers, setAnalyzers, addNewAnalyzer, removeAnalyzer, mapFromDto, markAsSaved } = useCustomAnalyzers();
 
     // Changing the database causes re-mount
     const asyncGetDatabaseAnalyzers = useAsync(() => databasesService.getCustomAnalyzers(db.name), [], {
@@ -52,7 +52,7 @@ export default function DatabaseCustomAnalyzers() {
     const numberOfCustomAnalyzersInCluster = useAppSelector(licenseSelectors.limitsUsage).NumberOfAnalyzersInCluster;
     const hasServerWideCustomAnalyzers = useAppSelector(licenseSelectors.statusValue("HasServerWideAnalyzers"));
 
-    const databaseResultsCount = analyzers.length;
+    const databaseResultsCount = analyzers.filter((x) => x.isSaved).length;
     const serverWideResultsCount = asyncGetServerWideAnalyzers.result?.length ?? null;
 
     const databaseLimitReachStatus = getLicenseLimitReachStatus(databaseResultsCount, licenseDatabaseLimit);
@@ -112,6 +112,7 @@ export default function DatabaseCustomAnalyzers() {
                         reload={asyncGetDatabaseAnalyzers.execute}
                         serverWideAnalyzerNames={asyncGetServerWideAnalyzers.result?.map((x) => x.Name) ?? []}
                         remove={removeAnalyzer}
+                        markAsSaved={markAsSaved}
                     />
 
                     <HrHeader

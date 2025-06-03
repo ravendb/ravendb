@@ -39,10 +39,11 @@ interface DatabaseCustomAnalyzersListItemProps {
     initialAnalyzer: CustomAnalyzerFormData;
     serverWideAnalyzerNames: string[];
     remove: () => void;
+    markAsSaved: () => void;
 }
 
 export default function DatabaseCustomAnalyzersListItem(props: DatabaseCustomAnalyzersListItemProps) {
-    const { initialAnalyzer, serverWideAnalyzerNames, remove } = props;
+    const { initialAnalyzer, serverWideAnalyzerNames, remove, markAsSaved } = props;
     const form = useForm<CustomAnalyzerFormData>({
         resolver: customAnalyzerYupResolver,
         defaultValues: initialAnalyzer,
@@ -79,6 +80,7 @@ export default function DatabaseCustomAnalyzersListItem(props: DatabaseCustomAna
                 Name: formData.name,
                 Code: formData.code,
             });
+            markAsSaved();
             toggleIsEditMode();
             reset(formData);
             throttledUpdateLicenseLimitsUsage();
