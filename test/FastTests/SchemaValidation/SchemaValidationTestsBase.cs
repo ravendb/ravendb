@@ -35,7 +35,7 @@ public abstract class SchemaValidationTestsBase : ParallelTestBase
             throw whenAll.Exception;
     }
     
-    protected static JsonOperationContext ReadObjectOnNewCtx(DynamicJsonValue obj, out BlittableJsonReaderObject readObj) 
+    public static JsonOperationContext ReadObjectOnNewCtx(DynamicJsonValue obj, out BlittableJsonReaderObject readObj) 
     {
         var context = JsonOperationContext.ShortTermSingleUse();
 
