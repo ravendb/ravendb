@@ -219,6 +219,10 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         let hasAnyErrors = false;
         this.spinners.save(true);
 
+        if (this.editedEmbeddingsGeneration().embeddingsSource() === "paths" && this.editedEmbeddingsGeneration().pathConfigurationPath()) {
+            this.editedEmbeddingsGeneration().addEmbeddingsPathConfiguration();
+        }
+
         if (!this.isValid(this.editedEmbeddingsGeneration().validationGroup)) {
             hasAnyErrors = true;
         }
