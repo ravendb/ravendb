@@ -140,7 +140,8 @@ namespace SlowTests.Tests.Indexes
         }
 
         [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Field boosting is not supported by Corax.")]
         public void QueryWillThrowWhenIndexHasBoostingAndAutomaticallySortingByScoreIsNotDisable(Options options)
         {
             using var store = GetDocumentStore(options);
