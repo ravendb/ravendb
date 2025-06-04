@@ -13,7 +13,7 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
         private LicenseLimitWarning(LicenseLimitException licenseLimit)
         {
-            Type = licenseLimit.Type;
+            Type = licenseLimit.LimitType;
             Message = licenseLimit.Message;
         }
 
@@ -34,11 +34,11 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
         {
             var alert = AlertRaised.Create(
                 null,
-                $@"You've reached your license limit ({EnumHelper.GetDescription(licenseLimit.Type)})",
+                $@"You've reached your license limit ({EnumHelper.GetDescription(licenseLimit.LimitType)})",
                 licenseLimit.Message,
                 AlertType.LicenseManager_LicenseLimit,
                 NotificationSeverity.Warning,
-                key: licenseLimit.Type.ToString(),
+                key: licenseLimit.LimitType.ToString(),
                 details: new LicenseLimitWarning(licenseLimit));
 
             notificationCenter.Add(alert, updateExisting: true);

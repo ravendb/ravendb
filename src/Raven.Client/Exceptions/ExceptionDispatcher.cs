@@ -25,8 +25,6 @@ namespace Raven.Client.Exceptions
 
             public string Type { get; set; }
 
-            public LimitType? LicenseLimitSubType { get; set; }
-
             public string Message { get; set; }
 
             public string Error { get; set; }
@@ -108,21 +106,7 @@ namespace Raven.Client.Exceptions
                 try
                 {
                     var message = schema.Error;
-                    if (type == typeof(LicenseLimitException) && schema.LicenseLimitSubType != null)
-                    {
-                         exception = (Exception)Activator.CreateInstance(
-                             type,
-                             BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public,
-                             null,
-                             new object[] { schema.LicenseLimitSubType.Value, message },
-                             null,
-                             null
-                          );
-                    }
-                    else
-                    {
-                        exception = (Exception)Activator.CreateInstance(type, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { message }, null, null);
-                    }
+                    exception = (Exception)Activator.CreateInstance(type, BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public, null, new[] { message }, null, null);
                 }
                 catch (Exception)
                 {
@@ -153,6 +137,10 @@ namespace Raven.Client.Exceptions
                 case BackupAlreadyRunningException backupAlreadyRunningException:
                     json.TryGet(nameof(BackupAlreadyRunningException.OperationId), out backupAlreadyRunningException.OperationId);
                     json.TryGet(nameof(BackupAlreadyRunningException.NodeTag), out backupAlreadyRunningException.NodeTag);
+                    break;
+                case LicenseLimitException licenseLimitException:
+                    if (json.TryGet(nameof(LicenseLimitException.LimitType), out string limitType) && Enum.TryParse(limitType, out LimitType type))
+                        licenseLimitException.LimitType = type;
                     break;
             }
         }

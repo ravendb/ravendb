@@ -826,12 +826,18 @@ public sealed partial class ClusterStateMachine
             return;
 
         if (serverStore.LicenseManager.LicenseStatus.HasExternalReplication == false && databaseRecord.ExternalReplications.Count > 0)
-            throw new LicenseLimitException(LimitType.ExternalReplication, "Your license doesn't support adding External Replication.");
+        {
+            if (databaseRecord.ExternalReplications.All(exRep => exRep.DelayReplicationFor == TimeSpan.Zero))
+                throw new LicenseLimitException(LimitType.ExternalReplication, "Your license doesn't support adding External Replication.");
 
-        if (databaseRecord.ExternalReplications.All(exRep => exRep.DelayReplicationFor == TimeSpan.Zero))
+            throw new LicenseLimitException(LimitType.DelayedExternalReplication, "Your license doesn't support adding Delayed External Replication.");
+        }
+
+        if (serverStore.LicenseManager.LicenseStatus.HasDelayedExternalReplication)
             return;
 
-        throw new LicenseLimitException(LimitType.DelayedExternalReplication, "Your license doesn't support adding Delayed External Replication.");
+        if (databaseRecord.ExternalReplications.Any(exRep => exRep.DelayReplicationFor != TimeSpan.Zero))
+            throw new LicenseLimitException(LimitType.DelayedExternalReplication, "Your license doesn't support adding External Replication.");
     }
 
     private void AssertRavenEtlLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
@@ -923,10 +929,7 @@ public sealed partial class ClusterStateMachine
 
     private void AssertDocumentsCompressionLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
     {
-        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
-            return;
-
-        if (serverStore.LicenseManager.LicenseStatus.HasDocumentsCompression)
+        if (AssertDocumentsCompression(serverStore, context)) 
             return;
 
         if (databaseRecord.DocumentsCompression == null)
@@ -936,6 +939,14 @@ public sealed partial class ClusterStateMachine
             return;
 
         throw new LicenseLimitException(LimitType.DocumentsCompression, "Your license doesn't support adding Documents Compression feature.");
+    }
+
+    private bool AssertDocumentsCompression(ServerStore serverStore, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return true;
+
+        return serverStore.LicenseManager.LicenseStatus.HasDocumentsCompression;
     }
 
     private void AssertAdditionalAssembliesFromNuGetLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)

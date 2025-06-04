@@ -4,7 +4,7 @@ namespace Raven.Client.Exceptions.Commercial
 {
     public sealed class LicenseLimitException : RavenException
     {
-        public LimitType Type { get; }
+        public LimitType LimitType { get; internal set; }
 
         public LicenseLimitException()
         {
@@ -15,10 +15,10 @@ namespace Raven.Client.Exceptions.Commercial
         {
         }
 
-        public LicenseLimitException(LimitType type, string message)
+        public LicenseLimitException(LimitType limitType, string message)
             : base(message)
         {
-            Type = type;
+            LimitType = limitType;
         }
 
         public LicenseLimitException(string message, Exception e)

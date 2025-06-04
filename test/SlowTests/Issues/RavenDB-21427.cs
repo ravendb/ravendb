@@ -451,7 +451,7 @@ namespace SlowTests.Issues
 
             var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () => await leader.ServerStore.PutLicenseAsync(li, RaftIdGenerator.NewId()));
 
-            Assert.Equal(limitType, exception.Type);
+            Assert.Equal(limitType, exception.LimitType);
         }
 
 

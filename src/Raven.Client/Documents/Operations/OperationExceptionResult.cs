@@ -9,8 +9,6 @@ namespace Raven.Client.Documents.Operations
     {
         public string Type { get; set; }
 
-        public LimitType? LicenseLimitSubType { get; set; }
-
         public string Message { get; set; }
 
         public string Error { get; set; }
@@ -26,8 +24,6 @@ namespace Raven.Client.Documents.Operations
         {
             ShouldPersist = shouldBePersistent;
             Type = exception.GetType().FullName;
-            if (exception is LicenseLimitException lle)
-                LicenseLimitSubType = lle.Type;
             Message = exception.Message;
             Error = ExceptionToString(exception);
             StatusCode = statusCode;
@@ -38,7 +34,6 @@ namespace Raven.Client.Documents.Operations
             return new DynamicJsonValue(GetType())
             {
                 [nameof(Type)] = Type,
-                [nameof(LicenseLimitSubType)] = LicenseLimitSubType?.ToString(),
                 [nameof(Message)] = Message,
                 [nameof(Error)] = Error,
                 [nameof(StatusCode)] = (int)StatusCode
