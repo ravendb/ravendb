@@ -13,7 +13,6 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents;
-using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;

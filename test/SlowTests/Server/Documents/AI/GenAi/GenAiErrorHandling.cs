@@ -224,6 +224,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
     ai.genContext({Text: comment.Text, Author: comment.Author, Id: comment.Id});
 }"
             };
+            config.Identifier = "blog-post-spam-check";
 
             store.Maintenance.Send(new AddGenAiOperation(config));
 
@@ -274,13 +275,13 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
                 var doc = session.Load<BlittableJsonReaderObject>(docId);
                 Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
                 Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection));
-                Assert.True(hashesSection.TryGet(config.Name, out BlittableJsonReaderArray hashes));
+                Assert.True(hashesSection.TryGet(config.Identifier, out BlittableJsonReaderArray hashes));
 
                 Assert.Equal(3, hashes.Length); // all 3 context hashes should be in metadata (refusal is considered a success) 
             }
 
             // assert stats
-            var stats = etlProcess.GetPerformanceStats().Last();
+            var stats = etlProcess.GetPerformanceStats().Last(s => s.NumberOfLoadedItems > 0);
             Assert.True(stats.SuccessfullyLoaded);
 
             // assert that next ETL batch does not start from etag 0 (batch was successful)
@@ -303,6 +304,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
         config.SampleObject = JsonConvert.SerializeObject(new { Result = "text" });
         config.UpdateScript = "this.Result = $output.Result;";
         config.GenAiTransformation = new GenAiTransformation { Script = "for (const comment of this.Comments) ai.genContext({Text: comment.Text, Id: comment.Id});" };
+        config.Identifier = "sanskrit-translation";
 
         store.Maintenance.Send(new AddGenAiOperation(config));
 
@@ -351,7 +353,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
             var doc = session.Load<BlittableJsonReaderObject>(docId);
             Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
             Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashes));
-            Assert.True(hashes.TryGet(config.Name, out BlittableJsonReaderArray arr));
+            Assert.True(hashes.TryGet(config.Identifier, out BlittableJsonReaderArray arr));
 
             Assert.Equal(1, arr.Length); // only some processed
         }
@@ -417,6 +419,8 @@ this.Comments[idx].IsSpam = $output.Blocked;";
     ai.genContext({Text: comment.Text, Author: comment.Author, Id: comment.Id});
 }"
         };
+        config.Identifier = "blog-post-spam-check";
+
 
         store.Maintenance.Send(new AddGenAiOperation(config));
         var db = await GetDatabase(store.Database);
@@ -460,7 +464,7 @@ this.Comments[idx].IsSpam = $output.Blocked;";
             var doc = session.Load<BlittableJsonReaderObject>(docId);
             Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
             Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection));
-            Assert.True(hashesSection.TryGet(config.Name, out BlittableJsonReaderArray hashes));
+            Assert.True(hashesSection.TryGet(config.Identifier, out BlittableJsonReaderArray hashes));
 
             // Only one comment should have succeeded
             Assert.Equal(1, hashes.Length);
@@ -495,7 +499,7 @@ this.Comments[idx].IsSpam = $output.Blocked;";
             var doc = session.Load<BlittableJsonReaderObject>(docId);
             Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
             Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection));
-            Assert.True(hashesSection.TryGet(config.Name, out BlittableJsonReaderArray hashes));
+            Assert.True(hashesSection.TryGet(config.Identifier, out BlittableJsonReaderArray hashes));
 
             // now both contexts should have their hash in metadata
             Assert.Equal(2, hashes.Length);

@@ -329,7 +329,6 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
     public TestEtlScriptResult RunTest(TestGenAiScript testGenAiScript, DocumentsOperationContext context)
     {
         List<GenAiResultItem> items;
-        List<Exception> exceptions = null;
         BlittableJsonReaderObject outputDocument = null;
 
         Document document = null;
@@ -380,7 +379,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             case TestStage.SendToModel:
                 _chatCompletionClient ??= GetClient();
                 items = testGenAiScript.Input;
-                exceptions = SendToModel(items, context, scope);
+                List<Exception> exceptions = SendToModel(items, context, scope);
                 if (exceptions is not null)
                     throw new AggregateException(exceptions);
 
@@ -394,6 +393,9 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     PatchRequest req = new(Configuration.UpdateScript, PatchRequestType.GenAi);
                     PatchDocumentCommand lastPatch = null;
                     var hashes = new List<string>();
+
+                    if (string.IsNullOrEmpty(Configuration.Identifier))
+                        Configuration.Identifier = Configuration.GenerateIdentifier();
 
                     if (testGenAiScript.Document != null)
                     {

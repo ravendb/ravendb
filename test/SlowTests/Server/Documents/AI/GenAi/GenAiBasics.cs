@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -12,7 +11,6 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents;
-using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;
@@ -586,14 +584,14 @@ for(const comment of this.Comments)
         config.SampleObject = JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or ham" });
         config.UpdateScript = @"    
 const idx = this.Comments.findIndex(c => c.Id == $input.Id);  
-if($output.Blocked)
+if ($output.Blocked)
 {
     this.Comments.splice(idx, 1); // remove
 }";
         config.GenAiTransformation = new GenAiTransformation
         {
             Script = @"
-for(const comment of this.Comments)
+for (const comment of this.Comments)
 {
     ai.genContext({Text: comment.Text, Author: comment.Author, Id: comment.Id});
 }
@@ -634,7 +632,7 @@ for(const comment of this.Comments)
             Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection));
             Assert.True(hashesSection.TryGet(identifier, out BlittableJsonReaderArray hashesArray));
             Assert.NotNull(hashesArray);
-            Assert.Equal(1, hashesArray.Length);
+            Assert.Equal(2, hashesArray.Length);
         }
     }
 
@@ -705,6 +703,7 @@ for(const comment of this.Comments)
         config.UpdateScript = "this.TextInPolish = $output.Translation;";
         config.Collection = "Posts";
         config.GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Text: this.Body });" };
+        config.Identifier = "posts-translation-check";
 
         store.Maintenance.Send(new AddGenAiOperation(config));
 
@@ -724,7 +723,7 @@ for(const comment of this.Comments)
             var doc = await session.LoadAsync<BlittableJsonReaderObject>(docId);
             Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
             Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection));
-            Assert.True(hashesSection.TryGet(config.Name, out BlittableJsonReaderArray hashesArray));
+            Assert.True(hashesSection.TryGet(config.Identifier, out BlittableJsonReaderArray hashesArray));
             Assert.NotNull(hashesArray);
             originalHash = hashesArray.Last().ToString();
         }
@@ -811,7 +810,7 @@ for(const comment of this.Comments)
             var doc = await session.LoadAsync<BlittableJsonReaderObject>(docId);
             Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
             Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection));
-            Assert.True(hashesSection.TryGet(config.Name, out BlittableJsonReaderArray hashesArray));
+            Assert.True(hashesSection.TryGet(config.Identifier, out BlittableJsonReaderArray hashesArray));
             Assert.NotNull(hashesArray);
 
             var newHash = hashesArray.Last().ToString();
