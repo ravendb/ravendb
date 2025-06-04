@@ -18,7 +18,7 @@ public class PostingListTestsExtended(ITestOutputHelper output) : NoDisposalNoOu
     public void CanDeleteAndInsertInRandomOrder(int seed, int size) => CanDeleteAndInsertInRandomOrderBase(seed, size);
 
     [RavenMultiplatformTheory(RavenTestCategory.Corax | RavenTestCategory.Voron, RavenArchitecture.X64)]
-    [InlineData(1477187726, true, 1828658)]
+    [InlineData(1828658, true, 1477187726)]
     [InlineDataWithRandomSeed(20000000, false)]
     [InlineDataWithRandomSeed(2000000, false)]
     [InlineDataWithRandomSeed(200000, false)]
