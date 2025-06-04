@@ -18,4 +18,8 @@ export class SharedStubs {
             Error: null,
         };
     }
+
+    static openAiModels(): string[] {
+        return ["text-embedding-ada-002", "gpt-3.5-turbo", "gpt-4.1"];
+    }
 }

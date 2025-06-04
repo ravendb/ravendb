@@ -194,7 +194,11 @@ function getConnectorOptions(
     ];
 
     if (viewContext === "taskGenAi") {
-        return [...allOptions.filter((x) => x.value === "ollamaSettings" || x.value === "openAiSettings")].reverse();
+        return [
+            ...allOptions.filter(
+                (x) => x.value === "ollamaSettings" || x.value === "openAiSettings" || x.value === "azureOpenAiSettings"
+            ),
+        ].reverse();
     }
 
     return allOptions;
