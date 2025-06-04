@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Http;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -128,5 +130,99 @@ namespace FastTests.Client
                 GetAllDerivedTypesRecursively(types, derivedType, results);
             }
         }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public void AllServerWideCommandsShouldBeListedExplicitly()
+        {
+            var expected = new HashSet<string>
+            {
+                "DeleteServerWideBackupConfigurationCommand",
+                "DeleteServerWideAnalyzerCommand",
+                "PutServerWideAnalyzersCommand",
+                "DeleteServerWideSorterCommand",
+                "PutServerWideSortersCommand",
+                "DeleteServerWideTaskCommand",
+                "ToggleServerWideTaskStateCommand",
+                "PutServerWideBackupConfigurationCommand",
+                "GetServerWideBackupConfigurationCommand",
+                "GetServerWideBackupConfigurationsCommand",
+                "GetServerWideClientConfigurationCommand",
+                "PutServerWideClientConfigurationCommand",
+                "PutServerWideExternalReplicationCommand",
+                "GetServerWideExternalReplicationCommand",
+                "GetServerWideExternalReplicationsCommand",
+                "GetServerWideOperationStateCommand"
+            };
+
+            var commandBaseType = typeof(RavenCommand<>);
+            var types = commandBaseType.Assembly.GetTypes();
+
+            var results = new List<Type>();
+            GetAllDerivedTypesRecursively(types.Where(t => t.IsAbstract == false).ToArray(), commandBaseType, results);
+
+            var serverWideCommands = results
+                .Where(t => t.Name.Contains("ServerWide"))
+                .Select(t => t.Name)
+                .Distinct()
+                .OrderBy(name => name)
+                .ToList();
+
+            var missing = serverWideCommands.Where(c => expected.Contains(c) == false).ToList();
+
+            Assert.True(missing.Count == 0,
+                $"The following server-wide `{nameof(RavenCommand)}`s are missing from the expected list:{Environment.NewLine}" +
+                string.Join(Environment.NewLine, missing.Select(n => $"  - {n}")) +
+                $"{Environment.NewLine}{Environment.NewLine}" +
+                $" Every *Put*/Update server-wide command must also be handled in `FilterOutServerWideTasks` during snapshot restore.{Environment.NewLine}" +
+                $" All server-wide commands (including Delete/Get) must be added to this list to ensure proper handling and visibility." +
+                $"{Environment.NewLine}Please update the `expected` list accordingly.");
+        }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public void AllServerWideCommandsShouldBeExplicitlyListed()
+        {
+            var expected = new HashSet<string>
+            {
+                "DeleteServerWideBackupConfigurationCommand",
+                "DeleteServerWideAnalyzerCommand",
+                "PutServerWideAnalyzerCommand",
+                "DeleteServerWideSorterCommand",
+                "PutServerWideSortersCommand",
+                "DeleteServerWideTaskCommand",
+                "ToggleServerWideTaskStateCommand",
+                "PutServerWideBackupConfigurationCommand",
+                "GetServerWideBackupConfigurationCommand",
+                "GetServerWideBackupConfigurationsCommand",
+                "GetServerWideClientConfigurationCommand",
+                "PutServerWideClientConfigurationCommand",
+                "PutServerWideExternalReplicationCommand",
+                "GetServerWideExternalReplicationCommand",
+                "GetServerWideExternalReplicationsCommand",
+                "GetServerWideOperationStateCommand",
+                "PutServerWideStudioConfigurationCommand",
+                "PutServerWideSorterCommand"
+
+            };
+
+            var clusterVersionList = ClusterCommandsVersionManager.ClusterCommandsVersions
+                .Keys
+                .Where(name => name.Contains("ServerWide"))
+                .Distinct()
+                .ToList();
+
+            var missingFromExpected = clusterVersionList
+                .Distinct()
+                .Where(name => !expected.Contains(name))
+                .ToList();
+
+            Assert.True(missingFromExpected.Count == 0,
+                $"The following server-wide `{nameof(RavenCommand)}`s are missing from the expected list:{Environment.NewLine}" +
+                string.Join(Environment.NewLine, missingFromExpected.Select(n => $"  - {n}")) +
+                $"{Environment.NewLine}{Environment.NewLine}" +
+                $" Every *Put*/Update server-wide command must also be handled in `FilterOutServerWideTasks` during snapshot restore.{Environment.NewLine}" +
+                $" All server-wide commands (including Delete/Get) must be added to this list to ensure proper handling and visibility." +
+                $"{Environment.NewLine}Please update the `expected` list accordingly.");
+        }
     }
+
 }
