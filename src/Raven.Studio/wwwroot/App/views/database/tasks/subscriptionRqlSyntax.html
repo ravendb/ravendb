@@ -2,14 +2,22 @@
     <div class="modal-content">
         <div class="modal-body">
             <button type="button" class="close" data-dismiss="modal" aria-label="Close"><i class="icon-cancel"></i></button>
+            <h3>Sample Subscription RQL</h3>
+            <hr />
             <div data-bind="foreach: $data.constructor.samples">
                 <div class="margin-top" data-bind="text: title"></div>
                 <pre class="margin-bottom copy-area"><a href="#" class="copy-button-hidden" title="Copy code sample" data-bind="click: _.partial($root.copySample, title)"><i class="icon-copy"></i></a><span data-bind="html: html"></span></pre>
             </div>
         </div>
         <div class="modal-footer margin-bottom">
-            <div class="text-left bg-info text-info">
-                <span class="padding"><strong>Note</strong>: Only object literal notation can be used with the 'select'</span>
+            <div class="text-left bg-info text-info padding padding-xs">
+                <ul class="margin-top">
+                    <li><strong>Note</strong>: Only object literal notation can be used with the <code>select</code> clause.</li>
+                    <li>More examples are available in the following documentation:<br /> 
+                        <a href="https://ravendb.net/l/S3QT51" target="_blank">Subscriptions creation examples</a><br />
+                        <a href="https://ravendb.net/l/OC3JL4" target="_blank">Subscriptions revisions support</a>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
