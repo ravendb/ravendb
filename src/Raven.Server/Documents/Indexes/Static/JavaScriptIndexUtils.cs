@@ -17,15 +17,18 @@ namespace Raven.Server.Documents.Indexes.Static
     {
         public static IEnumerable<ReturnStatement> GetReturnStatements(IFunction function)
         {
-            if (function is ArrowFunctionExpression arrowFunction && arrowFunction.Body is ObjectExpression objectExpression)
-            {
-                // looks like we have following case:
-                // x => ({ Name: x.Name })
-                // wrap with return statement and we're done
-                return new[] { new ReturnStatement(objectExpression) };
-            }
+            if (function is not ArrowFunctionExpression arrowFunction)
+                return GetReturnStatements(function.Body);
 
-            return GetReturnStatements(function.Body);
+            // Handle following cases:
+            //      x => ({ Name: x.Name })
+            //      x => someFunction();
+            return arrowFunction.Body.Type switch
+            {
+                NodeType.ObjectExpression => new[] { new ReturnStatement((ObjectExpression)arrowFunction.Body) },
+                NodeType.CallExpression => new[] { new ReturnStatement((CallExpression)arrowFunction.Body) },
+                _ => GetReturnStatements(function.Body)
+            };
         }
         
         public static IEnumerable<ReturnStatement> GetReturnStatements(Node stmt)
