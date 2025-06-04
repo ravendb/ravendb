@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
@@ -41,5 +42,14 @@ public class RavenDB_24185(ITestOutputHelper output) : NoDisposalNeeded(output)
         var ex = Assert.Throws<InvalidOperationException>(() => nativeList.Initialize(allocator, int.MaxValue / sizeof(long)));
         
         Assert.Equal($"NativeList<System.Int64> cannot be larger than 268435452 items. Requested size: {int.MaxValue / sizeof(long)}", ex.Message);
+    }
+
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Memory)]
+    public unsafe void EnsureThatNextBitsSizeIsNotLimitingCapacityDueToAligning()
+    {
+        using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
+        var maxSize = (int.MaxValue - sizeof(ByteStringStorage)) / sizeof(long);
+        var nativeList = new NativeList<long>();
+        nativeList.Initialize(allocator, maxSize - 1);
     }
 }

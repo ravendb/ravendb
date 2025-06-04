@@ -21,6 +21,7 @@ public unsafe struct NativeList<T>
 {
     // We're using ByteStringContext to allocate the underlying storage, and we've to take into account the overhead of the metadata.
     private static readonly int MaxCapacity = (int.MaxValue - sizeof(ByteStringStorage)) / sizeof(T);
+    private static readonly int MaxCapacityInBytes = MaxCapacity * sizeof(T);
     private ByteString _storage;
 
     public T* RawItems => Capacity > 0 ? (T*)_storage.Ptr : null;
@@ -130,7 +131,7 @@ public unsafe struct NativeList<T>
 
         var newSize = count == 1 ? 
             sizeof(T) 
-            : Math.Max(sizeof(T), Bits.NextAllocationSize(sizeof(T) * count));
+            : Math.Max(sizeof(T), Math.Min(MaxCapacityInBytes, Bits.NextAllocationSize(sizeof(T) * count)));
        
         if (newSize <= 0)
             ThrowMaxCapacityExceeded(count);
@@ -144,7 +145,8 @@ public unsafe struct NativeList<T>
         if (addition > MaxCapacity - Capacity)
             ThrowMaxCapacityExceeded(addition + (long)Capacity);
 
-        var newSize = Math.Max(sizeof(T), Bits.NextAllocationSize(sizeof(T) * (addition + Capacity)));
+        var newSize = Math.Max(sizeof(T), 
+            Math.Min(MaxCapacityInBytes, Bits.NextAllocationSize(sizeof(T) * (addition + Capacity))));
         ctx.Allocate(newSize, out var mem);
 
         if (_storage.HasValue)
