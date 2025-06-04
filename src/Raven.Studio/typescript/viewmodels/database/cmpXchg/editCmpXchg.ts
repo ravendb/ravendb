@@ -163,6 +163,7 @@ class editCmpXchg extends shardViewModelBase {
     valueEditor: KnockoutObservable<editorInfo>;
     metadataEditor: KnockoutObservable<editorInfo>;
 
+    isAtomicGuard: KnockoutComputed<boolean>;
     isSaveEnabled: KnockoutComputed<boolean>;
     isCreatingNewItem = ko.observable(false);
 
@@ -228,6 +229,8 @@ class editCmpXchg extends shardViewModelBase {
 
             return !isSaving && isDirty;
         });
+
+        this.isAtomicGuard = ko.pureComputed(() => this.key().startsWith("rvn-atomic/"));
     }
 
     private initValidation() {
@@ -239,6 +242,10 @@ class editCmpXchg extends shardViewModelBase {
                 {
                     validator: (val: string) => rg1.test(val),
                     message: "Key Cannot contain a backslash"
+                },
+                {
+                    validator: (val: string) => !val.startsWith("rvn-atomic/"),
+                    message: "The prefix 'rvn-atomic/' is reserved by RavenDB for Atomic Guards"
                 }]
         });
 

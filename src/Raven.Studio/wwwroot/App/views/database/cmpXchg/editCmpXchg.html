@@ -1,6 +1,6 @@
 <form class="cmp-xchg flex-form" data-bind="submit: saveCompareExchangeItem" autocomplete="off">
     <div class="flex-window flex-grow content-margin">
-        <div class="margin-top">
+        <div class="margin-top flex-horizontal">
             <div class="pull-left-sm btn-group">
                 <button type="submit" class="btn btn-primary" data-bind="enable: isSaveEnabled, css: { 'btn-spinner': spinners.save }">
                     <i class="icon-save"></i><span>Save</span>
@@ -15,6 +15,17 @@
                     <i class="icon-trash"></i><span>Delete</span>
                 </button>
             </div>
+            <div data-bind="visible: !isCreatingNewItem() && isAtomicGuard()">
+                <div class="text-warning bg-warning padding-xs margin-left-sm flex-horizontal">
+                    <i class="icon-warning flex-start margin-top-xxs"></i>
+                    <span>
+                        This compare-exchange item is used as an <strong>Atomic Guard</strong>, identified by the <code>rvn-atomic/</code> prefix.<br />
+                        Editing it manually may break document concurrency guarantees.<br />
+                        Learn more in the <a href='https://ravendb.net/l/SDMR11' target='_blank'>Atomic Guards docs</a>.
+                    </span>
+                </div>
+            </div>
+            <div class="flex-separator"></div>
             <div class="pull-right-sm bg-warning padding padding-xs" data-bind="visible: displayExternalChange">
                 <small>
                     <i class="icon-warning"></i>
