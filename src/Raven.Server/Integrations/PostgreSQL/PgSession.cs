@@ -12,6 +12,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Queries.Parser;
 using Raven.Server.Integrations.PostgreSQL.Exceptions;
 using Raven.Server.Integrations.PostgreSQL.Messages;
+using Raven.Server.ServerWide;
 using Raven.Server.TrafficWatch;
 using Raven.Server.Utils;
 using Sparrow.Logging;
@@ -26,7 +27,7 @@ namespace Raven.Server.Integrations.PostgreSQL
         private readonly CertificateUtils.CertificateHolder _serverCertificateHolder;
         private readonly int _identifier;
         private readonly int _processId;
-        private readonly DatabasesLandlord _databasesLandlord;
+        private readonly ServerStore _serverStore;
         private readonly CancellationToken _token;
         private Dictionary<string, string> _clientOptions;
 
@@ -35,14 +36,14 @@ namespace Raven.Server.Integrations.PostgreSQL
             CertificateUtils.CertificateHolder serverCertificateHolder,
             int identifier,
             int processId,
-            DatabasesLandlord databasesLandlord,
+            ServerStore serverStore,
             CancellationToken token)
         {
             _client = client;
             _serverCertificateHolder = serverCertificateHolder;
             _identifier = identifier;
             _processId = processId;
-            _databasesLandlord = databasesLandlord;
+            _serverStore = serverStore;
             _token = token;
             _clientOptions = null;
             NamedStatements = new ConcurrentDictionary<string, PgQuery>();
@@ -138,8 +139,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                 return;
             }
 
-            var result = _databasesLandlord.TryGetOrCreateDatabase(databaseName);
-            var nodeTag = result.DatabaseTask.Result.ServerStore.NodeTag;
+            var result = _serverStore.DatabasesLandlord.TryGetOrCreateDatabase(databaseName);
 
             if (result.DatabaseStatus == DatabasesLandlord.DatabaseSearchResult.Status.Missing)
             {
@@ -198,12 +198,12 @@ namespace Raven.Server.Integrations.PostgreSQL
                         await message.Init(transaction.MessageReader, reader, _token);
                         await message.Handle(transaction, messageBuilder, reader, writer, _token);
                         if (TrafficWatchManager.HasRegisteredClients && message is Query queryMessage)
-                            DispatchPostgresQueryMessageToTrafficWatch(queryMessage, nodeTag);
+                            DispatchPostgresQueryMessageToTrafficWatch(queryMessage);
                     }
                     catch (PgErrorException e)
                     {
                         if (TrafficWatchManager.HasRegisteredClients && message is Query queryMessage)
-                            DispatchPostgresQueryMessageToTrafficWatch(queryMessage, nodeTag, e);
+                            DispatchPostgresQueryMessageToTrafficWatch(queryMessage, e);
                         await message.HandleError(e, transaction, messageBuilder, writer, _token);
                     }
                 }
@@ -281,7 +281,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             return details;
         }
         
-        private void DispatchPostgresQueryMessageToTrafficWatch(Query message, string nodeTag, PgErrorException e = null)
+        private void DispatchPostgresQueryMessageToTrafficWatch(Query message, PgErrorException e = null)
         {
             var clientIp = _client.Client.LocalEndPoint?.ToString();
             string databaseName = _clientOptions.GetValueOrDefault("database", "N/A");
@@ -294,7 +294,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                 CertificateThumbprint = null,
                 CustomInfo = e is null ? null : $"{e.ErrorCode} - {e.Message}",
                 ClientIP = clientIp,
-                Source = nodeTag,
+                Source = _serverStore.NodeTag,
                 Username = username,
                 Query = message.QueryString
             };

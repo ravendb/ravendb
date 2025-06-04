@@ -133,7 +133,7 @@ namespace Raven.Server.Integrations.PostgreSQL
                     _server.Certificate,
                     identifier,
                     _processId,
-                    _server.ServerStore.DatabasesLandlord,
+                    _server.ServerStore,
                     _cts.Token);
 
                 await session.Run();
