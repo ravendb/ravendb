@@ -25,8 +25,8 @@ namespace Raven.Server.Documents.Indexes.Static
             //      x => someFunction();
             return arrowFunction.Body.Type switch
             {
-                NodeType.ObjectExpression => new[] { new ReturnStatement((ObjectExpression)arrowFunction.Body) },
-                NodeType.CallExpression => new[] { new ReturnStatement((CallExpression)arrowFunction.Body) },
+                Nodes.ObjectExpression => new[] { new ReturnStatement((ObjectExpression)arrowFunction.Body) },
+                Nodes.CallExpression => new[] { new ReturnStatement((CallExpression)arrowFunction.Body) },
                 _ => GetReturnStatements(function.Body)
             };
         }
