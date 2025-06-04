@@ -59,7 +59,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         var queryVector = Enumerable.Range(0, dimensions).Select(_ => random.NextSingle()).ToArray();
 
         var query = session.Query<Dto, TIndex>()
-            .VectorSearch(f => f.WithField(d => d.Singles), v => v.ByEmbedding(queryVector), 0.1f)
+            .VectorSearch(f => f.WithField(d => d.Singles), v => v.ByEmbedding(queryVector))
             .OrderByScore();
 
 
@@ -88,6 +88,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
     [InlineDataWithRandomSeed]
     [InlineData(1253422244)]
     [InlineData(1351777189)]
+    [InlineData(1833646005)]
     public void TestInt8Similarity(int seed) => TestInt8SimilarityBase<Index>(seed);
     
     [RavenTheory(RavenTestCategory.Vector)]
@@ -115,10 +116,13 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         using var session = store.OpenSession();
         var doc = session.Advanced.DocumentQuery<Dto>().NoTracking().NoCaching().First();
 
+        
+        
+        
         var queryVector = VectorQuantizer.ToInt8(Enumerable.Range(0, dimensions).Select(_ => random.NextSingle()).ToArray());
 
         var query = session.Query<Dto, TIndex>()
-            .VectorSearch(f => f.WithField(d => d.Int8), v => v.ByEmbedding(queryVector), 0.1f)
+            .VectorSearch(f => f.WithField(d => d.Int8), v => v.ByEmbedding(queryVector))
             .OrderByScore();
 
 
@@ -177,7 +181,7 @@ public class VectorSimilarityScoreTests(ITestOutputHelper output) : RavenTestBas
         } while (commonsBits <= 0);
 
         var query = session.Query<Dto, TIndex>()
-            .VectorSearch(f => f.WithField(d => d.Binary), v => v.ByEmbedding(queryVector), 0.01f)
+            .VectorSearch(f => f.WithField(d => d.Binary), v => v.ByEmbedding(queryVector))
             .OrderByScore();
         
         using IEnumerator<StreamResult<Dto>> streamResults = session.Advanced.Stream(query, out _);
