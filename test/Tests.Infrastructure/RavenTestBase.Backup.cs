@@ -759,6 +759,24 @@ namespace FastTests
 
                 return taskId.Value;
             }
+
+            public async Task WaitAndAssertForClusterObserverToGetUpdatedBackupStatusAsync(DocumentStore store, long backupTaskId, PeriodicBackupStatus expectedBackupStatus, RavenServer server = null, int timeout = 15_000, int interval = 100)
+            {
+                server ??= _parent.Server;
+                await _parent.WaitAndAssertForValueAsync(() =>
+                    {
+                        var clusterNodeStatusReports = server.ServerStore.Observer.Maintenance.GetStats();
+                        if (clusterNodeStatusReports.TryGetValue(server.ServerStore.NodeTag, out var clusterNodeStatusReport) == false ||
+                            clusterNodeStatusReport.Report.TryGetValue(store.Database, out var databaseStatusReport) == false ||
+                            databaseStatusReport?.BackupStatuses == null ||
+                            databaseStatusReport.BackupStatuses.TryGetValue(backupTaskId, out var fromReportBackupStatus) == false)
+                            return false;
+
+                        return fromReportBackupStatus?.LastRaftIndex?.LastEtag != null && fromReportBackupStatus.LastRaftIndex.LastEtag >= expectedBackupStatus.LastRaftIndex.LastEtag;
+                    },
+                    expectedVal: true,
+                    timeout, interval);
+            }
         }
     }
 }

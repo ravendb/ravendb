@@ -1373,7 +1373,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     using (context.OpenReadTransaction())
                     {
                         // clean tombstones
-                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true, sb);
+                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server.ServerStore.Engine.ContextPool, store.Database, server, ignoreClustrTrx: true, sb);
                         Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
                     }
 
@@ -1405,7 +1405,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        public async Task CompareExchangeTombstonesShouldBeClearedWhenThereIsOnlyFullBackup(Options options)
+        public async Task CompareExchangeTombstonesShouldNotBeClearedWhenThereIsOnlyFullBackup(Options options)
         {
             var list = new List<string>(new[] { "🐃", "🐂", "🐄", "🐎", "🐖",
                                                 "🐏", "🐑", "🐐", "🦌", "🐕",
@@ -1416,6 +1416,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using (var server = GetNewServer())
             using (var store = GetDocumentStore(new Options { Server = server }))
             {
+                var sb = new StringBuilder();
+                server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => sb.AppendLine(logLine);
+
                 Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
 
                 var indexesList = new Dictionary<string, long>();
@@ -1427,14 +1430,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     indexesList.Add(key, res.Index);
                 }
 
-                var stats = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
-                Assert.Equal(3, stats.CountOfCompareExchange);
-
-                // delete 1 unique value
-                var k = $"emojis/{list[2]}";
-                var del = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(k, indexesList[k]));
-                Assert.NotNull(del.Value);
-                indexesList.Remove(k);
+                var databaseStatistics = store.Maintenance.ForDatabase(store.Database).Send(new GetDetailedStatisticsOperation());
+                Assert.Equal(3, databaseStatistics.CountOfCompareExchange);
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
                 if (Directory.Exists(backupPath))
@@ -1442,21 +1439,37 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);
 
+                // CompareExchangeTombstoneCleanerTestHelper uses ClusterObserver, and we need to wait for the first report
+                var  backupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status;
+                await Backup.WaitAndAssertForClusterObserverToGetUpdatedBackupStatusAsync(store, backupTaskId, backupStatus, server, interval: (int) TimeSpan.FromSeconds(1).TotalMilliseconds);
+
+                // delete 1 unique value
+                var k = $"emojis/{list[2]}";
+                var del = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<User>(k, indexesList[k]));
+                Assert.NotNull(del.Value);
+                indexesList.Remove(k);
+
                 using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
                     Assert.Equal(1, numOfCompareExchangeTombstones);
-
-                    await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
                 }
+
+                sb.AppendLine("First cleanup attempt after generating tombstone");
+                await CompareExchangeTombstoneCleanerTestHelper.Clean(server.ServerStore.Engine.ContextPool, store.Database, server, ignoreClustrTrx: true, sb);
+
                 using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                    Assert.True(numOfCompareExchangeTombstones == 1,
+                        $"CompareExchange tombstones should not be cleaned, but it was cleaned. Current number of compare exchange tombstones: {numOfCompareExchangeTombstones}{Environment.NewLine}{sb}");
+                    sb.AppendLine($"After first cleanup attempt compare exchange tombstones has not been cleaned, current number of compare exchange tombstones: {numOfCompareExchangeTombstones}");
+
                     var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
-                    Assert.Equal(0, numOfCompareExchangeTombstones);
-                    Assert.Equal(2, numOfCompareExchanges);
+                    Assert.True(numOfCompareExchanges == 2, $"CompareExchange count should be 2, but it is {numOfCompareExchanges}{Environment.NewLine}{sb}");
+                    sb.AppendLine($"After first cleanup attempt compare exchange count is {numOfCompareExchanges}");
                 }
 
                 // add 1 cmpxchng
@@ -1470,25 +1483,36 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(del1.Value);
                 indexesList.Remove(k);
 
-                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);   // INCREMENTAL
-
                 using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
                     var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
-                    Assert.Equal(1, numOfCompareExchangeTombstones);
+                    Assert.True(numOfCompareExchangeTombstones == 2, $"The number of CompareExchange tombstones should be updated, but it was not. Expected: `2`, Actual:`{numOfCompareExchangeTombstones}`{Environment.NewLine}{sb}");
+                    sb.AppendLine($"The number of CompareExchange tombstones after adding new value and deleting one is {numOfCompareExchangeTombstones}");
 
-                    // clean tombstones
-                    var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
-                    Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
-                }
-                using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
                     var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
-                    Assert.Equal(0, numOfCompareExchangeTombstones);
-                    Assert.Equal(2, numOfCompareExchanges);
+                    Assert.True(numOfCompareExchanges == 2, $"CompareExchange count should be still `2`, but it is `{numOfCompareExchanges}`{Environment.NewLine}{sb}");
+                    sb.AppendLine($"The number of CompareExchange after adding new value and deleting one is still `{numOfCompareExchanges}`");
+                }
+
+                // Now we want to do incremental backup and check that tombstones will be cleaned
+                await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);
+                backupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(backupTaskId))).Status;
+                await Backup.WaitAndAssertForClusterObserverToGetUpdatedBackupStatusAsync(store, backupTaskId, backupStatus, server, interval: (int) TimeSpan.FromSeconds(1).TotalMilliseconds);
+
+                sb.AppendLine("We are going to clean CompareExchange tombstones after incremental backup");
+                await CompareExchangeTombstoneCleanerTestHelper.Clean(server.ServerStore.Engine.ContextPool, store.Database, server, ignoreClustrTrx: true, sb);
+
+                using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
+                    Assert.True(numOfCompareExchangeTombstones == 0, $"All CompareExchange tombstones should be cleaned, but it was not. Current number of compare exchange tombstones: {numOfCompareExchangeTombstones}{Environment.NewLine}{sb}");
+                    sb.AppendLine("After second (incremental) backup, all CompareExchange tombstones have been cleaned");
+
+                    var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
+                    Assert.True(numOfCompareExchanges == 2, $"CompareExchange count should be `2`, but it is `{numOfCompareExchanges}`{Environment.NewLine}{sb}");
+                    sb.AppendLine($"After second (incremental) backup, CompareExchange count is still `{numOfCompareExchanges}`");
                 }
 
                 using (var session = store.OpenSession())
@@ -1501,6 +1525,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
                 await Backup.RunBackupAsync(server, backupTaskId, store, isFullBackup: false);  // INCREMENTAL
 
+                Assert.NotNull(backupPath);
                 var backupDirectory = Directory.GetDirectories(backupPath).First();
                 AssertDumpFiles(backupDirectory, list);
             }
@@ -1534,33 +1559,31 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             switch (i)
                             {
                                 case 0:
-                                    Assert.Equal(2, uniqueValues.Length);
-                                    Assert.Equal(1, tombstones.Length);
+                                    Assert.True(uniqueValues.Length == 3, $"Expected 3 unique values, but got {uniqueValues.Length}: {uniqueValues}");
+                                    Assert.Equal(0, tombstones.Length);
 
-                                    for (int j = 0; j < uniqueValues.Length; j++)
+                                    foreach (BlittableJsonReaderObject value in uniqueValues)
                                     {
-                                        var obj = uniqueValues[i] as BlittableJsonReaderObject;
-                                        Assert.NotNull(obj);
-                                        Assert.True(obj.TryGet("Key", out string key));
-                                        Assert.True(key == $"emojis/{list[0]}" || key == $"emojis/{list[1]}");
+                                        Assert.NotNull(value);
+                                        Assert.True(value.TryGet("Key", out string key));
+                                        Assert.True(key == $"emojis/{list[0]}" || key == $"emojis/{list[1]}" || key == $"emojis/{list[2]}");
                                     }
-                                    var obj2 = tombstones[0] as BlittableJsonReaderObject;
-                                    Assert.NotNull(obj2);
-                                    Assert.True(obj2.TryGet("Key", out string key2));
-                                    Assert.Equal($"emojis/{list[2]}", key2);
                                     break;
                                 case 1:
                                     Assert.Equal(1, uniqueValues.Length);
-                                    Assert.Equal(1, tombstones.Length);
+                                    Assert.Equal(2, tombstones.Length);
 
                                     var obj4 = uniqueValues[0] as BlittableJsonReaderObject;
                                     Assert.NotNull(obj4);
                                     Assert.True(obj4.TryGet("Key", out string key4));
                                     Assert.Equal(key4, $"emojis/{list[3]}");
-                                    var obj3 = tombstones[0] as BlittableJsonReaderObject;
-                                    Assert.NotNull(obj3);
-                                    Assert.True(obj3.TryGet("Key", out string key3));
-                                    Assert.Equal($"emojis/{list[1]}", key3);
+
+                                    foreach (BlittableJsonReaderObject value in tombstones)
+                                    {
+                                        Assert.NotNull(value);
+                                        Assert.True(value.TryGet("Key", out string key));
+                                        Assert.True(key == $"emojis/{list[1]}" || key == $"emojis/{list[2]}");
+                                    }
                                     break;
                                 case 2:
                                     Assert.Equal(0, uniqueValues.Length);
@@ -1621,7 +1644,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
                         Assert.Equal(1, numOfCompareExchangeTombstones);
 
-                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
+                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server.ServerStore.Engine.ContextPool, store.Database, server, ignoreClustrTrx: true);
                         Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus, cleanupState);
                     }
                     using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -1682,7 +1705,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         Assert.Equal(1, numOfCompareExchangeTombstones);
 
                         // clean tombstones
-                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, true);
+                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server.ServerStore.Engine.ContextPool, store.Database, server, ignoreClustrTrx: true);
                         Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
                     }
                     using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -1825,25 +1848,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
 
             return list;
-        }
-
-        private static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> CleanupCompareExchangeTombstones(RavenServer server, string database, ClusterOperationContext context)
-        {
-            var merged = ClusterObserver.MergedDatabaseObservationState.GetEmpty();
-            merged.States.Add(0, null);
-            var cmd = server.ServerStore.Observer.GetCompareExchangeTombstonesToCleanup(database, merged, context, out var cleanupState);
-            if (cleanupState != ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones)
-                return cleanupState;
-
-            Assert.NotNull(cmd);
-
-            var result = await server.ServerStore.SendToLeaderAsync(cmd);
-            await server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
-
-            var hasMore = (bool)result.Result;
-            return hasMore
-                ? ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones
-                : ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones;
         }
     }
 }

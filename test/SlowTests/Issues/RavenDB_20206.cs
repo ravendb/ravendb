@@ -60,13 +60,9 @@ public class RavenDB_20206 : RavenTestBase
                 Assert.Equal(1, numOfCompareExchangeTombstones);
             }
 
-            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
                 // clean tombstones
-                var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store1.Database, server, true);
-                Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
-            }
+                var cleanupState1 = await CompareExchangeTombstoneCleanerTestHelper.Clean(server.ServerStore.Engine.ContextPool, store1.Database, server, ignoreClustrTrx: true);
+                Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState1);
 
             using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
@@ -82,13 +78,9 @@ public class RavenDB_20206 : RavenTestBase
                 Assert.Equal(2, numOfCompareExchanges);
             }
 
-            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                // clean tombstones
-                var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store2.Database, server, true);
-                Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
-            }
+            // clean tombstones
+            var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server.ServerStore.Engine.ContextPool, store2.Database, server, ignoreClustrTrx: true);
+            Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
 
             using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())

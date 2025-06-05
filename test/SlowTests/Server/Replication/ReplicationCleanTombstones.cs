@@ -252,7 +252,7 @@ namespace SlowTests.Server.Replication
                     var numberOfTombstones = 0L;
                     foreach (var server in cluster.Nodes)
                     {
-                        var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                        var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseNameForDoc);
 
                         // Run the tombstone cleaner and check the number of tombstones again
                         await database.TombstoneCleaner.ExecuteCleanup();

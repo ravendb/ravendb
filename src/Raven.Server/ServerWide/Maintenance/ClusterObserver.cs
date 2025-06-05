@@ -696,7 +696,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
                     }
 
-                    ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}': LastClusterWideTransactionRaftIndex = {report.LastClusterWideTransactionRaftIndex}");
+                    ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}': LastClusterWideTransactionRaftIndex = {(report.LastClusterWideTransactionRaftIndex == long.MaxValue ? "long.MaxValue" : report.LastClusterWideTransactionRaftIndex.ToString())}");
                     if (report.BackupStatuses == null)
                     {
                         // the node wasn't updated to a version that supports it
