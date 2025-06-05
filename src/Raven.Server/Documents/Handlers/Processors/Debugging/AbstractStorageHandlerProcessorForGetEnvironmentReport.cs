@@ -81,23 +81,22 @@ internal abstract class AbstractStorageHandlerProcessorForGetEnvironmentReport<T
     {
         if (env == null)
             return;
-
-        writer.WriteStartObject();
-
+        
+        using (var tx = context.OpenWriteTransaction())
+        {
+            var djv = GetJsonReport(env, tx.InnerTransaction.LowLevelTransaction, detailed);
+            writer.WriteStartObject();
+            writer.WritePropertyName("Report");
+            writer.WriteObject(context.ReadObject(djv, env.Name));
+        }
+        writer.WriteComma();
+        
         writer.WritePropertyName("Name");
         writer.WriteString(env.Name);
         writer.WriteComma();
 
         writer.WritePropertyName("Type");
         writer.WriteString(env.Type.ToString());
-        writer.WriteComma();
-
-        using (var tx = context.OpenWriteTransaction())
-        {
-            var djv = GetJsonReport(env, tx.InnerTransaction.LowLevelTransaction, detailed);
-            writer.WritePropertyName("Report");
-            writer.WriteObject(context.ReadObject(djv, env.Name));
-        }
 
         writer.WriteEndObject();
     }
