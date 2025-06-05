@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Server.Documents;
+using Raven.Server.Documents.AI;
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.SchemaValidation;
@@ -48,8 +50,26 @@ public class SchemaValidatorCache : IDisposable
                 SchemaDefinition = validator.SchemaDefinition
             };
 
-            //TODO: don't throw if it fails here
-            var blittable = _context.Value.Sync.ReadForMemory(validator.SchemaDefinition, "my-raw-json");
+            //TODO: don't throw if it fails here - someone can put an invalid schema definition in the database record
+            var blittable = _context.Value.Sync.ReadForMemory(validator.SchemaDefinition, "schema-validation");
+            if (blittable.TryGet(SchemaValidatorConstants.AdditionalProperties, out object additionalProperties) && additionalProperties is false &&
+                blittable.TryGet(SchemaValidatorConstants.Properties, out BlittableJsonReaderObject properties) &&
+                properties.Contains(Client.Constants.Documents.Metadata.Key) == false)
+            {
+                properties.Modifications = new DynamicJsonValue(properties)
+                {
+                    [Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue()
+                };
+
+                blittable.Modifications = new DynamicJsonValue(blittable)
+                {
+                    [SchemaValidatorConstants.Properties] = properties
+                };
+
+                using (_ = blittable)
+                    blittable = _context.Value.ReadObject(blittable, "modified-schema-validation");
+            }
+
             schemaValidator.Init(blittable);
 
             schemaValidatorsToAdd ??= new List<(string, SchemaValidator)>();
