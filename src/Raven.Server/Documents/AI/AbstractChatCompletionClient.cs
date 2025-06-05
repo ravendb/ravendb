@@ -14,11 +14,13 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using JsonSerializer = System.Text.Json.JsonSerializer;
@@ -61,6 +63,16 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
 
         _structuredOutputSchema = structuredOutputSchema ?? GetSchemaFor("{}");
         _contextPool = contextPool;
+    }
+
+    public async Task ProxyModelsAsync(HttpResponse response, CancellationToken token)
+    {
+        using var r = await _client.SendAsync(new HttpRequestMessage(HttpMethod.Get, new Uri(_baseUri, Constants.RequestFields.ModelsUri)), token);
+        
+        HttpResponseHelper.CopyStatusCode(r, response);
+        HttpResponseHelper.CopyHeaders(r, response);
+
+        await HttpResponseHelper.CopyContentAsync(r, response);
     }
 
     public async Task<(string Result, string Usage)> CompleteAsync(string prompt, string context, CancellationToken token)
@@ -534,6 +546,7 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
             public const string MediaTypeApplicationJson = "application/json";
 
             public const string DefaultRelativeUri = "/v1/chat/completions";
+            public const string ModelsUri = "/v1/models";
             public const string AuthorizationApiKeyProperty = "Bearer";
         }
     }

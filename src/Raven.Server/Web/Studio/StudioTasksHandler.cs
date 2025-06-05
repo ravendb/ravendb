@@ -1,15 +1,19 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.IndexMerging;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -281,6 +285,55 @@ namespace Raven.Server.Web.Studio
                 writer.WriteDateTime(nextOccurrence, false);
                 writer.WriteEndObject();
             }
+        }
+        
+        [RavenAction("/studio-tasks/ai/models", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task AiModels()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var json = await context.ReadForMemoryAsync(RequestBodyStream(), "studio-tasks/format");
+                if (json == null)
+                    throw new BadRequestException("No JSON was posted.");
+
+                var request = JsonDeserializationServer.AiModelsRequest(json);
+
+                string uri;
+                string apiKey = null;
+                switch (request.ConnectorType)
+                {
+                    case AiConnectorType.OpenAi:
+                        uri = request.OpenAiSettings.Endpoint ?? "https://api.openai.com/v1/";
+                        apiKey = request.OpenAiSettings.ApiKey;
+                        break;
+                    case AiConnectorType.AzureOpenAi:
+                        uri = request.AzureOpenAiSettings.Endpoint;
+                        apiKey = request.AzureOpenAiSettings.ApiKey;
+                        break;
+                    case AiConnectorType.Ollama:
+                        uri = request.OllamaSettings.Uri;
+                        break;
+                    default:
+                        throw new NotSupportedException($"Unsupported connector type: {request.ConnectorType}");
+                }
+
+                using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
+                using (var chat = new GenericChatCompletionClientForTesting(uri, model: null, apiKey: apiKey, ServerStore.ContextPool))
+                {
+                    await chat.ProxyModelsAsync(HttpContext.Response, cts.Token);
+                }
+            }
+        }
+
+        public sealed class AiModelsRequest
+        {
+            public AiConnectorType ConnectorType { get; set; }
+            
+            public OllamaSettings OllamaSettings { get; set; }
+            
+            public OpenAiSettings OpenAiSettings { get; set; }
+
+            public AzureOpenAiSettings AzureOpenAiSettings { get; set; }
         }
 
         public sealed class StudioBootstrapConfiguration
