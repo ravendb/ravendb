@@ -8,6 +8,7 @@ using System.Runtime.Intrinsics.X86;
 using System.Runtime.Intrinsics;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics.Arm;
+using Sparrow.Platform;
 
 namespace Sparrow.Server.Tensors
 {
@@ -32,6 +33,9 @@ namespace Sparrow.Server.Tensors
         public static T CosineSimilarity<T>(ReadOnlySpan<T> a, ReadOnlySpan<T> b)
             where T : unmanaged, IFloatingPoint<T>, IRootFunctions<T>, INumber<T>
         {
+            if (PlatformDetails.Is32Bits)
+                return TensorPrimitives.CosineSimilarity(a, b);
+            
             if (a.Length >= Vector512<T>.Count)
             {
                 if (typeof(T) == typeof(float))
