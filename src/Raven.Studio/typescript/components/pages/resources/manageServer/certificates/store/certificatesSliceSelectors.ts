@@ -148,7 +148,6 @@ export const certificatesSelectors = {
     sortMode: (state: RootState) => state.certificates.sortMode,
     isGenerateModalOpen: (state: RootState) => state.certificates.isGenerateModalOpen,
     isUploadModalOpen: (state: RootState) => state.certificates.isUploadModalOpen,
-    certificateToRegenerate: (state: RootState) => state.certificates.certificateToRegenerate,
     certificateToEdit: (state: RootState) => state.certificates.certificateToEdit,
     certificateToClone: (state: RootState) => state.certificates.certificateToClone,
     isReplaceServerModalOpen: (state: RootState) => state.certificates.isReplaceServerModalOpen,
