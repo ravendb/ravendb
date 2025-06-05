@@ -40,10 +40,10 @@ export default function CertificatesCloneModal() {
     const form = useForm<FormData>({
         resolver: yupResolver(schema),
         defaultValues: {
-            name: "",
+            name: certificate.Name,
             securityClearance: certificate.SecurityClearance,
             certificatePassphrase: "",
-            ...certificatesUtils.mapExpireFromDro(certificate),
+            ...certificatesUtils.mapExpireFromDto(certificate),
             databasePermissions: certificatesUtils.mapDatabasePermissionsFromDto(certificate),
             isRequire2FA: certificate.HasTwoFactor,
             authenticationKey: "",

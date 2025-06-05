@@ -7,7 +7,6 @@ import { useServices } from "components/hooks/useServices";
 import { CertificatesCloneFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import { CertificatesEditFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
-import { CertificatesRegenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegenerateModal";
 import {
     CertificateItem,
     TwoFactorAction,
@@ -24,10 +23,7 @@ export default function Certificates2FAField({ editingCert }: { editingCert?: Ce
     const { manageServerService } = useServices();
 
     const { control, setValue, watch } = useFormContext<
-        | CertificatesGenerateFormData
-        | CertificatesCloneFormData
-        | CertificatesEditFormData
-        | CertificatesRegenerateFormData
+        CertificatesGenerateFormData | CertificatesCloneFormData | CertificatesEditFormData
     >();
 
     const formValues = useWatch({ control });

@@ -3,7 +3,6 @@ import { ThemeColor } from "components/models/common";
 import { CertificatesCloneFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import { CertificatesEditFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import { CertificatesGenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesGenerateModal";
-import { CertificatesRegenerateFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegenerateModal";
 import { CertificatesReplaceServerFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesReplaceServerModal";
 import { CertificatesUploadFormData } from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesUploadModal";
 import {
@@ -91,14 +90,12 @@ function mapPermissions(
     );
 }
 
-function mapNotAfter(
-    formData: Pick<CertificatesGenerateFormData | CertificatesRegenerateFormData, "expireIn" | "expireTimeUnits">
-): string {
+function mapNotAfter(formData: Pick<CertificatesGenerateFormData, "expireIn" | "expireTimeUnits">): string {
     if (!formData.expireIn) {
         return null;
     }
 
-    return moment.utc().add(formData.expireIn, formData.expireTimeUnits).format();
+    return moment.utc().add(formData.expireIn, formData.expireTimeUnits).endOf("day").format();
 }
 
 function mapPassword(password: string): string {
@@ -157,23 +154,6 @@ function mapEditToDto(formData: CertificatesEditFormData, certificate: Certifica
     };
 }
 
-function mapRegenerateToDto(
-    formData: CertificatesRegenerateFormData,
-    certificate: CertificateItem
-): UpdateCertificateDto {
-    return {
-        Name: certificate.Name,
-        Thumbprint: certificate.Thumbprint,
-        SecurityClearance: certificate.SecurityClearance,
-        Permissions: certificate.Permissions,
-        NotAfter: mapNotAfter({
-            expireIn: formData.expireIn,
-            expireTimeUnits: formData.expireTimeUnits,
-        }),
-        TwoFactorAuthenticationKey: formData.isRequire2FA ? formData.authenticationKey : null,
-    };
-}
-
 function mapReplaceServerToDto(formData: CertificatesReplaceServerFormData): ReplaceServerCertificateDto {
     return {
         Certificate: formData.certificateAsBase64,
@@ -188,12 +168,16 @@ function mapDatabasePermissionsFromDto(dto: CertificateItem) {
     }));
 }
 
-function mapExpireFromDro(dto: CertificateItem): Pick<CertificatesGenerateFormData, "expireIn" | "expireTimeUnits"> {
+function mapExpireFromDto(dto: CertificateItem): Pick<CertificatesGenerateFormData, "expireIn" | "expireTimeUnits"> {
     const notAfter = moment.utc(dto.NotAfter);
-    const now = moment.utc();
-    const expireInDays = Math.ceil(moment.duration(notAfter.diff(now)).asDays());
+    const notBefore = moment.utc(dto.NotBefore);
 
-    if (expireInDays <= 0) {
+    const notBeforeDaysConst = 7; // Certificate is valid 7 days before creation
+    const durationInDays = Math.floor(
+        moment.duration(notAfter.diff(notBefore.add(notBeforeDaysConst, "days"))).asDays()
+    );
+
+    if (durationInDays <= 0) {
         return {
             expireIn: null,
             expireTimeUnits: "months",
@@ -201,7 +185,7 @@ function mapExpireFromDro(dto: CertificateItem): Pick<CertificatesGenerateFormDa
     }
 
     return {
-        expireIn: expireInDays,
+        expireIn: durationInDays,
         expireTimeUnits: "days",
     };
 }
@@ -226,10 +210,9 @@ export const certificatesUtils = {
     mapGenerateToDto,
     mapUploadToDto,
     mapEditToDto,
-    mapRegenerateToDto,
     mapReplaceServerToDto,
     mapDatabasePermissionsFromDto,
-    mapExpireFromDro,
+    mapExpireFromDto,
     twoFactorActionSchema,
     databasePermissionsSchema,
 };

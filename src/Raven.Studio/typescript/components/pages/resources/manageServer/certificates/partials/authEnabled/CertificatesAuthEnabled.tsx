@@ -23,7 +23,6 @@ import useDebouncedInput from "components/hooks/useDebouncedInput";
 import CertificatesUploadModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesUploadModal";
 import CertificatesReplaceServerModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesReplaceServerModal";
 import { StickyHeader } from "components/common/StickyHeader";
-import CertificatesRegenerateModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesRegenerateModal";
 import CertificatesCloneModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesCloneModal";
 import CertificatesEditModal from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesEditModal";
 import CertificatesWellKnownList from "components/pages/resources/manageServer/certificates/partials/authEnabled/CertificatesWellKnownList";
@@ -59,7 +58,6 @@ export default function CertificatesAuthEnabled() {
     }));
     const sortMode = useAppSelector(certificatesSelectors.sortMode);
 
-    const certificateToRegenerate = useAppSelector(certificatesSelectors.certificateToRegenerate);
     const certificateToEdit = useAppSelector(certificatesSelectors.certificateToEdit);
     const certificateToClone = useAppSelector(certificatesSelectors.certificateToClone);
 
@@ -267,7 +265,6 @@ export default function CertificatesAuthEnabled() {
             {isGenerateModalOpen && <CertificatesGenerateModal />}
             {isUploadModalOpen && <CertificatesUploadModal />}
             {isReplaceServerModalOpen && <CertificatesReplaceServerModal />}
-            {certificateToRegenerate && <CertificatesRegenerateModal />}
             {certificateToClone && <CertificatesCloneModal />}
             {certificateToEdit && <CertificatesEditModal />}
 

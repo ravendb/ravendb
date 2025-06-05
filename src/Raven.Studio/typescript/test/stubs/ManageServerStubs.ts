@@ -473,7 +473,7 @@ export class ManageServerStubs {
                         .add(-5 as const, "days")
                         .format(),
                     NotBefore: moment()
-                        .add(-10 as const, "days")
+                        .add(-20 as const, "days")
                         .format(),
                     CollectionSecondaryKeys: [],
                     CollectionPrimaryKey: "",

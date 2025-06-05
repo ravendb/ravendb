@@ -54,7 +54,6 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     const canBeAutomaticallyRenewed = isServerCert && serverCertificateSetupMode === "LetsEncrypt";
     const canEdit = !isServerCert && state !== "Expired";
     const canClone = !isServerCert;
-    const canRegenerate = !isServerCert && (state === "Expired" || state === "About to expire");
     const canDelete = (() => {
         if (isServerCert) {
             return false;
@@ -153,16 +152,6 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
                         </Button>
                     </div>
                     <RichPanelActions>
-                        {canRegenerate && (
-                            <Button
-                                title="Regenerate certificate"
-                                variant="warning"
-                                onClick={() => dispatch(certificatesActions.regenerateModalOpen(certificate))}
-                            >
-                                <Icon icon="refresh" />
-                                Regenerate
-                            </Button>
-                        )}
                         {canClone && (
                             <Button
                                 title="Clone certificate"
