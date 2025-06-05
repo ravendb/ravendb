@@ -1,17 +1,13 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using NJsonSchema;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Exceptions;
-using Raven.Server.SchemaValidation;
-using Raven.Tests.Core.Utils.Entities;
-using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
+
 namespace FastTests.SchemaValidation;
 
 public class SchemaValidationBasicTests : RavenTestBase
@@ -19,7 +15,7 @@ public class SchemaValidationBasicTests : RavenTestBase
     public SchemaValidationBasicTests(ITestOutputHelper output) : base(output) { }
 
     [RavenFact(RavenTestCategory.ClientApi)]
-    public async Task Crud()
+    public async Task Store()
     {
         var schema = JsonSchema.FromType<User>();
         var schemaData = schema.ToJson();
@@ -41,17 +37,28 @@ public class SchemaValidationBasicTests : RavenTestBase
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new User { Age = 17 }, "users/1");
-                await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+                var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+                Assert.Contains("The value '17' at 'Age' should be greater than or equal to 21.0.", error.Message);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Age = 80 }, "users/1");
+                var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+                Assert.Contains("The value '80' at 'Age' should be less than or equal to 67.0.", error.Message);
+            }
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new User { Age = 39 }, "users/1");
+                await session.SaveChangesAsync();
             }
         }
     }
 
     private class User
     {
-        [Required]
-        public string Name { get; set; }
-
-        [Range(18, int.MaxValue)]
+        [Range(21, 67)]
         public int Age { get; set; }
     }
 }
