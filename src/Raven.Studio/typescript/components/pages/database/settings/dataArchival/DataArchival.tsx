@@ -33,11 +33,15 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
+import { useRavenLink } from "hooks/useRavenLink";
 
 export default function DataArchival() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const hasDataArchival = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
+
+    const documentArchiveLinkToOverviewDocs = useRavenLink({ hash: "1NGJSU" });
+    const documentArchiveLinkToStudioViewDocs = useRavenLink({ hash: "VJAQ4B" });
 
     const { databasesService } = useServices();
     const asyncGetDataArchivalConfiguration = useAsyncCallback<DataArchivalFormData>(async () =>
@@ -206,8 +210,12 @@ export default function DataArchival() {
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
-                                <a href="#" target="_blank">
-                                    <Icon icon="newtab" /> Docs - Data Archival
+                                <a href={documentArchiveLinkToOverviewDocs} target="_blank">
+                                    <Icon icon="newtab" /> Docs - Data Archival - Overview
+                                </a>
+                                <br />
+                                <a href={documentArchiveLinkToStudioViewDocs} target="_blank">
+                                    <Icon icon="newtab" /> Docs - Data Archival - Settings view
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
