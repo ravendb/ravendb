@@ -22,7 +22,6 @@
         "@types/d3": "3.5.34",
         "@types/diff": "^4.0.2",
         "@types/durandal": "^2.1.38",
-        "@types/eonasdan-bootstrap-datetimepicker": "^4.17.32",
         "@types/jest": "^28.1.6",
         "@types/jquery": "2.0.40",
         "@types/jquery.blockui": "0.0.28",

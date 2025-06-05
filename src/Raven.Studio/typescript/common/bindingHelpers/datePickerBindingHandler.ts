@@ -26,7 +26,7 @@ class datePickerBindingHandler {
         delete options.startDateElement;
         const dpicker = $(element).datetimepicker(options);
 
-        dpicker.on('dp.change', ev => {
+        dpicker.on('dp.change', (ev: { date: moment.Moment }) => {
             if (endDateElement) {
                 $("#" + endDateElement).data("DateTimePicker").minDate(ev.date);
             }
