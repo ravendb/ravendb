@@ -58,7 +58,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             <div className="mb-2">
                 <FormLabel>
                     Endpoint
-                    <PopoverWithHoverWrapper message="The endpoint for generating responses using Azure OpenAI provider.">
+                    <PopoverWithHoverWrapper message="The Azure OpenAI endpoint for generating responses.">
                         <Icon icon="info" color="info" id="endpoint" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
@@ -68,7 +68,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             <div className="mb-2">
                 <FormLabel>
                     Model
-                    <PopoverWithHoverWrapper message="The model to use with Azure OpenAI provider.">
+                    <PopoverWithHoverWrapper message="The Azure OpenAI model to use.">
                         <Icon icon="info" color="info" id="model" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
