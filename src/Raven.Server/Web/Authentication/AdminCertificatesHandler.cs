@@ -776,10 +776,8 @@ namespace Raven.Server.Web.Authentication
                     var permissions = FormatPermissions(editedCertificate);
 
                     LogAuditFor("Certificates", "CHANGE", 
-                        $"Certificate {editedCertificate?.Name}. Security Clearance: {editedCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}. Not After: {editedCertificate?.NotAfter}.)");
+                        $"Certificate {editedCertificate?.Name}. Security Clearance: {editedCertificate?.SecurityClearance}. Permissions: {permissions}. TwoFactor: {string.IsNullOrEmpty(twoFactorAuthenticationKey) == false}.)");
                 }
-
-                var notAfter = editedCertificate.NotAfter ?? existingCertificate.NotAfter;
 
                 var cmd = new PutCertificateCommand(editedCertificate.Thumbprint,
                     new CertificateDefinition
@@ -790,7 +788,7 @@ namespace Raven.Server.Web.Authentication
                         SecurityClearance = editedCertificate.SecurityClearance,
                         Thumbprint = existingCertificate.Thumbprint,
                         PublicKeyPinningHash = existingCertificate.PublicKeyPinningHash,
-                        NotAfter = notAfter,
+                        NotAfter = existingCertificate.NotAfter,
                         NotBefore = existingCertificate.NotBefore
                     }, GetRaftRequestIdFromQuery())
                 { TwoFactorAuthenticationKey = twoFactorAuthenticationKey };

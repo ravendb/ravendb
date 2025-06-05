@@ -10,7 +10,6 @@ const selectors = {
     authIsDisabledHeader: /Authentication is disabled/,
     renewNowButton: /Renew now/,
     renewalDate: "2025-01-15",
-    regenerateButton: /Regenerate/,
     editButtonTitle: /Edit certificate/,
     deleteButtonTitle: /Delete certificate/,
     wellKnownServerCerts: /Well known admin certificates/,
@@ -107,32 +106,6 @@ describe("Certificates", () => {
     });
 
     describe("client certificate", () => {
-        it("can show regenerate button when cert is about to expire", async () => {
-            const { screen } = await rtlRender_WithWaitForLoad(
-                <CertificatesStory
-                    certificates={(x) => {
-                        x.Certificates = [serverCert, clientCert];
-                        x.Certificates[1].NotAfter = moment().add(14, "days").format();
-                    }}
-                />
-            );
-
-            expect(screen.getByRole("button", { name: selectors.regenerateButton })).toBeInTheDocument();
-        });
-
-        it("can hide regenerate button when cert is valid", async () => {
-            const { screen } = await rtlRender_WithWaitForLoad(
-                <CertificatesStory
-                    certificates={(x) => {
-                        x.Certificates = [serverCert, clientCert];
-                        x.Certificates[1].NotAfter = moment().add(15, "days").format();
-                    }}
-                />
-            );
-
-            expect(screen.queryByRole("button", { name: selectors.regenerateButton })).not.toBeInTheDocument();
-        });
-
         it("can show edit button when cert is not expired", async () => {
             const { screen } = await rtlRender_WithWaitForLoad(
                 <CertificatesStory
