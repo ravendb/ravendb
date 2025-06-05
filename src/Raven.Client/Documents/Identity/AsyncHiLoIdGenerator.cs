@@ -73,9 +73,22 @@ namespace Raven.Client.Documents.Identity
         /// <summary>
         /// Generates the document ID.
         /// </summary>
+        /// <param name="entity">The entity.</param>
+        /// <returns></returns>
+        [Obsolete("This method is deprecated and will be removed in RavenDB 8.0, use the overload with collectionName instead")]
+        public virtual async Task<string> GenerateDocumentIdAsync(object entity)
+        {
+            var result = await GetNextIdAsync().ConfigureAwait(false);
+            _forTestingPurposes?.BeforeGeneratingDocumentId?.Invoke();
+            return GetDocumentIdFromId(result);
+        }
+
+        /// <summary>
+        /// Generates the document ID.
+        /// </summary>
         /// <param name="collectionName">The collection name.</param>
         /// <returns></returns>
-        public virtual async Task<string> GenerateDocumentIdAsync(string collectionName)
+        public async Task<string> GenerateDocumentIdAsync(string collectionName)
         {
             var result = await GetNextIdAsync().ConfigureAwait(false);
             _forTestingPurposes?.BeforeGeneratingDocumentId?.Invoke();

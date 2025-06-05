@@ -4,6 +4,7 @@
 // </copyright>
 //-----------------------------------------------------------------------
 
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,6 +32,42 @@ namespace Raven.Client.Documents.Identity
             DbName = dbName;
             Conventions = store.GetRequestExecutor(dbName).Conventions;
             _identityPartsSeparator = Conventions.IdentityPartsSeparator;
+        }
+
+
+        [Obsolete("This method is deprecated and will be removed in RavenDB 8.0, use the overload with collectionName instead")]
+        public async Task<string> GenerateDocumentIdAsync(object entity)
+        {
+            var identityPartsSeparator = Conventions.IdentityPartsSeparator;
+            if (_identityPartsSeparator != identityPartsSeparator)
+                await MaybeRefresh(identityPartsSeparator).ConfigureAwait(false);
+
+            var typeTagName = Conventions.GetCollectionName(entity);
+            if (string.IsNullOrEmpty(typeTagName)) //ignore empty tags
+            {
+                return null;
+            }
+            var tag = Conventions.TransformTypeCollectionNameToDocumentIdPrefix(typeTagName);
+            if (_idGeneratorsByTag.TryGetValue(tag, out var value))
+            {
+                return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
+            }
+
+            await _generatorLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                if (_idGeneratorsByTag.TryGetValue(tag, out value))
+                    return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
+
+                value = CreateGeneratorFor(tag);
+                _idGeneratorsByTag.TryAdd(tag, value);
+            }
+            finally
+            {
+                _generatorLock.Release();
+            }
+
+            return await value.GenerateDocumentIdAsync(entity).ConfigureAwait(false);
         }
 
         public async Task<string> GenerateDocumentIdAsync(string collectionName)
@@ -97,6 +134,7 @@ namespace Raven.Client.Documents.Identity
                 }
             }
         }
+
 
         public async Task<long> GenerateNextIdForAsync(string collectionName)
         {
