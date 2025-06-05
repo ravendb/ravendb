@@ -14,7 +14,6 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents;
 using Raven.Server.Documents.AI;
-using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
 using Raven.Server.ServerWide.Context;
@@ -1443,7 +1442,7 @@ for (const comment of this.Comments)
 
         config.Collection = "Posts";
         config.Prompt = "Check if the following blog post comment is spam or not";
-        config.JsonSchema = OllamaChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new
+        config.JsonSchema = ChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new
         {
             Blocked = true, Reason = "Concise reason for why this comment was marked as spam or harmful"
         }));

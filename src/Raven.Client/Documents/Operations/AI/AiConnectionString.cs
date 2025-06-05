@@ -193,7 +193,7 @@ public sealed class AiConnectionString : ConnectionString
         return provider?.EmbeddingsMaxConcurrentBatches ?? globalQueryEmbeddingsMaxConcurrentBatches;
     }
 
-    private AbstractAiSettings GetActiveProviderInstance()
+    internal AbstractAiSettings GetActiveProviderInstance()
     {
         return OpenAiSettings ??
                AzureOpenAiSettings ??

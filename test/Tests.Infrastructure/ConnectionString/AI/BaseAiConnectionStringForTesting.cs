@@ -175,38 +175,15 @@ public abstract class AbstractGenAiConnectorForTesting<T> : BaseAiConnectorForTe
     protected override bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token)
     {
         var configuration = _aiIntegrationConfiguration.Value;
-        configuration.JsonSchema = OllamaChatCompletionClient.GetSchemaFor("{ \"Answer\" : \"answer here\" }");
-        var connectorType = configuration.Connection.GetActiveProvider();
+        configuration.JsonSchema = ChatCompletionClient.GetSchemaFor("{ \"Answer\" : \"answer here\" }");
         using (var contextPool = new JsonContextPool())
+        using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration))
         {
-            IChatCompletionClient client = connectorType switch
-            {
-                Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama => new OllamaChatCompletionClient(configuration, contextPool, IChatCompletionClient.DefaultConventions),
-                Raven.Client.Documents.Operations.AI.AiConnectorType.OpenAi => new OpenAiChatCompletionClient(configuration, contextPool, IChatCompletionClient.DefaultConventions),
-                _ => throw new NotSupportedException($"The specified model (\"{connectorType.ToString()}\") is not supported.")
-            };
-
             logger = null;
             var result = client.CompleteAsync(prompt: "Reply with exact word only: raven", "", token).GetAwaiter().GetResult();
 
             return true;
-        }
-    }
 
-    private class OpenAiChatCompletionClient : AbstractChatCompletionClient<JsonOperationContext>
-    {
-        public OpenAiChatCompletionClient(GenAiConfiguration configuration, JsonContextPool contextPool, DocumentConventions conventions) : base(baseUri: new Uri(configuration.Connection.OpenAiSettings.Endpoint),
-            model: configuration.Connection.OpenAiSettings.Model, apiKey: configuration.Connection.OpenAiSettings.ApiKey,
-            structuredOutputSchema: configuration.JsonSchema, contextPool, conventions)
-        {
-        }
-    }
-
-    private class OllamaChatCompletionClient : AbstractChatCompletionClient<JsonOperationContext>
-    {
-        public OllamaChatCompletionClient(GenAiConfiguration configuration, JsonContextPool contextPool, DocumentConventions conventions) : base(baseUri: new Uri(configuration.Connection.OllamaSettings.Uri),
-            model: configuration.Connection.OllamaSettings.Model, apiKey: null, structuredOutputSchema: configuration.JsonSchema, contextPool, conventions)
-        {
         }
     }
 }

@@ -7,7 +7,6 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.AI;
-using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats;
@@ -49,21 +48,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             _chatCompletionClient = GetClient();
     }
 
-    private IChatCompletionClient GetClient()
-    {
-        if (string.IsNullOrWhiteSpace(Configuration.JsonSchema))
-            Configuration.JsonSchema = OllamaChatCompletionClient.GetSchemaFor(Configuration.SampleObject);
-
-        var connectorType = Configuration.Connection.GetActiveProvider();
-        IChatCompletionClient client = connectorType switch
-        {
-            AiConnectorType.Ollama => new OllamaChatCompletionClient(Configuration, Database.ServerStore.ContextPool, IChatCompletionClient.DefaultConventions),
-            AiConnectorType.OpenAi => new OpenAiChatCompletionClient(Configuration, Database.ServerStore.ContextPool, IChatCompletionClient.DefaultConventions),
-            _ => throw new NotSupportedException($"The specified model (\"{connectorType.ToString()}\") is not supported.")
-        };
-
-        return client;
-    }
+    private IChatCompletionClient GetClient() => ChatCompletionClient.CreateChatCompletionClient(Database.DocumentsStorage.ContextPool, Configuration);
 
     public override EtlType EtlType => EtlType.GenAi;
     public override bool ShouldTrackCounters() => false;

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
@@ -16,51 +17,163 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
+using Raven.Server.Documents.AI.AiGen;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 
 namespace Raven.Server.Documents.AI;
 
-public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionClient, IChatCompletionClientForTesting
-    where TContext : JsonOperationContext
+public class ChatCompletionClient : IChatCompletionClient, IChatCompletionClientForTesting
 {
     private readonly string _model;
     private readonly HttpClientCacheKey _httpClientCacheKey;
     private readonly HttpClient _client;
     private readonly string _structuredOutputSchema;
-    private readonly DocumentConventions _conventions;
-    private readonly JsonContextPoolBase<TContext> _contextPool;
-    private readonly AuthenticationHeaderValue _auth;
-    private readonly Uri _baseUri;
+    private readonly IMemoryContextPool _contextPool;
 
-    protected AbstractChatCompletionClient(Uri baseUri, string model, string apiKey, string structuredOutputSchema, JsonContextPoolBase<TContext> contextPool, DocumentConventions conventions)
+    public static DocumentConventions Default = new DocumentConventions
     {
-        _model = model;
+        SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
+        MaxContextSizeToKeep = DocumentConventions.DefaultForServer.MaxContextSizeToKeep,
+        HttpPooledConnectionLifetime = DocumentConventions.DefaultForServer.HttpPooledConnectionLifetime,
+        DisposeCertificate = DocumentConventions.DefaultForServer.DisposeCertificate,
+        DisableTopologyCache = DocumentConventions.DefaultForServer.DisableTopologyCache,
+        UseHttpCompression = false
+    };
 
-        _auth = new AuthenticationHeaderValue(Constants.RequestFields.AuthorizationApiKeyProperty, apiKey);
-        _baseUri = baseUri;
-        _conventions = conventions;
+    static ChatCompletionClient()
+    {
+        Default.Freeze();
+    }
 
-        _httpClientCacheKey = new HttpClientCacheKey(certificate: null, _conventions.UseHttpDecompression,
-            _conventions.HasExplicitlySetDecompressionUsage, _conventions.HttpPooledConnectionLifetime,
-            _conventions.HttpPooledConnectionIdleTimeout, _conventions.GlobalHttpClientTimeout,
-            httpClientType: GetType(), _conventions.ConfigureHttpMessageHandler);
+    public static ChatCompletionClient CreateChatCompletionClient(IMemoryContextPool contextPool, GenAiConfiguration configuration)
+    {
+        var schema = configuration.JsonSchema;
+        if (string.IsNullOrWhiteSpace(schema))
+            schema = GetSchemaFor(configuration.SampleObject);
+
+        return CreateChatCompletionClient(contextPool, configuration.Connection, schema);
+    }
+
+    public static ChatCompletionClient CreateChatCompletionClient(IMemoryContextPool contextPool, AiConnectionString connection, string schema)
+    {
+        if (connection.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model) == false)
+        {
+            var connectorType = connection.GetActiveProvider();
+            throw new NotSupportedException($"The specified provider (\"{connectorType.ToString()}\") is not supported.");
+        }
+
+        var providerType = connection.GetActiveProviderInstance().GetType();
+
+        return new ChatCompletionClient(contextPool, uri, apiKey, model, schema, providerType, Default);
+    }
+
+    public ChatCompletionClient(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string structuredOutputSchema, Type providerType, DocumentConventions conventions)
+    {
+        _model = model ?? throw new ArgumentNullException(nameof(model));
+
+        _httpClientCacheKey = new HttpClientCacheKey(certificate: null, conventions.UseHttpDecompression,
+            conventions.HasExplicitlySetDecompressionUsage, conventions.HttpPooledConnectionLifetime,
+            conventions.HttpPooledConnectionIdleTimeout, conventions.GlobalHttpClientTimeout,
+            httpClientType: providerType, conventions.ConfigureHttpMessageHandler);
 
         _client = DefaultRavenHttpClientFactory.Instance.GetHttpClient(_httpClientCacheKey, handler => new HttpClient(handler)
         {
+            BaseAddress = new Uri(baseUri),
             DefaultRequestHeaders =
             {
+                Authorization = string.IsNullOrEmpty(apiKey) ? null : new AuthenticationHeaderValue(Constants.RequestFields.AuthorizationApiKeyProperty, apiKey),
                 Accept = { new MediaTypeWithQualityHeaderValue(Constants.RequestFields.MediaTypeApplicationJson) }
             }
         });
 
         _structuredOutputSchema = structuredOutputSchema ?? GetSchemaFor("{}");
         _contextPool = contextPool;
+    }
+
+    public async Task<AiResponse> CompleteAsync2(JsonOperationContext context, List<BlittableJsonReaderObject> messages, BlittableJsonReaderArray tools, AiUsage usage,
+        CancellationToken token)
+    {
+        using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext ctx);
+
+        var bodyJson = new DynamicJsonValue
+        {
+            ["model"] = _model,
+            ["messages"] = messages,
+            ["tools"] = tools,
+            ["response_format"] = new DynamicJsonValue
+            {
+                ["type"] = "json_schema", 
+                ["json_schema"] = context.Sync.ReadForMemory(_structuredOutputSchema, "json/schema"),
+            }
+        };
+        using var request = GetRequest2(ctx, bodyJson);
+        using var response = await _client.SendAsync(request, token).ConfigureAwait(false);
+        using var responseContent = await GetResponseContentAsync(ctx, response, token);
+
+        if (response.IsSuccessStatusCode == false)
+        {
+            HandleUnsuccessfulResponse(response, responseContent);
+            Debug.Assert(false, "we should never get here");
+        }
+
+        if (responseContent.TryGet("choices", out BlittableJsonReaderArray choices) == false || choices.Length == 0)
+        {
+            throw new UnexpectedResponseException("No choices in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+        }
+
+        var choice0 = (BlittableJsonReaderObject)choices[0];
+        
+        if (choice0.TryGet("message", out BlittableJsonReaderObject msg) == false ||
+            msg.TryGet("content", out string content) == false)
+        {
+            throw new UnexpectedResponseException("No message/content property in choice: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+        }
+        
+        messages.Add(context.ReadObject(msg,"copy-msg"));
+        
+        if (responseContent.TryGet("usage", out BlittableJsonReaderObject usageJson) == false)
+            throw new UnexpectedResponseException("No choices property in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+
+        usage.UpdateFrom(usageJson);
+
+        if (string.IsNullOrEmpty(content))
+        {
+            if (choice0.TryGet("finish_reason", out string finishReason) && 
+                finishReason == "tool_calls" && 
+                msg.TryGet("tool_calls", out BlittableJsonReaderArray calls))
+            {
+                var resp = new AiResponse(AiResponseType.Tool) { ToolCalls = [] };
+                foreach (BlittableJsonReaderObject call in calls)
+                {
+                    if (call.TryGet("id", out string callId) is false ||
+                        call.TryGet("function", out BlittableJsonReaderObject function) is false ||
+                        function.TryGet("name", out string name) is false ||
+                        function.TryGet("arguments", out string args) is false)
+                        throw new InvalidOperationException("Invalid function call");//TODO: raise proper error with details here
+                    resp.ToolCalls.Add(new AiToolCall(callId, name, args));
+                }
+                
+                return resp;
+            }
+            
+            choice0.TryGet("refusal", out string refusal); 
+            //TODO: full output if we get here?
+            throw new RefusedToAnswerException("The request was refused by the model")
+            {
+                Refusal = refusal, FinishReason = finishReason, RequestId = GetRequestId(response.Headers)
+            };
+        }
+
+        var result = context.Sync.ReadForMemory(content, "ai/output");
+        return new AiResponse(AiResponseType.Result) { Result = result };
     }
 
     public async Task<(string Result, string Usage)> CompleteAsync(string prompt, string context, CancellationToken token)
@@ -118,6 +231,19 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
         return (content, usage.ToString());
     }
 
+    private HttpRequestMessage GetRequest2(JsonOperationContext ctx, DynamicJsonValue body)
+    {
+        var content = new BlittableJsonContent(async stream =>
+        {
+            using var bodyJson = ctx.ReadObject(body, "ai-rag/request");
+            await using var writer = new AsyncBlittableJsonTextWriter(ctx, stream);
+            writer.WriteObject(bodyJson);
+        }, Default);
+
+        content.Headers.Add("Content-Type", "application/json");
+        return new HttpRequestMessage { Method = HttpMethod.Post, Content = content, RequestUri = new Uri("/v1/chat/completions", UriKind.Relative) };
+    }
+
     private HttpRequestMessage GetRequest(JsonOperationContext ctx, string prompt, string context)
     {
         var content = new BlittableJsonContent(async stream =>
@@ -167,20 +293,11 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
 
                 writer.WriteEndObject();
             }
-        }, IChatCompletionClient.DefaultConventions);
+        }, Default);
 
-        content.Headers.Add(Constants.RequestFields.HeaderContentType, Constants.RequestFields.MediaTypeApplicationJson);
+        content.Headers.Add("Content-Type", "application/json");
 
-        return new HttpRequestMessage
-        {
-            Method = HttpMethod.Post,
-            Content = content,
-            RequestUri = new Uri(_baseUri, Constants.RequestFields.DefaultRelativeUri),
-            Headers =
-            {
-                Authorization = _auth
-            }
-        };
+        return new HttpRequestMessage { Method = HttpMethod.Post, Content = content, RequestUri = new Uri(Constants.RequestFields.DefaultRelativeUri, UriKind.Relative) };
 
         BlittableJsonReaderObject GetStructuredOutputSchemaAsBlittable()
         {
@@ -453,6 +570,83 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
     {
         var hash = AttachmentsStorageHelper.CalculateHash(MemoryMarshal.AsBytes(schemaOrSampleObject.AsSpan()));
         return Base64UrlEncoder.Encode(Encoding.UTF8.GetBytes(hash));
+    }
+
+    public static string GenerateJsonObjectFromSampleObject(string s)
+    {
+        var doc = JsonDocument.Parse(s);
+        var element = GenerateJsonObjectFromSampleObject(doc.RootElement);
+        return JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = true });
+    }
+
+    static JsonObject GenerateJsonObjectFromSampleObject(JsonElement element)
+    {
+        var jsonObj = new JsonObject();
+
+        switch (element.ValueKind)
+        {
+            case JsonValueKind.Object:
+                jsonObj["type"] = "object";
+                var props = new JsonObject();
+                var required = new JsonArray();
+                foreach (JsonProperty prop in element.EnumerateObject())
+                {
+                    props[prop.Name] = GenerateJsonObjectFromSampleObject(prop.Value);
+                    required.Add(prop.Name);
+                }
+
+                jsonObj["properties"] = props;
+                jsonObj["required"] = required;
+                jsonObj["additionalProperties"] = false;
+
+                break;
+
+            case JsonValueKind.Array:
+                jsonObj["type"] = "array";
+                var content = element.EnumerateArray().FirstOrDefault();
+                if (content.ValueKind is not JsonValueKind.Undefined)
+                {
+                    jsonObj["items"] = GenerateJsonObjectFromSampleObject(content);
+                }
+                else
+                {
+                    jsonObj["items"] = new JsonObject { ["type"] = "null", };
+                }
+
+                break;
+
+            case JsonValueKind.String:
+                jsonObj["type"] = "string";
+                jsonObj["description"] = element.GetString();
+                break;
+
+            case JsonValueKind.Number:
+                if (element.TryGetInt32(out _))
+                {
+                    jsonObj["type"] = "integer";
+                }
+                else
+                {
+                    jsonObj["type"] = "number";
+                }
+
+                break;
+
+            case JsonValueKind.True:
+            case JsonValueKind.False:
+                jsonObj["type"] = "boolean";
+                break;
+
+            case JsonValueKind.Null:
+                jsonObj["type"] = "null";
+                break;
+
+            default:
+                jsonObj["type"] = "none";
+                break;
+        }
+
+        return jsonObj;
     }
 
     private IChatCompletionClientForTesting.TestingStuff _forTestingPurposes;

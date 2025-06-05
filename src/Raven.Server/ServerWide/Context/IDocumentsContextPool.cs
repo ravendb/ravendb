@@ -1,4 +1,5 @@
 ﻿using System;
+using Sparrow.Json;
 
 namespace Raven.Server.ServerWide.Context
 {

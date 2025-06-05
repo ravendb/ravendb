@@ -5,7 +5,6 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
-using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
@@ -22,7 +21,7 @@ public class ChatCompletionClientStressTests : RavenTestBase
     {
     }
 
-    private static string name = OllamaChatCompletionClient.GetAllowedUniqueName(DateTime.UtcNow.ToString());
+    private static string name = ChatCompletionClient.GetAllowedUniqueName(DateTime.UtcNow.ToString());
 
     private static string defaultJsonSchema = @"{
   ""name"": """ + name + @""",
@@ -53,7 +52,7 @@ public class ChatCompletionClientStressTests : RavenTestBase
     public async Task RateLimit_MaxTokens(Options options, GenAiConfiguration configuration)
     {
         using (var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests())))
-        using (var client = GetChatCompletionClient(configuration, contextPool))
+        using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration))
         {
             var prompt = "Check if the following blog post comment is spam or not";
             var context =
@@ -83,7 +82,7 @@ public class ChatCompletionClientStressTests : RavenTestBase
         var context = "{\"Text\":\"Surefire investment property in caiman islands, win $$$$ for sure, qucik!\",\"Author\":\"homepage\",\"Id\":\"2236672c-b941-4855-999e-5374f41cbddd\"}";
 
         using var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()));
-        using var client = GetChatCompletionClient(configuration, contextPool);
+        using var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration);
 
         //Raven.Server.Documents.AI.AiGen.GenAiRateLimitException: Rate limit reached for gpt-4o in organization "..." on requests per min (RPM): Limit 500, Used 500, Requested 1. Please try again in 120ms.
         await Assert.ThrowsAsync<RateLimitException>(async () =>
@@ -96,20 +95,6 @@ public class ChatCompletionClientStressTests : RavenTestBase
             }
             await Task.WhenAll(tasks);
         });
-    }
-
-    private static IChatCompletionClient GetChatCompletionClient(GenAiConfiguration configuration, TransactionContextPool contextPool, string jsonSchema = null)
-    {
-        jsonSchema ??= defaultJsonSchema;
-        configuration.JsonSchema = jsonSchema;
-
-        var connectorType = configuration.Connection.GetActiveProvider();
-        return connectorType switch
-        {
-            AiConnectorType.Ollama => new OllamaChatCompletionClient(configuration, contextPool, IChatCompletionClient.DefaultConventions),
-            AiConnectorType.OpenAi => new OpenAiChatCompletionClient(configuration, contextPool, IChatCompletionClient.DefaultConventions),
-            _ => throw new NotSupportedException($"The specified model (\"{connectorType.ToString()}\") is not supported.")
-        };
     }
 }
 

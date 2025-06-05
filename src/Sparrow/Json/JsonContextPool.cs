@@ -3,7 +3,7 @@ using Sparrow.Platform;
 
 namespace Sparrow.Json
 {
-    public sealed class JsonContextPool : JsonContextPoolBase<JsonOperationContext>
+    public sealed class JsonContextPool : JsonContextPoolBase<JsonOperationContext>, IMemoryContextPool
     {
         private readonly int _maxNumberOfAllocatedStringValuesPerContext;
 

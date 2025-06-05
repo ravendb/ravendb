@@ -5,7 +5,6 @@ using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
-using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Raven.Server.Web.System;
@@ -95,7 +94,8 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                 {
                     if (aiConnectionString.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model))
                     {
-                        using (var client = new GenericChatCompletionClientForTesting(uri, model, apiKey, ServerStore.ContextPool))
+                        var type = aiConnectionString.GetActiveProviderInstance().GetType();
+                        using (var client = new ChatCompletionClient(ServerStore.ContextPool, uri, apiKey, model, structuredOutputSchema: null, type, conventions: ChatCompletionClient.Default))
                         {
                             await client.CompleteAsync("foo", "bar", HttpContext.RequestAborted);
                         }

@@ -33,7 +33,7 @@ public class GenAiOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<G
 internal static class OpenAiConnectorHelper
 {
     public const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_OPENAI_API_KEY";
-    public const string Endpoint = "https://api.openai.com/v1";
+    public const string Endpoint = "https://api.openai.com/";
 
     public static AiConnectionString CreateAiConnectionString(string model)
     {

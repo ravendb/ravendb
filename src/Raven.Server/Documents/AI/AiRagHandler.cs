@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
-using NuGet.Common;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI.AiGen;
@@ -28,12 +27,9 @@ public class AiRagHandler : DatabaseRequestHandler
         var conStr = GetAiConnectionString(cfg.ConnectionStringName);
         options.TryGet("Parameters", out BlittableJsonReaderObject parameters);
 
-        (string url, string model, string apikey) = conStr.GetSettings();
-
         string schemaOrSampleObject = cfg.OutputSchema ?? throw new InvalidOperationException("Missing output schema in configuration");
-        string schema = AbstractChatCompletionClient.GetSchemaFor(schemaOrSampleObject);
-        using var client = new AbstractChatCompletionClient(new Uri(url), model, apikey,
-            schema);
+        string schema = ChatCompletionClient.GetSchemaFor(schemaOrSampleObject);
+        using var client = ChatCompletionClient.CreateChatCompletionClient(Database.ServerStore.ContextPool, conStr, schema);
 
         string userPrompt = GetStringQueryString("prompt");
         string id = GetStringQueryString("id");
@@ -236,7 +232,7 @@ public class AiRagHandler : DatabaseRequestHandler
         DynamicJsonArray tools = [];
         foreach (var q in cfg.Queries ?? [])
         {
-            string paramsSchema = AbstractChatCompletionClient.GenerateJsonObjectFromSampleObject(q.ParametersSchema);
+            string paramsSchema = ChatCompletionClient.GenerateJsonObjectFromSampleObject(q.ParametersSchema);
             tools.Add(new DynamicJsonValue
             {
                 ["type"] = "function",
@@ -249,9 +245,9 @@ public class AiRagHandler : DatabaseRequestHandler
                 ["strict"] = true
             });
         }
-        foreach (var a in cfg.Actions?? [])
+        foreach (var a in cfg.Actions ?? [])
         {
-            string paramsSchema = AbstractChatCompletionClient.GenerateJsonObjectFromSampleObject(a.ParametersSchema);
+            string paramsSchema = ChatCompletionClient.GenerateJsonObjectFromSampleObject(a.ParametersSchema);
             tools.Add(new DynamicJsonValue
             {
                 ["type"] = "function",
