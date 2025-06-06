@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_19426 : RavenTestBase
+public class RavenDB_19426(ITestOutputHelper output) : RavenTestBase(output)
 {
     private const string DocName = "doc/1";
 
@@ -41,12 +41,8 @@ public class RavenDB_19426 : RavenTestBase
         
         AssertIndexIsNotCorrupted(index, store);
     }
-    
-    
-    public RavenDB_19426(ITestOutputHelper output) : base(output)
-    {
-    }
-    
+
+
     [RavenTheory(RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void DeletionOfItemFromFanoutIndexReturnsCorrectCountOfTerms(Options options)
@@ -61,8 +57,8 @@ public class RavenDB_19426 : RavenTestBase
         index.Execute(store);
         Indexes.WaitForIndexing(store);
 
-        var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
-        Assert.Equal(2, indexStats.EntriesCount);
+        var entriesCount = WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, 2);
+        Assert.Equal(2, entriesCount);
 
         {
             //Swap in place, no new item.
@@ -73,9 +69,8 @@ public class RavenDB_19426 : RavenTestBase
         }
 
         Indexes.WaitForIndexing(store);
-
-        indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
-        Assert.Equal(0, indexStats.EntriesCount);
+        entriesCount = WaitForValue(() => store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName)).EntriesCount, 0);
+        Assert.Equal(0, entriesCount);
     }
 
     [RavenTheory(RavenTestCategory.Indexes)]
@@ -129,7 +124,6 @@ public class RavenDB_19426 : RavenTestBase
         Indexes.WaitForIndexing(store);
         var indexStats = store.Maintenance.Send(new GetIndexStatisticsOperation(index.IndexName));
         Assert.NotEqual(IndexState.Error ,indexStats.State);
-        WaitForUserToContinueTheTest(store);
     }
 
     private T CreateIndex<T>(IDocumentStore store) where T : AbstractIndexCreationTask, new()
