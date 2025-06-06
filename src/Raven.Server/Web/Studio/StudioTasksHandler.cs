@@ -305,7 +305,7 @@ namespace Raven.Server.Web.Studio
                 switch (request.ConnectorType)
                 {
                     case AiConnectorType.OpenAi:
-                        uri = request.OpenAiSettings.Endpoint ?? "https://api.openai.com/v1/";
+                        uri = request.OpenAiSettings.Endpoint;
                         apiKey = request.OpenAiSettings.ApiKey;
                         organization = request.OpenAiSettings.OrganizationId;
                         project = request.OpenAiSettings.ProjectId;

@@ -182,7 +182,7 @@ export default class MockTasksService extends AutoMockService<TasksService> {
         });
     }
 
-    withOpenAiModels(dto?: MockedValue<string[]>) {
-        return this.mockResolvedValue(this.mocks.getOpenAiModels, dto, SharedStubs.openAiModels());
+    withAiModels(dto?: MockedValue<string[]>) {
+        return this.mockResolvedValue(this.mocks.getAiModels, dto, SharedStubs.aiModels());
     }
 }

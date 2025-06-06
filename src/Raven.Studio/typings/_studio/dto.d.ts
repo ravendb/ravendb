@@ -1097,3 +1097,10 @@ type AiConnectionStringsSettings =
     | Raven.Client.Documents.Operations.AI.GoogleSettings
     | Raven.Client.Documents.Operations.AI.HuggingFaceSettings
     | Raven.Client.Documents.Operations.AI.MistralAiSettings;
+
+interface AiModelsRequestDto {
+    ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi">;
+    AzureOpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.AzureOpenAiSettings, "Endpoint", "ApiKey">;
+    OllamaSettings?: Pick<Raven.Client.Documents.Operations.AI.OllamaSettings, "Uri">;
+    OpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.OpenAiSettings, "Endpoint" | "ApiKey" | "OrganizationId" | "ProjectId">;
+}

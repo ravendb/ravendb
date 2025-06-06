@@ -1,5 +1,5 @@
 import { FlexGrow } from "components/common/FlexGrow";
-import { FormInput, FormLabel } from "components/common/Form";
+import { FormInput, FormLabel, FormSelectAutocomplete } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import {
     ConnectionFormData,
@@ -14,6 +14,8 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import ConnectionTestResult from "components/common/connectionTests/ConnectionTestResult";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
+import { SelectOption } from "components/common/select/Select";
+import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -36,17 +38,34 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
         });
     });
 
+    const asyncGetModelOptions = useAsyncDebounce(
+        async () => {
+            const uri = formValues.ollamaSettings.uri?.trim() ?? "";
+
+            if (!uri) {
+                return [];
+            }
+
+            const dto: AiModelsRequestDto = {
+                ConnectorType: "Ollama",
+                OllamaSettings: {
+                    Uri: uri,
+                },
+            };
+
+            try {
+                const result = await tasksService.getAiModels(dto);
+                return [...result].sort().map((x) => ({ label: x, value: x }) satisfies SelectOption);
+            } catch {
+                return [];
+            }
+        },
+        [formValues.ollamaSettings.uri],
+        300
+    );
+
     return (
         <>
-            <div className="mb-2">
-                <FormLabel>
-                    Model
-                    <PopoverWithHoverWrapper message="The Ollama model to use.">
-                        <Icon icon="info" color="info" id="model" margin="ms-1" />
-                    </PopoverWithHoverWrapper>
-                </FormLabel>
-                <FormInput control={control} name="ollamaSettings.model" type="text" disabled={isUsedByAnyTask} />
-            </div>
             <div className="mb-2">
                 <FormLabel>
                     URI
@@ -55,6 +74,22 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     </PopoverWithHoverWrapper>
                 </FormLabel>
                 <FormInput control={control} name="ollamaSettings.uri" type="text" />
+            </div>
+            <div className="mb-2">
+                <FormLabel>
+                    Model
+                    <PopoverWithHoverWrapper message="The Ollama model to use.">
+                        <Icon icon="info" color="info" id="model" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
+                </FormLabel>
+                <FormSelectAutocomplete
+                    control={control}
+                    name="ollamaSettings.model"
+                    isDisabled={isUsedByAnyTask}
+                    placeholder="Select a model or enter a new one (provide URI to see available models)"
+                    options={asyncGetModelOptions.result ?? []}
+                    isLoading={asyncGetModelOptions.loading}
+                />
             </div>
             <EmbeddingsMaxConcurrentBatches baseName="ollamaSettings" />
             <div className="d-flex mb-2">

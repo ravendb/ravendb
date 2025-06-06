@@ -19,7 +19,7 @@ export class SharedStubs {
         };
     }
 
-    static openAiModels(): string[] {
+    static aiModels(): string[] {
         return ["text-embedding-ada-002", "gpt-3.5-turbo", "gpt-4.1"];
     }
 }

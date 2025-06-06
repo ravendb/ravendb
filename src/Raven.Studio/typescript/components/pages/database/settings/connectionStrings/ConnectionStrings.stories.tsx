@@ -41,7 +41,7 @@ export const DefaultConnectionStrings: StoryObj<DefaultConnectionStringsProps> =
 
         accessManager.with_isServerSecure(props.isSecuredServer);
 
-        tasksService.withOpenAiModels();
+        tasksService.withAiModels();
         tasksService.withLocalFolderPathOptions();
         tasksService.withBackupLocation();
         tasksService.withGetTasks((x) => {

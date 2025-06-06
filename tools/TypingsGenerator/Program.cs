@@ -136,6 +136,7 @@ using TypeScripter;
 using TypeScripter.TypeScript;
 using Voron.Data.BTrees;
 using Voron.Debugging;
+using static Raven.Server.Web.Studio.StudioTasksHandler;
 using LicenseConfiguration = Raven.Server.Config.Categories.LicenseConfiguration;
 using Operation = Raven.Server.Documents.Operations.Operation;
 using PatchRequest = Raven.Server.Documents.Patch.PatchRequest;
@@ -599,6 +600,9 @@ namespace TypingsGenerator
             scripter.AddType(typeof(TestGenAiScript));
             scripter.AddType(typeof(GenAiTestScriptResult));
             scripter.AddType(typeof(GenAiPerformanceOperation));
+
+            // AI
+            scripter.AddType(typeof(AiModelsRequest));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));
