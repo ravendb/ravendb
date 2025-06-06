@@ -338,7 +338,7 @@ internal static class RavenLogManagerServerExtensions
         {
             Name = nameof(FileTarget),
             CreateDirs = true,
-            FileName = configuration.Logs.Path.Combine("${shortdate}.log").FullPath,
+            FileName = configuration.Logs.Path.Combine("server.log").FullPath,
             ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
             Header = Constants.Logging.DefaultHeaderAndFooterLayout,
             Layout = Constants.Logging.DefaultLayout,
@@ -504,7 +504,7 @@ internal static class RavenLogManagerServerExtensions
         {
             Name = nameof(FileTarget),
             CreateDirs = true,
-            FileName = configuration.Security.AuditLogPath.Combine("${shortdate}.audit.log").FullPath,
+            FileName = configuration.Security.AuditLogPath.Combine("server.audit.log").FullPath,
             ArchiveNumbering = ArchiveNumberingMode.DateAndSequence,
             Header = Constants.Logging.DefaultHeaderAndFooterLayout,
             Layout = Constants.Logging.DefaultLayout,
