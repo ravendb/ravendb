@@ -14,7 +14,7 @@ namespace Raven.Server.Documents.Indexes.Persistence
         {
         }
 
-        public abstract void Commit(IndexingStatsScope stats);
+        public abstract void Commit(IndexingStatsScope stats, CancellationToken token);
 
         public abstract void Optimize(CancellationToken token);
 

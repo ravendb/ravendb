@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
@@ -28,7 +29,7 @@ internal sealed class OutputReduceIndexWriteOperationScope<TWriter> where TWrite
         IsActive = false;
     }
 
-    public void Commit(IndexingStatsScope stats)
+    public void Commit(IndexingStatsScope stats, CancellationToken token)
     {
         using (new IsActiveScope(this))
         {
@@ -36,7 +37,7 @@ internal sealed class OutputReduceIndexWriteOperationScope<TWriter> where TWrite
 
             using (_txHolder.AcquireTransaction(out _))
             {
-                _writer.Commit(stats);
+                _writer.Commit(stats, token);
             }
 
             try

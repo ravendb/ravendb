@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Threading;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Sparrow.Json;
 using Sparrow.Logging;
@@ -18,12 +19,12 @@ public sealed class OutputReduceCoraxIndexWriteOperation : CoraxIndexWriteOperat
         _outputScope = new(index, writeTransaction, indexContext, this);
     }
     
-    public override void Commit(IndexingStatsScope stats)
+    public override void Commit(IndexingStatsScope stats, CancellationToken token)
     {
         if (_outputScope.IsActive)
-            base.Commit(stats);
+            base.Commit(stats, token);
         else
-            _outputScope.Commit(stats);
+            _outputScope.Commit(stats, token);
     }
 
     public override void IndexDocument(LazyStringValue key, LazyStringValue sourceDocumentId, object document, IndexingStatsScope stats,

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using Corax.Analyzers;
 using Corax.Mappings;
 using Corax.Pipeline;
@@ -944,9 +945,9 @@ namespace Corax.Indexing
             return fieldTree.TryGetValue(termValue, out idInTree);
         }
 
-        public void Commit() => Commit<EmptyStatsScope>(default);
+        public void Commit(CancellationToken token = default) => Commit<EmptyStatsScope>(default, token);
         
-        public void Commit<TStatsScope>(TStatsScope stats)
+        public void Commit<TStatsScope>(TStatsScope stats, CancellationToken token)
             where TStatsScope : struct, ICoraxStatsScope
         {
             _indexDebugDumper.Commit();
@@ -982,6 +983,7 @@ namespace Corax.Indexing
             uniquePostingList.Sort(sortedFields);
             foreach (var indexedField in sortedFields)
             {
+                token.ThrowIfCancellationRequested();
                 stats.SetAllocatedUnmanagedBytes(_entriesAllocator?._totalAllocated ?? 0);
 
                 //Dynamic terms will be indexed with explicit field terms.
@@ -1007,17 +1009,17 @@ namespace Corax.Indexing
                 using (staticFieldScope.For(CommitOperation.TextualValues))
                 {
                     using var inserter = new TextualFieldInserter(this, entriesToTermsTree, indexedField, workingBuffer);
-                    inserter.InsertTextualField();
+                    inserter.InsertTextualField(token);
                 }
                 
                 using (staticFieldScope.For(CommitOperation.IntegerValues))
-                    InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer);
+                    InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer, token);
                 
                 using (staticFieldScope.For(CommitOperation.FloatingValues))
-                    InsertNumericFieldDoubles(entriesToTermsTree, indexedField, workingBuffer);
+                    InsertNumericFieldDoubles(entriesToTermsTree, indexedField, workingBuffer, token);
 
                 using (staticFieldScope.For(CommitOperation.SpatialValues))
-                    InsertSpatialField(entriesToSpatialTree, indexedField);
+                    InsertSpatialField(entriesToSpatialTree, indexedField, token);
 
                 if (indexedField.HasMultipleTermsPerField)
                 {
@@ -1112,7 +1114,7 @@ namespace Corax.Indexing
             }
         }
 
-        private void InsertSpatialField(Tree entriesToSpatialTree, IndexedField indexedField)
+        private void InsertSpatialField(Tree entriesToSpatialTree, IndexedField indexedField, CancellationToken token)
         {
             if (indexedField.Spatial == null)
                 return;
@@ -1122,8 +1124,11 @@ namespace Corax.Indexing
             var termContainerId = fieldRootPage << 3 | 0b010;
             Debug.Assert(termContainerId >>> 3 == fieldRootPage, "field root too high?");
             var entriesToTerms = entriesToSpatialTree.FixedTreeFor(indexedField.Name, sizeof(double)+sizeof(double));
+
+
             foreach (var (entry, spatialEntry)  in indexedField.Spatial)
             {
+                token.ThrowIfCancellationRequested();
                 spatialEntry.Locations.Sort();
 
                 ref var entryTerms = ref GetEntryTerms(spatialEntry.TermsPerEntryIndex);
@@ -1296,7 +1301,7 @@ namespace Corax.Indexing
                 _pagesToPrefetch.Dispose();
             }
 
-            public void InsertTextualField()
+            public void InsertTextualField(in CancellationToken token)
             {
                 long totalLengthOfTerm = 0;
                 _buffers.PrepareTerms(_indexedField, out var sortedTerms, out var termsOffsets);
@@ -1322,6 +1327,8 @@ namespace Corax.Indexing
                 
                 while (true)
                 {
+                    token.ThrowIfCancellationRequested();
+                    
                     if (sortedTerms.IsEmpty)
                         break;
 
@@ -2005,7 +2012,7 @@ namespace Corax.Indexing
             _largePostingListSet.Remove(containerId);
         }
 
-        private void InsertNumericFieldLongs(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
+        private void InsertNumericFieldLongs(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, CancellationToken token)
         {
             var fieldTree = _fieldsTree.LookupFor<Int64LookupKey>(indexedField.NameLong);
 
@@ -2013,6 +2020,7 @@ namespace Corax.Indexing
 
             foreach (var (term, entriesLocation) in indexedField.Longs)
             {
+                token.ThrowIfCancellationRequested();
                 ref var entries = ref indexedField.Storage.GetAsRef(entriesLocation);
 
                 // We are not going to be using these entries anymore after this. 
@@ -2080,7 +2088,7 @@ namespace Corax.Indexing
             }
         }
 
-        private void InsertNumericFieldDoubles(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
+        private void InsertNumericFieldDoubles(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, CancellationToken token)
         {
             var fieldTree = _fieldsTree.LookupFor<DoubleLookupKey>(indexedField.NameDouble);
 
@@ -2088,6 +2096,8 @@ namespace Corax.Indexing
 
             foreach (var (term, entriesLocation) in indexedField.Doubles)
             {
+                token.ThrowIfCancellationRequested();
+                
                 ref var entries = ref indexedField.Storage.GetAsRef(entriesLocation);
 
                 // We are not going to be using these entries anymore after this. 

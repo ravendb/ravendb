@@ -79,13 +79,13 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             UpdateDynamicFieldsBindings();
         }
         
-        public override void Commit(IndexingStatsScope stats)
+        public override void Commit(IndexingStatsScope stats, CancellationToken token)
         {
             if (_indexWriter != null)
             {
                 using (var commitStats = stats.For(IndexingOperation.Corax.Commit))
                 {
-                    _indexWriter.Commit(new CoraxIndexingStats(commitStats));
+                    _indexWriter.Commit(new CoraxIndexingStats(commitStats), token);
                 }
             }
         }

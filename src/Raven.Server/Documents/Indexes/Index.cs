@@ -2493,7 +2493,7 @@ namespace Raven.Server.Documents.Indexes
                             {
                                 using (var indexWriteOperation = writeOperation.Value)
                                 {
-                                    indexWriteOperation.Commit(stats);
+                                    indexWriteOperation.Commit(stats, cancellationToken);
 
                                     entriesCount = writeOperation.Value.EntriesCount();
                                 }

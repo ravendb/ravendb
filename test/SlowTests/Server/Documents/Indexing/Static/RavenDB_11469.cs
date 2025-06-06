@@ -99,7 +99,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
 
                     using (var indexWriteOperation = writeOperation.Value)
                     {
-                        indexWriteOperation.Commit(stats);
+                        indexWriteOperation.Commit(stats, CancellationToken.None);
                     }
 
                     index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
@@ -160,7 +160,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
 
                         using (var indexWriteOperation = writeOperation.Value)
                         {
-                            indexWriteOperation.Commit(stats);
+                            indexWriteOperation.Commit(stats, CancellationToken.None);
                         }
 
                         index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
@@ -219,7 +219,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
 
                         using (var indexWriteOperation = writeOperation.Value)
                         {
-                            indexWriteOperation.Commit(stats);
+                            indexWriteOperation.Commit(stats, CancellationToken.None);
                         }
 
                         index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
@@ -279,7 +279,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
 
                         using (var indexWriteOperation = writeOperation.Value)
                         {
-                            indexWriteOperation.Commit(stats);
+                            indexWriteOperation.Commit(stats, CancellationToken.None);
                         }
 
                         index.IndexPersistence.RecreateSearcher(tx.InnerTransaction);
