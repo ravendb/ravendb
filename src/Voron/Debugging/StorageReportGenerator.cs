@@ -118,6 +118,14 @@ namespace Voron.Debugging
             {
                 var treeReport = GetReport(tree, input.IncludeDetails);
                 trees.Add(treeReport);
+                
+                if (SliceComparer.AreEqual(tree.Name, Hnsw.HnswGlobalConfigSlice))
+                {
+                    var globalContainer = tree.DirectRead(Hnsw.VectorsContainerIdSlice);
+                    if (globalContainer != null)
+                        input.Containers.Add(Hnsw.VectorContainerStorageSlice, Unsafe.Read<long>(globalContainer));
+                }
+                
                 if (tree.State.Header.Flags.HasFlag(TreeFlags.CompactTrees) ||
                     tree.State.Header.Flags.HasFlag(TreeFlags.Lookups))
                 {
