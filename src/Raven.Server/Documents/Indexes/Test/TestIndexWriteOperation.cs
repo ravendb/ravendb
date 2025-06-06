@@ -27,9 +27,9 @@ public sealed class TestIndexWriteOperation : IndexWriteOperationBase
         _inner?.Dispose();
     }
 
-    public override void Commit(IndexingStatsScope stats)
+    public override void Commit(IndexingStatsScope stats, CancellationToken token)
     {
-        _inner.Commit(stats);
+        _inner.Commit(stats, token);
     }
 
     public override void Optimize(CancellationToken token)

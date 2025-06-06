@@ -104,7 +104,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Lucene
             }
         }
 
-        public override void Commit(IndexingStatsScope stats)
+        public override void Commit(IndexingStatsScope stats, CancellationToken token)
         {
             if (_writer != null)
             {
