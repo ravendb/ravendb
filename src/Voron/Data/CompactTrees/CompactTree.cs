@@ -216,8 +216,8 @@ public sealed partial class CompactTree : IPrepareForCommit
             {
                 GetEncodedKey(llt, ContainerId, out keyLenInBits, out keyPtr);
             }
-            
-            var clonedKey = llt.AcquireCompactKey();
+
+            var clonedKey = new CompactKey();
             clonedKey.Initialize(llt);
             clonedKey.Set(keyLenInBits, keyPtr, parent.State.DictionaryId);
             return (T)(object)(new CompactKeyLookup(clonedKey));
