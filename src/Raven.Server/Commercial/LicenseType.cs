@@ -16,6 +16,8 @@ namespace Raven.Server.Commercial
 
         Developer = 5,
 
-        Essential = 6
+        Essential = 6,
+
+        EnterpriseAi = 7,
     }
 }
