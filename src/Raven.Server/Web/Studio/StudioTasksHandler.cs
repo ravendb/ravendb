@@ -117,10 +117,10 @@ namespace Raven.Server.Web.Studio
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     context.Write(writer, new DynamicJsonValue
-                    {
+                        {
                         [nameof(OfflineMigrationValidation.IsValid)] = isValid,
                         [nameof(OfflineMigrationValidation.ErrorMessage)] = errorMessage
-                    });
+                        });
                 }
             }
         }
@@ -204,7 +204,7 @@ namespace Raven.Server.Web.Studio
         public async Task Bootstrap()
         {
             // preload server configuration for studio
-            
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
@@ -286,7 +286,7 @@ namespace Raven.Server.Web.Studio
                 writer.WriteEndObject();
             }
         }
-        
+
         [RavenAction("/studio-tasks/ai/models", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task AiModels()
         {
@@ -300,11 +300,15 @@ namespace Raven.Server.Web.Studio
 
                 string uri;
                 string apiKey = null;
+                string organization = null;
+                string project = null;
                 switch (request.ConnectorType)
                 {
                     case AiConnectorType.OpenAi:
                         uri = request.OpenAiSettings.Endpoint ?? "https://api.openai.com/v1/";
                         apiKey = request.OpenAiSettings.ApiKey;
+                        organization = request.OpenAiSettings.OrganizationId;
+                        project = request.OpenAiSettings.ProjectId;
                         break;
                     case AiConnectorType.AzureOpenAi:
                         uri = request.AzureOpenAiSettings.Endpoint;
@@ -318,7 +322,7 @@ namespace Raven.Server.Web.Studio
                 }
 
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
-                using (var chat = new GenericChatCompletionClientForTesting(uri, model: null, apiKey: apiKey, ServerStore.ContextPool))
+                using (var chat = new GenericChatCompletionClientForTesting(uri, model: null, apiKey: apiKey, organizationId: organization, projectId: project, ServerStore.ContextPool))
                 {
                     await chat.ProxyModelsAsync(HttpContext.Response, cts.Token);
                 }
@@ -328,9 +332,9 @@ namespace Raven.Server.Web.Studio
         public sealed class AiModelsRequest
         {
             public AiConnectorType ConnectorType { get; set; }
-            
+
             public OllamaSettings OllamaSettings { get; set; }
-            
+
             public OpenAiSettings OpenAiSettings { get; set; }
 
             public AzureOpenAiSettings AzureOpenAiSettings { get; set; }

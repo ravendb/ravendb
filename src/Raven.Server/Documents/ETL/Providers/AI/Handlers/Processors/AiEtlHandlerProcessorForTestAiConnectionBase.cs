@@ -95,7 +95,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                 {
                     if (aiConnectionString.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model))
                     {
-                        using (var client = new GenericChatCompletionClientForTesting(uri, model, apiKey, ServerStore.ContextPool))
+                        using (var client = new GenericChatCompletionClientForTesting(uri, model, apiKey, organizationId: null, projectId: null, ServerStore.ContextPool))
                         {
                             await client.CompleteAsync("foo", "bar", HttpContext.RequestAborted);
                         }

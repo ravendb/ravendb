@@ -25,13 +25,14 @@ using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
-
 namespace Raven.Server.Documents.AI;
 
 public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionClient, IChatCompletionClientForTesting
     where TContext : JsonOperationContext
 {
     private readonly string _model;
+    private readonly string _organizationId;
+    private readonly string _projectId;
     private readonly HttpClientCacheKey _httpClientCacheKey;
     private readonly HttpClient _client;
     private readonly string _structuredOutputSchema;
@@ -40,9 +41,11 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
     private readonly AuthenticationHeaderValue _auth;
     private readonly Uri _baseUri;
 
-    protected AbstractChatCompletionClient(Uri baseUri, string model, string apiKey, string structuredOutputSchema, JsonContextPoolBase<TContext> contextPool, DocumentConventions conventions)
+    protected AbstractChatCompletionClient(Uri baseUri, string model, string apiKey, string organizationId, string projectId, string structuredOutputSchema, JsonContextPoolBase<TContext> contextPool, DocumentConventions conventions)
     {
         _model = model;
+        _organizationId = organizationId;
+        _projectId = projectId;
 
         _auth = new AuthenticationHeaderValue(Constants.RequestFields.AuthorizationApiKeyProperty, apiKey);
         _baseUri = baseUri;
@@ -67,7 +70,8 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
 
     public async Task ProxyModelsAsync(HttpResponse response, CancellationToken token)
     {
-        using var r = await _client.SendAsync(new HttpRequestMessage(HttpMethod.Get, new Uri(_baseUri, Constants.RequestFields.ModelsUri)), token);
+        using var request = CreateRequest(HttpMethod.Get, Constants.RequestFields.ModelsUri);
+        using var r = await _client.SendAsync(request, token);
         
         HttpResponseHelper.CopyStatusCode(r, response);
         HttpResponseHelper.CopyHeaders(r, response);
@@ -80,7 +84,7 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
         _forTestingPurposes?.SimulateFailure?.Invoke(context);
 
         using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext ctx);
-        using var request = GetRequest(ctx, prompt, context);
+        using var request = CreateCompletionRequest(ctx, prompt, context);
         using var response = await _client.SendAsync(request, token).ConfigureAwait(false);
         using var responseContent = await GetResponseContentAsync(ctx, response, token);
 
@@ -130,7 +134,28 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
         return (content, usage.ToString());
     }
 
-    private HttpRequestMessage GetRequest(JsonOperationContext ctx, string prompt, string context)
+    private HttpRequestMessage CreateRequest(HttpMethod httpMethod, string relativeUri)
+    {
+        var request = new HttpRequestMessage
+        {
+            Method = httpMethod,
+            RequestUri = new Uri(_baseUri, relativeUri),
+            Headers =
+            {
+                Authorization = _auth
+            }
+        };
+
+        if (string.IsNullOrEmpty(_organizationId) == false)
+            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiOrganization, _organizationId);
+        
+        if (string.IsNullOrEmpty(_projectId) == false)
+            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiProject, _projectId);
+
+        return request;
+    }
+
+    private HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, string prompt, string context)
     {
         var content = new BlittableJsonContent(async stream =>
         {
@@ -183,16 +208,10 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
 
         content.Headers.Add(Constants.RequestFields.HeaderContentType, Constants.RequestFields.MediaTypeApplicationJson);
 
-        return new HttpRequestMessage
-        {
-            Method = HttpMethod.Post,
-            Content = content,
-            RequestUri = new Uri(_baseUri, Constants.RequestFields.DefaultRelativeUri),
-            Headers =
-            {
-                Authorization = _auth
-            }
-        };
+        var request = CreateRequest(HttpMethod.Post, Constants.RequestFields.DefaultRelativeUri);
+        request.Content = content;
+
+        return request;
 
         BlittableJsonReaderObject GetStructuredOutputSchemaAsBlittable()
         {
@@ -543,6 +562,8 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
 
             // HTTP headers
             public const string HeaderContentType = "Content-Type";
+            public const string OpenAiOrganization = "OpenAI-Organization";
+            public const string OpenAiProject = "OpenAI-Project";
             public const string MediaTypeApplicationJson = "application/json";
 
             public const string DefaultRelativeUri = "/v1/chat/completions";
