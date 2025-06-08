@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.ETL;
 using Sparrow.Json;
 using Tests.Infrastructure;
@@ -31,7 +32,7 @@ public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output
         {
             config.Prompt = "Translate the following sentence";
             config.Collection = "Posts";
-            config.SampleObject = JsonConvert.SerializeObject(new { Translation = "foo" });
+            config.JsonSchema = OllamaChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new { Translation = "foo" }));
             config.UpdateScript = "this.Translation = $output.Translation";
             config.GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Sentence: this.Body });" };
             src.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -49,7 +50,7 @@ public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output
             Assert.Equal(config.Name, imported.Name);
             Assert.Equal(config.ConnectionStringName, imported.ConnectionStringName);
             Assert.Equal(config.Prompt, imported.Prompt);
-            Assert.Equal(config.SampleObject, imported.SampleObject);
+            Assert.Equal(config.JsonSchema, imported.JsonSchema);
             Assert.Equal(config.UpdateScript, imported.UpdateScript);
             Assert.Equal(config.Collection, imported.Collection);
             Assert.Equal(config.GenAiTransformation.Script, imported.GenAiTransformation.Script);
@@ -62,13 +63,13 @@ public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output
     public async Task CanBackupAndRestoreGenAiEtl(Options options, GenAiConfiguration config, BackupType backupType)
     {
         var backupPath = NewDataPath();
-        var sampleObject = JsonConvert.SerializeObject(new { Answer = "42" });
+        var jsonSchema = OllamaChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new { Answer = "42" }));
 
         using (var store = GetDocumentStore())
         {
             config.Prompt = "Give a short answer to the following question";
             config.Collection = "Posts";
-            config.SampleObject = sampleObject;
+            config.JsonSchema = jsonSchema;
             config.UpdateScript = "this.GenAnswer = $output.Answer";
             config.GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Question: this.Body });" };
             store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -194,7 +195,7 @@ public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output
 
             config.Prompt = "What is the answer to life?";
             config.Collection = "Posts";
-            config.SampleObject = JsonConvert.SerializeObject(new { Answer = "42" });
+            config.JsonSchema = OllamaChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new { Answer = "42" }));
             config.UpdateScript = "this.GenAnswer = $output.Answer";
             config.GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Question: this.Body });" };
 
@@ -232,7 +233,7 @@ public class GenAiBackupRestore(ITestOutputHelper output) : RavenTestBase(output
                 Assert.Equal(config.Name, restoredGenConfig.Name);
                 Assert.Equal(config.ConnectionStringName, restoredGenConfig.ConnectionStringName);
                 Assert.Equal(config.Prompt, restoredGenConfig.Prompt);
-                Assert.Equal(config.SampleObject, restoredGenConfig.SampleObject);
+                Assert.Equal(config.JsonSchema, restoredGenConfig.JsonSchema);
                 Assert.Equal(config.UpdateScript, restoredGenConfig.UpdateScript);
                 Assert.Equal(config.Collection, restoredGenConfig.Collection);
                 Assert.Equal(config.GenAiTransformation.Script, restoredGenConfig.GenAiTransformation.Script);

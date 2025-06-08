@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Server.Documents.AI;
+using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -37,7 +38,7 @@ public class GenAiErrorHandling(ITestOutputHelper output) : RavenTestBase(output
 
             config.Prompt = "Check if the following blog post comment is spam or not";
             config.Collection = "Posts";
-            config.SampleObject = JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or ham" });
+            config.JsonSchema = OllamaChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or harmful" }));
             config.UpdateScript = @"    
 const idx = this.Comments.findIndex(c => c.Id == $input.Id);
 this.Comments[idx].IsSpam = $output.Blocked;
@@ -91,7 +92,7 @@ if($output.Blocked)
 
             config.Prompt = "Check if the following blog post comment is spam or not";
             config.Collection = "Posts";
-            config.SampleObject = JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or ham" });
+            config.JsonSchema = OllamaChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or ham" }));
             config.UpdateScript = badScript;
             config.GenAiTransformation = new GenAiTransformation
             {
@@ -152,7 +153,7 @@ if($output.Blocked)
 
             config.Prompt = "Check if the following blog post comment is spam or not";
             config.Collection = "Posts";
-            config.SampleObject = JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or ham" });
+            config.JsonSchema = OllamaChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or ham" }));
             config.UpdateScript = badScript;
             config.GenAiTransformation = new GenAiTransformation
             {
@@ -214,7 +215,7 @@ if($output.Blocked)
 
             config.Prompt = "Check if the following blog post comment is spam or not";
             config.Collection = "Posts";
-            config.SampleObject = JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or ham" });
+            config.JsonSchema = OllamaChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or ham" }));
             config.UpdateScript = @"const idx = this.Comments.findIndex(c => c.Id == $input.Id);  
 this.Comments[idx].IsBlocked = $output.Blocked;";
             config.GenAiTransformation = new GenAiTransformation
@@ -301,7 +302,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
 
         config.Prompt = "Translate this text to sanskrit";
         config.Collection = "Posts";
-        config.SampleObject = JsonConvert.SerializeObject(new { Result = "text" });
+        config.JsonSchema = OllamaChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new { Result = "text" }));
         config.UpdateScript = "this.Result = $output.Result;";
         config.GenAiTransformation = new GenAiTransformation { Script = "for (const comment of this.Comments) ai.genContext({Text: comment.Text, Id: comment.Id});" };
         config.Identifier = "sanskrit-translation";
@@ -409,7 +410,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
 
         config.Prompt = "Check if the following blog post comment is spam or not";
         config.Collection = "Posts";
-        config.SampleObject = JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or ham" });
+        config.JsonSchema = OllamaChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or ham" }));
         config.UpdateScript = @"const idx = this.Comments.findIndex(c => c.Id == $input.Id); 
 this.Comments[idx].IsSpam = $output.Blocked;";
         config.GenAiTransformation = new GenAiTransformation

@@ -26,7 +26,7 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     
     //TODO: Make this JSON objects? 
     public string JsonSchema { get; set; }
-    public string SampleObject { get; set; }
+
     public string UpdateScript { get; set; }
 
     public int MaxConcurrency { get; set; } = DefaultMaxConcurrency;
@@ -63,12 +63,12 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
     public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
     {
         if (validateConnection && Initialized == false)
-            throw new InvalidOperationException("GenAi configuration must be initialized");
+            throw new InvalidOperationException("GenAI configuration must be initialized");
 
         errors = [];
 
         if (validateName && string.IsNullOrEmpty(Name))
-            errors.Add($"{nameof(Name)} of GenAi configuration cannot be empty");
+            errors.Add($"{nameof(Name)} of GenAI configuration cannot be empty");
 
         if (TestMode == false && string.IsNullOrEmpty(ConnectionStringName))
             errors.Add($"{nameof(ConnectionStringName)} cannot be empty");
@@ -88,6 +88,9 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         if (TestMode == false && string.IsNullOrEmpty(UpdateScript))
             errors.Add("You must provide an update function");
 
+        if (TestMode == false && string.IsNullOrWhiteSpace(JsonSchema))
+            errors.Add($"{nameof(JsonSchema)} must be provided");
+
         return errors.Count == 0;
     }
 
@@ -100,7 +103,6 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         json[nameof(Identifier)] = Identifier;
         json[nameof(Collection)] = Collection;
         json[nameof(Prompt)] = Prompt;
-        json[nameof(SampleObject)] = SampleObject;
         json[nameof(JsonSchema)] = JsonSchema;
         json[nameof(UpdateScript)] = UpdateScript;
         json[nameof(GenAiTransformation)] = GenAiTransformation.ToJson();

@@ -45,15 +45,14 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         Metrics = new EtlMetricsCountersManager();
         _maxConcurrency = configuration.MaxConcurrency;
 
-        if (configuration.TestMode == false)
-            _chatCompletionClient = GetClient();
+        if (configuration.TestMode) 
+            return;
+        
+        _chatCompletionClient = GetClient();
     }
 
     private IChatCompletionClient GetClient()
     {
-        if (string.IsNullOrWhiteSpace(Configuration.JsonSchema))
-            Configuration.JsonSchema = OllamaChatCompletionClient.GetSchemaFor(Configuration.SampleObject);
-
         var connectorType = Configuration.Connection.GetActiveProvider();
         IChatCompletionClient client = connectorType switch
         {
