@@ -20,7 +20,7 @@ public sealed class GenAiHandler : DatabaseRequestHandler
     {
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {
-            var sampleObj = await context.ReadForMemoryAsync(RequestBodyStream(), "etl/toJsonSchema");
+            var sampleObj = await context.ReadForMemoryAsync(RequestBodyStream(), "GenAI/ToJsonSchema");
 
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {

@@ -19,7 +19,7 @@ public class RavenDB_24187(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
-    public async Task TestConvertingSampleObjectToSchema(Options options, GenAiConfiguration config)
+    public async Task CanConvertSampleObjectToSchema(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
         store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));

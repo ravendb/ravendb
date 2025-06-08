@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Server.Documents.Sharding.Handlers.Processors.ETL;
 using Raven.Server.Routing;
 
@@ -11,5 +12,11 @@ public sealed class ShardedGenAiHandler : ShardedDatabaseRequestHandler
     {
         using (var processor = new ShardedGenAiHandlerProcessorForPostScriptTest(this))
             await processor.ExecuteAsync();
+    }
+
+    [RavenShardedAction("/databases/*/admin/ai/gen-ai/to-json-schema", "POST")]
+    public Task GetJsonSchemaFromSampleObject()
+    {
+        throw new NotSupportedInShardingException("GenAI is currently not supported in sharding");
     }
 }
