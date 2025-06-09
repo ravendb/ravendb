@@ -2,13 +2,14 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Threading.Tasks;
-using Tests.Infrastructure;
+using FastTests.Voron.Util;
 using Raven.Server.Utils;
 using SlowTests.Corax;
-using SlowTests.Sharding.Cluster;
-using Xunit;
-using FastTests.Voron.Util;
+using SlowTests.Issues;
 using SlowTests.Server;
+using SlowTests.Sharding.Cluster;
+using Tests.Infrastructure;
+using Xunit;
 
 namespace Tryouts;
 
@@ -23,18 +24,18 @@ public static class Program
     {
         Console.WriteLine(Process.GetCurrentProcess().Id);
 
-        for (int i = 0; i < 1; i++)
+        for (int i = 0; i < 10; i++)
         {
             Console.WriteLine($"Starting to run {i}");
 
             try
             {
                 using (var testOutputHelper = new ConsoleTestOutputHelper())
-                using (var test = new RecordingTransactionOperationsMergerTests(testOutputHelper))
+                using (var test = new RavenDB_21273(testOutputHelper))
                 {
                     DebuggerAttachedTimeout.DisableLongTimespan = true;
                     //test.CanRoundTripSmallContainer("GreaterThan42B");
-                    await test.RecordingDeleteRevisionsCommand();
+                    await test.ExceptionWhenImportingDelayedExternalReplicationWithProLicense();
                 }
             }
             catch (Exception e)

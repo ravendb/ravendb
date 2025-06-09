@@ -30,7 +30,7 @@ namespace Raven.Client.Exceptions
             public string Error { get; set; }
         }
 
-        public static Exception Get(ExceptionSchema schema, HttpStatusCode code, Exception inner = null)
+        public static Exception Get(ExceptionSchema schema, HttpStatusCode code, Exception inner = null, LimitType? limitType = null)
         {
             var message = schema.Message;
             var typeAsString = schema.Type;
@@ -63,6 +63,9 @@ namespace Raven.Client.Exceptions
 
             if (typeof(RavenException).IsAssignableFrom(type) == false)
                 return new RavenException(error, exception);
+
+            if (exception is LicenseLimitException lle && limitType != null)
+                lle.LimitType = (LimitType)limitType;
 
             return exception;
         }

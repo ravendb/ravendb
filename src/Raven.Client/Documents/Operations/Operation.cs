@@ -7,7 +7,6 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Changes;
-using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Util;
@@ -292,7 +291,8 @@ namespace Raven.Client.Documents.Operations
                             Type = exceptionResult.Type,
                             Url = _requestExecutor.Url
                         };
-                        _result.TrySetException(ExceptionDispatcher.Get(ex, exceptionResult.StatusCode));
+
+                        _result.TrySetException(ExceptionDispatcher.Get(ex, exceptionResult.StatusCode, limitType: exceptionResult.LimitType));
                         break;
                     case OperationStatus.Canceled:
                         StopProcessing();
