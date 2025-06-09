@@ -108,4 +108,16 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
 
         return json;
     }
+
+    internal bool Equals(GenAiConfiguration other)
+    {
+        if (other == null)
+            return false;
+
+        return Prompt == other.Prompt &&
+               UpdateScript == other.UpdateScript &&
+               JsonSchema == other.JsonSchema &&
+               SampleObject == other.SampleObject &&
+               MaxConcurrency == other.MaxConcurrency;
+    }
 }
