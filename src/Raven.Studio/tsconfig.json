@@ -37,7 +37,6 @@
             "diff",
             "ace",
             "bootstrap",
-            "eonasdan-bootstrap-datetimepicker",
             "leaflet",
             "leaflet.markercluster",
             "node"
