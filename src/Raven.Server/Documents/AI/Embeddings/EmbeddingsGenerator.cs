@@ -102,6 +102,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             _parent = parent;
             Configuration = configuration;
             _connectionString = connectionString;
+            Configuration.Initialize(_connectionString);
             _connectionStringIdentifier = new AiConnectionStringIdentifier(_connectionString.Identifier);
             _embeddingGenerationService = AiHelper.CreateService(connectionString);
             _shutdown = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
