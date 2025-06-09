@@ -118,7 +118,7 @@ for(const comment of this.Comments)
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/admin/ai/gen-ai/to-json-schema";
+            url = $"{node.Url}/studio-tasks/convert-to-json-schema";
 
             var request = new HttpRequestMessage
             {
