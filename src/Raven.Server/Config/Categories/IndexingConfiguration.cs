@@ -655,6 +655,18 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.VectorSearch.MaximumConcurrentBatchesForHnswAcceleration", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public int MaximumConcurrentBatchesForHnswAcceleration { get; set; }
 
+        [Description("EXPERT: Disable shared journals between indexes.")]
+        [DefaultValue(false)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.Storage.DisableSharedJournals", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public bool DisableSharedJournals { get; set; }
+        
+        [Description("EXPERT: Minimum amount of additional journals writes from indexes that we will merge before we'll let the transaction merger run. Higher values here means higher latency but better throughput")]
+        [DefaultValue(8)]
+        [IndexUpdateType(IndexUpdateType.Reset)]
+        [ConfigurationEntry("Indexing.Storage.MinimumSharedJournalsMergeCount", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public int MinimumSharedJournalsMergeCount { get; set; }
+
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

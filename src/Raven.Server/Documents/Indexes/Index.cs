@@ -606,7 +606,7 @@ namespace Raven.Server.Documents.Indexes
 
         private static void AttemptToLinkDatabaseAndIndexJournals(string name, StorageEnvironmentOptions indexOptions, DocumentDatabase documentDatabase)
         {
-            if (documentDatabase.Configuration.Storage.AvoidSharedJournals is false &&
+            if (documentDatabase.Configuration.Indexing.DisableSharedJournals is false &&
                 indexOptions.CanJournalsBeLinkedWith(documentDatabase.DocumentsStorage.Environment.Options))
             {
                 // here we enable the root / branch model for this index
@@ -777,7 +777,7 @@ namespace Raven.Server.Documents.Indexes
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = documentDatabase.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
             options.DisableSparseRegions = documentDatabase.Configuration.Storage.DisableSparseRegions;
             options.JournalsCompressionAcceleration = documentDatabase.Configuration.Storage.JournalsCompressionAcceleration;
-            options.MinimumSharedJournalsMergeCount = documentDatabase.Configuration.Storage.MinimumSharedJournalsMergeCount;
+            options.MinimumSharedJournalsMergeCount = documentDatabase.Configuration.Indexing.MinimumSharedJournalsMergeCount;
             options.MaxLogFileSize = documentDatabase.Configuration.Storage.MaxJournalFileSize.GetValue(SizeUnit.Bytes);
 
 

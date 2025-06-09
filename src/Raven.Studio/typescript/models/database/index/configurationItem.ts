@@ -54,7 +54,8 @@ class configurationItem {
         "Indexing.Corax.VectorSearch.MaximumConcurrentBatchesForHnswAcceleration",
         "Indexing.Corax.VectorSearch.OrderByScoreAutomatically",
         "Storage.DisableSparseRegions",
-        "Storage.JournalsCompressionAcceleration"
+        "Storage.JournalsCompressionAcceleration",
+        "Indexing.Storage.DisableSharedJournals"
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
             Obsolete keys:

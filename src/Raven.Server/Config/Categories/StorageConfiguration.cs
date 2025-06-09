@@ -164,16 +164,6 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(false)]
         [ConfigurationEntry("Storage.DisableSparseRegions", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public bool DisableSparseRegions { get; set; }
-
-        [Description("EXPERT: Avoid shared journals between database & indexes.")]
-        [DefaultValue(false)]
-        [ConfigurationEntry("Storage.AvoidSharedJournals", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public bool AvoidSharedJournals { get; set; }
-        
-        [Description("EXPERT: Minimum amount of additional journals writes from indexes that we will merge before we'll let the transaction merger run database transactions. Higher values here means higher latency but throughput")]
-        [DefaultValue(8)]
-        [ConfigurationEntry("Storage.MinimumSharedJournalsMergeCount", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        public int MinimumSharedJournalsMergeCount { get; set; }
         
         [Description("EXPERT: I/O for flush and sync operation is issued for a low priority thread, giving transaction commits higher priority")]
         [DefaultValue(false)]

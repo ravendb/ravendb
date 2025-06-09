@@ -72,7 +72,7 @@ namespace SlowTests.Cluster
             // is waiting for the indexes to complete.
             // As we don't have an actual need for testing shared journals, it is easiest to simply 
             // skip this behavior for this test
-            databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Storage.AvoidSharedJournals)] = "true"; 
+            databaseRecord.Settings[RavenConfiguration.GetKey(x => x.Indexing.DisableSharedJournals)] = "true"; 
         }
 
         [RavenMultiplatformTheory(RavenTestCategory.ClusterTransactions | RavenTestCategory.Cluster, RavenArchitecture.X64)]
@@ -1717,7 +1717,7 @@ namespace SlowTests.Cluster
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                Assert.True(context.DocumentDatabase.Configuration.Storage.AvoidSharedJournals, 
+                Assert.True(context.DocumentDatabase.Configuration.Indexing.DisableSharedJournals, 
                     "This test requires a shared journal to be disabled, since we try to coordinate db & indexes work in this test");
                 _manualResetEvent.WaitOne(_timeout);
                 return 1;

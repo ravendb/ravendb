@@ -48,7 +48,7 @@ public class SharedIndexJournals : IJournalMerger, IDisposable
         options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = documentDatabase.Configuration.Storage.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions;
         options.DisableSparseRegions = documentDatabase.Configuration.Storage.DisableSparseRegions;
         options.JournalsCompressionAcceleration = documentDatabase.Configuration.Storage.JournalsCompressionAcceleration;
-        options.MinimumSharedJournalsMergeCount = documentDatabase.Configuration.Storage.MinimumSharedJournalsMergeCount;
+        options.MinimumSharedJournalsMergeCount = documentDatabase.Configuration.Indexing.MinimumSharedJournalsMergeCount;
         options.MaxLogFileSize = documentDatabase.Configuration.Storage.MaxJournalFileSize.GetValue(SizeUnit.Bytes);
 
         options.OnNonDurableFileSystemError += documentDatabase.HandleNonDurableFileSystemError;

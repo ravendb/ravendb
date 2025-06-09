@@ -110,6 +110,7 @@ namespace FastTests.Issues
                 "Indexing.MergeFactor",
                 "Indexing.NumberOfLargeSegmentsToMergeInSingleBatch",
                 "Indexing.UseCompoundFileInMerging",
+                "Indexing.Storage.DisableSharedJournals"
             };
 
             var sortedStudioList = propertiesDeclaredInStudio.OrderBy(x => x).ToList();
