@@ -20,7 +20,7 @@ public unsafe struct NativeList<T>
     where T: unmanaged
 {
     // We're using ByteStringContext to allocate the underlying storage, and we've to take into account the overhead of the metadata.
-    private static readonly int MaxCapacity = (int.MaxValue - sizeof(ByteStringStorage)) / sizeof(T);
+    internal static readonly int MaxCapacity = (int.MaxValue - sizeof(ByteStringStorage)) / sizeof(T);
     private static readonly int MaxCapacityInBytes = MaxCapacity * sizeof(T);
     private ByteString _storage;
 

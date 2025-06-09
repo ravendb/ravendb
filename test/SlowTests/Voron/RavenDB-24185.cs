@@ -19,7 +19,11 @@ public class RavenDB_24185(ITestOutputHelper output) : NoDisposalNeeded(output)
         var nextCapacity = (int.MaxValue / sizeof(long)) + 1;
         var nativeList = new NativeList<long>();
         var ex = Assert.Throws<InvalidOperationException>(() => nativeList.Initialize(allocator, nextCapacity));
-        Assert.Equal("NativeList<System.Int64> cannot be larger than 268435452 items. Requested size: 268435456", ex.Message);
+        Assert.Equal($"NativeList<System.Int64> cannot be larger than {NativeList<long>.MaxCapacity} items. Requested size: 268435456", ex.Message);
+
+        // MaxCapacity takes into account the size of the ByteStringStorage. It contains a ptr, so the max capacity is dependent on the platform.
+        var maxCapacity = Sparrow.Platform.PlatformDetails.Is32Bits ? 268435453 : 268435452;
+        Assert.Equal(maxCapacity, NativeList<long>.MaxCapacity);
     }
 
     [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Memory)]
@@ -31,7 +35,7 @@ public class RavenDB_24185(ITestOutputHelper output) : NoDisposalNeeded(output)
 
         var nextCapacity = (int.MaxValue / sizeof(long));
         var ex = Assert.Throws<InvalidOperationException>(() => nativeList.Grow(allocator, nextCapacity));
-        Assert.Equal("NativeList<System.Int64> cannot be larger than 268435452 items. Requested size: 268435456", ex.Message);
+        Assert.Equal($"NativeList<System.Int64> cannot be larger than {NativeList<long>.MaxCapacity} items. Requested size: 268435456", ex.Message);
     }
     
     [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Memory)]
@@ -41,10 +45,10 @@ public class RavenDB_24185(ITestOutputHelper output) : NoDisposalNeeded(output)
         var nativeList = new NativeList<long>();
         var ex = Assert.Throws<InvalidOperationException>(() => nativeList.Initialize(allocator, int.MaxValue / sizeof(long)));
         
-        Assert.Equal($"NativeList<System.Int64> cannot be larger than 268435452 items. Requested size: {int.MaxValue / sizeof(long)}", ex.Message);
+        Assert.Equal($"NativeList<System.Int64> cannot be larger than {NativeList<long>.MaxCapacity} items. Requested size: {int.MaxValue / sizeof(long)}", ex.Message);
     }
 
-    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Memory)]
+    [RavenMultiplatformFact(category: RavenTestCategory.Voron | RavenTestCategory.Memory, platform: RavenPlatform.All, architecture: RavenArchitecture.AllX64)]
     public unsafe void EnsureThatNextBitsSizeIsNotLimitingCapacityDueToAligning()
     {
         using var allocator = new ByteStringContext(SharedMultipleUseFlag.None);
