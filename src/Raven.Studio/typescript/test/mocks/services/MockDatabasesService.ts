@@ -117,6 +117,10 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
         );
     }
 
+    withoutArchivalConfiguration() {
+        return this.mockResolvedValue(this.mocks.getDataArchivalConfiguration, null, undefined);
+    }
+
     withDocumentsCompressionConfiguration(dto?: Raven.Client.ServerWide.DocumentsCompressionConfiguration) {
         return this.mockResolvedValue(
             this.mocks.getDocumentsCompressionConfiguration,

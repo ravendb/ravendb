@@ -17,19 +17,24 @@ export default {
     },
 } satisfies Meta<typeof DataArchival>;
 
-function commonInit() {
+function commonInit(hasConfiguration: boolean) {
     const { databases } = mockStore;
+    const { databasesService } = mockServices;
+
+    if (hasConfiguration) {
+        databasesService.withDataArchivalConfiguration();
+    } else {
+        databasesService.withoutArchivalConfiguration();
+    }
+
     databases.withActiveDatabase_NonSharded_SingleNode();
 }
 
 export const LicenseAllowed: StoryObj<typeof DataArchival> = {
     render: () => {
-        commonInit();
+        commonInit(true);
 
-        const { databasesService } = mockServices;
         const { license } = mockStore;
-
-        databasesService.withDataArchivalConfiguration();
         license.with_License();
 
         return <DataArchival />;
@@ -38,13 +43,21 @@ export const LicenseAllowed: StoryObj<typeof DataArchival> = {
 
 export const LicenseRestricted: StoryObj<typeof DataArchival> = {
     render: () => {
-        commonInit();
+        commonInit(true);
 
-        const { databasesService } = mockServices;
         const { license } = mockStore;
-
-        databasesService.withDataArchivalConfiguration();
         license.with_LicenseLimited({ HasDataArchival: false });
+
+        return <DataArchival />;
+    },
+};
+
+export const InitialDataArchival: StoryObj<typeof DataArchival> = {
+    render: () => {
+        commonInit(false);
+
+        const { license } = mockStore;
+        license.with_License();
 
         return <DataArchival />;
     },

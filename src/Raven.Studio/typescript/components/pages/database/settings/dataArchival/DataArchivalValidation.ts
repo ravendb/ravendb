@@ -10,7 +10,20 @@ const schema = yup
             .nullable()
             .positive()
             .integer()
-            .when("isArchiveFrequencyEnabled", { is: true, then: (schema) => schema.required() }),
+            .when("isArchiveFrequencyEnabled", {
+                is: true,
+                then: (schema) => schema.required(),
+            }),
+        isLimitMaxItemsToProcessEnabled: yup.boolean(),
+        maxItemsToProcess: yup
+            .number()
+            .nullable()
+            .positive()
+            .integer()
+            .when("isLimitMaxItemsToProcessEnabled", {
+                is: true,
+                then: (schema) => schema.required(),
+            }),
     })
     .required();
 

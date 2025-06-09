@@ -4,7 +4,7 @@ import { rtlRender } from "test/rtlTestUtils";
 import * as stories from "./DataArchival.stories";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 
-const { LicenseAllowed, LicenseRestricted } = composeStories(stories);
+const { LicenseAllowed, LicenseRestricted, InitialDataArchival } = composeStories(stories);
 
 describe("DataArchival", () => {
     it("can render", async () => {
@@ -31,5 +31,20 @@ describe("DataArchival", () => {
         const { screen } = rtlRender(<LicenseRestricted />);
 
         expect(await screen.findByText(/Licensing/)).toBeInTheDocument();
+    });
+
+    it("can set default batch size", async () => {
+        const { screen, fireClick } = rtlRender(<InitialDataArchival />);
+        const enableButton = await screen.findByRole("checkbox", { name: "Enable Data Archival" });
+
+        expect(enableButton).not.toBeChecked();
+
+        await fireClick(enableButton);
+
+        const setMaxNumberOfDocumentToProcessCheckbox = await screen.findByLabelText(
+            "Set max number of documents to process in a single run"
+        );
+        expect(setMaxNumberOfDocumentToProcessCheckbox).toBeChecked();
+        expect(await screen.findByName("maxItemsToProcess")).toHaveValue(65536);
     });
 });
