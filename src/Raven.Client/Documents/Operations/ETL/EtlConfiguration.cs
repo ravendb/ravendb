@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Newtonsoft.Json;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.ServerWide;
 using Sparrow.Json;
@@ -34,6 +35,12 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public void Initialize(T connectionString)
         {
+            if (Initialized)
+            {
+                Debug.Assert(ReferenceEquals(connectionString, Connection));
+                return;
+            }
+            
             Connection = connectionString;
             Initialized = true;
         }
