@@ -162,8 +162,8 @@ class listView<T> {
         }
     }
   
-    private findListViewElement(): JQuery {
-        const element = $(document.querySelector("#" + this.listId));
+    private findListViewElement(): JQuery<HTMLElement> {
+        const element = $(document.querySelector("#" + this.listId)) as JQuery<HTMLElement>;
         if (element.length === 0) {
             throw new Error("Couldn't find list view element with ID " + this.listId);
         }

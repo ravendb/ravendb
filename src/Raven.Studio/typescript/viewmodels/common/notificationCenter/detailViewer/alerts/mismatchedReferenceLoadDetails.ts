@@ -63,7 +63,7 @@ class mismatchedReferenceLoadDetails extends abstractAlertDetails {
         this.columnPreview.install(".mismatchedReferenceLoadDetails", ".js-mismatched-reference-load-tooltip",
             (details: WarningItem,
              column: textColumn<WarningItem>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
                 if (value) {
                     onValue(genUtils.escapeHtml(value), value);

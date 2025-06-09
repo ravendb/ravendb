@@ -113,7 +113,7 @@ class clusterOverviewWidget extends websocketBasedWidget<Raven.Server.Dashboard.
         grid.init(() => this.prepareGridData(), () => this.prepareColumns());
 
         this.columnPreview.install(".cluster-overview-grid", ".js-cluster-overview-preview",
-            (nodeItem: nodeStatsItem, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+            (nodeItem: nodeStatsItem, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (column instanceof textColumn) {
                     if (column.header === "Start time") {
                         onValue(moment.utc(nodeItem.startTime()), nodeItem.startTime());

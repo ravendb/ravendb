@@ -10,7 +10,7 @@ import virtualGridController = require("widgets/virtualGrid/virtualGridControlle
 class hyperlinkColumn<T extends object> extends textColumn<T> {
 
     private readonly hrefAccessor: (obj: T) => string;
-    private readonly customHandler: (obj: T, event: JQueryEventObject) => void;
+    private readonly customHandler: (obj: T, event: JQuery.TriggeredEvent) => void;
     private readonly extraClassForLink: (obj: T) => string;
     private readonly openInNewTab: (obj: T) => boolean;
 
@@ -29,7 +29,7 @@ class hyperlinkColumn<T extends object> extends textColumn<T> {
         return this.linkActionUniqueId === actionId;
     }
 
-    handle(row: virtualRow, event: JQueryEventObject) {
+    handle(row: virtualRow, event: JQuery.TriggeredEvent) {
         this.customHandler(row.data as T, event);
     }
 

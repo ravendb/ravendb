@@ -159,7 +159,7 @@ class migrateDatabase extends viewModelBase {
     private initInlineEdit() {
         const $body = $("body");
 
-        this.registerDisposableHandler($body, "click", (event: JQueryEventObject) => {
+        this.registerDisposableHandler($body, "click", (event: JQuery.TriggeredEvent) => {
             if ($(event.target).closest(".inline-edit").length === 0) {
                 // click outside edit area - close all of them
 

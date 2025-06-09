@@ -51,7 +51,7 @@ class requestLatencyDetails extends abstractPerformanceHintDetails {
 
         this.columnPreview.install(".requestLatencyDetails", ".js-request-latency-details-tooltip", 
             (details: Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo, 
-             column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>, e: JQueryEventObject, 
+             column: textColumn<Raven.Server.NotificationCenter.Notifications.Details.RequestLatencyInfo>, e: JQuery.TriggeredEvent, 
              onValue: (context: any, valueToCopy?: string) => void) => {
             const value = column.getCellValue(details);
             if (column.header === "Date") {

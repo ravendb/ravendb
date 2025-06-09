@@ -118,7 +118,7 @@ class cmpXchg extends viewModelBase {
         grid.init((s) => this.fetchItems(s), () => gridColumns);
         
          this.columnPreview.install(".js-cmp-xchg-grid", ".js-cmp-xchg-tooltip", 
-             (doc: Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+             (doc: Raven.Server.Web.System.CompareExchangeHandler.CompareExchangeListItem, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
             if (column instanceof textColumn) {
                 const value = column.getCellValue(doc);
                 if (!_.isUndefined(value)) {
@@ -130,7 +130,7 @@ class cmpXchg extends viewModelBase {
         });
     }
 
-    newItem($event: JQueryEventObject): void {
+    newItem($event: JQuery.TriggeredEvent): void {
         eventsCollector.default.reportEvent("cmpXchg", "new");
         const url = appUrl.forNewCmpXchg(this.activeDatabase());
         if ($event.ctrlKey) {

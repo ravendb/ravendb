@@ -54,7 +54,7 @@ class virtualUpdateByQueryFailuresDetails extends dialogViewModelBase {
         this.columnPreview.install(".virtualUpdateByQueryFailuresDetails", ".js-virtual-update-by-query-failures-details-tooltip",
             (details: queryBasedVirtualBulkOperationFailureItem,
              column: textColumn<queryBasedVirtualBulkOperationFailureItem>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (!(column instanceof actionColumn)) {
                     if (column.header === "Date") {
                         onValue(moment.utc(details.date), details.date);

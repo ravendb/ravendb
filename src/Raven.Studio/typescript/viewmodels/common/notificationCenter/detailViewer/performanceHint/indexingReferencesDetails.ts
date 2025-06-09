@@ -84,7 +84,7 @@ class indexingReferencesDetails extends abstractPerformanceHintDetails {
         this.columnPreview.install(".indexingReferencesDetails", ".js-indexing-references-details-tooltip",
             (details: indexingReferencesItem,
              column: textColumn<indexingReferencesItem>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (!(column instanceof actionColumn)) {
                     if (column.header === "Date") {
                         onValue(moment.utc(details.lastWarningTime), details.lastWarningTime);

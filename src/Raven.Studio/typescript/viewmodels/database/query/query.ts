@@ -625,7 +625,7 @@ class query extends viewModelBase {
         this.createKeyboardShortcut("alt+r", () => this.runQuery(), query.containerSelector); // Using keyboard shortcut here, rather than HTML's accesskey, so that we don't steal focus from the editor.
         */
 
-        this.registerDisposableHandler($(window), "storage", () => this.loadSavedQueries());
+        this.registerDisposableHandler($(window as unknown as any), "storage", () => this.loadSavedQueries());
     }
     
     compositionComplete() {
@@ -728,7 +728,7 @@ class query extends viewModelBase {
             });
 
         this.columnPreview.install("virtual-grid", ".js-query-tooltip", 
-            (doc: document, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+            (doc: document, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
             if (this.currentTab() === "explanations" && column.header === "Explanation") {
                 // we don't want to show inline preview for Explanation column, as value doesn't contain full message
                 // which might be misleading - use preview button to obtain entire explanation 

@@ -38,7 +38,7 @@ class debugAdvancedClusterSnapshotInstallation extends dialogViewModelBase {
         });
 
         this.columnPreview.install(".clusterSnapshotInstallationDetails", ".js-cluster-snapshot-installation-details-tooltip",
-            (details: Raven.Server.Rachis.RachisDebugMessage, column: textColumn<Raven.Server.Rachis.RachisDebugMessage>, e: JQueryEventObject,
+            (details: Raven.Server.Rachis.RachisDebugMessage, column: textColumn<Raven.Server.Rachis.RachisDebugMessage>, e: JQuery.TriggeredEvent,
              onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
                 if (column.header === "Time") {

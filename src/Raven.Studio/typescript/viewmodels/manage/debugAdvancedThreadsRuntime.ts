@@ -128,7 +128,7 @@ class debugAdvancedThreadsRuntime extends viewModelBase {
         this.columnPreview.install("virtual-grid", ".js-threads-runtime-tooltip",
             (entry: Raven.Server.Dashboard.ThreadInfo,
                 column: textColumn<Raven.Server.Dashboard.ThreadInfo>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 if (column.header === "Overall CPU Time") {
                     const timings = {
                         StartTime: entry.StartingTime,

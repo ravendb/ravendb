@@ -69,7 +69,7 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
         
         const container = d3.select(containerSelector as string);
         
-        const $container = $(containerSelector);
+        const $container = $(containerSelector as string);
         
         this.width = $container.innerWidth();
         this.height = $container.innerHeight();
@@ -134,7 +134,7 @@ export class lineChart<TPayload extends { Date: string }> implements clusterDash
     onResize() {
         const container = d3.select(this.containerSelector as string);
         
-        const $container = $(this.containerSelector);
+        const $container = $(this.containerSelector as string);
         
         this.width = $container.innerWidth();
         this.height = $container.innerHeight();

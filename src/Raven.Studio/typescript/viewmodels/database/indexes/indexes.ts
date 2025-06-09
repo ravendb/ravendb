@@ -466,7 +466,7 @@ class indexes extends viewModelBase {
         
         if (connectionStatus.showConnectionLost()) {
             // looks like we don't have connection to server, skip index progress update 
-            return $.Deferred().fail();
+            return $.Deferred().fail(undefined);
         }
 
         if (this.requestedIndexingInProgress) {

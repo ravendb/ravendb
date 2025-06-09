@@ -128,7 +128,7 @@ class conflicts extends viewModelBase {
         );
 
         this.columnPreview.install(".conflicts-grid", ".js-conflict-details-tooltip",
-            (details: replicationConflictListItemDto, column: virtualColumn, e: JQueryEventObject,
+            (details: replicationConflictListItemDto, column: virtualColumn, e: JQuery.TriggeredEvent,
              onValue: (context: any, valueToCopy?: string) => void) => {
                 if (column instanceof textColumn) {
                     if (column.header === "Last Modified") {
@@ -169,7 +169,7 @@ class conflicts extends viewModelBase {
         }
     }
 
-    private handleLoadAction(conflictToLoad: replicationConflictListItemDto, event: JQueryEventObject) {
+    private handleLoadAction(conflictToLoad: replicationConflictListItemDto, event: JQuery.TriggeredEvent) {
         event.preventDefault();
 
         const documentId = conflictToLoad.Id;

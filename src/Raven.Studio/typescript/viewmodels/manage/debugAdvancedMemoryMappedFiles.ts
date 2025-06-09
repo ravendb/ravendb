@@ -119,7 +119,7 @@ class memoryMappedFiles extends viewModelBase {
         this.columnPreview.install("virtual-grid", ".js-memory-mapped-files-tooltip",
             (entry: memoryMappingItem, 
                                     column: textColumn<memoryMappingItem>, 
-                                    e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+                                    e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
             if (column.header === "Total Mapped") {
                 const json = JSON.stringify(entry.Mappings, null, 4);
                 const html = highlight(json, languages.javascript, "js");

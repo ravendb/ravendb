@@ -26,7 +26,7 @@ class commandBase {
     }
 
     query<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T, options?: JQueryAjaxSettings, timeToAlert = 9000, baseUrl?: string): JQueryPromise<T> {
-        const ajax = this.ajax<T>(relativeUrl, args, "GET", db, options, timeToAlert, baseUrl);
+        const ajax = this.ajax<any>(relativeUrl, args, "GET", db, options, timeToAlert, baseUrl);
         if (resultsSelector) {
             const task = $.Deferred<T>();
             ajax.done((results, status, xhr) => {
@@ -43,7 +43,7 @@ class commandBase {
     }
 
     protected head<T>(relativeUrl: string, args: any, db?: database, resultsSelector?: (results: any, xhr: JQueryXHR) => T): JQueryPromise<T> {
-        const ajax = this.ajax<T>(relativeUrl, args, "HEAD", db);
+        const ajax = this.ajax<any>(relativeUrl, args, "HEAD", db);
         if (resultsSelector) {
             const task = $.Deferred<T>();
             ajax.done((results, status, xhr) => {
@@ -156,7 +156,7 @@ class commandBase {
         return $.ajax(defaultOptions)
             .always(() => {
                 requestExecution.markCompleted();
-            });
+            }) as any;
     }
 
     protected extractEtag(xhr: JQueryXHR) {

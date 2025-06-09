@@ -255,7 +255,7 @@ class customSorters extends viewModelBase {
         grid.headerVisible(true);
 
         this.columnPreview.install("virtual-grid", ".custom-sorters-tooltip",
-            (doc: documentObject, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy: string) => void) => {
+            (doc: documentObject, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy: string) => void) => {
                 if (column instanceof textColumn) {
                     const value = column.getCellValue(doc);
                     if (!_.isUndefined(value)) {

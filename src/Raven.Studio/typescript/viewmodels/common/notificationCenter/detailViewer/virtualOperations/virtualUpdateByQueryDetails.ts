@@ -57,7 +57,7 @@ class virtualUpdateByQueryDetails extends dialogViewModelBase {
         this.columnPreview.install(".virtualUpdateByQueryDetails", ".js-virtual-update-by-query-details-tooltip",
             (details: queryBasedVirtualBulkOperationItem,
              column: textColumn<queryBasedVirtualBulkOperationItem>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string | number) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string | number) => void) => {
                 if (!(column instanceof actionColumn)) {
                     if (column.header === dateHeader) {
                         onValue(moment.utc(details.date), details.date);

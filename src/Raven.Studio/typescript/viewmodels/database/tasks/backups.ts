@@ -74,7 +74,7 @@ class backups extends viewModelBase {
     compositionComplete(): void {
         super.compositionComplete();
 
-        this.registerDisposableHandler($(document), "fullscreenchange", () => {
+        this.registerDisposableHandler($(document as unknown as any), "fullscreenchange", () => {
             $("body").toggleClass("fullscreen", $(document).fullScreen());
             this.graph.onResize();
         });

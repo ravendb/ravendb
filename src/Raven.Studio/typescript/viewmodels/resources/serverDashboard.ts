@@ -818,7 +818,7 @@ class serverDashboard extends viewModelBase {
             $el.height($el.innerHeight());
         });
         
-        this.registerDisposableHandler($(window), "resize", _.debounce(() => this.onResize(), 700));
+        this.registerDisposableHandler($(window as unknown as any), "resize", _.debounce(() => this.onResize(), 700));
     }
     
     private onResize() {

@@ -153,7 +153,7 @@ class manageDatabaseGroup extends viewModelBase {
         
         this.setupDisableReasons();
 
-        this.registerDisposableHandler($(document), "fullscreenchange", () => {
+        this.registerDisposableHandler($(document as unknown as any), "fullscreenchange", () => {
             $("body").toggleClass("fullscreen", $(document).fullScreen());
             this.graph.onResize();
         });

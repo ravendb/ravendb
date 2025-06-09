@@ -622,7 +622,7 @@ class genUtils {
         return code;
     }
     
-    static canConsumeDelegatedEvent(event: JQueryEventObject) {
+    static canConsumeDelegatedEvent(event: JQuery.TriggeredEvent) {
         const target = event.target;
         const currentTarget = event.currentTarget;
         

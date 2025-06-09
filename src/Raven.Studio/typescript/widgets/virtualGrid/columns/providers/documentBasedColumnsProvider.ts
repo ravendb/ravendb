@@ -32,7 +32,7 @@ type documentBasedColumnsProviderOpts = {
     columnOptions?: columnOptionsDto;
     showFlags?: boolean; // revisions, counters, attachments
     detectTimeSeries?: boolean;
-    timeSeriesActionHandler?: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQueryEventObject) => void;
+    timeSeriesActionHandler?: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQuery.TriggeredEvent) => void;
 }
 
 class documentBasedColumnsProvider {
@@ -53,7 +53,7 @@ class documentBasedColumnsProvider {
     private readonly customInlinePreview: (doc: document, title?: string) => void;
     private readonly collectionTracker: collectionsTracker;
     private readonly customColumnProvider: () => virtualColumn[];
-    private readonly timeSeriesActionHandler: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQueryEventObject) => void;
+    private readonly timeSeriesActionHandler: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQuery.TriggeredEvent) => void;
 
     private static readonly externalIdRegex = /^\w+\/\w+/ig;
 

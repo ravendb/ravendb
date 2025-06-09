@@ -126,7 +126,7 @@ class blockingTombstonesDetails extends abstractAlertDetails {
         this.columnPreview.install(".blockingTombstonesDetails", ".js-blocking-tombstones-details-tooltip",
             (details: WarningItem,
              column: textColumn<WarningItem>,
-             e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+             e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
                 const value = column.getCellValue(details);
                 if (value) {
                     onValue(genUtils.escapeHtml(value), value);

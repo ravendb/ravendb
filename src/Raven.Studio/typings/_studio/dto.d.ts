@@ -692,7 +692,7 @@ interface textColumnOpts<T> {
 }
 
 interface hypertextColumnOpts<T> extends textColumnOpts<T> {
-    handler?: (item: T, event: JQueryEventObject) => void;
+    handler?: (item: T, event: JQuery.TriggeredEvent) => void;
     extraClassForLink?: (item: T) => string;
     openInNewTab?: (item: T) => boolean;
 }
@@ -705,7 +705,7 @@ interface multiNodeTagsColumnOpts<T> extends textColumnOpts<T> {
 type timeSeriesColumnEventType = "plot" | "preview";
 
 interface timeSeriesColumnOpts<T> extends textColumnOpts<T> {
-    handler?: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQueryEventObject) => void;
+    handler?: (type: timeSeriesColumnEventType, documentId: string, name: string, value: timeSeriesQueryResultDto, event: JQuery.TriggeredEvent) => void;
 }
 
 interface virtualColumnDto {

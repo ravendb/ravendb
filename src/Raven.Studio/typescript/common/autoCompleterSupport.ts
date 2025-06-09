@@ -6,7 +6,7 @@ class autoCompleterSupport {
   constructor(private autoCompleteBase: KnockoutObservableArray<KnockoutObservable<string>>, private autoCompleteResults: KnockoutObservableArray<KnockoutObservable<string>>,private showAllOptionOnEmptyInput: boolean = false) {
   }
 
-  searchForCompletions(input: JQuery) {
+  searchForCompletions(input: JQuery<HTMLInputElement>) {
     this.autoCompleteResults([]);
 
     const typedWord = this.getWordUserIsTyping(input);
@@ -21,7 +21,7 @@ class autoCompleterSupport {
     }
   }
 
-  completeTheWord(input: JQuery, selectedCompletion: string, updateObservableClouse: (newValue: string) => void = null) {
+  completeTheWord(input: JQuery<HTMLInputElement>, selectedCompletion: string, updateObservableClouse: (newValue: string) => void = null) {
     if (input.length > 0) {
       const inputValue: string = input.val();
 
@@ -65,7 +65,7 @@ class autoCompleterSupport {
     return beginIndex;
 
   }
-  private getWordUserIsTyping($input: JQuery) {
+  private getWordUserIsTyping($input: JQuery<HTMLInputElement>) {
     const cursorPosition = inputCursor.getPosition($input);
     //var beginIndex = $input.val().lastIndexOf(' ', cursorPosition-1);
     const beginIndex = this.findWordStartWithEndPosition($input.val(), cursorPosition - 1) + 1;

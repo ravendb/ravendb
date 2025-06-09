@@ -218,7 +218,7 @@ class identities extends viewModelBase {
         grid.init(() => this.fetchIdentities(), () => gridColumns);
         
         this.columnPreview.install(".js-identities-grid", ".js-identities-tooltip",
-            (identityItem: identity, column: virtualColumn, e: JQueryEventObject, onValue: (context: any, valueToCopy?: string) => void) => {
+            (identityItem: identity, column: virtualColumn, e: JQuery.TriggeredEvent, onValue: (context: any, valueToCopy?: string) => void) => {
             if (column instanceof textColumn) {
                 onValue(column.getCellValue(identityItem));
             }
