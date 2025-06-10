@@ -62,18 +62,7 @@ export default function EditGenAiTaskModelFields() {
                 <div>
                     <div className="mb-1">
                         JSON schema
-                        <PopoverWithHoverWrapper
-                            message={
-                                <>
-                                    Enter a formal JSON schema that defines the structure of the response you want to
-                                    receive from the model.
-                                    <br />
-                                    <br />
-                                    If not provided, RavenDB will generate the schema automatically based on the sample
-                                    response object.
-                                </>
-                            }
-                        >
+                        <PopoverWithHoverWrapper message={<JsonSchemaTooltipBody />}>
                             <Icon icon="info" color="info" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </div>
@@ -157,18 +146,7 @@ export default function EditGenAiTaskModelFields() {
                     <FormLabel className="hstack justify-content-between">
                         <div>
                             JSON schema
-                            <PopoverWithHoverWrapper
-                                message={
-                                    <>
-                                        Enter a formal JSON schema that defines the structure of the response you want
-                                        to receive from the model.
-                                        <br />
-                                        <br />
-                                        If not provided, RavenDB will generate the schema automatically based on the
-                                        sample response object.
-                                    </>
-                                }
-                            >
+                            <PopoverWithHoverWrapper message={<JsonSchemaTooltipBody />}>
                                 <Icon icon="info" color="info" margin="ms-1" />
                             </PopoverWithHoverWrapper>
                         </div>
@@ -281,5 +259,16 @@ function JsonSchemaSyntaxHelp() {
             <div>Sample JSON schema</div>
             <Code code={code} elementToCopy={code} language="json" />
         </div>
+    );
+}
+
+function JsonSchemaTooltipBody() {
+    return (
+        <>
+            Enter a JSON schema that defines the structure of the output you expect from the model.
+            <br />
+            <br />
+            If not provided, RavenDB will generate the schema automatically based on the sample response object.
+        </>
     );
 }

@@ -126,7 +126,7 @@ export function EditGenAiTaskStepSummary() {
                 <div className="hstack justify-content-end mt-4">
                     <FormGroup>
                         <FormSwitch control={control} name="isResetScript">
-                            Regenerate all documents
+                            Reprocess all documents
                             <PopoverWithHoverWrapper
                                 message={
                                     <>
