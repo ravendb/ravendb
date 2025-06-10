@@ -17,7 +17,7 @@ class getIndexEntriesFieldsCommand extends commandBase {
         this.reportFailure = reportFailure;
     }
 
-    execute(): JQueryPromise<getIndexEntriesFieldsCommandResult> {
+    execute(): JQueryPromise<getIndexEntriesFieldsCommandResult[]> {
         const task = this.getIndexEntries();
 
         if (this.reportFailure) {
@@ -29,7 +29,7 @@ class getIndexEntriesFieldsCommand extends commandBase {
         return task;
     }
 
-    private getIndexEntries(): JQueryPromise<getIndexEntriesFieldsCommandResult> {
+    private getIndexEntries(): JQueryPromise<getIndexEntriesFieldsCommandResult[]> {
         const args = {
             name: this.indexName,
             op: "entries-fields",

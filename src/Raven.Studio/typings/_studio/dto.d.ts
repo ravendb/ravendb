@@ -761,9 +761,13 @@ interface confirmationDialogOptions {
     wideDialog?: boolean;
 }
 
+type IndexEntriesFieldType = "Static" | "Dynamic";
+type IndexEntriesValueType = "Term" | "Vector";
+
 interface getIndexEntriesFieldsCommandResult {
-    Static: string[];
-    Dynamic: string[];
+    Name: string;
+    FieldType: IndexEntriesFieldType;
+    ValueType: IndexEntriesValueType
 }
 
 interface scrollColorConfig {

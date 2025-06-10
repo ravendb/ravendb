@@ -1,12 +1,13 @@
-import { FieldType, TermsForField } from "components/pages/database/indexes/list/terms/useIndexTerms";
+import { TermsForField } from "components/pages/database/indexes/list/terms/useIndexTerms";
 
-const createTermsForField = (fieldName: string, type: FieldType): TermsForField => {
+const createTermsForField = (fieldName: string, type: IndexEntriesFieldType, termType: IndexEntriesValueType): TermsForField => {
     return {
         fromValue: null,
         name: fieldName,
         hasMoreTerms: true,
         terms: [],
         type,
+        termType,
         loadError: "",
     };
 };
@@ -16,21 +17,31 @@ const getTermsLoadedAmount = (indexTerms: TermsForField[]) => {
 };
 
 const getTermsFields = (perNodeFields: getIndexEntriesFieldsCommandResult[]) => {
-    const dynamicFields = new Set<string>();
-    const staticFields = new Set<string>();
+    const allFields = perNodeFields;
 
-    perNodeFields.forEach((fields) => {
-        fields.Dynamic.forEach((d) => dynamicFields.add(d));
-        fields.Static.forEach((d) => staticFields.add(d));
+    const dynamicFields = new Map<string, getIndexEntriesFieldsCommandResult>();
+    const staticFields = new Map<string, getIndexEntriesFieldsCommandResult>();
+
+    allFields.forEach(field => {
+        switch (field.FieldType) {
+            case "Dynamic":
+                dynamicFields.set(field.Name, field);
+                break;
+            case "Static":
+                staticFields.set(field.Name, field);
+                break;
+            default:
+                break;
+        }
     });
 
-    const joinedResult: getIndexEntriesFieldsCommandResult = {
-        Dynamic: Array.from(dynamicFields),
-        Static: Array.from(staticFields),
-    };
+    const processedStaticFields = Array.from(staticFields.values()).map(field =>
+        createTermsForField(field.Name, field.FieldType, field.ValueType),
+    );
 
-    const processedStaticFields = joinedResult.Static.map((fieldName) => createTermsForField(fieldName, "static"));
-    const processedDynamicFields = joinedResult.Dynamic.map((fieldName) => createTermsForField(fieldName, "dynamic"));
+    const processedDynamicFields = Array.from(dynamicFields.values()).map(field =>
+        createTermsForField(field.Name, field.FieldType, field.ValueType),
+    );
 
     return processedStaticFields.concat(processedDynamicFields);
 };

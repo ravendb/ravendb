@@ -40,7 +40,7 @@ export default class MockIndexesService extends AutoMockService<IndexesService> 
         return this.mockResolvedValue(this.mocks.getIndexErrorDetails, dto, IndexesStubs.getIndexErrorDetails());
     }
 
-    withGetIndexFields(dto?: MockedValue<getIndexEntriesFieldsCommandResult>) {
+    withGetIndexFields(dto?: MockedValue<getIndexEntriesFieldsCommandResult[]>) {
         return this.mockResolvedValue(this.mocks.getIndexEntriesFields, dto, IndexesStubs.getIndexTermFields());
     }
 

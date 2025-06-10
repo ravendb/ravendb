@@ -21,15 +21,12 @@ const testIdSelectors = {
 
 type IndexTermsMockupType = Record<
     "indexFieldsDto" | "indexTerms",
-    Record<string, TermsQueryResult | getIndexEntriesFieldsCommandResult>
+    Record<string, TermsQueryResult | getIndexEntriesFieldsCommandResult[]>
 >;
 
 const indexTermsMockups: IndexTermsMockupType = {
     indexFieldsDto: {
-        empty: {
-            Dynamic: [],
-            Static: [],
-        },
+        empty: [],
     },
     indexTerms: {
         empty: {
@@ -58,7 +55,7 @@ describe("IndexTerms", () => {
         const accordions = await screen.findAllByTestId(testIdSelectors.termAccordion);
 
         const expectedAccordionsLength =
-            IndexesStubs.getIndexTermFields().Static.length + IndexesStubs.getIndexTermFields().Dynamic.length;
+            IndexesStubs.getIndexTermFields().filter(x => x.FieldType === "Static").length + IndexesStubs.getIndexTermFields().filter(x => x.FieldType === "Dynamic").length;
 
         expect(accordions).toHaveLength(expectedAccordionsLength);
     });
@@ -68,7 +65,7 @@ describe("IndexTerms", () => {
 
         const dynamicTermFields = await screen.findAllByTestId(testIdSelectors.termDynamicField);
 
-        const termDynamicLength = IndexesStubs.getIndexTermFields().Dynamic.length;
+        const termDynamicLength = IndexesStubs.getIndexTermFields().filter(x => x.FieldType === "Dynamic").length;
         expect(dynamicTermFields).toHaveLength(termDynamicLength);
     });
 
@@ -76,7 +73,7 @@ describe("IndexTerms", () => {
         const { screen } = rtlRender(
             <IndexTermsStory
                 pathParams={pathParams}
-                indexFieldsDto={indexTermsMockups.indexFieldsDto.empty as getIndexEntriesFieldsCommandResult}
+                indexFieldsDto={indexTermsMockups.indexFieldsDto.empty as getIndexEntriesFieldsCommandResult[]}
             />
         );
 

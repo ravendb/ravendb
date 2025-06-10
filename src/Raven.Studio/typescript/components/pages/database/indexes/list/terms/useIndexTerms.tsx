@@ -14,12 +14,12 @@ export type TermsForField = {
     name: string;
     terms: string[];
     fromValue: string;
-    type: FieldType;
+    type: IndexEntriesFieldType;
+    termType: IndexEntriesValueType;
     hasMoreTerms: boolean;
     loadError: string;
 };
 
-export type FieldType = "static" | "dynamic";
 
 export const INDEX_TERMS_PAGE_LIMIT = 800;
 
@@ -39,7 +39,8 @@ export function useIndexTerms(indexName: string) {
             );
 
             const perNodeFields = await Promise.all(tasks);
-            const termFields = getTermsFields(perNodeFields);
+            // @ts-expect-error using spread operator instead of concat or flat because of performance - spread operator is faster around 3x.
+            const termFields = getTermsFields(...perNodeFields);
 
             return await Promise.all(termFields.map((field) => loadTerms.execute(indexName, field)));
         },

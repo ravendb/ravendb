@@ -12,7 +12,7 @@ export default {
 } satisfies Meta;
 
 interface IndexTermsStoryArgs {
-    indexFieldsDto?: getIndexEntriesFieldsCommandResult;
+    indexFieldsDto?: getIndexEntriesFieldsCommandResult[];
     indexTerms?: TermsQueryResult;
     pathParams?: string[];
 }

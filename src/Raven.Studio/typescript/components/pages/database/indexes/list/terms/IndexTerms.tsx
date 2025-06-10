@@ -79,9 +79,14 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                     <div className="d-flex align-items-center gap-2">
                         <span className="m-0">{field.name}</span>
                         <HStack className="gap-1">
-                            {field.type === "dynamic" && (
+                            {field.type === "Dynamic" && (
                                 <Badge data-testid="term-dynamic-field" bg="light" className="rounded-pill">
                                     Dynamic field
+                                </Badge>
+                            )}
+                            {field.termType === "Vector" && (
+                                <Badge data-testid="term-vector-field" bg="light" pill>
+                                    Vector field
                                 </Badge>
                             )}
                             <Badge bg="secondary" pill>
