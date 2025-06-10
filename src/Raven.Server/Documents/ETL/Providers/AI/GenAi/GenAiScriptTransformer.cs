@@ -100,7 +100,7 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
 
         var context = JsBlittableBridge.Translate(Context, DocumentScript.ScriptEngine, args[0].AsObject());
         string hash = CalculateHash(context);
-        var isCached = ShouldSendContext(hash, _configuration.Name, Current.Document) == false;
+        var isCached = ShouldSendContext(hash, _configuration.Identifier, Current.Document) == false;
 
         using (context)
         {
@@ -110,11 +110,11 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
         return JsValue.Null;
     }
 
-    private static bool ShouldSendContext(string hash, string taskName, Document doc)
+    private static bool ShouldSendContext(string hash, string taskIdentifier, Document doc)
     {
         if (doc.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
             metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection) == false ||
-            hashesSection.TryGet(taskName, out BlittableJsonReaderArray existingHashes) == false)
+            hashesSection.TryGet(taskIdentifier, out BlittableJsonReaderArray existingHashes) == false)
             return true; // hash not found, should send
 
         foreach (var h in existingHashes)
