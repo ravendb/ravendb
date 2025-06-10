@@ -67,7 +67,7 @@ const mapToDto = (
         EtlType: "GenAi",
         ConnectionStringName: data.connectionStringName,
         AllowEtlOnNonEncryptedChannel: data.isAllowEtlOnNonEncryptedChannel,
-        MaxConcurrency: data.maxConcurrency,
+        MaxConcurrency: data.maxConcurrency || undefined,
         Disabled: data.state === "Disabled",
         MentorNode: data.isSetResponsibleNode ? data.responsibleNode : undefined,
         PinToMentorNode: data.isSetResponsibleNode && data.isPinResponsibleNode,

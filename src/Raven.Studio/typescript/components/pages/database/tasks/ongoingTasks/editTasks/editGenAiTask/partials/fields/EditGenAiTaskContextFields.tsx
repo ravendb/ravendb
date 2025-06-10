@@ -82,7 +82,7 @@ function ScriptSyntaxHelp() {
     // Call 'ai.genContext' to generate a context object for each comment.
     // The custom object passed to this method defines the structure of the context object.
     ai.genContext({
-        Text: \`Blog post topic: \${this.Topic}.  Comment: \${comment.Text}\`, 
+        Text: \`Blog post topic: \${this.Topic}. Comment: \${comment.Text}\`, 
         AuthorName: comment.Author,
         CommentId: comment.Id
     });

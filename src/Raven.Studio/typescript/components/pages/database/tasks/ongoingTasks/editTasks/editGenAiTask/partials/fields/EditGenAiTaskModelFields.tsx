@@ -78,7 +78,7 @@ export default function EditGenAiTaskModelFields() {
                         </PopoverWithHoverWrapper>
                     </div>
                     <div className="hstack gap-1">
-                        <div className="flex-grow-1 vstack">
+                        <div className="flex-grow-1 vstack w-50">
                             <SchemaProviderButton
                                 icon="default"
                                 title={
@@ -90,7 +90,7 @@ export default function EditGenAiTaskModelFields() {
                                 handleClick={() => setValue("schemaProvider", "sampleObject")}
                             />
                         </div>
-                        <div className="flex-grow-1 vstack">
+                        <div className="flex-grow-1 vstack w-50">
                             <SchemaProviderButton
                                 icon="edit"
                                 title="Provide JSON schema"
