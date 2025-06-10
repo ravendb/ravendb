@@ -107,7 +107,7 @@ public partial class Hnsw
         private int _nextNodeIndex;
 
         public int MaxConcurrentBatches = 512;
-        void InsertVectorsToGraph(ref ContextBoundNativeList<byte> byteBuffer)
+        void InsertVectorsToGraph(ref ContextBoundNativeList<byte> byteBuffer, CancellationToken token)
         {
             if (_searchState.TryGetLocationForNode(EntryPointId, out var entryPointNode) is false)
             {
@@ -126,7 +126,7 @@ public partial class Hnsw
             int numberOfBatches = Math.Max(1, _searchState.CreatedNodes / MaxConcurrentBatches);
             // but not too much...
             int maxTasks = Math.Min(numberOfBatches, MaxConcurrentBatches);
-            NodePlacementRunner runner = new(this, maxTasks);
+            NodePlacementRunner runner = new(this, maxTasks, token);
             runner.Run();
         }
 
@@ -598,11 +598,12 @@ public partial class Hnsw
             private readonly ConcurrentQueue<(Exception Error, IEnumerator<WorkItem> It)> _placementErrors = [];
             private readonly List<WorkItem> _items = [];
             private readonly SearchState _searchState;
-            private readonly CancellationTokenSource _cts = new();
+            private readonly CancellationTokenSource _errorCts = new();
+            private readonly CancellationTokenSource _mainCts;
             private readonly List<Exception> _errors = [];
             private readonly LinkedList<int> _inFlightIndexes = [];
 
-            public bool IsCancelled => _cts.IsCancellationRequested;
+            public bool IsCancelled => _mainCts.IsCancellationRequested;
             
 
             public void AddInFlight(LinkedListNode<int> node)
@@ -615,8 +616,9 @@ public partial class Hnsw
                 _inFlightIndexes.Remove(node);
             }
 
-            public NodePlacementRunner(Registration parent, int activeTasksCount)
+            public NodePlacementRunner(Registration parent, int activeTasksCount, CancellationToken token)
             {
+                _mainCts = CancellationTokenSource.CreateLinkedTokenSource(token, _errorCts.Token);
                 _activeTasksCount = activeTasksCount;
                 _searchState = parent._searchState;
                 for (int i = 0; i < activeTasksCount; i++)
@@ -671,6 +673,13 @@ public partial class Hnsw
                     {
                         if(_errors.Count > 0)
                             throw new AggregateException(_errors);
+                        if (_errorCts.IsCancellationRequested == false && _mainCts.IsCancellationRequested)
+                        {
+                            // If _mainCts is canceled and _errorCts is not, then we need to throw 
+                            // to indicate that we're done due to operation cancellation!
+                            _mainCts.Token.ThrowIfCancellationRequested();
+                        }
+                            
                         return; // done
                     }
                     
@@ -726,7 +735,7 @@ public partial class Hnsw
             private void HandleError(Exception error, IEnumerator<WorkItem> it)
             {
                 // force all pending work to stop now, instead of when it is all done
-                _cts.Cancel();
+                _errorCts.Cancel();
                 _errors.Add(error);
                 try
                 {

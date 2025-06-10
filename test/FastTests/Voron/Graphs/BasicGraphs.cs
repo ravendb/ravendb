@@ -4,6 +4,7 @@ using System.Linq;
 using System.Numerics.Tensors;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
+using System.Threading;
 using FastTests.Voron.FixedSize;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Tests.Infrastructure;
@@ -97,13 +98,13 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             {
                 registration.Register(1, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Register(2, MemoryMarshal.Cast<float, byte>(v2));
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Register(3, MemoryMarshal.Cast<float, byte>(v1));
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
 
             txw.Commit();
@@ -153,13 +154,13 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             {
                 registration.Register(4, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
             
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Register(12, MemoryMarshal.Cast<float, byte>(v1));
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
 
             txw.Commit();
@@ -212,13 +213,13 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             {
                 vectorHashToRemove = registration.Register(entryIdToRemove, MemoryMarshal.Cast<float, byte>(v1)).ToSpan().ToArray();
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
             
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Register(12, MemoryMarshal.Cast<float, byte>(v1));
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
 
             txw.Commit();
@@ -231,7 +232,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Remove(entryIdToRemove, vectorHashToRemove);
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
 
             txw.Commit();
@@ -274,7 +275,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             {
                 registration.Register(1, v1.GetEmbedding());
                 registration.Register(2, v2.GetEmbedding());
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
             
             wTx.Commit();
@@ -325,7 +326,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
                     elementInGraph.Add((id, vec.ToSpan().ToArray()));
                 }
                 
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
 
             txw.Commit();
@@ -358,7 +359,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             {
                 foreach (var el in toRemove)
                     registration.Remove(el.entryId, el.vectorHash);
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
             
             txw.Commit();
@@ -390,7 +391,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
                 foreach (var id in toRemove)
                     registration.Remove(id.entryId, id.vectorHash);
                 
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
             
             txw.Commit();
@@ -419,7 +420,7 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Remove(elementInGraph[0].entryId, elementInGraph[0].vectorHash);
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
             
             txw.Commit();
@@ -472,13 +473,13 @@ public class BasicGraphs(ITestOutputHelper output) : StorageTest(output)
             {
                 registration.Register(4, MemoryMarshal.Cast<float, byte>(v1));
                 registration.Register(8, MemoryMarshal.Cast<float, byte>(v2));
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
 
             using (var registration = Hnsw.RegistrationFor(txw.LowLevelTransaction, "test", hnswRandom))
             {
                 registration.Register(12, MemoryMarshal.Cast<float, byte>(v1));
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
 
             txw.Commit();

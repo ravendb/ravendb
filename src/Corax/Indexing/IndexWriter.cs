@@ -1000,7 +1000,7 @@ namespace Corax.Indexing
                     RegisterVectorRootPage(indexedField.FieldRootPage);
                     if (MaximumConcurrentBatchesForHnswAcceleration != null)
                         indexedField.VectorIndexer.MaxConcurrentBatches = MaximumConcurrentBatchesForHnswAcceleration.Value;
-                    indexedField.VectorIndexer.Commit();
+                    indexedField.VectorIndexer.Commit(token);
                 }
                 
                 if (indexedField.Textual.Count == 0)

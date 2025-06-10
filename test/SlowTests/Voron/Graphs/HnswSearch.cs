@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading;
 using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
@@ -32,7 +33,7 @@ public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
                 foreach (var (id, vector) in storage)
                     registration.Register(id, MemoryMarshal.Cast<float, byte>(vector));
                 
-                registration.Commit();
+                registration.Commit(CancellationToken.None);
             }
             
             wTx.Commit();

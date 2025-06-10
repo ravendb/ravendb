@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
+using System.Threading;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Compression;
@@ -1003,7 +1004,7 @@ public unsafe partial class Hnsw
             return hashBuffer;
         }
 
-        public void Commit()
+        public void Commit(CancellationToken token)
         {
             PortableExceptions.ThrowIfOnDebug<InvalidOperationException>(_searchState.Llt.Committed);
             
@@ -1024,7 +1025,7 @@ public unsafe partial class Hnsw
             nodes = Span<Node>.Empty;
             _ = nodes;
 
-            InsertVectorsToGraph(ref byteBuffer);
+            InsertVectorsToGraph(ref byteBuffer, token);
 
             nodes = _searchState.Nodes;
             for (int i = 0; i < nodes.Length; i++)

@@ -111,7 +111,7 @@ async Task ImportData(string path)
                         var vector = new Memory<float>(vectors, i * 768, 768);
                         registration.Register(ids[i] * 100, MemoryMarshal.Cast<float, byte>(vector.Span));
                     }
-                    registration.Commit();
+                    registration.Commit(CancellationToken.None);
                 }
                 txw.Commit();
             }
