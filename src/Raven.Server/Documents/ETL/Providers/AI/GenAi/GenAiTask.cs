@@ -48,7 +48,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             _chatCompletionClient = GetClient();
     }
 
-    private IChatCompletionClient GetClient() => ChatCompletionClient.CreateChatCompletionClient(Database.DocumentsStorage.ContextPool, Configuration);
+    private IChatCompletionClient GetClient() => ChatCompletionClient.CreateChatCompletionClient(Database.DocumentsStorage.ContextPool, Configuration.Connection,
+        Configuration.JsonSchema ?? ChatCompletionClient.GetSchemaFor(Configuration.SampleObject));
 
     public override EtlType EtlType => EtlType.GenAi;
     public override bool ShouldTrackCounters() => false;

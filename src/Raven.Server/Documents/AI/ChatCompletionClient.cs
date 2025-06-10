@@ -53,15 +53,6 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         ConventionsToUse.Freeze();
     }
 
-    public static ChatCompletionClient CreateChatCompletionClient(IMemoryContextPool contextPool, GenAiConfiguration configuration)
-    {
-        var schema = configuration.JsonSchema;
-        if (string.IsNullOrWhiteSpace(schema))
-            schema = GetSchemaFor(configuration.SampleObject);
-
-        return CreateChatCompletionClient(contextPool, configuration.Connection, schema);
-    }
-
     public static ChatCompletionClient CreateChatCompletionClient(IMemoryContextPool contextPool, AiConnectionString connection, string schema)
     {
         if (connection.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model) == false)

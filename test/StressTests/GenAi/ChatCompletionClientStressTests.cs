@@ -52,7 +52,7 @@ public class ChatCompletionClientStressTests : RavenTestBase
     public async Task RateLimit_MaxTokens(Options options, GenAiConfiguration configuration)
     {
         using (var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests())))
-        using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration))
+        using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection , defaultJsonSchema))
         {
             var prompt = "Check if the following blog post comment is spam or not";
             var context =
@@ -82,7 +82,7 @@ public class ChatCompletionClientStressTests : RavenTestBase
         var context = "{\"Text\":\"Surefire investment property in caiman islands, win $$$$ for sure, qucik!\",\"Author\":\"homepage\",\"Id\":\"2236672c-b941-4855-999e-5374f41cbddd\"}";
 
         using var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()));
-        using var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration);
+        using var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection , defaultJsonSchema);
 
         //Raven.Server.Documents.AI.AiGen.GenAiRateLimitException: Rate limit reached for gpt-4o in organization "..." on requests per min (RPM): Limit 500, Used 500, Requested 1. Please try again in 120ms.
         await Assert.ThrowsAsync<RateLimitException>(async () =>
