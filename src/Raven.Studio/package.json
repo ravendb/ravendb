@@ -168,5 +168,10 @@
         "util": "^0.12.5",
         "webcola": "^3.4.0",
         "yup": "^1.4.0"
+    },
+    "overrides": {
+        "eonasdan-bootstrap-datetimepicker": {
+            "moment-timezone": "^0.6.0"
+        }
     }
 }
