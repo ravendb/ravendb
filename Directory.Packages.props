@@ -4,25 +4,25 @@
     <CentralPackageTransitivePinningEnabled>True</CentralPackageTransitivePinningEnabled>
   </PropertyGroup>
   <ItemGroup>
-    <PackageVersion Include="AWSSDK.Core" Version="4.0.0.3" />
-    <PackageVersion Include="AWSSDK.Glacier" Version="4.0.0.2" />
-    <PackageVersion Include="AWSSDK.S3" Version="4.0.0.3" />
+    <PackageVersion Include="AWSSDK.Core" Version="4.0.0.8" />
+    <PackageVersion Include="AWSSDK.Glacier" Version="4.0.0.6" />
+    <PackageVersion Include="AWSSDK.S3" Version="4.0.1.4" />
     <PackageVersion Include="AWSSDK.SecurityToken" Version="4.0.0.2" />
     <PackageVersion Include="Azure.Identity" Version="1.14.0" />
     <PackageVersion Include="Azure.Storage.Blobs" Version="12.24.0" />
     <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
     <PackageVersion Include="BenchmarkDotNet.Diagnostics.Windows" Version="0.14.0" />
-    <PackageVersion Include="BouncyCastle.Cryptography" Version="2.6.0" />
+    <PackageVersion Include="BouncyCastle.Cryptography" Version="2.6.1" />
     <PackageVersion Include="CloudNative.CloudEvents" Version="2.8.0" />
     <PackageVersion Include="CloudNative.CloudEvents.Amqp" Version="2.8.0" />
     <PackageVersion Include="CloudNative.CloudEvents.Kafka" Version="2.8.0" />
     <PackageVersion Include="CloudNative.CloudEvents.NewtonsoftJson" Version="2.8.0" />
     <PackageVersion Include="Confluent.Kafka" Version="2.10.0" />
-    <PackageVersion Include="CsvHelper" Version="33.0.1" />
+    <PackageVersion Include="CsvHelper" Version="33.1.0" />
     <PackageVersion Include="DasMulli.Win32.ServiceUtils.Signed" Version="1.1.0" />
-    <PackageVersion Include="Google.Api.Gax.Rest" Version="4.10.0" />
+    <PackageVersion Include="Google.Api.Gax.Rest" Version="4.11.0" />
     <PackageVersion Include="Google.Cloud.Storage.V1" Version="4.13.0" />
-    <PackageVersion Include="Hl7.Fhir.R4" Version="5.11.6" />
+    <PackageVersion Include="Hl7.Fhir.R4" Version="5.11.7" />
     <PackageVersion Include="JetBrains.Annotations" Version="2024.3.0" />
     <PackageVersion Include="Jint" Version="3.0.32-ravendb" />
     <PackageVersion Include="JunitXml.TestLogger" Version="6.1.0" />
@@ -32,7 +32,7 @@
     <PackageVersion Include="Lucene.Net" Version="3.0.54013" />
     <PackageVersion Include="Lucene.Net.Contrib.Spatial.NTS" Version="3.0.54013" />
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
-    <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.16" />
+    <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.17" />
     <PackageVersion Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" />
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
@@ -49,7 +49,7 @@
     <PackageVersion Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.Json" Version="8.0.1" />
     <PackageVersion Include="Microsoft.Extensions.Configuration.UserSecrets" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.13.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="Microsoft.NETCore.Jit" Version="2.0.8" />
     <PackageVersion Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageVersion Include="MongoDB.Driver" Version="2.30.0" />
@@ -69,7 +69,7 @@
     <PackageVersion Include="NuGet.Resolver" Version="6.14.0" />
     <PackageVersion Include="Oracle.ManagedDataAccess.Core" Version="23.8.0" />
     <PackageVersion Include="Parquet.Net" Version="3.10.0" />
-    <PackageVersion Include="Polly" Version="8.5.2" />
+    <PackageVersion Include="Polly" Version="8.6.0" />
     <PackageVersion Include="RabbitMQ.Client" Version="6.8.1" />
     <PackageVersion Include="Raven.CodeAnalysis" Version="1.0.11" />
     <PackageVersion Include="SourceLink.Create.CommandLine" Version="2.8.3" />
