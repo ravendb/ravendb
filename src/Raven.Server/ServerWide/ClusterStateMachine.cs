@@ -817,12 +817,12 @@ namespace Raven.Server.ServerWide
                     {
                         actions.Add(() =>
                         Changes.OnDatabaseChanges(database, index, nameof(T), DatabasesLandlord.ClusterDatabaseChangeType.ValueChanged, changeState: null));
-                }
+                    }
                 }
 
                 ExecuteManyOnDispose(context, index, type, actions);
 
-                }
+            }
             catch (Exception e)
             {
                 exception = e;

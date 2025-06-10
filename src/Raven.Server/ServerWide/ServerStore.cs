@@ -17,6 +17,7 @@ using Lucene.Net.Search;
 using NCrontab.Advanced;
 using NCrontab.Advanced.Extensions;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -27,6 +28,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Cluster;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Server;
+using Raven.Client.Exceptions.Sharding;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
@@ -43,7 +45,6 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Dashboard;
 using Raven.Server.Documents;
-using Raven.Server.Documents.AI;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Analysis;
 using Raven.Server.Documents.Indexes.Sorting;
@@ -2221,13 +2222,19 @@ namespace Raven.Server.ServerWide
                         break;
                     case EtlType.GenAi:
                     {
-                        var aiIntegration = JsonDeserializationCluster.GenAiConfiguration(etlConfiguration);
-                        aiIntegration.Validate(out var aiIntegrationErr, validateName: false, validateConnection: false);
-                        if (ValidateConnectionString(rawRecord, aiIntegration.ConnectionStringName, aiIntegration.EtlType) == false)
-                            aiIntegrationErr.Add(
-                                $"Could not find connection string named '{aiIntegration.ConnectionStringName}'. Please supply an existing connection string.");
-                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, aiIntegrationErr);
-                        command = new AddGenAiCommand(aiIntegration, databaseName, raftRequestId);
+                        if (rawRecord.IsSharded) 
+                            throw new NotSupportedInShardingException("GenAI is currently not supported in sharding");
+
+                        var genAi = JsonDeserializationCluster.GenAiConfiguration(etlConfiguration);
+                        genAi.Validate(out var genAiErr, validateName: false, validateConnection: false);
+                        if (ValidateConnectionString(rawRecord, genAi.ConnectionStringName, genAi.EtlType) == false)
+                            genAiErr.Add($"Could not find connection string named '{genAi.ConnectionStringName}'. Please supply an existing connection string.");
+                        ThrowInvalidConfigurationIfNecessary(etlConfiguration, genAiErr);
+
+                        if (genAi.ProcessNewDocumentsOnly)
+                            await UpdateGenAiStateToLastEtag(databaseName, genAi);
+
+                        command = new AddGenAiCommand(genAi, databaseName, raftRequestId);
                     }
                         break;
 
@@ -2237,6 +2244,19 @@ namespace Raven.Server.ServerWide
             }
 
             return await SendToLeaderAsync(command);
+        }
+
+        private async Task UpdateGenAiStateToLastEtag(string databaseName, GenAiConfiguration genAiConfiguration)
+        {
+            // Update the ETL process state with the last etag and change vector so that GenAI task will start from new docs only
+
+            var database = await DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
+            (long lastEtag, string lastCv) = database.ReadLastEtagAndChangeVector();
+            
+            var updateStateCmd = new UpdateEtlProcessStateCommand(databaseName, genAiConfiguration.Name, genAiConfiguration.Transforms[0].Name, lastEtag, lastCv, NodeTag,
+                LicenseManager.HasHighlyAvailableTasks(), database.DbBase64Id, RaftIdGenerator.NewId(), skippedTimeSeriesDocs: null, lastBatchTime: null);
+
+            await SendToLeaderAsync(updateStateCmd);
         }
 
         public async Task<(long, object)> AddQueueSink(TransactionOperationContext context,
