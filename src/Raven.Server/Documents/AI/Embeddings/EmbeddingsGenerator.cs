@@ -6,9 +6,9 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.AI;
 using Microsoft.IdentityModel.Protocols.Configuration;
 using Microsoft.SemanticKernel;
-using Microsoft.SemanticKernel.Embeddings;
 using Nito.AsyncEx;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
@@ -17,7 +17,6 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
 using Raven.Server.Background;
 using Raven.Server.Config;
 using Raven.Server.Documents.ETL.Providers.AI;
@@ -82,7 +81,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         private readonly DocumentsStorage _documentsStorage;
         public readonly EmbeddingsGenerationConfiguration Configuration;
         private readonly AiConnectionString _connectionString;
-        private readonly ITextEmbeddingGenerationService _embeddingGenerationService;
+        private readonly IEmbeddingGenerator<string, Embedding<float>> _embeddingGenerationService;
         private readonly CancellationToken _cancellationToken;
         private readonly AsyncManualResetEvent _hasWork = new();
         private readonly ConcurrentQueue<GenerateEmbeddings> _work = new();
@@ -354,11 +353,11 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
         {
             try
             {
-                IList<ReadOnlyMemory<float>> allEmbeddings;
+                GeneratedEmbeddings<Embedding<float>> allEmbeddings;
 
                 try
                 {
-                    allEmbeddings = await _embeddingGenerationService.GenerateEmbeddingsAsync(batch, cancellationToken: _cancellationToken);
+                    allEmbeddings = await _embeddingGenerationService.GenerateAsync(batch, cancellationToken: _cancellationToken);
                 }
                 catch (HttpOperationException httpOperationException) when (httpOperationException.StatusCode == HttpStatusCode.TooManyRequests)
                 {
@@ -372,7 +371,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
                 for (int i = 0; i < allEmbeddings.Count; i++)
                 {
-                    embeddings[i].Add(EmbeddingsHelper.CreateEmbeddingValue(allEmbeddings[i], Configuration.Quantization));
+                    embeddings[i].Add(EmbeddingsHelper.CreateEmbeddingValue(allEmbeddings[i].Vector, Configuration.Quantization));
                 }
 
                 if (_parent._mode is Mode.Query)

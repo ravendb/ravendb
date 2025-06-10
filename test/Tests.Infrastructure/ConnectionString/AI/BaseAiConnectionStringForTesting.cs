@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading;
+using Microsoft.Extensions.AI;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
@@ -111,8 +112,8 @@ public abstract class BaseAiConnectorForTesting<T> : IAiConnectorForTesting
         {
             using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5)))
             {
-                (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateServicesForTest(_embeddingsGenerationConfiguration.Value);
-                var embeddings = service.GenerateEmbeddingsAsync(EmbeddingsHelper.ValuesListToVerifyConnection, cancellationToken: cts.Token).GetAwaiter().GetResult();
+                (IEmbeddingGenerator<string, Embedding<float>> service, logger) = AiHelper.CreateServicesForTest(_embeddingsGenerationConfiguration.Value);
+                var embeddings = service.GenerateAsync(EmbeddingsHelper.ValuesListToVerifyConnection, cancellationToken: cts.Token).GetAwaiter().GetResult();
 
                 var isExpectedResponse = embeddings.Count == EmbeddingsHelper.ValuesListToVerifyConnection.Count;
                 if (isExpectedResponse == false)

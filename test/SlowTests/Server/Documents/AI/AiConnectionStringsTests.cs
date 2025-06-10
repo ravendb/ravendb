@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using FastTests;
+using Microsoft.Extensions.AI;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -175,8 +176,8 @@ public class AiConnectionStringsTests : RavenTestBase
     {
         using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
         {
-            (ITextEmbeddingGenerationService service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
-            var embeddings = service.GenerateEmbeddingsAsync(_testValuesList, cancellationToken: cts.Token).GetAwaiter().GetResult();
+            (IEmbeddingGenerator<string, Embedding<float>> service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
+            var embeddings = service.GenerateAsync(_testValuesList, cancellationToken: cts.Token).GetAwaiter().GetResult();
 
             Assert.Equal(_testValuesList.Count, embeddings.Count);
         }
@@ -191,11 +192,11 @@ public class AiConnectionStringsTests : RavenTestBase
 
         using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30)))
         {
-            (ITextEmbeddingGenerationService service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
-            var embeddings = service.GenerateEmbeddingsAsync(_testValuesList, cancellationToken: cts.Token).GetAwaiter().GetResult();
+            (IEmbeddingGenerator<string, Embedding<float>> service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
+            var embeddings = service.GenerateAsync(_testValuesList, cancellationToken: cts.Token).GetAwaiter().GetResult();
 
             for (var i = 0; i < _testValuesList.Count; i++)
-                Assert.False(embeddings[i].Length == dimensions, $"{_testValuesList[i]}: Dimensionality hasn't been configured yet, but embeddings were generated with '{embeddings[i].Length}' dimensions, which should be different from {dimensions} to test it when it is configured.");
+                Assert.False(embeddings[i].Vector.Length == dimensions, $"{_testValuesList[i]}: Dimensionality hasn't been configured yet, but embeddings were generated with '{embeddings[i].Vector.Length}' dimensions, which should be different from {dimensions} to test it when it is configured.");
 
             embeddings = null;
             Assert.Null(embeddings);
@@ -214,10 +215,10 @@ public class AiConnectionStringsTests : RavenTestBase
             }
 
             (service, _) = AiHelper.CreateServicesForTest(embeddingsGenerationConfiguration);
-            embeddings = service.GenerateEmbeddingsAsync(_testValuesList, cancellationToken: cts.Token).GetAwaiter().GetResult();
+            embeddings = service.GenerateAsync(_testValuesList, cancellationToken: cts.Token).GetAwaiter().GetResult();
 
             for (var i = 0; i < _testValuesList.Count; i++)
-                Assert.True(embeddings[i].Length == dimensions, $"{_testValuesList[i]}: Dimensionality was configured to {dimensions}, but embeddings were generated with {embeddings[i].Length} dimensions.");
+                Assert.True(embeddings[i].Vector.Length == dimensions, $"{_testValuesList[i]}: Dimensionality was configured to {dimensions}, but embeddings were generated with {embeddings[i].Vector.Length} dimensions.");
         }
     }
 }

@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using FastBertTokenizer;
+using Microsoft.Extensions.AI;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.SemanticKernel.Connectors.Onnx;
 using Raven.Client.Documents.Indexes.Vector;
@@ -30,13 +31,15 @@ public static class GenerateEmbeddings
 
     private static SessionOptions OnnxSessionOptions;
 
-    internal static readonly Lazy<BertOnnxTextEmbeddingGenerationService> Embedder = new(() => CreateTextEmbeddingGenerationService());
+    internal static readonly Lazy<IEmbeddingGenerator<string, Embedding<float>>> Embedder = new(() => CreateTextEmbeddingGenerationService());
 
     static GenerateEmbeddings()
     {
+#pragma warning disable CS0618 // Type or member is obsolete
         BertOnnxTextEmbeddingGenerationServiceCtor = typeof(BertOnnxTextEmbeddingGenerationService).GetConstructor(BindingFlags.NonPublic | BindingFlags.Instance, [typeof(InferenceSession), typeof(BertTokenizer), typeof(int), typeof(BertOnnxOptions)]);
         if (BertOnnxTextEmbeddingGenerationServiceCtor == null)
             throw new InvalidOperationException($"Could not find constructor for {typeof(BertOnnxTextEmbeddingGenerationService)}.");
+#pragma warning restore CS0618 // Type or member is obsolete
     }
 
     public static void Configure(RavenConfiguration configuration)
@@ -234,13 +237,13 @@ public static class GenerateEmbeddings
 
         try
         {
-            var embeddings = Embedder.Value.GenerateEmbeddingsAsync(List).GetAwaiter().GetResult();
+            var embeddings = Embedder.Value.GenerateAsync(List).GetAwaiter().GetResult();
 
             var embedding = embeddings[0];
 
             var memoryScope = allocator.Allocate(dimensions, out System.Memory<byte> memory);
             
-            MemoryMarshal.AsBytes(embedding.Span).CopyTo(memory.Span);
+            MemoryMarshal.AsBytes(embedding.Vector.Span).CopyTo(memory.Span);
 
             return (memoryScope, memory, dimensions);
         }
@@ -250,7 +253,7 @@ public static class GenerateEmbeddings
         }
     }
 
-    internal static BertOnnxTextEmbeddingGenerationService CreateTextEmbeddingGenerationService(BertOnnxOptions options = null, int? dimensions = null)
+    internal static IEmbeddingGenerator<string, Embedding<float>> CreateTextEmbeddingGenerationService(BertOnnxOptions options = null, int? dimensions = null)
     {
         using (var onnxModelStream = File.OpenRead(Path.Combine("LocalEmbeddings", "bge-micro-v2", "model.onnx")))
         using (var vocabStream = File.OpenRead(Path.Combine("LocalEmbeddings", "bge-micro-v2", "vocab.txt")))
@@ -274,7 +277,7 @@ public static class GenerateEmbeddings
                 tokenizer.LoadVocabulary(vocabReader, convertInputToLowercase: !options.CaseSensitive, options.UnknownToken, options.ClsToken, options.SepToken, options.PadToken, options.UnicodeNormalization);
             }
 
-            return (BertOnnxTextEmbeddingGenerationService)BertOnnxTextEmbeddingGenerationServiceCtor.Invoke([onnxSession, tokenizer, dimensions, options]);
+            return (IEmbeddingGenerator<string, Embedding<float>>)BertOnnxTextEmbeddingGenerationServiceCtor.Invoke([onnxSession, tokenizer, dimensions, options]);
         }
     }
 }

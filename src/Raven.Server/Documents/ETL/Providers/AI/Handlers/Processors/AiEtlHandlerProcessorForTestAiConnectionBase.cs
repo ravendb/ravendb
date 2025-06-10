@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Microsoft.SemanticKernel.Embeddings;
+using Microsoft.Extensions.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
@@ -81,8 +81,8 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
 
                 var aiEtlConfiguration = new EmbeddingsGenerationConfiguration { Connection = aiConnectionString };
 
-                (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateServicesForTest(aiEtlConfiguration);
-                var embeddings = await service.GenerateEmbeddingsAsync(EmbeddingsHelper.ValuesListToVerifyConnection, cancellationToken: token.Token);
+                (IEmbeddingGenerator<string, Embedding<float>> service, logger) = AiHelper.CreateServicesForTest(aiEtlConfiguration);
+                var embeddings = await service.GenerateAsync(EmbeddingsHelper.ValuesListToVerifyConnection, cancellationToken: token.Token);
 
                 if (embeddings.Count != EmbeddingsHelper.ValuesListToVerifyConnection.Count)
                     throw new Exception(

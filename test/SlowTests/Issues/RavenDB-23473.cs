@@ -87,9 +87,9 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
                     if (localEmbedding == null)
                     {
 #pragma warning disable SKEXP0070
-                        var embedding = await GenerateEmbeddings.Embedder.Value.GenerateEmbeddingsAsync(new List<string> {q.Body });
+                        var embedding = await GenerateEmbeddings.Embedder.Value.GenerateAsync(new List<string> {q.Body });
 #pragma warning restore SKEXP0070
-                        vector = embedding[0].ToArray().ToList();
+                        vector = embedding[0].Vector.ToArray().ToList();
                         localEmbedding = new Embedding { Vector = vector };
                         await session.StoreAsync(localEmbedding, embeddingId);
                     }

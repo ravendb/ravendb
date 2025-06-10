@@ -2,16 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using System.Runtime.InteropServices;
-using System.Threading.Tasks;
-using Google.Apis.Util;
-using Lucene.Net.Documents;
-using Microsoft.SemanticKernel.Embeddings;
+using Microsoft.Extensions.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Server.Documents.AI;
-using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
@@ -21,8 +16,6 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Sparrow.Json.Parsing;
 using Sparrow.Server.Utils;
 
 #pragma warning disable SKEXP0001
@@ -171,7 +164,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
 
     public EmbeddingsGenerationTestScriptResult RunTest(IEnumerable<EmbeddingGenerationScriptResult> records, DocumentsOperationContext context)
     {
-        (ITextEmbeddingGenerationService embeddingService, _) = AiHelper.CreateServicesForTest(
+        (IEmbeddingGenerator<string, Embedding<float>> embeddingService, _) = AiHelper.CreateServicesForTest(
             new EmbeddingsGenerationConfiguration { Connection = new AiConnectionString { EmbeddedSettings = new EmbeddedSettings() } });
 
         var result = new EmbeddingsGenerationTestScriptResult();
@@ -195,10 +188,10 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
                 }
             }
         }
-        var results = embeddingService.GenerateEmbeddingsAsync(chunks, cancellationToken: CancellationToken).GetAwaiter().GetResult();
+        var results = embeddingService.GenerateAsync(chunks, cancellationToken: CancellationToken).GetAwaiter().GetResult();
         for (int i = 0; i < results.Count; i++)
         {
-            allItems[i].Embeddings = MemoryMarshalEx.Cast<float, byte>(results[i]);
+            allItems[i].Embeddings = MemoryMarshalEx.Cast<float, byte>(results[i].Vector);
         }
 
         result.TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList();
