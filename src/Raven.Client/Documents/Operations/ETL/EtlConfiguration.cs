@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Operations.ETL
         [JsonIgnore]
         internal T Connection { get; set; }
 
-        public void Initialize(T connectionString)
+        public virtual void Initialize(T connectionString)
         {
             if (Initialized)
             {

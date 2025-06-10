@@ -25,6 +25,12 @@ namespace Raven.Client.Documents.Operations.ETL.OLAP
             return _name ??= Connection?.GetDestination();
         }
 
+        public override void Initialize(OlapConnectionString connectionString)
+        {
+            Connection = connectionString;
+            Initialized = true;
+        }
+
         public override EtlType EtlType => EtlType.Olap;
 
         public override bool UsingEncryptedCommunicationChannel()
