@@ -19,6 +19,7 @@ import OptionalLabel from "components/common/OptionalLabel";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
+import { editGenAiTaskUtils } from "../../utils/editGenAiTaskUtils";
 
 type OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState;
 
@@ -159,6 +160,24 @@ export default function EditGenAiTaskBasicFields() {
                         />
                     )}
                 </InputGroup>
+            </FormGroup>
+            <FormGroup>
+                <FormLabel>
+                    Max concurrency <OptionalLabel />
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                The maximum number of concurrent requests sent to the model (default:{" "}
+                                {editGenAiTaskUtils.defaultMaxConcurrency}).
+                                <br />
+                                Each request includes: a context object, the prompt, and the JSON schema.
+                            </>
+                        }
+                    >
+                        <Icon icon="info" color="info" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
+                </FormLabel>
+                <FormInput type="number" control={control} name="maxConcurrency" />
             </FormGroup>
         </>
     );

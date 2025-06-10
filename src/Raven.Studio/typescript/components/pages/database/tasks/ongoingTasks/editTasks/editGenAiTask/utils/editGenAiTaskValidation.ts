@@ -11,6 +11,7 @@ export const editGenAiTaskSchema = yup.object({
     isPinResponsibleNode: yup.boolean(),
     connectionStringName: yup.string().required(),
     isAllowEtlOnNonEncryptedChannel: yup.boolean(),
+    maxConcurrency: yup.number().nullable().min(1).positive().integer(),
     collectionName: yup.string().required(),
     prompt: yup.string().required(),
     schemaProvider: yup.string<EditGenAiTaskSchemaProvider>().nullable().required(),

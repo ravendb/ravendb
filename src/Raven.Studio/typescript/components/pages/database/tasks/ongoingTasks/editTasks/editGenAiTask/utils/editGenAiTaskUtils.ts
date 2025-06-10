@@ -12,6 +12,7 @@ const getDefaultValues = (dto: Raven.Client.Documents.Operations.OngoingTasks.Ge
             connectionStringName: "",
             isAllowEtlOnNonEncryptedChannel: false,
             collectionName: "",
+            maxConcurrency: null,
             prompt: "",
             schemaProvider: null,
             jsonSchema: "",
@@ -38,6 +39,7 @@ const getDefaultValues = (dto: Raven.Client.Documents.Operations.OngoingTasks.Ge
         connectionStringName: dto.ConnectionStringName,
         isAllowEtlOnNonEncryptedChannel: dto.Configuration.AllowEtlOnNonEncryptedChannel,
         collectionName: dto.Configuration.Collection,
+        maxConcurrency: dto.Configuration.MaxConcurrency,
         prompt: dto.Configuration.Prompt ?? "",
         schemaProvider: dto.Configuration.JsonSchema ? "jsonSchema" : "sampleObject",
         jsonSchema: dto.Configuration.JsonSchema ?? "",
@@ -65,6 +67,7 @@ const mapToDto = (
         EtlType: "GenAi",
         ConnectionStringName: data.connectionStringName,
         AllowEtlOnNonEncryptedChannel: data.isAllowEtlOnNonEncryptedChannel,
+        MaxConcurrency: data.maxConcurrency,
         Disabled: data.state === "Disabled",
         MentorNode: data.isSetResponsibleNode ? data.responsibleNode : undefined,
         PinToMentorNode: data.isSetResponsibleNode && data.isPinResponsibleNode,
@@ -77,11 +80,11 @@ const mapToDto = (
         GenAiTransformation: {
             Script: data.script,
         },
-        MaxConcurrency: undefined, // TODO kalczur ask Aviv
     };
 };
 
 export const editGenAiTaskUtils = {
     getDefaultValues,
     mapToDto,
+    defaultMaxConcurrency: 4,
 };

@@ -14,6 +14,7 @@ import EditGenAiTaskInfoHub from "../../EditGenAiTaskInfoHub";
 import EditGenAiTaskCancelButton from "../EditGenAiTaskCancelButton";
 import { FormSwitch, FormGroup } from "components/common/Form";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { editGenAiTaskUtils } from "../../utils/editGenAiTaskUtils";
 
 export function EditGenAiTaskStepSummary() {
     const dispatch = useAppDispatch();
@@ -61,6 +62,10 @@ export function EditGenAiTaskStepSummary() {
                 <div className="hstack justify-content-between">
                     <div>Connection string</div>
                     <div>{formValues.connectionStringName}</div>
+                </div>
+                <div className="hstack justify-content-between">
+                    <div>Max concurrency</div>
+                    <div>{formValues.maxConcurrency || editGenAiTaskUtils.defaultMaxConcurrency}</div>
                 </div>
             </div>
             <div className="hstack justify-content-between mt-4">
