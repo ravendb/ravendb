@@ -6,7 +6,6 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
-using Google.Apis.Util;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -517,8 +516,13 @@ public class MaxReadOpsPerSecOptionTests : ClusterTestBase
                     return (DocumentsToCreate - MaxReadOpsPerSecToTest) / MaxReadOpsPerSecToTest;
 
                 case BackupType.Snapshot:
-                    // snapshot data requires 11 buffer iterations for db with 5 docs (value obtained experimentally)
-                    return 11;
+                    // snapshot data requires 10 or 11 buffer iterations for a database with 5 docs, depending on the system environment's bitness (values obtained experimentally)
+                    return RuntimeInformation.ProcessArchitecture switch
+                    {
+                        Architecture.X86 or Architecture.Arm => 10,
+                        Architecture.X64 or Architecture.Arm64 => 11,
+                        _ => throw new ArgumentOutOfRangeException(nameof(RuntimeInformation.ProcessArchitecture), "Unsupported architecture.")
+                    };
 
                 default:
                     throw new ArgumentOutOfRangeException();
