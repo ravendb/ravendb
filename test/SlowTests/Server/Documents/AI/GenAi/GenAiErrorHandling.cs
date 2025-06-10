@@ -398,7 +398,6 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
         }
     }
 
-    
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
     public async Task GenAi_LoadError_AuthFailure_ShouldOnlyTrackSuccess(Options options, GenAiConfiguration config)

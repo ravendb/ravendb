@@ -818,6 +818,107 @@ for(const comment of this.Comments)
         }
     }
 
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    public async Task ShouldStartFromNewDocuments(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        // store some documents before we define the GenAI task
+        using (var session = store.OpenSession())
+        {
+            for (int i = 1; i <= 10; i++)
+            {
+                var p = new Post(
+                    [
+                        new Comment("legit comment", "user"),
+                        new Comment("spam comment", "bot")
+                    ],
+                    "title", "author");
+
+                session.Store(p, $"posts/{i}");
+            }
+
+            session.SaveChanges();
+        }
+
+        config.Prompt = "Check if the following blog post comment is spam or not";
+        config.Collection = "Posts";
+        config.SampleObject = JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam or ham" });
+        config.UpdateScript = @"    
+const idx = this.Comments.findIndex(c => c.Id == $input.Id);
+if (idx < 0)
+    return;
+this.Comments[idx].IsSpam = $output.Blocked 
+";
+        config.GenAiTransformation = new GenAiTransformation
+        {
+            Script = @"
+for(const comment of this.Comments)
+{
+    ai.genContext({Text: comment.Text, Author: comment.Author, Id: comment.Id});
+}
+"
+        };
+
+        store.Maintenance.Send(new AddGenAiOperation(config));
+
+        var db = await GetDatabase(store.Database);
+
+        var state = EtlProcess.GetProcessState(db, config.Name, config.Transforms[0].Name);
+        var lastProcessedEtag = state.GetLastProcessedEtag(db.DbBase64Id, Server.ServerStore.NodeTag);
+        Assert.Equal(10, lastProcessedEtag);
+
+        using (var session = store.OpenSession())
+        {
+            // should not be processed
+            var docs = session.Advanced.LoadStartingWith<BlittableJsonReaderObject>("posts/");
+
+            foreach (var post in docs)
+            {
+                Assert.True(post.TryGet("Comments", out BlittableJsonReaderArray comments));
+                foreach (var o in comments)
+                {
+                    var comment = o as BlittableJsonReaderObject;
+                    Assert.NotNull(comment);
+                    Assert.False(comment.TryGet("IsSpam", out bool _));
+                }
+            }
+        }
+
+        var etl = Etl.WaitForEtlToComplete(store);
+
+        // update one post
+        using (var session = store.OpenSession())
+        {
+            var post = session.Load<Post>("posts/1");
+            post.Comments.Add(new Comment("great article", "aviv"));
+            session.SaveChanges();
+        }
+
+        Assert.True(etl.Wait(TimeSpan.FromSeconds(30)));
+
+        using (var session = store.OpenSession())
+        {
+            // should be processed
+            var post = session.Load<BlittableJsonReaderObject>("posts/1");
+
+            Assert.True(post.TryGet("Comments", out BlittableJsonReaderArray comments));
+            foreach (var o in comments)
+            {
+                var comment = o as BlittableJsonReaderObject;
+                Assert.NotNull(comment);
+                Assert.True(comment.TryGet("IsSpam", out bool _));
+            }
+        }
+
+        var oldEtag = lastProcessedEtag;
+        state = EtlProcess.GetProcessState(db, config.Name, config.Transforms[0].Name);
+        lastProcessedEtag = state.GetLastProcessedEtag(db.DbBase64Id, Server.ServerStore.NodeTag);
+        Assert.True(lastProcessedEtag > oldEtag);
+    }
+
     internal record Comment(string Text, string Author)
     {
         public string Id { get; set; } = Guid.NewGuid().ToString();
