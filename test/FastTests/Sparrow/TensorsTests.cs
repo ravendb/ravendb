@@ -252,14 +252,14 @@ namespace FastTests.Sparrow
                 RunWithMagnitudeFunc(&Functions.CosineDistance);
 
                 // AVX-2 path
-                if (AdvInstructionSet.X86.IsSupportedAvx256)
+                if (AdvInstructionSet.X86.IsSupportedAvx256 && size >= Vector256<sbyte>.Count)
                     RunWithMagnitudeFunc(&Functions.Vectorized256.CosineSimilarityIntegersAvx2);
 
-                if (AdvInstructionSet.Arm.IsSupported && Dp.IsSupported)
-                    RunWithMagnitudeFunc(&Functions.Vectorized256.CosineSimilarityIntegersNeon);
+                if (AdvInstructionSet.Arm.IsSupported && Dp.IsSupported && size >= Vector128<sbyte>.Count)
+                    RunWithMagnitudeFunc(&Functions.Vectorized128.CosineSimilarityIntegersNeon);
 
                 // AVX-512 path
-                if (Avx512BW.IsSupported && Avx512F.IsSupported)
+                if (Avx512BW.IsSupported && Avx512F.IsSupported && size >= Vector512<sbyte>.Count)
                     RunWithMagnitudeFunc(&Functions.Vectorized512.CosineSimilarityIntegersAvx512);
             }
         }
@@ -390,6 +390,7 @@ namespace FastTests.Sparrow
         // A randomized test to compare your implementation with a reference implementation.
         [RavenTheory(RavenTestCategory.Core)]
         [InlineDataWithRandomSeed]
+        [InlineData(531226929)]
         public void RandomVectors_ReferenceComparison_Integers(int seed = 1337)
         {
             var rnd = new Random(seed);
@@ -425,14 +426,14 @@ namespace FastTests.Sparrow
             RunWithMagnitudeFunc(&Functions.CosineDistance, expectedDistance);
 
             // AVX-2 path
-            if (AdvInstructionSet.X86.IsSupportedAvx256)
+            if (AdvInstructionSet.X86.IsSupportedAvx256 && size >= Vector256<sbyte>.Count)
                 RunWithMagnitudeFunc(&Functions.Vectorized256.CosineSimilarityIntegersAvx2, expectedSim);
 
-            if (AdvInstructionSet.Arm.IsSupported && Dp.IsSupported)
-                RunWithMagnitudeFunc(&Functions.Vectorized256.CosineSimilarityIntegersNeon, expectedSim);
+            if (AdvInstructionSet.Arm.IsSupported && Dp.IsSupported && size >= Vector128<sbyte>.Count)
+                RunWithMagnitudeFunc(&Functions.Vectorized128.CosineSimilarityIntegersNeon, expectedSim);
 
             // AVX-512 path
-            if (Avx512BW.IsSupported && Avx512F.IsSupported)
+            if (Avx512BW.IsSupported && Avx512F.IsSupported && size >= Vector512<sbyte>.Count)
                 RunWithMagnitudeFunc(&Functions.Vectorized512.CosineSimilarityIntegersAvx512, expectedSim);
         }
 
@@ -479,16 +480,16 @@ namespace FastTests.Sparrow
             RunSimilarityTest(&Functions.Serial.CosineSimilarity);
 
             // AVX-512 path
-            if (Avx512BW.IsSupported && Avx512F.IsSupported)
+            if (Avx512BW.IsSupported && Avx512F.IsSupported && size >= Vector512<sbyte>.Count)
                 RunSimilarityTest(&Functions.Vectorized512.CosineSimilarityIntegersAvx512);
 
             // AVX-2 path
-            if (AdvInstructionSet.X86.IsSupportedAvx256)
+            if (AdvInstructionSet.X86.IsSupportedAvx256 && size >= Vector256<sbyte>.Count)
                 RunSimilarityTest(&Functions.Vectorized256.CosineSimilarityIntegersAvx2);
 
             // NEON path
-            if (AdvInstructionSet.Arm.IsSupported && Dp.IsSupported)
-                RunSimilarityTest(&Functions.Vectorized256.CosineSimilarityIntegersNeon);
+            if (AdvInstructionSet.Arm.IsSupported && Dp.IsSupported && size >= Vector128<sbyte>.Count)
+                RunSimilarityTest(&Functions.Vectorized128.CosineSimilarityIntegersNeon);
         }
 
         // A randomized test to compare your implementation with a reference implementation.

@@ -78,9 +78,9 @@ namespace Sparrow.Server.Tensors
                         MemoryMarshal.Cast<T, sbyte>(b), TResult.One);
                 }
 
-                if (a.Length >= Vector256<sbyte>.Count && AdvInstructionSet.Arm.IsSupported && Dp.IsSupported)
+                if (a.Length >= Vector128<sbyte>.Count && AdvInstructionSet.Arm.IsSupported && Dp.IsSupported)
                 {
-                    return Vectorized256.CosineSimilarityIntegersNeon(
+                    return Vectorized128.CosineSimilarityIntegersNeon(
                         MemoryMarshal.Cast<T, sbyte>(a), TResult.One,
                         MemoryMarshal.Cast<T, sbyte>(b), TResult.One);
                 }
@@ -127,9 +127,9 @@ namespace Sparrow.Server.Tensors
                         MemoryMarshal.Cast<T, sbyte>(b), bMagnitude);
                 }
 
-                if (a.Length >= Vector256<sbyte>.Count && AdvInstructionSet.Arm.IsSupported && Dp.IsSupported)
+                if (a.Length >= Vector128<sbyte>.Count && AdvInstructionSet.Arm.IsSupported && Dp.IsSupported)
                 {
-                    return Vectorized256.CosineSimilarityIntegersNeon(
+                    return Vectorized128.CosineSimilarityIntegersNeon(
                         MemoryMarshal.Cast<T, sbyte>(a), aMagnitude,
                         MemoryMarshal.Cast<T, sbyte>(b), bMagnitude);
                 }
@@ -161,6 +161,21 @@ namespace Sparrow.Server.Tensors
             where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
         {
             return TResult.One - CosineSimilarity(a, aMagnitude, b, bMagnitude);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+        internal static TResult CosineSimilarityNormalize<T, TResult>(T ab, T a2, T b2)
+            where T : unmanaged, IRootFunctions<T>, INumber<T>
+            where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
+        {
+            if (Sse2.IsSupported)
+                return Vectorized256.CosineSimilarityNormalizeSse<T, TResult>(ab, a2, b2);
+
+            if (AdvInstructionSet.Arm.IsSupported)
+                return Vectorized128.CosineSimilarityNormalizeNeon<T, TResult>(ab, a2, b2);
+
+            // Fallback to the serial implementation if SIMD is not supported
+            return Serial.CosineSimilarityNormalize<T, TResult>(ab, a2, b2);
         }
 
         public static class Serial
@@ -822,7 +837,94 @@ namespace Sparrow.Server.Tensors
                 TResult fa2 = TResult.CreateTruncating(a2) * aMagnitude * aMagnitude;
                 TResult fb2 = TResult.CreateTruncating(b2) * bMagnitude * bMagnitude;
 
-                return Vectorized256.CosineSimilarityNormalize<TResult, TResult>(fab, fa2, fb2);
+                return CosineSimilarityNormalize<TResult, TResult>(fab, fa2, fb2);
+            }
+        }
+
+        public static class Vectorized128
+        {
+            [MethodImpl(MethodImplOptions.AggressiveInlining)]
+            internal static TResult CosineSimilarityIntegersNeon<TResult>(ReadOnlySpan<sbyte> a, TResult aMagnitude, ReadOnlySpan<sbyte> b, TResult bMagnitude)
+                where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
+            {
+                if (Dp.IsSupported == false)
+                    throw new NotSupportedException("This method should not be called on the current architecture");
+
+                Vector128<int> abVec = Vector128<int>.Zero;
+                Vector128<int> a2Vec = Vector128<int>.Zero;
+                Vector128<int> b2Vec = Vector128<int>.Zero;
+
+                int i = a.Length;
+
+                ref sbyte aRef = ref MemoryMarshal.GetReference(a);
+                ref sbyte bRef = ref MemoryMarshal.GetReference(b);
+                
+                Loop:
+                
+                // Load 16 signed-bytes from each span
+                Vector128<sbyte> aVec = Vector128.LoadUnsafe(ref aRef);
+                Vector128<sbyte> bVec = Vector128.LoadUnsafe(ref bRef);
+
+                // 4 × dot-product accumulating per 4 lanes
+                abVec = Dp.DotProduct(abVec, aVec, bVec);
+                a2Vec = Dp.DotProduct(a2Vec, aVec, aVec);
+                b2Vec = Dp.DotProduct(b2Vec, bVec, bVec);
+
+                i -= Vector128<sbyte>.Count;
+                aRef = ref Unsafe.Add(ref aRef, Vector128<sbyte>.Count);
+                bRef = ref Unsafe.Add(ref bRef, Vector128<sbyte>.Count);
+                if (i >= Vector128<sbyte>.Count)
+                    goto Loop;
+
+                int ab = Vector128.Sum(abVec);
+                int a2 = Vector128.Sum(a2Vec);
+                int b2 = Vector128.Sum(b2Vec);
+                while (i > 0)
+                {
+                    ab += aRef * bRef;
+                    a2 += aRef * aRef;
+                    b2 += bRef * bRef;
+
+                    i--;
+                    aRef = ref Unsafe.Add(ref aRef, 1);
+                    bRef = ref Unsafe.Add(ref bRef, 1);
+                }
+
+                // Special cases
+                if (a2 == 0 && b2 == 0)
+                    return TResult.CreateTruncating(double.NaN); // Both zero vectors: nan
+                if (ab == 0)
+                    return TResult.Zero; // Orthogonal or one zero: distance = 1, similarity 0
+
+                // Apply magnitudes and normalise
+                TResult fab = TResult.CreateTruncating(ab) * aMagnitude * bMagnitude;
+                TResult fa2 = TResult.CreateTruncating(a2) * aMagnitude * aMagnitude;
+                TResult fb2 = TResult.CreateTruncating(b2) * bMagnitude * bMagnitude;
+                return CosineSimilarityNormalize<TResult, TResult>(fab, fa2, fb2);
+            }
+            
+            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
+            internal static TResult CosineSimilarityNormalizeNeon<T, TResult>(T ab, T a2, T b2)
+                where T : unmanaged, IRootFunctions<T>, INumber<T>
+                where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
+            {
+                // Create vector with the squared magnitudes
+                var squares = Vector64.Create(float.CreateTruncating(b2), float.CreateTruncating(a2));
+
+                // Compute reciprocal square root approximation
+                Vector64<float> rsqrts = AdvSimd.ReciprocalSquareRootEstimate(squares);
+
+                // Perform two rounds of Newton-Raphson refinement for better accuracy
+                // Formula: rsqrt_new = rsqrt * (1.5 - 0.5 * x * rsqrt^2)
+                // Which can be rewritten as: rsqrt * vrsqrts(x * rsqrt, rsqrt)
+                rsqrts = AdvSimd.Multiply(rsqrts, AdvSimd.ReciprocalSquareRootStep(AdvSimd.Multiply(squares, rsqrts), rsqrts));
+                rsqrts = AdvSimd.Multiply(rsqrts, AdvSimd.ReciprocalSquareRootStep(AdvSimd.Multiply(squares, rsqrts), rsqrts));
+
+                // Extract the refined reciprocal square roots
+                float a2Reciprocal = rsqrts.GetElement(0);
+                float b2Reciprocal = rsqrts.GetElement(1);
+
+                return TResult.CreateTruncating(float.CreateTruncating(ab) * a2Reciprocal * b2Reciprocal);
             }
         }
 
@@ -867,46 +969,6 @@ namespace Sparrow.Server.Tensors
 
                 return TResult.CreateTruncating(double.CreateTruncating(ab) * a2Reciprocal * b2Reciprocal);
             }
-
-            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-            internal static TResult CosineSimilarityNormalizeNeon<T, TResult>(T ab, T a2, T b2)
-                where T : unmanaged, IRootFunctions<T>, INumber<T>
-                where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
-            {
-                // Create vector with the squared magnitudes
-                var squares = Vector64.Create(float.CreateTruncating(b2), float.CreateTruncating(a2));
-
-                // Compute reciprocal square root approximation
-                Vector64<float> rsqrts = AdvSimd.ReciprocalSquareRootEstimate(squares);
-
-                // Perform two rounds of Newton-Raphson refinement for better accuracy
-                // Formula: rsqrt_new = rsqrt * (1.5 - 0.5 * x * rsqrt^2)
-                // Which can be rewritten as: rsqrt * vrsqrts(x * rsqrt, rsqrt)
-                rsqrts = AdvSimd.Multiply(rsqrts, AdvSimd.ReciprocalSquareRootStep(AdvSimd.Multiply(squares, rsqrts), rsqrts));
-                rsqrts = AdvSimd.Multiply(rsqrts, AdvSimd.ReciprocalSquareRootStep(AdvSimd.Multiply(squares, rsqrts), rsqrts));
-
-                // Extract the refined reciprocal square roots
-                float a2Reciprocal = rsqrts.GetElement(0);
-                float b2Reciprocal = rsqrts.GetElement(1);
-
-                return TResult.CreateTruncating(float.CreateTruncating(ab) * a2Reciprocal * b2Reciprocal);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
-            internal static TResult CosineSimilarityNormalize<T, TResult>(T ab, T a2, T b2)
-                where T : unmanaged, IRootFunctions<T>, INumber<T>
-                where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
-            {
-                if (Sse2.IsSupported)
-                    return CosineSimilarityNormalizeSse<T, TResult>(ab, a2, b2);
-
-                if (AdvInstructionSet.Arm.IsSupported)
-                    return CosineSimilarityNormalizeNeon<T, TResult>(ab, a2, b2);
-
-                // Fallback to the serial implementation if SIMD is not supported
-                return Serial.CosineSimilarityNormalize<T, TResult>(ab, a2, b2);
-            }
-
 
             [MethodImpl(MethodImplOptions.AggressiveOptimization | MethodImplOptions.AggressiveInlining)]
             public static TResult CosineSimilarity<T, TResult>(ReadOnlySpan<T> a, ReadOnlySpan<T> b)
@@ -1018,66 +1080,6 @@ namespace Sparrow.Server.Tensors
                 int b2 = Vector256.Sum(Avx2.Add(b2Lo, b2Hi));
 
                 // Tail loop for remaining elements
-                while (i > 0)
-                {
-                    ab += aRef * bRef;
-                    a2 += aRef * aRef;
-                    b2 += bRef * bRef;
-
-                    i--;
-                    aRef = ref Unsafe.Add(ref aRef, 1);
-                    bRef = ref Unsafe.Add(ref bRef, 1);
-                }
-
-                // Special cases
-                if (a2 == 0 && b2 == 0)
-                    return TResult.CreateTruncating(double.NaN); // Both zero vectors: nan
-                if (ab == 0)
-                    return TResult.Zero; // Orthogonal or one zero: distance = 1, similarity 0
-
-                // Apply magnitudes and normalise
-                TResult fab = TResult.CreateTruncating(ab) * aMagnitude * bMagnitude;
-                TResult fa2 = TResult.CreateTruncating(a2) * aMagnitude * aMagnitude;
-                TResult fb2 = TResult.CreateTruncating(b2) * bMagnitude * bMagnitude;
-                return CosineSimilarityNormalize<TResult, TResult>(fab, fa2, fb2);
-            }
-
-            [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            internal static TResult CosineSimilarityIntegersNeon<TResult>(ReadOnlySpan<sbyte> a, TResult aMagnitude, ReadOnlySpan<sbyte> b, TResult bMagnitude)
-                where TResult : unmanaged, IFloatingPoint<TResult>, IRootFunctions<TResult>, INumber<TResult>
-            {
-                if (Dp.IsSupported == false)
-                    throw new NotSupportedException("This method should not be called on the current architecture");
-
-                Vector128<int> abVec = Vector128<int>.Zero;
-                Vector128<int> a2Vec = Vector128<int>.Zero;
-                Vector128<int> b2Vec = Vector128<int>.Zero;
-
-                int i = a.Length;
-
-                ref sbyte aRef = ref MemoryMarshal.GetReference(a);
-                ref sbyte bRef = ref MemoryMarshal.GetReference(b);
-                
-                Loop:
-                
-                // Load 16 signed-bytes from each span
-                Vector128<sbyte> aVec = Vector128.LoadUnsafe(ref aRef);
-                Vector128<sbyte> bVec = Vector128.LoadUnsafe(ref bRef);
-
-                // 4 × dot-product accumulating per 4 lanes
-                abVec = Dp.DotProduct(abVec, aVec, bVec);
-                a2Vec = Dp.DotProduct(a2Vec, aVec, aVec);
-                b2Vec = Dp.DotProduct(b2Vec, bVec, bVec);
-
-                i -= Vector128<sbyte>.Count;
-                aRef = ref Unsafe.Add(ref aRef, Vector128<sbyte>.Count);
-                bRef = ref Unsafe.Add(ref bRef, Vector128<sbyte>.Count);
-                if (i >= Vector128<sbyte>.Count)
-                    goto Loop;
-
-                int ab = Vector128.Sum(abVec);
-                int a2 = Vector128.Sum(a2Vec);
-                int b2 = Vector128.Sum(b2Vec);
                 while (i > 0)
                 {
                     ab += aRef * bRef;
