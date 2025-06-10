@@ -232,7 +232,7 @@ public class AiRagHandler : DatabaseRequestHandler
         DynamicJsonArray tools = [];
         foreach (var q in cfg.Queries ?? [])
         {
-            string paramsSchema = ChatCompletionClient.GenerateJsonObjectFromSampleObject(q.ParametersSchema);
+            string paramsSchema = ChatCompletionClient.GetSchemaFor(q.ParametersSchema);
             tools.Add(new DynamicJsonValue
             {
                 ["type"] = "function",
@@ -247,7 +247,7 @@ public class AiRagHandler : DatabaseRequestHandler
         }
         foreach (var a in cfg.Actions ?? [])
         {
-            string paramsSchema = ChatCompletionClient.GenerateJsonObjectFromSampleObject(a.ParametersSchema);
+            string paramsSchema = ChatCompletionClient.GetSchemaFor(a.ParametersSchema);
             tools.Add(new DynamicJsonValue
             {
                 ["type"] = "function",

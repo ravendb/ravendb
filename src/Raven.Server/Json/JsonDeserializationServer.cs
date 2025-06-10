@@ -83,6 +83,7 @@ using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.Stud
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
+using Raven.Server.Documents.AI;
 
 namespace Raven.Server.Json
 {
@@ -348,6 +349,8 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, HuggingFaceSettings> HuggingFaceSettings = GenerateJsonDeserializationRoutine<HuggingFaceSettings>();
 
         internal static readonly Func<BlittableJsonReaderObject, MistralAiSettings> MistralAiSettings = GenerateJsonDeserializationRoutine<MistralAiSettings>();
+
+        public static readonly Func<BlittableJsonReaderObject, AiUsage> AiUsage = GenerateJsonDeserializationRoutine<AiUsage>();
 
         public sealed class Parameters
         {

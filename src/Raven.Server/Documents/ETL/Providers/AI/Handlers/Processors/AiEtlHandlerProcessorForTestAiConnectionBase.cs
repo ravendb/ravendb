@@ -95,7 +95,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                     if (aiConnectionString.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model))
                     {
                         var type = aiConnectionString.GetActiveProviderInstance().GetType();
-                        using (var client = new ChatCompletionClient(ServerStore.ContextPool, uri, apiKey, model, structuredOutputSchema: null, type, conventions: ChatCompletionClient.Default))
+                        using (var client = new ChatCompletionClient(ServerStore.ContextPool, uri, apiKey, model, structuredOutputSchema: null, type, conventions: ChatCompletionClient.ConventionsToUse))
                         {
                             await client.CompleteAsync("foo", "bar", HttpContext.RequestAborted);
                         }

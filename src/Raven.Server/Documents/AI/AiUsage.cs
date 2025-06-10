@@ -1,8 +1,7 @@
-﻿using Raven.Client.Documents.Indexes;
-using Sparrow.Json;
+﻿using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Documents.Operations.AI;
+namespace Raven.Server.Documents.AI;
 public class AiUsage : IDynamicJsonValueConvertible
 {
     public int PromptTokens { get; set; }

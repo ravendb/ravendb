@@ -30,7 +30,7 @@ using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Raven.Server.Documents.AI;
 
-public class ChatCompletionClient : IChatCompletionClient, IChatCompletionClientForTesting
+internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClientForTesting
 {
     private readonly string _model;
     private readonly HttpClientCacheKey _httpClientCacheKey;
@@ -38,7 +38,7 @@ public class ChatCompletionClient : IChatCompletionClient, IChatCompletionClient
     private readonly string _structuredOutputSchema;
     private readonly IMemoryContextPool _contextPool;
 
-    public static DocumentConventions Default = new DocumentConventions
+    public static DocumentConventions ConventionsToUse = new DocumentConventions
     {
         SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
         MaxContextSizeToKeep = DocumentConventions.DefaultForServer.MaxContextSizeToKeep,
@@ -50,7 +50,7 @@ public class ChatCompletionClient : IChatCompletionClient, IChatCompletionClient
 
     static ChatCompletionClient()
     {
-        Default.Freeze();
+        ConventionsToUse.Freeze();
     }
 
     public static ChatCompletionClient CreateChatCompletionClient(IMemoryContextPool contextPool, GenAiConfiguration configuration)
@@ -72,7 +72,7 @@ public class ChatCompletionClient : IChatCompletionClient, IChatCompletionClient
 
         var providerType = connection.GetActiveProviderInstance().GetType();
 
-        return new ChatCompletionClient(contextPool, uri, apiKey, model, schema, providerType, Default);
+        return new ChatCompletionClient(contextPool, uri, apiKey, model, schema, providerType, ConventionsToUse);
     }
 
     public ChatCompletionClient(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string structuredOutputSchema, Type providerType, DocumentConventions conventions)
@@ -238,10 +238,15 @@ public class ChatCompletionClient : IChatCompletionClient, IChatCompletionClient
             using var bodyJson = ctx.ReadObject(body, "ai-rag/request");
             await using var writer = new AsyncBlittableJsonTextWriter(ctx, stream);
             writer.WriteObject(bodyJson);
-        }, Default);
+        }, ConventionsToUse);
 
-        content.Headers.Add("Content-Type", "application/json");
-        return new HttpRequestMessage { Method = HttpMethod.Post, Content = content, RequestUri = new Uri("/v1/chat/completions", UriKind.Relative) };
+        content.Headers.Add(Constants.RequestFields.HeaderContentType, Constants.RequestFields.MediaTypeApplicationJson);
+        return new HttpRequestMessage
+        {
+            Method = HttpMethod.Post, 
+            Content = content, 
+            RequestUri = new Uri(Constants.RequestFields.DefaultRelativeUri, UriKind.Relative)
+        };
     }
 
     private HttpRequestMessage GetRequest(JsonOperationContext ctx, string prompt, string context)
@@ -293,11 +298,16 @@ public class ChatCompletionClient : IChatCompletionClient, IChatCompletionClient
 
                 writer.WriteEndObject();
             }
-        }, Default);
+        }, ConventionsToUse);
 
-        content.Headers.Add("Content-Type", "application/json");
+        content.Headers.Add(Constants.RequestFields.HeaderContentType, Constants.RequestFields.MediaTypeApplicationJson);
 
-        return new HttpRequestMessage { Method = HttpMethod.Post, Content = content, RequestUri = new Uri(Constants.RequestFields.DefaultRelativeUri, UriKind.Relative) };
+        return new HttpRequestMessage
+        {
+            Method = HttpMethod.Post, 
+            Content = content, 
+            RequestUri = new Uri(Constants.RequestFields.DefaultRelativeUri, UriKind.Relative)
+        };
 
         BlittableJsonReaderObject GetStructuredOutputSchemaAsBlittable()
         {
@@ -570,83 +580,6 @@ public class ChatCompletionClient : IChatCompletionClient, IChatCompletionClient
     {
         var hash = AttachmentsStorageHelper.CalculateHash(MemoryMarshal.AsBytes(schemaOrSampleObject.AsSpan()));
         return Base64UrlEncoder.Encode(Encoding.UTF8.GetBytes(hash));
-    }
-
-    public static string GenerateJsonObjectFromSampleObject(string s)
-    {
-        var doc = JsonDocument.Parse(s);
-        var element = GenerateJsonObjectFromSampleObject(doc.RootElement);
-        return JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = true });
-    }
-
-    static JsonObject GenerateJsonObjectFromSampleObject(JsonElement element)
-    {
-        var jsonObj = new JsonObject();
-
-        switch (element.ValueKind)
-        {
-            case JsonValueKind.Object:
-                jsonObj["type"] = "object";
-                var props = new JsonObject();
-                var required = new JsonArray();
-                foreach (JsonProperty prop in element.EnumerateObject())
-                {
-                    props[prop.Name] = GenerateJsonObjectFromSampleObject(prop.Value);
-                    required.Add(prop.Name);
-                }
-
-                jsonObj["properties"] = props;
-                jsonObj["required"] = required;
-                jsonObj["additionalProperties"] = false;
-
-                break;
-
-            case JsonValueKind.Array:
-                jsonObj["type"] = "array";
-                var content = element.EnumerateArray().FirstOrDefault();
-                if (content.ValueKind is not JsonValueKind.Undefined)
-                {
-                    jsonObj["items"] = GenerateJsonObjectFromSampleObject(content);
-                }
-                else
-                {
-                    jsonObj["items"] = new JsonObject { ["type"] = "null", };
-                }
-
-                break;
-
-            case JsonValueKind.String:
-                jsonObj["type"] = "string";
-                jsonObj["description"] = element.GetString();
-                break;
-
-            case JsonValueKind.Number:
-                if (element.TryGetInt32(out _))
-                {
-                    jsonObj["type"] = "integer";
-                }
-                else
-                {
-                    jsonObj["type"] = "number";
-                }
-
-                break;
-
-            case JsonValueKind.True:
-            case JsonValueKind.False:
-                jsonObj["type"] = "boolean";
-                break;
-
-            case JsonValueKind.Null:
-                jsonObj["type"] = "null";
-                break;
-
-            default:
-                jsonObj["type"] = "none";
-                break;
-        }
-
-        return jsonObj;
     }
 
     private IChatCompletionClientForTesting.TestingStuff _forTestingPurposes;
