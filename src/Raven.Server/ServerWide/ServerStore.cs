@@ -2709,16 +2709,28 @@ namespace Raven.Server.ServerWide
 
                     case ConnectionStringType.Ai:
 
-                        var aiEtls = rawRecord.EmbeddingsGenerations;
+                        // Don't delete the connection string if used by tasks types: Embeddings, GenAi
 
-                        // Don't delete the connection string if used by tasks types: AI Integration
-                        if (aiEtls != null)
+                        var embeddingsGenerationTasks = rawRecord.EmbeddingsGenerations;
+                        if (embeddingsGenerationTasks != null)
                         {
-                            foreach (var aiEtlTask in aiEtls)
+                            foreach (var embeddingsTask in embeddingsGenerationTasks)
                             {
-                                if (aiEtlTask.ConnectionStringName == connectionStringName)
+                                if (embeddingsTask.ConnectionStringName == connectionStringName)
                                 {
-                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {aiEtlTask.Name}");
+                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {embeddingsTask.Name}");
+                                }
+                            }
+                        }
+
+                        var genAiTasks = rawRecord.GenAis;
+                        if (genAiTasks != null)
+                        {
+                            foreach (var genAiTask in genAiTasks)
+                            {
+                                if (genAiTask.ConnectionStringName == connectionStringName)
+                                {
+                                    throw new InvalidOperationException($"Can't delete connection string: {connectionStringName}. It is used by task: {genAiTask.Name}");
                                 }
                             }
                         }
