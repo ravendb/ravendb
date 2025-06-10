@@ -17,6 +17,7 @@ namespace Raven.Client.Documents.Operations.ETL
         MentorNode = 1 << 9,
         ConfigurationDisabled = 1 << 10,
         TransformationDocumentIdPostfix = 1 << 11,
-        ConnectionString = 1 << 12
+        ConnectionString = 1 << 12,
+        Other = 1 << 13
     }
 }

@@ -109,15 +109,19 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         return json;
     }
 
-    internal bool Equals(GenAiConfiguration other)
+    internal override EtlConfigurationCompareDifferences Compare(EtlConfiguration<AiConnectionString> config, Dictionary<string, AiConnectionString> connectionStrings, List<(string TransformationName, EtlConfigurationCompareDifferences Difference)> transformationDiffs = null)
     {
-        if (other == null)
-            return false;
+        var differences = base.Compare(config, connectionStrings, transformationDiffs);
+        if (config is not GenAiConfiguration other)
+            return differences;
 
-        return Prompt == other.Prompt &&
-               UpdateScript == other.UpdateScript &&
-               JsonSchema == other.JsonSchema &&
-               SampleObject == other.SampleObject &&
-               MaxConcurrency == other.MaxConcurrency;
+        if (Prompt != other.Prompt ||
+            UpdateScript != other.UpdateScript ||
+            JsonSchema != other.JsonSchema ||
+            SampleObject != other.SampleObject ||
+            MaxConcurrency != other.MaxConcurrency)
+            differences |= EtlConfigurationCompareDifferences.Other;
+
+        return differences;
     }
 }

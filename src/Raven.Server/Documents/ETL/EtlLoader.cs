@@ -863,9 +863,6 @@ namespace Raven.Server.Documents.ETL
 
                         foreach (var config in myGenAiEtl)
                         {
-                            if (genAiTask.Configuration.Equals(config) == false)
-                                continue;
-
                             var diff = genAiTask.Configuration.Compare(config, record.AiConnectionStrings);
 
                             if (diff == EtlConfigurationCompareDifferences.None)
