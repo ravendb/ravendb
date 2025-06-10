@@ -77,9 +77,15 @@ export default function EditGenAiTaskContextFields() {
 }
 
 function ScriptSyntaxHelp() {
-    const code = `for(const comment of this.Comments)
+    const code = `for(const comment of this.Comments)  // 'this' is the source document
 {
-    ai.genContext({Text: comment.Text, Author: comment.Author, Id: comment.Id});
+    // Call 'ai.genContext' to generate a context object for each comment.
+    // The custom object passed to this method defines the structure of the context object.
+    ai.genContext({
+        Text: \`Blog post topic: \${this.Topic}.  Comment: \${comment.Text}\`, 
+        AuthorName: comment.Author,
+        CommentId: comment.Id
+    });
 }`;
 
     return (

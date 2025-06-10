@@ -8,7 +8,7 @@ import EditConnectionStrings from "components/pages/database/settings/connection
 import { useAppDispatch, useAppSelector } from "components/store";
 import { sortBy } from "lodash";
 import { useAsync } from "react-async-hook";
-import { editGenAiTaskActions, editGenAiTaskSelectors } from "../../store/editGenAiTaskSlice";
+import { editGenAiTaskActions } from "../../store/editGenAiTaskSlice";
 import EditGenAiTaskNodeField from "./EditGenAiTaskNodeField";
 import InputGroup from "react-bootstrap/InputGroup";
 import { useServices } from "components/hooks/useServices";
@@ -25,7 +25,6 @@ type OngoingTaskState = Raven.Client.Documents.Operations.OngoingTasks.OngoingTa
 export default function EditGenAiTaskBasicFields() {
     const dispatch = useAppDispatch();
 
-    const isNewTask = useAppSelector(editGenAiTaskSelectors.isNewTask);
     const isEncrypted = useAppSelector(databaseSelectors.activeDatabase)?.isEncrypted;
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
@@ -161,13 +160,6 @@ export default function EditGenAiTaskBasicFields() {
                     )}
                 </InputGroup>
             </FormGroup>
-            {!isNewTask && (
-                <FormGroup>
-                    <FormSwitch control={control} name="isResetScript">
-                        Regenerate all documents
-                    </FormSwitch>
-                </FormGroup>
-            )}
         </>
     );
 }

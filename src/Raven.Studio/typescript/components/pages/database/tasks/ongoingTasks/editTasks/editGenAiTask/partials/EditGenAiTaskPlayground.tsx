@@ -373,6 +373,18 @@ export default function EditGenAiTaskPlayground() {
                                 <FormGroup className="hstack justify-content-end" marginClass="mb-2">
                                     <FormSwitch control={control} name="isForceSendingCachedObjects">
                                         Force reprocess
+                                        <PopoverWithHoverWrapper
+                                            message={
+                                                <>
+                                                    When enabled, clicking &quot;Test model&quot; will send a test
+                                                    request to the model even if the sample document and context objects
+                                                    (from the playground), and the prompt and JSON schema (from the task
+                                                    definition) haven’t changed.
+                                                </>
+                                            }
+                                        >
+                                            <Icon icon="info" color="info" margin="ms-1" />
+                                        </PopoverWithHoverWrapper>
                                     </FormSwitch>
                                 </FormGroup>
                                 {isPlaygroundEditMode && (
