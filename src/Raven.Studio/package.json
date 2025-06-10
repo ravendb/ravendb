@@ -109,5 +109,10 @@
         "toastr": "^2.1.4",
         "util": "^0.12.4",
         "webcola": "^3.4.0"
+    },
+    "overrides": {
+        "eonasdan-bootstrap-datetimepicker": {
+            "moment-timezone": "^0.6.0"
+        }
     }
 }
