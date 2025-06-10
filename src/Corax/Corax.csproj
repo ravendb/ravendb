@@ -3,7 +3,7 @@
     <Description>Corax - Low level indexing engine</Description>
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.16</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.17</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Corax</AssemblyName>
     <PackageId>Corax</PackageId>
