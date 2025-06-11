@@ -15,6 +15,7 @@ const indexName = pathParams[0];
 const testIdSelectors = {
     termAccordion: "term-accordion",
     termDynamicField: "term-dynamic-field",
+    termVectorField: "term-vector-field",
     termPill: "term-pill",
     termLoadMoreButton: "term-load-more-btn",
 };
@@ -66,6 +67,15 @@ describe("IndexTerms", () => {
         const dynamicTermFields = await screen.findAllByTestId(testIdSelectors.termDynamicField);
 
         const termDynamicLength = IndexesStubs.getIndexTermFields().filter(x => x.FieldType === "Dynamic").length;
+        expect(dynamicTermFields).toHaveLength(termDynamicLength);
+    });
+
+    it("can render accordion with 'vector field' badge", async () => {
+        const { screen } = rtlRender(<IndexTermsStory pathParams={pathParams} />);
+
+        const dynamicTermFields = await screen.findAllByTestId(testIdSelectors.termVectorField);
+
+        const termDynamicLength = IndexesStubs.getIndexTermFields().filter(x => x.ValueType === "Vector").length;
         expect(dynamicTermFields).toHaveLength(termDynamicLength);
     });
 

@@ -348,6 +348,11 @@ export class IndexesStubs {
                 "FieldType": "Static",
                 "ValueType": "Term",
             },
+            {
+                "Name": "Name__PQ",
+                "FieldType": "Dynamic",
+                "ValueType": "Term",
+            },
         ];
     }
 

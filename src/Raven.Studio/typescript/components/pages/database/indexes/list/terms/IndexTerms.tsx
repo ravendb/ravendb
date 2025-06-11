@@ -80,7 +80,7 @@ function IndexTermsAccordions({ field, indexName, loadMore }: IndexTermsAccordio
                         <span className="m-0">{field.name}</span>
                         <HStack className="gap-1">
                             {field.type === "Dynamic" && (
-                                <Badge data-testid="term-dynamic-field" bg="light" className="rounded-pill">
+                                <Badge data-testid="term-dynamic-field" bg="light" pill>
                                     Dynamic field
                                 </Badge>
                             )}
