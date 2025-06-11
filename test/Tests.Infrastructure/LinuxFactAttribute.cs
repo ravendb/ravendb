@@ -1,11 +1,11 @@
 using System.Runtime.InteropServices;
-using Xunit;
+using Xunit.Sdk;
 
-namespace FastTests
+namespace Tests.Infrastructure
 {
-    public class LinuxFactAttribute : FactAttribute
+    public class LinuxFactAttribute : RavenFactAttribute
     {
-        public LinuxFactAttribute()
+        public LinuxFactAttribute(RavenTestCategory category = RavenTestCategory.Linux) : base(category)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) == false)
             {

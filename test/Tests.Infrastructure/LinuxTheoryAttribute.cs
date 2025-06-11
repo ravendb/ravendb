@@ -1,11 +1,11 @@
-﻿using System.Runtime.InteropServices;
-using Xunit;
+﻿﻿using System.Runtime.InteropServices;
+using Xunit.Sdk;
 
 namespace Tests.Infrastructure
 {
-    public class LinuxTheoryAttribute : TheoryAttribute
+    public class LinuxTheoryAttribute : RavenTheoryAttribute
     {
-        public LinuxTheoryAttribute()
+        public LinuxTheoryAttribute(RavenTestCategory category = RavenTestCategory.Linux) : base(category)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) == false)
             {

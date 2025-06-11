@@ -1,8 +1,9 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Sparrow.Server.Platform.Posix;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
