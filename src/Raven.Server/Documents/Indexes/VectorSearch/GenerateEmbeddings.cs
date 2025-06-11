@@ -11,6 +11,7 @@ using FastBertTokenizer;
 using Microsoft.Extensions.AI;
 using Microsoft.ML.OnnxRuntime;
 using Microsoft.SemanticKernel.Connectors.Onnx;
+using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Queries.Vector;
 using Raven.Server.Config;
@@ -118,6 +119,7 @@ public static class GenerateEmbeddings
 
         return new VectorValue(memoryScope, memory, bytesUsed);
     }
+    
     public static VectorValue FromArray(ByteStringContext allocator, IDisposable memoryScope, Memory<byte> memory, in VectorOptions options, int usedBytes)
     {
         var embeddingSourceType = options.SourceEmbeddingType;
@@ -181,7 +183,7 @@ public static class GenerateEmbeddings
         return FromArray(allocator, memScope, mem, options, bytesWritten);
     }
 
-    internal static VectorValue Quantize(ByteStringContext allocator, in VectorEmbeddingType destinationFormat,
+    private static VectorValue Quantize(ByteStringContext allocator, in VectorEmbeddingType destinationFormat,
         IDisposable memoryScope,
         Memory<byte> memory, int usedBytes)
     {
@@ -199,7 +201,7 @@ public static class GenerateEmbeddings
                     if (dest.Length < source.Length + sizeof(float))
                     {
                         var requestedSize = dest.Length + sizeof(float);
-                        var mem = allocator.Allocate(requestedSize, out System.Memory<byte> buffer);
+                        var mem = allocator.Allocate(requestedSize, out Memory<byte> buffer);
                         VectorQuantizer.TryToInt8(source, MemoryMarshal.Cast<byte, sbyte>(buffer.Span), out usedBytes);
 
                         embeddings = new VectorValue(mem, buffer);
@@ -241,7 +243,7 @@ public static class GenerateEmbeddings
 
             var embedding = embeddings[0];
 
-            var memoryScope = allocator.Allocate(dimensions, out System.Memory<byte> memory);
+            var memoryScope = allocator.Allocate(dimensions, out Memory<byte> memory);
             
             MemoryMarshal.AsBytes(embedding.Vector.Span).CopyTo(memory.Span);
 
@@ -253,7 +255,7 @@ public static class GenerateEmbeddings
         }
     }
 
-    internal static IEmbeddingGenerator<string, Embedding<float>> CreateTextEmbeddingGenerationService(BertOnnxOptions options = null, int? dimensions = null)
+    private static IEmbeddingGenerator<string, Embedding<float>> CreateTextEmbeddingGenerationService(BertOnnxOptions options = null, int? dimensions = null)
     {
         using (var onnxModelStream = File.OpenRead(Path.Combine("LocalEmbeddings", "bge-micro-v2", "model.onnx")))
         using (var vocabStream = File.OpenRead(Path.Combine("LocalEmbeddings", "bge-micro-v2", "vocab.txt")))
@@ -277,7 +279,10 @@ public static class GenerateEmbeddings
                 tokenizer.LoadVocabulary(vocabReader, convertInputToLowercase: !options.CaseSensitive, options.UnknownToken, options.ClsToken, options.SepToken, options.PadToken, options.UnicodeNormalization);
             }
 
-            return (IEmbeddingGenerator<string, Embedding<float>>)BertOnnxTextEmbeddingGenerationServiceCtor.Invoke([onnxSession, tokenizer, dimensions, options]);
+#pragma warning disable CS0618 // Type or member is obsolete
+            var service = (IEmbeddingGenerationService<string, float>)BertOnnxTextEmbeddingGenerationServiceCtor.Invoke([onnxSession, tokenizer, dimensions, options]);
+#pragma warning restore CS0618 // Type or member is obsolete
+            return service.AsEmbeddingGenerator();
         }
     }
 }
