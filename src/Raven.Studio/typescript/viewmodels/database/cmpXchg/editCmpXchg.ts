@@ -9,7 +9,7 @@ import documentHelpers = require("common/helpers/database/documentHelpers");
 import getCompareExchangeItemCommand = require("commands/database/cmpXchg/getCompareExchangeItemCommand");
 import saveCompareExchangeItemCommand = require("commands/database/cmpXchg/saveCompareExchangeItemCommand");
 import deleteCompareExchangeConfirm = require("viewmodels/database/documents/deleteCompareExchangeConfirm");
-import deleteCompareExchangeProgress = require("viewmodels/database/documents/deleteCompareExchangeProgress");
+import deleteCompareExchangeProgress = require("viewmodels/database/documents/deleteCompareExchangeList");
 import editorWarningsConfirm = require("viewmodels/database/documents/editorWarningsConfirm");
 import eventsCollector = require("common/eventsCollector");
 import popoverUtils = require("common/popoverUtils");
@@ -473,12 +473,12 @@ class editCmpXchg extends shardViewModelBase {
                     const deleteProgress = new deleteCompareExchangeProgress([{ Key: this.key(), Index: this.loadedIndex() }], this.db);
                  
                     deleteProgress.start()
-                        .done(() => {
+                        .catch(() => this.displayExternalChange(true))
+                        .then(() => {
                             this.dirtyFlag().reset();
                             router.navigate(appUrl.forCmpXchg(this.db));
                         })
-                        .fail(() => this.displayExternalChange(true))
-                        .always(() => this.spinners.delete(false));
+                        .finally(() => this.spinners.delete(false));
                 }
             });
     }

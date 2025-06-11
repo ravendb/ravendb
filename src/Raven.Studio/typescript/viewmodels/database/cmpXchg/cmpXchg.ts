@@ -4,7 +4,7 @@ import appUrl = require("common/appUrl");
 import viewModelBase = require("viewmodels/viewModelBase");
 import eventsCollector = require("common/eventsCollector");
 import deleteCompareExchangeConfirm = require("viewmodels/database/documents/deleteCompareExchangeConfirm");
-import deleteCompareExchangeProgress = require("viewmodels/database/documents/deleteCompareExchangeProgress");
+import deleteCompareExchangeList = require("viewmodels/database/documents/deleteCompareExchangeList");
 import virtualGridController = require("widgets/virtualGrid/virtualGridController");
 import getCompareExchangeItemsCommand = require("commands/database/cmpXchg/getCompareExchangeItemsCommand");
 import hyperlinkColumn = require("widgets/virtualGrid/columns/hyperlinkColumn");
@@ -160,10 +160,7 @@ class cmpXchg extends shardViewModelBase {
                         new getCompareExchangeItemsCommand(this.db, this.filter(), 0, 2147483647)
                             .execute()
                             .done(allValues => {
-                                const deleteProgress = new deleteCompareExchangeProgress(allValues.items, this.db);
-
-                                deleteProgress.start()
-                                    .always(() => this.onDeleteCompleted());
+                                new deleteCompareExchangeList(allValues.items, this.db).start().finally(() => this.onDeleteCompleted());
                             })
                     }
                 })
@@ -177,10 +174,7 @@ class cmpXchg extends shardViewModelBase {
                     if (deleting) {
                         this.spinners.delete(true);
 
-                        const deleteProgress = new deleteCompareExchangeProgress(selection, this.db);
-
-                        deleteProgress.start()
-                            .always(() => this.onDeleteCompleted());
+                        new deleteCompareExchangeList(selection, this.db).start().finally(() => this.onDeleteCompleted());
                     }
                 });
         }
