@@ -1,6 +1,10 @@
 import { TermsForField } from "components/pages/database/indexes/list/terms/useIndexTerms";
 
-const createTermsForField = (fieldName: string, type: IndexEntriesFieldType, termType: IndexEntriesValueType): TermsForField => {
+const createTermsForField = (
+    fieldName: string,
+    type: IndexEntriesFieldType,
+    termType: IndexEntriesValueType
+): TermsForField => {
     return {
         fromValue: null,
         name: fieldName,
@@ -22,7 +26,7 @@ const getTermsFields = (perNodeFields: getIndexEntriesFieldsCommandResult[]) => 
     const dynamicFields = new Map<string, getIndexEntriesFieldsCommandResult>();
     const staticFields = new Map<string, getIndexEntriesFieldsCommandResult>();
 
-    allFields.forEach(field => {
+    allFields.forEach((field) => {
         switch (field.FieldType) {
             case "Dynamic":
                 dynamicFields.set(field.Name, field);
@@ -35,12 +39,12 @@ const getTermsFields = (perNodeFields: getIndexEntriesFieldsCommandResult[]) => 
         }
     });
 
-    const processedStaticFields = Array.from(staticFields.values()).map(field =>
-        createTermsForField(field.Name, field.FieldType, field.ValueType),
+    const processedStaticFields = Array.from(staticFields.values()).map((field) =>
+        createTermsForField(field.Name, field.FieldType, field.ValueType)
     );
 
-    const processedDynamicFields = Array.from(dynamicFields.values()).map(field =>
-        createTermsForField(field.Name, field.FieldType, field.ValueType),
+    const processedDynamicFields = Array.from(dynamicFields.values()).map((field) =>
+        createTermsForField(field.Name, field.FieldType, field.ValueType)
     );
 
     return processedStaticFields.concat(processedDynamicFields);

@@ -339,19 +339,19 @@ export class IndexesStubs {
     static getIndexTermFields(): getIndexEntriesFieldsCommandResult[] {
         return [
             {
-                "Name": "vector.search(embedding.text(Name))",
-                "FieldType": "Static",
-                "ValueType": "Vector",
+                Name: "vector.search(embedding.text(Name))",
+                FieldType: "Static",
+                ValueType: "Vector",
             },
             {
-                "Name": "id()",
-                "FieldType": "Static",
-                "ValueType": "Term",
+                Name: "id()",
+                FieldType: "Static",
+                ValueType: "Term",
             },
             {
-                "Name": "Name__PQ",
-                "FieldType": "Dynamic",
-                "ValueType": "Term",
+                Name: "Name__PQ",
+                FieldType: "Dynamic",
+                ValueType: "Term",
             },
         ];
     }

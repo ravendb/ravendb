@@ -20,7 +20,6 @@ export type TermsForField = {
     loadError: string;
 };
 
-
 export const INDEX_TERMS_PAGE_LIMIT = 800;
 
 export function useIndexTerms(indexName: string) {

@@ -56,7 +56,8 @@ describe("IndexTerms", () => {
         const accordions = await screen.findAllByTestId(testIdSelectors.termAccordion);
 
         const expectedAccordionsLength =
-            IndexesStubs.getIndexTermFields().filter(x => x.FieldType === "Static").length + IndexesStubs.getIndexTermFields().filter(x => x.FieldType === "Dynamic").length;
+            IndexesStubs.getIndexTermFields().filter((x) => x.FieldType === "Static").length +
+            IndexesStubs.getIndexTermFields().filter((x) => x.FieldType === "Dynamic").length;
 
         expect(accordions).toHaveLength(expectedAccordionsLength);
     });
@@ -66,7 +67,7 @@ describe("IndexTerms", () => {
 
         const dynamicTermFields = await screen.findAllByTestId(testIdSelectors.termDynamicField);
 
-        const termDynamicLength = IndexesStubs.getIndexTermFields().filter(x => x.FieldType === "Dynamic").length;
+        const termDynamicLength = IndexesStubs.getIndexTermFields().filter((x) => x.FieldType === "Dynamic").length;
         expect(dynamicTermFields).toHaveLength(termDynamicLength);
     });
 
@@ -75,7 +76,7 @@ describe("IndexTerms", () => {
 
         const dynamicTermFields = await screen.findAllByTestId(testIdSelectors.termVectorField);
 
-        const termDynamicLength = IndexesStubs.getIndexTermFields().filter(x => x.ValueType === "Vector").length;
+        const termDynamicLength = IndexesStubs.getIndexTermFields().filter((x) => x.ValueType === "Vector").length;
         expect(dynamicTermFields).toHaveLength(termDynamicLength);
     });
 
