@@ -18,6 +18,7 @@ using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.AiAgent;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;
@@ -473,6 +474,13 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return true;
     }
 
+    public static string GenerateJsonObjectFromSampleObject(string s)
+    {
+        var doc = JsonDocument.Parse(s);
+        var element = GenerateJsonSchemaObjectFromSampleObject(doc.RootElement);
+        return JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = true });
+    }
+
     internal static string GetSchemaFor(string schemaOrSampleObject)
     {
         var doc = JsonDocument.Parse(schemaOrSampleObject);
@@ -490,76 +498,76 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         };
 
         return JsonSerializer.Serialize(schema, new JsonSerializerOptions { WriteIndented = true });
+    }
 
-        JsonObject GenerateJsonSchemaObjectFromSampleObject(JsonElement element)
+    public static JsonObject GenerateJsonSchemaObjectFromSampleObject(JsonElement element)
+    {
+        var jsonObj = new JsonObject();
+
+        switch (element.ValueKind)
         {
-            var jsonObj = new JsonObject();
+            case JsonValueKind.Object:
+                jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeObject;
+                var props = new JsonObject();
+                var required = new JsonArray();
+                foreach (JsonProperty prop in element.EnumerateObject())
+                {
+                    props[prop.Name] = GenerateJsonSchemaObjectFromSampleObject(prop.Value);
+                    required.Add(prop.Name);
+                }
 
-            switch (element.ValueKind)
-            {
-                case JsonValueKind.Object:
-                    jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeObject;
-                    var props = new JsonObject();
-                    var required = new JsonArray();
-                    foreach (JsonProperty prop in element.EnumerateObject())
-                    {
-                        props[prop.Name] = GenerateJsonSchemaObjectFromSampleObject(prop.Value);
-                        required.Add(prop.Name);
-                    }
-                    jsonObj[Constants.JsonSchemaFields.Properties] = props;
-                    jsonObj[Constants.JsonSchemaFields.Required] = required;
-                    jsonObj[Constants.JsonSchemaFields.AdditionalProperties] = false;
+                jsonObj[Constants.JsonSchemaFields.Properties] = props;
+                jsonObj[Constants.JsonSchemaFields.Required] = required;
+                jsonObj[Constants.JsonSchemaFields.AdditionalProperties] = false;
 
-                    break;
+                break;
 
-                case JsonValueKind.Array:
-                    jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeArray;
-                    var content = element.EnumerateArray().FirstOrDefault();
-                    if (content.ValueKind is not JsonValueKind.Undefined)
-                    {
-                        jsonObj[Constants.JsonSchemaFields.Items] = GenerateJsonSchemaObjectFromSampleObject(content);
-                    }
-                    else
-                    {
-                        jsonObj[Constants.JsonSchemaFields.Items] = new JsonObject
-                        {
-                            [Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeNull,
-                        };
-                    }
-                    break;
+            case JsonValueKind.Array:
+                jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeArray;
+                var content = element.EnumerateArray().FirstOrDefault();
+                if (content.ValueKind is not JsonValueKind.Undefined)
+                {
+                    jsonObj[Constants.JsonSchemaFields.Items] = GenerateJsonSchemaObjectFromSampleObject(content);
+                }
+                else
+                {
+                    jsonObj[Constants.JsonSchemaFields.Items] = new JsonObject { [Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeNull, };
+                }
 
-                case JsonValueKind.String:
-                    jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeString;
-                    jsonObj[Constants.JsonSchemaFields.Description] = element.GetString();
-                    break;
+                break;
 
-                case JsonValueKind.Number:
-                    if (element.TryGetInt32(out _))
-                    {
-                        jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeInteger;
-                    }
-                    else
-                    {
-                        jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeNumber;
-                    }
-                    break;
+            case JsonValueKind.String:
+                jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeString;
+                jsonObj[Constants.JsonSchemaFields.Description] = element.GetString();
+                break;
 
-                case JsonValueKind.True:
-                case JsonValueKind.False:
-                    jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeBoolean;
-                    break;
+            case JsonValueKind.Number:
+                if (element.TryGetInt32(out _))
+                {
+                    jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeInteger;
+                }
+                else
+                {
+                    jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeNumber;
+                }
 
-                case JsonValueKind.Null:
-                    jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeNull;
-                    break;
+                break;
 
-                default:
-                    jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeNone;
-                    break;
-            }
+            case JsonValueKind.True:
+            case JsonValueKind.False:
+                jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeBoolean;
+                break;
 
-            return jsonObj;
+            case JsonValueKind.Null:
+                jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeNull;
+                break;
+
+            default:
+                jsonObj[Constants.JsonSchemaFields.Type] = Constants.JsonSchemaFields.TypeNone;
+                break;
         }
+
+        return jsonObj;
     }
 
     public void Dispose()

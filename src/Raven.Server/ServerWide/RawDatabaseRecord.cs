@@ -7,6 +7,7 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.AiAgent;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -958,6 +959,60 @@ namespace Raven.Server.ServerWide
 
                 return _genAiConfigurationTasks;
             }
+        }
+
+        private Dictionary<string, AiAgentConfiguration> _aiAgents;
+
+        public Dictionary<string, AiAgentConfiguration> AiAgents
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.AiAgents;
+
+                if (_aiAgents == null)
+                {
+                    _aiAgents = [];
+                    if (_record.TryGet(nameof(DatabaseRecord.AiAgents), out BlittableJsonReaderObject agents) && agents != null)
+                    {
+                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
+                        for (var i = 0; i < agents.Count; i++)
+                        {
+                            agents.GetPropertyByIndex(i, ref propertyDetails);
+
+                            if (propertyDetails.Value == null)
+                                continue;
+
+                            if (propertyDetails.Value is BlittableJsonReaderObject agent)
+                                _aiAgents[propertyDetails.Name] = JsonDeserializationCluster.AiAgentConfiguration(agent);
+                        }
+                    }
+                }
+
+                return _aiAgents;
+            }
+        }
+
+        public bool TryGetAiAgent(string name, out AiAgentConfiguration config)
+        {
+            config = null;
+            if (_materializedRecord != null)
+            {
+                config = _materializedRecord.AiAgents[name];
+                return true;
+            }
+
+            if (_record.TryGet(nameof(DatabaseRecord.AiAgents), out BlittableJsonReaderObject obj) && obj != null)
+            {
+
+                if (obj.TryGet(name, out BlittableJsonReaderObject configBlittable))
+                {
+                    config = JsonDeserializationCluster.AiAgentConfiguration(configBlittable);
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private Dictionary<string, string> _settings;

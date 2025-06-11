@@ -6,6 +6,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.AiAgent;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.DataArchival;
@@ -126,6 +127,8 @@ namespace Raven.Client.ServerWide
         public Dictionary<string, SnowflakeConnectionString> SnowflakeConnectionStrings = new Dictionary<string, SnowflakeConnectionString>();
         
         public Dictionary<string, AiConnectionString> AiConnectionStrings = new();
+
+        public Dictionary<string, AiAgentConfiguration> AiAgents = new();
 
         public List<RavenEtlConfiguration> RavenEtls = [];
 

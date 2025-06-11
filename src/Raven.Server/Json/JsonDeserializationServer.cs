@@ -350,8 +350,6 @@ namespace Raven.Server.Json
 
         internal static readonly Func<BlittableJsonReaderObject, MistralAiSettings> MistralAiSettings = GenerateJsonDeserializationRoutine<MistralAiSettings>();
 
-        public static readonly Func<BlittableJsonReaderObject, AiUsage> AiUsage = GenerateJsonDeserializationRoutine<AiUsage>();
-
         public sealed class Parameters
         {
             private Parameters()

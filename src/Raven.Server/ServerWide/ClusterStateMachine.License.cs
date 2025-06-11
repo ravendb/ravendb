@@ -181,7 +181,9 @@ public sealed partial class ClusterStateMachine
             case nameof(AddGenAiCommand):
                 AssertGenAi(databaseRecord, serverStore.LicenseManager.LicenseStatus);
                 break;
-
+            case nameof(AddOrUpdateAiAgentCommand):
+                AssertAiAgent(databaseRecord, serverStore.LicenseManager.LicenseStatus);
+                break;
         }
     }
 
@@ -222,6 +224,7 @@ public sealed partial class ClusterStateMachine
             AssertSnowflakeEtl(databaseRecord, newLicenseLimits);
             AssertEmbeddingsGeneration(databaseRecord, newLicenseLimits);
             AssertGenAi(databaseRecord, newLicenseLimits);
+            AssertAiAgent(databaseRecord, newLicenseLimits);
             
             if (AssertPeriodicBackup(newLicenseLimits, context) == false && databaseRecord.PeriodicBackups.Count > 0)
                 throw new LicenseLimitException(LimitType.PeriodicBackup, $"Your license doesn't support periodic backup.");
@@ -965,6 +968,20 @@ public sealed partial class ClusterStateMachine
             return;
 
         throw new LicenseLimitException(LimitType.GenAi, "Your license doesn't support using the AI Generation feature.");
+    }
+
+    private static void AssertAiAgent(DatabaseRecord databaseRecord, LicenseStatus licenseStatus)
+    {
+        // TODO: Remove this check when AI Agent will be available for all license types
+        return;
+
+        if (licenseStatus.HasAiAgent)
+            return;
+
+        if (databaseRecord.AiAgents.Count == 0)
+            return;
+
+        throw new LicenseLimitException(LimitType.AiAgent, "Your license doesn't support using the AI Agent feature.");
     }
 
     private void AssertTimeSeriesConfigurationLicenseLimits(ServerStore serverStore, DatabaseRecord databaseRecord, ClusterOperationContext context)
