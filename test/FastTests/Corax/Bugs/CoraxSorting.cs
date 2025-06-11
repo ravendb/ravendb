@@ -20,7 +20,7 @@ public class CoraxSorting : RavenTestBase
 
     private record User(string Name);
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanProperlySort()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));

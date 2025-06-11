@@ -8,13 +8,9 @@ using Xunit.Abstractions;
 
 namespace FastTests.Corax;
 
-public class CompactTreeTests : StorageTest
+public class CompactTreeTests(ITestOutputHelper output) : StorageTest(output)
 {
-    public CompactTreeTests(ITestOutputHelper output) : base(output)
-    {
-    }
-
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanHandleMerges()
     {
         using (var wtx = Env.WriteTransaction())
@@ -37,7 +33,7 @@ public class CompactTreeTests : StorageTest
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanHandlePageSplits()
     {
         var expected = new List<(string,long)>();
@@ -74,7 +70,7 @@ public class CompactTreeTests : StorageTest
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanHandlePageSplitsWithCompression()
     {
         using (var wtx = Env.WriteTransaction())
@@ -226,7 +222,7 @@ public class CompactTreeTests : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanProperlyResetIterator()
     {
         using (var wtx = Env.WriteTransaction())
@@ -277,7 +273,7 @@ public class CompactTreeTests : StorageTest
 
 }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanAddIterateAndRemove()
     {
         using (var wtx = Env.WriteTransaction())

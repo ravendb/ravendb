@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -7,10 +7,11 @@ using Corax.Querying;
 using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;
-using Voron;
-using Xunit.Abstractions;
-using Xunit;
 using Sparrow.Threading;
+using Tests.Infrastructure;
+using Voron;
+using Xunit;
+using Xunit.Abstractions;
 using IndexSearcher = Corax.Querying.IndexSearcher;
 using IndexWriter = Corax.Indexing.IndexWriter;
 
@@ -29,7 +30,7 @@ namespace FastTests.Corax
             _analyzers = CreateKnownFields(_bsc);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void CanDelete()
         {
             PrepareData(batchSize: 1000);
@@ -67,7 +68,7 @@ namespace FastTests.Corax
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void CanDeleteNumericalData()
         {
             PrepareData();
@@ -95,7 +96,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [InlineData(1)]
         [InlineData(4)]
         [InlineData(10000)]
@@ -130,7 +131,7 @@ namespace FastTests.Corax
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void CanDeleteOneElement()
         {
             PrepareData(DataType.Modulo);
@@ -169,7 +170,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void CanDeleteAndPushUnderSameId()
         {
             PrepareData(DataType.Modulo, 1);

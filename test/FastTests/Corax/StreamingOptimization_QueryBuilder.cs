@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -44,7 +44,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
     {
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)] // TermMatch and asc order on same field with same type => can optimize
     public async Task SortingMatchIsSkippedOnSingleTermMatch(bool hasMultipleValues) => await TestQueryBuilder<TermMatch>(hasMultipleValues, session =>
@@ -53,7 +53,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)] // TermMatch and desc order on same field with same type => can optimize
     public async Task SortingMatchIsNotSkippedOnSingleTermMatchDesc(bool hasMultipleValues) => await TestQueryBuilder<TermMatch>(hasMultipleValues, session =>
@@ -62,7 +62,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderByDescending(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)] // TermMatch and asc order on same field with different type => cant optimize
     public async Task SortingMatchIsNotSkippedOnSingleTermMatchNumeric(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -71,7 +71,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderByDescending(x => x.Name, OrderingType.Long)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)] // TermMatch and desc order on same field with same type => can optimize
     public async Task SortingMatchIsSkippedWhenWeQueryOnTheSameType(bool hasMultipleValues) => await TestQueryBuilder<TermMatch>(hasMultipleValues, session =>
@@ -80,7 +80,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First, OrderingType.Long)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)] // TermMatch and desc order on same field with same type => can optimize
     public async Task SortingMatchIsSkippedWhenWeQueryOnTheSameType2(bool hasMultipleValues) => await TestQueryBuilder<TermMatch>(hasMultipleValues, session =>
@@ -89,7 +89,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First, OrderingType.Double)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)] // where Name = X and Field < 1 order by Name => where Name = x and Field < 1
     public async Task SortingMatchIsSkippedWhenIsAndBinaryMatch(bool hasMultipleValues) => await TestQueryBuilder<BinaryMatch>(hasMultipleValues, session =>
@@ -100,7 +100,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)] // where Name = X or Field < 1 order by Name
     public async Task SortingMatchIsNotSkippedWhenIsOrBinaryMatch(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -111,7 +111,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)] // where (Name = x and F < 1) and (S = 2 and F < 2 ) order by Name => skip order by
     public async Task BinaryMatchOfBinaryMatchAnd(bool hasMultipleValues) => await TestQueryBuilder<BinaryMatch>(hasMultipleValues, session =>
@@ -130,7 +130,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)] // where (Name = x and F < 1) or (S = 2 and F < 2 ) order by Name => skip order by
     public async Task BinaryMatchOfBinaryMatchOr(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -149,7 +149,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)] // where (Name = x or F < 1) and (S = 2 and F < 2 ) order by Name => cant skip order by
     public async Task BinaryOrMatchAndBinaryMatchOr(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -168,7 +168,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)] // where (Name = x and F < 1) and (S = 2 and F < 2 ) order by S => add sorting match
     public async Task BinaryMatchOfBinaryMatchAndButSortOnDifferentField(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -189,7 +189,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
 
 
     //DOUBLE SINGLE TESTS
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task LessThanOptimization(bool hasMultipleValues) => await TestQueryBuilder<MultiTermMatch>(hasMultipleValues, session =>
@@ -198,7 +198,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task LessThanOptimizationWithTermMatch(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -209,7 +209,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task LessThanOrEqualOptimization(bool hasMultipleValues) => await TestQueryBuilder<MultiTermMatch>(hasMultipleValues, session =>
@@ -218,7 +218,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task LessThanOrEqualOptimizationWithTermMatch(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -229,7 +229,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task GreaterThanOptimization(bool hasMultipleValues) => await TestQueryBuilder<MultiTermMatch>(hasMultipleValues, session =>
@@ -238,7 +238,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task GreaterThanOptimizationWithTermMatch(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -249,7 +249,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task GreaterThanOrEqualOptimization(bool hasMultipleValues) => await TestQueryBuilder<MultiTermMatch>(hasMultipleValues, session =>
@@ -258,7 +258,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task GreaterThanOrEqualOptimizationWithTermMatch(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -269,7 +269,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task StartsWithOptimization(bool hasMultipleValues) => await TestQueryBuilder<MultiTermMatch>(hasMultipleValues, session =>
@@ -278,7 +278,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task StartsWithWithNumericOrderingD(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -287,7 +287,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name, OrderingType.Double)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task StartsWithWithNumericOrderingL(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -296,7 +296,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name, OrderingType.Long)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task StartsWithDifferentOrderByField(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -305,7 +305,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task StartsWithWithBinary(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -317,7 +317,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .GetIndexQuery());
 
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task EndsWithOptimization(bool hasMultipleValues) => await TestQueryBuilder<MultiTermMatch>(hasMultipleValues, session =>
@@ -326,7 +326,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task EndsWithDifferentOrderByField(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -335,7 +335,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task EndsWithWithBinary(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -346,7 +346,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task ExistsOptimization(bool hasMultipleValues) => await TestQueryBuilder<MultiTermMatch>(hasMultipleValues, session =>
@@ -355,7 +355,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task ExistsDifferentOrderByField(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -364,7 +364,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task ExistsWithBinary(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -375,7 +375,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task RegexOptimization(bool hasMultipleValues) => await TestQueryBuilder<MultiTermMatch>(hasMultipleValues, session =>
@@ -384,7 +384,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task RegexDifferentOrderByField(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -393,7 +393,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.First)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(true)]
     [InlineData(false)]
     public async Task RegexWithBinary(bool hasMultipleValues) => await TestQueryBuilder<SortingMatch>(hasMultipleValues, session =>
@@ -404,7 +404,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
             .OrderBy(x => x.Name)
             .GetIndexQuery());
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [MemberData(nameof(RangesTests))]
     public async Task RangeTests(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
     {
@@ -431,7 +431,7 @@ public class StreamingOptimization_QueryBuilder : RavenTestBase
         );
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [MemberData(nameof(RangesTests))]
     public async Task RangeTestsCannotApplyStreaming(bool hasMultipleValues, bool leftInclusive, bool rightInclusive, bool ascending)
     {

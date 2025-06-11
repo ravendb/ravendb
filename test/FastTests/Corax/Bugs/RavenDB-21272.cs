@@ -1,6 +1,7 @@
 using System.Linq;
 using System.Text;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Xunit;
@@ -14,7 +15,7 @@ public class RavenDB_21272 : StorageTest
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanHandleDeletionOfSeparatorKeyWhenTheLeafKeyWasAlreadyRemoved()
     {
         const int Size = 2048;

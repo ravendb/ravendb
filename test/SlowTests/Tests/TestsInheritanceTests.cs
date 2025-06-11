@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="NoNonDisposableTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -19,12 +19,8 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Tests
 {
-    public class TestsInheritanceTests : NoDisposalNeeded
+    public class TestsInheritanceTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public TestsInheritanceTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         private readonly HashSet<Assembly> _assemblies = new HashSet<Assembly>();
 
         // In linux we might encounter Microsoft's VisualStudio assembly types, so we skip this test in linux, and rely on the windows tests result as good for linux too
@@ -90,7 +86,7 @@ namespace SlowTests.Tests
                         select method;
 
             var array = types.ToArray();
-            const int numberToTolerate = 4348;
+            const int numberToTolerate = 4192;
             if (array.Length == numberToTolerate)
                 return;
 

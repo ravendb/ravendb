@@ -1,6 +1,7 @@
 using Corax.Indexing;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ public class EntriesModificationsTests : NoDisposalNeeded
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void EntriesModificationsWillEraseOddDuplicates()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);

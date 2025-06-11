@@ -8,15 +8,12 @@ using Xunit.Abstractions;
 
 namespace FastTests.Corax;
 
-public class CompoundSorting : RavenTestBase
+public class CompoundSorting(ITestOutputHelper output) : RavenTestBase(output)
 {
     //We want to test if every comparer works good as second etc since it has different method to evaluate than single one.
     //Also Ascending/Descending
-    public CompoundSorting(ITestOutputHelper output) : base(output)
-    {
-    }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax)]
     [InlineData(true)]
     [InlineData(false)]
     public void CompoundSorting_Spatial(bool boxedComparer)
@@ -40,7 +37,7 @@ public class CompoundSorting : RavenTestBase
 
     }
     
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax)]
     [InlineData(true)]
     [InlineData(false)]
     public void CompoundSorting_Alphanumerical(bool boxedComparer)
@@ -65,7 +62,7 @@ public class CompoundSorting : RavenTestBase
     }
     
      
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax)]
     [InlineData(true)]
     [InlineData(false)]
     public void CompoundSorting_Int(bool boxedComparer)
@@ -89,7 +86,7 @@ public class CompoundSorting : RavenTestBase
 
     }
     
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax)]
     [InlineData(true)]
     [InlineData(false)]
     public void CompoundSorting_String_Floating(bool boxedComparer)

@@ -54,7 +54,7 @@ public class StreamingOptimization_DataTests : RavenTestBase
         }
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax)]
     [MemberData(nameof(UnboundedRange))]
     public void UnboundedRangeQueries(UnaryMatchOperation unaryMatchOperation, OrderingType fieldType, bool ascending, object value)
     {
@@ -140,7 +140,7 @@ public class StreamingOptimization_DataTests : RavenTestBase
         Assert.Equal(linqResults.Select(i => i.Id), serverResults.Select(i => i.Id));
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void AscendingStartsWithStreamingReturnsGoodOrder()
     {
         using var store = CreateDatabase(out List<Dto> actualDocuments);
@@ -154,7 +154,7 @@ public class StreamingOptimization_DataTests : RavenTestBase
         Assert.Equal(actualDocuments.Where(i =>i.Name.StartsWith("a")).OrderBy(i => i.Name).Select(i => i.Id), results.Select(i => i.Id));
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void DescendingStartsWithStreamingReturnsGoodOrder()
     {
         using var store = CreateDatabase(out List<Dto> actualDocuments);
@@ -168,7 +168,7 @@ public class StreamingOptimization_DataTests : RavenTestBase
         Assert.Equal(actualDocuments.Where(i =>i.Name.StartsWith("a")).OrderByDescending(i => i.Name).Select(i => i.Id), results.Select(i => i.Id));
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void DescendingMaximumPrefixStartsWithStreamingReturnsGoodOrder()
     {
         string maxPrefix = Encodings.Utf8.GetString(new byte[] {255, 255});
@@ -184,7 +184,7 @@ public class StreamingOptimization_DataTests : RavenTestBase
         
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void EndsWithWithStreamingReturnsGoodOrder()
     {
         using var store = CreateDatabase(out List<Dto> actualDocuments);
@@ -198,7 +198,7 @@ public class StreamingOptimization_DataTests : RavenTestBase
         Assert.Equal(actualDocuments.Where(i =>i.Name.EndsWith("a")).OrderBy(i => i.Name).Select(i => i.Id), results.Select(i => i.Id));
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void DescendingEndsWithWithStreamingReturnsGoodOrder()
     {
         using var store = CreateDatabase(out List<Dto> actualDocuments);
@@ -212,7 +212,7 @@ public class StreamingOptimization_DataTests : RavenTestBase
         Assert.Equal(actualDocuments.Where(i =>i.Name.EndsWith("a")).OrderByDescending(i => i.Name).Select(i => i.Id), results.Select(i => i.Id));
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void ExistsWithStreamingReturnsGoodOrder()
     {
         using var store = CreateDatabase(out List<Dto> actualDocuments);
@@ -226,7 +226,7 @@ public class StreamingOptimization_DataTests : RavenTestBase
         Assert.Equal(actualDocuments.OrderBy(i => i.Name).Select(i => i.Id), results.Select(i => i.Id));
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void DescendingExistsWithStreamingReturnsGoodOrder()
     {
         using var store = CreateDatabase(out List<Dto> actualDocuments);
@@ -240,7 +240,7 @@ public class StreamingOptimization_DataTests : RavenTestBase
         Assert.Equal(actualDocuments.OrderByDescending(i => i.Name).Select(i => i.Id), results.Select(i => i.Id));
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void RegexWithStreamingReturnsGoodOrder()
     {
         using var store = CreateDatabase(out List<Dto> actualDocuments);
@@ -254,7 +254,7 @@ public class StreamingOptimization_DataTests : RavenTestBase
         Assert.Equal(actualDocuments.Where(i=> i.Name.Contains("a")).OrderBy(i => i.Name).Select(i => i.Id), results.Select(i => i.Id));
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void DescendingRegexWithStreamingReturnsGoodOrder()
     {
         using var store = CreateDatabase(out List<Dto> actualDocuments);

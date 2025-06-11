@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Sparrow.Server;
 using Sparrow.Threading;
 using Tests.Infrastructure;
@@ -75,7 +75,7 @@ public class RavenDB_23695 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanProperlyPrepareListForPostingList_Update()
     {
         using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -94,7 +94,7 @@ public class RavenDB_23695 : RavenTestBase
         Assert.Equal(4, clb[0]);
     }
     
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanProperlyPrepareListForPostingList_Removal()
     {
         using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -108,7 +108,7 @@ public class RavenDB_23695 : RavenTestBase
         Assert.Equal(16, clb[0]);
     }
     
-    [RavenFact(RavenTestCategory.Core)]
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanProperlyPrepareListForPostingList_Insert()
     {
         using var ctx = new ByteStringContext(SharedMultipleUseFlag.None);

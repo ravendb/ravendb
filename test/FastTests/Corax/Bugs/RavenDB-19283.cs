@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Text;
 using Corax;
 using Corax.Querying;
@@ -6,6 +6,7 @@ using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -20,7 +21,7 @@ public class RavenDB_19283 : StorageTest
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public unsafe void CanReadAndWriteLargeEntries()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);

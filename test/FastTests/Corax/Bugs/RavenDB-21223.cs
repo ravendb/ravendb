@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron.Data.Containers;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,7 +17,7 @@ namespace FastTests.Corax.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ContainerAllocateDeleteAndAllocate()
         {
             List<long> toDelete = new();

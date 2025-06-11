@@ -13,13 +13,9 @@ using Xunit.Abstractions;
 
 namespace FastTests.Corax.Ranking;
 
-public class QuantizationTest : RavenTestBase
+public class QuantizationTest(ITestOutputHelper output) : RavenTestBase(output)
 {
-    public QuantizationTest(ITestOutputHelper output) : base(output)
-    {
-    }
-
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Intrinsics)]
     public void CanEncodeAndDecodeEveryNumberUnderShort()
     {
         for (short value = 1; value < short.MaxValue; ++value)
@@ -85,7 +81,7 @@ public class QuantizationTest : RavenTestBase
     // a buffer from a managed pointer, which could be moved by the garbage collector to a different location. After some research, we discovered a third way to load a vector that is both GC safe
     // and does not require pinning memory. Although this approach is not documented, we added two tests to this function to ensure that any internal changes to the method would trigger a notification,
     // since debugging such issues can be extremely challenging.
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Intrinsics)]
     public void CanSafelyReadVectorFromManagedMemory2()
     {
         var buffer = new long[4];
