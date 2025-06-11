@@ -80,7 +80,8 @@ public static partial class CoraxQueryBuilder
                 (isForDoc: false, StringSegment stringSegmentAsBase64) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata,
                     GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, stringSegmentAsBase64.ToString(), false), minimumMatch,
                     numberOfCandidates, exact, builderParameters.IsVectorSingleClause),
-                (_, BlittableJsonReaderArray { Length: > 0 }) => throw new InvalidDataException("Cannot perform search on empty value.")
+                (_, BlittableJsonReaderArray { Length: > 0 }) => throw new InvalidDataException("Cannot perform search on empty value."),
+                _ => throw new InvalidQueryException($"Unknown method in value ({methodValue.Name}. Parameter type: {methodParameter.GetType().FullName}, Value: {methodParameter}")
             };
         }
         
