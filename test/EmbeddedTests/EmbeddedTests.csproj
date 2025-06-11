@@ -36,7 +36,6 @@
     <ProjectReference Include="..\..\src\Raven.TestDriver\Raven.TestDriver.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="System.Net.Http" />
     <PackageReference Include="System.Text.Encodings.Web" />
     <PackageReference Include="System.Text.Json" />
@@ -47,6 +46,12 @@
     </PackageReference>
     <PackageReference Include="xunit" />
     <PackageReference Include="Npgsql" VersionOverride="5.0.18" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' != 'net6.0' AND '$(TargetFramework)' != 'net7.0' AND '$(TargetFramework)' != 'net5.0' AND '$(TargetFramework)' != 'netcoreapp3.1'">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0' OR '$(TargetFramework)' == 'net7.0' OR '$(TargetFramework)' == 'net5.0' OR '$(TargetFramework)' == 'netcoreapp3.1'">
+    <PackageReference Include="Microsoft.NET.Test.Sdk" VersionOverride="17.13.0" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\MyCustomAnalyzers.dll" />
