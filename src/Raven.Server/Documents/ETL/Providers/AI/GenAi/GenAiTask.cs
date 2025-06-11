@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
@@ -403,15 +404,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                         // so it needs to be written to storage before the patch.
                         // the write-tx is not commited so this won't be persisted.
 
-                        if (document!.Data.HasParent)
-                        {
-                            using (var old = document.Data)
-                            {
-                                document.Data = document.Data.Clone(context);
-                            }
-                        }
-
-                        context.DocumentDatabase.DocumentsStorage.Put(context, document.Id, expectedChangeVector: null, document.Data);
+                        FilterMetadataProperties(context, document);
+                        context.DocumentDatabase.DocumentsStorage.Put(context, document!.Id, expectedChangeVector: null, document.Data);
                     }
 
                     foreach (var item in items)
@@ -466,6 +460,32 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             OutputDocument = outputDocument,
             TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList()
         };
+    }
+
+    private static void FilterMetadataProperties(DocumentsOperationContext context, Document document)
+    {
+        if (document!.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+        {
+            metadata.Modifications = new DynamicJsonValue(metadata);
+
+            metadata.Modifications.Remove(Constants.Documents.Metadata.Id);
+            metadata.Modifications.Remove(Constants.Documents.Metadata.LastModified);
+            metadata.Modifications.Remove(Constants.Documents.Metadata.IndexScore);
+            metadata.Modifications.Remove(Constants.Documents.Metadata.ChangeVector);
+            metadata.Modifications.Remove(Constants.Documents.Metadata.Flags);
+
+            document.Data.Modifications = new DynamicJsonValue(document.Data)
+            {
+                [Constants.Documents.Metadata.Key] = metadata
+            };
+        }
+        else if (document.Data.HasParent == false)
+            return; // no need to clone
+
+        using (var old = document.Data)
+        {
+            document.Data = document.Data.Clone(context);
+        }
     }
 
     private static List<GenAiResultItem> PrepareItemsBeforeSendingToModel(IEnumerable<GenAiScriptResult> items)
