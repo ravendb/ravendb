@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿﻿﻿﻿﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -8,17 +8,14 @@ using Newtonsoft.Json.Linq;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
-    public class BlittableValidationTest : NoDisposalNeeded
+    public class BlittableValidationTest(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public BlittableValidationTest(ITestOutputHelper output) : base(output)
-        {
-        }
-
         private BlittableJsonReaderObject InitSimpleBlittable(JsonOperationContext context, out int size)
         {
             var obj = JObject.FromObject(new Employee
@@ -38,7 +35,7 @@ namespace FastTests.Blittable
             return reader;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WithEscape()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -187,7 +184,7 @@ namespace FastTests.Blittable
             public string LastName { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Complex_Valid_Blittable()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -205,7 +202,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Empty_Valid_Blittable()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -223,7 +220,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Invalid_Bool()
         {
             var blittable = new byte[16]
@@ -239,7 +236,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Invalid_Compressed_String()
         {
             var blittable = new byte[31]
@@ -257,7 +254,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Invalid_Float()
         {
             var blittable = new byte[22]
@@ -277,7 +274,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Invalid_Integer()
         {
             var blittable = new byte[26]
@@ -294,7 +291,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Invalid_Long()
         {
             var blittable = new byte[26]
@@ -311,7 +308,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Invalid_Names_Offset()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -359,7 +356,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Invalid_Null()
         {
             var blittable = new byte[16]
@@ -375,7 +372,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Invalid_Number_Of_Prop()
         {
             var blittable = new byte[192]
@@ -411,7 +408,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Invalid_Root_Token()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -434,7 +431,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Invalid_String()
         {
             var blittable = new byte[26]
@@ -451,7 +448,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Simple_Valid_Blittable_Test()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -462,7 +459,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Valid_Blittable()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -489,7 +486,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Valid_Compressed_String()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -535,7 +532,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Valid_object_read_from_non_zero_offset()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -586,7 +583,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Valid_String()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -645,7 +642,7 @@ namespace FastTests.Blittable
               .Select(s => s[random.Next(s.Length)]).ToArray());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Valid_String_With_260_EscChar()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -678,7 +675,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Valid_String_With_66K_EscChar()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -712,7 +709,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Invalid_Props_Offset()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -731,7 +728,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void Invalid_Root_Metadata_Offset()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -746,7 +743,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void ParseBlitAndValidate()
         {
             var assembly = typeof(BlittableFormatTests).Assembly;

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+﻿﻿﻿﻿﻿﻿// -----------------------------------------------------------------------
 //  <copyright file="NoNonDisposableTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -90,7 +90,7 @@ namespace SlowTests.Tests
                         select method;
 
             var array = types.ToArray();
-            const int numberToTolerate = 4515;
+            const int numberToTolerate = 4348;
             if (array.Length == numberToTolerate)
                 return;
 

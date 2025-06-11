@@ -4,18 +4,15 @@ using System.Linq;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Utils
 {
-    public class IncludeUtilTests : NoDisposalNeeded
+    public class IncludeUtilTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public IncludeUtilTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_with_array_of_nested_objects_should_work1()
         {
             var obj = new DynamicJsonValue
@@ -99,7 +96,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData('/')]
         [InlineData(':')]
         public void FindDocIdFromPath_with_array_of_arrays_with_simple_values_should_work(char identityPartsSeparator)
@@ -148,7 +145,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData('/')]
         [InlineData(':')]
         public void FindDocIdFromPath_with_array_of_arrays_of_objects_should_work(char identityPartsSeparator)
@@ -198,7 +195,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData('/')]
         [InlineData(':')]
         public void FindDocIdFromPath_with_array_of_with_of_arrays_of_nested_objects_should_work1(char identityPartsSeparator)
@@ -247,7 +244,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData('/')]
         [InlineData(':')]
         public void FindDocIdFromPath_with_array_of_with_of_arrays_of_nested_objects_should_work2(char identityPartsSeparator)
@@ -305,7 +302,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData('/')]
         [InlineData(':')]
         public void FindDocIdFromPath_with_array_of_with_of_arrays_of_nested_objects_should_work3(char identityPartsSeparator)
@@ -424,7 +421,7 @@ namespace FastTests.Utils
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_with_array_of_nested_objects_should_work2()
         {
             var obj = new DynamicJsonValue
@@ -500,7 +497,7 @@ namespace FastTests.Utils
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_with_array_of_nested_objects_with_prefix_should_work()
         {
             var obj = new DynamicJsonValue
@@ -575,7 +572,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_with_array_of_nested_objects_with_suffix_should_work()
         {
             var obj = new DynamicJsonValue
@@ -650,7 +647,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_prefix1()
         {
             var obj = new DynamicJsonValue
@@ -667,7 +664,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_suffix1()
         {
             var obj = new DynamicJsonValue
@@ -684,7 +681,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_prefix2()
         {
             var obj = new DynamicJsonValue
@@ -719,7 +716,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_with_array_selection_should_work_in_flat_object_with_suffix2()
         {
             var obj = new DynamicJsonValue
@@ -754,7 +751,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_with_array_selection_should_work_in_flat_object1()
         {
             var obj = new DynamicJsonValue
@@ -771,7 +768,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_with_array_selection_should_work_in_nested_object2()
         {
             var obj = new DynamicJsonValue
@@ -799,7 +796,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_with_array_selection_should_work_in_flat_object2()
         {
             var obj = new DynamicJsonValue
@@ -826,7 +823,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_return_value_for_single_level_nested_path()
         {
             var obj = new DynamicJsonValue
@@ -847,7 +844,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_return_value_for_single_level_nested_path_with_prefix()
         {
             var obj = new DynamicJsonValue
@@ -884,7 +881,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_return_value_for_single_level_nested_path_with_suffix()
         {
             var obj = new DynamicJsonValue
@@ -921,7 +918,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_return_value_for_single_level_nested_path_with_prefix_and_string_value()
         {
             var obj = new DynamicJsonValue
@@ -958,7 +955,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_return_value_for_single_level_nested_path_with_suffix_and_string_value()
         {
             var obj = new DynamicJsonValue
@@ -995,7 +992,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_return_value_for_multiple_level_nested_path()
         {
             var obj = new DynamicJsonValue
@@ -1032,7 +1029,7 @@ namespace FastTests.Utils
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_return_empty_for_incorrect_path()
         {
             var obj = new DynamicJsonValue
@@ -1050,7 +1047,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_work_in_flat_object1()
         {
             var obj = new DynamicJsonValue
@@ -1067,7 +1064,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_work_in_flat_object2()
         {
             var obj = new DynamicJsonValue
@@ -1095,7 +1092,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_return_empty_with_incomplete_prefix_in_flat_object()
         {
             var obj = new DynamicJsonValue
@@ -1113,7 +1110,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_return_empty_with_incomplete_suffix_in_flat_object()
         {
             var obj = new DynamicJsonValue
@@ -1140,7 +1137,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_work_with_prefix_in_flat_object()
         {
             var obj = new DynamicJsonValue
@@ -1158,7 +1155,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_work_with_suffix_in_flat_object()
         {
             var obj = new DynamicJsonValue
@@ -1177,7 +1174,7 @@ namespace FastTests.Utils
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_work_with_very_short_prefix_in_flat_object()
         {
             var obj = new DynamicJsonValue
@@ -1203,7 +1200,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_should_work_with_very_short_suffix_in_flat_object()
         {
             var obj = new DynamicJsonValue
@@ -1229,7 +1226,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void FindDocIdFromPath_with_multiple_targets_should_work_in_flat_object()
         {
             var obj = new DynamicJsonValue

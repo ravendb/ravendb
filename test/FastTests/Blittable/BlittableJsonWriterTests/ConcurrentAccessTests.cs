@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -18,7 +18,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ConcurrentReadsTest()
         {
             var str = GenerateSimpleEntityForFunctionalityTest2();
@@ -33,7 +33,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ConcurrentWrite_WhenResetCachedPropertiesForNewDocument_ShouldThrowInformativeException()
         {
             Assert.Throws<InvalidOperationException>(() =>

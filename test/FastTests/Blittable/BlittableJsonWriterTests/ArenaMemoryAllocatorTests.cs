@@ -1,6 +1,7 @@
-﻿using System;
+﻿﻿using System;
 using Sparrow.Json;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ public class ArenaMemoryAllocatorTests : NoDisposalNeeded
 
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void ShouldUseFragmentedMemorySegment()
     {
         using (var arena = new ArenaMemoryAllocator(SharedMultipleUseFlag.None))

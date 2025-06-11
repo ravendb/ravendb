@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+﻿﻿using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Server.Logging;
@@ -17,7 +17,7 @@ namespace FastTests.Blittable
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void SerialAllocationAndRelease()
         {
             using (var pool = new UnmanagedBuffersPoolWithLowMemoryHandling(RavenLogManager.Instance.CreateNullLogger(), string.Empty))
@@ -34,7 +34,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ParallelAllocationAndReleaseSeperately()
         {
             using (var pool = new UnmanagedBuffersPoolWithLowMemoryHandling(RavenLogManager.Instance.CreateNullLogger(), string.Empty))
@@ -55,7 +55,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ParallelSerialAllocationAndRelease()
         {
             using (var pool = new UnmanagedBuffersPoolWithLowMemoryHandling(RavenLogManager.Instance.CreateNullLogger(), string.Empty))
