@@ -43,20 +43,30 @@ class queryUtil {
         
         return ` between "${start}" and "${end}"`;
     }
-    
-    static formatIndexQuery(indexName: string, fieldName: string, value: string) {
+
+    static formatIndexQuery(indexName: string, fieldName: string, value: string, termType: IndexEntriesValueType) {
         const escapedFieldName = queryUtil.escapeName(fieldName);
         const escapedIndexName = queryUtil.escapeName(indexName);
         const escapedValueName = queryUtil.escapeName(value);
-        
+
         const fromPart = `from index ${escapedIndexName}`;
-        let wherePart = `where ${escapedFieldName} == ${escapedValueName}`;
-        
+        let wherePart;
+
+        if (termType === "Vector") {
+            wherePart = `where vector.search(${escapedFieldName}, embedding.Raw(${escapedValueName}))`;
+        } else {
+            wherePart = `where ${escapedFieldName} == ${escapedValueName}`;
+        }
+
         if (indexName.startsWith("Auto") &&
             ((value.startsWith("{") && (queryUtil.hasUpperCase(value))) || value === "NULL_VALUE")) {
-            wherePart = `where exact(${escapedFieldName} == ${escapedValueName})`;
+            if (termType === "Vector") {
+                wherePart = `where exact(vector.search(${escapedFieldName}, embedding.Raw(${escapedValueName})))`;
+            } else {
+                wherePart = `where exact(${escapedFieldName} == ${escapedValueName})`;
+            }
         }
-        
+
         return `${fromPart} ${wherePart}`;
     }
     

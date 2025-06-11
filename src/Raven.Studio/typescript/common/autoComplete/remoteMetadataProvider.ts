@@ -26,7 +26,7 @@ class remoteMetadataProvider implements queryCompleterProviders {
         new getIndexEntriesFieldsCommand(indexName, this.db.name, locations[0], false)
             .execute()
             .done(result => {
-                callback(result.Static.filter(x => !IndexUtils.default.FieldsToHideOnUi.includes(x)));
+                callback(result.filter(x => x.FieldType === "Static").map(x => x.Name).filter(x => !IndexUtils.default.FieldsToHideOnUi.includes(x)));
             });
     }
 

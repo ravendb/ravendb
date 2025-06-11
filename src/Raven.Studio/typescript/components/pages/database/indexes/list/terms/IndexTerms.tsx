@@ -147,7 +147,7 @@ function IndexTermItem({ index, term, indexName, field, fieldTerms }: IndexTermI
 
     const navigateToQuery = () => {
         const query = queryCriteria.empty();
-        const queryText = queryUtil.formatIndexQuery(indexName, field.name, term);
+        const queryText = queryUtil.formatIndexQuery(indexName, field.name, term, field.termType);
 
         query.queryText(queryText);
         query.name(`Index terms for ${indexName} (${field.name}: ${term})`);
