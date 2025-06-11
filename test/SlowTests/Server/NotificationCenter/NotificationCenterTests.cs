@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
@@ -23,6 +23,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
 using Sparrow.Server.LowMemory;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 

@@ -1,8 +1,9 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
 using System.Text;
 using Raven.Server.Platform.Posix;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
