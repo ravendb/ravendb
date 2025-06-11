@@ -1,6 +1,7 @@
-﻿using Sparrow.Compression;
+﻿﻿﻿﻿using Sparrow.Compression;
 using System;
 using System.Collections.Generic;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,7 +36,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Theory, MemberData("Sizes")]
+        [RavenTheory(RavenTestCategory.Core), MemberData("Sizes")]
         public void CompressAndDecompress(int size, int bits)
         {
             uint marker = 0xDEADBEEF;
@@ -73,7 +74,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Compress2()
         {
             byte[] input = new byte[] { 3, 3, 2, 2, 3, 0, 2, 0, 2, 1, 0, 1, 3, 1, 3, 0, 3, 0, 2, 0, 2, 1, 3, 1, 0, 3, 0, 0, 2, 0, 1, 2, 2, 2, 3, 2, 0, 0, 2, 1, 2, 2, 0, 3, 0, 0, 3, 2, 0, 2, 1, 2, 3, 2, 2, 1, 3, 0, 1, 0, 3, 1, 1, 2, 0, 2, 2, 1, 2, 1, 0, 3, 2, 0, 2, 0, 1, 3, 1, 3, 3, 2, 3, 0, 2, 2, 2, 0, 3, 2, 2, 0, 2, 2, 2, 0, 0, 1, 3, 1 };
@@ -101,7 +102,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Compress()
         {
             uint marker = 0xDEADBEEF;

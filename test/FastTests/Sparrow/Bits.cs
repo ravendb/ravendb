@@ -1,8 +1,9 @@
-﻿using System;
+﻿﻿﻿using System;
 using System.Buffers.Binary;
 using System.Runtime.InteropServices;
 using Sparrow.Binary;
 using Sparrow.Server.Binary;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace FastTests.Sparrow
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Bits_MostSignificativeBit()
         {
             Assert.Equal(0, Bits.MostSignificantBit(0));
@@ -56,7 +57,7 @@ namespace FastTests.Sparrow
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Bits_LeadingZeroes()
         {
             Assert.Equal(32, Bits.LeadingZeroes(0));
@@ -77,7 +78,7 @@ namespace FastTests.Sparrow
             Assert.Equal(0, Bits.LeadingZeroes((uint)0xFFFF0000));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Bits_Ceil2Log()
         {
             Assert.Equal(0, Bits.CeilLog2(0));
@@ -98,7 +99,7 @@ namespace FastTests.Sparrow
             Assert.Equal(31, Bits.CeilLog2((uint)0x40B79DF0));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Bits_NextPowerOf2()
         {
             for (int i = 1; i < 30; i++)
@@ -115,7 +116,7 @@ namespace FastTests.Sparrow
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Bits_PowerOf2Fixed()
         {
             Assert.Equal(1, Bits.PowerOf2(1));
@@ -133,7 +134,7 @@ namespace FastTests.Sparrow
             Assert.Equal(256, Bits.PowerOf2((long)255));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Bits_TrailingAndLeadingZeroes()
         {
             long number = 210;
@@ -169,7 +170,7 @@ namespace FastTests.Sparrow
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void BitReaderEquivalence()
         {
             for (int i = 0; i <= 255; i++)

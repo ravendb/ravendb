@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
@@ -63,7 +63,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Encryption | RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed]
         public unsafe void WriteSeekAndReadInTempCryptoStream(int seed)
         {
