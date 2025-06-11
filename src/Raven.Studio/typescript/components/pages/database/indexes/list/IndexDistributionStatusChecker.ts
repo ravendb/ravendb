@@ -38,4 +38,5 @@ export default class IndexDistributionStatusChecker {
     somePaused = (): boolean => this.index.nodesInfo.some((x) => x.details?.status === "Paused");
     somePending = (): boolean => this.index.nodesInfo.some((x) => x.details?.status === "Pending");
     someStale = (): boolean => this.index.nodesInfo.some((x) => x.details?.stale);
+    everyIdle = (): boolean => this.index.nodesInfo.every((x) => x.details?.state === "Idle");
 }

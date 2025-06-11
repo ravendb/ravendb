@@ -40,6 +40,7 @@ function configureIndexService() {
 function configureDifferentIndexStates() {
     const { indexesService } = mockServices;
 
+    const [idleStats, idleProgress] = IndexesStubs.getIdleIndex();
     const [upToDateStats, upToDateProgress] = IndexesStubs.getUpToDateIndex();
     const [upToDateStatsWithErrors, upToDateProgressWithErrors] = IndexesStubs.getUpToDateIndexWithErrors();
     const [staleStats, staleProgress] = IndexesStubs.getStaleInProgressIndex();
@@ -52,6 +53,7 @@ function configureDifferentIndexStates() {
 
     indexesService.withGetStats(
         [
+            idleStats,
             upToDateStats,
             upToDateStatsWithErrors,
             staleStats,
@@ -65,6 +67,7 @@ function configureDifferentIndexStates() {
     );
     indexesService.withGetProgress(
         [
+            idleProgress,
             upToDateProgress,
             upToDateProgressWithErrors,
             staleProgress,

@@ -43,6 +43,14 @@ export class IndexesStubs {
         return IndexesStubs.getSampleProgress().find((x) => x.Name === "Orders/ByCompany");
     }
 
+    static getIdleIndex(): [IndexStats, IndexProgress] {
+        const stats = IndexesStubs.getGenericStats();
+        stats.Name = "IdleIndex";
+        stats.State = "Idle";
+
+        return [stats, null];
+    }
+
     static getUpToDateIndex(): [IndexStats, IndexProgress] {
         const stats = IndexesStubs.getGenericStats();
         stats.Name = "UpToDateIndex";

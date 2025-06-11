@@ -7,6 +7,7 @@ interface PopoverWithHoverWrapperProps extends Omit<PopoverWithHoverProps, "targ
     message: ReactNode | ReactNode[];
     isInPopoverBody?: boolean;
     inline?: boolean;
+    wrapperClassName?: string;
 }
 
 export default function PopoverWithHoverWrapper({
@@ -14,12 +15,13 @@ export default function PopoverWithHoverWrapper({
     message,
     isInPopoverBody = true,
     inline = true,
+    wrapperClassName,
     ...rest
 }: PopoverWithHoverWrapperProps) {
     const [target, setTarget] = useState<HTMLElement>();
     return (
         <>
-            <div ref={setTarget} className={classNames({ "d-inline-block": inline })}>
+            <div ref={setTarget} className={classNames({ "d-inline-block": inline }, wrapperClassName)}>
                 {children}
             </div>
             {message && (
