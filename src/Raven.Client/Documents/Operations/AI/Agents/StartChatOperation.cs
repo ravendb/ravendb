@@ -5,39 +5,42 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
+using Raven.Client.Util;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Documents.Operations.AI.AiAgent;
-
-internal class StartChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSchema>> where TSchema : new()
+namespace Raven.Client.Documents.Operations.AI.Agents;
+public class StartChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSchema>> where TSchema : new()
 {
-    private readonly string _agent;
+    private readonly string _name;
     private readonly string _prompt;
     private readonly Dictionary<string, object> _parameters;
 
-    public StartChatOperation(string agent, string prompt, Dictionary<string, object> parameters = null)
+    public StartChatOperation(string agentName, string prompt, Dictionary<string, object> parameters = null)
     {
-        _agent = agent ?? throw new ArgumentNullException(nameof(agent));
-        _prompt = prompt ?? throw new ArgumentNullException(nameof(prompt));
+        ValidationMethods.AssertNotNullOrEmpty(agentName, nameof(agentName));
+        ValidationMethods.AssertNotNullOrEmpty(prompt, nameof(prompt));
+
+        _name = agentName;
+        _prompt = prompt;
         _parameters = parameters;
     }
 
     public RavenCommand<ChatResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
-        return new StartChatOperationCommand(_agent, _prompt, _parameters, conventions);
+        return new StartChatOperationCommand(_name, _prompt, _parameters, conventions);
     }
 
-    private sealed class StartChatOperationCommand : RavenCommand<ChatResult<TSchema>>
+    internal sealed class StartChatOperationCommand : RavenCommand<ChatResult<TSchema>>
     {
-        private readonly string _agent;
+        private readonly string _name;
         private readonly string _prompt;
         private readonly Dictionary<string, object> _parameters;
         private readonly DocumentConventions _conventions;
 
-        public StartChatOperationCommand(string agent, string prompt, Dictionary<string, object> parameters, DocumentConventions conventions)
+        public StartChatOperationCommand(string agentName, string prompt, Dictionary<string, object> parameters, DocumentConventions conventions)
         {
-            _agent = agent;
+            _name = agentName;
             _prompt = prompt;
             _parameters = parameters;
             _conventions = conventions;
@@ -45,19 +48,16 @@ internal class StartChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TS
         public override bool IsReadRequest => false;
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/ai/ai-agent/start?agent={_agent}";
+            url = $"{node.Url}/databases/{node.Database}/ai/agent/start?name={Uri.EscapeDataString(_name)}";
+            var body = new StartChatBody { Prompt = _prompt, Parameters = _parameters };
+
 
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(async stream =>
                 {
-                    var json = new DynamicJsonValue
-                    {
-                        ["Parameters"] = DynamicJsonValue.Convert(_parameters),
-                        ["Prompt"] = _prompt,
-                    };
-                    await ctx.WriteAsync(stream, ctx.ReadObject(json,"chat-params")).ConfigureAwait(false);
+                    await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(),"chat-params")).ConfigureAwait(false);
                 }, _conventions)
             };
 
@@ -80,6 +80,20 @@ internal class StartChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TS
                 Response = _conventions.Serialization.DefaultConverter.FromBlittable<TSchema>(result, chatId)
             };
         }
+    }
+}
+
+internal class StartChatBody : IDynamicJson
+{
+    public Dictionary<string, object> Parameters { get; set; }
+    public string Prompt { get; set; }
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(Parameters)] = DynamicJsonValue.Convert(Parameters),
+            [nameof(Prompt)] = Prompt
+        };
     }
 }
 

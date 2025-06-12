@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.AI.AiAgent;
+using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.AiGen;
@@ -16,11 +18,11 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 
-namespace Raven.Server.Documents.Handlers.AI.AiAgent;
+namespace Raven.Server.Documents.Handlers.AI.Agents;
 
 public class AiAgentHandler : DatabaseRequestHandler
 {
-    [RavenAction("/databases/*/admin/ai/ai-agent/add", "PUT", AuthorizationStatus.DatabaseAdmin)]
+    [RavenAction("/databases/*/admin/ai/agent", "PUT", AuthorizationStatus.DatabaseAdmin)]
     public async Task AddOrModifyAiAgent()
     {
         using (var process = new AiAgentProcessorForAddOrUpdateAiAgent<DatabaseRequestHandler, DocumentsOperationContext>(this))
@@ -30,7 +32,7 @@ public class AiAgentHandler : DatabaseRequestHandler
     }
 
 
-    [RavenAction("/databases/*/admin/ai/ai-agent/delete", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+    [RavenAction("/databases/*/admin/ai/agent", "DELETE", AuthorizationStatus.DatabaseAdmin)]
     public async Task DeleteAiAgent()
     {
         using (var process = new AiAgentProcessorForDeleteAiAgent<DatabaseRequestHandler, DocumentsOperationContext>(this))
@@ -39,7 +41,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         }
     }
 
-    [RavenAction("/databases/*/ai/ai-agent/start", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+    [RavenAction("/databases/*/ai/agent/start", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
     public async Task StartChat()
     {
         using var token = CreateHttpRequestBoundOperationToken();
@@ -81,7 +83,7 @@ public class AiAgentHandler : DatabaseRequestHandler
 
 
 
-    [RavenAction("/databases/*/ai/ai-agent/resume", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+    [RavenAction("/databases/*/ai/agent/resume", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
     public async Task ResumeChat()
     {
         using var token = CreateHttpRequestBoundOperationToken();
@@ -89,7 +91,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         throw new NotImplementedException();
     }
 
-    [RavenAction("/databases/*/admin/ai/ai-agent/get", "GET", AuthorizationStatus.DatabaseAdmin)]
+    [RavenAction("/databases/*/admin/ai/agent", "GET", AuthorizationStatus.DatabaseAdmin)]
     public async Task GetAiAgentConfiguration()
     {
         using var token = CreateHttpRequestBoundOperationToken();
@@ -162,8 +164,8 @@ public class AiAgentHandler : DatabaseRequestHandler
     private async Task<(BlittableJsonReaderObject Parameter, string UserPrompt)> ReadBodyAsync(JsonOperationContext context, CancellationToken token)
     {
         var body = await context.ReadForMemoryAsync(RequestBodyStream(), "ai-agent", token);
-        body.TryGet("Parameters", out BlittableJsonReaderObject parameters);
-        if (body.TryGet("Prompt", out string userPrompt) == false)
+        body.TryGet(nameof(StartChatBody.Parameters), out BlittableJsonReaderObject parameters);
+        if (body.TryGet(nameof(StartChatBody.Prompt), out string userPrompt) == false)
             throw new ArgumentException($"User prompt is missing");
 
         return (parameters, userPrompt);
@@ -328,9 +330,15 @@ public class AiAgentHandler : DatabaseRequestHandler
             for (int i = 0; i < results.Length; i++)
             {
                 var queryResponse = (BlittableJsonReaderObject)results[i];
+                if (queryResponse.TryGet("StatusCode", out int statusCode) == false)
+                    throw new InvalidOperationException("Missing status code"); // TODO: shouldn't happen, but add error handling
                 if(queryResponse.TryGet("Result", out BlittableJsonReaderObject queryResponseResult) is false)
                     throw new InvalidOperationException("Missing Result from query request output"); // TODO: shouldn't happen, but add error handling
-                if(queryResponseResult.TryGet("Results", out BlittableJsonReaderArray queryResult) is false)
+
+                if (statusCode != 200)
+                    throw ExceptionDispatcher.Get(queryResponseResult, (HttpStatusCode)statusCode);
+
+                if (queryResponseResult.TryGet("Results", out BlittableJsonReaderArray queryResult) is false)
                     throw new InvalidOperationException("Missing Results from query output"); // TODO: shouldn't happen, but add error handling
 
                 messages.Add(context.ReadObject(new DynamicJsonValue

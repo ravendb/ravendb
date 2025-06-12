@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 using Microsoft.IdentityModel.Tokens;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.AI.AiAgent;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Util;

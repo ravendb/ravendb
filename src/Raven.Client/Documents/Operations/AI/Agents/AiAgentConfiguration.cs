@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Session;
+using Raven.Client.Util;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Documents.Operations.AI.AiAgent;
+namespace Raven.Client.Documents.Operations.AI.Agents;
 
 public class AiAgentConfiguration : IDynamicJson
 {
@@ -13,8 +17,11 @@ public class AiAgentConfiguration : IDynamicJson
 
     public AiAgentConfiguration(string connectionStringName, string systemPrompt)
     {
-        ConnectionStringName = connectionStringName ?? throw new ArgumentNullException(nameof(connectionStringName));
-        SystemPrompt = systemPrompt ?? throw new ArgumentNullException(nameof(systemPrompt));
+        ValidationMethods.AssertNotNullOrEmpty(connectionStringName, nameof(connectionStringName));
+        ValidationMethods.AssertNotNullOrEmpty(systemPrompt, nameof(systemPrompt));
+        
+        ConnectionStringName = connectionStringName;
+        SystemPrompt = systemPrompt;
     }
 
     public string ConnectionStringName { get; set; }
@@ -55,6 +62,21 @@ public class AiAgentConfiguration : IDynamicJson
     }
     public class ToolQuery : IDynamicJson
     {
+        public static ToolQuery Build<T>(string name, string description, IRavenQueryable<T> query)
+        {
+            var dq = (AsyncDocumentQuery<T>)query.ToAsyncDocumentQuery();
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                return new ToolQuery
+                {
+                    Name = name,
+                    Description = description,
+                    Query = dq.ToString(),
+                    ParametersSchema = context.ReadObject(DynamicJsonValue.Convert(dq.QueryParameters), "params").ToString()
+                };
+            }
+        }
+
         public string Name { get; set; }
         public string Description { get; set; }
         public string Query { get; set; }
@@ -72,7 +94,7 @@ public class AiAgentConfiguration : IDynamicJson
         }
     }
 
-    public ToolQuery FindQuery(string name)
+    internal ToolQuery FindQuery(string name)
     {
         foreach (ToolQuery query in Queries ?? [])
         {
@@ -82,8 +104,7 @@ public class AiAgentConfiguration : IDynamicJson
 
         return null;
     }
-    
-    public ToolAction FindAction(string name)
+    internal ToolAction FindAction(string name)
     {
         foreach (ToolAction action in Actions ?? [])
         {

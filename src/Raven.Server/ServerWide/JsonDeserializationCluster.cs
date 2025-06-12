@@ -38,7 +38,7 @@ using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Sparrow.Json;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.AI.AiAgent;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.ServerWide.Commands.AI;
 
 namespace Raven.Server.ServerWide

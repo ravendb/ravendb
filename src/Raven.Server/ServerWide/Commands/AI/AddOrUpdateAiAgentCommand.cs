@@ -1,6 +1,6 @@
 ﻿using System;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.AI.AiAgent;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.ServerWide;
 using Sparrow.Json.Parsing;
 

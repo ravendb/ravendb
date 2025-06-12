@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -8,53 +7,43 @@ using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
 
-namespace Raven.Client.Documents.Operations.AI.AiAgent
+namespace Raven.Client.Documents.Operations.AI.Agents
 {
-    internal class AddOrModifyAiAgentOperation : AddOrModifyAiAgentOperation<object>
+    public class AddOrUpdateAiAgentOperation : AddOrUpdateAiAgentOperation<object>
     {
-        public AddOrModifyAiAgentOperation(string name, AiAgentConfiguration configuration) : base(name, configuration)
+        public AddOrUpdateAiAgentOperation(string name, AiAgentConfiguration configuration) : base(name, configuration)
         {
             if (string.IsNullOrEmpty(configuration.OutputSchema))
                 throw new ArgumentException("OutputSchema cannot be null or empty.", nameof(configuration.OutputSchema));
         }
     }
 
-    internal class AddOrModifyAiAgentOperation<TSchema> : IMaintenanceOperation<AiAgentConfigurationResult> where TSchema : new()
+    public class AddOrUpdateAiAgentOperation<TSchema> : IMaintenanceOperation<AiAgentConfigurationResult> where TSchema : new()
     {
         private readonly string _name;
         private readonly AiAgentConfiguration _configuration;
 
-        public AddOrModifyAiAgentOperation(string name, AiAgentConfiguration configuration)
+        public AddOrUpdateAiAgentOperation(string name, AiAgentConfiguration configuration)
         {
-            _name = name ?? throw new ArgumentNullException(nameof(name));
-            _configuration = configuration ?? throw new ArgumentNullException(name);
-            
-        }
+            ValidationMethods.AssertNotNullOrEmpty(configuration, nameof(configuration));
+            ValidationMethods.AssertNotNullOrEmpty(name, nameof(name));
 
-        protected void Initialize()
-        {
-            if (_configuration.OutputSchema == null)
-            {
-                using (var context = JsonOperationContext.ShortTermSingleUse())
-                {
-                    _configuration.OutputSchema = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new TSchema(), context).ToString();
-                }
-            }
+            _name = name;
+            _configuration = configuration;
         }
 
         public RavenCommand<AiAgentConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            Initialize();
-            return new AddOrModifyAiAgentOperationCommand(_name, _configuration, conventions);
+            return new AddOrUpdateAiAgentOperationCommand(_name, _configuration, conventions);
         }
 
-        private sealed class AddOrModifyAiAgentOperationCommand : RavenCommand<AiAgentConfigurationResult>, IRaftCommand
+        private sealed class AddOrUpdateAiAgentOperationCommand : RavenCommand<AiAgentConfigurationResult>, IRaftCommand
         {
             private readonly string _name;
             private readonly AiAgentConfiguration _configuration;
             private readonly DocumentConventions _conventions;
 
-            public AddOrModifyAiAgentOperationCommand(string name, AiAgentConfiguration configuration, DocumentConventions conventions)
+            public AddOrUpdateAiAgentOperationCommand(string name, AiAgentConfiguration configuration, DocumentConventions conventions)
             {
                 _name = name;
                 _configuration = configuration;
@@ -63,13 +52,14 @@ namespace Raven.Client.Documents.Operations.AI.AiAgent
             public override bool IsReadRequest => false;
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/ai/ai-agent/add?agent={_name}";
+                url = $"{node.Url}/databases/{node.Database}/admin/ai/agent?name={Uri.EscapeDataString(_name)}";
 
                 var request = new HttpRequestMessage
                 {
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(async stream =>
                     {
+                        _configuration.OutputSchema ??= DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new TSchema(), ctx).ToString();
                         await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false);
                     }, _conventions)
                 };

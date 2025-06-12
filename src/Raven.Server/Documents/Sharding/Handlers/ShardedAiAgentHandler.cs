@@ -6,10 +6,10 @@ namespace Raven.Server.Documents.Sharding.Handlers;
 
 public sealed class ShardedAiAgentHandler : ShardedDatabaseRequestHandler
 {
-    [RavenShardedAction("/databases/*/admin/ai/ai-agent/add", "PUT")]
+    [RavenShardedAction("/databases/*/admin/ai/agent", "PUT")]
     public Task AddOrModifyAiAgent() => throw new NotSupportedInShardingException("AI Agent is currently not supported in sharding. Please use the non-sharded endpoint for this operation.");
 
 
-    [RavenShardedAction("/databases/*/admin/ai/ai-agent/delete", "DELETE")]
+    [RavenShardedAction("/databases/*/admin/ai/agent", "DELETE")]
     public Task DeleteAiAgent() => throw new NotSupportedInShardingException("AI Agent is currently not supported in sharding. Please use the non-sharded endpoint for this operation.");
 }

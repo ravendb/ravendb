@@ -8,7 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.AI.AiAgent;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;

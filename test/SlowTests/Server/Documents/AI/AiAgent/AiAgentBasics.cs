@@ -7,7 +7,7 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.AI.AiAgent;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Tests.Infrastructure;
 using Xunit;
@@ -38,6 +38,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         public async Task CanCreateAiAgent(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
+            await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
             using var session = store.OpenAsyncSession();
@@ -53,26 +55,18 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             agent.Queries =
             [
-                new AiAgentConfiguration.ToolQuery
-                {
-                    Name = "ProductSearch",
-                    Description = "semantic search the store product catalog",
-                    Query = session.Query<Product>().VectorSearch(v=>v.WithText(p=>p.Name), v=>v.ByText("$query")).ToString(),
-                    // Query = "from Products where vector.search(embedding.text(Name), $query)",
-                    ParametersSchema = "{\"query\": [\"term or phrase to search in the catalog\"]}"
-                },
-
-                new AiAgentConfiguration.ToolQuery
-                {
-                    Name = "RecentOrder",
-                    Description = "Get the recent orders of the current user",
-                    // Query = "from Orders where Company = $company order by OrderedAt desc limit 10",
-                    Query = session.Query<Query.Order>().Where(o => o.Company == "$company").OrderByDescending(o => o.OrderedAt).Take(10).ToString(),
-                    ParametersSchema = "{}"
-                }
+                AiAgentConfiguration.ToolQuery.Build(
+                    "ProductSearch", 
+                    "semantic search the store product catalog",
+                    session.Query<Product>().VectorSearch(v => v.WithText(p => p.Name), v => v.ByText("$query")))
+                ,
+                AiAgentConfiguration.ToolQuery.Build(
+                    "RecentOrder", 
+                    "Get the recent orders of the current user",
+                    session.Query<Query.Order>().Where(o => o.Company == "$company").OrderByDescending(o => o.OrderedAt).Take(10))
             ];
 
-            await store.Maintenance.SendAsync(new AddOrModifyAiAgentOperation<OutputSchema>("shopping assistant", agent));
+            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>("shopping assistant", agent));
             var r = await store.Maintenance.SendAsync(new StartChatOperation<OutputSchema>("shopping assistant", "what goes well with my cheese?",
                 new Dictionary<string, object> { ["company"] = "companies/90-A" }));
 
