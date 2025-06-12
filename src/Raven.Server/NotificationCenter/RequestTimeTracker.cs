@@ -62,6 +62,9 @@ namespace Raven.Server.NotificationCenter
 
                 _notificationCenter.RequestLatency
                     .AddHint(_sw.ElapsedMilliseconds, _source, queryWithParameters);
+                
+                if (_logger.IsOperationsEnabled)
+                    _logger.Operations($"High latency request detected - Source: {_source}, Duration: {_sw.Elapsed}, Query: {queryWithParameters}");
             }
             catch (Exception e)
             {
