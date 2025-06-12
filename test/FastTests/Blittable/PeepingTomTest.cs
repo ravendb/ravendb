@@ -4,18 +4,15 @@ using System.Threading;
 using FastTests.Voron.FixedSize;
 using Sparrow;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
-    public class PeepingTomTest : NoDisposalNeeded
+    public class PeepingTomTest(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public PeepingTomTest(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(123456, 65535, 0)]
         [InlineData(1234, 535, 0)]
         [InlineData(4096, 4096, 0)]
@@ -32,7 +29,7 @@ namespace FastTests.Blittable
                 PeepingTomStreamTest(originalSize, chunkSizeToRead, offset, seed: null, context, cts.Token);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineDataWithRandomSeed]
         [InlineData(1291481720)]
         [InlineData(916490010)]

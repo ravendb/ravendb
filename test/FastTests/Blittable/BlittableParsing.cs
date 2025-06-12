@@ -2,18 +2,15 @@
 using System.Text;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
-    public class BlittableParsing : NoDisposalNeeded
+    public class BlittableParsing(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public BlittableParsing(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanParseProperly()
         {
             var json = "{\"Type\":\"Acknowledge\",\"Etag\":194}";

@@ -1,18 +1,15 @@
 ﻿using System.Collections.Generic;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
-    public class BlittableJsonEqualityTests : NoDisposalNeeded
+    public class BlittableJsonEqualityTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public BlittableJsonEqualityTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Equals_identical()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -75,7 +72,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Equals_even_though_order_of_properties_is_different()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -137,7 +134,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void GetHashCode_must_not_use_size_if_it_isnt_root()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -181,7 +178,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Equals_with_the_usage_of_memcmp_underneath()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -239,7 +236,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Equals_with_the_usage_of_memcmp_underneath_and_complex_nested_object()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -305,7 +302,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Must_not_be_equal_if_nested_property_name_is_different()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -371,7 +368,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Equals_when_creating_blittable_in_different_ways()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -434,7 +431,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Equals_blittables_created_manually()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())

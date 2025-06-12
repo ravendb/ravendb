@@ -1,29 +1,20 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="MutatingJsonTests.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
-    public class MutatingJsonTests : NoDisposalNeeded
+    public class MutatingJsonTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public MutatingJsonTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         private const string InitialJson = @"{""Name"":""Oren"",""Dogs"":[""Arava"",""Oscar"",""Sunny""],""State"":{""Sleep"":false}}";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public Task CanAddProperty()
         {
             return AssertEqualAfterRoundTripAsync(source =>
@@ -35,7 +26,7 @@ namespace FastTests.Blittable
             }, @"{""Name"":""Oren"",""Dogs"":[""Arava"",""Oscar"",""Sunny""],""State"":{""Sleep"":false},""Age"":34}");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public Task CanAddNegativeIntegerProperty()
         {
             return AssertEqualAfterRoundTripAsync(source =>
@@ -47,7 +38,7 @@ namespace FastTests.Blittable
             }, @"{""Name"":""Oren"",""Dogs"":[""Arava"",""Oscar"",""Sunny""],""State"":{""Sleep"":false},""Age"":-34}");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public Task CanCompressFields()
         {
             return AssertEqualAfterRoundTripAsync(source =>
@@ -61,7 +52,7 @@ namespace FastTests.Blittable
                 @"{""Name"":""there goes the man in the moon""}");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public Task WillPreserveEscapes()
         {
             return AssertEqualAfterRoundTripAsync(source =>
@@ -74,7 +65,7 @@ namespace FastTests.Blittable
                 @"{""Name"":""Oren\r\n""}");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public Task CanModifyArrayProperty()
         {
             return AssertEqualAfterRoundTripAsync(source =>
@@ -90,7 +81,7 @@ namespace FastTests.Blittable
             }, @"{""Name"":""Oren"",""Dogs"":[""Arava"",""Oscar"",""Phoebe""],""State"":{""Sleep"":false}}");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public Task CanModifyNestedObjectProperty()
         {
             return AssertEqualAfterRoundTripAsync(source =>
@@ -105,7 +96,7 @@ namespace FastTests.Blittable
             }, @"{""Name"":""Oren"",""Dogs"":[""Arava"",""Oscar"",""Sunny""],""State"":{""Sleep"":true}}");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public Task CanRemoveAndAddProperty()
         {
             return AssertEqualAfterRoundTripAsync(source =>
@@ -118,7 +109,7 @@ namespace FastTests.Blittable
             }, @"{""Name"":""Oren"",""State"":{""Sleep"":false},""Pie"":3.147}");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public Task CanAddAndRemoveProperty()
         {
             return AssertEqualAfterRoundTripAsync(source =>
@@ -153,7 +144,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanModifyRespectingUnitOfWork()
         {
             var ctx = JsonOperationContext.ShortTermSingleUse();

@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,12 +13,8 @@ namespace FastTests.Blittable
         public static readonly Func<BlittableJsonReaderObject, SerializationDeserializationValidation.Values> SerializationDeserializationValidation = GenerateJsonDeserializationRoutine<SerializationDeserializationValidation.Values>();
     }
 
-    public class SerializationDeserializationValidation : NoDisposalNeeded
+    public class SerializationDeserializationValidation(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public SerializationDeserializationValidation(ITestOutputHelper output) : base(output)
-        {
-        }
-
         public class Values
         {
             public int intMinVal;
@@ -53,7 +50,7 @@ namespace FastTests.Blittable
             public string[] stringArray;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ValidateRanges()
         {
             var values = new Values

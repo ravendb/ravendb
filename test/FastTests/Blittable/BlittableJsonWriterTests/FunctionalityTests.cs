@@ -13,6 +13,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,14 +25,14 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Generating_DictionaryDeserializationRoutine_should_work()
         {
             Func<BlittableJsonReaderObject, Dictionary<string, long>> deserializationFunc = JsonDeserializationBase.GenerateJsonDeserializationRoutine<Dictionary<string, long>>();
             Assert.NotNull(deserializationFunc);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task FunctionalityTest()
         {
             var str = GenerateSimpleEntityForFunctionalityTest();
@@ -56,7 +57,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void FunctionalityTest2()
         {
             var str = GenerateSimpleEntityForFunctionalityTest2();
@@ -67,7 +68,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void EmptyArrayTest()
         {
             var str = "{\"Alias\":\"Jimmy\",\"Data\":[],\"Name\":\"Trolo\",\"SubData\":{\"SubArray\":[]}}";
@@ -84,7 +85,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(1)]
         [InlineData(10)]
         [InlineData(100)]
@@ -117,7 +118,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             NativeMemory.Free(encodeOutput, maximumOutputLength);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(1)]
         [InlineData(10)]
         [InlineData(100)]
@@ -161,7 +162,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task BasicCopyToStream()
         {
             var json = JsonConvert.SerializeObject(new
@@ -187,7 +188,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task UsingBooleans()
         {
             var json = JsonConvert.SerializeObject(new
@@ -206,7 +207,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void UsingChars()
         {
             var deserialize = JsonDeserializationBase.GenerateJsonDeserializationRoutine<CharClass>();

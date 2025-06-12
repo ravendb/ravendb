@@ -6,18 +6,15 @@
 
 using System.Text;
 using Sparrow.Compression;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
-    public unsafe class SmallStringCompressionTests : NoDisposalNeeded
+    public unsafe class SmallStringCompressionTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public SmallStringCompressionTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("this is a sample string")]
         [InlineData("here is a funny story I have heard")]
         [InlineData("who is here, and who is there, who is everywhere?")]
@@ -45,7 +42,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("this is a sample string")]
         [InlineData("here is a funny story I have heard")]
         [InlineData("who is here, and who is there, who is everywhere?")]
@@ -74,7 +71,7 @@ namespace FastTests.Blittable
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("this is a sample string")]
         [InlineData("בארזים נפלה שלהבת")]
         public void CanHandleSmallBufferCompression(string s)
@@ -93,7 +90,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("this is a sample string")]
         [InlineData("here is a funny story I have heard")]
         [InlineData("who is here, and who is there, who is everywhere?")]

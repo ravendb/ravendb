@@ -3,18 +3,15 @@ using System.IO;
 using System.Text;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
-    public unsafe class UnmanageJsonReaderTests : NoDisposalNeeded
+    public unsafe class UnmanageJsonReaderTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public UnmanageJsonReaderTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [MemberData(nameof(Samples))]
         public void CanReadAll(string name)
         {
@@ -51,7 +48,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [MemberData(nameof(InvalidJsons))]
         public void FailsOnInvalidJson(string invalidJson)
         {

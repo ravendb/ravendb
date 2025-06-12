@@ -1,19 +1,15 @@
 ﻿using System;
 using Sparrow.Json;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests;
 
-public class ArenaMemoryAllocatorTests : NoDisposalNeeded
+public class ArenaMemoryAllocatorTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
-    public ArenaMemoryAllocatorTests(ITestOutputHelper output) : base(output)
-    {
-
-    }
-
-    [Fact]
+    [RavenFact(RavenTestCategory.Memory)]
     public void ShouldUseFragmentedMemorySegment()
     {
         using (var arena = new ArenaMemoryAllocator(SharedMultipleUseFlag.None))

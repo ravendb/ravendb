@@ -7,6 +7,7 @@ using Sparrow.Collections;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void BasicObject()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -42,7 +43,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void BasicEmptyObject()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -65,7 +66,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void BasicNestedEmptyObject()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -96,7 +97,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void BasicIntFlatStructure()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -131,7 +132,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void BasicIntNestedStructure()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -192,7 +193,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void BasicIntDeeperNestedStructure()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -314,7 +315,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void FlatObjectWithEmptyArray()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -353,7 +354,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void FlatObjectWithArrayOfEmptyObjects()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -404,7 +405,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void FlatObjectWithIntArrayTest()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -448,7 +449,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ObjectWithNestedIntArrayTest()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -505,7 +506,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void FlatObjectWithObjectArray()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -562,7 +563,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void FlatObjectWithObjectArrayWithNestedArray()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -629,7 +630,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void SimpleArrayDocument()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -657,7 +658,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
@@ -700,7 +701,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void ReadDataTypesTest()
         {
             using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
@@ -819,7 +820,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void LargeDocumentsMemoryReuse()
         {
             using (var context = new JsonOperationContext(1024 * 64, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
