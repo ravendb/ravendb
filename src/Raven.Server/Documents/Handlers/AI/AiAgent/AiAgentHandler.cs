@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.AiAgent;
@@ -19,7 +20,7 @@ namespace Raven.Server.Documents.Handlers.AI.AiAgent;
 
 public class AiAgentHandler : DatabaseRequestHandler
 {
-    [RavenAction("/databases/*/ai/ai-agent/add", "PUT", AuthorizationStatus.DatabaseAdmin)]
+    [RavenAction("/databases/*/admin/ai/ai-agent/add", "PUT", AuthorizationStatus.DatabaseAdmin)]
     public async Task AddOrModifyAiAgent()
     {
         using (var process = new AiAgentProcessorForAddOrUpdateAiAgent<DatabaseRequestHandler, DocumentsOperationContext>(this))
@@ -29,7 +30,7 @@ public class AiAgentHandler : DatabaseRequestHandler
     }
 
 
-    [RavenAction("/databases/*/ai/ai-agent/delete", "DELETE", AuthorizationStatus.DatabaseAdmin)]
+    [RavenAction("/databases/*/admin/ai/ai-agent/delete", "DELETE", AuthorizationStatus.DatabaseAdmin)]
     public async Task DeleteAiAgent()
     {
         using (var process = new AiAgentProcessorForDeleteAiAgent<DatabaseRequestHandler, DocumentsOperationContext>(this))
@@ -43,7 +44,6 @@ public class AiAgentHandler : DatabaseRequestHandler
     {
         using var token = CreateHttpRequestBoundOperationToken();
         var name = GetStringQueryString("agent", required: true);
-        string userPrompt = GetStringQueryString("prompt", required: true);
 
         AiAgentConfiguration configuration;
         using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
@@ -54,14 +54,9 @@ public class AiAgentHandler : DatabaseRequestHandler
                 throw new ArgumentException($"AI Agent '{name}' doesn't exists");
         }
 
-     
-
-        using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
-
-        var options = await context.ReadForMemoryAsync(RequestBodyStream(), "ai-agent", token.Token);
-        options.TryGet("Parameters", out BlittableJsonReaderObject parameters);
-
-        var r = await Talk(context, configuration, userPrompt, parameters, token: token);
+        using var _ = ContextPool.AllocateOperationContext(out JsonOperationContext context);
+        var body = await ReadBodyAsync(context, token.Token);
+        var r = await Talk(context, configuration, body.UserPrompt, body.Parameter, token: token);
 
         string conversationId = null;
         if (configuration.Persistence is not null)
@@ -84,6 +79,8 @@ public class AiAgentHandler : DatabaseRequestHandler
         writer.WriteEndObject();
     }
 
+
+
     [RavenAction("/databases/*/ai/ai-agent/resume", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
     public async Task ResumeChat()
     {
@@ -92,33 +89,11 @@ public class AiAgentHandler : DatabaseRequestHandler
         throw new NotImplementedException();
     }
 
-    [RavenAction("/databases/*/ai/ai-agent/get", "GET", AuthorizationStatus.DatabaseAdmin)]
+    [RavenAction("/databases/*/admin/ai/ai-agent/get", "GET", AuthorizationStatus.DatabaseAdmin)]
     public async Task GetAiAgentConfiguration()
     {
         using var token = CreateHttpRequestBoundOperationToken();
-        var name = GetStringQueryString("agent", required: true);
-        AiAgentConfiguration configuration;
-        
-        using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
-        using (ctx.OpenReadTransaction())
-        using (var record = ServerStore.Cluster.ReadRawDatabaseRecord(ctx, DatabaseName))
-        {
-            if (record.TryGetAiAgent(name, out configuration) == false)
-                throw new ArgumentException($"AI Agent '{name}' doesn't exists");
-        }
-
-        using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-        await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), token.Token))
-        {
-            var obj = context.ReadObject(configuration.ToJson(), "get-ai-agent");
-            writer.WriteObject(obj);
-        }
-    }
-
-    [RavenAction("/databases/*/ai/ai-agent/get-all", "GET", AuthorizationStatus.DatabaseAdmin)]
-    public async Task GetAllAiAgents()
-    {
-        using var token = CreateHttpRequestBoundOperationToken();
+        var name = GetStringQueryString("agent");
 
         Dictionary<string, AiAgentConfiguration> agents;
         using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
@@ -126,6 +101,21 @@ public class AiAgentHandler : DatabaseRequestHandler
         using (var record = ServerStore.Cluster.ReadRawDatabaseRecord(ctx, DatabaseName))
         {
             agents = record.AiAgents;
+        }
+
+        if (string.IsNullOrEmpty(name) == false)
+        {
+            if (agents.TryGetValue(name, out var configuration) == false)
+                throw new ArgumentException($"AI Agent '{name}' doesn't exists");
+
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream(), token.Token))
+            {
+                var obj = context.ReadObject(configuration.ToJson(), "get-ai-agent");
+                writer.WriteObject(obj);
+            }
+
+            return;
         }
 
         using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -154,12 +144,11 @@ public class AiAgentHandler : DatabaseRequestHandler
     {
         using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
         using var token = CreateHttpRequestBoundOperationToken();
-        string userPrompt = GetStringQueryString("prompt", required: true);
         var options = await context.ReadForMemoryAsync(RequestBodyStream(), "ai-agent", token.Token);
         var cfg = JsonDeserializationClient.AiAgentConfiguration(options);
-        options.TryGet("Parameters", out BlittableJsonReaderObject parameters);
 
-        var r = await Talk(context, cfg, userPrompt, parameters, token);
+        var body = await ReadBodyAsync(context, token.Token);
+        var r = await Talk(context, cfg, body.UserPrompt, body.Parameter, token);
 
         await using var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream());
         writer.WriteStartObject();
@@ -170,8 +159,17 @@ public class AiAgentHandler : DatabaseRequestHandler
         r.Usage.Write(writer);
         writer.WriteEndObject();
     }
+    private async Task<(BlittableJsonReaderObject Parameter, string UserPrompt)> ReadBodyAsync(JsonOperationContext context, CancellationToken token)
+    {
+        var body = await context.ReadForMemoryAsync(RequestBodyStream(), "ai-agent", token);
+        body.TryGet("Parameters", out BlittableJsonReaderObject parameters);
+        if (body.TryGet("Prompt", out string userPrompt) == false)
+            throw new ArgumentException($"User prompt is missing");
 
-    private async Task<(AiUsage Usage, AiResponse Response, BlittableJsonReaderObject Dcoument)> Talk(DocumentsOperationContext context, AiAgentConfiguration cfg,
+        return (parameters, userPrompt);
+    }
+
+    private async Task<(AiUsage Usage, AiResponse Response, BlittableJsonReaderObject Dcoument)> Talk(JsonOperationContext context, AiAgentConfiguration cfg,
         string userPrompt, BlittableJsonReaderObject parameters, OperationCancelToken token)
     {
         var conStr = GetAiConnectionString(cfg.ConnectionStringName);
@@ -217,7 +215,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         return (usage, result, docJson);
     }
 
-    private static BlittableJsonReaderObject CreateDocument(DocumentsOperationContext context, AiAgentConfiguration cfg, List<BlittableJsonReaderObject> msgs)
+    private static BlittableJsonReaderObject CreateDocument(JsonOperationContext context, AiAgentConfiguration cfg, List<BlittableJsonReaderObject> msgs)
     {
         var metadata = new DynamicJsonValue
         {
@@ -289,7 +287,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         return context.ReadObject(conversation, "create-conversion");
     }
 
-    private async Task HandleToolCalls(DocumentsOperationContext context, List<BlittableJsonReaderObject> messages, AiResponse result, AiAgentConfiguration cfg,
+    private async Task HandleToolCalls(JsonOperationContext context, List<BlittableJsonReaderObject> messages, AiResponse result, AiAgentConfiguration cfg,
         BlittableJsonReaderObject parameters)
     {
         // TODO: handle a response that does both query & action
@@ -345,7 +343,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         }
     }
 
-    private static BlittableJsonReaderObject CreateParameters(DocumentsOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)
+    private static BlittableJsonReaderObject CreateParameters(JsonOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)
     {
         var args = context.Sync.ReadForMemory(call.Arguments, "call/args");
         if (parameters is null)
@@ -363,7 +361,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         return args;
     }
 
-    private static BlittableJsonReaderArray GenerateTools(AiAgentConfiguration cfg, DocumentsOperationContext context)
+    private static BlittableJsonReaderArray GenerateTools(AiAgentConfiguration cfg, JsonOperationContext context)
     {
         DynamicJsonArray tools = [];
         foreach (var q in cfg.Queries ?? [])

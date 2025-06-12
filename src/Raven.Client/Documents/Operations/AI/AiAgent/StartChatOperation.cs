@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -11,32 +10,32 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.AiAgent;
 
-internal class StartChatOperation<T> : IMaintenanceOperation<ChatResult<T>> where T : new()
+internal class StartChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSchema>> where TSchema : new()
 {
     private readonly string _agent;
     private readonly string _prompt;
-    private readonly Dictionary<string, string> _parameters;
+    private readonly Dictionary<string, object> _parameters;
 
-    public StartChatOperation(string agent, string prompt, Dictionary<string, string> parameters = null)
+    public StartChatOperation(string agent, string prompt, Dictionary<string, object> parameters = null)
     {
         _agent = agent ?? throw new ArgumentNullException(nameof(agent));
         _prompt = prompt ?? throw new ArgumentNullException(nameof(prompt));
         _parameters = parameters;
     }
 
-    public RavenCommand<ChatResult<T>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+    public RavenCommand<ChatResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
         return new StartChatOperationCommand(_agent, _prompt, _parameters, conventions);
     }
 
-    private sealed class StartChatOperationCommand : RavenCommand<ChatResult<T>>
+    private sealed class StartChatOperationCommand : RavenCommand<ChatResult<TSchema>>
     {
         private readonly string _agent;
         private readonly string _prompt;
-        private readonly Dictionary<string, string> _parameters;
+        private readonly Dictionary<string, object> _parameters;
         private readonly DocumentConventions _conventions;
 
-        public StartChatOperationCommand(string agent, string prompt, Dictionary<string, string> parameters, DocumentConventions conventions)
+        public StartChatOperationCommand(string agent, string prompt, Dictionary<string, object> parameters, DocumentConventions conventions)
         {
             _agent = agent;
             _prompt = prompt;
@@ -46,14 +45,18 @@ internal class StartChatOperation<T> : IMaintenanceOperation<ChatResult<T>> wher
         public override bool IsReadRequest => false;
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/ai/ai-agent/start?agent={_agent}&prompt={_prompt}";
+            url = $"{node.Url}/databases/{node.Database}/ai/ai-agent/start?agent={_agent}";
 
             var request = new HttpRequestMessage
             {
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(async stream =>
                 {
-                    var json = new DynamicJsonValue { ["Parameters"] = DynamicJsonValue.Convert(_parameters) };
+                    var json = new DynamicJsonValue
+                    {
+                        ["Parameters"] = DynamicJsonValue.Convert(_parameters),
+                        ["Prompt"] = _prompt,
+                    };
                     await ctx.WriteAsync(stream, ctx.ReadObject(json,"chat-params")).ConfigureAwait(false);
                 }, _conventions)
             };
@@ -66,15 +69,15 @@ internal class StartChatOperation<T> : IMaintenanceOperation<ChatResult<T>> wher
             if (response == null)
                 ThrowInvalidResponse();
 
-            response.TryGet(nameof(ChatResult<T>.Usage), out BlittableJsonReaderObject usage);
-            response.TryGet(nameof(ChatResult<T>.Response), out BlittableJsonReaderObject result);
-            response.TryGet(nameof(ChatResult<T>.ChatId), out string chatId);
+            response.TryGet(nameof(ChatResult<TSchema>.Usage), out BlittableJsonReaderObject usage);
+            response.TryGet(nameof(ChatResult<TSchema>.Response), out BlittableJsonReaderObject result);
+            response.TryGet(nameof(ChatResult<TSchema>.ChatId), out string chatId);
 
-            Result = new ChatResult<T>
+            Result = new ChatResult<TSchema>
             {
                 ChatId = chatId,
                 Usage = JsonDeserializationClient.AiUsage(usage),
-                Response = _conventions.Serialization.DefaultConverter.FromBlittable<T>(result, chatId)
+                Response = _conventions.Serialization.DefaultConverter.FromBlittable<TSchema>(result, chatId)
             };
         }
     }

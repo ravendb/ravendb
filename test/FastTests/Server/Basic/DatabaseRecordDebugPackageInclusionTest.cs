@@ -41,6 +41,7 @@ namespace FastTests.Server.Basic
                 nameof(DatabaseRecord.AiConnectionStrings),
                 nameof(DatabaseRecord.EmbeddingsGenerations),
                 nameof(DatabaseRecord.GenAis),
+                nameof(DatabaseRecord.AiAgents)
             };
             
             foreach (var safe in ServerWideDebugInfoPackageHandler.FieldsThatShouldBeExposedForDebug)

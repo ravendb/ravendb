@@ -73,7 +73,7 @@ namespace FastTests.Client
                 "AdoptOrphanedRevisionsCommand",
                 "AddPrefixedShardingSettingCommand", "DeletePrefixedShardingSettingCommand", "UpdatePrefixedShardingSettingCommand", "RevertRevisionsByIdCommand",
                 "DeleteRevisionsCommand", "ConfigureRevisionsBinCleanerCommand",
-                "GetCollectionRevisionsStatisticsCommand"
+                "GetCollectionRevisionsStatisticsCommand","AddOrModifyAiAgentOperationCommand","DeleteAiAgentOperationCommand","StartChatOperationCommand"
             }.OrderBy(t => t);
 
             var commandBaseType = typeof(RavenCommand<>);

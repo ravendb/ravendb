@@ -72,18 +72,6 @@ public class AiAgentConfiguration : IDynamicJson
         }
     }
 
-    /*
-    public List<string> FindParameters()
-    {
-        foreach (ToolQuery query in Queries ?? [])
-        {
-            if(query.Name == name)
-                return query;
-        }
-
-        return null;
-    }*/
-
     public ToolQuery FindQuery(string name)
     {
         foreach (ToolQuery query in Queries ?? [])

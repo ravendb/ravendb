@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Operations.AI.AiAgent
         }
     }
 
-    internal class AddOrModifyAiAgentOperation<T> : IMaintenanceOperation<AiAgentConfigurationResult> where T : new()
+    internal class AddOrModifyAiAgentOperation<TSchema> : IMaintenanceOperation<AiAgentConfigurationResult> where TSchema : new()
     {
         private readonly string _name;
         private readonly AiAgentConfiguration _configuration;
@@ -37,7 +37,7 @@ namespace Raven.Client.Documents.Operations.AI.AiAgent
             {
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
-                    _configuration.OutputSchema = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new T(), context).ToString();
+                    _configuration.OutputSchema = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new TSchema(), context).ToString();
                 }
             }
         }
@@ -63,7 +63,7 @@ namespace Raven.Client.Documents.Operations.AI.AiAgent
             public override bool IsReadRequest => false;
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/ai/ai-agent/add?agent={_name}";
+                url = $"{node.Url}/databases/{node.Database}/admin/ai/ai-agent/add?agent={_name}";
 
                 var request = new HttpRequestMessage
                 {

@@ -32,7 +32,7 @@ internal class DeleteAiAgentOperation : IMaintenanceOperation<AiAgentConfigurati
         public override bool IsReadRequest => false;
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/ai/ai-agent/delete?agent={_name}";
+            url = $"{node.Url}/databases/{node.Database}/admin/ai/ai-agent/delete?agent={_name}";
 
             var request = new HttpRequestMessage
             {
