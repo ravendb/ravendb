@@ -11,13 +11,9 @@ using Xunit.Abstractions;
 
 namespace FastTests.Utils
 {
-    public unsafe class TimeParsing : NoDisposalNeeded
+    public unsafe class TimeParsing(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public TimeParsing(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("2016-10-05T21:07:32.2082285Z")]
         [InlineData("2016-10-05T21:07:32.2082285")]
         [InlineData("2016-10-05T21:07:32")]
@@ -37,7 +33,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("21:07:32.2082285")]
         [InlineData("21:07:32")]
         [InlineData("2.21:07:32")]
@@ -62,7 +58,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("21:07:32 some text")]
         [InlineData("2.21:07:32 some text")]
         [InlineData("333.21:07:32.232 some text")]
@@ -87,7 +83,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("2016-10-05T21:07:32.2082285+03:00")]
         [InlineData("2016-10-05T21:17:32.2082285+01:00")]
         public void CanParseValidDatesTimeOffset(string dt)
@@ -106,7 +102,7 @@ namespace FastTests.Utils
             }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("2016-10-05T")]
         [InlineData("2016-10-05T21:17:32.2082285+01:00,ad")]
         [InlineData("2016-10-05T21:17:3")]
@@ -123,7 +119,7 @@ namespace FastTests.Utils
             }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("1998-02-09", 1998, 2, 9)]
         [InlineData("0001-12-10", 1, 12, 10)]
         [InlineData("2022-02-14", 2022, 2, 14)]
@@ -139,7 +135,7 @@ namespace FastTests.Utils
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("20:59:12.9990000", 20, 59, 12, 999)]
         [InlineData("21:38:32.9120000", 21, 38, 32, 912)]
         [InlineData("23:59:00", 23, 59,0,0)]

@@ -4,18 +4,15 @@ using System.Linq;
 using FastTests.Voron.FixedSize;
 using FastTests.Voron.Util;
 using Raven.Client.Documents.Operations.Attachments;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Utils
 {
-    public class LimitedStreamTests : NoDisposalNeeded
+    public class LimitedStreamTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public LimitedStreamTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineDataWithRandomSeed]
         public void Should_properly_read_ranges(int seed)
         {
@@ -62,7 +59,7 @@ namespace FastTests.Utils
         }
 
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineDataWithRandomSeed]
         public void Should_properly_seek(int seed)
         {
