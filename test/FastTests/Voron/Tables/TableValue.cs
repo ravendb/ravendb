@@ -1,25 +1,15 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="TableValue.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System;
 using System.Text;
+using Tests.Infrastructure;
+using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
 
-using Voron.Data.Tables;
-
 namespace FastTests.Voron.Tables
 {
-    public unsafe class TableValueTests : NoDisposalNeeded
+    public unsafe class TableValueTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public TableValueTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanBuild()
         {
             var oren = Encoding.UTF8.GetBytes("Oren Eini");
@@ -44,7 +34,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanRead()
         {
             var orenStr = "Oren Eini";
@@ -90,7 +80,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSerializeBool()
         {
             var v1 = true;
@@ -119,7 +109,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSerializeRecursively()
         {
             var v1 = 0L;

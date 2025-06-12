@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.PostingLists;
 using Voron.Global;
@@ -12,19 +13,14 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron.PostingLists
 {
-    public unsafe class PostingListLeafPageTests : StorageTest
+    public unsafe class PostingListLeafPageTests(ITestOutputHelper output) : StorageTest(output)
     {
-
-        public PostingListLeafPageTests(ITestOutputHelper output) : base(output)
-        {   
-        }
-        
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(1)]
         [InlineData(100)]
         [InlineData(257)] // with compressed
-        [InlineData(513)] // with compressed x 2 
-        [InlineData(4096 + 257)] // with compressed x 16 (so will recompress) 
+        [InlineData(513)] // with compressed x 2
+        [InlineData(4096 + 257)] // with compressed x 16 (so will recompress)
         public void CanAddAndRead(int size)
         {
             using var _tx = Env.WriteTransaction();
@@ -61,12 +57,12 @@ namespace FastTests.Voron.PostingLists
             Assert.Equal(list, leaf.GetDebugOutput());
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(1)]
         [InlineData(100)]
         [InlineData(257)] // with compressed
-        [InlineData(513)] // with compressed x 2 
-        [InlineData(4096 + 257)] // with compressed x 16 (so will recompress) 
+        [InlineData(513)] // with compressed x 2
+        [InlineData(4096 + 257)] // with compressed x 16 (so will recompress)
         public void CanAddAndRemove(int size)
         {
             using var _tx = Env.WriteTransaction();
@@ -120,12 +116,12 @@ namespace FastTests.Voron.PostingLists
         }
 
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(1)]
         [InlineData(100)]
         [InlineData(257)] // with compressed
-        [InlineData(513)] // with compressed x 2 
-        [InlineData(4096 + 257)] // with compressed x 16 (so will recompress) 
+        [InlineData(513)] // with compressed x 2
+        [InlineData(4096 + 257)] // with compressed x 16 (so will recompress)
         public void CanHandleDuplicateValues(int size)
         {
             using var _tx = Env.WriteTransaction();

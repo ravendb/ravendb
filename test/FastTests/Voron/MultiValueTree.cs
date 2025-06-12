@@ -1,6 +1,7 @@
-﻿using System;
+﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data;
 using Xunit;
@@ -8,13 +9,10 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron
 {
-    public class MultiValueTree : StorageTest
+    public class MultiValueTree(ITestOutputHelper output) : StorageTest(output)
     {
-        public MultiValueTree(ITestOutputHelper output) : base(output)
-        {
-        }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Single_MultiAdd_And_Read_DataStored()
         {
             var random = new Random();
@@ -48,7 +46,7 @@ namespace FastTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MultiDelete_Remains_One_Entry_The_Data_Is_Retrieved_With_MultiRead()
         {
             const int INPUT_COUNT = 3;
@@ -85,7 +83,7 @@ namespace FastTests.Voron
             ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, "foo");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MultiDelete_Remains_No_Entries_ChildTreeKey_Doesnt_Exist()
         {
             const int INPUT_COUNT = 3;
@@ -126,7 +124,7 @@ namespace FastTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Single_MultiAdd_And_Single_MultiDelete_DataDeleted()
         {
             var random = new Random();
@@ -161,7 +159,7 @@ namespace FastTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Multiple_MultiAdd_And_MultiDelete_InTheSame_Transaction_EntryDeleted()
         {
             const int INPUT_COUNT = 25;
@@ -191,7 +189,7 @@ namespace FastTests.Voron
             ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, "foo");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void NamedTree_Multiple_MultiAdd_And_MultiDelete_InTheSame_Transaction_EntryDeleted()
         {
             const int INPUT_COUNT = 25;
@@ -227,7 +225,7 @@ namespace FastTests.Voron
             ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, "foo");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void NamedTree_Multiple_MultiAdd_MultiDelete_Once_And_Read_EntryDeleted()
         {
             const int INPUT_COUNT = 25;
@@ -268,7 +266,7 @@ namespace FastTests.Voron
             ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, "foo");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MultiAdd_Twice_TheSame_KeyValue_MultiDelete_NotThrowsException_MultiTree_Deleted()
         {
             const string CHILDTREE_KEY = "ChildTree";
@@ -289,7 +287,7 @@ namespace FastTests.Voron
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Multiple_MultiAdd_MultiDelete_Once_And_Read_EntryDeleted()
         {
             const int INPUT_COUNT = 25;
@@ -328,7 +326,7 @@ namespace FastTests.Voron
             ValidateInputExistence(inputData, CHILDTREE_KEY, INPUT_DATA_SIZE, "foo");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Multiple_MultiAdd_And_Read_DataStored()
         {
             const int INPUT_COUNT = 3;

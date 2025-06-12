@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FastTests.Voron.FixedSize;
 using Tests.Infrastructure;
 using Voron.Impl.FreeSpace;
@@ -13,7 +13,7 @@ namespace FastTests.Voron
         {
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenFact(RavenTestCategory.Core)]
         public void VerifySingleSmallResult()
         {
             int[] arr =
@@ -46,7 +46,7 @@ namespace FastTests.Voron
             Assert.Equal(result1, result2);
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenFact(RavenTestCategory.Core)]
         public void VerifySingleLargeResultSearching100()
         {
             int[] arr =
@@ -76,7 +76,7 @@ namespace FastTests.Voron
             Assert.Equal(result1, result2);
         }
 
-        [RavenFact(RavenTestCategory.Voron)]
+        [RavenFact(RavenTestCategory.Core)]
         public void VerifySingleLargeResultSearching451()
         {
             int[] arr =
@@ -106,7 +106,7 @@ namespace FastTests.Voron
             Assert.Equal(result1, result2);
         }
 
-        [RavenTheory(RavenTestCategory.Voron)]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineDataWithRandomSeed]
         public void VerifyResultWithRandomInput(int seed)
         {
@@ -126,7 +126,7 @@ namespace FastTests.Voron
             }
         }
 
-        [RavenTheory(RavenTestCategory.Voron)]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineDataWithRandomSeed(1, 2)]
         [InlineDataWithRandomSeed(2, 32)]
         [InlineDataWithRandomSeed(32, 300)]
@@ -158,7 +158,7 @@ namespace FastTests.Voron
             }
         }
 
-        [RavenTheory(RavenTestCategory.Voron)]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineDataWithRandomSeed(0, 2)]
         [InlineDataWithRandomSeed(2, 32)]
         [InlineDataWithRandomSeed(32, 64)]
@@ -187,7 +187,7 @@ namespace FastTests.Voron
             Assert.Equal(result1, result2);
         }
 
-        [RavenTheory(RavenTestCategory.Voron)]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineDataWithRandomSeed(0, 2)]
         [InlineDataWithRandomSeed(2, 32)]
         [InlineDataWithRandomSeed(32, 64)]
@@ -215,7 +215,7 @@ namespace FastTests.Voron
             Assert.Equal(result1, result2);
         }
 
-        [RavenTheory(RavenTestCategory.Voron)]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineDataWithRandomSeed(0, 2)]
         [InlineDataWithRandomSeed(2, 32)]
         [InlineDataWithRandomSeed(32, 64)]

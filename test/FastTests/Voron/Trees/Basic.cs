@@ -1,21 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using Xunit;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Global;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
-    public class Basic : StorageTest
+    public class Basic(ITestOutputHelper output) : StorageTest(output)
     {
-        public Basic(ITestOutputHelper output) : base(output)
-        {
-        }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddVeryLargeValue()
         {
             var random = new Random();
@@ -42,7 +40,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAdd()
         {
             using (var tx = Env.WriteTransaction())
@@ -52,7 +50,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddAndRead()
         {
             using (var tx = Env.WriteTransaction())
@@ -75,7 +73,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddAndReadStats()
         {
             using (var tx = Env.WriteTransaction())
@@ -91,7 +89,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddEnoughToCausePageSplit()
         {
             using (var tx = Env.WriteTransaction())
@@ -119,7 +117,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void AfterPageSplitAllDataIsValid()
         {
             const int count = 256;
@@ -151,7 +149,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void PageSplitsAllAround()
         {
             using (var tx = Env.WriteTransaction())

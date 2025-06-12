@@ -1,4 +1,5 @@
-﻿using System.Text;
+using System.Text;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Util.Conversion;
 using Xunit;
@@ -6,14 +7,9 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
-    public unsafe class SecondayIndex : TableStorageTest
+    public unsafe class SecondayIndex(ITestOutputHelper output) : TableStorageTest(output)
     {
-        public SecondayIndex(ITestOutputHelper output) : base(output)
-        {
-        }
-
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanInsertThenReadBySecondary()
         {
             using (var tx = Env.WriteTransaction())
@@ -57,7 +53,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanInsertThenDeleteBySecondary()
         {
             using (var tx = Env.WriteTransaction())
@@ -98,7 +94,7 @@ namespace FastTests.Voron.Tables
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanInsertThenUpdateThenBySecondary()
         {
             using (var tx = Env.WriteTransaction())

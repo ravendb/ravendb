@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.IO;
 using Xunit;
 using Voron;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.Trees
 {
@@ -12,7 +13,7 @@ namespace FastTests.Voron.Trees
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void EmptyIterator()
         {
             using (var tx = Env.WriteTransaction())
@@ -35,7 +36,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanIterateInOrder()
         {
             var random = new Random();

@@ -1,19 +1,15 @@
-﻿using System.Text;
+using System.Text;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
-    public unsafe class CompositeIndex : TableStorageTest
+    public unsafe class CompositeIndex(ITestOutputHelper output) : TableStorageTest(output)
     {
-        public CompositeIndex(ITestOutputHelper output) : base(output)
-        {
-        }
-
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanInsertThenReadByComposite()
         {
             using (var tx = Env.WriteTransaction())
@@ -65,7 +61,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanInsertThenDeleteByComposite()
         {
             using (var tx = Env.WriteTransaction())
@@ -109,7 +105,7 @@ namespace FastTests.Voron.Tables
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanInsertThenUpdateThenByComposite()
         {
             using (var tx = Env.WriteTransaction())

@@ -1,23 +1,15 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="SimpleFixedSizeTrees.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System;
-using Xunit;
+using Tests.Infrastructure;
 using Voron;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.FixedSize
 {
-    public class SimpleFixedSizeTrees : StorageTest
+    public class SimpleFixedSizeTrees(ITestOutputHelper output) : StorageTest(output)
     {
-        public SimpleFixedSizeTrees(ITestOutputHelper output) : base(output)
-        {
-        }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void TimeSeries()
         {
             Slice watchId;
@@ -62,7 +54,7 @@ namespace FastTests.Voron.FixedSize
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAdd()
         {
             Slice treeId;
@@ -88,7 +80,7 @@ namespace FastTests.Voron.FixedSize
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void SeekShouldGiveTheNextKey()
         {
             Slice treeId;
@@ -119,7 +111,7 @@ namespace FastTests.Voron.FixedSize
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAdd_Mixed()
         {
             Slice treeId;
@@ -152,7 +144,7 @@ namespace FastTests.Voron.FixedSize
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanIterate()
         {
             Slice treeId;
@@ -187,7 +179,7 @@ namespace FastTests.Voron.FixedSize
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanRemove()
         {
             Slice treeId;
@@ -222,7 +214,7 @@ namespace FastTests.Voron.FixedSize
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDeleteRange()
         {
             Slice treeId;
@@ -275,7 +267,7 @@ namespace FastTests.Voron.FixedSize
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDeleteRangeWithGaps()
         {
             Slice treeId;
@@ -348,7 +340,7 @@ namespace FastTests.Voron.FixedSize
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDeleteAllRange()
         {
             Slice treeId;
@@ -391,7 +383,7 @@ namespace FastTests.Voron.FixedSize
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAdd_WithValue()
         {
             Slice treeId;
@@ -425,7 +417,7 @@ namespace FastTests.Voron.FixedSize
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanRemove_WithValue()
         {
             Slice treeId;

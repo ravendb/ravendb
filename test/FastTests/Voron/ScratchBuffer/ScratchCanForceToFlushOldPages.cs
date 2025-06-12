@@ -1,9 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="ForScratchBuffer.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
+using Tests.Infrastructure;
 using Xunit;
 using Voron;
 using Xunit.Abstractions;
@@ -22,7 +17,7 @@ namespace FastTests.Voron.ScratchBuffer
             base.Configure(options);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanForceToFlushPagesOlderThanOldestActiveTransactionToFreePagesFromScratch()
         {
             using (var txw = Env.WriteTransaction())

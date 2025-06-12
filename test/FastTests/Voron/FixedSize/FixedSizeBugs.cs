@@ -1,16 +1,13 @@
-﻿using Voron;
+using Tests.Infrastructure;
+using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.FixedSize
 {
-    public class FixedSizeBugs : StorageTest
+    public class FixedSizeBugs(ITestOutputHelper output) : StorageTest(output)
     {
-        public FixedSizeBugs(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddDuplicate()
         {
             Slice treeId;
@@ -54,7 +51,7 @@ namespace FastTests.Voron.FixedSize
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddDuplicate_Many()
         {
             Slice treeId;

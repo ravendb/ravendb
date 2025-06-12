@@ -1,4 +1,4 @@
-﻿using Tests.Infrastructure;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -55,7 +55,7 @@ namespace FastTests.Voron.Bugs
             Env.FlushLogToDataFile();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Flushing_should_not_throw_on_freeing_scratch_page()
         {
             long pageNumber;

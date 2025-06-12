@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using Voron;
 using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.Bugs
 {
@@ -22,7 +23,7 @@ namespace FastTests.Voron.Bugs
             options.MaxLogFileSize = _64KB;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldFreeAllocationsInScratchBuffersSoTheyCanBeCleaned()
         {
             RequireFileBasedPager();
@@ -73,7 +74,7 @@ namespace FastTests.Voron.Bugs
             Assert.Equal(1, scratchBufferPoolInfo.ScratchFilesUsage.Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MustNotFreePagesAndRemoveJournalsIfThereIsTransactionThatMightReadFromIt()
         {
             RequireFileBasedPager();

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,13 +10,9 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
-    public class FreeSpaceTest : StorageTest
+    public class FreeSpaceTest(ITestOutputHelper output) : StorageTest(output)
     {
-        public FreeSpaceTest(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void WillBeReused()
         {
             var random = new Random();
@@ -65,7 +61,7 @@ namespace FastTests.Voron.Trees
             Assert.True(Env.NextPageNumber - old < 2, "This test will not pass until we finish merging the free space branch");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldReturnProperPageFromSecondSection()
         {
             using (var tx = Env.WriteTransaction())
@@ -81,7 +77,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(400, 10, 3)]
         [InlineDataWithRandomSeed(400, 10)]
         public void CanReuseMostOfFreePages_RemainingOnesCanBeTakenToHandleFreeSpace(int maxPageNumber, int numberOfFreedPages, int seed)
@@ -132,7 +128,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(400, 6, 2)]
         public void FreeSpaceHandlingShouldNotReturnPagesThatAreAlreadyAllocated(int maxPageNumber, int numberOfFreedPages, int seed)
         {
@@ -197,7 +193,7 @@ namespace FastTests.Voron.Trees
             } while (true);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed(100, 500)]
         public void CanGetListOfAllFreedPages(int maxPageNumber, int numberOfFreedPages, int seed)
         {

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Tests.Infrastructure;
 using Voron.Data.Containers;
 using Voron.Global;
 using Voron.Impl.Paging;
@@ -10,13 +11,9 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron.Containers
 {
-    public class ContainerTests : StorageTest
+    public class ContainerTests(ITestOutputHelper output) : StorageTest(output)
     {
-        public ContainerTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanStoreData()
         {
             using var wtx = Env.WriteTransaction();
@@ -34,7 +31,7 @@ namespace FastTests.Voron.Containers
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanScanValues()
         {
             var expected = new List<long>();
@@ -71,7 +68,7 @@ namespace FastTests.Voron.Containers
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanStoreDeleteAndRecoverSpace()
         {
             using var wtx = Env.WriteTransaction();
@@ -112,7 +109,7 @@ namespace FastTests.Voron.Containers
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanStoreMoreThanASinglePage()
         {
             using var wtx = Env.WriteTransaction();
@@ -139,7 +136,7 @@ namespace FastTests.Voron.Containers
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanStoreDeleteAndRecoverSpaceForOverflowPage()
         {
             long containerItemId;
@@ -178,7 +175,7 @@ namespace FastTests.Voron.Containers
                     Assert.Contains(releasedPage, currentAllocations.Keys);
                     Assert.Equal(currentAllocations[releasedPage], "Freed Page");
                 }
-                
+
             }
         }
     }

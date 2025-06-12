@@ -1,30 +1,21 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="TreeStateTests.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System;
 using System.Linq;
-using Xunit;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Global;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
-    public class TreeStateTests : StorageTest
+    public class TreeStateTests(ITestOutputHelper output) : StorageTest(output)
     {
-        public TreeStateTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         protected override void Configure(StorageEnvironmentOptions options)
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(5, 2)]
         [InlineData(35, 13)]
         [InlineData(256, 32)]
@@ -54,7 +45,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void HasReducedNumberOfPagesAfterRemovingHalfOfEntries()
         {
             int numberOfRegularItems = 0;
@@ -104,7 +95,7 @@ namespace FastTests.Voron.Trees
 
                 tx.Commit();
 
-                
+
                 ref readonly var state = ref tree.State.Header;
                 ref readonly var oldState = ref old.Header;
 
@@ -116,7 +107,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void HasReducedTreeDepthValueAfterRemovingEntries()
         {
             int numberOfItems = 0;
@@ -167,7 +158,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void AllPagesCantHasDuplicatesInMultiTrees()
         {
             using (var tx = Env.WriteTransaction())
@@ -181,12 +172,12 @@ namespace FastTests.Voron.Trees
 
                 var allPages = tree.AllPages();
                 var allPagesDistinct = allPages.Distinct().ToList();
-                
+
                 Assert.Equal(allPagesDistinct.Count, allPages.Count);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MustNotProduceNegativePageCountNumber()
         {
             using (var tx = Env.WriteTransaction())

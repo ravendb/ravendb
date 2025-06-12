@@ -1,5 +1,6 @@
-﻿using Sparrow.Server;
+using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,7 +13,7 @@ namespace FastTests.Voron
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void BasicContains()
         {
             using ByteStringContext context = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -34,7 +35,7 @@ namespace FastTests.Voron
             Assert.False(original.Contains(multipleHits));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void BasicSpan()
         {
             using ByteStringContext context = new ByteStringContext(SharedMultipleUseFlag.None);

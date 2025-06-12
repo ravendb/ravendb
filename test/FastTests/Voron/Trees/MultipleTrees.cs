@@ -1,16 +1,13 @@
-﻿using System;
+using System;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
-    public class MultipleTrees : StorageTest
+    public class MultipleTrees(ITestOutputHelper output) : StorageTest(output)
     {
-        public MultipleTrees(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanCreateNewTree()
         {
             using (var tx = Env.WriteTransaction())
@@ -31,7 +28,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanUpdateValuesInSubTree()
         {
             using (var tx = Env.WriteTransaction())
@@ -60,7 +57,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CreatingTreeWithoutCommitingTransactionShouldYieldNoResults()
         {
             using (var tx = Env.WriteTransaction())

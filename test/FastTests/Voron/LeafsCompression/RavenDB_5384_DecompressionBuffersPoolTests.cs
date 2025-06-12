@@ -1,7 +1,8 @@
-﻿using Voron;
+using Voron;
 using Xunit;
 using Assert = Xunit.Assert;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.LeafsCompression
 {
@@ -18,7 +19,7 @@ namespace FastTests.Voron.LeafsCompression
             options.MaxScratchBufferSize = _64KB * 4;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void Should_cleanup_scratch_files_which_are_no_longer_necessary()
         {
             using (var tx = Env.ReadTransaction())

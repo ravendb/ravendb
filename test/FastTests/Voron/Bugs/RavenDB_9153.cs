@@ -1,7 +1,8 @@
-﻿using Voron.Data.BTrees;
+using Voron.Data.BTrees;
 using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.Bugs
 {
@@ -11,7 +12,7 @@ namespace FastTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Overflow_shrink_should_decrease_number_of_allocated_pages_in_scratch()
         {
             using (var tx = Env.WriteTransaction())

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -8,6 +8,7 @@ using Voron.Data.BTrees;
 using Voron.Impl;
 using Voron.Global;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.Trees
 {
@@ -17,7 +18,7 @@ namespace FastTests.Voron.Trees
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddVeryLargeValueAndThenDeleteIt()
         {
             var random = new Random();
@@ -66,7 +67,7 @@ namespace FastTests.Voron.Trees
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDeleteAtRoot()
         {
             using (var tx = Env.WriteTransaction())

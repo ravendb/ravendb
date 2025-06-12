@@ -1,16 +1,13 @@
-﻿using System.IO;
+using System.IO;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
-    public class Rebalance : StorageTest
+    public class Rebalance(ITestOutputHelper output) : StorageTest(output)
     {
-        public Rebalance(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanMergeRight()
         {
             using (var tx = Env.WriteTransaction())
@@ -32,7 +29,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanMergeLeft()
         {
             using (var tx = Env.WriteTransaction())
@@ -49,7 +46,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void StressTest()
         {
             using (var tx = Env.WriteTransaction())

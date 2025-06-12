@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using Raven.Client.Documents.Operations.Backups;
 using Sparrow.Backups;
@@ -24,7 +24,7 @@ namespace FastTests.Voron.Backups
             options.ManualFlushing = true;
         }
 
-        [RavenTheory(RavenTestCategory.BackupExportImport)]
+        [RavenTheory(RavenTestCategory.Voron | RavenTestCategory.BackupExportImport)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Deflate)]
         [InlineData(SnapshotBackupCompressionAlgorithm.Zstd)]
         public void CanBackupAndRestoreSmall(SnapshotBackupCompressionAlgorithm compressionAlgorithm)

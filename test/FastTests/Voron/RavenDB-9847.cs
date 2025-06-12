@@ -1,6 +1,7 @@
-﻿using System.Linq;
+using System.Linq;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron
 {
@@ -10,7 +11,7 @@ namespace FastTests.Voron
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Can_get_updated_overflow_value_in_same_tx()
         {
             using (var tx = Env.WriteTransaction())

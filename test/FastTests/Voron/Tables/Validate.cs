@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
@@ -7,13 +8,9 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
-    public class Validate : StorageTest
+    public class Validate(ITestOutputHelper output) : StorageTest(output)
     {
-        public Validate(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ErrorsOnInvalidVariableSizeDef()
         {
             using (var tx = Env.WriteTransaction())
@@ -22,7 +19,7 @@ namespace FastTests.Voron.Tables
                 {
                     StartIndex = 2,
                     Count = 1,
-                    
+
                 };
                 Slice.From(tx.Allocator, "Test Name", ByteStringType.Immutable, out expectedIndex.Name);
 
@@ -38,7 +35,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ErrorsOnInvalidFixedSizeDef()
         {
             using (var tx = Env.WriteTransaction())
@@ -60,7 +57,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ErrorsOnInvalidSchemaWithSingleFixedIndex()
         {
             using (var tx = Env.WriteTransaction())
@@ -90,7 +87,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ErrorsOnInvalidSchemaWithSingleVariableIndex()
         {
             using (var tx = Env.WriteTransaction())
@@ -121,7 +118,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ErrorsOnInvalidSchemaWithMultipleIndexes()
         {
             using (var tx = Env.WriteTransaction())

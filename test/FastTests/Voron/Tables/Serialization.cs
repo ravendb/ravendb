@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using System.Text;
 using Sparrow.Server;
@@ -11,11 +11,8 @@ using static FastTests.Voron.Tables.RavenDB_17760;
 
 namespace FastTests.Voron.Tables
 {
-    public unsafe class Serialization : StorageTest
+    public unsafe class Serialization(ITestOutputHelper output) : StorageTest(output)
     {
-        public Serialization(ITestOutputHelper output) : base(output)
-        {
-        }
 
         private static void SchemaIndexDefEqual(TableSchema.AbstractTreeIndexDef expectedIndex,
             TableSchema.AbstractTreeIndexDef actualIndex)
@@ -116,7 +113,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSerializeNormalIndex()
         {
             using (var tx = Env.WriteTransaction())
@@ -141,7 +138,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSerializeFixedIndex()
         {
             using (var tx = Env.WriteTransaction())
@@ -165,7 +162,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSerializeSchema()
         {
             using (var tx = Env.WriteTransaction())
@@ -207,7 +204,7 @@ namespace FastTests.Voron.Tables
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSerializeMultiIndexSchema()
         {
             using (var tx = Env.WriteTransaction())
@@ -257,7 +254,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSerializeDynamicIndex()
         {
             using (var tx = Env.WriteTransaction())
@@ -383,7 +380,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSerializeSchemaWithDynamicIndex()
         {
             using (var tx = Env.WriteTransaction())
@@ -432,7 +429,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSerializeDynamicIndex2()
         {
             using (var tx = Env.WriteTransaction())
@@ -457,7 +454,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSerializeSchemaWithDynamicIndex2()
         {
             using (var tx = Env.WriteTransaction())

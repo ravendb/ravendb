@@ -1,17 +1,14 @@
-﻿using System.IO;
-using Xunit;
+using System.IO;
+using Tests.Infrastructure;
 using Voron;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
-    public class CanIterateBackward : StorageTest
+    public class CanIterateBackward(ITestOutputHelper output) : StorageTest(output)
     {
-        public CanIterateBackward(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void SeekLastOnEmptyResultInFalse()
         {
             using (var tx = Env.WriteTransaction())
@@ -26,7 +23,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSeekLast()
         {
             using (var tx = Env.WriteTransaction())
@@ -52,7 +49,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSeekBack()
         {
             using (var tx = Env.WriteTransaction())

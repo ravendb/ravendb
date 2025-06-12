@@ -1,4 +1,5 @@
-﻿using Sparrow.Binary;
+using Sparrow.Binary;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Exceptions;
@@ -7,13 +8,9 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
-    public class TableIndexes : StorageTest
+    public class TableIndexes(ITestOutputHelper output) : StorageTest(output)
     {
-        public TableIndexes(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Insert_same_value_to_fixed_sized_index_throws()
         {
             using (var tx = Env.WriteTransaction())
@@ -58,7 +55,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Update_same_value_to_fixed_sized_index_throws()
         {
             using (var tx = Env.WriteTransaction())
@@ -121,7 +118,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Insert_same_value_to_index_deosnt_throw()
         {
             using (var tx = Env.WriteTransaction())
@@ -166,7 +163,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Update_same_value_to_index_doesnt_throw()
         {
             using (var tx = Env.WriteTransaction())
@@ -227,7 +224,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void delete_by_fixed_sized_index()
         {
             using (var tx = Env.WriteTransaction())

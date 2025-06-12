@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron.Data.Containers;
 using Voron.Util.PFor;
 using Xunit;
@@ -12,13 +13,9 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron.Util;
 
-public unsafe class PForEncoderTests : NoDisposalNeeded
+public unsafe class PForEncoderTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
-    public PForEncoderTests(ITestOutputHelper output) : base(output)
-    {
-    }
-    
-    [Theory]
+    [RavenTheory(RavenTestCategory.Core)]
     [InlineData("SmallBufferSizeMisleading")]
     [InlineData("GreaterThan42B")]
     [InlineData("GreaterThan42B-Truncated")] // this ensures the >4.2B is on the last varint block
@@ -53,7 +50,7 @@ public unsafe class PForEncoderTests : NoDisposalNeeded
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void CanRespectBufferBoundaryForPage()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -71,8 +68,8 @@ public unsafe class PForEncoderTests : NoDisposalNeeded
             Assert.Equal(array.Length, count + count2);
         }
     }
-    
-    [Fact]
+
+    [RavenFact(RavenTestCategory.Core)]
     public void CanRespectBufferBoundaryForPage2()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);

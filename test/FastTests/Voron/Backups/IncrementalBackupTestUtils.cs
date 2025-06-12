@@ -1,9 +1,3 @@
-// -----------------------------------------------------------------------
-//  <copyright file="IncrementalBackupTestUtils.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System;
 using System.IO;
 using Raven.Server.Utils;

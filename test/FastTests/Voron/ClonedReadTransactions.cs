@@ -1,7 +1,8 @@
-﻿using Voron;
+using Voron;
 using Voron.Data.BTrees;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron
 {
@@ -11,7 +12,7 @@ namespace FastTests.Voron
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void CanCloneAndReadOldDataFromReadTx()
         {
             Options.ForceUsing32BitsPager = true;

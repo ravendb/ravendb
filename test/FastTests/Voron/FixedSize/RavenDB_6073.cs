@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using Voron;
 using Xunit;
 using Constants = Voron.Global.Constants;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.FixedSize
 {
@@ -12,7 +13,7 @@ namespace FastTests.Voron.FixedSize
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Branch_page_collapsing_during_tree_rebalancing()
         {
             var numberOfItems = 10000;

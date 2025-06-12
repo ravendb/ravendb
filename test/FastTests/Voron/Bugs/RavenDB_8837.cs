@@ -1,8 +1,9 @@
-﻿using Raven.Server.Documents;
+using Raven.Server.Documents;
 using Voron;
 using Voron.Data.RawData;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.Bugs
 {
@@ -17,7 +18,7 @@ namespace FastTests.Voron.Bugs
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Braking_large_allocation_in_scratch_file_has_to_really_create_separate_pages_of_size_one()
         {
             long pageNumber;

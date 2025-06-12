@@ -1,9 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="MultiTreeSize.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +10,7 @@ namespace FastTests.Voron
         {
         }
 
-		[Fact]
+		[RavenFact(RavenTestCategory.Voron)]
 		public void Single_AddMulti_WillUseOnePage()
 		{
 			using (var tx = Env.WriteTransaction())
@@ -35,7 +30,7 @@ namespace FastTests.Voron
 		    Assert.Equal(0,usedDataFileSizeInBytes - Env.Stats().UsedDataFileSizeInBytes);
 		}
 
-		[Fact]
+		[RavenFact(RavenTestCategory.Voron)]
 		public void TwoSmall_AddMulti_WillUseOnePage()
 		{
 			using (var tx = Env.WriteTransaction())
