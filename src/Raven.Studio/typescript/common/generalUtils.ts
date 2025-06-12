@@ -623,7 +623,7 @@ class genUtils {
         
         while (element != currentTarget) {
             
-            const tag = element.tagName.toLocaleLowerCase();
+            const tag = element.tagName?.toLocaleLowerCase();
             
             if (tag === "a" || tag === "button" || tag === "input") {
                 return false;

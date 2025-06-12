@@ -6,7 +6,6 @@ import {
 } from "components/pages/resources/databases/store/databasesViewSlice";
 import databasesManager from "common/shell/databasesManager";
 import notificationCenter from "common/notifications/notificationCenter";
-import DatabaseUtils from "components/utils/DatabaseUtils";
 import { UnsubscribeListener } from "@reduxjs/toolkit";
 import { clusterSelectors } from "components/common/shell/clusterSlice";
 import app from "durandal/app";
@@ -18,6 +17,8 @@ import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { addAppListener } from "components/storeUtils";
 import { databasesSlice } from "components/common/shell/databasesSlice";
+import { DatabaseActionContexts } from "components/common/MultipleDatabaseLocationSelector";
+import ActionContextUtils from "components/utils/actionContextUtils";
 
 export const toggleIndexing =
     (db: DatabaseSharedInfo, disable: boolean): AppAsyncThunk =>
@@ -52,24 +53,29 @@ export const openNotificationCenterForDatabase =
     };
 
 export const togglePauseIndexing =
-    (db: DatabaseSharedInfo, pause: boolean): AppAsyncThunk =>
-    async (dispatch, getState, getServices) => {
+    (db: DatabaseSharedInfo, pause: boolean, contexts: DatabaseActionContexts[]): AppAsyncThunk =>
+    async (dispatch, _, getServices) => {
         const { indexesService } = getServices();
-        const locations = DatabaseUtils.getLocations(db);
 
-        if (pause) {
-            const tasks = locations.map(async (l) => {
-                await indexesService.pauseAllIndexes(db.name, l);
-                dispatch(databasesViewSlice.actions.pausedIndexing(db.name, l));
-            });
-            await Promise.all(tasks);
-        } else {
-            const tasks = locations.map(async (l) => {
-                await indexesService.resumeAllIndexes(db.name, l);
-                dispatch(databasesViewSlice.actions.resumedIndexing(db.name, l));
-            });
-            await Promise.all(tasks);
+        let tasks: Promise<void>[] = [];
+
+        for (const { nodeTag, shardNumbers } of contexts) {
+            const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
+
+            if (pause) {
+                tasks = locations.map(async (location) => {
+                    await indexesService.pauseAllIndexes(db.name, location);
+                    dispatch(databasesViewSlice.actions.pausedIndexing(db.name, location));
+                });
+            } else {
+                tasks = locations.map(async (location) => {
+                    await indexesService.resumeAllIndexes(db.name, location);
+                    dispatch(databasesViewSlice.actions.resumedIndexing(db.name, location));
+                });
+            }
         }
+
+        await Promise.all(tasks);
     };
 
 export const syncDatabaseDetails = (): AppThunk<UnsubscribeListener> => (dispatch) => {

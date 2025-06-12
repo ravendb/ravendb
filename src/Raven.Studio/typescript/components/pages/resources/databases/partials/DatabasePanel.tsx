@@ -1,4 +1,4 @@
-﻿import React, { MouseEvent, useState } from "react";
+﻿import React, { MouseEvent, useMemo, useState } from "react";
 import { DatabaseLocalInfo, DatabaseSharedInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppUrls } from "hooks/useAppUrls";
@@ -51,6 +51,8 @@ import useConfirm from "components/common/ConfirmDialog";
 import Dropdown from "react-bootstrap/Dropdown";
 import changesContext = require("common/changesContext");
 import DatabaseLockMode = Raven.Client.ServerWide.DatabaseLockMode;
+import { GlobalPauseIndexingConfirm } from "./GlobalPauseIndexingConfirm";
+import { GlobalResumeIndexingConfirm } from "./GlobalResumeIndexingConfirm";
 
 interface DatabasePanelProps {
     databaseName: string;
@@ -99,6 +101,9 @@ export function DatabasePanel(props: DatabasePanelProps) {
     const dispatch = useAppDispatch();
     const { databasesService } = useServices();
     const confirm = useConfirm();
+
+    const locations = useMemo(() => DatabaseUtils.getLocations(db), [db]);
+    const allActionContexts = useMemo(() => ActionContextUtils.getContexts(locations), [locations]);
 
     //TODO: show commands errors!
 
@@ -175,22 +180,28 @@ export function DatabasePanel(props: DatabasePanelProps) {
         }
     };
 
-    const onTogglePauseIndexing = async (pause: boolean) => {
+    const { value: isGlobalPauseIndexingOpen, toggle: toggleIsGlobalPauseIndexingOpen } = useBoolean(false);
+    const { value: isGlobalResumeIndexingOpen, toggle: toggleIsGlobalResumeIndexingOpen } = useBoolean(false);
+
+    const handleGlobalPauseIndexing = async (contexts: DatabaseActionContexts[]) => {
         reportEvent("databases", "pause-indexing");
 
-        const isConfirmed = await confirm({
-            icon: pause ? "pause" : "play",
-            title: `Do you want to ${pause ? "pause" : "resume"} indexing?`,
-            actionColor: pause ? "warning" : "success",
-        });
+        try {
+            setInProgressAction("Pausing indexing");
+            await dispatch(togglePauseIndexing(db, true, contexts));
+        } finally {
+            setInProgressAction(null);
+        }
+    };
 
-        if (isConfirmed) {
-            try {
-                setInProgressAction(pause ? "Pausing indexing" : "Resume indexing");
-                await dispatch(togglePauseIndexing(db, pause));
-            } finally {
-                setInProgressAction(null);
-            }
+    const handleGlobalResumeIndexing = async (contexts: DatabaseActionContexts[]) => {
+        reportEvent("databases", "resume-indexing");
+
+        try {
+            setInProgressAction("Resuming indexing");
+            await dispatch(togglePauseIndexing(db, false, contexts));
+        } finally {
+            setInProgressAction(null);
         }
     };
 
@@ -373,14 +384,32 @@ export function DatabasePanel(props: DatabasePanelProps) {
 
                                     <Dropdown.Menu data-testid="database-actions-dropdown-menu">
                                         {canPauseAnyIndexing && (
-                                            <Dropdown.Item onClick={() => onTogglePauseIndexing(true)}>
-                                                <Icon icon="pause" /> Pause indexing until restart
-                                            </Dropdown.Item>
+                                            <>
+                                                <Dropdown.Item onClick={toggleIsGlobalPauseIndexingOpen}>
+                                                    <Icon icon="pause" /> Pause indexing until restart
+                                                </Dropdown.Item>
+                                                {isGlobalPauseIndexingOpen && (
+                                                    <GlobalPauseIndexingConfirm
+                                                        toggle={toggleIsGlobalPauseIndexingOpen}
+                                                        onConfirm={handleGlobalPauseIndexing}
+                                                        allActionContexts={allActionContexts}
+                                                    />
+                                                )}
+                                            </>
                                         )}
                                         {canResumeAnyPausedIndexing && (
-                                            <Dropdown.Item onClick={() => onTogglePauseIndexing(false)}>
-                                                <Icon icon="play" /> Resume indexing
-                                            </Dropdown.Item>
+                                            <>
+                                                <Dropdown.Item onClick={toggleIsGlobalResumeIndexingOpen}>
+                                                    <Icon icon="play" /> Resume indexing
+                                                </Dropdown.Item>
+                                                {isGlobalResumeIndexingOpen && (
+                                                    <GlobalResumeIndexingConfirm
+                                                        toggle={toggleIsGlobalResumeIndexingOpen}
+                                                        onConfirm={handleGlobalResumeIndexing}
+                                                        allActionContexts={allActionContexts}
+                                                    />
+                                                )}
+                                            </>
                                         )}
                                         {canDisableIndexing && (
                                             <Dropdown.Item onClick={() => onToggleDisableIndexing(true)}>

@@ -96,6 +96,10 @@ interface IndexesStatsState {
     indexes: IndexSharedInfo[];
     locations: databaseLocationSpecifier[];
     resetInProgress: string[];
+    globalStatus: {
+        location: databaseLocationSpecifier;
+        status: Raven.Client.Documents.Indexes.IndexRunningStatus;
+    }[];
 }
 
 function mapToIndexSharedInfo(stats: IndexStats): IndexSharedInfo {
@@ -400,5 +404,6 @@ export const indexesStatsReducerInitializer = (locations: databaseLocationSpecif
         indexes: [],
         locations,
         resetInProgress: [],
+        globalStatus: [],
     };
 };
