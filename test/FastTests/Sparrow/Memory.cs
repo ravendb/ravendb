@@ -5,6 +5,7 @@ using System.Runtime.Intrinsics;
 using System.Runtime.Intrinsics.X86;
 using Sparrow;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace FastTests.Sparrow
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void LongRoundedSize()
         {
             var s1 = new byte[8] { 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00 };
@@ -47,7 +48,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void SmallerThanBigLoop()
         {
             for (int size = 1; size < 8; size++)
@@ -81,7 +82,7 @@ namespace FastTests.Sparrow
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void EnsureProperBehaviorWhenUnaligned()
         {
             var s1 = new byte[4 * Vector256<byte>.Count];
@@ -119,7 +120,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(6, 5)]
         [InlineData(33, 32)]
         [InlineData(32, 0)]
@@ -182,7 +183,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void TestFirstByteSmallerThanRest()
         {
             byte[] first = Convert.FromBase64String("DeVgA5+9xzBvKwAc8tdM0A==");
@@ -211,7 +212,7 @@ namespace FastTests.Sparrow
 
         public static IEnumerable<object[]> RandomSeeds => new[] { new object[] { Random.Shared.Next() } };
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [MemberData(nameof(RandomSeeds))]
         public void LoopDifferencesWithRandomData(int seed)
         {
@@ -268,7 +269,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void IncreasingSizeForLoop()
         {
             for (int size = 0; size < 1024; size++)
