@@ -11,6 +11,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		Directory.Packages.props = Directory.Packages.props
 		global.json = global.json
 		RavenDB.ruleset = RavenDB.ruleset
+		agents.md = agents.md
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "test", "test", "{764C36EA-83A0-4BA3-BA36-53A6808C13A9}"

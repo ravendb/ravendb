@@ -29,7 +29,7 @@ jobs:
       working-directory: ./test/SlowTests
 
     - name: Test - Release
-      run: dotnet test SlowTests.csproj --configuration Release --no-restore --filter Category=Conventions
+      run: dotnet test SlowTests.csproj --configuration Release --no-restore --filter Category=Codebase
       env: # Or as an environment variable
         RAVEN_LICENSE: ${{ secrets.RAVEN_LICENSE }}
         RAVEN_MAX_RUNNING_TESTS: 1
