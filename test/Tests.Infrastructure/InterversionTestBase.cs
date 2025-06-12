@@ -286,13 +286,15 @@ namespace Tests.Infrastructure
                 if (readLineTask == null)
                     readLineTask = output.ReadLineAsync();
 
-                var hasResult = await readLineTask.WaitWithTimeout(TimeSpan.FromSeconds(5)).ConfigureAwait(false);
+                var hasResult = await readLineTask.WaitWithTimeout(TimeSpan.FromSeconds(60)).ConfigureAwait(false);
 
-                //if (startupDuration.Elapsed > options.MaxServerStartupTimeDuration)
-                //    return null;
+                // if (startupDuration.Elapsed > options.MaxServerStartupTimeDuration)
+                //     return null;
 
                 if (hasResult == false)
-                    continue;
+                {
+                    break;
+                }
 
                 var line = await readLineTask;
 
