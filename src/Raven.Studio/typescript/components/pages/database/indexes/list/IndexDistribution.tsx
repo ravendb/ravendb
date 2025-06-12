@@ -19,6 +19,7 @@ import IndexDistributionStatusChecker from "./IndexDistributionStatusChecker";
 import moment = require("moment");
 import genUtils = require("common/generalUtils");
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { useRavenLink } from "components/hooks/useRavenLink";
 
 interface IndexDistributionProps {
     index: IndexSharedInfo;
@@ -411,16 +412,25 @@ export function IndexProgress(props: IndexProgressProps) {
 }
 
 function IdleIndexInfoIcon() {
+    const docsLink = useRavenLink({ hash: "2VWBSO" });
+
     return (
         <PopoverWithHoverWrapper
             message={
-                <ul className="m-0">
-                    <li>An idle index is an index that is running but it&apos;s rarely or never used by queries.</li>
-                    <li className="mt-1">
-                        It still consumes storage and can slow down write operations, since the database must maintain
-                        it during inserts, updates, or deletes.
-                    </li>
-                </ul>
+                <>
+                    An auto-index becomes Idle when the time difference between its last-query-time and the most recent
+                    time the database was queried (using any other index) exceeds a configurable threshold (default 30
+                    min).
+                    <br />
+                    <br />
+                    While idle, it is not considered disabled and continues indexing relevant data. If it remains idle,
+                    it will be deleted after a configurable duration (default: 72 hrs).
+                    <br />
+                    <br />
+                    <a href={docsLink} target="_blank">
+                        Docs - Index states
+                    </a>
+                </>
             }
             wrapperClassName="d-flex"
         >
