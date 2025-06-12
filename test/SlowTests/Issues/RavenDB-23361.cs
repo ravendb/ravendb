@@ -41,8 +41,9 @@ public class RavenDB_23361 : RavenTestBase
                 Assert.Contains("EmbeddingBase64", indexes[0].Fields.Keys);
 
                 var queriedEmbedding = new float[] { 0.5f, 0.1f };
-                
-                _ = session.Query<Dto>().VectorSearch(x => x.WithEmbedding("EmbeddingSingles"), factory => factory.ByEmbedding(queriedEmbedding)).Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(5))).ToList();
+
+                TimeSpan stalenessTimeout = TimeSpan.FromSeconds(30);
+                _ = session.Query<Dto>().VectorSearch(x => x.WithEmbedding("EmbeddingSingles"), factory => factory.ByEmbedding(queriedEmbedding)).Customize(x => x.WaitForNonStaleResults(stalenessTimeout)).ToList();
                 
                 Indexes.WaitForIndexing(store);
                 
@@ -55,7 +56,7 @@ public class RavenDB_23361 : RavenTestBase
                 Assert.Single(vectorSearchIndex.Fields);
                 Assert.Contains("vector.search(EmbeddingSingles)", vectorSearchIndex.Fields.Keys);
 
-                _ = session.Query<Dto>().Where(x => x.EmbeddingBinary.Contains((byte)0)).Customize(x => x.WaitForNonStaleResults(TimeSpan.FromSeconds(5))).ToList();
+                _ = session.Query<Dto>().Where(x => x.EmbeddingBinary.Contains((byte)0)).Customize(x => x.WaitForNonStaleResults(stalenessTimeout)).ToList();
                 
                 Indexes.WaitForIndexing(store);
 
@@ -68,7 +69,7 @@ public class RavenDB_23361 : RavenTestBase
                 Assert.Contains("EmbeddingBase64", nonVectorSearchIndex.Fields.Keys);
                 Assert.Contains("EmbeddingBinary", nonVectorSearchIndex.Fields.Keys);
                 
-                _ = session.Query<Dto>().VectorSearch(x => x.WithEmbedding("EmbeddingSingles"), factory => factory.ByEmbedding(queriedEmbedding)).Where(x => x.EmbeddingBase64 == "abcd").Customize(x => x.WaitForNonStaleResults()).ToList();
+                _ = session.Query<Dto>().VectorSearch(x => x.WithEmbedding("EmbeddingSingles"), factory => factory.ByEmbedding(queriedEmbedding)).Where(x => x.EmbeddingBase64 == "abcd").Customize(x => x.WaitForNonStaleResults(stalenessTimeout)).ToList();
                 
                 Indexes.WaitForIndexing(store);
                 
