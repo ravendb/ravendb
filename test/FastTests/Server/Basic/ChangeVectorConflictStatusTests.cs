@@ -3,18 +3,15 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Server.Basic
 {
-    public class ChangeVectorConflictStatusTests : NoDisposalNeeded
+    public class ChangeVectorConflictStatusTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public ChangeVectorConflictStatusTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void EtagShouldNotOverflow()
         {
             var cv1 =
@@ -41,7 +38,7 @@ namespace FastTests.Server.Basic
             var y = ChangeVectorUtils.Distance(cv2, cv1);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CalculateChangeVectorDistance()
         {
             var cv1 =
@@ -69,7 +66,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(x, -y);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void EtagShouldNotOverflow2()
         {
             var x = ChangeVectorUtils.TryUpdateChangeVector("C", "n0rGjcmUT0u7ctxBXlZZPg", 5554138256, new ChangeVector("C:5554138256-n0rGjcmUT0u7ctxBXlZZPg", null));
@@ -77,7 +74,7 @@ namespace FastTests.Server.Basic
             Assert.False(x.IsValid);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Two_empty_ChangeVectors()
         {
             Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(string.Empty, string.Empty));
@@ -85,19 +82,19 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(string.Empty, null));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Empty_remote_change_vector_should_generate_already_merged()
         {
             Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(string.Empty, ChangeVector((Guid.NewGuid(), 2, 1), (Guid.NewGuid(), 3, 2))));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Empty_local_change_vector()
         {
             Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(ChangeVector((Guid.NewGuid(), 2, 1), (Guid.NewGuid(), 3, 2)), string.Empty));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Change_vector_has_negative_etag()
         {
             var changeVectorWithNegatoveEtag = ChangeVector((Guid.NewGuid(), 2, 1), (Guid.NewGuid(), -3, 2));
@@ -110,7 +107,7 @@ namespace FastTests.Server.Basic
                 ChangeVectorUtils.GetConflictStatus(changeVector, changeVectorWithNegatoveEtag));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Remote_has_entries_not_in_local_with_entries_same_order_and_all_remote_etags_large_than_local()
         {
             var dbIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
@@ -122,7 +119,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Remote_has_entries_not_in_local_with_entries_not_same_order_and_all_remote_etags_large_than_local()
         {
             var dbIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
@@ -134,7 +131,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Remote_has_entries_not_in_local_with_entries_same_order_and_all_local_etags_large_than_remote()
         {
             var dbIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
@@ -146,7 +143,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Remote_has_entries_not_in_local_with_entries_not_same_order_and_all_local_etags_large_than_remote()
         {
             var dbIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
@@ -158,7 +155,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Remote_has_entries_not_in_local_with_entries_same_order_and_some_local_etags_large_than_remote()
         {
             var dbIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
@@ -170,7 +167,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Remote_has_entries_not_in_local_with_entries_not_same_order_and_some_local_etags_large_than_remote()
         {
             var dbIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
@@ -182,7 +179,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -211,7 +208,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -243,7 +240,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -275,7 +272,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -307,7 +304,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -339,7 +336,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -369,7 +366,7 @@ namespace FastTests.Server.Basic
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -398,7 +395,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -427,7 +424,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -460,7 +457,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -493,7 +490,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -525,7 +522,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -558,7 +555,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -590,7 +587,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -623,7 +620,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -652,7 +649,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Replication)]
         [InlineData(15)]
         [InlineData(100)]
         [InlineData(1000)]
@@ -681,7 +678,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Different_change_vectors_with_different_prefix_remote_smaller_with_remote_etags_smaller()
         {
             var dbIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
@@ -692,7 +689,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Different_change_vectors_with_different_prefix_local_smaller_with_remote_etags_smaller()
         {
             var dbIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
@@ -703,7 +700,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Different_change_vectors_with_different_prefix_remote_smaller_with_remote_etags_larger()
         {
             var dbIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
@@ -714,7 +711,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Different_change_vectors_with_different_prefix_local_smaller_with_remote_etags_larger()
         {
             var dbIds = new[] { Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid() };
@@ -725,7 +722,7 @@ namespace FastTests.Server.Basic
             Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote, local));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void ToChangeVector_should_properly_parse_change_vector()
         {
             var dbIds = new List<string> { DbId(), DbId(), DbId() };

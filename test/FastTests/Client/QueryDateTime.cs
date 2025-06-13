@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -14,7 +14,7 @@ namespace FastTests.Client
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void DynamicQueryingDateTimeShouldWork(Options options)
         {
@@ -40,7 +40,7 @@ namespace FastTests.Client
                     res = session.Query<PersonAndDate>().Where(x => x.Date.Second == 43).ToList();
                     Assert.Equal(1, res.Count);
 
-                    //1902-04-30​T10:40:00.000Z = 600000000000000000L
+                    //1902-04-30T10:40:00.000Z = 600000000000000000L
                     res = session.Query<PersonAndDate>().Where(x => x.Date.Ticks > 600000000000000000L).ToList();
                     Assert.Equal(1, res.Count);
 
@@ -50,7 +50,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void StaticQueryingDateTimeShouldWork(Options options)
         {
@@ -80,7 +80,7 @@ namespace FastTests.Client
                     res = session.Query<PersonAndDate>(index.IndexName).Where(x => x.Date.Second == 43).ToList();
                     Assert.Equal(1, res.Count);
 
-                    //1902-04-30​T10:40:00.000Z = 600000000000000000L
+                    //1902-04-30T10:40:00.000Z = 600000000000000000L
                     res = session.Query<PersonAndDate>(index.IndexName).Where(x => x.Date.Ticks > 600000000000000000L).ToList();
                     Assert.Equal(1, res.Count);
 

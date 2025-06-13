@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -12,6 +12,7 @@ using Raven.Server.Config.Settings;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Basic
 {
@@ -21,7 +22,7 @@ namespace FastTests.Server.Basic
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void Should_not_throw_when_there_no_timeout()
         {
             UseNewLocalServer();
@@ -29,7 +30,7 @@ namespace FastTests.Server.Basic
 
             int retries = 3;
             //in case that there is alot of stuff is going on concurrently with this test,
-            //give several chances for the load to pass successfully 
+            //give several chances for the load to pass successfully
             bool didPassAtLeastOnce = false;
             for (int i = 0; i < 3; i++)
             {
@@ -53,7 +54,7 @@ namespace FastTests.Server.Basic
             Assert.True(didPassAtLeastOnce);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public async Task Should_throw_when_there_is_timeout()
         {
             UseNewLocalServer();
@@ -63,7 +64,7 @@ namespace FastTests.Server.Basic
             {
                 mre.Set();
                 Thread.Sleep(100);
-            }; // force timeout          
+            }; // force timeout
 
             var url = Server.WebUrl;
             var name = GetDatabaseName();

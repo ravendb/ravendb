@@ -22,7 +22,7 @@ namespace FastTests.Server.Documents.Queries
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task Cutoff_etag_usage()
         {
             using (var store = GetDocumentStore())

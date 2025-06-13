@@ -6,6 +6,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Cluster
 {
@@ -15,7 +16,7 @@ namespace FastTests.Server.Cluster
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public void AllClusterCommandsHasVersion()
         {
             List<Exception> exceptions = new List<Exception>();
@@ -44,7 +45,7 @@ namespace FastTests.Server.Cluster
             throw new AggregateException(exceptions);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public void AllClusterCommandHasCtor()
         {
             List<Exception> exceptions = new List<Exception>();

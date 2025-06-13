@@ -14,7 +14,7 @@ namespace FastTests.Client.Queries
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void QueryingUsingInShouldYieldDistinctResults(Options options)
         {
@@ -30,7 +30,7 @@ namespace FastTests.Client.Queries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanQueryNullUsingInQuery(Options options)
         {
@@ -60,7 +60,7 @@ namespace FastTests.Client.Queries
             }
         }
         
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryDatesViaInQuery(Options options)
         {
@@ -80,7 +80,7 @@ namespace FastTests.Client.Queries
             Assert.Equal(4, query.Count);
         } 
         
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void InQueryUseAnalyzerDuringQueryBuildingPhase(Options options)
         {

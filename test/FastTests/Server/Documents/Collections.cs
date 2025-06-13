@@ -17,7 +17,7 @@ namespace FastTests.Server.Documents
         {
         }
 
-        [RavenTheory(RavenTestCategory.None)]
+        [RavenTheory(RavenTestCategory.Core)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanSurviveRestart(Options options)
         {

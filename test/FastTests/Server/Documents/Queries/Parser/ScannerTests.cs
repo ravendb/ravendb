@@ -3,6 +3,7 @@ using Raven.Server.Documents.Queries.AST;
 using Xunit;
 using Raven.Server.Documents.Queries.Parser;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Parser
 {
@@ -12,7 +13,7 @@ namespace FastTests.Server.Documents.Queries.Parser
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData(null)]
         [InlineData("")]
         [InlineData("   ")]
@@ -25,7 +26,7 @@ namespace FastTests.Server.Documents.Queries.Parser
             Assert.False(qs.Identifier());
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("hello", 0, 5)]
         [InlineData(" name = ", 1, 4)]
         [InlineData("some_thing ", 0, 10)]
@@ -40,7 +41,7 @@ namespace FastTests.Server.Documents.Queries.Parser
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData(" 'hel lo' ", "hel lo")]
         [InlineData(" \"he \"", "he ")]
         [InlineData(" \"he\"\" \" ", "he\" ")]
@@ -55,7 +56,7 @@ namespace FastTests.Server.Documents.Queries.Parser
             Assert.Equal(escape, a.ToString());
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("1", 1L)]
         [InlineData("1.0", 1.0D)]
         [InlineData("1234 ", 1234L)]
@@ -75,7 +76,7 @@ namespace FastTests.Server.Documents.Queries.Parser
                 Assert.Equal((long)expected, long.Parse(qs.Token.Value, CultureInfo.InvariantCulture));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("hello there", 6, 5)]
         public void CanScanConsecutiveIdentifiers(string q, int start, int len)
         {

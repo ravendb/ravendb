@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿﻿using System;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CanUseSimpleReduction(RavenTestParameters config)
         {
@@ -71,7 +71,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [InlineData(100, new[] { "Poland", "Israel", "USA" })]
         public async Task MultipleReduceKeys(int numberOfUsers, string[] locations)
         {
@@ -118,7 +118,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CanDelete(RavenTestParameters config)
         {
@@ -231,7 +231,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Configuration)]
         [RavenExplicitData]
         public async Task DefinitionOfAutoMapReduceIndexIsPersisted(RavenTestParameters config)
         {
@@ -339,7 +339,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CanGroupByNestedFieldAndAggregateOnCollection(RavenTestParameters config)
         {
@@ -401,7 +401,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public void CanStoreAndReadReduceStats(RavenTestParameters config)
         {
@@ -451,7 +451,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CanUpdateByChangingValue(RavenTestParameters config)
         {
@@ -529,7 +529,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CanUpdateByChangingReduceKey(RavenTestParameters config)
         {
@@ -610,7 +610,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task GroupByMultipleFields(RavenTestParameters config)
         {

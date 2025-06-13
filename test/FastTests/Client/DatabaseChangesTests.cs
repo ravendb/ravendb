@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions.Database;
@@ -18,7 +18,7 @@ namespace FastTests.Client
         {
         }
 
-        [RavenTheory(RavenTestCategory.ChangesApi)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.ChangesApi)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task DatabaseChanges_WhenRetryAfterCreatingDatabase_ShouldSubscribe(Options options, bool disableTopologyUpdates)
@@ -57,7 +57,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.ChangesApi)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.ChangesApi)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task DatabaseChanges_WhenTryToReconnectAfterDeletingDatabase_ShouldFailToSubscribe(Options options, bool disableTopologyUpdates)
@@ -90,7 +90,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.ChangesApi)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.ChangesApi)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task DatabaseChanges_WhenDeleteDatabaseAfterSubscribe_ShouldSetConnectionStateToDatabaseDoesNotExistException(Options options, bool disableTopologyUpdates)
@@ -109,7 +109,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.ChangesApi)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.ChangesApi)]
         [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
         public async Task DatabaseChanges_WhenDisposeDatabaseChanges_ShouldSetConnectionStateDisposed(Options options, bool disableTopologyUpdates)

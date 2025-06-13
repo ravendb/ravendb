@@ -5,6 +5,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Basic
 {
@@ -19,7 +20,7 @@ namespace FastTests.Server.Basic
             public string ProductName { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Should_Update_LastIdle()
         {
             using (var store = GetDocumentStore())
@@ -34,7 +35,7 @@ namespace FastTests.Server.Basic
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Should_Update_LastWork()
         {
             using (var store = GetDocumentStore())
@@ -60,7 +61,7 @@ namespace FastTests.Server.Basic
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Should_Cleanup_Resources()
         {
             DoNotReuseServer();

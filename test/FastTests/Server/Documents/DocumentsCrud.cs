@@ -9,6 +9,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents
 {
@@ -26,7 +27,7 @@ namespace FastTests.Server.Documents
             _disposeDatabase = CreatePersistentDocumentDatabase(NewDataPath(prefix: "DocumentsCrud"), out _documentDatabase, caller: caller);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("users/1")]
         [InlineData("USERs/1")]
         [InlineData("לכובע שלי שלוש פינות")]
@@ -64,7 +65,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("users/1")]
         [InlineData("USERs/1")]
         [InlineData("לכובע שלי שלוש פינות")]
@@ -105,7 +106,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanQueryByGlobalEtag()
         {
             Initialize();
@@ -167,7 +168,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task EtagsArePersisted()
         {
             Initialize();
@@ -214,7 +215,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task EtagsArePersistedWithDeletes()
         {
             Initialize();
@@ -274,7 +275,7 @@ namespace FastTests.Server.Documents
             _documentDatabase = await GetDatabase(_documentDatabase.Name);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanQueryByPrefix()
         {
             Initialize();
@@ -334,7 +335,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanQueryByCollectionEtag()
         {
             Initialize();
@@ -395,7 +396,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WillVerifyEtags_New()
         {
             Initialize();
@@ -420,7 +421,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WillVerifyEtags_Existing()
         {
             Initialize();
@@ -446,7 +447,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WillVerifyEtags_OnDeleteExisting()
         {
             Initialize();
@@ -472,7 +473,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WillVerifyEtags_OnDeleteNotThere()
         {
             Initialize();
@@ -486,7 +487,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WillVerifyEtags_ShouldBeNew()
         {
             Initialize();
@@ -511,7 +512,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WillVerifyEtags_VerifyNew()
         {
             Initialize();
@@ -537,7 +538,7 @@ namespace FastTests.Server.Documents
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void PutDocumentWithoutId()
         {
             Initialize();

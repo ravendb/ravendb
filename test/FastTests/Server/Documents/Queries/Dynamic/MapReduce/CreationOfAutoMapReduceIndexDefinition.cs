@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
@@ -8,6 +8,7 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.Documents.Queries.Parser;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 {
@@ -19,7 +20,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
 
         private DynamicQueryMapping _sut;
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void SpecifyingInvalidParametersWillResultInException()
         {
             Assert.Throws<ArgumentNullException>(() => new AutoMapReduceIndexDefinition(null, null, null));
@@ -50,7 +51,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void Map_all_fields()
         {
             _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users GROUP BY Location SELECT Location, count() "));
@@ -63,7 +64,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal("Auto/Users/ByCountReducedByLocation", definition.Name);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void Error_when_no_group_by_field()
         {
             var ex = Assert.Throws<QueryParser.ParseException>(() => new IndexQueryServerSide("FROM Users GROUP BY SELECT count() "));
@@ -71,13 +72,13 @@ namespace FastTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Contains("Unable to get field for GROUP BY", ex.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void Can_be_no_aggregation_field_in_dynamic_group_by()
         {
             new IndexQueryServerSide("FROM Users GROUP BY Location");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void Extends_mapping_based_on_existing_definition_if_group_by_fields_match()
         {
             _sut = DynamicQueryMapping.Create(

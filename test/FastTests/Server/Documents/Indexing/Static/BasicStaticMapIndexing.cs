@@ -28,7 +28,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task The_easiest_static_index(RavenTestParameters config)
         {
@@ -100,7 +100,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CanInheritConfiguration(RavenTestParameters config)
         {
@@ -124,7 +124,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CanPersist(RavenTestParameters config)
         {
@@ -191,7 +191,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void IndexDefinitionSerialization()
         {
             var indexDefinition = new IndexDefinition();
@@ -262,7 +262,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public void StalenessCalculationShouldWorkForAllDocsIndexes(RavenTestParameters config)
         {
@@ -355,7 +355,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public void NumberOfDocumentsAndTombstonesToProcessShouldBeCalculatedCorrectly(RavenTestParameters config)
         {
@@ -504,7 +504,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(200, 1000)]
         [InlineData(1000, 2000)]
         [InlineData(128, 2048)]

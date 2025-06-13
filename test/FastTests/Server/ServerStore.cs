@@ -9,6 +9,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server
 {
@@ -18,7 +19,7 @@ namespace FastTests.Server
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Admin_databases_endpoint_should_refuse_document_with_lower_etag_with_concurrency_Exception()
         {
             using (var store = GetDocumentStore())
@@ -44,7 +45,7 @@ namespace FastTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Admin_databases_endpoint_should_fetch_document_with_etag_in_metadata_property()
         {
             using (var store = GetDocumentStore())

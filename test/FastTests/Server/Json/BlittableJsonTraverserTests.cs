@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+﻿﻿﻿using System.Collections.Generic;
 using System.Linq;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Json
 {
@@ -18,7 +19,7 @@ namespace FastTests.Server.Json
             _ctx = JsonOperationContext.ShortTermSingleUse();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Reads_simple_value()
         {
             var doc = create_doc(new DynamicJsonValue
@@ -31,7 +32,7 @@ namespace FastTests.Server.Json
             Assert.Equal("John Doe", read.ToString());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Reads_nested_values()
         {
             var doc = create_doc(new DynamicJsonValue
@@ -56,7 +57,7 @@ namespace FastTests.Server.Json
             Assert.Equal(2L, read);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Reads_values_nested_in_array()
         {
             var doc = create_doc(new DynamicJsonValue
@@ -87,7 +88,7 @@ namespace FastTests.Server.Json
             Assert.Equal("John", items[1].ToString());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Reads_array_values()
         {
             var doc = create_doc(new DynamicJsonValue
@@ -111,7 +112,7 @@ namespace FastTests.Server.Json
             Assert.Equal("John", items[1].ToString());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Reads_values_nested_in_array_as_objects()
         {
             var doc = create_doc(new DynamicJsonValue
@@ -148,7 +149,7 @@ namespace FastTests.Server.Json
             Assert.Equal("John", items[1].ToString());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Reads_value_nested_in_object_of_array_of_arrays()
         {
             var doc = create_doc(new DynamicJsonValue
@@ -209,7 +210,7 @@ namespace FastTests.Server.Json
             Assert.Equal("foo/2", items[1].ToString());
             Assert.Equal("foo/3", items[2].ToString());
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Reads_values_of_multidimensional_array()
         {
             var doc = create_doc(new DynamicJsonValue
@@ -287,7 +288,7 @@ namespace FastTests.Server.Json
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Reads_value_nested_in_nested_object_of_array_of_arrays()
         {
             var doc = create_doc(new DynamicJsonValue

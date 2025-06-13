@@ -9,6 +9,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Operations
 {
@@ -18,7 +19,7 @@ namespace FastTests.Server.Documents.Operations
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Can_notify_about_operations_progress_and_completion()
         {
             using (var db = CreateDocumentDatabase())
@@ -94,7 +95,7 @@ namespace FastTests.Server.Documents.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Can_notify_about_exception_in_operation()
         {
             using (var db = CreateDocumentDatabase())
@@ -130,7 +131,7 @@ namespace FastTests.Server.Documents.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Should_be_able_to_cancel_operation()
         {
             using (var db = CreateDocumentDatabase())
@@ -163,7 +164,7 @@ namespace FastTests.Server.Documents.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Can_serialize_in_progress_state_to_json()
         {
             var state = new OperationState
@@ -184,7 +185,7 @@ namespace FastTests.Server.Documents.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Can_serialize_completed_state_to_json()
         {
             var state = new OperationState

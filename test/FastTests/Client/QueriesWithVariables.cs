@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using Raven.Client.Documents.Linq;
 using Tests.Infrastructure;
@@ -13,7 +13,7 @@ namespace FastTests.Client
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Query_With_Simple_Constants(Options options)
         {
@@ -48,7 +48,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Query_With_Simple_Constants_IntoClass(Options options)
         {

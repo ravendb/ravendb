@@ -19,7 +19,7 @@ namespace FastTests.Server.Documents.Queries
             public string Name { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void HighlightingOnAutomap(Options option)
         {

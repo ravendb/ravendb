@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,6 +7,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing
 {
@@ -16,7 +17,7 @@ namespace FastTests.Server.Documents.Indexing
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void WillTranslateReferenceToIdTo__document_id()
         {
             Expression<Func<IEnumerable<Nestable>, IEnumerable>> map = nests => from nestable in nests
@@ -25,7 +26,7 @@ namespace FastTests.Server.Documents.Indexing
             Assert.Contains("Id = Id(nestable)", code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void WillNotTranslateIdTo__document_idIfNotOnRootEntity()
         {
             Expression<Func<IEnumerable<Nestable>, IEnumerable>> map = nests => from nestable in nests
@@ -35,7 +36,7 @@ namespace FastTests.Server.Documents.Indexing
             Assert.Contains("Id = child.Id", code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void WillTranslateProperlyBothRootAndChild()
         {
             Expression<Func<IEnumerable<Nestable>, IEnumerable>> map = nests => from nestable in nests
@@ -46,7 +47,7 @@ namespace FastTests.Server.Documents.Indexing
             Assert.Contains("Id2 = Id(nestable)", code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void WillTranslateAnonymousArray()
         {
             Expression<Func<IEnumerable<Nestable>, IEnumerable>> map = nests => from nestable in nests

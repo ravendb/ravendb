@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+﻿﻿using Newtonsoft.Json;
 using Raven.Server.Documents.Queries.Parser;
 using System;
 using System.IO;
@@ -7,6 +7,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Parser
 {
@@ -16,7 +17,7 @@ namespace FastTests.Server.Documents.Queries.Parser
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData(@"from Orders
 select ID('not valid argument')", QueryType.Select)]
         [InlineData(@"declare function Name() {
@@ -58,7 +59,7 @@ update {
             Assert.Throws<InvalidQueryException>(() => new QueryMetadata(q, null, 1, queryType: type));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [InlineData(@"
 declare function Name() {
     var a = ""{{\"""";
@@ -88,7 +89,7 @@ UPDATE {
             parser.Parse(type);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("Name")]
         [InlineData("Address.City")]
         [InlineData("Address.City.Zone")]
@@ -104,7 +105,7 @@ UPDATE {
             Assert.True(parser.Field(out token));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData(" $name ", 4)]
         [InlineData("$age ", 3)]
         public void CanParseParameter(string q, int len)
@@ -116,7 +117,7 @@ UPDATE {
             Assert.Equal(len, token.Length);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("Name = 'Oren'", OperatorType.Equal)]
         [InlineData("Name < 'Oren'", OperatorType.LessThan)]
         [InlineData("Name <= 'Oren'", OperatorType.LessThanEqual)]
@@ -150,7 +151,7 @@ UPDATE {
             Assert.IsType<NegatedExpression>(((BinaryExpression)op).Right);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanParseTimeSeriesDeclaration()
         {
             var parser = new QueryParser();
@@ -189,7 +190,7 @@ from Users as u select test(u)
             Assert.Equal(type, op.GetType());
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("Name =     'Oren'", "Name = 'Oren'")]
         [InlineData("Name between \n'Oren' AND 'Phoebe'", "Name BETWEEN 'Oren' AND 'Phoebe'")]
         [InlineData("( Name between 'Oren' AND 'Phoebe' )", "Name BETWEEN 'Oren' AND 'Phoebe'")]
@@ -215,7 +216,7 @@ from Users as u select test(u)
             Assert.Equal(o, output.GetStringBuilder().ToString());
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("State = 2 AND Act = 'Wait'", "{\"Type\":\"And\",\"Left\":{\"Type\":\"Equal\",\"Left\":\"State\",\"Right\":2},\"Right\":{\"Type\":\"Equal\",\"Left\":\"Act\",\"Right\":\"Wait\"}}")]
         [InlineData("( Name between 'Oren' AND 'Phoebe' )", "{\"Between\":{\"Min\":\"Oren\",\"Max\":\"Phoebe\"}}")]
         [InlineData("Name IN ()", "{\"In\":[]}")]

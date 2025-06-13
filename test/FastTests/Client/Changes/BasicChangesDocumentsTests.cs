@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Tests.Core.Utils.Entities;
@@ -15,7 +15,7 @@ public class BasicChangesDocumentsTests : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.ChangesApi)]
+    [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.ChangesApi)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task Can_Subscribe_To_Single_Document_Changes(Options options)
     {
@@ -59,7 +59,7 @@ public class BasicChangesDocumentsTests : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.ChangesApi)]
+    [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.ChangesApi)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task Can_Subscribe_To_All_Document_Changes(Options options)
     {
@@ -94,7 +94,7 @@ public class BasicChangesDocumentsTests : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.ChangesApi)]
+    [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.ChangesApi)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task Can_Subscribe_To_Collection_Document_Changes(Options options)
     {
@@ -130,7 +130,7 @@ public class BasicChangesDocumentsTests : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.ChangesApi)]
+    [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.ChangesApi)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public async Task Can_Subscribe_To_Prefix_Document_Changes(Options options)
     {

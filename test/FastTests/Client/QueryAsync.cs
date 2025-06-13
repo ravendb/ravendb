@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -16,7 +16,7 @@ namespace FastTests.Client
         {
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryAsync_Simple(Options options)
         {
@@ -37,7 +37,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryAsync_With_Where_Clause(Options options)
         {
@@ -64,7 +64,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task QueryAsync_By_Index(Options options)
         {

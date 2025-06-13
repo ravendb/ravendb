@@ -5,6 +5,7 @@ using Raven.Server.Documents.Indexes.Static.Roslyn;
 using Raven.Server.Documents.Indexes.Static.Roslyn.Rewriters;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing
 {
@@ -14,7 +15,7 @@ namespace FastTests.Server.Documents.Indexing
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(@"docs.SelectMany(match => match.Teams, (match, team) => new { match = match, team = team })
                           .SelectMany(this0 => this0.team.Series, (this0, serie) => new { this0 = this0, serie = serie })
                           .SelectMany(this1 => this1.serie.Games, (this1, game) => new { Player = game.Player,

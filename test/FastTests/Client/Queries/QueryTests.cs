@@ -41,7 +41,7 @@ namespace FastTests.Client.Queries
             public bool IsDeleted { get; set; }
         }
         
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(true, SearchEngineMode = RavenSearchEngineMode.All)]
         [RavenData(false, SearchEngineMode = RavenSearchEngineMode.All)]
         public  void Query_CreateClausesForQueryDynamicallyWithOnBeforeQueryEvent(Options options, bool useCompression)
@@ -98,7 +98,7 @@ namespace FastTests.Client.Queries
                 }
             }
         }
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Query_CreateClausesForQueryDynamicallyWhenTheQueryEmpty(Options options)
         {
@@ -141,7 +141,7 @@ namespace FastTests.Client.Queries
             }
         }
         
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public  void Query_CreateClausesForQueryDynamically(Options options)
         {
@@ -187,7 +187,7 @@ namespace FastTests.Client.Queries
             }
         }
         
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Query_CreateClausesForQueryDynamicallyAsyncWithOnBeforeQueryEvent(Options options)
         {
@@ -239,7 +239,7 @@ namespace FastTests.Client.Queries
             }
         }
         
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_WhenCompareObjectWithUlongInWhereClause_ShouldWork(Options options)
         {
@@ -268,7 +268,7 @@ namespace FastTests.Client.Queries
             WaitForUserToContinueTheTest(store);
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
         public async Task Query_DifferentTypesComparison(Options options)
         {
@@ -298,7 +298,7 @@ namespace FastTests.Client.Queries
         }
 
         
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Query_WhenUsingDateTimeNowInWhereClause_ShouldSendRequestForEachQuery(Options options)
         {

@@ -1,4 +1,4 @@
-﻿using System.Linq;
+﻿﻿using System.Linq;
 using System.Threading;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
@@ -16,7 +16,7 @@ namespace FastTests.Server
         {
         }
 
-        [RavenMultiplatformFact(RavenTestCategory.None, RavenPlatform.Windows | RavenPlatform.Linux)]
+        [RavenMultiplatformFact(RavenTestCategory.Monitoring, RavenPlatform.Windows | RavenPlatform.Linux)]
         public void ThreadUsage_WhenThreadsHaveSameCpuUsageAndTotalProcessorTime_ShouldListThemBoth()
         {
             using var database = CreateDocumentDatabase();

@@ -1,6 +1,7 @@
-﻿using Raven.Server.Documents.Queries;
+﻿﻿﻿using Raven.Server.Documents.Queries;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
@@ -10,7 +11,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void FunctionWithLoad()
         {
             var query = new IndexQueryServerSide(@"
@@ -28,7 +29,7 @@ select {
             Assert.True(query.Metadata.HasIncludeOrLoad);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void SelectWithLoad()
         {
             var query = new IndexQueryServerSide(@"
@@ -42,7 +43,7 @@ select {
             Assert.True(query.Metadata.HasIncludeOrLoad);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void Load()
         {
             var query = new IndexQueryServerSide(@"
@@ -55,7 +56,7 @@ select c.Name
             Assert.True(query.Metadata.HasIncludeOrLoad);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void Include()
         {
             var query = new IndexQueryServerSide(@"
@@ -68,7 +69,7 @@ include o.Company
             Assert.True(query.Metadata.HasIncludeOrLoad);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void WithoutIncludeOrLoad()
         {
             var query = new IndexQueryServerSide(@"

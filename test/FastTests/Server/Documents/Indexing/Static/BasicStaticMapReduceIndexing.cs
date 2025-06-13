@@ -24,7 +24,7 @@ namespace FastTests.Server.Documents.Indexing.Static
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task The_simpliest_static_map_reduce_index(RavenTestParameters config)
         {
@@ -117,7 +117,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CanPersist(RavenTestParameters config)
         {

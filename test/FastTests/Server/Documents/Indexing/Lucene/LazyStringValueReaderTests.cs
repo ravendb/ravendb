@@ -7,6 +7,7 @@ using Raven.Server.Json;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.Lucene
 {
@@ -20,7 +21,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             _ctx = JsonOperationContext.ShortTermSingleUse();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData("ąęłóżźćń")]
         [InlineData("לכובע שלי שלוש פינות")]
         public void Reads_unicode(string expected)
@@ -35,7 +36,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(1024)]
         [InlineData(1500)]
         [InlineData(2048)]
@@ -53,7 +54,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(10)]
         [InlineData(1500)]
         [InlineData(2048)]
@@ -67,7 +68,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             Assert.Equal(expected.First(), stringResult);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_reuse_reader_multiple_times()
         {
             var r = new Random();
@@ -88,7 +89,7 @@ namespace FastTests.Server.Documents.Indexing.Lucene
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CompareLazyCompressedStringValue()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())

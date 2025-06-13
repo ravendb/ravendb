@@ -5,6 +5,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server
 {
@@ -14,7 +15,7 @@ namespace FastTests.Server
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanCreateAndDeleteDbWithNameBeingPrefix()
         {
             var databaseWithName_2 = CreateDatabaseWithName(true, null, null, "CanCreateAndDeleteDbWithNameBeingPrefix.ctor_2");
@@ -30,7 +31,7 @@ namespace FastTests.Server
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CannotDeleteEntireDbFolder()
         {
             DoNotReuseServer();
@@ -55,7 +56,7 @@ namespace FastTests.Server
             DeleteDatabase("someDB1");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CannotDeleteEntireDbFolder2()
         {
             DoNotReuseServer();

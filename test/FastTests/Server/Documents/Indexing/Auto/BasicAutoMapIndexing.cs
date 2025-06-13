@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -36,7 +36,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CheckDispose(RavenTestParameters config)
         {
@@ -80,7 +80,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CanPersist(RavenTestParameters config)
         {
@@ -144,7 +144,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CanDelete(RavenTestParameters config)
         {
@@ -198,7 +198,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             Assert.Equal(0, indexes.Count);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CanReset(RavenTestParameters config)
         {
@@ -254,7 +254,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             Assert.Equal(2, indexes.Count);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public void SimpleIndexing(RavenTestParameters config)
         {
@@ -417,7 +417,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public void WriteErrors(RavenTestParameters config)
         {
@@ -456,7 +456,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public void Errors2(RavenTestParameters config)
         {
@@ -905,7 +905,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public void Errors(RavenTestParameters config)
         {
@@ -948,7 +948,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task AutoIndexesShouldBeMarkedAsIdleAndDeleted(RavenTestParameters config)
         {
@@ -1312,7 +1312,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task IndexCreationOptions(RavenTestParameters config)
         {
@@ -1337,7 +1337,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task LockMode(RavenTestParameters config)
         {
@@ -1364,7 +1364,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task IndexLoadErrorCreatesFaultyInMemoryIndexFakeAndAddsAlert(RavenTestParameters config)
         {
@@ -1420,7 +1420,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task CanDeleteFaultyIndex(RavenTestParameters config)
         {

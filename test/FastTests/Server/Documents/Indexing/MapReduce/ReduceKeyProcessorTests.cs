@@ -8,6 +8,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing.MapReduce
 {
@@ -17,7 +18,7 @@ namespace FastTests.Server.Documents.Indexing.MapReduce
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void Can_handle_values_of_different_types()
         {
             using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling("ReduceKeyProcessorTests"))

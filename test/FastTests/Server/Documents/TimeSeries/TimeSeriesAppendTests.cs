@@ -5,6 +5,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.TimeSeries
 {
@@ -14,7 +15,7 @@ namespace FastTests.Server.Documents.TimeSeries
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanAppendMoreThan127Tags()
         {
             using (var db = CreateDocumentDatabase())

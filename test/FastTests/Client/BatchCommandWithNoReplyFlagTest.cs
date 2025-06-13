@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.JsonPatch;
@@ -20,27 +20,27 @@ public class BatchCommandWithNoReplyFlagTest : RavenTestBase
     {
     }
         
-    [RavenFact(RavenTestCategory.Patching)]
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
     public async Task BatchWithNoReply_WhenPatch_ShouldNotFail()
     {
         const string user1Id = "users/1";
         const string user1Value = "SomeValue";
-        
+
         var store = GetDocumentStore();
         var requestExecutor = store.GetRequestExecutor();
-        
+
         using (var session = store.OpenSession())
         using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {
             session.Store(new TestObj(), user1Id);
             session.SaveChanges();
-                
+
             var result = new InMemoryDocumentSessionOperations.SaveChangesData((InMemoryDocumentSessionOperations)session);
             var patchRequest = new PatchRequest{Script = "this.Name = args.val_0;", Values = new Dictionary<string, object>{{"val_0", user1Value}}};
             result.SessionCommands.Add(new PatchCommandData(user1Id, null, patchRequest));
-            
+
             var sbc = new TestSingleNodeBatchCommand(DocumentConventions.Default, context, result.SessionCommands, result.Options);
-            
+
             await requestExecutor.ExecuteAsync(sbc, context);
         }
 
@@ -50,28 +50,28 @@ public class BatchCommandWithNoReplyFlagTest : RavenTestBase
             Assert.Equal(user1Value, user.Name);
         }
     }
-    
-    [RavenFact(RavenTestCategory.Patching)]
+
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
     public async Task BatchWithNoReply_WhenJsonPatch_ShouldNotFail()
     {
         const string user2Id = "users/1";
         const string user2Value = "SomeValue";
-        
+
         var store = GetDocumentStore();
         var requestExecutor = store.GetRequestExecutor();
-        
+
         using (var session = store.OpenSession())
         using (requestExecutor.ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {
             session.Store(new TestObj(), user2Id);
             session.SaveChanges();
-                
+
             var result = new InMemoryDocumentSessionOperations.SaveChangesData((InMemoryDocumentSessionOperations)session);
             var jpd = new JsonPatchDocument();
             jpd.Add("/Name", user2Value);
             result.SessionCommands.Add(new JsonPatchCommandData(user2Id, jpd));
             var sbc = new TestSingleNodeBatchCommand(DocumentConventions.Default, context, result.SessionCommands, result.Options);
-            
+
             await requestExecutor.ExecuteAsync(sbc, context);
         }
 

@@ -5,6 +5,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Indexing
 {
@@ -14,7 +15,7 @@ namespace FastTests.Server.Documents.Indexing
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Basic()
         {
             using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -58,7 +59,7 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanPersist()
         {
             using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -93,7 +94,7 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CheckWritability()
         {
             using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -138,7 +139,7 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CheckReadonly()
         {
             using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -171,7 +172,7 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void WillExpand()
         {
             using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -204,7 +205,7 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CannotMixFilters()
         {
             using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -223,7 +224,7 @@ namespace FastTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void WillGetConsumedFromStorage()
         {
             using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))

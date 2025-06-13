@@ -23,7 +23,7 @@ namespace FastTests.Server.Documents.Indexing.Static
             _ctx = JsonOperationContext.ShortTermSingleUse();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_get_simple_values()
         {
             var now = SystemTime.UtcNow;

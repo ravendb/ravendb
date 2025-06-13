@@ -8,6 +8,7 @@ using System.Linq;
 using Raven.Server.Routing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Routing
 {
@@ -17,7 +18,7 @@ namespace FastTests.Server.Routing
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanQueryTrie()
         {
             var trie = Trie<int>.Build(new[]
@@ -33,7 +34,7 @@ namespace FastTests.Server.Routing
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanQueryWithRoot()
         {
             var trie = Trie<int>.Build(new[]
@@ -49,7 +50,7 @@ namespace FastTests.Server.Routing
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData("databases/northwind/docs")]
         [InlineData("databases")]
         [InlineData("databases/northwind/indexes/Raven/DocumentsByEntityName")]

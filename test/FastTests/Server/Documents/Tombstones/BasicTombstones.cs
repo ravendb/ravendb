@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,6 +12,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Tombstones
 {
@@ -21,7 +22,7 @@ namespace FastTests.Server.Documents.Tombstones
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanCreateAndGetTombstone()
         {
             using (var database = CreateDocumentDatabase())
@@ -71,7 +72,7 @@ namespace FastTests.Server.Documents.Tombstones
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Cleanup()
         {
             using (var database = CreateDocumentDatabase())
@@ -199,7 +200,7 @@ namespace FastTests.Server.Documents.Tombstones
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CleanupOfMultiMapIndexWithLoadDocument()
         {
             var indexDefinition = new IndexDefinition()

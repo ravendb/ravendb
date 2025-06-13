@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿﻿﻿﻿using System;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
@@ -7,6 +7,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Dynamic.Map
 {
@@ -18,7 +19,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
 
         private DynamicQueryMapping _sut;
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void SpecifyingInvalidParametersWillResultInException()
         {
             var fields = new[] { new AutoIndexField
@@ -35,7 +36,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             new AutoMapIndexDefinition("test", fields);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CanExtractTermsFromRangedQuery()
         {
             create_dynamic_mapping("FROM Users WHERE Term BETWEEN 0 AND 10");
@@ -48,7 +49,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByTerm", definition.Name);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CanExtractTermsFromEqualityQuery()
         {
             create_dynamic_mapping("FROM Users WHERE Term = 'Whatever'");
@@ -62,7 +63,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CanExtractMultipleTermsQuery()
         {
             create_dynamic_mapping("FROM Users WHERE Term = 'Whatever' OR Term2 BETWEEN 0 AND 10");
@@ -77,7 +78,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CanExtractTermsFromComplexQuery()
         {
             create_dynamic_mapping("FROM Users WHERE (Term = 'bar' OR Term2 = 'baz') OR Term3 = 'foo' OR NOT Term4 = 'rob'");
@@ -94,7 +95,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CanExtractMultipleNestedTermsQuery()
         {
             create_dynamic_mapping("FROM Users WHERE Term = 'Whatever' OR (Term2 = 'Whatever' AND Term3 = 'Whatever')");
@@ -109,7 +110,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByTermAndTerm2AndTerm3", definition.Name);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CreateDefinitionSupportsArrayProperties()
         {
             create_dynamic_mapping("FROM Users WHERE Tags[].Name = 'Any'");
@@ -123,7 +124,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CreateDefinitionSupportsNestedProperties()
         {
             create_dynamic_mapping("FROM Users WHERE User.Name = 'Any'");
@@ -136,7 +137,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByUser.Name", definition.Name);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CreateDefinitionForQueryWithSortedFields()
         {
             create_dynamic_mapping("FROM Users WHERE StartsWith(Name, 'a') ORDER BY Age AS long");
@@ -151,7 +152,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             var nameField = definition.MapFields["Name"];
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CreateDefinitionForQueryWithNestedFieldsAndStringSortingSet()
         {
             create_dynamic_mapping("FROM Users WHERE StartsWith(Name, 'a') ORDER BY Address.Country ASC");
@@ -165,7 +166,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAddress.CountryAndName", definition.Name);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CreateDefinitionForQueryWithNestedFieldsAndNumberSortingSet()
         {
             create_dynamic_mapping("FROM Users WHERE StartsWith(Name, 'a') ORDER BY Address.ZipCode AS double");
@@ -179,7 +180,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAddress.ZipCodeAndName", definition.Name);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CreateDefinitionForQueryWithRangeField()
         {
             create_dynamic_mapping("FROM Users WHERE Age BETWEEN 30 AND 40 ORDER BY Age");
@@ -192,7 +193,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAge", definition.Name);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void ExtendsMappingBasedOnExistingDefinition()
         {
             _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE StartsWith(FirstName, 'a') ORDER BY Count AS long"));
@@ -214,7 +215,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAgeAndCountAndFirstNameAndLastName", definition.Name);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void DefinitionExtensionWontDuplicateFields()
         {
             _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE StartsWith(FirstName, 'A') AND StartsWith(LastName, 'A') ORDER BY Age AS double, Count AS long"));
@@ -238,7 +239,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAddressIdAndAgeAndCountAndFirstNameAndLastName", definition.Name);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void OrderingSpecifiedUsing_AS_AfterOrderBy()
         {
             create_dynamic_mapping("FROM Users WHERE Age > 40 ORDER BY Age AS string");
@@ -251,7 +252,7 @@ namespace FastTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal("Auto/Users/ByAge", definition.Name);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void ExtendsIndexingOptionsOfTheSameField()
         {
             _sut = DynamicQueryMapping.Create(new IndexQueryServerSide("FROM Users WHERE FirstName = 'a'"));

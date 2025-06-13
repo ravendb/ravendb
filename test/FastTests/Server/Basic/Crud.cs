@@ -6,6 +6,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Basic
 {
@@ -15,7 +16,7 @@ namespace FastTests.Server.Basic
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanSaveAndLoad()
         {
             using (var store = GetDocumentStore())
@@ -42,7 +43,7 @@ namespace FastTests.Server.Basic
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanOverwriteDocumentWithSmallerValue()
         {
             using (var store = GetDocumentStore())

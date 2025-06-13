@@ -5,6 +5,7 @@ using Raven.Client.ServerWide.Operations.TrafficWatch;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server
 {
@@ -14,7 +15,7 @@ namespace FastTests.Server
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public async Task CheckDefaultsAndCanSetAndGetTrafficWatchConfiguration()
         {
             using (var store = GetDocumentStore())

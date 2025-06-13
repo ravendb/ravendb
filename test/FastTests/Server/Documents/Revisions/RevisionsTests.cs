@@ -1,17 +1,10 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="RevisionsTests.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Utils;
-using Microsoft.Extensions.Azure;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
@@ -20,7 +13,6 @@ using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Documents.Revisions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
@@ -32,13 +24,8 @@ using Xunit.Abstractions;
 
 namespace FastTests.Server.Documents.Revisions
 {
-
-    public class RevisionsTests : RavenTestBase
+    public class RevisionsTests(ITestOutputHelper output) : RavenTestBase(output)
     {
-        public RevisionsTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetNonExistingRevisionsByChangeVectorAsyncLazily(Options options)
@@ -179,7 +166,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetMetadataForLazily()
         {
             using (var store = GetDocumentStore())
@@ -986,7 +973,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetNullForNotExistsDocument()
         {
             using (var store = GetDocumentStore())
@@ -1007,7 +994,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanGetAllRevisionsFor()
         {
             var company = new Company { Name = "Company Name" };
@@ -1037,7 +1024,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task CanCheckIfDocumentHasRevisions()
         {
             var company = new Company { Name = "Company Name" };
@@ -1180,7 +1167,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task WillCreateRevision()
         {
             var product = new User { Name = "Hibernating" };
@@ -1218,7 +1205,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task WillCreateValidRevisionWhenCompressionDocumentWasSaved()
         {
             var user = new User { Name = new string('1', 4096 * 2) }; // create a string which will be compressed
@@ -1277,7 +1264,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task WillDeleteOldRevisions()
         {
             var company = new Company { Name = "Company #1" };
@@ -1372,7 +1359,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Revisions, LicenseRequired = true)]
         public async Task RevisionsOrder()
         {
             using (var store = GetDocumentStore())
@@ -1410,7 +1397,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [RavenFact(RavenTestCategory.Revisions, LicenseRequired = true)]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Revisions | RavenTestCategory.Counters, LicenseRequired = true)]
         public async Task CanGetCountersSnapshotInRevisions()
         {
             using (var store = GetDocumentStore())
@@ -1503,7 +1490,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task CanLimitNumberOfRevisionsByAge()
         {
             var revisionsAgeLimit = TimeSpan.FromSeconds(10);
@@ -1861,7 +1848,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
         public async Task CollectionCaseSensitiveTest1()
         {
             using (var store = GetDocumentStore())
@@ -1898,7 +1885,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Revisions)]
         public async Task CollectionCaseSensitiveTest2()
         {
             using (var store = GetDocumentStore())
@@ -1935,7 +1922,7 @@ namespace FastTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public async Task CollectionCaseSensitiveTest3()
         {
             using (var store = GetDocumentStore())

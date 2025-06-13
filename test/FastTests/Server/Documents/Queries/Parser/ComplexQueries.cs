@@ -4,6 +4,7 @@ using System.IO;
 using Raven.Server.Documents.Queries.AST;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Server.Documents.Queries.Parser
 {
@@ -13,7 +14,7 @@ namespace FastTests.Server.Documents.Queries.Parser
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData(@"FROM Users (IsActive =false)", "{\"From\":\"Users\"}")]
         [InlineData(@"FROM Users (IsActive = true)
 GROUP BY Country
