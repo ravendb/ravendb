@@ -383,20 +383,6 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                     </ButtonGroup>
 
                                     <Dropdown.Menu data-testid="database-actions-dropdown-menu">
-                                        {canPauseAnyIndexing && (
-                                            <>
-                                                <Dropdown.Item onClick={toggleIsGlobalPauseIndexingOpen}>
-                                                    <Icon icon="pause" /> Pause indexing until restart
-                                                </Dropdown.Item>
-                                                {isGlobalPauseIndexingOpen && (
-                                                    <GlobalPauseIndexingConfirm
-                                                        toggle={toggleIsGlobalPauseIndexingOpen}
-                                                        onConfirm={handleGlobalPauseIndexing}
-                                                        allActionContexts={allActionContexts}
-                                                    />
-                                                )}
-                                            </>
-                                        )}
                                         {canResumeAnyPausedIndexing && (
                                             <>
                                                 <Dropdown.Item onClick={toggleIsGlobalResumeIndexingOpen}>
@@ -406,6 +392,20 @@ export function DatabasePanel(props: DatabasePanelProps) {
                                                     <GlobalResumeIndexingConfirm
                                                         toggle={toggleIsGlobalResumeIndexingOpen}
                                                         onConfirm={handleGlobalResumeIndexing}
+                                                        allActionContexts={allActionContexts}
+                                                    />
+                                                )}
+                                            </>
+                                        )}
+                                        {canPauseAnyIndexing && (
+                                            <>
+                                                <Dropdown.Item onClick={toggleIsGlobalPauseIndexingOpen}>
+                                                    <Icon icon="pause" /> Pause indexing until restart
+                                                </Dropdown.Item>
+                                                {isGlobalPauseIndexingOpen && (
+                                                    <GlobalPauseIndexingConfirm
+                                                        toggle={toggleIsGlobalPauseIndexingOpen}
+                                                        onConfirm={handleGlobalPauseIndexing}
                                                         allActionContexts={allActionContexts}
                                                     />
                                                 )}

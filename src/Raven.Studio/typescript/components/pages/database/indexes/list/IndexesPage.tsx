@@ -31,6 +31,10 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import Dropdown from "react-bootstrap/Dropdown";
 import ButtonGroup from "react-bootstrap/ButtonGroup";
 import { CustomDropdownToggle } from "components/common/Dropdown";
+import useBoolean from "components/hooks/useBoolean";
+import { GlobalPauseIndexingConfirm } from "components/pages/resources/databases/partials/GlobalPauseIndexingConfirm";
+import { GlobalResumeIndexingConfirm } from "components/pages/resources/databases/partials/GlobalResumeIndexingConfirm";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 interface IndexesPageProps {
     stale?: boolean;
@@ -79,6 +83,9 @@ export function IndexesPage({ queryParams }: ReactQueryParamsProps<IndexesPagePr
         globalIndexingStatus,
         isImportIndexModalOpen,
         toggleIsImportIndexModalOpen,
+        asyncPauseGlobalIndexing,
+        asyncResumeGlobalIndexing,
+        globalStatusList,
     } = useIndexesPage(queryParams?.stale, queryParams?.isImportOpen);
 
     const deleteSelectedIndexes = () => {
@@ -95,6 +102,14 @@ export function IndexesPage({ queryParams }: ReactQueryParamsProps<IndexesPagePr
             mode
         );
     };
+
+    console.log("kalczur globalStatusList", globalStatusList);
+
+    const canPauseGlobalIndexing = globalStatusList?.some((x) => x.status === "Running");
+    const canResumeGlobalIndexing = globalStatusList?.some((x) => x.status === "Paused");
+
+    const { value: isGlobalPauseIndexingOpen, toggle: toggleIsGlobalPauseIndexingOpen } = useBoolean(false);
+    const { value: isGlobalResumeIndexingOpen, toggle: toggleIsGlobalResumeIndexingOpen } = useBoolean(false);
 
     const allActionContexts = ActionContextUtils.getContexts(DatabaseUtils.getLocations(db));
 
@@ -172,7 +187,7 @@ export function IndexesPage({ queryParams }: ReactQueryParamsProps<IndexesPagePr
             {stats.indexes.length > 0 && (
                 <StickyHeader>
                     <Row>
-                        <Col className="hstack">
+                        <Col className="hstack gap-2">
                             {hasDatabaseWriteAccess && (
                                 <ConditionalPopover
                                     conditions={{
@@ -227,6 +242,46 @@ export function IndexesPage({ queryParams }: ReactQueryParamsProps<IndexesPagePr
                                         </Dropdown.Menu>
                                     </Dropdown>
                                 </ConditionalPopover>
+                            )}
+                            {canResumeGlobalIndexing && (
+                                <>
+                                    <ButtonWithSpinner
+                                        variant="success"
+                                        className="rounded-pill"
+                                        onClick={toggleIsGlobalResumeIndexingOpen}
+                                        isSpinning={asyncResumeGlobalIndexing.loading}
+                                        icon="play"
+                                    >
+                                        Resume indexing
+                                    </ButtonWithSpinner>
+                                    {isGlobalResumeIndexingOpen && (
+                                        <GlobalResumeIndexingConfirm
+                                            toggle={toggleIsGlobalResumeIndexingOpen}
+                                            onConfirm={asyncResumeGlobalIndexing.execute}
+                                            allActionContexts={allActionContexts}
+                                        />
+                                    )}
+                                </>
+                            )}
+                            {canPauseGlobalIndexing && (
+                                <>
+                                    <ButtonWithSpinner
+                                        variant="secondary"
+                                        className="rounded-pill"
+                                        onClick={toggleIsGlobalPauseIndexingOpen}
+                                        isSpinning={asyncPauseGlobalIndexing.loading}
+                                        icon="pause"
+                                    >
+                                        Pause indexing
+                                    </ButtonWithSpinner>
+                                    {isGlobalPauseIndexingOpen && (
+                                        <GlobalPauseIndexingConfirm
+                                            toggle={toggleIsGlobalPauseIndexingOpen}
+                                            onConfirm={asyncPauseGlobalIndexing.execute}
+                                            allActionContexts={allActionContexts}
+                                        />
+                                    )}
+                                </>
                             )}
                         </Col>
                         <Col xs="auto">

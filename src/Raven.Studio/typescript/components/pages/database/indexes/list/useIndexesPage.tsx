@@ -9,6 +9,7 @@ import {
     IndexType,
 } from "components/models/indexes";
 import {
+    GlobalIndexStatus,
     indexesStatsReducer,
     indexesStatsReducerInitializer,
 } from "components/pages/database/indexes/list/IndexesStatsReducer";
@@ -25,7 +26,7 @@ import IndexRunningStatus = Raven.Client.Documents.Indexes.IndexRunningStatus;
 import collection from "models/database/documents/collection";
 import IndexLockMode = Raven.Client.Documents.Indexes.IndexLockMode;
 import IndexPriority = Raven.Client.Documents.Indexes.IndexPriority;
-import { useAsync } from "react-async-hook";
+import { useAsync, useAsyncCallback } from "react-async-hook";
 import { InputItem, InputItemLimit } from "components/models/common";
 import { DatabaseActionContexts } from "components/common/MultipleDatabaseLocationSelector";
 import ActionContextUtils from "components/utils/actionContextUtils";
@@ -78,7 +79,7 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         onConfirm: (contextPoints: DatabaseActionContexts[]) => void;
     }>();
 
-    const { indexesService } = useServices();
+    const { indexesService, databasesService } = useServices();
     const eventsCollector = useEventsCollector();
     const { databaseChangesApi, serverNotifications } = useChanges();
 
@@ -255,6 +256,64 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
             };
         }
     }, [databaseChangesApi, handleDatabaseChanges, serverNotifications]);
+
+    const asyncGetGlobalStatus = useAsync(async () => {
+        const statusList: GlobalIndexStatus[] = [];
+
+        for (const { tag: nodeTag } of db.nodes) {
+            try {
+                const status = await databasesService.getDatabasesState(nodeTag);
+
+                for (const dbStatus of status.Databases) {
+                    if (DatabaseUtils.shardGroupKey(dbStatus.Name) === db.name) {
+                        statusList.push({
+                            location: { nodeTag, shardNumber: DatabaseUtils.shardNumber(dbStatus.Name) },
+                            status: dbStatus.IndexingStatus,
+                        });
+                    }
+                }
+            } catch {
+                messagePublisher.reportError("Failed to load global indexing status for node " + nodeTag);
+            }
+        }
+
+        dispatch({
+            type: "GlobalStatusLoaded",
+            statusList,
+        });
+    }, [db]);
+
+    const asyncPauseGlobalIndexing = useAsyncCallback(async (contexts: DatabaseActionContexts[]) => {
+        let tasks: Promise<void>[] = [];
+
+        for (const { nodeTag, shardNumbers } of contexts) {
+            const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
+
+            tasks = locations.map(async (location) => {
+                await indexesService.pauseAllIndexes(db.name, location);
+            });
+        }
+
+        await Promise.all(tasks);
+        await asyncGetGlobalStatus.execute();
+        throttledRefresh.current();
+    });
+
+    const asyncResumeGlobalIndexing = useAsyncCallback(async (contexts: DatabaseActionContexts[]) => {
+        let tasks: Promise<void>[] = [];
+
+        for (const { nodeTag, shardNumbers } of contexts) {
+            const locations = ActionContextUtils.getLocations(nodeTag, shardNumbers);
+
+            tasks = locations.map(async (location) => {
+                await indexesService.resumeAllIndexes(db.name, location);
+            });
+        }
+
+        await Promise.all(tasks);
+        await asyncGetGlobalStatus.execute();
+        throttledRefresh.current();
+    });
 
     const highlightUsed = useRef<boolean>(false);
 
@@ -773,6 +832,9 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         globalIndexingStatus,
         isImportIndexModalOpen,
         toggleIsImportIndexModalOpen,
+        asyncPauseGlobalIndexing,
+        asyncResumeGlobalIndexing,
+        globalStatusList: stats.globalStatusList,
     };
 }
 
