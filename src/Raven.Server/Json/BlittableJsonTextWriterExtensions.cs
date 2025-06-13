@@ -1914,8 +1914,7 @@ namespace Raven.Server.Json
                 first = false;
 
                 WriteDocument(writer, context, documents.Current, metadataOnly);
-                await writer.MaybeFlushAsync(token)
-                            .ConfigureAwait(false);
+                await writer.MaybeFlushAsync(token);
             }
 
             writer.WriteEndArray();

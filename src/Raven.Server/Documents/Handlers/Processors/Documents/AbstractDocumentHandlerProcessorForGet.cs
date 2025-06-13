@@ -284,55 +284,69 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
     {
         long numberOfResults;
         long totalDocumentsSizeInBytes;
+
+        ReadTransaction?.DebugInfo_Add("WriteDocumentsByIdResultAsync: About to create writer");
+
         await using (AsyncBlittableJsonTextWriter.Create(context, RequestHandler.ResponseBodyStream(), out var writer))
         {
+            ReadTransaction?.DebugInfo_Add("WriteDocumentsByIdResultAsync: Writer created, starting JSON");
+
             writer.WriteStartObject();
 
             writer.WritePropertyName(nameof(GetDocumentsResult.Results));
+
+            ReadTransaction?.DebugInfo_Add("WriteDocumentsByIdResultAsync: About to write documents");
 
             (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, result.Documents, metadataOnly, CancellationToken);
 
             writer.WriteComma();
 
-            await WriteIncludesAsync(writer, context, nameof(GetDocumentsResult.Includes), result.Includes, CancellationToken)
-                    .ConfigureAwait(false);
+            ReadTransaction?.DebugInfo_Add("WriteDocumentsByIdResultAsync: About to write includes");
+
+            await WriteIncludesAsync(writer, context, nameof(GetDocumentsResult.Includes), result.Includes, CancellationToken);
 
             if (result.CounterIncludes?.Count > 0)
             {
+                ReadTransaction?.DebugInfo_Add("WriteDocumentsByIdResultAsync: About to write included counters");
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.CounterIncludes));
-                await result.CounterIncludes.WriteIncludesAsync(writer, context, CancellationToken)
-                                            .ConfigureAwait(false);
+                await result.CounterIncludes.WriteIncludesAsync(writer, context, CancellationToken);
             }
 
             if (result.TimeSeriesIncludes?.Count > 0)
             {
+                ReadTransaction?.DebugInfo_Add("WriteDocumentsByIdResultAsync: About to write included time series");
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.TimeSeriesIncludes));
-                await result.TimeSeriesIncludes.WriteIncludesAsync(writer, context, CancellationToken)
-                                               .ConfigureAwait(false);
+                await result.TimeSeriesIncludes.WriteIncludesAsync(writer, context, CancellationToken);
             }
 
             if (result.RevisionIncludes?.Count > 0)
             {
+                ReadTransaction?.DebugInfo_Add("WriteDocumentsByIdResultAsync: About to write included revisions");
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludes));
                 writer.WriteStartArray();
-                await result.RevisionIncludes.WriteIncludesAsync(writer, context, CancellationToken)
-                                             .ConfigureAwait(false);
+                await result.RevisionIncludes.WriteIncludesAsync(writer, context, CancellationToken);
                 writer.WriteEndArray();
             }
 
             if (result.CompareExchangeIncludes?.Count > 0)
             {
+                ReadTransaction?.DebugInfo_Add("WriteDocumentsByIdResultAsync: About to write included compare exchanges");
+
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.CompareExchangeValueIncludes));
-                await writer.WriteCompareExchangeValuesAsync(result.CompareExchangeIncludes, CancellationToken)
-                                .ConfigureAwait(false);
+                await writer.WriteCompareExchangeValuesAsync(result.CompareExchangeIncludes, CancellationToken);
             }
 
             writer.WriteEndObject();
+
+            ReadTransaction?.DebugInfo_Add("WriteDocumentsByIdResultAsync: About to dispose writer");
+
         }
+        ReadTransaction?.DebugInfo_Add("WriteDocumentsByIdResultAsync: Completed successfully");
+
         return (numberOfResults, totalDocumentsSizeInBytes);
     }
 

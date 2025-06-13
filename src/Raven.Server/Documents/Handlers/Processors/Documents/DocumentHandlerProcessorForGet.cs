@@ -98,8 +98,6 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
                 document = RequestHandler.Database.DocumentsStorage.Get(context, id);
             }
 
-            readTx.InnerTransaction.LowLevelTransaction.DebugInfo_Add($"doc: {id} (found: {(document != null)})");
-
             if (document == null)
             {
                 if (clusterWideTx)
@@ -181,7 +179,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
     protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
         DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, bool metadataOnly, CancellationToken token)
     {
-        return await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token).ConfigureAwait(false);
+        return await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
     }
 
     protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
