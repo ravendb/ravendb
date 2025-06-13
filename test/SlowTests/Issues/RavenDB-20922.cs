@@ -101,6 +101,13 @@ namespace SlowTests.Issues
             await EnableIndexClusterWide(store, index[0].Name);
 
             var documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+
+            await WaitForValueAsync(async () =>
+            {
+                documentDatabase = await leader.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+                return documentDatabase.IndexStore.GetIndex(index[0].Name).Status;
+            }, IndexRunningStatus.Running);
+
             var autoIndex = documentDatabase.IndexStore.GetIndex(index[0].Name);
             Assert.Equal(IndexState.Normal, autoIndex.State);
             Assert.Equal(IndexRunningStatus.Running, autoIndex.Status);
