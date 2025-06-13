@@ -260,7 +260,7 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
     const asyncGetGlobalStatus = useAsync(async () => {
         const statusList: GlobalIndexStatus[] = [];
 
-        for (const { tag: nodeTag } of db.nodes) {
+        for (const { tag: nodeTag } of db?.nodes ?? []) {
             try {
                 const status = await databasesService.getDatabasesState(nodeTag);
 
@@ -281,7 +281,7 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
             type: "GlobalStatusLoaded",
             statusList,
         });
-    }, [db]);
+    }, []);
 
     const asyncPauseGlobalIndexing = useAsyncCallback(async (contexts: DatabaseActionContexts[]) => {
         let tasks: Promise<void>[] = [];
