@@ -6,6 +6,7 @@ using SharpCompress.Compressors;
 using SharpCompress.Compressors.Deflate;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron.Util.PFor;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,7 +19,7 @@ public class PostingListAddRemoval : StorageTest
     {
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void AdditionsAndRemovalWorkInBulk()
     {
         var ops = ReadOperationsFrom("3-2015-10.txt.gz");
@@ -54,7 +55,7 @@ public class PostingListAddRemoval : StorageTest
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public unsafe void CanHandleLargeValues()
     {
         List<long> items = ReadNumbersFromResource("Corax.PostingList.AddsBiggerThanInt.txt").ToList();
@@ -98,7 +99,7 @@ public class PostingListAddRemoval : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public unsafe void CanWorkWhenEntryIdIsBiggerThanInt()
     {
         var maxSize = 0;
@@ -161,7 +162,7 @@ public class PostingListAddRemoval : StorageTest
     }
 
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Voron)]
     [InlineData(300)]
     [InlineData(5000)]
     [InlineData(int.MaxValue)]

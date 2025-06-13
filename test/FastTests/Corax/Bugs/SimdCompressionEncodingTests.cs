@@ -1,5 +1,6 @@
-﻿using Sparrow.Server;
+using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron.Util.PFor;
 using Xunit;
 using Xunit.Abstractions;
@@ -129,7 +130,7 @@ public class SimdCompressionEncodingTests : NoDisposalNeeded
         83609395204
     };
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public unsafe void CanProperlyEncodeValues()
     {
         var buffer = stackalloc byte[10000];

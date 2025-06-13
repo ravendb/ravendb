@@ -19,7 +19,7 @@ public class QuantizationTest : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanEncodeAndDecodeEveryNumberUnderShort()
     {
         for (short value = 1; value < short.MaxValue; ++value)
@@ -85,7 +85,7 @@ public class QuantizationTest : RavenTestBase
     // a buffer from a managed pointer, which could be moved by the garbage collector to a different location. After some research, we discovered a third way to load a vector that is both GC safe
     // and does not require pinning memory. Although this approach is not documented, we added two tests to this function to ensure that any internal changes to the method would trigger a notification,
     // since debugging such issues can be extremely challenging.
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanSafelyReadVectorFromManagedMemory2()
     {
         var buffer = new long[4];

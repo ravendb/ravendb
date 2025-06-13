@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -11,6 +11,7 @@ using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,7 +28,7 @@ namespace FastTests.Corax
         public BoostingQueryTest(ITestOutputHelper output) : base(output) { }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleBoosting()
         {
             PrepareData();
@@ -51,7 +52,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void OrBoosting()
         {
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 1}); //  2 * 10
@@ -89,7 +90,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [InlineData(256, 29)]
         [InlineData(512, 29)]
         [InlineData(1024, 29)]
@@ -126,7 +127,7 @@ namespace FastTests.Corax
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void OrderByBoosting()
         {
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 1}); // 2 * 10
@@ -165,7 +166,7 @@ namespace FastTests.Corax
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void OrderByBoostingTake4()
         {
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 1}); // 2 * 10
@@ -209,7 +210,7 @@ namespace FastTests.Corax
             return value1.Content1.CompareTo(value2.Content1);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void OrderByBoostingTermFrequency()
         {
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 0}); // 1/2
@@ -258,7 +259,7 @@ namespace FastTests.Corax
         }
 
         //todo
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void OrderByBoostingOrBasedInQuery()
         {
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 0}); // 1/2
@@ -300,7 +301,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public unsafe void CanAddAndRemoveDocumentBoost()
         {
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 0, Boost = 10F}); // 1            
@@ -335,7 +336,7 @@ namespace FastTests.Corax
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void OrderByBoostingMultiTermFrequency()
         {
             longList.Add(new IndexSingleNumericalEntry<long, long> {Id = $"list/1", Content1 = 0}); // 1            

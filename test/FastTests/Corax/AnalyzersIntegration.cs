@@ -1,4 +1,4 @@
-﻿using System.Linq;
+﻿﻿﻿using System.Linq;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents;
 using Xunit;
@@ -13,7 +13,7 @@ public class AnalyzersIntegration : RavenTestBase
     {
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void LowercaseAnalyzer(Options options)
     {
@@ -42,7 +42,7 @@ public class AnalyzersIntegration : RavenTestBase
         }
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void RavenStandardAnalyzer(Options options)
     {

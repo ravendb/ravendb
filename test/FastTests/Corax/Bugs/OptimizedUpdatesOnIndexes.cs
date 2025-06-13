@@ -1,7 +1,8 @@
-﻿using Corax;
+using Corax;
 using Corax.Mappings;
 using FastTests.Voron;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,7 +17,7 @@ public class OptimizedUpdatesOnIndexes : StorageTest
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanUpdateAndNotDelete()
     {
         using var fields = CreateKnownFields(Allocator);

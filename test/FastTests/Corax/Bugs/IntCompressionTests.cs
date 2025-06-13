@@ -1,4 +1,4 @@
-﻿using System.IO;
+﻿﻿using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using Newtonsoft.Json;
@@ -18,7 +18,7 @@ namespace FastTests.Corax.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanEncodeAndDecode()
         {
             var data = new[]

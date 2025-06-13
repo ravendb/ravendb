@@ -33,7 +33,7 @@ namespace FastTests.Corax
         public IndexSearcherTest(ITestOutputHelper output) : base(output)
         {
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void CanDeleteDifferentLongAndDoubleInSingleEntry()
         {
             var entry1 = new IndexSingleEntry() {Id = "e/1", Content = "2023-08-02T12:01:34.2111452"};
@@ -71,7 +71,7 @@ namespace FastTests.Corax
             }            
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void GetTermFromEntryIdViaEntriesFields()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
@@ -95,7 +95,7 @@ namespace FastTests.Corax
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void CanCompareEntriesDirectly()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
@@ -129,7 +129,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void EmptyTerm()
         {
             var entry = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
@@ -151,7 +151,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SingleTerm()
         {
             var entry = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
@@ -170,7 +170,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SmallSetTerm()
         {
             var entries = new IndexEntry[16];
@@ -202,7 +202,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void EmptyAnd()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
@@ -222,13 +222,13 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SingleAndNoDuplication()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
             var entry2 = new IndexEntry {Id = "entry/2", Content = new string[] {"road", "mountain"},};
 
-            
+
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, new[] {entry1, entry2}, CreateKnownFields(bsc));
 
@@ -244,7 +244,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SingleAnd()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
@@ -265,7 +265,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void AllAnd()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
@@ -286,7 +286,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void AllAndWithEmpty()
         {
             var entries = Enumerable.Range(1, 10_000).Select(i => new IndexEntry {Id = $"entry/{i}", Content = new string[] {"road", "lake", "mountain"}}).ToArray();
@@ -306,7 +306,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void AllAndMemoized()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
@@ -333,7 +333,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void EmptyOr()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
@@ -354,7 +354,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SingleOr()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
@@ -383,7 +383,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void AllOr()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
@@ -405,7 +405,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void AllOrInBatches()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake"},};
@@ -428,7 +428,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleAndOr()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
@@ -467,7 +467,7 @@ namespace FastTests.Corax
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [InlineData(new object[] {10, 3})]
         [InlineData(new object[] {8000, 18})]
         [InlineData(new object[] {1000, 8})]
@@ -542,7 +542,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleInStatement()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"road", "lake", "mountain"},};
@@ -587,7 +587,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [InlineData(new object[] {1000, 8})]
         [InlineData(new object[] {300, 128})]
         [InlineData(new object[] {10000, 128})]
@@ -677,7 +677,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void AllIn()
         {
             var entry0 = new IndexEntry
@@ -781,7 +781,7 @@ namespace FastTests.Corax
 
             using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
             IndexEntries(bsc, entries, CreateKnownFields(bsc));
-            
+
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
 
@@ -874,7 +874,7 @@ namespace FastTests.Corax
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleStartWithStatement()
         {
             var entry1 = new IndexEntry {Id = "entry/1", Content = new string[] {"a road", "a lake", "the mountain"},};
@@ -925,7 +925,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void MixedSortedMatchStatement()
         {
             var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
@@ -950,7 +950,7 @@ namespace FastTests.Corax
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void WillGetTotalNumberOfResultsInPagedQuery()
         {
             var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
@@ -977,7 +977,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void CanGetAllEntries()
         {
             var list = new List<IndexSingleEntry>();
@@ -1016,7 +1016,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleSortedMatchStatement()
         {
             var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
@@ -1055,7 +1055,7 @@ namespace FastTests.Corax
                 Assert.Equal("entry/3", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id));
                 long id1 = ids1[1];
                 Assert.Equal("entry/2", searcher.TermsReaderFor(searcher.GetFirstIndexedFiledName()).GetTermFor(id1));
-                
+
                 Span<long> ids2 = stackalloc long[2];
                 Assert.Equal(1, match.Fill(ids2));
                 long id2 = ids2[0];
@@ -1065,7 +1065,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleOrdinalCompareStatementWithLongValue()
         {
             var list = new List<IndexSingleEntryDouble>();
@@ -1122,7 +1122,7 @@ namespace FastTests.Corax
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleOrdinalCompareStatement()
         {
             var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
@@ -1178,7 +1178,7 @@ namespace FastTests.Corax
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleEqualityCompareStatement()
         {
             var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "1"};
@@ -1234,7 +1234,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleWildcardStatement()
         {
             var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "Testing"};
@@ -1328,7 +1328,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SimpleBetweenCompareStatement()
         {
             var entry1 = new IndexSingleEntry {Id = "entry/1", Content = "3"};
@@ -1381,7 +1381,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void BetweenWithCustomComparers()
         {
             var entries = Enumerable.Range(0, 100).Select(i => new IndexSingleEntryDouble() {Id = $"entry{i}", Content = Convert.ToDouble(i)}).ToList();
@@ -1446,7 +1446,7 @@ namespace FastTests.Corax
             }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [InlineData(new object[] {1000, 8})]
         public void AndInStatementWithLowercaseAnalyzer(int setSize, int stackSize)
         {
@@ -1523,7 +1523,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [InlineData(new object[] {1000, 8})]
         public void AndInStatementAndWhitespaceTokenizer(int setSize, int stackSize)
         {
@@ -1601,7 +1601,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void StartsWithSingle()
         {
             var entry = new IndexSingleEntry {Id = $"entry/1", Content = "tester"};
@@ -1782,7 +1782,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [InlineData(100, 16)]
         [InlineData(1000, 128)]
         [InlineData(10_000, 128)]
@@ -1852,7 +1852,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void UnaryMatch()
         {
             var entries = new List<IndexEntry>();
@@ -1884,7 +1884,7 @@ namespace FastTests.Corax
             using var searcher = new IndexSearcher(Env, CreateKnownFields(Allocator));
             var contentMetadata = searcher.FieldMetadataBuilder("Content", ContentIndex);
             {
-                var notOne = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), 
+                var notOne = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
                     new []{new MultiUnaryItem(searcher, contentMetadata, "1", UnaryMatchOperation.NotEquals)});
                 Span<long> ids = stackalloc long[32];
                 var expected = entries.Count(x => x.Content.Contains("1") == false);
@@ -1898,7 +1898,7 @@ namespace FastTests.Corax
                 Assert.Equal(3, result);
             }
             {
-                var notTwo = searcher.CreateMultiUnaryMatch(searcher.AllEntries(), 
+                var notTwo = searcher.CreateMultiUnaryMatch(searcher.AllEntries(),
                     new []{new MultiUnaryItem(searcher, contentMetadata, "2", UnaryMatchOperation.NotEquals)});
                 Span<long> ids = stackalloc long[32];
                 var expected = entries.Count(x => x.Content.Contains("2") == false);

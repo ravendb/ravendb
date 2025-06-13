@@ -1,7 +1,8 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests.Voron.FixedSize;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron.Impl;
 using Voron;
 using Xunit;
@@ -15,7 +16,7 @@ public class RavenDB_21087 : NoDisposalNeeded
     {
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Voron)]
     [InlineData(3)]
     [InlineData(16)]
     [InlineData(128)]

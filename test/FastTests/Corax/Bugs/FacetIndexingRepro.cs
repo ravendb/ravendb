@@ -7,6 +7,7 @@ using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
@@ -22,7 +23,7 @@ namespace FastTests.Corax.Bugs;
 public class FacetIndexingRepro : StorageTest
 {
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanHandleRecompressionOfEntryTerms()
     {
         using var bsc = new ByteStringContext(SharedMultipleUseFlag.None);
@@ -64,7 +65,7 @@ public class FacetIndexingRepro : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanAddAndRemoveItems()
     {
         using (var wtx = Env.WriteTransaction())
@@ -105,7 +106,7 @@ public class FacetIndexingRepro : StorageTest
         ('-', 16472), ('+', 192), ('-', 16488), ('+', 160), ('+', 32),
     };
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public unsafe void ShouldNotCorrupt()
     {
         using var stream = typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + "index-corrupt-log.bin");
@@ -205,7 +206,7 @@ public class FacetIndexingRepro : StorageTest
 
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public unsafe void CanSuccessfullyIndexData()
     {
         using var stream = typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs." + "index-log.bin");

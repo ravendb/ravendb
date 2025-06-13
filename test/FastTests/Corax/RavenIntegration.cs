@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -665,7 +665,7 @@ public class RavenIntegration : RavenTestBase
         Assert.Equal(count / 2, entriesCount);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void AllInUnaryMatchWillDetectEachDocumentSeparately()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));

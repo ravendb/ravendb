@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using Corax.Querying.Matches.Meta;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ public class RavenDB_21052 : NoDisposalNeeded
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanDetectGapBetweenArrays()
     {
         var right = new long[] {10, 11, 13, 15};
@@ -31,7 +32,7 @@ public class RavenDB_21052 : NoDisposalNeeded
         Assert.Equal(0, read);
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanPerformIntersectionWhenLastElementIsMarkedAsUsed()
     {
         var right = new long[] {10, 11, 13, 15};
@@ -46,7 +47,7 @@ public class RavenDB_21052 : NoDisposalNeeded
         Assert.Equal(2, read);
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanPerformIntersectionWhenFirstElementIsMarkedAsUsed()
     {
         var right = new long[] {10, 11, 13, 15};

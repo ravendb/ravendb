@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Corax;
@@ -9,6 +9,7 @@ using Corax.Pipeline;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,7 +26,7 @@ namespace FastTests.Corax
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public unsafe void NGramBasicIndexing()
         {
             var entry1 = new IndexEntryValues { Id = "entry/1", Content = "road lake" };
@@ -87,7 +88,7 @@ namespace FastTests.Corax
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public unsafe void NGramWithRemoves()
         {
             var entry1 = new IndexEntryValues { Id = "entry/1", Content = "road lake" };
@@ -122,7 +123,7 @@ namespace FastTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public unsafe void LevenshteinBasicIndexing()
         {
             var entry1 = new IndexEntryValues { Id = "entry/1", Content = "road lake" };

@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
@@ -21,7 +22,7 @@ public class PostingListSize : StorageTest
     }
 
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public unsafe void CanManagePageSplit2()
     {
         var reader = new StreamReader(typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs.page-base64.txt"));
@@ -66,7 +67,7 @@ public class PostingListSize : StorageTest
     }
 
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanManagePageSplit()
     {
         var reader = new StreamReader(typeof(PostingListAddRemoval).Assembly.GetManifestResourceStream("FastTests.Corax.Bugs.PostListSplit.txt"));
@@ -82,7 +83,7 @@ public class PostingListSize : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void PostingListSizeWouldBeReasonable()
     {
         var vals = new long[]
@@ -123,7 +124,7 @@ public class PostingListSize : StorageTest
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public unsafe void ShouldNotCrash()
     {
         var buffer = Convert.FromBase64String(

@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron.Data.Lookups;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,7 +16,7 @@ public class RavenDB_21321 : StorageTest
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron)]
     public void CanBulkInsertToLookup()
     {
         long k = 0;

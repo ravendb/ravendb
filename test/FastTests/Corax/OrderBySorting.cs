@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using Corax;
@@ -8,6 +8,7 @@ using Corax.Querying.Matches.SortingMatches.Meta;
 using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Voron;
 using Xunit.Abstractions;
 using Xunit;
@@ -26,7 +27,7 @@ namespace FastTests.Corax
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void OrderByNumber()
         {
             PrepareData();

@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
+using Tests.Infrastructure;
 using Voron.Data.Lookups;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,7 +15,7 @@ public class LookupBulkTests : StorageTest
     public LookupBulkTests(ITestOutputHelper output) : base(output)
     {
     }
-    [Theory]
+    [RavenTheory(RavenTestCategory.Voron)]
     [InlineData(214)]
     [InlineDataWithRandomSeed]
     public void CanBulkAddToEmptyLookup(int seed)
@@ -71,7 +72,7 @@ public class LookupBulkTests : StorageTest
         }
     }
     
-    [Theory]
+    [RavenTheory(RavenTestCategory.Voron)]
     [InlineData(214)]
     [InlineDataWithRandomSeed]
     public void CanBulkUpdateAndInsertAndRemove(int seed)

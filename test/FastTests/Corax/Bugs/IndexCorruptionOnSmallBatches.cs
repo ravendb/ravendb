@@ -1,4 +1,5 @@
-﻿using System.Linq;
+using System.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ public class IndexCorruptionOnSmallBatches : RavenTestBase
 
     private record Item(string Num);
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void ShouldNotHappen()
     {
         using var store = GetDocumentStore(new Options

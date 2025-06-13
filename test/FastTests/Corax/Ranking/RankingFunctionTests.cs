@@ -55,7 +55,7 @@ public class RankingFunctionTests : StorageTest
         Assert.Equal(1, read);
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax)]
     [InlineData(10)] //small
     [InlineData(1000)] //posting list
 

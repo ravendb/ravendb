@@ -16,7 +16,7 @@ public class CompoundSorting : RavenTestBase
     {
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
     public void CompoundSorting_Spatial(bool boxedComparer)
@@ -40,7 +40,7 @@ public class CompoundSorting : RavenTestBase
 
     }
     
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
     public void CompoundSorting_Alphanumerical(bool boxedComparer)
@@ -65,7 +65,7 @@ public class CompoundSorting : RavenTestBase
     }
     
      
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
     public void CompoundSorting_Int(bool boxedComparer)
@@ -89,7 +89,7 @@ public class CompoundSorting : RavenTestBase
 
     }
     
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
     public void CompoundSorting_String_Floating(bool boxedComparer)
