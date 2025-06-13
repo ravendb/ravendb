@@ -989,6 +989,9 @@ namespace Raven.Server.Documents.Indexes
                 return;
             }
 
+            if (Status == IndexRunningStatus.Running)
+                return;
+            
             using (DrainRunningQueries())
             {
                 StartIndexingThread();
