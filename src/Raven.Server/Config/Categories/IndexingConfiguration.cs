@@ -138,21 +138,19 @@ namespace Raven.Server.Config.Categories
         [IndexUpdateType(IndexUpdateType.Refresh)]
         [ConfigurationEntry("Indexing.Auto.DeploymentMode", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public IndexDeploymentMode AutoIndexDeploymentMode { get; protected set; }
-        
-        
-        [Description("The default archived data processing behavior for auto indexes")]
+
+        [Description("The default processing behavior for archived documents in auto indexes.")]
         [DefaultValue(ArchivedDataProcessingBehavior.ExcludeArchived)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Auto.ArchivedDataProcessingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public ArchivedDataProcessingBehavior AutoIndexArchivedDataProcessingBehavior{ get; protected set; }
         
-        
-        [Description("The default archived data processing behavior for static indexes")]
+        [Description("The default processing behavior for archived documents in static indexes that use Documents as their data source." +
+                     "This setting does not apply to indexes based on Time Series or Counters, which default to IncludeArchived.")]
         [DefaultValue(ArchivedDataProcessingBehavior.ExcludeArchived)]
         [IndexUpdateType(IndexUpdateType.None)]
         [ConfigurationEntry("Indexing.Static.ArchivedDataProcessingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public ArchivedDataProcessingBehavior StaticIndexArchivedDataProcessingBehavior{ get; protected set; }
-
 
         [Description("Indicate if indexing performance metrics are gathered")]
         [DefaultValue(true)]
