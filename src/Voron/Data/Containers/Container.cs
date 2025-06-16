@@ -273,7 +273,7 @@ namespace Voron.Data.Containers
 
         private readonly Page _page;
 
-        public ref ContainerPageHeader Header => ref MemoryMarshal.AsRef<ContainerPageHeader>(_page.AsSpan());
+        public readonly ref ContainerPageHeader Header;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal ref ItemMetadata MetadataFor(int pos = 0)
@@ -605,6 +605,7 @@ namespace Voron.Data.Containers
             Debug.Assert(((ContainerPageHeader*)page.Pointer)->ContainerFlags == ExtendedPageType.Container);
 
             _page = page;            
+            Header = ref Unsafe.AsRef<ContainerPageHeader>(page.Pointer);
         }
 
         public static long Create(LowLevelTransaction llt)
