@@ -51,10 +51,12 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             }
         }
 
+        protected virtual string GetChangeVector() => RequestHandler.GetStringQueryString("changeVector", required: false);
+
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
             var id = RequestHandler.GetLongQueryString("id", required: false);
-            var changeVector = RequestHandler.GetStringQueryString("changeVector", required: false);
+            var changeVector = GetChangeVector();
 
             if (id == null)
             {

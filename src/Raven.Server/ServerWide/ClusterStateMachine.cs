@@ -422,27 +422,7 @@ namespace Raven.Server.ServerWide
                         break;
 
                     case nameof(AddGenAiCommand):
-                        var addGenAiCommand = (AddGenAiCommand)JsonDeserializationCluster.Commands[type](cmd);
-                        var updateStateCommand = addGenAiCommand.HandleChangeVectorInitialState(context, serverStore);
-                        if (updateStateCommand != null)
-                        {
-                            SetValueForTypedDatabaseCommand(context, nameof(UpdateEtlProcessStateCommand), updateStateCommand, index, out result);
-                            //leader?.SetStateOf(index, result);
-                            //index++;
-                        }
-                        UpdateDatabase(context, type, cmd, index, serverStore);
-                        break;
                     case nameof(UpdateGenAiCommand):
-                        var updateGenAiCommand = (UpdateGenAiCommand)JsonDeserializationCluster.Commands[type](cmd);
-                        //var updateOrRemoveStateCommand = updateGenAiCommand.HandleChangeVectorInitialState(context, serverStore, out string subCmdType);
-                        //if (updateOrRemoveStateCommand != null)
-                        //{
-                        //    SetValueForTypedDatabaseCommand(context, subCmdType, updateOrRemoveStateCommand, index, out result);
-                        //    leader?.SetStateOf(index, result);
-                        //    index++;
-                        //}
-                        UpdateDatabase(context, type, cmd, index, serverStore);
-                        break;
                     case nameof(PutSortersCommand):
                     case nameof(DeleteSorterCommand):
                     case nameof(PutAnalyzersCommand):

@@ -1,20 +1,28 @@
-﻿using Raven.Client;
-using Raven.Client.Documents.Conventions;
+﻿using System;
+using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
+using Raven.Server.Documents.Replication;
+using Raven.Server.Logging;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.ETL;
-using Raven.Server.Utils;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.AI;
 
 public sealed class UpdateGenAiCommand : UpdateEtlCommand<GenAiConfiguration, AiConnectionString>
 {
-    public string InitialChangeVector;
+    public string ChangeVectorForStartingPoint;
+
+    [JsonDeserializationIgnore]
+    public long Index;
 
     public UpdateGenAiCommand()
     {
@@ -23,49 +31,73 @@ public sealed class UpdateGenAiCommand : UpdateEtlCommand<GenAiConfiguration, Ai
 
     public UpdateGenAiCommand(long taskId, GenAiConfiguration configuration, string databaseName, string changeVector, string uniqueRequestId) : base(taskId, configuration, EtlType.GenAi, databaseName, uniqueRequestId)
     {
-        InitialChangeVector = changeVector;
+        ChangeVectorForStartingPoint = changeVector;
     }
 
     public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
     {
+        Index = etag;
+
         InClusterValidation(record);
 
         new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.GenAi, DatabaseName, null).UpdateDatabaseRecord(record, etag);
-        new AddGenAiCommand(Configuration, DatabaseName, null, null).UpdateDatabaseRecord(record, etag);
+        new AddGenAiCommand(Configuration, DatabaseName, ChangeVectorForStartingPoint, null).UpdateDatabaseRecord(record, etag);
     }
 
-    public BlittableJsonReaderObject HandleChangeVectorInitialState(JsonOperationContext context, ServerStore serverStore, out string type)
+    public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, RavenAuditLogger clusterAuditLog) => 
+        UpdateGenAiState(ctx, items, DatabaseName, Configuration, ChangeVectorForStartingPoint, Index);
+
+    public static void UpdateGenAiState(ClusterOperationContext ctx, Table items, string database, GenAiConfiguration configuration, string changeVectorForStartingPoint, long index)
     {
-        type = string.Empty;
-        if (InitialChangeVector == nameof(Constants.Documents.GenAiChangeVectorSpecialStates.DoNotChange))
-            return null;
-
-        UpdateValueForDatabaseCommand command;
-        if (InitialChangeVector == nameof(Constants.Documents.GenAiChangeVectorSpecialStates.BeginningOfTime))
+        switch (changeVectorForStartingPoint)
         {
-            command = new RemoveEtlProcessStateCommand(DatabaseName, Configuration.Name, Configuration.Transforms[0].Name, UniqueRequestId);
-            type = nameof(RemoveEtlProcessStateCommand);
-        }
-        else
-        {
-            type = nameof(UpdateEtlProcessStateCommand);
-
-            var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(DatabaseName).GetAwaiter().GetResult();
-            long etag;
-            if (InitialChangeVector == nameof(Constants.Documents.GenAiChangeVectorSpecialStates.LastDocument))
-            {
-                (etag, InitialChangeVector) = database.ReadLastEtagAndChangeVector();
-            }
-            else
-            {
-                etag = ChangeVectorUtils.GetEtagById(InitialChangeVector, database.DbBase64Id);
-            }
-
-            command = new UpdateEtlProcessStateCommand(DatabaseName, Configuration.Name, Configuration.Transforms[0].Name, etag, InitialChangeVector, serverStore.NodeTag,
-                serverStore.LicenseManager.HasHighlyAvailableTasks(), database.DbBase64Id, RaftIdGenerator.NewId(), skippedTimeSeriesDocs: null, lastBatchTime: null);
+            case null:
+            case "":
+            case nameof(Constants.Documents.GenAiChangeVectorSpecialStates.DoNotChange):
+                return;
+            case nameof(Constants.Documents.GenAiChangeVectorSpecialStates.LastDocument):
+                throw new RachisInvalidOperationException($"You can't pass '{nameof(Constants.Documents.GenAiChangeVectorSpecialStates.LastDocument)}' here directly");
         }
 
-        return DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(command, context);
+        var itemKey = EtlProcessState.GenerateItemName(database, configuration.Name, configuration.Transforms[0].Name);
+        
+        using var _ = Slice.From(ctx.Allocator, itemKey, out Slice valueName);
+        using var __ = Slice.From(ctx.Allocator, itemKey.ToLowerInvariant(), out Slice valueNameLowered);
+        var stateBlittable = ClusterStateMachine.ReadInternal(ctx, out var _, valueNameLowered);
+
+        var etl = stateBlittable != null ? JsonDeserializationClient.EtlProcessState(stateBlittable) : new EtlProcessState
+        {
+            ConfigurationName = configuration.Name,
+            TransformationName = configuration.Transforms[0].Name
+        };
+
+        switch (changeVectorForStartingPoint)
+        {
+            case nameof(Constants.Documents.GenAiChangeVectorSpecialStates.BeginningOfTime):
+                etl.ChangeVector = null;
+                etl.LastProcessedEtagPerDbId.Clear();
+                break;
+
+            default:
+                foreach (var entry in changeVectorForStartingPoint.ToChangeVectorList())
+                {
+                    if (etl.LastProcessedEtagPerDbId.TryGetValue(entry.DbId, out var current))
+                    {
+                        etl.LastProcessedEtagPerDbId[entry.DbId] = Math.Max(current, entry.Etag);
+                    }
+                    else
+                    {
+                        etl.LastProcessedEtagPerDbId.Add(entry.DbId, entry.Etag);
+                    }
+                }
+                etl.ChangeVector = changeVectorForStartingPoint;
+                break;
+        }
+
+        using (var updatedValue = ctx.ReadObject(etl.ToJson(), "update-genai-state"))
+        {
+            ClusterStateMachine.UpdateValue(index, items, valueNameLowered, valueName, updatedValue);
+        }
     }
 
     private void InClusterValidation(DatabaseRecord record)
@@ -135,7 +167,7 @@ public sealed class UpdateGenAiCommand : UpdateEtlCommand<GenAiConfiguration, Ai
     public override DynamicJsonValue ToJson(JsonOperationContext context)
     {
         var json = base.ToJson(context);
-        json[nameof(InitialChangeVector)] = InitialChangeVector;
+        json[nameof(ChangeVectorForStartingPoint)] = ChangeVectorForStartingPoint;
 
         return json;
     }
