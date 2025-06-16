@@ -1115,7 +1115,7 @@ $accordion-button-active-icon: none !default;
 $tooltip-font-size: $font-size-sm !default;
 $tooltip-max-width: 200px !default;
 $tooltip-color: $text-emphasis-var !default;
-$tooltip-bg: $panel-bg-3-var !default;
+$tooltip-bg: $tooltip-bg-var !default;
 $tooltip-border-radius: var(--#{$prefix}border-radius) !default;
 $tooltip-opacity: 0.9 !default;
 $tooltip-padding-y: $spacer * 0.25 !default;
@@ -1143,7 +1143,7 @@ $form-feedback-tooltip-border-radius: $tooltip-border-radius !default;
 
 // scss-docs-start popover-variables
 $popover-font-size: $font-size-sm !default;
-$popover-bg: $panel-bg-2-var !default;
+$popover-bg: $tooltip-bg !default;
 $popover-max-width: 400px !default;
 $popover-border-width: var(--#{$prefix}border-width) !default;
 $popover-border-color: $popover-bg !default;
@@ -1151,7 +1151,7 @@ $popover-border-radius: var(--#{$prefix}border-radius-md) !default;
 $popover-inner-border-radius: calc(
     #{$popover-border-radius} - #{$popover-border-width}
 ) !default; // stylelint-disable-line function-disallowed-list
-$popover-box-shadow: var(--#{$prefix}box-shadow-lg) !default;
+$popover-box-shadow: none !default;
 
 $popover-header-font-size: $font-size-base !default;
 $popover-header-bg: var(--#{$prefix}secondary-bg) !default;
@@ -1159,7 +1159,7 @@ $popover-header-color: $headings-color !default;
 $popover-header-padding-y: 0.5rem !default;
 $popover-header-padding-x: $spacer !default;
 
-$popover-body-color: var(--#{$prefix}body-color) !default;
+$popover-body-color: color-contrast($popover-bg) !default;
 $popover-body-padding-y: $gutter-sm !default;
 $popover-body-padding-x: $gutter-sm !default;
 
