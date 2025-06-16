@@ -1026,7 +1026,7 @@ namespace Raven.Client.Http
                             {
                                 var name = databaseMissing.FirstOrDefault();
                                 if (name != null)
-                                    DatabaseDoesNotExistException.Throw(name);
+                                    DatabaseDoesNotExistException.Throw(Uri.UnescapeDataString(name));
                             }
 
                             ThrowFailedToContactAllNodes(command, request);

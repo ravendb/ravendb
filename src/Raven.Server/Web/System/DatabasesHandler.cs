@@ -127,7 +127,7 @@ namespace Raven.Server.Web.System
                         // here we return 503 so clients will try to failover to another server
                         // if this is a newly created db that we haven't been notified about it yet
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
-                        HttpContext.Response.Headers[Constants.Headers.DatabaseMissing] = name;
+                        HttpContext.Response.Headers[Constants.Headers.DatabaseMissing] = Uri.EscapeDataString(name);
                         await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                         {
                             context.Write(writer,
@@ -150,7 +150,7 @@ namespace Raven.Server.Web.System
                     {
                         // The database at deletion progress from all nodes
                         HttpContext.Response.StatusCode = (int)HttpStatusCode.ServiceUnavailable;
-                        HttpContext.Response.Headers[Constants.Headers.DatabaseMissing] = name;
+                        HttpContext.Response.Headers[Constants.Headers.DatabaseMissing] = Uri.EscapeDataString(name);
                         await using (var writer = new AsyncBlittableJsonTextWriter(context, HttpContext.Response.Body))
                         {
                             context.Write(writer, new DynamicJsonValue { ["Type"] = "Error", ["Message"] = "Database " + name + " was deleted" });

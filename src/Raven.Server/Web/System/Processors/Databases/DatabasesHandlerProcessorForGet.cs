@@ -62,7 +62,7 @@ internal sealed class DatabasesHandlerProcessorForGet : AbstractDatabasesHandler
             if (items.Count == 0 && name != null)
             {
                 await RequestHandler.NoContent(HttpStatusCode.NotFound);
-                HttpContext.Response.Headers[Constants.Headers.DatabaseMissing] = name;
+                HttpContext.Response.Headers[Constants.Headers.DatabaseMissing] = Uri.EscapeDataString(name);
                 return;
             }
 
