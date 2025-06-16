@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -69,16 +70,7 @@ public class StartChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSch
             if (response == null)
                 ThrowInvalidResponse();
 
-            response.TryGet(nameof(ChatResult<TSchema>.Usage), out BlittableJsonReaderObject usage);
-            response.TryGet(nameof(ChatResult<TSchema>.Response), out BlittableJsonReaderObject result);
-            response.TryGet(nameof(ChatResult<TSchema>.ChatId), out string chatId);
-
-            Result = new ChatResult<TSchema>
-            {
-                ChatId = chatId,
-                Usage = JsonDeserializationClient.AiUsage(usage),
-                Response = _conventions.Serialization.DefaultConverter.FromBlittable<TSchema>(result, chatId)
-            };
+            Result = ChatResult<TSchema>.Convert(response, _conventions);
         }
     }
 }
@@ -97,11 +89,82 @@ internal class StartChatBody : IDynamicJson
     }
 }
 
-public class ChatResult<T>
+internal class ResumeChatBody : IDynamicJson
+{
+    public List<ToolResponse> ToolResponse { get; set; }
+    public string UserPrompt { get; set; }
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(ToolResponse)] = ToolResponse == null ? null : new DynamicJsonArray(ToolResponse.Select(r => r.ToJson())), 
+            [nameof(UserPrompt)] = UserPrompt,
+        };
+    }
+}
+
+public class ChatResult<TSchema>
 {
     public string ChatId { get; set; }
-    public T Response { get; set; }
+    public TSchema Response { get; set; }
     public AiUsage Usage { get; set; }
+    public List<ToolRequest> ToolRequests { get; set; }
+
+    internal static ChatResult<TSchema> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
+    {
+        response.TryGet(nameof(Usage), out BlittableJsonReaderObject usage);
+        response.TryGet(nameof(Response), out BlittableJsonReaderObject result);
+        response.TryGet(nameof(ChatId), out string chatId);
+
+        List<ToolRequest> requests = null;
+        if (response.TryGet(nameof(ToolRequests), out BlittableJsonReaderArray toolRequests) && toolRequests != null)
+        {
+            requests = [];
+            foreach (BlittableJsonReaderObject toolRequest in toolRequests)
+            {
+                var r = JsonDeserializationClient.ToolRequest(toolRequest);
+                requests.Add(r);
+            }
+        }
+
+        return new ChatResult<TSchema>
+        {
+            ChatId = chatId,
+            ToolRequests = requests,
+            Usage = JsonDeserializationClient.AiUsage(usage),
+            Response = result == null ? default : conventions.Serialization.DefaultConverter.FromBlittable<TSchema>(result, chatId)
+        };
+    }
+}
+
+public class ToolRequest : IDynamicJson
+{
+    public string Name;
+    public string ToolId;
+    public string Arguments;
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(Name)] = Name,
+            [nameof(ToolId)] = ToolId,
+            [nameof(Arguments)] = Arguments
+        };
+    }
+}
+
+public class ToolResponse : IDynamicJson
+{
+    public string ToolId;
+    public string Content;
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(ToolId)] = ToolId,
+            [nameof(Content)] = Content
+        };
+    }
 }
 
 public class AiUsage : IDynamicJsonValueConvertible

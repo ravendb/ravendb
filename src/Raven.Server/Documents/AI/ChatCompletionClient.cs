@@ -236,7 +236,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
     {
         var content = new BlittableJsonContent(async stream =>
         {
-            using var bodyJson = ctx.ReadObject(body, "ai-rag/request");
+            using var bodyJson = ctx.ReadObject(body, "ai-agent/request");
             await using var writer = new AsyncBlittableJsonTextWriter(ctx, stream);
             writer.WriteObject(bodyJson);
         }, ConventionsToUse);

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Client.Util;
@@ -80,7 +82,6 @@ public class AiAgentConfiguration : IDynamicJson
         public string Name { get; set; }
         public string Description { get; set; }
         public string Query { get; set; }
-        
         public string ParametersSchema { get; set; }
         public DynamicJsonValue ToJson()
         {
