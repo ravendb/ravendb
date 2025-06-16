@@ -558,12 +558,12 @@ $input-padding-y-lg: $input-btn-padding-y-lg !default;
 $input-padding-x-lg: $input-btn-padding-x-lg !default;
 $input-font-size-lg: $input-btn-font-size-lg !default;
 
-$input-bg: $well-bg-var !default;
+$input-bg: var(--#{$prefix}input-bg) !default;
 $input-disabled-color: null !default;
 $input-disabled-bg: transparent !default;
 $input-disabled-border-color: $border-color-disabled !default;
 
-$input-color: $text-color-var !default;
+$input-color: $text-color !default;
 $input-border-color: $border-color-light !default;
 $input-border-width: $input-btn-border-width !default;
 $input-box-shadow: var(--#{$prefix}box-shadow-inset) !default;
@@ -574,12 +574,12 @@ $input-border-radius-lg: var(--#{$prefix}border-radius-lg) !default;
 
 $input-focus-bg: $input-bg !default;
 $input-focus-border-color: tint-color($component-active-bg, 50%) !default;
-$input-focus-color: $text-emphasis-var !default;
+$input-focus-color: $text-emphasis-color !default;
 $input-focus-width: $input-btn-focus-width !default;
 $input-focus-box-shadow: $input-btn-focus-box-shadow !default;
 
-$input-placeholder-color: $text-muted-var !default;
-$input-plaintext-color: $text-color-var !default;
+$input-placeholder-color: $text-muted !default;
+$input-plaintext-color: $text-color !default;
 
 $input-height-border: calc(#{$input-border-width} * 2) !default; // stylelint-disable-line function-disallowed-list
 

@@ -134,11 +134,6 @@
 .form-control,
 .form-select {
     min-height: 40px;
-
-    &::placeholder {
-        color: $text-muted-var;
-        opacity: 0.5;
-    }
 }
 
 .clearable-input {
@@ -606,7 +601,7 @@ $panels: (
 }
 
 $filtering-input-baseheight: 35px !default;
-$filtering-input-bg: $well-bg-var !default;
+$filtering-input-bg: $input-bg-var !default;
 $filtering-input-border-radius: $filtering-input-baseheight !default;
 $filtering-input-bg: $toggle-bg !default;
 

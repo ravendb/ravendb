@@ -78,6 +78,7 @@ $well-bg: $body-bg;
 $base-well-bg: $body-bg;
 $pre-bg: $well-bg;
 $ace-gutter-bg: $panel-header-bg;
+$input-bg: #0a0d1d;
 $tooltip-bg: #0f0f19;
 
 $primary: $color-5;
@@ -151,6 +152,8 @@ $twofactor: #5537c4;
     $base-well-bg: $black;
     $pre-bg: $white;
     $ace-gutter-bg: $panel-bg-2;
+    $input-bg: #f5f6ff;
+    $tooltip-bg: #141728;
 
     $link-color: #c072ee;
     $shadow-color: $gray-500;
@@ -253,6 +256,7 @@ $twofactor: #5537c4;
     $base-well-bg: $body-bg;
     $pre-bg: $white;
     $ace-gutter-bg: $panel-header-bg;
+    $input-bg: #f2f3f7;
     $tooltip-bg: #1e1e23;
 
     $link-color: #c072ee;
@@ -339,6 +343,7 @@ $twofactor: #5537c4;
     $base-well-bg: $body-bg;
     $pre-bg: $well-bg;
     $ace-gutter-bg: $panel-header-bg;
+    $input-bg: #17191f;
     $tooltip-bg: #1e1e23;
 
     $success: $color-3;
@@ -514,6 +519,7 @@ $well-bg-var: var(--well-bg);
 $pre-bg-var: var(--pre-bg);
 $ace-gutter-bg-var: var(--ace-gutter-bg);
 $shadow-color-var: var(--shadow-color);
+$input-bg-var: var(--input-bg);
 $tooltip-bg-var: var(--tooltip-bg);
 
 $link-color-var: var(--link-color);
