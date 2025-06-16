@@ -275,8 +275,8 @@ function PermissionsBadge({ certificate }: { certificate: CertificateItem }) {
         SecurityClearance === "Operator"
     ) {
         return (
-            <Badge bg="faded-success" pill>
-                <Icon icon="user" />
+            <Badge bg="faded-success" title="Cluster admin access" pill>
+                <Icon icon="cluster" />
                 All
             </Badge>
         );
@@ -297,7 +297,7 @@ function PermissionsBadge({ certificate }: { certificate: CertificateItem }) {
     return (
         <div className="hstack gap-1">
             {dbAccessArray.map(({ databaseName, accessLevel }) => (
-                <Badge key={databaseName} bg={getAccessColor(accessLevel)} pill>
+                <Badge key={databaseName} bg={getAccessColor(accessLevel)} title={getAccessTitle(accessLevel)} pill>
                     <Icon icon={getAccessIcon(accessLevel)} />
                     {databaseName}
                 </Badge>
@@ -306,10 +306,23 @@ function PermissionsBadge({ certificate }: { certificate: CertificateItem }) {
     );
 }
 
+function getAccessTitle(access: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess) {
+    switch (access) {
+        case "Admin":
+            return "Admin access";
+        case "Read":
+            return "Read access";
+        case "ReadWrite":
+            return "Read/write access";
+        default:
+            assertUnreachable(access);
+    }
+}
+
 function getAccessIcon(access: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess): IconName {
     switch (access) {
         case "Admin":
-            return "access-admin";
+            return "hammer-driver";
         case "Read":
             return "access-read";
         case "ReadWrite":
@@ -322,9 +335,9 @@ function getAccessIcon(access: Raven.Client.ServerWide.Operations.Certificates.D
 function getAccessColor(access: Raven.Client.ServerWide.Operations.Certificates.DatabaseAccess): `faded-${ThemeColor}` {
     switch (access) {
         case "Admin":
-            return "faded-success";
-        case "Read":
             return "faded-danger";
+        case "Read":
+            return "faded-info";
         case "ReadWrite":
             return "faded-warning";
         default:
