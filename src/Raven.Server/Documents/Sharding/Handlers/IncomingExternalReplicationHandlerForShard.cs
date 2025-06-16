@@ -1,4 +1,6 @@
-﻿using Raven.Client.Documents.Replication.Messages;
+﻿using System;
+using System.Collections.Generic;
+using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.ReplicationItems;
@@ -38,7 +40,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
                 _database = database;
             }
 
-            protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
+            protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item, List<IDisposable> disposables)
             {
                 var changeVector = context.GetChangeVector(item.ChangeVector);
                 var result = _database.DocumentsStorage.GetNewChangeVector(context);

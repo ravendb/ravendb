@@ -251,11 +251,11 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             using (var store = GetDocumentStore())
             {
                 await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
-                await AssertGetRetiredAttachmentsInBulk(store);
+                await AssertGetRetiredAttachmentsInBulk(store, size);
             }
         }
     }
-    protected async Task AssertGetRetiredAttachmentsInBulk(DocumentStore store)
+    protected async Task AssertGetRetiredAttachmentsInBulk(DocumentStore store, long size, AttachmentFlags flags = AttachmentFlags.Retired)
     {
         var attachmentRequests = new List<AttachmentRequest>();
         foreach (var attachment in Attachments)
@@ -267,15 +267,16 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         var attachmentsCount = 0;
         while (attachmentsEnumerator.MoveNext())
         {
-            var current = attachmentsEnumerator.Current;
+            AttachmentEnumeratorResult current = attachmentsEnumerator.Current;
             Assert.NotNull(current);
 
             var tuple = Attachments.FirstOrDefault(x => x.DocumentId == current.Details.DocumentId && x.Name == current.Details.Name);
             Assert.NotNull(tuple);
             tuple.Stream.Position = 0;
 
-            Assert.True(AttachmentsStreamTests.CompareStreams(current.Stream, tuple.Stream));
-            current.Stream?.Dispose();
+
+            await CompareAttachment(tuple.Name, tuple.Hash, tuple.ContentType, tuple.Stream, size, flags, current.Details, current.Stream);
+            await current.Stream.DisposeAsync();
 
             attachmentsCount++;
         }
@@ -345,8 +346,19 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 Etl.AddEtl(store, configuration, connectionString);
                 etlDone.Wait(TimeSpan.FromSeconds(15));
 
-                await PutRetireAttachmentsConfiguration(replica, Settings);
-                await AssertGetRetiredAttachmentsInBulk(replica);
+                var replicaDb = await Databases.GetDocumentDatabaseInstanceFor(replica);
+                var val3 = WaitForValue(() =>
+                {
+                    using (replicaDb.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var c = replicaDb.DocumentsStorage.AttachmentsStorage.GetAllAttachments(context).Count();
+
+                        return c;
+                    }
+                }, attachmentsCount, 30_000);
+                Assert.Equal(attachmentsCount, val3);
+                await AssertGetRetiredAttachmentsInBulk(replica, size, AttachmentFlags.None);
             }
         }
     }

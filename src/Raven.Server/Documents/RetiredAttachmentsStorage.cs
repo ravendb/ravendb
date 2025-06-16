@@ -502,12 +502,11 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             collection = Database.DocumentsStorage.ExtractCollectionName(context, document.Data).Name;
         }
 
-        return StreamForDownloadDestinationInternal(downloader, attachment, collection);
+        return StreamForDownloadDestinationInternal(downloader, attachment.Base64Hash.ToString());
     }
 
-    public async Task<Stream> StreamForDownloadDestinationInternal(DirectFileDownloader downloader, Attachment attachment, string collection)
+    public async Task<Stream> StreamForDownloadDestinationInternal(DirectFileDownloader downloader, string objKeyName)
     {
-        var objKeyName = attachment.Base64Hash.ToString();
         var folderName = string.Empty;
 
         return await downloader.StreamForDownloadDestination(Database, folderName, objKeyName);

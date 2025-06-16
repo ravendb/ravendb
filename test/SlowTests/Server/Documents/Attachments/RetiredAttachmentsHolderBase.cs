@@ -70,18 +70,24 @@ public abstract class RetiredAttachmentsHolderBase : ReplicationTestBase
         Assert.Equal(collections.Count, ids.GroupBy(x => x.Item2).Count());
     }
 
-    public static async Task GetAndCompareRetiredAttachment(IDocumentStore store, string id, string attachmentName, string hash, string contentType, MemoryStream stream, int streamSize)
+    public static async Task GetAndCompareRetiredAttachment(IDocumentStore store, string id, string attachmentName, string hash, string contentType, MemoryStream stream, int streamSize, AttachmentFlags flags = AttachmentFlags.Retired)
     {
         var retired = await store.Operations.SendAsync(new GetAttachmentOperation(id, attachmentName, AttachmentType.Document, null));
+        await CompareAttachment(attachmentName, hash, contentType, stream, streamSize, flags, retired.Details, retired.Stream);
+    }
+
+    internal static async Task CompareAttachment(string attachmentName, string hash, string contentType, MemoryStream stream, long streamSize, AttachmentFlags flags,
+        AttachmentDetails retired, Stream stream1)
+    {
         Assert.NotNull(retired);
-        Assert.Equal(hash, retired.Details.Hash);
-        Assert.Equal(contentType, retired.Details.ContentType);
-        Assert.Equal(attachmentName, retired.Details.Name);
-        Assert.Equal(streamSize, retired.Details.Size);
-        Assert.Equal(AttachmentFlags.Retired, retired.Details.Flags);
-        Assert.NotNull(retired.Details.RetireAt);
+        Assert.Equal(hash, retired.Hash);
+        Assert.Equal(contentType, retired.ContentType);
+        Assert.Equal(attachmentName, retired.Name);
+        Assert.Equal(streamSize, retired.Size);
+        Assert.Equal(flags, retired.Flags);
+        Assert.NotNull(retired.RetireAt);
         using var retiredStream = new MemoryStream();
-        await retired.Stream.CopyToAsync(retiredStream);
+        await stream1.CopyToAsync(retiredStream);
         stream.Position = 0;
         retiredStream.Position = 0;
         await AttachmentsStreamTests.CompareStreamsAsync(stream, retiredStream);

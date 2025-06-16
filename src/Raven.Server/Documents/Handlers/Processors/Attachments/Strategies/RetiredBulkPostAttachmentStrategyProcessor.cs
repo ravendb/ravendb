@@ -1,11 +1,9 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
 {
@@ -24,22 +22,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
         public override async Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment, string collection)
         {
             return await RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(downloader,
-                attachment, collection);
+                attachment.Base64Hash.ToString());
         }
 
         public override DirectFileDownloader GetAttachmentsDownloader(OperationCancelToken tcs)
         {
             return RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(tcs);
-        }
-
-        public override void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
-        {
-            writer.WriteStartObject();
-            WriteAttachmentDetailsInternal(writer, attachment, documentId);
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentDetails.Flags));
-            writer.WriteInteger((int)attachment.Flags);
-            writer.WriteEndObject();
         }
     }
 }

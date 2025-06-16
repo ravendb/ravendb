@@ -20,10 +20,10 @@ internal abstract class AbstractBulkPostAttachmentStrategyProcessor<TRequestHand
     public abstract string CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name);
     public abstract Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment, string collection);
     public abstract DirectFileDownloader GetAttachmentsDownloader(OperationCancelToken tcs);
-    public abstract void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId);
 
-    protected static void WriteAttachmentDetailsInternal(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
+    public void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
     {
+        writer.WriteStartObject();
         writer.WritePropertyName(nameof(AttachmentDetails.Name));
         writer.WriteString(attachment.Name);
         writer.WriteComma();
@@ -41,5 +41,17 @@ internal abstract class AbstractBulkPostAttachmentStrategyProcessor<TRequestHand
         writer.WriteComma();
         writer.WritePropertyName(nameof(AttachmentDetails.DocumentId));
         writer.WriteString(documentId);
+        writer.WriteComma();
+        writer.WritePropertyName(nameof(AttachmentDetails.Flags));
+        writer.WriteInteger((int)attachment.Flags);
+
+        if (attachment.RetireAt.HasValue)
+        {
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(AttachmentDetails.RetireAt));
+            writer.WriteDateTime(attachment.RetireAt.Value, true);
+        }
+
+        writer.WriteEndObject();
     }
 }

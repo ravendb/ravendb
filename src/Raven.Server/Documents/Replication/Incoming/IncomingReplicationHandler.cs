@@ -12,6 +12,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Config;
+using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
@@ -330,8 +331,33 @@ namespace Raven.Server.Documents.Replication.Incoming
                 _isInternal = isInternal;
             }
 
-            protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
+            protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item, List<IDisposable> disposables)
             {
+                if (_isInternal == false)
+                {
+                    switch (item)
+                    {
+                        case AttachmentReplicationItem attachmentReplicationItem:
+                            if (attachmentReplicationItem.Flags == AttachmentFlags.Retired)
+                            {
+                                attachmentReplicationItem.Flags = AttachmentFlags.None;
+                            }
+                            break;
+
+                        case DocumentReplicationItem document:
+
+                            if (document.Type != ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
+                            {
+                                if (RavenEtlScriptRun.DropRetiredAttachmentFlagFromAttachmentMetadataIfNeeded(context, document.Id, document.Data, out document.Data))
+                                {
+                                    disposables.Add(document.Data);
+                                }
+                            }
+
+                            break;
+                    }
+                }
+
                 return context.GetChangeVector(item.ChangeVector).Order;
             }
 
@@ -382,7 +408,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                         operationsCount++;
 
-                        var changeVectorToMerge = PreProcessItem(context, item);
+                        var changeVectorToMerge = PreProcessItem(context, item, toDispose);
 
                         var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
                         var changeVectorVersion = incomingChangeVector.Version;
@@ -429,7 +455,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 if (newChangeVector != null)
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, attachment.RetireAtUtc, collectionSlice, attachment.Flags, attachment.AttachmentSize,isRevision, newChangeVector);
+                                        contentType, attachment.Base64Hash, attachment.RetireAtUtc, collectionSlice, attachment.Flags, attachment.AttachmentSize, isRevision, newChangeVector);
                                 }
 
                                 break;

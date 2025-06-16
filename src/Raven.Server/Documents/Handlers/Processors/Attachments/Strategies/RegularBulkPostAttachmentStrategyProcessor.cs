@@ -6,7 +6,6 @@ using Raven.Client.Documents.Attachments;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
 {
@@ -34,13 +33,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
         public override DirectFileDownloader GetAttachmentsDownloader(OperationCancelToken tcs)
         {
             return null;
-        }
-
-        public override void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
-        {
-            writer.WriteStartObject();
-            WriteAttachmentDetailsInternal(writer, attachment, documentId);
-            writer.WriteEndObject();
         }
     }
 }

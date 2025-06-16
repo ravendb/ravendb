@@ -150,7 +150,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                 _preventDeletionsMode = pullReplicationParams.PreventDeletionsMode;
             }
 
-            protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
+            protected override ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item, List<IDisposable> disposables)
             {
                 if (_isSink) 
                     ReplaceKnownSinkEntries(context, ref item.ChangeVector);
