@@ -56,6 +56,7 @@ using Raven.Server.Integrations.PostgreSQL.Commands;
 using Raven.Server.Json;
 using Raven.Server.Logging;
 using Raven.Server.Monitoring;
+using Raven.Server.Monitoring.Snmp.Objects.Database;
 using Raven.Server.NotificationCenter;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -2133,7 +2134,7 @@ namespace Raven.Server.ServerWide
         }
 
         public async Task<(long, object)> AddEtl(TransactionOperationContext context,
-            string databaseName, BlittableJsonReaderObject etlConfiguration, string raftRequestId)
+            string databaseName, BlittableJsonReaderObject etlConfiguration, string changeVector, string raftRequestId)
         {
             UpdateDatabaseCommand command;
 
@@ -2231,10 +2232,7 @@ namespace Raven.Server.ServerWide
                             genAiErr.Add($"Could not find connection string named '{genAi.ConnectionStringName}'. Please supply an existing connection string.");
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, genAiErr);
 
-                        if (genAi.ProcessNewDocumentsOnly)
-                            await UpdateGenAiStateToLastEtag(databaseName, genAi);
-
-                        command = new AddGenAiCommand(genAi, databaseName, raftRequestId);
+                        command = new AddGenAiCommand(genAi, databaseName, changeVector, raftRequestId);
                     }
                         break;
 
@@ -2244,19 +2242,6 @@ namespace Raven.Server.ServerWide
             }
 
             return await SendToLeaderAsync(command);
-        }
-
-        private async Task UpdateGenAiStateToLastEtag(string databaseName, GenAiConfiguration genAiConfiguration)
-        {
-            // Update the ETL process state with the last etag and change vector so that GenAI task will start from new docs only
-
-            var database = await DatabasesLandlord.TryGetOrCreateResourceStore(databaseName);
-            (long lastEtag, string lastCv) = database.ReadLastEtagAndChangeVector();
-            
-            var updateStateCmd = new UpdateEtlProcessStateCommand(databaseName, genAiConfiguration.Name, genAiConfiguration.Transforms[0].Name, lastEtag, lastCv, NodeTag,
-                LicenseManager.HasHighlyAvailableTasks(), database.DbBase64Id, RaftIdGenerator.NewId(), skippedTimeSeriesDocs: null, lastBatchTime: null);
-
-            await SendToLeaderAsync(updateStateCmd);
         }
 
         public async Task<(long, object)> AddQueueSink(TransactionOperationContext context,
@@ -2392,7 +2377,8 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration, string raftRequestId)
+        public async Task<(long, object)> UpdateEtl(TransactionOperationContext context, string databaseName, long id, BlittableJsonReaderObject etlConfiguration,
+            string changeVector, string raftRequestId)
         {
             UpdateDatabaseCommand command;
             using (ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
@@ -2481,7 +2467,7 @@ namespace Raven.Server.ServerWide
 
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, genAiErr);
 
-                        command = new UpdateGenAiCommand(id, genAi, databaseName, raftRequestId);
+                        command = new UpdateGenAiCommand(id, genAi, databaseName, changeVector, raftRequestId);
                         break;
                     default:
                         throw new NotSupportedException($"Unknown ETL configuration type. Configuration: {etlConfiguration}");

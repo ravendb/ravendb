@@ -240,6 +240,13 @@ namespace Raven.Client
                 BeginningOfTime
             }
 
+            public enum GenAiChangeVectorSpecialStates
+            {
+                DoNotChange,
+                LastDocument,
+                BeginningOfTime
+            }
+
             public sealed class Metadata
             {
                 private Metadata()

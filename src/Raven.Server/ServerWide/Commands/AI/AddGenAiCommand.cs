@@ -1,23 +1,34 @@
 ﻿using System.Linq;
 using System;
+using Raven.Client;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.ServerWide;
+using Raven.Server.Logging;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide.Commands.ETL;
+using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands.AI;
 
 public sealed class AddGenAiCommand : AddEtlCommand<GenAiConfiguration, AiConnectionString>
 {
+    public string InitialChangeVector;
+
     public AddGenAiCommand()
     {
         // for deserialization
     }
 
-    public AddGenAiCommand(GenAiConfiguration configuration, string databaseName, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
+    public AddGenAiCommand(GenAiConfiguration configuration, string databaseName, string changeVector, string uniqueRequestId) : base(configuration, databaseName, uniqueRequestId)
     {
-
+        InitialChangeVector = changeVector;
     }
+
 
     public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
     {
@@ -34,6 +45,29 @@ public sealed class AddGenAiCommand : AddEtlCommand<GenAiConfiguration, AiConnec
         Validate(record);
 
         Add(ref record.GenAis, record, etag);
+    }
+
+    public BlittableJsonReaderObject HandleChangeVectorInitialState(JsonOperationContext context, ServerStore serverStore)
+    {
+        if (InitialChangeVector == nameof(Constants.Documents.GenAiChangeVectorSpecialStates.BeginningOfTime))
+            return null;
+
+        var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(DatabaseName).GetAwaiter().GetResult();
+        long etag;
+        if (InitialChangeVector is nameof(Constants.Documents.GenAiChangeVectorSpecialStates.LastDocument) 
+            or nameof(Constants.Documents.GenAiChangeVectorSpecialStates.DoNotChange))
+        {
+            (etag, InitialChangeVector) = database.ReadLastEtagAndChangeVector();
+        }
+        else
+        {
+            etag = ChangeVectorUtils.GetEtagById(InitialChangeVector, database.DbBase64Id);
+        }
+
+        var cmd = new UpdateEtlProcessStateCommand(DatabaseName, Configuration.Name, Configuration.Transforms[0].Name, etag, InitialChangeVector, serverStore.NodeTag,
+            serverStore.LicenseManager.HasHighlyAvailableTasks(), database.DbBase64Id, UniqueRequestId, skippedTimeSeriesDocs: null, lastBatchTime: null);
+
+        return DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(cmd, context);
     }
 
     private void Validate(DatabaseRecord databaseRecord)
@@ -59,5 +93,20 @@ public sealed class AddGenAiCommand : AddEtlCommand<GenAiConfiguration, AiConnec
                 $"The identifier '{Configuration.Identifier}' is already used by " +
                 $"Gen AI task{(identifierConflicts.Length > 1 ? "s" : "")} " +
                 $"'{string.Join("', '", identifierConflicts.Select(x => x.Name))}'");
+    }
+
+    public override DynamicJsonValue ToJson(JsonOperationContext context)
+    {
+        var json = base.ToJson(context);
+        json[nameof(InitialChangeVector)] = InitialChangeVector;
+
+        return json;
+    }
+
+    public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, RavenAuditLogger clusterAuditLog)
+    {
+        //var cmd = new UpdateEtlProcessStateCommand();
+        //cmd.Execute(ctx, items, );
+        //base.AfterDatabaseRecordUpdate(ctx, items, clusterAuditLog);
     }
 }

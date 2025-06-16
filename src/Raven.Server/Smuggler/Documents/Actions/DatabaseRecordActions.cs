@@ -703,7 +703,7 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
 
                 etl.TaskId = 0;
                 etl.Disabled = true;
-                tasks.Add(_server.SendToLeaderAsync(new AddGenAiCommand(etl, _name, RaftIdGenerator.DontCareId)));
+                tasks.Add(_server.SendToLeaderAsync(new AddGenAiCommand(etl, _name, null, RaftIdGenerator.DontCareId)));
             }
 
             result.DatabaseRecord.GenAiTasksUpdated = true;

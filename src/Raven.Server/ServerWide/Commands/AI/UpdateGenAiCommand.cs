@@ -1,21 +1,29 @@
-﻿using Raven.Client.Documents.Operations.AI;
+﻿using Raven.Client;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.ServerWide;
+using Raven.Client.Util;
 using Raven.Server.ServerWide.Commands.ETL;
+using Raven.Server.Utils;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands.AI;
 
 public sealed class UpdateGenAiCommand : UpdateEtlCommand<GenAiConfiguration, AiConnectionString>
 {
+    public string InitialChangeVector;
+
     public UpdateGenAiCommand()
     {
         // for deserialization
     }
 
-    public UpdateGenAiCommand(long taskId, GenAiConfiguration configuration, string databaseName, string uniqueRequestId) : base(taskId, configuration, EtlType.EmbeddingsGeneration, databaseName, uniqueRequestId)
+    public UpdateGenAiCommand(long taskId, GenAiConfiguration configuration, string databaseName, string changeVector, string uniqueRequestId) : base(taskId, configuration, EtlType.GenAi, databaseName, uniqueRequestId)
     {
-
+        InitialChangeVector = changeVector;
     }
 
     public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
@@ -23,7 +31,41 @@ public sealed class UpdateGenAiCommand : UpdateEtlCommand<GenAiConfiguration, Ai
         InClusterValidation(record);
 
         new DeleteOngoingTaskCommand(TaskId, OngoingTaskType.GenAi, DatabaseName, null).UpdateDatabaseRecord(record, etag);
-        new AddGenAiCommand(Configuration, DatabaseName, null).UpdateDatabaseRecord(record, etag);
+        new AddGenAiCommand(Configuration, DatabaseName, null, null).UpdateDatabaseRecord(record, etag);
+    }
+
+    public BlittableJsonReaderObject HandleChangeVectorInitialState(JsonOperationContext context, ServerStore serverStore, out string type)
+    {
+        type = string.Empty;
+        if (InitialChangeVector == nameof(Constants.Documents.GenAiChangeVectorSpecialStates.DoNotChange))
+            return null;
+
+        UpdateValueForDatabaseCommand command;
+        if (InitialChangeVector == nameof(Constants.Documents.GenAiChangeVectorSpecialStates.BeginningOfTime))
+        {
+            command = new RemoveEtlProcessStateCommand(DatabaseName, Configuration.Name, Configuration.Transforms[0].Name, UniqueRequestId);
+            type = nameof(RemoveEtlProcessStateCommand);
+        }
+        else
+        {
+            type = nameof(UpdateEtlProcessStateCommand);
+
+            var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(DatabaseName).GetAwaiter().GetResult();
+            long etag;
+            if (InitialChangeVector == nameof(Constants.Documents.GenAiChangeVectorSpecialStates.LastDocument))
+            {
+                (etag, InitialChangeVector) = database.ReadLastEtagAndChangeVector();
+            }
+            else
+            {
+                etag = ChangeVectorUtils.GetEtagById(InitialChangeVector, database.DbBase64Id);
+            }
+
+            command = new UpdateEtlProcessStateCommand(DatabaseName, Configuration.Name, Configuration.Transforms[0].Name, etag, InitialChangeVector, serverStore.NodeTag,
+                serverStore.LicenseManager.HasHighlyAvailableTasks(), database.DbBase64Id, RaftIdGenerator.NewId(), skippedTimeSeriesDocs: null, lastBatchTime: null);
+        }
+
+        return DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(command, context);
     }
 
     private void InClusterValidation(DatabaseRecord record)
@@ -88,5 +130,13 @@ public sealed class UpdateGenAiCommand : UpdateEtlCommand<GenAiConfiguration, Ai
         //{
         //    throw new RachisApplyException("Failed to validate AI Integration configuration", e);
         //}
+    }
+
+    public override DynamicJsonValue ToJson(JsonOperationContext context)
+    {
+        var json = base.ToJson(context);
+        json[nameof(InitialChangeVector)] = InitialChangeVector;
+
+        return json;
     }
 }

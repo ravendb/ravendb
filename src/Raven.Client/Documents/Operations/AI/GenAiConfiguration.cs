@@ -31,7 +31,6 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
 
     public int MaxConcurrency { get; set; } = DefaultMaxConcurrency;
 
-    public bool ProcessNewDocumentsOnly { get; set; } = true;
 
     private List<Transformation> _transforms;
 
@@ -107,7 +106,6 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         json[nameof(UpdateScript)] = UpdateScript;
         json[nameof(GenAiTransformation)] = GenAiTransformation.ToJson();
         json[nameof(MaxConcurrency)] = MaxConcurrency;
-        json[nameof(ProcessNewDocumentsOnly)] = ProcessNewDocumentsOnly;
 
         return json;
     }

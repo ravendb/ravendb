@@ -54,13 +54,14 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, BlittableJsonReaderObject configuration, string raftRequestId)
         {
             var id = RequestHandler.GetLongQueryString("id", required: false);
+            var changeVector = RequestHandler.GetStringQueryString("changeVector", required: false);
 
             if (id == null)
             {
-                return RequestHandler.ServerStore.AddEtl(context, RequestHandler.DatabaseName, configuration, raftRequestId);
+                return RequestHandler.ServerStore.AddEtl(context, RequestHandler.DatabaseName, configuration, changeVector, raftRequestId);
             }
 
-            return RequestHandler.ServerStore.UpdateEtl(context, RequestHandler.DatabaseName, id.Value, configuration, raftRequestId);
+            return RequestHandler.ServerStore.UpdateEtl(context, RequestHandler.DatabaseName, id.Value, configuration, changeVector, raftRequestId);
         }
 
         protected virtual void AssertCanAddOrUpdateEtl(ref BlittableJsonReaderObject etlConfiguration)
