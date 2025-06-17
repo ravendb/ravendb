@@ -3,6 +3,7 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import reactUtils = require("common/reactUtils");
 import AiConnectionStrings = require("components/pages/database/aiHub/aiConnectionStrings/AiConnectionStrings");
 import AiTasks = require("components/pages/database/aiHub/aiTasks/AiTasks");
+import AiAgents = require("components/pages/database/aiHub/aiAgents/AiAgents");
 
 export = getAiHubMenuItem;
 
@@ -15,6 +16,14 @@ function getAiHubMenuItem(appUrls: computedAppUrls) {
             nav: true,
             css: 'icon-manage-connection-strings ai-hub',
             dynamicHash: appUrls.aiConnectionStrings
+        }),
+        new leafMenuItem({
+            route: 'databases/ai/agents',
+            moduleId: reactUtils.bridgeToReact(AiAgents.default, "nonShardedView"),
+            title: 'AI Agents',
+            nav: true,
+            css: 'icon-ai-agents ai-hub',
+            dynamicHash: appUrls.aiAgents
         }),
         new leafMenuItem({
             route: 'databases/ai/tasks',
