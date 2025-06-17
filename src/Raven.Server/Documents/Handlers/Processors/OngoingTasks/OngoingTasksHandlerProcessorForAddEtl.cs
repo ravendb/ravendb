@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -16,7 +17,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
             var changeVector = base.GetChangeVector();
 
-            if (changeVector != nameof(Constants.Documents.GenAiChangeVectorSpecialStates.LastDocument))
+            if (StartingPointChangeVector.From(changeVector) != StartingPointChangeVector.LastDocument)
                 return changeVector;
 
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))

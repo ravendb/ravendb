@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
@@ -963,7 +964,7 @@ for(const comment of this.Comments)
 
         var etl = Etl.WaitForEtlToComplete(store);
 
-        store.Maintenance.Send(new AddGenAiOperation(config, initialChangeVector: nameof(Constants.Documents.GenAiChangeVectorSpecialStates.BeginningOfTime)));
+        store.Maintenance.Send(new AddGenAiOperation(config, StartingPointChangeVector.BeginningOfTime));
 
         Assert.True(etl.Wait(TimeSpan.FromSeconds(30)));
 

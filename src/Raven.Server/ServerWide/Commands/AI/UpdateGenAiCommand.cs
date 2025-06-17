@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -45,19 +46,15 @@ public sealed class UpdateGenAiCommand : UpdateEtlCommand<GenAiConfiguration, Ai
     }
 
     public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, RavenAuditLogger clusterAuditLog) => 
-        UpdateGenAiState(ctx, items, DatabaseName, Configuration, ChangeVectorForStartingPoint, Index);
+        UpdateGenAiState(ctx, items, DatabaseName, Configuration, StartingPointChangeVector.From(ChangeVectorForStartingPoint), Index);
 
-    public static void UpdateGenAiState(ClusterOperationContext ctx, Table items, string database, GenAiConfiguration configuration, string changeVectorForStartingPoint, long index)
+    public static void UpdateGenAiState(ClusterOperationContext ctx, Table items, string database, GenAiConfiguration configuration, StartingPointChangeVector changeVectorForStartingPoint, long index)
     {
-        switch (changeVectorForStartingPoint)
-        {
-            case null:
-            case "":
-            case nameof(Constants.Documents.GenAiChangeVectorSpecialStates.DoNotChange):
-                return;
-            case nameof(Constants.Documents.GenAiChangeVectorSpecialStates.LastDocument):
-                throw new RachisInvalidOperationException($"You can't pass '{nameof(Constants.Documents.GenAiChangeVectorSpecialStates.LastDocument)}' here directly");
-        }
+        if (changeVectorForStartingPoint == null || changeVectorForStartingPoint == StartingPointChangeVector.DoNotChange)
+            return;
+
+        if (changeVectorForStartingPoint == StartingPointChangeVector.LastDocument)
+            throw new RachisInvalidOperationException($"You can't pass '{StartingPointChangeVector.LastDocument}' here directly");
 
         var itemKey = EtlProcessState.GenerateItemName(database, configuration.Name, configuration.Transforms[0].Name);
         
@@ -71,27 +68,19 @@ public sealed class UpdateGenAiCommand : UpdateEtlCommand<GenAiConfiguration, Ai
             TransformationName = configuration.Transforms[0].Name
         };
 
-        switch (changeVectorForStartingPoint)
+        if (changeVectorForStartingPoint == StartingPointChangeVector.BeginningOfTime)
         {
-            case nameof(Constants.Documents.GenAiChangeVectorSpecialStates.BeginningOfTime):
-                etl.ChangeVector = null;
-                etl.LastProcessedEtagPerDbId.Clear();
-                break;
-
-            default:
-                foreach (var entry in changeVectorForStartingPoint.ToChangeVectorList())
-                {
-                    if (etl.LastProcessedEtagPerDbId.TryGetValue(entry.DbId, out var current))
-                    {
-                        etl.LastProcessedEtagPerDbId[entry.DbId] = Math.Max(current, entry.Etag);
-                    }
-                    else
-                    {
-                        etl.LastProcessedEtagPerDbId.Add(entry.DbId, entry.Etag);
-                    }
-                }
-                etl.ChangeVector = changeVectorForStartingPoint;
-                break;
+            etl.ChangeVector = null;
+            etl.LastProcessedEtagPerDbId.Clear();
+        }
+        else
+        {
+            etl.LastProcessedEtagPerDbId.Clear();
+            foreach (var entry in changeVectorForStartingPoint.Value.ToChangeVectorList() ?? [])
+            {
+                etl.LastProcessedEtagPerDbId.Add(entry.DbId, entry.Etag);
+            }
+            etl.ChangeVector = changeVectorForStartingPoint.Value;
         }
 
         using (var updatedValue = ctx.ReadObject(etl.ToJson(), "update-genai-state"))

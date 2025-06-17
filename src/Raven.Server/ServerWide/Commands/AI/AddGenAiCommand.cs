@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using System;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.ServerWide;
 using Raven.Server.Logging;
@@ -83,5 +84,5 @@ public sealed class AddGenAiCommand : AddEtlCommand<GenAiConfiguration, AiConnec
     }
 
     public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, RavenAuditLogger clusterAuditLog)
-        => UpdateGenAiCommand.UpdateGenAiState(ctx, items, DatabaseName, Configuration, ChangeVectorForStartingPoint, Index);
+        => UpdateGenAiCommand.UpdateGenAiState(ctx, items, DatabaseName, Configuration, StartingPointChangeVector.From(ChangeVectorForStartingPoint), Index);
 }
