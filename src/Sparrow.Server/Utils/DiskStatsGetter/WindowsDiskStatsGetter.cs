@@ -119,7 +119,8 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
 
                     try
                     {
-                        counter = _countersPerDisk[path] = new Lazy<DiskCounters>(() => new DiskCounters(name));
+                        counter = _countersPerDisk.GetOrAdd(path, new Lazy<DiskCounters>(() => new DiskCounters(name)));
+                        return counter?.Value;
                     }
                     catch (UnauthorizedAccessException)
                     {
@@ -129,17 +130,12 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
                         _countersPerDisk[path] = null;
                         return null;
                     }
-
-                    break;
                 }
 
-                if (counter == null)
-                {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations($"Couldn't find instance in {DiskCategory} for \"{drive}\" (requested for path \"{path}\").");
+                if (Logger.IsOperationsEnabled)
+                    Logger.Operations($"Couldn't find instance in {DiskCategory} for \"{drive}\" (requested for path \"{path}\").");
 
-                    _countersPerDisk[path] = null;
-                }
+                _countersPerDisk[path] = null;
             }
 
             return counter?.Value;
