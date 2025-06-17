@@ -112,7 +112,9 @@ namespace Raven.Client.Documents
             database = this.GetDatabase(database);
             
             var indexesToAdd = IndexCreation.CreateIndexesToAdd(tasks, conventions);
-
+            if (indexesToAdd == null || indexesToAdd.Length == 0)
+                return Task.CompletedTask;
+            
             return Maintenance.ForDatabase(database).SendAsync(new PutIndexesOperation(indexesToAdd), token);
         }
 
