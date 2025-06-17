@@ -101,7 +101,7 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
     private class CountersPerDisk : IDisposable
     {
         private readonly PerformanceCounterCategory _category = new PerformanceCounterCategory(DiskCategory);
-        private readonly ConcurrentDictionary<string, DiskCounters> _countersPerDisk = new ConcurrentDictionary<string, DiskCounters>();
+        private readonly ConcurrentDictionary<string, Lazy<DiskCounters>> _countersPerDisk = new ConcurrentDictionary<string, Lazy<DiskCounters>>();
 
         public DiskCounters Get(string path)
         {
@@ -119,7 +119,7 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
 
                     try
                     {
-                        counter = _countersPerDisk[path] = new DiskCounters(name);
+                        counter = _countersPerDisk[path] = new Lazy<DiskCounters>(() => new DiskCounters(name));
                     }
                     catch (UnauthorizedAccessException)
                     {
@@ -141,14 +141,14 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
                 }
             }
 
-            return counter;
+            return counter?.Value;
         }
 
         public void Dispose()
         {
             foreach (var (_, value) in _countersPerDisk)
             {
-                value.Dispose();
+                value?.Value.Dispose();
             }
         }
     }
