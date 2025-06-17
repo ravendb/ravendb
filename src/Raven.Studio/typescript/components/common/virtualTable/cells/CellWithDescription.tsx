@@ -22,7 +22,7 @@ export function CellWithDescription<TData, TValue>({
     cellClassName,
 }: CellWithDescriptionProps<TData, TValue>) {
     const handleCopyToClipboard = () => {
-        copyToClipboard.copy(description, "Item has been copied to clipboard");
+        copyToClipboard.copy(String(getValue()), "Item has been copied to clipboard");
     };
 
     return (
