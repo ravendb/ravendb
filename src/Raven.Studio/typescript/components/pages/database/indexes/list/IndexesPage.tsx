@@ -103,8 +103,6 @@ export function IndexesPage({ queryParams }: ReactQueryParamsProps<IndexesPagePr
         );
     };
 
-    console.log("kalczur globalStatusList", globalStatusList);
-
     const canPauseGlobalIndexing = globalStatusList?.some((x) => x.status === "Running");
     const canResumeGlobalIndexing = globalStatusList?.some((x) => x.status === "Paused");
 
