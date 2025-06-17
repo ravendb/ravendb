@@ -131,6 +131,7 @@ class appUrl {
         // AI Hub
         aiConnectionStrings: ko.pureComputed(() => appUrl.forAiConnectionStrings(appUrl.currentDatabase())),
         aiAgents: ko.pureComputed(() => appUrl.forAiAgents(appUrl.currentDatabase())),
+        editAiAgent: ko.pureComputed(() => appUrl.forEditAiAgent(appUrl.currentDatabase())),
         aiTasks: ko.pureComputed(() => appUrl.forAiTasks(appUrl.currentDatabase())),
         aiTasksStats: ko.pureComputed(() => appUrl.forAiTasksStats(appUrl.currentDatabase())),
     };
@@ -774,6 +775,11 @@ class appUrl {
     static forAiAgents(db: database | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/ai/agents?" + databasePart;
+    }
+
+    static forEditAiAgent(db: database | string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/ai/agents/edit?" + databasePart;
     }
 
     static forAiTasks(db: database | string): string {

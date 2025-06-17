@@ -1,21 +1,25 @@
 import { Icon } from "components/common/Icon";
 import AiAgentsInfoHub from "./AiAgentsInfoHub";
 import { AboutViewHeading } from "components/common/AboutView";
-import Button from "react-bootstrap/Button";
 import Form from "react-bootstrap/Form";
 import { EmptySet } from "components/common/EmptySet";
+import { useAppUrls } from "components/hooks/useAppUrls";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 export default function AiAgents() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const { appUrl } = useAppUrls();
     return (
         <div className="content-padding">
             <div className="hstack justify-content-between align-items-start">
                 <AboutViewHeading title="AI Agents" icon="ai-agents" marginBottom={4} />
                 <AiAgentsInfoHub />
             </div>
-            <Button variant="primary" className="rounded-pill">
+            <a href={appUrl.forEditAiAgent(databaseName)} className="btn btn-primary rounded-pill">
                 <Icon icon="plus" />
                 Add new
-            </Button>
+            </a>
             <div className="d-flex flex-column flex-grow mt-4">
                 <div className="small-label ms-1 mb-1">Filter by name</div>
                 <div className="clearable-input">
