@@ -62,7 +62,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         string conversationId = null;
         if (configuration.Persistence is not null)
         {
-            MergedPutCommand putCmd = new(r.Dcoument, $"{configuration.Persistence.Collection}{Database.IdentityPartsSeparator}", null, Database);
+            MergedPutCommand putCmd = new(r.Docoument, $"{configuration.Persistence.Collection}{Database.IdentityPartsSeparator}", null, Database);
             await Database.TxMerger.Enqueue(putCmd);
             conversationId = putCmd.PutResult.Id;
         }
@@ -75,9 +75,6 @@ public class AiAgentHandler : DatabaseRequestHandler
     {
         using var token = CreateHttpRequestBoundOperationToken();
         var chatId = GetStringQueryString("chatId", required: true);
-        var name = GetStringQueryString("name", required: true);
-        
-        var configuration = GetAiAgentConfiguration(name);
 
         using var _ = Database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
         using var __ = context.OpenReadTransaction();
@@ -86,42 +83,49 @@ public class AiAgentHandler : DatabaseRequestHandler
         if (chat == null)
             throw new DocumentDoesNotExistException(chatId);
 
-        var document = ChatDocument.ToDocument(chatId, chat.Data);
+        var chatDocument = ChatDocument.ToDocument(chatId, chat.Data);
         var body = await ReadResumeChatBodyAsync(context, token.Token);
 
-        if (string.IsNullOrEmpty(body.UserPrompt) == false)
-        {
-            document.AddMessage(context, context.ReadObject(new DynamicJsonValue
-            {
-                ["role"] = "user",
-                ["content"] = body.UserPrompt
-            }, "user/msg"));
-        }
+        var configuration = GetAiAgentConfiguration(chatDocument.Agent);
 
-        if (body.ActionResponse != null)
-        {
-            foreach (BlittableJsonReaderObject tool in body.ActionResponse)
-            {
-                var t = JsonDeserializationClient.ToolResponse(tool);
-                document.Messages.Add(context.ReadObject(new DynamicJsonValue
-                {
-                    ["tool_call_id"] = t.ToolId,
-                    ["role"] = "tool",
-                    ["content"] = t.Content
-                },"user/tool"));
-            }
-        }
+        AddNewMessages();
 
-        var r = await Talk(context, configuration, document, token: token);
+        var r = await Talk(context, configuration, chatDocument, token: token);
 
         if (configuration.Persistence is not null)
         {
             // we don't pass change vector here, so last write wins
-            MergedPutCommand putCmd = new(r.Dcoument, chatId, changeVector: null, Database);
+            MergedPutCommand putCmd = new(r.Docoument, chatId, changeVector: null, Database);
             await Database.TxMerger.Enqueue(putCmd);
         }
 
         await WriteResponseAsync(context, chatId, r);
+
+        void AddNewMessages()
+        {
+            if (string.IsNullOrEmpty(body.UserPrompt) == false)
+            {
+                chatDocument.AddMessage(context, context.ReadObject(new DynamicJsonValue
+                {
+                    ["role"] = "user",
+                    ["content"] = body.UserPrompt
+                }, "user/msg"));
+            }
+
+            if (body.ActionResponse != null)
+            {
+                foreach (BlittableJsonReaderObject tool in body.ActionResponse)
+                {
+                    var t = JsonDeserializationClient.ToolResponse(tool);
+                    chatDocument.Messages.Add(context.ReadObject(new DynamicJsonValue
+                    {
+                        ["tool_call_id"] = t.ToolId,
+                        ["role"] = "tool",
+                        ["content"] = t.Content
+                    }, "user/tool"));
+                }
+            }
+        }
     }
 
     [RavenAction("/databases/*/admin/ai/agent", "GET", AuthorizationStatus.DatabaseAdmin)]
@@ -211,7 +215,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         return (actionResponse, userPrompt);
     }
 
-    private async Task<(AiUsage Usage, List<ToolRequest> userToolRequests, BlittableJsonReaderObject Response, BlittableJsonReaderObject Dcoument)> Talk(JsonOperationContext context, AiAgentConfiguration configuration, ChatDocument document, OperationCancelToken token)
+    private async Task<(AiUsage Usage, List<ToolRequest> userToolRequests, BlittableJsonReaderObject Response, BlittableJsonReaderObject Docoument)> Talk(JsonOperationContext context, AiAgentConfiguration configuration, ChatDocument document, OperationCancelToken token)
     {
         document.EnsureInitialized();
 
@@ -239,7 +243,7 @@ public class AiAgentHandler : DatabaseRequestHandler
             if (aiResponse.Type is AiResponseType.Result)
                 break;
             
-            await HandleToolCalls(context, configuration, document, aiResponse);
+            await HandleQueryToolCalls(context, configuration, document, aiResponse);
 
             if (TryGetUserTools(configuration, aiResponse, out userToolRequests))
                 break; // we need to return the user tool requests to the client, so we can continue the conversation
@@ -268,7 +272,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         return userTools.Count > 0;
     }
 
-    private async Task HandleToolCalls(JsonOperationContext context, AiAgentConfiguration cfg, ChatDocument document, AiResponse result)
+    private async Task HandleQueryToolCalls(JsonOperationContext context, AiAgentConfiguration cfg, ChatDocument document, AiResponse result)
     {
         // TODO: handle a response that does both query & action
         DynamicJsonArray reqs = [];

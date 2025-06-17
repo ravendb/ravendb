@@ -27,7 +27,7 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
 
         var r = await ServerStore.SendToLeaderAsync(new AddOrUpdateAiAgentCommand(RequestHandler.DatabaseName, name, cfg, RequestHandler.GetRaftRequestIdFromQuery()), token.Token);
         
-        RequestHandler.LogTaskToAudit($"Create AI Agent '{name}'", r.Index, options);
+        RequestHandler.LogTaskToAudit($"Add/Update AI Agent '{name}'", r.Index, options);
 
         await RequestHandler.WaitForIndexNotificationAsync(r.Index);
 

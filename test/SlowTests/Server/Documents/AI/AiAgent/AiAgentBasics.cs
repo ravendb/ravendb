@@ -129,7 +129,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.NotNull(r.ChatId);
 
 
-            var r2 = await store.Maintenance.SendAsync(new ResumeChatOperation<OutputSchema>("shopping assistant", r.ChatId,
+            var r2 = await store.Maintenance.SendAsync(new ResumeChatOperation<OutputSchema>(r.ChatId,
                 userPrompt: "can you give me a cheaper alternative?"));
 
             Assert.NotNull(r2.Response.Answer);
@@ -192,7 +192,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 });
             }
 
-            var r2 = await store.Maintenance.SendAsync(new ResumeChatOperation<OutputSchema>("shopping assistant", r.ChatId, toolResponses: toolResponse));
+            var r2 = await store.Maintenance.SendAsync(new ResumeChatOperation<OutputSchema>(r.ChatId, toolResponses: toolResponse));
 
             Assert.NotNull(r2.Response.Answer);
             Assert.NotNull(r2.Usage);

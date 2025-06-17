@@ -10,6 +10,10 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
+/// <summary>
+/// Defines the configuration for an AI agent in RavenDB, including the system prompt,
+/// tools (queries/actions), output schema, persistence settings, and connection string.
+/// </summary>
 public class AiAgentConfiguration : IDynamicJson
 {
     public AiAgentConfiguration()
@@ -17,6 +21,11 @@ public class AiAgentConfiguration : IDynamicJson
         // for serialization purposes
     }
 
+    /// <summary>
+    /// Initializes a new instance of <see cref="AiAgentConfiguration"/> with the specified connection string and system prompt.
+    /// </summary>
+    /// <param name="connectionStringName">The name of the connection string to use for the AI integration.</param>
+    /// <param name="systemPrompt">The system prompt that defines the agent’s role and behavior.</param>
     public AiAgentConfiguration(string connectionStringName, string systemPrompt)
     {
         ValidationMethods.AssertNotNullOrEmpty(connectionStringName, nameof(connectionStringName));
@@ -26,11 +35,42 @@ public class AiAgentConfiguration : IDynamicJson
         SystemPrompt = systemPrompt;
     }
 
+    /// <summary>
+    /// The name of the connection string used to connect to the AI provider.
+    /// </summary>
     public string ConnectionStringName { get; set; }
+
+    /// <summary>
+    /// The prompt that guides the behavior and purpose of the AI agent.
+    /// </summary>
     public string SystemPrompt { get; set; }
+
+    /// <summary>
+    /// A JSON schema (as string) describing the expected structure of the AI agent's output.
+    /// This allows validation and parsing of the AI-generated response according to a known format.
+    ///
+    /// For example:
+    /// <code>
+    /// {
+    ///   "Answer": "Answer to the user question",
+    ///   "Relevant": true,
+    ///   "RelevantOrdersId": ["The order ids relevant to the query or response"],
+    ///   "MatchingProductsId": ["All the product ids referenced either by the user or the system"]
+    /// }
+    /// </code>
+    /// </summary>
     public string OutputSchema { get; set; }
+
     public List<ToolQuery> Queries { get; set; }= [];
+
+    /// <summary>
+    /// A list of actions (tools with parameters) the agent can invoke.
+    /// </summary>
     public List<ToolAction> Actions { get; set; } = [];
+
+    /// <summary>
+    /// Controls persistence behavior of chats - whether the chat history will be persistent or not
+    /// </summary>
     public PersistenceConfiguration Persistence { get; set; }
 
     public class PersistenceConfiguration : IDynamicJson

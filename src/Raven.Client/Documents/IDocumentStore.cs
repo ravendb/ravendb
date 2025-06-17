@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
@@ -253,6 +254,8 @@ namespace Raven.Client.Documents
         OperationExecutor Operations { get; }
 
         DatabaseSmuggler Smuggler { get; }
+
+        DatabaseAiAgents AiAgents { get; }
 
         IDisposable SetRequestTimeout(TimeSpan timeout, string database = null);
     }

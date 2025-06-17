@@ -11,20 +11,17 @@ namespace Raven.Client.Documents.Operations.AI.Agents;
 
 public class ResumeChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSchema>> where TSchema : new()
 {
-    private readonly string _name;
     private readonly string _chatId;
     private readonly string _userPrompt;
     private readonly List<ToolResponse> _toolResponses;
 
-    public ResumeChatOperation(string agentName, string chatId, string userPrompt = null, List<ToolResponse> toolResponses = null)
+    public ResumeChatOperation(string chatId, string userPrompt = null, List<ToolResponse> toolResponses = null)
     {
-        ValidationMethods.AssertNotNullOrEmpty(agentName, nameof(agentName));
         ValidationMethods.AssertNotNullOrEmpty(chatId, nameof(chatId));
 
         if (string.IsNullOrEmpty(userPrompt) && (toolResponses == null || toolResponses.Count == 0))
             throw new ArgumentException($"Either '{nameof(userPrompt)}' or '{nameof(toolResponses)}' must be provided to resume a chat.");
 
-        _name = agentName;
         _chatId = chatId;
         _userPrompt = userPrompt;
         _toolResponses = toolResponses;
@@ -32,20 +29,18 @@ public class ResumeChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSc
 
     public RavenCommand<ChatResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
-        return new ResumeChatOperationCommand(_name, _chatId, _userPrompt, _toolResponses, conventions);
+        return new ResumeChatOperationCommand(_chatId, _userPrompt, _toolResponses, conventions);
     }
 
     internal sealed class ResumeChatOperationCommand : RavenCommand<ChatResult<TSchema>>
     {
-        private readonly string _name;
         private readonly string _chatId;
         private readonly string _userPrompt;
         private readonly List<ToolResponse> _toolResponses;
         private readonly DocumentConventions _conventions;
 
-        public ResumeChatOperationCommand(string name, string chatId, string userPrompt, List<ToolResponse> toolResponses, DocumentConventions conventions)
+        public ResumeChatOperationCommand(string chatId, string userPrompt, List<ToolResponse> toolResponses, DocumentConventions conventions)
         {
-            _name = name;
             _chatId = chatId;
             _userPrompt = userPrompt;
             _toolResponses = toolResponses;
@@ -54,7 +49,7 @@ public class ResumeChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSc
         public override bool IsReadRequest => false;
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/ai/agent/resume?name={Uri.EscapeDataString(_name)}&chatId={Uri.EscapeDataString(_chatId)}";
+            url = $"{node.Url}/databases/{node.Database}/ai/agent/resume?chatId={Uri.EscapeDataString(_chatId)}";
             var body = new ResumeChatBody { ToolResponse = _toolResponses, UserPrompt = _userPrompt};
 
             var request = new HttpRequestMessage

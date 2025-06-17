@@ -1,0 +1,152 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using FastTests;
+using FastTests.Client;
+using Orders;
+using Raven.Client.Documents;
+using Raven.Client.Documents.Linq;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Tests.Infrastructure;
+using Xunit;
+using Xunit.Abstractions;
+
+
+namespace SlowTests.Server.Documents.AI.AiAgent;
+
+public class AiAgentClientApiBasics : RavenTestBase
+{
+    public AiAgentClientApiBasics(ITestOutputHelper output) : base(output)
+    {
+    }
+
+    public class OutputSchema
+    {
+        public string Answer = "Answer to the user question";
+
+        public bool Relevant = true;
+
+        public List<string> RelevantOrdersId = ["The order ids relevant to the query or response"];
+
+        public List<string> MatchingProductsId = ["All the product ids referenced either by the user or the system"];
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    public async Task AiAgentClientApiBasicTest(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        using var session = store.OpenAsyncSession();
+
+        var agent = new AiAgentConfiguration(config.ConnectionStringName,
+            "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
+
+        agent.Persistence = new AiAgentConfiguration.PersistenceConfiguration
+        {
+            Collection = "Chats",
+            Expires = TimeSpan.FromDays(30)
+        };
+
+        agent.Queries =
+        [
+            AiAgentConfiguration.ToolQuery.Build(
+                    "ProductSearch",
+                    "semantic search the store product catalog",
+                    session.Query<Product>().VectorSearch(v => v.WithText(p => p.Name), v => v.ByText("$query")))
+                ,
+                AiAgentConfiguration.ToolQuery.Build(
+                    "RecentOrder",
+                    "Get the recent orders of the current user",
+                    session.Query<Query.Order>().Where(o => o.Company == "$company").OrderByDescending(o => o.OrderedAt).Take(10))
+        ];
+
+        await store.AiAgents.CreateAgentAsync<OutputSchema>("shopping assistant", agent);
+
+        var r = await store.AiAgents.StartChatAsync<OutputSchema>("shopping assistant", "what goes well with my cheese?",
+            p => p.AddParameter("company", "companies/90-A"));
+
+        Assert.NotNull(r.Response.Answer);
+        Assert.NotNull(r.Usage);
+        Assert.NotNull(r.ChatId);
+
+        var chat = await session.LoadAsync<dynamic>(r.ChatId);
+        Assert.NotNull(chat);
+
+        var r1 = await store.AiAgents.ContinueChatAsync<OutputSchema>(r.ChatId, "what goes well with my cheese?");
+
+        Assert.False(string.IsNullOrEmpty(r1.Response.Answer));
+
+        var r2 = await store.AiAgents.ContinueChatAsync<OutputSchema>(r.ChatId, "what cheese goes well with italian food?");
+
+        Assert.False(string.IsNullOrEmpty(r2.Response.Answer));
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    public async Task AiAgentClientApiAnswerActionTool(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        using var session = store.OpenAsyncSession();
+
+        var agent = new AiAgentConfiguration(config.ConnectionStringName,
+            "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
+
+        agent.Persistence = new AiAgentConfiguration.PersistenceConfiguration
+        {
+            Collection = "Chats",
+            Expires = TimeSpan.FromDays(30)
+        };
+
+        agent.Actions =
+        [
+            new AiAgentConfiguration.ToolAction
+            {
+                Name = "ProductSearch",
+                Description =  "semantic search the store product catalog",
+                ParametersSchema = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+            }
+            ,
+            new AiAgentConfiguration.ToolAction
+            {
+                Name = "RecentOrder",
+                Description = "Get the recent orders of the current user",
+                ParametersSchema = "{}"
+            }
+        ];
+
+        await store.AiAgents.CreateAgentAsync<OutputSchema>("shopping assistant", agent);
+
+        var r = await store.AiAgents.StartChatAsync<OutputSchema>("shopping assistant", "what goes well with my cheese for recent orders?");
+
+        Assert.True(r.ToolRequests.Count > 0);
+        Assert.NotNull(r.Usage);
+        Assert.NotNull(r.ChatId);
+
+        var toolResponses = new List<ToolResponse>();
+        for (int i = 0; i < r.ToolRequests.Count; i++)
+        {
+            var request = r.ToolRequests[i];
+            toolResponses.Add(new ToolResponse
+            {
+                ToolId = request.ToolId,
+                Content = "{}"
+            });
+        }
+
+        var r2 = await store.AiAgents.ContinueChatAsync<OutputSchema>(r.ChatId, toolResponses);
+
+        Assert.NotNull(r2.Response.Answer);
+        Assert.NotNull(r2.Usage);
+        Assert.NotNull(r2.ChatId);
+    }
+}
