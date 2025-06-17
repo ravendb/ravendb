@@ -4,15 +4,16 @@ import Code from "components/common/Code";
 import { Icon } from "components/common/Icon";
 import { PopoverWithHover } from "components/common/PopoverWithHover";
 import CellValue from "components/common/virtualTable/cells/CellValue";
-import { PropsWithChildren, useState } from "react";
+import { PropsWithChildren, ReactNode, useState } from "react";
 import Button from "react-bootstrap/Button";
 import Popover from "react-bootstrap/Popover";
 
 interface CellWithCopyProps extends PropsWithChildren {
     value: unknown;
+    additionalButtons?: ReactNode;
 }
 
-export function CellWithCopy({ value, children }: CellWithCopyProps) {
+export function CellWithCopy({ value, children, additionalButtons }: CellWithCopyProps) {
     const [valuePopover, setValuePopover] = useState<HTMLElement>();
 
     if (value === undefined) {
@@ -37,10 +38,11 @@ export function CellWithCopy({ value, children }: CellWithCopyProps) {
                         <Code language="json" code={jsonBody} />
                     </pre>
                     <span className="small-label">Actions</span>
-                    <div>
-                        <Button onClick={handleCopyToClipboard} size="sm" variant="primary" title="Copy to clipboard">
+                    <div className="d-flex gap-2">
+                        <Button onClick={handleCopyToClipboard} size="sm" title="Copy to clipboard">
                             <Icon icon="copy-to-clipboard" margin="m-0" />
                         </Button>
+                        {additionalButtons}
                     </div>
                 </Popover.Body>
             </PopoverWithHover>
@@ -48,9 +50,15 @@ export function CellWithCopy({ value, children }: CellWithCopyProps) {
     );
 }
 
-export function CellWithCopyWrapper({ getValue }: { getValue: () => unknown }) {
+export function CellWithCopyWrapper({
+    getValue,
+    additionalButtons,
+}: {
+    getValue: () => unknown;
+    additionalButtons?: ReactNode;
+}) {
     return (
-        <CellWithCopy value={getValue()}>
+        <CellWithCopy additionalButtons={additionalButtons} value={getValue()}>
             <CellValue value={getValue()} />
         </CellWithCopy>
     );

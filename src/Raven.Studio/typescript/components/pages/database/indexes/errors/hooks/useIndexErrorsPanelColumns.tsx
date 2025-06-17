@@ -4,7 +4,7 @@ import { CellContext, ColumnDef } from "@tanstack/react-table";
 import CellValue, { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import CellDocumentValue from "components/common/virtualTable/cells/CellDocumentValue";
 import { useAppUrls } from "hooks/useAppUrls";
-import { CellWithCopy, CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
+import { CellWithCopy } from "components/common/virtualTable/cells/CellWithCopy";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
@@ -56,7 +56,7 @@ export function useIndexErrorsPanelColumns(availableWidth: number) {
         {
             header: "Error",
             accessorKey: "Error",
-            cell: CellWithCopyWrapper,
+            cell: IndexErrorsCellWithCopyWrapper,
             size: getSize(defaultCellSize * 1.5),
         },
     ];
@@ -151,5 +151,30 @@ const CellValueRelativeTimeWrapper = ({ getValue, row }: CellValueRelativeTimeWr
         >
             <CellValue value={getValue()} />
         </PopoverWithHoverWrapper>
+    );
+};
+type IndexErrorsCellWithCopyWrapperProps = CellContext<IndexErrorPerDocument, unknown>;
+
+const IndexErrorsCellWithCopyWrapper = ({ getValue, row, table }: IndexErrorsCellWithCopyWrapperProps) => {
+    const { value: isOpen, toggle: toggleIsOpen } = useBoolean(false);
+    const additionalButtons = (
+        <Button size="sm" onClick={toggleIsOpen} title="Show error details">
+            <Icon icon="preview" margin="m-0" />
+        </Button>
+    );
+
+    return (
+        <>
+            <CellWithCopy additionalButtons={additionalButtons} value={getValue()}>
+                <CellValue value={getValue()} />
+            </CellWithCopy>
+            <IndexErrorsModal
+                isOpen={isOpen}
+                toggleModal={toggleIsOpen}
+                errorDetails={row}
+                dataLength={table.options.data.length}
+                getRow={table.getRow}
+            />
+        </>
     );
 };
