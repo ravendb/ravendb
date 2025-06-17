@@ -127,6 +127,7 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
                             Logger.Operations($"Couldn't create disk counters instance in {DiskCategory} for \"{drive}\" (requested for path \"{path}\").");
 
                         _countersPerDisk[path] = null;
+                        return null;
                     }
 
                     break;
