@@ -117,7 +117,18 @@ internal class WindowsDiskStatsGetter : DiskStatsGetter<WindowsDiskStatsRawResul
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"{nameof(DiskCounters)} was created for \"{drive}\" (requested for path \"{path}\").");
 
-                    counter = _countersPerDisk[path] = new DiskCounters(name);
+                    try
+                    {
+                        counter = _countersPerDisk[path] = new DiskCounters(name);
+                    }
+                    catch (UnauthorizedAccessException)
+                    {
+                        if (Logger.IsOperationsEnabled)
+                            Logger.Operations($"Couldn't create disk counters instance in {DiskCategory} for \"{drive}\" (requested for path \"{path}\").");
+
+                        _countersPerDisk[path] = null;
+                    }
+
                     break;
                 }
 
