@@ -50,7 +50,8 @@ public sealed class UpdateGenAiCommand : UpdateEtlCommand<GenAiConfiguration, Ai
 
     public static void UpdateGenAiState(ClusterOperationContext ctx, Table items, string database, GenAiConfiguration configuration, StartingPointChangeVector changeVectorForStartingPoint, long index)
     {
-        if (changeVectorForStartingPoint == null || changeVectorForStartingPoint == StartingPointChangeVector.DoNotChange)
+        if (changeVectorForStartingPoint?.Value == null || 
+            changeVectorForStartingPoint == StartingPointChangeVector.DoNotChange)
             return;
 
         if (changeVectorForStartingPoint == StartingPointChangeVector.LastDocument)

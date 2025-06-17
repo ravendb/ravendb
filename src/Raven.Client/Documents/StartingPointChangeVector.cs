@@ -6,9 +6,9 @@ namespace Raven.Client.Documents
     {
         public readonly string Value;
 
-        private StartingPointChangeVector(string changeVector)
+        private StartingPointChangeVector(string startingPoint)
         {
-            Value = changeVector ?? throw new ArgumentNullException(nameof(changeVector));
+            Value = startingPoint;
         }
 
         public static StartingPointChangeVector From(string changeVector) => new(changeVector);
