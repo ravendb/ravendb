@@ -32,6 +32,7 @@ import {
     OngoingInternalReplicationNodeInfo,
     OngoingTaskAmazonSqsEtlSharedInfo,
     OngoingTaskEmbeddingsGenerationSharedInfo,
+    OngoingTaskGenAiSharedInfo,
 } from "components/models/tasks";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import OngoingTask = Raven.Client.Documents.Operations.OngoingTasks.OngoingTask;
@@ -41,6 +42,7 @@ import genUtils from "common/generalUtils";
 import OngoingTaskSqlEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSqlEtl;
 import OngoingTaskSnowflakeEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl;
 import EmbeddingsGeneration = Raven.Client.Documents.Operations.OngoingTasks.EmbeddingsGeneration;
+import GenAi = Raven.Client.Documents.Operations.OngoingTasks.GenAi;
 import OngoingTaskRavenEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskRavenEtl;
 import OngoingTaskElasticSearchEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskElasticSearchEtl;
 import OngoingTaskOlapEtlListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskOlapEtl;
@@ -469,6 +471,18 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 ...commonProps,
                 identifier: incoming.Configuration.Identifier,
                 connectionStringName: incoming.ConnectionStringName,
+            };
+
+            return result;
+        }
+        case "GenAi": {
+            const incoming = task as GenAi;
+
+            // noinspection UnnecessaryLocalVariableJS
+            const result: OngoingTaskGenAiSharedInfo = {
+                ...commonProps,
+                identifier: incoming.Configuration.Identifier,
+                connectionStringName: incoming.Configuration.ConnectionStringName,
             };
 
             return result;
