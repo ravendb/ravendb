@@ -10,6 +10,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.AI.GenAi;
+using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.IndexMerging;
@@ -338,6 +339,25 @@ namespace Raven.Server.Web.Studio
             public OpenAiSettings OpenAiSettings { get; set; }
 
             public AzureOpenAiSettings AzureOpenAiSettings { get; set; }
+        }
+
+        [RavenAction("/studio-tasks/convert-to-json-schema", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetJsonSchemaFromSampleObject()
+        {
+            using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
+            {
+                var sampleObj = await context.ReadForMemoryAsync(RequestBodyStream(), "convert-to-json-schema");
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    var schema = AbstractChatCompletionClient<JsonOperationContext>.GetSchemaFor(sampleObj.ToString());
+
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Result");
+                    writer.WriteString(schema);
+                    writer.WriteEndObject();
+                }
+            }
         }
 
         public sealed class StudioBootstrapConfiguration
