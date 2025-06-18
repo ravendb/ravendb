@@ -39,11 +39,11 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             Fetcher.Initialize(clusterContext, docsContext, Active);
         }
 
-        protected abstract bool ShouldSend(T item, out string reason, out Exception exception, out Document result);
+        protected abstract bool ShouldSend(T item, out Exception exception, out Document result);
 
         protected (Document Doc, Exception Exception) GetBatchItem(T item)
         {
-            if (ShouldSend(item, out var reason, out var exception, out var result))
+            if (ShouldSend(item, out var exception, out var result))
             {
                 if (IncludesCmd != null && Run != null)
                     IncludesCmd.AddRange(Run.Includes, result.Id);
@@ -53,9 +53,6 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
                 return (result, null);
             }
-
-            if (Logger.IsInfoEnabled) 
-                Logger.Info(reason, exception);
 
             if (exception != null)
             {

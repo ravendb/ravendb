@@ -117,10 +117,9 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return new DocumentSubscriptionFetcher(Database, SubscriptionConnectionsState, Collection);
         }
 
-        protected override bool ShouldSend(Document item, out string reason, out Exception exception, out Document result)
+        protected override bool ShouldSend(Document item, out Exception exception, out Document result)
         {
             exception = null;
-            reason = null;
             result = item;
             string id = item.Id; // we convert the Id to string since item might get disposed
 
@@ -129,16 +128,18 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                 var conflictStatus = ChangeVectorUtils.GetConflictStatus(
                     remoteAsString: item.ChangeVector,
                     localAsString: SubscriptionState.ChangeVectorForNextBatchStartingPoint);
-
+                
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {
-                    reason = $"{id} is already merged";
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"{id} is already merged");
                     return false;
                 }
 
                 if (SubscriptionConnectionsState.IsDocumentInActiveBatch(ClusterContext, id, Active))
                 {
-                    reason = $"{id} exists in an active batch";
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"{id} exists in an active batch");
                     return false;
                 }
             }
@@ -151,7 +152,10 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                     item.ChangeVector = string.Empty;
                     current.Document?.Dispose();
                     current.Tombstone?.Dispose();
-                    reason = $"Skip {id} from resend";
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"Skip {id} from resend");
+
                     return false;
                 }
 
@@ -182,7 +186,10 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                         ItemsToRemoveFromResend.Add(id);
 
                     result.Data = null;
-                    reason = $"{id} filtered out by criteria";
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"{id} filtered out by criteria");
+
                     return false;
                 }
                 
@@ -191,7 +198,10 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             catch (Exception ex)
             {
                 exception = ex;
-                reason = $"Criteria script threw exception for document id {id}";
+
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Criteria script threw exception for document id {id}", exception);
+
                 return false;
             }
         }

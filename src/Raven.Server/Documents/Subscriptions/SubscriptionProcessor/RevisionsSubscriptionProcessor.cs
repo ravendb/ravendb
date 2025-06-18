@@ -105,10 +105,9 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             return new RevisionSubscriptionFetcher(Database, SubscriptionConnectionsState, Collection);
         }
 
-        protected override bool ShouldSend((Document Previous, Document Current) item, out string reason, out Exception exception, out Document result)
+        protected override bool ShouldSend((Document Previous, Document Current) item, out Exception exception, out Document result)
         {
             exception = null;
-            reason = null;
             result = item.Current;
 
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Storage)
@@ -119,13 +118,15 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {
-                    reason = $"{item.Current.Id} is already merged";
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"{item.Current.Id} is already merged");
                     return false;
                 }
 
                 if (SubscriptionConnectionsState.IsRevisionInActiveBatch(ClusterContext, item.Current.ChangeVector, Active))
                 {
-                    reason = $"{item.Current.Id} is in active batch";
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"{item.Current.Id} is in active batch");
                     return false;
                 }
             }
@@ -156,7 +157,10 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
                     transformResult.Dispose();
                     result.Data?.Dispose();
                     result.Data = null;
-                    reason = $"{item.Current.Id} filtered by criteria";
+
+                    if (Logger.IsInfoEnabled)
+                        Logger.Info($"{item.Current.Id} filtered by criteria");
+
                     return false;
                 }
 
@@ -170,7 +174,9 @@ namespace Raven.Server.Documents.Subscriptions.SubscriptionProcessor
             }
             catch (Exception ex)
             {
-                reason = $"Criteria script threw exception for revision id {item.Current.Id} with change vector current: {item.Current.ChangeVector}, previous: {item.Previous?.ChangeVector}";
+                if (Logger.IsInfoEnabled)
+                    Logger.Info($"Criteria script threw exception for revision id {item.Current.Id} with change vector current: {item.Current.ChangeVector}, previous: {item.Previous?.ChangeVector}", exception);
+
                 exception = ex;
                 return false;
             }
