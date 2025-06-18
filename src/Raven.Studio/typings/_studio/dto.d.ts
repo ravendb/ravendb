@@ -1087,8 +1087,6 @@ type CertificatesResponseDto = {
     WellKnownIssuers: string[]
 }
 
-type GenAiConfiguration = Omit<Raven.Client.Documents.Operations.AI.GenAiConfiguration, "Identifier">;
-
 type AiConnectionStringsSettings =
     | Raven.Client.Documents.Operations.AI.OpenAiSettings
     | Raven.Client.Documents.Operations.AI.AzureOpenAiSettings

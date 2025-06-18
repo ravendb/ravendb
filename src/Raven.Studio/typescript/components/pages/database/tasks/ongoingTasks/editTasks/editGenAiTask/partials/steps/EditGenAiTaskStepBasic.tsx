@@ -69,7 +69,16 @@ export function EditGenAiTaskStepBasicFooter() {
     };
 
     const handleNext = async () => {
-        const isValid = await trigger(["name", "state", "responsibleNode", "connectionStringName"]);
+        const isValid = await trigger([
+            "name",
+            "state",
+            "responsibleNode",
+            "connectionStringName",
+            "maxConcurrency",
+            "isStartingPoint",
+            "startingPointType",
+            "startingPointChangeVector",
+        ]);
 
         if (isValid) {
             dispatch(editGenAiTaskActions.currentStepSet("context"));

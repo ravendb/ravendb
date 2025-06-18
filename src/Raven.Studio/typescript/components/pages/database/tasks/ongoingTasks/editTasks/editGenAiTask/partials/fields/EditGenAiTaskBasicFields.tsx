@@ -13,7 +13,7 @@ import EditGenAiTaskNodeField from "./EditGenAiTaskNodeField";
 import InputGroup from "react-bootstrap/InputGroup";
 import { useServices } from "components/hooks/useServices";
 import { useFormContext, useWatch } from "react-hook-form";
-import { EditGenAiTaskFormData } from "../../utils/editGenAiTaskValidation";
+import { EditGenAiTaskFormData, GenAiStartingPoint } from "../../utils/editGenAiTaskValidation";
 import TaskUtils from "components/utils/TaskUtils";
 import OptionalLabel from "components/common/OptionalLabel";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
@@ -179,6 +179,30 @@ export default function EditGenAiTaskBasicFields() {
                 </FormLabel>
                 <FormInput type="number" control={control} name="maxConcurrency" />
             </FormGroup>
+            <FormGroup>
+                <FormSwitch control={control} name="isStartingPoint">
+                    Use a defined starting point
+                </FormSwitch>
+            </FormGroup>
+            {formValues.isStartingPoint && (
+                <FormGroup>
+                    <FormLabel>Send Documents From</FormLabel>
+                    <FormSelect control={control} name="startingPointType" options={startingPointTypeOptions} />
+                </FormGroup>
+            )}
+            {formValues.isStartingPoint && formValues.startingPointType === "Change Vector" && (
+                <FormGroup>
+                    <FormLabel>Change Vector</FormLabel>
+                    <FormInput
+                        type="textarea"
+                        as="textarea"
+                        rows={3}
+                        control={control}
+                        name="startingPointChangeVector"
+                        placeholder="Enter change vector to start sending documents from"
+                    />
+                </FormGroup>
+            )}
         </>
     );
 }
@@ -189,3 +213,10 @@ const stateOptions: SelectOption<OngoingTaskState>[] = (["Enabled", "Disabled"] 
         value: x,
     })
 );
+
+const startingPointTypeOptions: SelectOption<GenAiStartingPoint>[] = (
+    ["Beginning of Time", "Latest Document", "Change Vector"] satisfies GenAiStartingPoint[]
+).map((x) => ({
+    label: x,
+    value: x,
+}));

@@ -76,7 +76,13 @@ export default function EditGenAiTask({ queryParams }: ReactQueryParamsProps<Que
     const handleSave: SubmitHandler<EditGenAiTaskFormData> = (data) => {
         return tryHandleSubmit(async () => {
             const scriptsToReset = data.isResetScript ? [data.scriptToReset] : undefined;
-            await tasksService.saveGenAiTask(databaseName, editGenAiTaskUtils.mapToDto(data, taskId), scriptsToReset);
+            await tasksService.saveGenAiTask(
+                databaseName,
+                editGenAiTaskUtils.mapToDto(data, taskId),
+                scriptsToReset,
+                editGenAiTaskUtils.getSerializedChangeVector(data, taskId)
+            );
+
             reset(data);
             setIsDirty(false);
             cancel();

@@ -1,6 +1,7 @@
 import * as yup from "yup";
 
 type EditGenAiTaskSchemaProvider = "jsonSchema" | "sampleObject";
+export type GenAiStartingPoint = "Beginning of Time" | "Latest Document" | "Change Vector";
 
 export const editGenAiTaskSchema = yup.object({
     name: yup.string().required(),
@@ -12,6 +13,16 @@ export const editGenAiTaskSchema = yup.object({
     connectionStringName: yup.string().required(),
     isAllowEtlOnNonEncryptedChannel: yup.boolean(),
     maxConcurrency: yup.number().nullable().min(1).positive().integer(),
+    isStartingPoint: yup.boolean(),
+    startingPointType: yup.string<GenAiStartingPoint>().nullable(),
+    startingPointChangeVector: yup
+        .string()
+        .nullable()
+        .when(["isStartingPoint", "startingPointType"], {
+            is: (isStartingPoint: boolean, startingPointType: GenAiStartingPoint) =>
+                isStartingPoint && startingPointType === "Change Vector",
+            then: (schema) => schema.required(),
+        }),
     collectionName: yup.string().required(),
     prompt: yup.string().required(),
     schemaProvider: yup.string<EditGenAiTaskSchemaProvider>().nullable().required(),
