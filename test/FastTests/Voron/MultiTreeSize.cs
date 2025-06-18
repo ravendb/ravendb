@@ -4,20 +4,21 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron
 {
-	public class MultiTreeSize : StorageTest
-	{
+    public class MultiTreeSize : StorageTest
+    {
         public MultiTreeSize(ITestOutputHelper output) : base(output)
         {
         }
 
-		[RavenFact(RavenTestCategory.Voron)]
-		public void Single_AddMulti_WillUseOnePage()
-		{
-			using (var tx = Env.WriteTransaction())
-			{
-			    tx.CreateTree("foo");
-			    tx.Commit();
-			}
+        [RavenFact(RavenTestCategory.Voron)]
+        public void Single_AddMulti_WillUseOnePage()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
+                tx.CreateTree("foo");
+                tx.Commit();
+            }
+
             var usedDataFileSizeInBytes = Env.Stats().UsedDataFileSizeInBytes;
 
             using (var tx = Env.WriteTransaction())
@@ -27,17 +28,17 @@ namespace FastTests.Voron
                 tx.Commit();
             }
 
-		    Assert.Equal(0,usedDataFileSizeInBytes - Env.Stats().UsedDataFileSizeInBytes);
-		}
+            Assert.Equal(0, usedDataFileSizeInBytes - Env.Stats().UsedDataFileSizeInBytes);
+        }
 
-		[RavenFact(RavenTestCategory.Voron)]
-		public void TwoSmall_AddMulti_WillUseOnePage()
-		{
-			using (var tx = Env.WriteTransaction())
-			{
+        [RavenFact(RavenTestCategory.Voron)]
+        public void TwoSmall_AddMulti_WillUseOnePage()
+        {
+            using (var tx = Env.WriteTransaction())
+            {
                 tx.CreateTree("foo");
-				tx.Commit();
-			}
+                tx.Commit();
+            }
 
             var usedDataFileSizeInBytes = Env.Stats().UsedDataFileSizeInBytes;
 
@@ -50,7 +51,6 @@ namespace FastTests.Voron
             }
 
             Assert.Equal(0, usedDataFileSizeInBytes - Env.Stats().UsedDataFileSizeInBytes);
-
         }
     }
 }
