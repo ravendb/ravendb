@@ -4,6 +4,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,7 +31,7 @@ namespace FastTests.Issues
                 f.Write("{}");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Default_database_path_settings()
         {
             var config = RavenConfiguration.CreateForTesting("foo", ResourceType.Database, _emptySettingFile);
@@ -60,7 +61,7 @@ namespace FastTests.Issues
             Assert.Null(config.Storage.TempPath);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Inherits_server_settings_and_appends_resource_specific_suffix_paths()
         {
             var server = RavenConfiguration.CreateForServer(null);
@@ -85,7 +86,7 @@ namespace FastTests.Issues
             Assert.Equal(new PathSetting($@"{_rootPathString}indexes-temp\Databases\Foo").FullPath, database.Indexing.TempPath.FullPath);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Resource_specific_paths_do_not_require_any_suffixes()
         {
             var server = RavenConfiguration.CreateForServer(null);
@@ -116,7 +117,7 @@ namespace FastTests.Issues
             Assert.Equal(new PathSetting($@"{_rootPathString}my-indexes-temp").FullPath, database.Indexing.TempPath.FullPath);
         }
 
-       [Fact]
+       [RavenFact(RavenTestCategory.Core)]
         public void Should_create_data_in_directory_specified_at_server_level()
         {
             var server = RavenConfiguration.CreateForServer(null);
@@ -135,7 +136,7 @@ namespace FastTests.Issues
             Assert.Equal(new PathSetting($@"{_rootPathString}RavenData\Items").FullPath, database.Core.DataDirectory.FullPath);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Should_trim_last_directory_separator_character()
         {
             Assert.False(new PathSetting("Items\\").FullPath.EndsWith(@"\\"));
@@ -151,3 +152,4 @@ namespace FastTests.Issues
         }
     }
 }
+

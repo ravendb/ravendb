@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task WhereIdInLargeCollectionPerformance()
         {
             // 5000 documents, but way more ids supplied for where in cause > 20 second runtime
@@ -72,3 +73,4 @@ namespace FastTests.Issues
         }
     }
 }
+

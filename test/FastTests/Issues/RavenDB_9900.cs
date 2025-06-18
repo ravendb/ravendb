@@ -1,5 +1,6 @@
 ﻿using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Database_creation_using_relative_path_creates_directories_incorrectly()
         {
             var server = RavenConfiguration.CreateForServer(null);
@@ -33,3 +34,4 @@ namespace FastTests.Issues
         }
     }
 }
+

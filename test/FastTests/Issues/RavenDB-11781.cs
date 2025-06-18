@@ -14,7 +14,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanDeployMapReduceIndexWithOutputReduceToCollection(Options options)
         {
@@ -37,7 +37,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanDeployMapReduceIndex(Options options)
         {
@@ -130,3 +130,4 @@ namespace FastTests.Issues
         }
     }
 }
+

@@ -1,7 +1,8 @@
-﻿using Raven.Client.Documents.Conventions;
+﻿﻿using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ public class RavenDB_18334 : NoDisposalNeeded
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void Can_Build_Serializator_For_SmugglerResult()
     {
         using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -39,3 +40,4 @@ public class RavenDB_18334 : NoDisposalNeeded
         
     }
 }
+

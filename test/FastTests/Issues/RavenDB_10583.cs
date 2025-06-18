@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using Tests.Infrastructure;
 using Xunit;
@@ -23,7 +23,7 @@ namespace FastTests.Issues
             Value3
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void TranslateEnumAsString(Options options)
         {
@@ -60,7 +60,7 @@ namespace FastTests.Issues
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void TranslateEnumAsInteger(Options options)
         {

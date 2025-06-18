@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -16,7 +16,7 @@ namespace FastTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Indexes)]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public async Task Should_Handle_ToArray()
         {
             using (var store = GetDocumentStore())

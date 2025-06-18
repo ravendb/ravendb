@@ -3,6 +3,7 @@ using System.Linq;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace FastTests.Issues
             public string Bar { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Subscribing_to_OnBeforeStore_event_should_not_prevent_metadata_to_be_saved()
         {
             var databaseName = GetDatabaseName();
@@ -66,3 +67,4 @@ namespace FastTests.Issues
         }
     }
 }
+

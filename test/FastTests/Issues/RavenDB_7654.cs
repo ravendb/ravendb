@@ -1,6 +1,7 @@
-﻿using System;
+﻿﻿using System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void TimeSpanCanBeParsedFromStringIntAndDouble()
         {
             var deserialize = JsonDeserializationBase.GenerateJsonDeserializationRoutine<Test>();
@@ -67,3 +68,4 @@ namespace FastTests.Issues
         }
     }
 }
+

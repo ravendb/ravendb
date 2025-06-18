@@ -3,6 +3,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Tests.Infrastructure.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void AsExtensionShouldTakeIntoAccountProjection()
         {
             using (var store = GetDocumentStore())
@@ -36,3 +37,4 @@ namespace FastTests.Issues
         }
     }
 }
+

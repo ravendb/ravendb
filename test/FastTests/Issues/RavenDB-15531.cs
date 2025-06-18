@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 using System.Linq;
 using Raven.Client.Documents.Session;
@@ -12,7 +13,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void UpdateSessionChangesAfterTrackedEntityIsRefreshed()
         {
             using (var store = GetDocumentStore())
@@ -57,3 +58,4 @@ namespace FastTests.Issues
         }
     }
 }
+

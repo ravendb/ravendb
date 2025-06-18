@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldWork()
         {
             var server = RavenConfiguration.CreateForServer(null);
@@ -28,3 +29,4 @@ namespace FastTests.Issues
         }
     }
 }
+

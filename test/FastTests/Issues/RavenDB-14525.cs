@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task case_insensitive_collection_name()
         {
             var count = 0;
@@ -52,3 +53,4 @@ namespace FastTests.Issues
         }
     }
 }
+

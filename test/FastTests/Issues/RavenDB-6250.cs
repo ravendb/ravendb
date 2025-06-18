@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+﻿﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB-4446.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Documents.Operations;
 using Raven.Server.NotificationCenter.Notifications;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void All_operations_has_details_providers()
         {
             var alreadyHandledInStudio = new HashSet<OperationType>
@@ -73,7 +74,7 @@ namespace FastTests.Issues
                                          "If operation doesn't provide details, please add this to 'operationWithoutDetails' set.");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void All_performance_hints_has_details_providers()
         {
             var alreadyHandledInStudio = new HashSet<PerformanceHintType>
@@ -109,3 +110,4 @@ namespace FastTests.Issues
 
     }
 }
+

@@ -1,4 +1,5 @@
-﻿using Xunit;
+﻿﻿using Tests.Infrastructure;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Issues;
@@ -9,7 +10,7 @@ public class RavenDB_18546 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void Should_Resolve_Class_Type()
     {
         const string id1 = "products/1";
@@ -55,3 +56,4 @@ public class RavenDB_18546 : RavenTestBase
         public string Arava => "omer";
     }
 }
+

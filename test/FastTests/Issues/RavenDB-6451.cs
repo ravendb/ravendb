@@ -6,6 +6,7 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using McMaster.Extensions.CommandLineUtils;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -43,7 +44,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Exceptions_should_not_have_blittable_and_pointer_fields()
         {
             //sanity check
@@ -151,3 +152,4 @@ namespace FastTests.Issues
         }
     }
 }
+

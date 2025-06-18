@@ -6,6 +6,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Server.Extensions;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Complex_object_should_generate_csharp_class_properly()
         {
             using (var store = GetDocumentStore())
@@ -179,3 +180,4 @@ namespace FastTests.Issues
         ";
     }
 }
+

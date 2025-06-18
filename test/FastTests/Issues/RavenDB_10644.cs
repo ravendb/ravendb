@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using Tests.Infrastructure;
 using Xunit;
@@ -17,7 +17,7 @@ namespace FastTests.Issues
             public decimal Value { get; set; }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void TranslateMathRound(Options options)
         {

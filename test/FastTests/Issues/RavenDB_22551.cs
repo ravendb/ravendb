@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+﻿﻿using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,7 +11,7 @@ namespace FastTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Core)]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Different_Casing_Should_Not_Create_New_Database_Instance()
         {
             using (var store = GetDocumentStore())

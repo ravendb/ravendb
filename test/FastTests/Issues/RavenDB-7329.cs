@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace FastTests.Issues
 
         private const string FakeCertPath = "C:\\fake\\cert\\path.crt";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void GivenZerosInServerUrlShouldUseWebUriForNodeUrl()
         {
             var config = GetConfiguration(serverUrl: "http://0.0.0.0:8080",
@@ -23,7 +24,7 @@ namespace FastTests.Issues
             Assert.Equal($"http://localhost:8080".ToLowerInvariant(), result);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void GivenNonZeroAddressReturnsServersWebUrl()
         {
             var config = GetConfiguration(serverUrl: "http://localhost:0");
@@ -31,7 +32,7 @@ namespace FastTests.Issues
             Assert.Equal($"http://localhost:8888".ToLowerInvariant(), result);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void GivenSetPublicServerShouldUseThatForNodeUrl()
         {
             var config = GetConfiguration(
@@ -42,7 +43,7 @@ namespace FastTests.Issues
             Assert.Equal($"http://live-test.ravendb.net:80".ToLowerInvariant(), result);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void GivenPortZeroInTcpServerUrlShouldTakeItFromArg()
         {
             var config = GetConfiguration(
@@ -52,7 +53,7 @@ namespace FastTests.Issues
             Assert.Equal($"tcp://localhost:38888".ToLowerInvariant(), result);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void GivenPublicTcpServerUrlItShouldUseThatForNodeTcpServerUrl()
         {
             var config = GetConfiguration(publicTcpServerUrl: "tcp://live-test.ravendb.net:55555");
@@ -60,7 +61,7 @@ namespace FastTests.Issues
             Assert.Equal($"tcp://live-test.ravendb.net:55555".ToLowerInvariant(), result);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void PublicUrlShouldNotBeZeros()
         {
             try
@@ -74,7 +75,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void PublicUrlShouldHaveSameSchemeAsBindingOne()
         {
             try
@@ -91,7 +92,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void PublicUrlShouldNotHavePortZero()
         {
             try
@@ -105,7 +106,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void PublicTcpUrlShouldNotBeZeros()
         {
             try
@@ -120,7 +121,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void PublicTcpUrlShouldNotHavePortZero()
         {
             try
@@ -134,7 +135,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void UrlSchemeShouldPassThrough()
         {
             var config = GetConfiguration(serverUrl: "https://localhost:8080", certPath: FakeCertPath);
@@ -163,3 +164,4 @@ namespace FastTests.Issues
         }
     }
 }
+

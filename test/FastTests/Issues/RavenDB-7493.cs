@@ -7,6 +7,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,7 @@ namespace FastTests.Issues
             public List<string> ListOfStrings = new List<string>();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void UseInitialValuesIfNotFoundOnJson()
         {
             var fun = JsonDeserializationBase.GenerateJsonDeserializationRoutine<Foo>();
@@ -42,7 +43,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Ensure_deserialization_routines_are_properly_created()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -96,3 +97,4 @@ namespace FastTests.Issues
         }
     }
 }
+

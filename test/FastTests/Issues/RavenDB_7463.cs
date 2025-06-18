@@ -3,6 +3,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Database;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldThrowDatabaseDoesNotExistsException()
         {
             var databaseName = "RavenDB_7463" + Guid.NewGuid();            
@@ -42,3 +43,4 @@ namespace FastTests.Issues
         }
     }
 }
+

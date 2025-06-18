@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,7 +11,7 @@ public class RavenDB_23848 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.ClientApi)]
+    [RavenFact(RavenTestCategory.Querying)]
     public void should_generate_correct_rql_for_contains_all_with_empty_list()
     {
         using (var store = GetDocumentStore())

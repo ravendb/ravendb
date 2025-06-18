@@ -1,5 +1,6 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace FastTests.Issues
             public Dictionary<string, int> Values { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void TranslateDictionaryFunctions()
         {
             using (var store = GetDocumentStore())
@@ -170,3 +171,4 @@ namespace FastTests.Issues
 
     }
 }
+

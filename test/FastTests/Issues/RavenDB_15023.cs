@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanSwitchDefaultComparerInTheDictionary()
         {
             var deserialize = JsonDeserializationBase.GenerateJsonDeserializationRoutine<MyClass>();
@@ -83,3 +84,4 @@ namespace FastTests.Issues
         }
     }
 }
+

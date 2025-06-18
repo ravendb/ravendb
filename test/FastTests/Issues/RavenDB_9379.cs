@@ -2,6 +2,7 @@
 using Raven.Server.Config;
 using Raven.Server.Utils.Cli;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ServerUrlHostAndPortCliArgShouldStayTheSameAfterRestart()
         {
             // ARRANGE
@@ -35,7 +36,7 @@ namespace FastTests.Issues
             Assert.Equal("--ServerUrl=http://0.0.0.0:8080", updatedArgs[0]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void GivenServerUrlCliArgAndSecuredSetupSchemeShouldBeUpdatedAfterRestart()
         {
             // ARRANGE
@@ -57,7 +58,7 @@ namespace FastTests.Issues
             Assert.Equal("--ServerUrl=https://0.0.0.0:8080", updatedArgs[0]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void GivenUnsecuredAccessSetInCliArgsRemoveItAfterSetupIfRunOnDocker()
         {
             // ARRANGE
@@ -97,3 +98,4 @@ namespace FastTests.Issues
         }
     }
 }
+

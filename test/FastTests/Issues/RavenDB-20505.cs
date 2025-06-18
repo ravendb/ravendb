@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task PatchingPerformanceWithLargeCollectionParameter()
         {
             var documents = Enumerable.Range(1, 2_000)
@@ -78,3 +79,4 @@ namespace FastTests.Issues
         }
     }
 }
+

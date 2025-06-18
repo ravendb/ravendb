@@ -1,5 +1,6 @@
 ﻿using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanParseQueryWithStringQuotesInComment()
         {
             var parser = new QueryParser();
@@ -29,7 +30,7 @@ update {
             parser.Parse(QueryType.Update);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanParseQueryWithStringQuotesInComment_Select()
         {
             var parser = new QueryParser();
@@ -49,3 +50,4 @@ select {
 
     }
 }
+

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void GivenNonExistingFileAsCustomConfigPathConfigurationLoadingShouldThrow()
         {
             try
@@ -27,3 +28,4 @@ namespace FastTests.Issues
         }
     }
 }
+

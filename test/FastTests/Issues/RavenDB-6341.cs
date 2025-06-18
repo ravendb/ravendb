@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text;
 using Raven.Client.Http;
 using Raven.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,7 @@ namespace FastTests.Issues
             nameof(IRaftCommand.RaftUniqueRequestId)
         };
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CommandsShouldNotHavePublicSettersInPropertiesOrNonReadOnlyPublicFields()
         {
             var sb = new StringBuilder();
@@ -91,3 +92,4 @@ namespace FastTests.Issues
         }
     }
 }
+

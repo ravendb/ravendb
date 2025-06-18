@@ -1,5 +1,6 @@
 ﻿using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace FastTests.Issues
             
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Null_path_database_setting_should_default_to_server_value()
         {
             var server = RavenConfiguration.CreateForServer(null);
@@ -32,3 +33,4 @@ namespace FastTests.Issues
         }
     }
 }
+

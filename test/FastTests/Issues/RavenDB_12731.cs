@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using System.Threading.Tasks;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanCompareLazyStringValueAndLazyCompressedStringValue()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -44,3 +45,4 @@ namespace FastTests.Issues
         }
     }
 }
+

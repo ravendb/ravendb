@@ -17,7 +17,7 @@ public class RavenDB_21557 : RavenTestBase
     {
     }
 
-    [RavenTheory(RavenTestCategory.Indexes)]
+    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void Can_project_role_names_from_user_without_roles(Options options)
     {
