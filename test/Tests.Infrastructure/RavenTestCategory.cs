@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.ComponentModel;
 
 namespace Tests.Infrastructure;
@@ -70,7 +70,6 @@ public enum RavenTestCategory : long
     /// USAGE: Tests involving checking inheritance rules applied by the project.
     /// EXAMPLES: Inheritance, testing attributes to the tests, non-disposable tests, etc.
     /// </summary>
-    [Description("Codebase Sanity Checks")]
     Codebase = 1L << 5,
 
     // ===== PLATFORM & ARCHITECTURE =====
