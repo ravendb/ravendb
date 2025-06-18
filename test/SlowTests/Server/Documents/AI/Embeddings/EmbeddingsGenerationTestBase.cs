@@ -72,7 +72,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
     protected static (EmbeddingsGenerationConfiguration AiIntegrationConfiguration, AiConnectionString connectionString) AddEmbeddingsGenerationTask(
         IDocumentStore store, EmbeddingsGenerationConfiguration configuration)
     {
-        var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, EmbeddedSettings = new EmbeddedSettings() };
+        var connectionString = new AiConnectionString { Name = configuration.ConnectionStringName, ModelType = AiModelType.Embeddings, EmbeddedSettings = new EmbeddedSettings() };
 
         connectionString.Identifier = connectionString.GenerateIdentifier();
 

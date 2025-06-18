@@ -21,6 +21,7 @@ public class EmbeddingsMistralAiConnectorForTesting : AbstractEmbeddingsConnecto
 
         return new AiConnectionString
         {
+            ModelType = AiModelType.Embeddings,
             MistralAiSettings = new MistralAiSettings(Model, apiKey, Endpoint)
         };
     }

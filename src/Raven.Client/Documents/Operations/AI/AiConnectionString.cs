@@ -26,6 +26,8 @@ public sealed class AiConnectionString : ConnectionString
 
     public override ConnectionStringType Type => ConnectionStringType.Ai;
 
+    public AiModelType ModelType { get; set; }
+
     protected override void ValidateImpl(List<string> errors)
     {
         var allSettings = new AbstractAiSettings[]
@@ -73,6 +75,9 @@ public sealed class AiConnectionString : ConnectionString
 
         if (Identifier != newConnectionString.Identifier)
             result |= AiSettingsCompareDifferences.Identifier;
+
+        if (ModelType != newConnectionString.ModelType)
+            result |= AiSettingsCompareDifferences.ModelArchitecture;
 
         var oldProvider = GetActiveProvider();
         var newProvider = newConnectionString.GetActiveProvider();
@@ -151,6 +156,9 @@ public sealed class AiConnectionString : ConnectionString
         if (Identifier != aiConnectionString.Identifier)
             return false;
 
+        if (ModelType != aiConnectionString.ModelType) 
+            return false;
+
         var activeProvider = GetActiveProvider();
         var otherActiveProvider = aiConnectionString.GetActiveProvider();
 
@@ -176,6 +184,7 @@ public sealed class AiConnectionString : ConnectionString
         var json = base.ToJson();
 
         json[nameof(Identifier)] = Identifier;
+        json[nameof(ModelType)] = ModelType;
         json[nameof(OpenAiSettings)] = OpenAiSettings?.ToJson();
         json[nameof(AzureOpenAiSettings)] = AzureOpenAiSettings?.ToJson();
         json[nameof(OllamaSettings)] = OllamaSettings?.ToJson();

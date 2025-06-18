@@ -37,7 +37,7 @@ public class EmbeddingsOllamaConnectorForTesting : AbstractEmbeddingsConnectorFo
     }
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama);
 
-    protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model);
+    protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.Embeddings);
 }
 
 public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiOllamaConnectorForTesting>
@@ -50,19 +50,20 @@ public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<G
     }
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama);
 
-    protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model);
+    protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.LLM);
 }
 
 internal static class OllamaConnectorHelper
 {
     public const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_OLLAMA_URI";
 
-    public static AiConnectionString CreateAiConnectionString(string model)
+    public static AiConnectionString CreateAiConnectionString(string model, AiModelType modelType)
     {
         var uri = Environment.GetEnvironmentVariable(EnvironmentVariable);
 
         return new AiConnectionString
         {
+            ModelType = modelType,
             OllamaSettings = new OllamaSettings(uri, model)
         };
     }

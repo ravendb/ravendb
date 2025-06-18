@@ -203,8 +203,10 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
                         $"connection string{(identifierConflicts.Length > 1 ? "s" : "")} " +
                         $"'{string.Join("', '", identifierConflicts.Select(x => x.Key))}'");
 
-                var etlsUsingConnection = databaseRecord.EmbeddingsGenerations.Where(x => x.ConnectionStringName == ConnectionString.Name).ToArray();
-                var isConnectionStringInUse = etlsUsingConnection.Length > 0;
+                var embeddingsUsingConnection = databaseRecord.EmbeddingsGenerations.Where(x => x.ConnectionStringName == ConnectionString.Name).ToArray();
+                var genAisUsingConnection = databaseRecord.GenAis.Where(x => x.ConnectionStringName == ConnectionString.Name).ToArray();
+
+                var isConnectionStringInUse = embeddingsUsingConnection.Length > 0 || genAisUsingConnection.Length > 0;
 
                 if (isUpdate == false || isConnectionStringInUse == false)
                     return;
@@ -213,16 +215,19 @@ namespace Raven.Server.ServerWide.Commands.ConnectionStrings
                 if (differences.HasFlag(AiSettingsCompareDifferences.RequiresEmbeddingsRegeneration) == false)
                     return;
 
-                var etlNames = string.Join("', '", etlsUsingConnection.Select(x => x.Name));
+                var embeddingTasks = embeddingsUsingConnection.Select(x => x.Name);
+                var genAiTasks = genAisUsingConnection.Select(x => x.Name);
+                var etlNames = string.Join("', '", embeddingTasks.Concat(genAiTasks));
+
                 throw new RachisApplyException(
                     $"Cannot update connection string '{ConnectionString.Name}' because it contains changes ({differences}) that would affect the structure or creation process of embeddings. " +
                     $"Changes to parameters like model selection, tokenization settings, embedding dimensions, or normalization options require recreating all embeddings to maintain consistency. " +
                     $"To proceed with these changes:{Environment.NewLine}" +
-                    $"1. Delete the existing AI Integration task{(etlsUsingConnection.Length == 1 ? "" : "s")}{Environment.NewLine}" +
-                    $"2. {(etlsUsingConnection.Length == 1 ?
+                    $"1. Delete the existing AI Integration task{(etlNames.Length == 1 ? "" : "s")}{Environment.NewLine}" +
+                    $"2. {(etlNames.Length == 1 ?
                         "After deleting the AI Integration task, you can either update this connection string or create a new one with your desired settings" :
                         $"Create a new connection string with your desired settings, as this connection string is used by AI Integration tasks: '{etlNames}'")}{Environment.NewLine}" +
-                    $"3. Create a new AI Integration task using the {(etlsUsingConnection.Length == 1 ? "updated or new" : "new")} connection string{Environment.NewLine}" +
+                    $"3. Create a new AI Integration task using the {(etlNames.Length == 1 ? "updated or new" : "new")} connection string{Environment.NewLine}" +
                     "This will ensure all documents are processed with consistent settings and maintain data integrity. " +
                     "Note: While you can update non-critical settings like API keys or endpoints without recreating the task, your current changes include critical modifications that affect the embedding process.");
             }
