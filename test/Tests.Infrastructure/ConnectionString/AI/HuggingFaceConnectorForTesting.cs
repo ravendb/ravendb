@@ -20,6 +20,7 @@ public class EmbeddingsHuggingFaceConnectorForTesting : AbstractEmbeddingsConnec
 
         return new AiConnectionString
         {
+            ModelType = AiModelType.Embeddings,
             HuggingFaceSettings = new HuggingFaceSettings(apiKey, Model)
         };
     }

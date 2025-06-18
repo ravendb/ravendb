@@ -75,7 +75,11 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
             errors.Add($"{nameof(ConnectionStringName)} cannot be empty");
 
         if (validateConnection && TestMode == false)
+        {
             Connection.Validate(errors);
+            if (Connection.ModelType != AiModelType.LLM)
+                errors.Add($"{nameof(Connection.ModelType)} of GenAI configuration must be {nameof(AiModelType.LLM)}");
+        }
 
         if (string.IsNullOrEmpty(Collection))
             errors.Add($"{nameof(Collection)} must be provided");
