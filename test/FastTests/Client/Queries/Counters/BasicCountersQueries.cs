@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Raven.Client.Documents.Indexes.Counters;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
@@ -30,7 +30,7 @@ namespace FastTests.Client.Queries.Counters
             public long Count { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicMapIndex_Query(Options options)
         {
@@ -301,7 +301,7 @@ namespace FastTests.Client.Queries.Counters
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicMapReduceIndex_Query(Options options)
         {
@@ -543,3 +543,7 @@ namespace FastTests.Client.Queries.Counters
         }
     }
 }
+
+
+
+

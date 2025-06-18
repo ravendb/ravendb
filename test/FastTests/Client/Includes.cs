@@ -59,7 +59,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_Load_With_Include_Using_IIncludeBuilder()
         {
             using (var store = GetDocumentStore())
@@ -103,7 +103,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Use_Includes_Within_Multi_Load(Options options)
         {
@@ -144,7 +144,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_Include_By_Primary_String_Property()
         {
             using (var store = GetDocumentStore())
@@ -171,7 +171,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_Include_By_Primary_String_Property_Using_IIncludeBuilder()
         {
             using (var store = GetDocumentStore())
@@ -199,7 +199,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Query_With_Include_By_Primary_String_Property(Options options)
         {
@@ -238,7 +238,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_Include_By_Primary_List_Of_Strings()
         {
             using (var store = GetDocumentStore())
@@ -273,7 +273,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Include_By_Primary_List_Of_Strings_Using_IIncludeBuilder(Options options)
         {
@@ -310,7 +310,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_Include_By_Secondary_String_Property()
         {
             using (var store = GetDocumentStore())
@@ -366,7 +366,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_Include_By_List_Of_Secondary_String_Property()
         {
             using (var store = GetDocumentStore())
@@ -407,7 +407,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Include_By_List_Of_Secondary_String_Property_Using_IIncludeBuilder(Options options)
         {
@@ -452,7 +452,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void Can_Include_Nested_Dictionary_Values_Property(Options options)
         {
@@ -783,3 +783,4 @@ namespace FastTests.Client
         }
     }
 }
+

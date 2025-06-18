@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -20,7 +20,7 @@ namespace FastTests.Client.Indexing.Counters
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void BasicMapIndex(Options options)
         {
@@ -234,7 +234,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task BasicMapIndexWithLoad(Options options)
         {
@@ -403,7 +403,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void BasicMapReduceIndex(Options options)
         {
@@ -580,7 +580,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public async Task BasicMapReduceIndexWithLoad(Options options)
         {
@@ -746,7 +746,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void MapIndexWithCaseInsensitiveCounterNames(Options options)
         {
@@ -796,7 +796,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUpdateMapCountersIndex(Options options)
         {
@@ -836,7 +836,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUpdateMapCountersIndexWithoutUpdatingCompiledIndex(Options options)
         {
@@ -878,7 +878,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUpdateMapReduceCountersIndex(Options options)
         {
@@ -936,7 +936,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUpdateMapReduceCountersIndexWithoutUpdatingCompiledIndex(Options options)
         {
@@ -994,7 +994,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [RavenTheory(RavenTestCategory.Counters)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanMapAllCountersFromCollection(Options options)
         {
@@ -1165,7 +1165,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanMapAllCounters(Options options)
         {
@@ -1271,7 +1271,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         public void SupportForEscapedCollectionAndCounterNames()
         {
             using (var store = GetDocumentStore(new Options
@@ -1334,7 +1334,7 @@ namespace FastTests.Client.Indexing.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         public async Task CanPersist()
         {
             using (var store = GetDocumentStore(new Options
@@ -1443,3 +1443,18 @@ namespace FastTests.Client.Indexing.Counters
         }
     }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

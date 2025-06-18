@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
@@ -16,7 +16,7 @@ namespace FastTests.Client.Indexing
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Can_Put(Options options)
         {
@@ -55,7 +55,7 @@ namespace FastTests.Client.Indexing
             public int Age { set; get; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Can_Put_And_Replace(Options options)
         {
@@ -109,7 +109,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Can_Put_Replace_And_Back_To_Original(Options options)
         {
@@ -176,7 +176,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task Can_start_and_stop_index(Options options)
         {
@@ -216,3 +216,9 @@ namespace FastTests.Client.Indexing
         }
     }
 }
+
+
+
+
+
+

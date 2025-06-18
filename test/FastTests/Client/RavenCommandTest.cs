@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Http;
@@ -15,7 +15,7 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WhenCommandCanBeCheckedForFastestNode_ItCanRunInParallel()
         {
             var expected = new[]

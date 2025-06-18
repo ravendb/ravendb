@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations.Indexes;
@@ -30,7 +30,7 @@ namespace FastTests.Client.Queries.TimeSeries
             public long Count { get; set; }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicMapIndex_Query(Options options)
         {
@@ -257,7 +257,7 @@ WaitForUserToContinueTheTest(store);
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void BasicMapReduceIndex_Query(Options options)
         {

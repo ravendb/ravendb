@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace FastTests.Client
@@ -12,7 +13,7 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Store_Document()
         {
             using (var store = GetDocumentStore())
@@ -28,7 +29,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Store_Documents()
         {
             using (var store = GetDocumentStore())
@@ -44,7 +45,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Refresh_stored_document()
         {
             using (var store = GetDocumentStore())
@@ -82,7 +83,7 @@ namespace FastTests.Client
             }
         }
 
-       /* [Fact]
+       /* [RavenFact(RavenTestCategory.ClientApi)]
         public void Store_Document_without_id_prop()
         {
             using (var store = GetDocumentStore())
@@ -103,4 +104,5 @@ namespace FastTests.Client
         }*/
     }
 }
+
 

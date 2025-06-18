@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Xunit;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace FastTests.Client
@@ -14,7 +15,7 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void include_with_prefix()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -38,7 +39,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void include_with_suffix()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -69,3 +70,4 @@ namespace FastTests.Client
         }
     }
 }
+

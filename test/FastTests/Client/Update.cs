@@ -1,5 +1,6 @@
-﻿using Raven.Tests.Core.Utils.Entities;
+using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace FastTests.Client
@@ -10,7 +11,7 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Update_Document()
         {
             using (var store = GetDocumentStore())
@@ -32,4 +33,5 @@ namespace FastTests.Client
         }
     }
 }
+
 

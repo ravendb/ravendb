@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Raven.Client.Http;
 using Sparrow.Json;
 using Xunit;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace FastTests.Client;
@@ -14,7 +15,7 @@ public class HttpCacheTests : NoDisposalNeeded
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public async Task Can_Internally_Dispose_Http_Cache_Item()
     {
         using (var httpCache = new HttpCache(1024))
@@ -58,7 +59,7 @@ public class HttpCacheTests : NoDisposalNeeded
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public async Task Can_Internally_Dispose_Not_Found_Item()
     {
         using (var httpCache = new HttpCache(1024))
@@ -90,7 +91,7 @@ public class HttpCacheTests : NoDisposalNeeded
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public async Task Can_Internally_Dispose_Http_Cache_Item_Before_Setting_Not_Found()
     {
         using (var httpCache = new HttpCache(1024))
@@ -151,3 +152,4 @@ public class HttpCacheTests : NoDisposalNeeded
         }
     }
 }
+

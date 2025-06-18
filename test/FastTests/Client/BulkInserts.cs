@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.IO.Compression;
 using System.Linq;
@@ -165,7 +165,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenFact(RavenTestCategory.BulkInsert)]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.BulkInsert)]
         public void CanUseCustomSerializer()
         {
             IJsonSerializer jsonSerializer = null;
@@ -211,7 +211,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenFact(RavenTestCategory.BulkInsert)]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.BulkInsert)]
         public void CanUseNewtonsoftSerializer()
         {
             JsonSerializer jsonSerializer = null;

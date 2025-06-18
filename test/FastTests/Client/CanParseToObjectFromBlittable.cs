@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using Newtonsoft.Json;
@@ -7,6 +7,7 @@ using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client
 {
@@ -34,7 +35,7 @@ namespace FastTests.Client
 #pragma warning restore 649
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Directly()
         {
             var json = "{'Id':'users/1', 'Name': 'Oren', 'Dogs':['Arava','Oscar','Phoebe'], 'Age': 34, 'Children':[{'Name':'Date'}]}";

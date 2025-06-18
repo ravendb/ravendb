@@ -940,7 +940,7 @@ namespace FastTests.Client
             }
         }
 
-        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching | RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void PatchNullField_ExpectFieldSetToNull(Options options)
         {
@@ -1066,7 +1066,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
         public void CanIncrementLong()
         {
             using (var store = GetDocumentStore())
