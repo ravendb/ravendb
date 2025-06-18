@@ -2801,6 +2801,8 @@ namespace Raven.Server.ServerWide
                 case nameof(AddSnowflakeEtlCommand):
                 case nameof(AddEmbeddingsGenerationCommand): 
                 case nameof(AddGenAiCommand):
+                case nameof(AddOrUpdateAiAgentCommand):
+                case nameof(DeleteAiAgentCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
                 case nameof(DeleteIndexCommand):

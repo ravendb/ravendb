@@ -614,6 +614,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.SnowflakeEtls = smugglerDatabaseRecord.SnowflakeEtls;
                     databaseRecord.SnowflakeConnectionStrings = smugglerDatabaseRecord.SnowflakeConnectionStrings;
                     databaseRecord.AiConnectionStrings = smugglerDatabaseRecord.AiConnectionStrings;
+                    databaseRecord.AiAgents = smugglerDatabaseRecord.AiAgents;
                     databaseRecord.EmbeddingsGenerations = smugglerDatabaseRecord.EmbeddingsGenerations;
                     databaseRecord.GenAis = smugglerDatabaseRecord.GenAis;
                 };
