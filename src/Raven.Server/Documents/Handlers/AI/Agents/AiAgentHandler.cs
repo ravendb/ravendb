@@ -57,12 +57,12 @@ public class AiAgentHandler : DatabaseRequestHandler
         var chat = new ChatDocument(name, body.Parameter);
         
         chat.Initialize(context, configuration.SystemPrompt, body.UserPrompt);
-        var r = await Talk(context, configuration, chat, token);
+        var r = await TalkAsync(context, configuration, chat, token);
 
         string conversationId = null;
         if (configuration.Persistence is not null)
         {
-            MergedPutCommand putCmd = new(r.Docoument, $"{configuration.Persistence.Collection}{Database.IdentityPartsSeparator}", null, Database);
+            MergedPutCommand putCmd = new(r.Document, $"{configuration.Persistence.Collection}{Database.IdentityPartsSeparator}", null, Database);
             await Database.TxMerger.Enqueue(putCmd);
             conversationId = putCmd.PutResult.Id;
         }
@@ -90,12 +90,12 @@ public class AiAgentHandler : DatabaseRequestHandler
 
         AddNewMessages();
 
-        var r = await Talk(context, configuration, chatDocument, token: token);
+        var r = await TalkAsync(context, configuration, chatDocument, token: token);
 
         if (configuration.Persistence is not null)
         {
             // we don't pass change vector here, so last write wins
-            MergedPutCommand putCmd = new(r.Docoument, chatId, changeVector: null, Database);
+            MergedPutCommand putCmd = new(r.Document, chatId, changeVector: null, Database);
             await Database.TxMerger.Enqueue(putCmd);
         }
 
@@ -190,7 +190,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         var chat = new ChatDocument("test", body.Parameter);
         chat.Initialize(context, cfg.SystemPrompt, body.UserPrompt);
 
-        var r = await Talk(context, cfg, chat, token);
+        var r = await TalkAsync(context, cfg, chat, token);
 
         await WriteResponseAsync(context, "test", r);
     }
@@ -215,7 +215,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         return (actionResponse, userPrompt);
     }
 
-    private async Task<(AiUsage Usage, List<ToolRequest> userToolRequests, BlittableJsonReaderObject Response, BlittableJsonReaderObject Docoument)> Talk(JsonOperationContext context, AiAgentConfiguration configuration, ChatDocument document, OperationCancelToken token)
+    private async Task<(AiUsage Usage, List<ToolRequest> userToolRequests, BlittableJsonReaderObject Response, BlittableJsonReaderObject Document)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration, ChatDocument document, OperationCancelToken token)
     {
         document.EnsureInitialized();
 
@@ -243,7 +243,7 @@ public class AiAgentHandler : DatabaseRequestHandler
             if (aiResponse.Type is AiResponseType.Result)
                 break;
             
-            await HandleQueryToolCalls(context, configuration, document, aiResponse);
+            await HandleQueryToolCallsAsync(context, configuration, document, aiResponse);
 
             if (TryGetUserTools(configuration, aiResponse, out userToolRequests))
                 break; // we need to return the user tool requests to the client, so we can continue the conversation
@@ -272,7 +272,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         return userTools.Count > 0;
     }
 
-    private async Task HandleQueryToolCalls(JsonOperationContext context, AiAgentConfiguration cfg, ChatDocument document, AiResponse result)
+    private async Task HandleQueryToolCallsAsync(JsonOperationContext context, AiAgentConfiguration cfg, ChatDocument document, AiResponse result)
     {
         // TODO: handle a response that does both query & action
         DynamicJsonArray reqs = [];

@@ -24,7 +24,7 @@ public class AiAgentConfiguration : IDynamicJson
     /// <summary>
     /// Initializes a new instance of <see cref="AiAgentConfiguration"/> with the specified connection string and system prompt.
     /// </summary>
-    /// <param name="connectionStringName">The name of the connection string to use for the AI integration.</param>
+    /// <param name="connectionStringName">The name of the connection string to use for the AI Agent.</param>
     /// <param name="systemPrompt">The system prompt that defines the agent’s role and behavior.</param>
     public AiAgentConfiguration(string connectionStringName, string systemPrompt)
     {
@@ -61,10 +61,17 @@ public class AiAgentConfiguration : IDynamicJson
     /// </summary>
     public string OutputSchema { get; set; }
 
+    /// <summary>
+    /// Database-side tools: predefined queries that RavenDB executes to fetch data directly during chat.
+    /// The agent decides when to call them based on user input and context.
+    /// When the agent calls them, it gets an actual data from the database based on these queries.
+    /// </summary>
     public List<ToolQuery> Queries { get; set; }= [];
 
     /// <summary>
-    /// A list of actions (tools with parameters) the agent can invoke.
+    /// Model-side tools: callable actions where the AI agent fills parameters and invokes the tool as part of reasoning.
+    /// The agent decides when to call them based on user input and context.
+    /// When the agent calls them, it expects the user to provide "answers" for them.
     /// </summary>
     public List<ToolAction> Actions { get; set; } = [];
 

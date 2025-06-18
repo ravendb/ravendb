@@ -88,9 +88,7 @@ public class DatabaseAiAgents
     /// <returns>The result of the chat.</returns>
     public ChatResult<TSchema> StartChat<TSchema>(string agentName, string prompt, Func<AiAgentParametersBuilder, AiAgentParametersBuilder> func) where TSchema : new()
     {
-        var builder = func.Invoke(new AiAgentParametersBuilder());
-        var parameters = builder.GetParameters();
-        return StartChat<TSchema>(agentName, prompt, parameters);
+        return AsyncHelpers.RunSync(() => StartChatAsync<TSchema>(agentName, prompt, func));
     }
 
     /// <summary>
