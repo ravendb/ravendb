@@ -46,7 +46,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
 
     protected override long ExecuteCmd(DocumentsOperationContext context)
     {
-        var hashes = new Dictionary<string, (BlittableJsonReaderObject Doc, List<string> Hashes)>();
+        var hashes = new Dictionary<string, (Document Doc, List<string> Hashes)>();
 
         using (_database.Scripts.GetScriptRunner(_patchRequest, readOnly: false, out var runner))
         {
@@ -61,8 +61,10 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                     Document document = GetCurrentDocument(context, item.DocId);
                     if (document is null)
                         continue; // document was probably deleted while we talked to the model, skipping this
-
-                    tuple = (document.Data, []);
+                    using (var old = document)
+                    {
+                        tuple = (document.Clone(context), []);
+                    }
                 }
 
                 tuple.Hashes.Add(item.ContextOutput.AiHash);
@@ -75,9 +77,9 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                 {
                     var documentInstance = (BlittableObjectInstance)runner.Translate(context, tuple.Doc).AsObject();
                     using (var scriptResult = runner.Run(context, context, "execute", item.DocId, [documentInstance, args]))
-                    using (var old = tuple.Doc)
+                    using (var old = tuple.Doc.Data)
                     {
-                        tuple.Doc = scriptResult.TranslateToObject(context);
+                        tuple.Doc.Data = scriptResult.TranslateToObject(context);
                     }
                 }
                 catch (Exception e)
@@ -101,7 +103,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
             if (allHashes.Count is 0)
                 continue;
 
-            UpdateHashesInMetadata(id, doc, _taskIdentifier, allHashes, context);
+            UpdateHashesInMetadata(id, doc.Data, _taskIdentifier, allHashes, context);
         }
 
         return _items.Count;
