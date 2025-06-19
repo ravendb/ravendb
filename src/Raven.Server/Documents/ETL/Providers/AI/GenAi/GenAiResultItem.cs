@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Raven.Server.Documents.AI;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -33,7 +34,7 @@ public class GenAiResultItem
 public class ModelOutput
 {
     public BlittableJsonReaderObject Output { get; set; }
-    public ModelUsageStats Usage { get; set; }
+    public AiUsage Usage { get; set; }
 
     public DynamicJsonValue ToJson() => new()
     {
@@ -53,19 +54,5 @@ public class ContextOutput
         [nameof(Context)] = Context, 
         [nameof(IsCached)] = IsCached, 
         [nameof(AiHash)] = AiHash
-    };
-}
-
-public class ModelUsageStats
-{
-    public int PromptTokens { get; set; }
-    public int CompletionTokens { get; set; }
-    public int TotalTokens { get; set; }
-
-    public DynamicJsonValue ToJson() => new()
-    {
-        [nameof(PromptTokens)] = PromptTokens,
-        [nameof(CompletionTokens)] = CompletionTokens,
-        [nameof(TotalTokens)] = TotalTokens
     };
 }

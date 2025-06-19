@@ -304,20 +304,15 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         }
     }
 
-    private static ModelUsageStats ToUsageStats(JsonOperationContext context, string usage, string id)
+    private static AiUsage ToUsageStats(JsonOperationContext context, string usage, string id)
     {
-        using var usageBlittable = context.Sync.ReadForMemory(usage, id);
-
-        usageBlittable.TryGet("total_tokens", out int totalTokens);
-        usageBlittable.TryGet("prompt_tokens", out int promptTokens);
-        usageBlittable.TryGet("completion_tokens", out int completionTokens);
-
-        return new ModelUsageStats
+        var aiUsage = new AiUsage();
+        using (var json = context.Sync.ReadForMemory(usage, id))
         {
-            TotalTokens = totalTokens, 
-            PromptTokens = promptTokens, 
-            CompletionTokens = completionTokens
-        };
+            aiUsage.UpdateFrom(json);
+        }
+
+        return aiUsage;
     }
 
     private void ApplyUpdateScript(DocumentsOperationContext context, List<GenAiResultItem> results)
