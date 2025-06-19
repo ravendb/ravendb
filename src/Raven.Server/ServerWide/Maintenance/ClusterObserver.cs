@@ -1319,9 +1319,9 @@ namespace Raven.Server.ServerWide.Maintenance
                 return (false, null);
             }
 
-            if (mentorPrevDbStats.Status == Loading)
+            if (mentorPrevDbStats.Status != Loaded)
             {
-                LogMessage($"Can't promote node {promotable}, previous stats for mentor {mentorNode} show the database is still loading", database: dbName);
+                LogMessage($"Can't promote node {promotable}: the database is not loaded on mentor {mentorNode} in previous stats. Current status: {mentorPrevDbStats.Status}", database: dbName);
                 return (false, null);
             }
             
