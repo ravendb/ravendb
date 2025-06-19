@@ -281,7 +281,7 @@ public abstract class SmugglerProgressBase : IOperationProgress
                 sb.AppendLine("- AI Connection Strings");
 
             if (AiAgentsUpdated)
-                sb.AppendLine("- AI Agents Strings");
+                sb.AppendLine("- AI Agents");
 
             if (ConflictSolverConfigUpdated)
                 sb.AppendLine("- Conflicts Solvers");
