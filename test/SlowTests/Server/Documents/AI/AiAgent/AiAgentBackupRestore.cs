@@ -46,7 +46,11 @@ public class AiAgentBackupRestore : ReplicationTestBase
             await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
             using var dis = Backup.RestoreDatabase(destination,
-                new RestoreBackupConfiguration { BackupLocation = Directory.GetDirectories(backupPath).First(), DatabaseName = destination.Database });
+                new RestoreBackupConfiguration
+                {
+                    BackupLocation = Directory.GetDirectories(backupPath).First(), 
+                    DatabaseName = destination.Database
+                });
             {
                 var destRecord = await destination.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(destination.Database));
                 var destAgents = destRecord.AiAgents;
@@ -59,8 +63,8 @@ public class AiAgentBackupRestore : ReplicationTestBase
                 Assert.NotNull(destConfigs[0]);
                 Assert.NotNull(destConfigs[1]);
                 var configs = agents.Values.ToList();
-                Assert.True(AiAgentConfigurationsAreEqualByValue(configs[0], destConfigs[0]));
-                Assert.True(AiAgentConfigurationsAreEqualByValue(configs[1], destConfigs[1]));
+                Assert.True(AiAgentConfigurationsAreEqualByValue(configs[0], destConfigs[0], out var reason0), reason0);
+                Assert.True(AiAgentConfigurationsAreEqualByValue(configs[1], destConfigs[1], out var reason1), reason1);
             }
         }
     }
@@ -110,24 +114,49 @@ public class AiAgentBackupRestore : ReplicationTestBase
         return new Dictionary<string, AiAgentConfiguration>() { { "shopping assistant", agent0 }, { "warehouse manager", agent1 } };
     }
 
-    private static bool AiAgentConfigurationsAreEqualByValue(AiAgentConfiguration x, AiAgentConfiguration y)
+    private static bool AiAgentConfigurationsAreEqualByValue(AiAgentConfiguration x, AiAgentConfiguration y, out string reason)
     {
+        reason = string.Empty;
+
         if (ReferenceEquals(x, y))
             return true;
-        if (x is null || y is null)
+
+        if (x is null)
+        {
+            reason = "x is null";
             return false;
+        } 
+        if (y is null)
+        {
+            reason = "y is null";
+            return false;
+        }
 
         // compare simple properties
-        if (string.Equals(x.ConnectionStringName, y.ConnectionStringName, StringComparison.Ordinal) == false ||
-            string.Equals(x.SystemPrompt, y.SystemPrompt, StringComparison.Ordinal) == false ||
-            string.Equals(x.OutputSchema, y.OutputSchema, StringComparison.Ordinal) == false)
+        if (string.Equals(x.ConnectionStringName, y.ConnectionStringName, StringComparison.Ordinal) == false)
         {
+            reason = $"ConnectionStringName: {x.ConnectionStringName} != {y.ConnectionStringName}";
+            return false;
+        }
+
+        if (string.Equals(x.SystemPrompt, y.SystemPrompt, StringComparison.Ordinal) == false)
+        {
+            reason = $"SystemPrompt: {x.SystemPrompt} != {y.SystemPrompt}";
+            return false;
+        }
+
+        if (string.Equals(x.OutputSchema, y.OutputSchema, StringComparison.Ordinal) == false)
+        {
+            reason = $"OutputSchema: {x.OutputSchema} != {y.OutputSchema}";
             return false;
         }
 
         // compare PersistenceConfiguration
         if (PersistenceEquals(x.Persistence, y.Persistence) == false)
+        {
+            reason = $"Persistence: [{x.Persistence.Collection} {x.Persistence.Expires}] != [{y.Persistence.Collection} {y.Persistence.Expires}]";
             return false;
+        }
 
         // compare queries
         if (ListEquals(x.Queries, y.Queries, (a, b) =>
@@ -135,14 +164,20 @@ public class AiAgentBackupRestore : ReplicationTestBase
                                           string.Equals(a.Description, b.Description, StringComparison.Ordinal) &&
                                           string.Equals(a.Query, b.Query, StringComparison.Ordinal) &&
                                           string.Equals(a.ParametersSchema, b.ParametersSchema, StringComparison.Ordinal))) == false)
+        {
+            reason = $"Queries not equal (count1={x.Queries.Count} count2={y.Queries.Count})";
             return false;
+        }
 
         // compare actions
         if (ListEquals(x.Actions, y.Actions, (a, b) =>
                 ReferenceEquals(a, b) || (a != null && b != null && string.Equals(a.Name, b.Name, StringComparison.Ordinal) &&
                                           string.Equals(a.Description, b.Description, StringComparison.Ordinal) &&
                                           string.Equals(a.ParametersSchema, b.ParametersSchema, StringComparison.Ordinal))) == false)
+        {
+            reason = $"Actions not equal (count1={x.Actions.Count} count2={y.Actions.Count})";
             return false;
+        }
 
         return true;
     }
