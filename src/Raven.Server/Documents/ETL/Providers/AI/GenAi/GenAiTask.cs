@@ -257,18 +257,15 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 Output = context.Sync.ReadForMemory(result, item.DocId)
             };
 
-            var usageBlittable = context.Sync.ReadForMemory(usage, item.DocId);
-            usageBlittable.TryGet("total_tokens", out int tokensUsed);
-            usageBlittable.TryGet("prompt_tokens", out int promptTokens);
-            usageBlittable.TryGet("completion_tokens", out int completionTokens);
+            var modelUsage = ToUsageStats(context, usage, item.DocId);
 
-            statsScope.TotalTokensUsed += tokensUsed;
-            statsScope.PromptTokensUsed += promptTokens;
-            statsScope.CompletionTokensUsed += completionTokens;
+            statsScope.TotalTokensUsed += modelUsage.TotalTokens;
+            statsScope.PromptTokensUsed += modelUsage.PromptTokens;
+            statsScope.CompletionTokensUsed += modelUsage.CompletionTokens;
 
             if (Configuration.TestMode)
             {
-                item.ModelOutput.Usage = usageBlittable;
+                item.ModelOutput.Usage = modelUsage;
             }
         }
 
@@ -305,6 +302,22 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     return singleEx;
             }
         }
+    }
+
+    private static ModelUsageStats ToUsageStats(JsonOperationContext context, string usage, string id)
+    {
+        using var usageBlittable = context.Sync.ReadForMemory(usage, id);
+
+        usageBlittable.TryGet("total_tokens", out int totalTokens);
+        usageBlittable.TryGet("prompt_tokens", out int promptTokens);
+        usageBlittable.TryGet("completion_tokens", out int completionTokens);
+
+        return new ModelUsageStats
+        {
+            TotalTokens = totalTokens, 
+            PromptTokens = promptTokens, 
+            CompletionTokens = completionTokens
+        };
     }
 
     private void ApplyUpdateScript(DocumentsOperationContext context, List<GenAiResultItem> results)
