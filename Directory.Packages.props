@@ -134,7 +134,7 @@
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.6" />
     <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageVersion Include="System.Memory" Version="4.6.3" />
-    <PackageVersion Include="System.Reflection.Metadata" Version="9.0.6" />
+    <PackageVersion Include="System.Reflection.Metadata" Version="8.0.0" />
     <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
     <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageVersion Include="System.Text.Encodings.Web" Version="4.7.2" />
