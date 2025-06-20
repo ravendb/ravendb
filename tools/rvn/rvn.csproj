@@ -155,11 +155,8 @@
     <PackageReference Include="Microsoft.Extensions.Logging.Configuration" />
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Polly" />
-    <PackageReference Include="System.Formats.Asn1" />
-    <PackageReference Include="System.Reflection.Metadata" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="System.ServiceProcess.ServiceController" />
-    <PackageReference Include="System.Threading.Channels" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
   <ItemGroup>

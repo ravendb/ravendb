@@ -24,9 +24,6 @@
     <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
     <PackageReference Include="Microsoft.Extensions.Logging.Configuration" />
     <PackageReference Include="System.Diagnostics.EventLog" />
-    <PackageReference Include="System.Formats.Asn1" />
-    <PackageReference Include="System.Reflection.Metadata" />
-    <PackageReference Include="System.Threading.Channels" />
     <PackageReference Include="ZstdSharp.Port" />
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />

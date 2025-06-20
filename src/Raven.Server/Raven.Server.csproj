@@ -159,7 +159,6 @@
     <PackageReference Include="Lucene.Net" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
@@ -202,17 +201,10 @@
     </PackageReference>
     <PackageReference Include="Snappier" />
     <PackageReference Include="Snowflake.Data" />
-    <PackageReference Include="System.Collections.Immutable" />
-    <PackageReference Include="System.Diagnostics.DiagnosticSource" />
-    <PackageReference Include="System.Formats.Asn1" />
     <PackageReference Include="System.Linq.Async" />
-    <PackageReference Include="System.Net.Http" />
     <PackageReference Include="System.Private.Uri" />
-    <PackageReference Include="System.Reflection.Metadata" />
     <PackageReference Include="System.Runtime.Caching" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
-    <PackageReference Include="System.Security.Cryptography.X509Certificates" />
-    <PackageReference Include="System.Text.Json" />
     <PackageReference Include="ZstdSharp.Port" />
   </ItemGroup>
   <ItemGroup>

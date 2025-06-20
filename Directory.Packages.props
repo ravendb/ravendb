@@ -41,11 +41,9 @@
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
     <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="8.0.17" />
     <PackageVersion Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" />
-    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.6" />
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
-    <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.0.2" />
     <PackageVersion Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.621003" />
     <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.22" />
@@ -111,30 +109,16 @@
     <PackageVersion Include="Snappier" Version="1.2.0" />
     <PackageVersion Include="Snowflake.Data" Version="4.5.0" />
     <PackageVersion Include="Spatial4n" Version="0.4.1.1" />
-    <PackageVersion Include="System.Buffers" Version="4.6.1" />
-    <PackageVersion Include="System.Collections.Immutable" Version="9.0.6" />
     <PackageVersion Include="System.Data.HashFunction.Blake2" Version="2.0.0" />
-    <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="9.0.6" />
     <PackageVersion Include="System.Diagnostics.EventLog" Version="9.0.6" />
     <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="9.0.6" />
     <PackageVersion Include="System.DirectoryServices.Protocols" Version="9.0.6" />
-    <PackageVersion Include="System.Formats.Asn1" Version="9.0.6" />
     <PackageVersion Include="System.Linq.Async" Version="6.0.1" />
-    <PackageVersion Include="System.Memory" Version="4.6.3" />
-    <PackageVersion Include="System.Net.Http" Version="4.3.4" />
     <PackageVersion Include="System.Numerics.Tensors" Version="9.0.6" />
     <PackageVersion Include="System.Private.Uri" Version="4.3.2" />
-    <PackageVersion Include="System.Reflection.Metadata" Version="9.0.6" />
     <PackageVersion Include="System.Runtime.Caching" Version="9.0.6" />
-    <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
-    <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="9.0.6" />
-    <PackageVersion Include="System.Security.Cryptography.X509Certificates" Version="4.3.2" />
     <PackageVersion Include="System.ServiceProcess.ServiceController" Version="9.0.6" />
-    <PackageVersion Include="System.Text.Encodings.Web" Version="9.0.6" />
-    <PackageVersion Include="System.Text.Json" Version="9.0.6" />
-    <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
-    <PackageVersion Include="System.Threading.Channels" Version="9.0.6" />
     <PackageVersion Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
     <PackageVersion Include="TypeScripter" Version="0.5.4" />
     <PackageVersion Include="xRetry" Version="1.9.0" />
@@ -144,5 +128,16 @@
     <PackageVersion Include="XunitLogger" Version="4.0.991" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
     <PackageVersion Include="ZstdSharp.Port" Version="0.8.5" />
+  </ItemGroup>
+  <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible($(TargetFramework), 'net5.0'))">
+    <PackageVersion Include="System.Buffers" Version="4.6.1" />
+    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.6" />
+    <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
+    <PackageVersion Include="System.Memory" Version="4.6.3" />
+    <PackageVersion Include="System.Reflection.Metadata" Version="9.0.6" />
+    <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
+    <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
+    <PackageVersion Include="System.Text.Encodings.Web" Version="4.7.2" />
+    <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
   </ItemGroup>
 </Project>
