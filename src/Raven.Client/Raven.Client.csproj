@@ -15,6 +15,7 @@
     <Title>RavenDB Client</Title>
     <CodeAnalysisRuleSet>..\..\RavenDB.Client.ruleset</CodeAnalysisRuleSet>
     <Configurations>Debug;Release;Validate</Configurations>
+    <DontPinSystemPackages>true</DontPinSystemPackages>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)'=='Validate'">
     <Optimize>true</Optimize>

@@ -98,7 +98,6 @@
     <ProjectReference Include="..\Voron\Voron.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="AWSSDK.Core" />
     <PackageReference Include="AWSSDK.Glacier" />
     <PackageReference Include="AWSSDK.S3" />
@@ -127,7 +126,6 @@
     <PackageReference Include="Lucene.Net" />
     <PackageReference Include="Lucene.Net.Contrib.Spatial.NTS" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
-    <PackageReference Include="Microsoft.Bcl.AsyncInterfaces" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" />
     <PackageReference Include="Microsoft.Data.SqlClient" />
@@ -165,6 +163,10 @@
     <PackageReference Include="Snowflake.Data" />
     <PackageReference Include="System.Runtime.Caching" />
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
+  </ItemGroup>
+  <!--Needed to resolve issues with copying files-->
+  <ItemGroup>
+    <PackageReference Include="System.Runtime.Loader" />
   </ItemGroup>
   <ItemGroup>
     <None Update="NLog.default.config">

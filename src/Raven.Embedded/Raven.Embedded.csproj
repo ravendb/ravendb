@@ -12,6 +12,7 @@
     <PackageLicenseFile>LICENSE.txt</PackageLicenseFile>
     <CodeAnalysisRuleSet>..\..\RavenDB.Client.ruleset</CodeAnalysisRuleSet>
     <Configurations>Debug;Release;Validate</Configurations>
+    <DontPinSystemPackages>true</DontPinSystemPackages>
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
     <TargetFrameworks>netstandard2.0;net462;net8.0</TargetFrameworks>

@@ -41,11 +41,9 @@
     <PackageVersion Include="McMaster.Extensions.CommandLineUtils" Version="4.1.1" />
     <PackageVersion Include="Microsoft.AspNetCore.JsonPatch" Version="10.0.0-rc.1.25451.107" />
     <PackageVersion Include="Microsoft.Azure.DocumentDB.Core" Version="2.22.0" />
-    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.0-rc.1.25451.107" />
     <PackageVersion Include="Microsoft.Bcl.HashCode" Version="6.0.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp" Version="4.14.0" />
     <PackageVersion Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.14.0" />
-    <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
     <PackageVersion Include="Microsoft.Data.SqlClient" Version="6.1.1" />
     <PackageVersion Include="Microsoft.Diagnostics.NETCore.Client" Version="0.2.621003" />
     <PackageVersion Include="Microsoft.Diagnostics.Tracing.TraceEvent" Version="3.1.24" />
@@ -111,7 +109,6 @@
     <PackageVersion Include="Snappier" Version="1.2.0" />
     <PackageVersion Include="Snowflake.Data" Version="4.8.0" />
     <PackageVersion Include="Spatial4n" Version="0.4.1.1" />
-    <PackageVersion Include="System.Collections.Immutable" Version="10.0.0-rc.1.25451.107" />
     <PackageVersion Include="System.Data.HashFunction.Blake2" Version="2.0.0" />
     <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="10.0.0-rc.1.25451.107" />
     <PackageVersion Include="System.Diagnostics.EventLog" Version="10.0.0-rc.1.25451.107" />
@@ -122,7 +119,6 @@
     <PackageVersion Include="System.Numerics.Tensors" Version="10.0.0-rc.1.25451.107" />
     <PackageVersion Include="System.Reflection.Metadata" Version="10.0.0-rc.1.25451.107" />
     <PackageVersion Include="System.Runtime.Caching" Version="10.0.0-rc.1.25451.107" />
-    <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="10.0.0-rc.1.25451.107" />
     <PackageVersion Include="System.ServiceProcess.ServiceController" Version="10.0.0-rc.1.25451.107" />
     <PackageVersion Include="System.Text.Encodings.Web" Version="10.0.0-rc.1.25451.107" />
@@ -136,5 +132,15 @@
     <PackageVersion Include="XunitLogger" Version="4.0.991" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
     <PackageVersion Include="ZstdSharp.Port" Version="0.8.6" />
+  </ItemGroup>
+  <ItemGroup Condition="!($([MSBuild]::IsTargetFrameworkCompatible($(TargetFramework), 'net8.0')) AND '$(DontPinSystemPackages)' == 'true')">
+    <PackageVersion Include="System.Collections.Immutable" Version="10.0.0-rc.1.25451.107"/>
+  </ItemGroup>
+  <ItemGroup Condition="!($([MSBuild]::IsTargetFrameworkCompatible($(TargetFramework), 'net6.0')) AND '$(DontPinSystemPackages)' == 'true')">
+    <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
+  </ItemGroup>
+  <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible($(TargetFramework), 'net5.0'))">
+    <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="10.0.0-rc.1.25451.107" />
+    <PackageVersion Include="Microsoft.CSharp" Version="4.7.0" />
   </ItemGroup>
 </Project>
