@@ -61,10 +61,8 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                     Document document = GetCurrentDocument(context, item.DocId);
                     if (document is null)
                         continue; // document was probably deleted while we talked to the model, skipping this
-                    using (var old = document)
-                    {
-                        tuple = (document.Clone(context), []);
-                    }
+
+                    tuple = (document, []);
                 }
 
                 tuple.Hashes.Add(item.ContextOutput.AiHash);
