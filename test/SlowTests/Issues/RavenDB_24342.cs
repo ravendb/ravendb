@@ -26,8 +26,6 @@ namespace SlowTests.Issues
             using var store = GetDocumentStore(options);
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-            var etl = Etl.WaitForEtlToComplete(store);
-
             config.Prompt = "Check if the following blog post comment is spam or not";
             config.Collection = "Posts";
             config.SampleObject = JsonConvert.SerializeObject(new { Blocked = true, Reason = "Concise reason for why this comment was marked as spam" });
@@ -42,6 +40,9 @@ for(const comment of this.Comments)
 }
 "
             };
+
+            await store.Maintenance.SendAsync(new AddGenAiOperation(config));
+            var etl = Etl.WaitForEtlToComplete(store);
 
             using (var session = store.OpenAsyncSession())
             {
@@ -58,7 +59,6 @@ for(const comment of this.Comments)
                 await session.SaveChangesAsync();
             }
 
-            store.Maintenance.Send(new AddGenAiOperation(config));
             Assert.True(etl.Wait(TimeSpan.FromSeconds(30)));
 
             using var verify = store.OpenAsyncSession();
