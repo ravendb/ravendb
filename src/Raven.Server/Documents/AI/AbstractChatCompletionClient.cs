@@ -79,7 +79,7 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
         await HttpResponseHelper.CopyContentAsync(r, response);
     }
 
-    public async Task<(string Result, string Usage)> CompleteAsync(string prompt, string context, CancellationToken token)
+    public async Task<(string Result, AiUsage Usage)> CompleteAsync(string prompt, string context, CancellationToken token)
     {
         _forTestingPurposes?.SimulateFailure?.Invoke(context);
 
@@ -131,7 +131,13 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
                 RequestId = GetRequestId(response.Headers)
             };
 
-        return (content, usage.ToString());
+        var aiUsage = new AiUsage();
+        using (usage)
+        {
+            aiUsage.UpdateFrom(usage);
+        }
+
+        return (content, aiUsage);
     }
 
     private HttpRequestMessage CreateRequest(HttpMethod httpMethod, string relativeUri)
