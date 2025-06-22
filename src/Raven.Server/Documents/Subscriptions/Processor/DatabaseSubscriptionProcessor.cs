@@ -75,7 +75,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
         protected override SubscriptionBatchItem GetBatchItem(T item)
         {
-            var batchItem = ShouldSend(item, out var reason);
+            var batchItem = ShouldSend(item);
 
             if (batchItem.Status == SubscriptionBatchItemStatus.Send)
             {
@@ -87,9 +87,6 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
                 return batchItem;
             }
-
-            if (Logger.IsInfoEnabled)
-                Logger.Info(reason, batchItem.Exception);
 
             if (batchItem.Status  == SubscriptionBatchItemStatus.Exception)
             {
@@ -104,7 +101,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
         protected abstract SubscriptionFetcher<T> CreateFetcher();
 
-        protected abstract SubscriptionBatchItem ShouldSend(T item, out string reason);
+        protected abstract SubscriptionBatchItem ShouldSend(T item);
     }
 
     public abstract class DatabaseSubscriptionProcessorBase<TItem> : AbstractSubscriptionProcessor<DatabaseIncludesCommandImpl, TItem>, IDatabaseSubscriptionProcessor
