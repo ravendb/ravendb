@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.Extensions.AI;
 using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
@@ -11,6 +12,7 @@ using Raven.Server.Json;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+
 #pragma warning disable SKEXP0001
 
 namespace Raven.Server.Documents.ETL.Providers.AI.Handlers.Processors;
@@ -80,30 +82,31 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                         throw new ArgumentOutOfRangeException();
                 }
 
-                try
+                switch (aiConnectionString.ModelType)
                 {
-                    var aiEtlConfiguration = new EmbeddingsGenerationConfiguration { Connection = aiConnectionString };
-                    (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateEmbeddingServicesForTest(aiEtlConfiguration);
-                    var embeddings = await service.GenerateEmbeddingsAsync(EmbeddingsHelper.ValuesListToVerifyConnection, cancellationToken: token.Token);
+                    case AiModelType.Embeddings:
+                        var aiEtlConfiguration = new EmbeddingsGenerationConfiguration { Connection = aiConnectionString };
+                        (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateEmbeddingServicesForTest(aiEtlConfiguration);
+                        var embeddings = await service.GenerateEmbeddingsAsync(EmbeddingsHelper.ValuesListToVerifyConnection, cancellationToken: token.Token);
 
-                    if (embeddings.Count != EmbeddingsHelper.ValuesListToVerifyConnection.Count)
-                        throw new EmbeddingsMismatchException(
-                            $"Failed to generate embeddings for test values. Expected '{EmbeddingsHelper.ValuesListToVerifyConnection.Count}' result, but got '{embeddings.Count}'.");
-                }
-                // TODO: remove this ugly workaround
-                catch (Exception e) when (e is not EmbeddingsMismatchException)
-                {
-                    if (aiConnectionString.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model))
-                    {
+                        if (embeddings.Count != EmbeddingsHelper.ValuesListToVerifyConnection.Count)
+                            throw new EmbeddingsMismatchException(
+                                $"Failed to generate embeddings for test values. Expected '{EmbeddingsHelper.ValuesListToVerifyConnection.Count}' result, but got '{embeddings.Count}'.");
+                        break;
+                    case AiModelType.LLM:
+                        if (aiConnectionString.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model) == false)
+                            throw new InvalidOperationException(
+                                $"Invalid provider settings for {nameof(AiConnectionString)} with model type '{nameof(AiConnectionString.ModelType.LLM)}'. " +
+                                $"Supported providers for '{nameof(AiConnectionString.ModelType.LLM)}' model type are '{nameof(AiConnectorType.OpenAi)}' and '{nameof(AiConnectorType.Ollama)}'");
+                        
                         using (var client = new GenericChatCompletionClientForTesting(uri, model, apiKey, organizationId: null, projectId: null, ServerStore.ContextPool))
                         {
                             await client.CompleteAsync("foo", "bar", HttpContext.RequestAborted);
                         }
-                    }
-                    else
-                    {
-                        throw;
-                    }
+
+                        break;
+                    default:
+                        throw new ArgumentOutOfRangeException("Invalid model type: " + aiConnectionString.ModelType);
                 }
 
                 var result = new DynamicJsonValue { [nameof(NodeConnectionTestResult.Success)] = true };
