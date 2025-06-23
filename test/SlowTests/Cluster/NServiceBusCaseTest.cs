@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -22,7 +22,7 @@ namespace SlowTests.Cluster
         const int NumberOfConcurrentUpdates = 50;
         const int MaxRetryAttempts = 50;
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task ConcurrentArrayUpdate()
         {
             var cluster = await CreateRaftCluster(3, watcherCluster: true);

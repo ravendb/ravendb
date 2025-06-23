@@ -407,7 +407,7 @@ namespace SlowTests.Sharding.ETL
             }
         }
 
-        [Fact(Skip = "RavenDB-19069 Sharded ETL OngoingTaskInfo is not implemented")]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Sharding, Skip = "RavenDB-19069 Sharded ETL OngoingTaskInfo is not implemented")]
         public async Task WillWorkAfterResponsibleNodeRestart()
         {
             var srcDb = "ETL-src";

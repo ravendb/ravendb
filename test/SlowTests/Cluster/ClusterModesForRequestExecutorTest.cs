@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -36,7 +36,7 @@ namespace SlowTests.Cluster
             return $"{url}:{port}";
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClientApi)]
         public async Task ProxyServer_should_work()
         {
             int serverPort = 10000;
@@ -82,7 +82,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact(Skip = "RavenDB-9020")]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClientApi, Skip = "RavenDB-9020")]
         public async Task Fastst_node_should_choose_the_node_without_delay()
         {
             NoTimeouts();
@@ -194,7 +194,7 @@ namespace SlowTests.Cluster
             requestExecutor.OnTopologyUpdated += ApplyProxies;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClientApi)]
         public async Task Round_robin_load_balancing_should_work()
         {
             var databaseName = GetDatabaseName();
@@ -292,7 +292,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClientApi)]
         public async Task Round_robin_load_balancing_with_failing_node_should_work()
         {
             var databaseName = GetDatabaseName();
@@ -385,7 +385,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClientApi)]
         public async Task RavenDB_7992()
         {
             //here we test that when choosing Fastest-Node as the ReadBalanceBehavior,

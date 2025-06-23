@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -30,7 +30,7 @@ namespace SlowTests.Cluster
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task ReorderDatabaseNodes()
         {
             var db = "ReorderDatabaseNodes";
@@ -118,7 +118,7 @@ namespace SlowTests.Cluster
             Assert.True(ex.InnerException is ArgumentException);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task ClusterWideIdentity()
         {
             var db = "ClusterWideIdentity";
@@ -149,7 +149,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task NextIdentityForOperationShouldBroadcast()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -189,7 +189,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task NextIdentityForOperationShouldBroadcast2()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -218,7 +218,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task PreferredNodeShouldBeRestoredAfterBroadcast()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -272,7 +272,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task ChangesApiFailOver()
         {
             using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))

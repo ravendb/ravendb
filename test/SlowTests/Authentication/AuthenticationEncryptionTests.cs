@@ -27,7 +27,7 @@ namespace SlowTests.Authentication
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Security | RavenTestCategory.Encryption)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
         public async Task CanUseEncryption(RavenTestParameters configuration)
         {
@@ -85,7 +85,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Security | RavenTestCategory.Encryption)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
         public async Task CanRestartEncryptedDbWithIndexes(RavenTestParameters configuration)
         {
@@ -185,7 +185,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Security | RavenTestCategory.Encryption)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
         public async Task CanCompactEncryptedDb(RavenTestParameters configuration)
         {
@@ -266,3 +266,4 @@ namespace SlowTests.Authentication
         }
     }
 }
+

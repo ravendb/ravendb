@@ -8,6 +8,7 @@ using Raven.Client.ServerWide.Sharding;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -80,7 +81,7 @@ namespace SlowTests.Sharding.BucketMigration
             return shards;
         }
 
-        [Fact(Skip = "Too stressful")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "Too stressful")]
         public void BalanceShardsWithNaiveApproach()
         {
             var record = new DatabaseRecord("dummy")

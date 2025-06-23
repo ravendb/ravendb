@@ -821,7 +821,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact(Skip = "Conflict for for document in different collections can be resolved only manually - Issue RavenDB-17382")]
+        [RavenFact(RavenTestCategory.Replication, Skip = "Conflict for for document in different collections can be resolved only manually - Issue RavenDB-17382")]
         public async Task Conflict_should_be_created_and_resolved_for_document_in_different_collections()
         {
             const string dbName1 = "FooBar-1";
@@ -1025,7 +1025,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact(Skip = "Conflict for for document in different collections can be resolved only manually - Issue RavenDB-17382")]
+        [RavenFact(RavenTestCategory.Replication, Skip = "Conflict for for document in different collections can be resolved only manually - Issue RavenDB-17382")]
         public async Task Should_not_resolve_conflcit_with_script_when_they_from_different_collection()
         {
             using (var store1 = GetDocumentStore(options: new Options

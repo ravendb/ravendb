@@ -104,14 +104,14 @@ namespace SlowTests.Authentication
             await CanGetLetsEncryptCertificateAndRenewAfterFailure(acmeUrl);
         }
 
-        [RetryFact(delayBetweenRetriesMs: 1000)]
+        [RavenRetryFact(RavenTestCategory.Certificates, delayBetweenRetriesMs: 1000)]
         public async Task CanGetLetsEncryptCertificateAndRenewAfterFailure()
         {
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
             await CanGetLetsEncryptCertificateAndRenewAfterFailure(acmeUrl);
         }
 
-        [RetryFact(delayBetweenRetriesMs: 1000)]
+        [RavenRetryFact(RavenTestCategory.Certificates, delayBetweenRetriesMs: 1000)]
         public async Task ReplaceCertificateWithPrivateKey()
         {
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";

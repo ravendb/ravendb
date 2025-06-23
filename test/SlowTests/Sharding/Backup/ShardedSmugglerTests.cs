@@ -203,7 +203,7 @@ namespace SlowTests.Sharding.Backup
             }
         }
 
-        [Fact(Skip = "For testing")]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.Sharding, Skip = "For testing")]
         public async Task RegularToRegular()
         {
             var file = GetTempFileName();

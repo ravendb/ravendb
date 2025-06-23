@@ -30,6 +30,7 @@ using Sparrow.Platform;
 using Sparrow.Utils;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Authentication
 {
@@ -39,7 +40,7 @@ namespace SlowTests.Authentication
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates | RavenTestCategory.Cluster)]
         public async Task CanReplaceClusterCert()
         {
             var clusterSize = 3;
@@ -123,7 +124,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact(Skip = "https://github.com/dotnet/corefx/issues/30691")]
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates | RavenTestCategory.Cluster, Skip = "https://github.com/dotnet/corefx/issues/30691")]
         public async Task CanReplaceClusterCertWithExtensionPoint()
         {
             string loadAndRenewScript;
@@ -352,7 +353,7 @@ exit 0";
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates | RavenTestCategory.Cluster)]
         public async Task CanTrustNewClientCertBasedOnPublicKeyPinningHash()
         {
             // Setting up two clusters with external replication cluster1 --> cluster2
@@ -475,7 +476,7 @@ exit 0";
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates | RavenTestCategory.Cluster)]
         public async Task WillNotTrustNewClientCertIfPublicKeyPinningHashIsDifferent()
         {
             // Setting up two clusters with external replication cluster1 --> cluster2
@@ -603,7 +604,7 @@ exit 0";
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates | RavenTestCategory.Cluster)]
         public void PublicKeyPinningHashShouldBeEqual()
         {
             var (c1, c2) = CertificateUtils.CreateTwoTestCertificatesWithSameKey(Environment.MachineName, "sameKey");
@@ -615,7 +616,7 @@ exit 0";
             Assert.Equal(h1, h2);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security | RavenTestCategory.Certificates | RavenTestCategory.Cluster)]
         public void PublicKeyPinningHashShouldNotBeEqual()
         {
             // Different private key
@@ -632,3 +633,4 @@ exit 0";
     }
 }
 */
+

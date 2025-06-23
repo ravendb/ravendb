@@ -129,7 +129,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Security | RavenTestCategory.Certificates)]
         [InlineData(null)] // framework default
         [InlineData("1.1")]
         [InlineData("2.0")]
@@ -283,7 +283,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public void CanOnlyGetRelevantDbsAccordingToPermissions()
         {
             var certificates = SetupServerAuthentication(Certificates);
@@ -325,7 +325,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public void CannotGetDocWithoutCertificate()
         {
             SetupServerAuthentication(Certificates);
@@ -365,7 +365,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public void CannotContactServerWhenNotUsingHttps()
         {
             var certificates = SetupServerAuthentication(Certificates, serverUrl: $"http://{Environment.MachineName}:0");
@@ -375,7 +375,7 @@ namespace SlowTests.Authentication
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public void CannotGetCertificateWithInvalidDbNamePermission()
         {
             var certificates = SetupServerAuthentication(Certificates);
@@ -416,7 +416,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public void AllAdminRoutesHaveCorrectAuthorizationStatus()
         {
             var endpointsToIgnore = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -431,7 +431,7 @@ namespace SlowTests.Authentication
             Assert.Empty(routes);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public void AllAdminAuthorizationStatusHaveCorrectRoutes()
         {
             var routesToIgnore = new HashSet<string>
@@ -452,7 +452,7 @@ namespace SlowTests.Authentication
             Assert.Empty(routes);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public async Task EditClientCertificateOperation_WhenDo_ShouldEditCertificate()
         {
             const string certificateName = "Client&Certificate 2";
@@ -504,7 +504,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public async Task GetClientCertificateOperation_WhenNodeIsPassive_ShouldGetCertificate()
         {
             const string certificateName = "ClientCertificate2";
@@ -559,7 +559,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public async Task GetCertificate_WhenMetadataOnly_ShouldNotSendTheCertificateItself()
         {
             const string certificateName = "ClientCertificate";
@@ -745,3 +745,5 @@ namespace SlowTests.Authentication
         }
     }
 }
+
+

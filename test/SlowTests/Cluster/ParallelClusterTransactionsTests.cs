@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -41,7 +41,7 @@ namespace SlowTests.Cluster
             return base.GetNewServer(options, caller);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClusterTransactions)]
         public Task ParallelClusterTransactions() => ParallelClusterTransactions(3);
 
         public async Task ParallelClusterTransactions(int numberOfNodes)
