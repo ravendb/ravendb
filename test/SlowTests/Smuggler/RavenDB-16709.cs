@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Text;
 using System.Threading.Tasks;
@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using static SlowTests.Issues.RavenDB_9519;
@@ -16,7 +17,7 @@ public class RavenDB_16709 : RavenTestBase
 {
     public RavenDB_16709(ITestOutputHelper output) : base(output) { }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task ShouldProceedWhenCsvContainsEmptyColumnName()
     {
         const string userId = "user/1";
