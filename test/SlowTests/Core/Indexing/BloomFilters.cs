@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="CustomAnalyzers.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,6 +13,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Core.Indexing
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Skip_Storing_In_Bloom_Filter_If_No_Document_Was_Stored_In_Lucene()
         {
             using (var store = GetDocumentStore())
@@ -95,7 +96,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Delete_From_Index_If_The_Document_Isnt_Relevant_For_The_Index_Anymore()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,4 @@
-﻿//----------------------------------------------------------------------
+//----------------------------------------------------------------------
 //  <copyright file="ReferencedDocuments.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -89,7 +89,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicLoadDocumentsWithEnumerable(Options options)
         {
@@ -135,7 +135,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicLoadDocuments(Options options)
         {
@@ -269,7 +269,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicLoadDocuments_Casing(Options options)
         {
@@ -416,7 +416,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldReindexOnReferencedDocumentChange(Options options)
         {
@@ -469,7 +469,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanProceedWhenReferencedDocumentsAreMissing(Options options)
         {
@@ -505,7 +505,7 @@ namespace SlowTests.Core.Indexing
             }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task HandleReference_ShouldCompleteTheIndexing(RavenTestParameters config)
         {
@@ -560,7 +560,7 @@ namespace SlowTests.Core.Indexing
             }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public async Task HandleReferenceAndMapping_ShouldNotMissChangedReference(RavenTestParameters config)
         {

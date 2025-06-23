@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Keys.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Xunit.Abstractions;
 
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 
 using Address = SlowTests.Core.Utils.Entities.Address;
@@ -24,7 +25,7 @@ namespace SlowTests.Core.Session
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void GetDocumentId()
         {
             using (var store = GetDocumentStore())
@@ -46,7 +47,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task KeyGeneration()
         {
             using (var store = GetDocumentStore(new Options
@@ -81,7 +82,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void KeyGenerationOnLoad()
         {
             using (var store = GetDocumentStore(new Options

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="CustomAnalyzers.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -25,7 +25,7 @@ namespace SlowTests.Core.Indexing
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax is not supporting custom analyzers")]
         public void CreateAndQuerySimpleIndexWithSortingAndCustomCollateral(Options options)
@@ -70,7 +70,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Sharded, Skip = "Highlighting queries are currently not supported in a sharded database ")]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Corax is not supporting custom analyzers")]

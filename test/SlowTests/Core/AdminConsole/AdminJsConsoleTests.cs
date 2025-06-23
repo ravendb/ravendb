@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -8,6 +8,7 @@ using Raven.Server;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Core.AdminConsole
             DoNotReuseServer();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript)]
         public async Task CanGetSettings()
         {
             using (var store = GetDocumentStore())
@@ -59,7 +60,7 @@ namespace SlowTests.Core.AdminConsole
             return token;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript)]
         public async Task CanGetResultAsDateObject()
         {
             using (var store = GetDocumentStore())
@@ -75,7 +76,7 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript)]
         public async Task CanGetResultAsPrimitiveObject()
         {
             using (var store = GetDocumentStore())
@@ -107,7 +108,7 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript)]
         public async Task CanGetResultAsComplexObject()
         {
             using (var store = GetDocumentStore())
@@ -141,7 +142,7 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript)]
         public async Task CanConvertAllJsonTypesToString()
         {
             using (var store = GetDocumentStore())
@@ -170,7 +171,7 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript)]
         public async Task CanModifyConfigurationOnTheFly()
         {
             using (var store = GetDocumentStore())
@@ -195,7 +196,7 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript)]
         public void CanGetServerSettings()
         {
             var result = ExecuteScript(null, @"
@@ -208,7 +209,7 @@ namespace SlowTests.Core.AdminConsole
             Assert.Equal(10L, result["MaxConcurrentFlushes"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript)]
         public void CanGetServerStoreConfigs()
         {
             DoNotReuseServer();
@@ -230,7 +231,7 @@ namespace SlowTests.Core.AdminConsole
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript)]
         public void CanModifyServerConfigurationOnTheFly()
         {
             var configuration = Server.Configuration;
@@ -251,7 +252,7 @@ namespace SlowTests.Core.AdminConsole
             Assert.Equal(40, configuration.Storage.MaxConcurrentFlushes);            
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript)]
         public void CanReturnNullResult()
         {
             var result = ExecuteScript(null, "return null");

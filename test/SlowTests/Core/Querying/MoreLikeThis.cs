@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Queries.MoreLikeThis;
@@ -18,7 +18,7 @@ namespace SlowTests.Core.Querying
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseBasicMoreLikeThis(Options options)
         {
@@ -58,7 +58,7 @@ namespace SlowTests.Core.Querying
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMoreLikeThisWithIncludes(Options options)
         {
