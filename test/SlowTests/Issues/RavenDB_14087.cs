@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Indexes.Static;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanAssignArrayToPropertyInPatch()
         {
             using (var store = GetDocumentStore())

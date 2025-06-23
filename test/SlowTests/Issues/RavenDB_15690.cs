@@ -1,8 +1,9 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task HasChanges_ShouldDetectDeletes()
         {
             using (var store = GetDocumentStore())

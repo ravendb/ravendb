@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -41,7 +42,7 @@ namespace SlowTests.Issues
             public Dictionary<string, string> Values { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanModifyDictionaryWithPatch_Add()
         {
             using (var store = GetDocumentStore())
@@ -80,7 +81,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanModifyDictionaryWithPatch_Add2()
         {
             using (var store = GetDocumentStore())
@@ -119,7 +120,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanModifyDictionaryWithPatch_Add_WithVariables()
         {
             using (var store = GetDocumentStore())
@@ -183,7 +184,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanModifyDictionaryWithPatch_Add_WithComplexNestedPath()
         {
             using (var store = GetDocumentStore())
@@ -253,7 +254,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task CanModifyDictionaryWithPatch_Add_AsyncSession()
         {
             using (var store = GetDocumentStore())
@@ -292,7 +293,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task CanModifyDictionaryWithPatch_Add2_AsyncSession()
         {
             using (var store = GetDocumentStore())
@@ -332,7 +333,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanModifyDictionaryWithPatch_Remove()
         {
             using (var store = GetDocumentStore())
@@ -371,7 +372,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanModifyDictionaryWithPatch_Remove_WithVariable()
         {
             using (var store = GetDocumentStore())
@@ -412,7 +413,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task CanModifyDictionaryWithPatch_Remove_AsyncSession()
         {
             using (var store = GetDocumentStore())

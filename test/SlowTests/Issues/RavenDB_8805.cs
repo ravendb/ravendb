@@ -1,7 +1,8 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents.Queries;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldNotThrow()
         {
             using (var store = GetDocumentStore())

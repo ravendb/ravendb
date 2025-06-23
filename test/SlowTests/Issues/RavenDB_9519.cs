@@ -27,7 +27,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Querying)]
         [InlineData("From%20companies")]
         public async Task NestedObjectShouldBeExportedAndImportedProperly(string query)
         {
@@ -129,7 +129,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CannotImportCsvWithInvalidCsvConfigCharParams()
         {
             using (var store = GetDocumentStore())

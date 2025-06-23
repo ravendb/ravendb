@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task CreatingARevisionManuallyAfterEnablingRevisionsForAnyCollection()
         {
             using (var store = GetDocumentStore())
@@ -70,7 +71,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task CreatingARevisionManuallyAfterEnablingRevisionsForAnyCollectionSameSession()
         {
             using (var store = GetDocumentStore())
@@ -129,7 +130,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task CreatingARevisionManuallyAfterEnablingRevisionsForAnyCollectionWhenRevisionIsBlocked()
         {
             using (var store = GetDocumentStore())

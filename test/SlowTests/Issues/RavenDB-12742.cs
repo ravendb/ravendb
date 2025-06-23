@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron.Data.BTrees;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanOverwriteBigValueInSameTx()
         {
             var r = new Random();
@@ -33,7 +34,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanOverwriteBigValueInSameTx_Decrease()
         {
             var r = new Random();
@@ -54,7 +55,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanOverwriteBigValueInSameTx_Increase()
         {
             var r = new Random();

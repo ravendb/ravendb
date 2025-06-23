@@ -23,7 +23,7 @@ namespace SlowTests.Issues
             public string Id { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanTranslateGroupsCorrectly()
         {
             using (var store = GetDocumentStore())

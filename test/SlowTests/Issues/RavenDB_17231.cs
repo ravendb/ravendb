@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task FailuresDuringEmptyQueueShouldCauseReelection()
         {
             var (nodes, leader) = await CreateRaftCluster(3);

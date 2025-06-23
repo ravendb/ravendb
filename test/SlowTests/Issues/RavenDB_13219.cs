@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Operations;
@@ -6,6 +6,7 @@ using Raven.Client.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
 
+using Tests.Infrastructure;
 namespace SlowTests.Issues
 {
     public class RavenDB_13219 : RavenTestBase
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Patching)]
         public void ShouldNotBeAbleToCreateCountersWithoutNames()
         {
             using (var store = GetDocumentStore())

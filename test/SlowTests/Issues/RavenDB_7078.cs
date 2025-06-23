@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Invalid_map_function_due_to_raven_linq_optimizer_not_supporting_select_into()
         {
             using (var store = GetDocumentStore())

@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange)]
         public void CompareExchangeAndIdentitiesCount()
         {
             using (var store = GetDocumentStore())

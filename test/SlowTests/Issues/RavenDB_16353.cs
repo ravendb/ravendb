@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Can_Use_No_Tracking_For_Referenced_Items()
         {
             var productsBySupplierNoTracking = new Products_BySupplier_NoTracking();
@@ -31,7 +31,7 @@ namespace SlowTests.Issues
             await Can_Use_No_Tracking_For_Referenced_Items_Internal(productsBySupplierNoTracking, productsBySupplier);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.JavaScript)]
         public async Task Can_Use_No_Tracking_For_Referenced_Items_JavaScript()
         {
             var productsBySupplierNoTracking = new Products_BySupplier_NoTracking_JavaScript();

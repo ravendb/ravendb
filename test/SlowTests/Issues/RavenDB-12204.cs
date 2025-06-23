@@ -5,6 +5,7 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanMigrateFromRavenDb()
         {
             var file = Path.Combine(NewDataPath(forceCreateDir: true), "export.ravendbdump");

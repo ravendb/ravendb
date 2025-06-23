@@ -3,6 +3,7 @@ using System.IO;
 using FastTests.Voron;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldProperlyShrinkOverflowPageOnStreamAdd()
         {
             using (var tx = Env.WriteTransaction())

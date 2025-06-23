@@ -1,10 +1,11 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Can_select_and_query_field_with_dot()
         {
             using (var store = GetDocumentStore())

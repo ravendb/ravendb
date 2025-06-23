@@ -1,10 +1,11 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void ShouldTranslateIdPropertyToIdFunctionInQueryWithWhereExactOverload()
         {
             using (var store = GetDocumentStore())

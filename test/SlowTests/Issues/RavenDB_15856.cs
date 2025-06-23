@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Impl;
 using Xunit;
@@ -22,7 +23,7 @@ namespace SlowTests.Issues
             options.MaxScratchBufferSize = _64KB * 4;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanCleanupAndGetTempPagesConcurrentlyFromDecompressionBuffers()
         {
             var run = true;

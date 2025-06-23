@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldNotCreatePropertyAfterAccessingIt(Options options)
         {
@@ -67,7 +67,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldNotProjectPropertyValueIfOnlyViewedStoredIndexedValue(Options options)
         {
@@ -102,7 +102,7 @@ b:u.newField
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19393")]
         public void ShouldProjectPropertyValueIfViewedAndUpdatedStoredIndexedValue(Options options)
@@ -142,7 +142,7 @@ b:u.newField
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19393")]
         public void ShouldProjectPropertyValueIfViewedAndUpdatedStoredIndexedValueShouldRespectOperationsOrder(Options options)

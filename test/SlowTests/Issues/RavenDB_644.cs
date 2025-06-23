@@ -9,6 +9,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -134,7 +135,7 @@ namespace SlowTests.Issues
 
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void IndexDefinitionBuilderShouldThrow()
         {
             var exception = Assert.Throws<IndexCompilationException>(
@@ -149,7 +150,7 @@ namespace SlowTests.Issues
             Assert.Equal("Reduce cannot contain Count() methods in grouping.", exception.InnerException.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ServerShouldThrow()
         {
             var exception = Assert.Throws<IndexCompilationException>(
@@ -203,7 +204,7 @@ namespace SlowTests.Issues
             Assert.Contains("Reduce cannot contain Count() methods in grouping.", exception.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ServerShouldThrow2()
         {
             var exception = Assert.Throws<IndexCompilationException>(
@@ -243,7 +244,7 @@ namespace SlowTests.Issues
             Assert.Contains("Reduce cannot contain Count() methods in grouping.", exception.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ServerShouldNotThrow()
         {
             using (var store = GetDocumentStore())

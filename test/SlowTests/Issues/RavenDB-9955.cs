@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void JsConvertorShouldIgnoreValueProperyOfNullable()
         {
             using (var store = GetDocumentStore())
@@ -54,7 +55,7 @@ namespace SlowTests.Issues
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void ToDictionaryWithNullableValue()
         {
             using (var store = GetDocumentStore())

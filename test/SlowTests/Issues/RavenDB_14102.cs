@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
             public string Path;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanEscapeLastCharInString()
         {
             using (var store = GetDocumentStore())

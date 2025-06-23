@@ -10,6 +10,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Should_unload_db_and_send_notification_on_catastrophic_failure()
         {
             UseNewLocalServer();

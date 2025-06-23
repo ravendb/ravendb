@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;
@@ -8,7 +8,7 @@ namespace SlowTests.Issues
 {
     public class RavenDB_14527 : RavenTestBase
     {
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanHandleLargeTimeDelta()
         {
             using var store = GetDocumentStore();

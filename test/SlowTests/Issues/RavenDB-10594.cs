@@ -35,7 +35,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseDefaultFieldToSetAnalyzer(Options options)
         {

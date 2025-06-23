@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ public class RavenDB_18332 : RavenTestBase
 #pragma warning restore CS0649
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public void WillNotGetIndexErrorOnFirstOrDefaultWithNoValues()
     {
         var store = GetDocumentStore();

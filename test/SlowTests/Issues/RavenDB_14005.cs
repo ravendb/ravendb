@@ -2,6 +2,7 @@
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Cluster)]
         [InlineData(true)]
         [InlineData(false)]
         public async Task CanGetCompareExchangeValuesLazily(bool noTracking)

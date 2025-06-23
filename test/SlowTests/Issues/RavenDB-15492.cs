@@ -1,4 +1,5 @@
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,7 +11,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WillCallOnBeforeDeleteWhenCallingDeleteById()
         {
             using var store = GetDocumentStore();

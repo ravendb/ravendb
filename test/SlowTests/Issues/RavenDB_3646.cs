@@ -48,7 +48,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Spatial)]
         public void QueryWithoutCustomize()
         {
             using (var store = GetDocumentStore())

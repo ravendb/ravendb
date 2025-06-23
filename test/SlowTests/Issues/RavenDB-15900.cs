@@ -42,7 +42,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task RemoveEntryFromRaftLogEP()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
@@ -160,7 +160,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task RemoveEntryFromRaftLogTest()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);

@@ -1,9 +1,10 @@
-﻿using FastTests;
+using FastTests;
 using Orders;
 using Raven.Client.Documents.Linq;
 using Xunit;
 using Xunit.Abstractions;
 
+using Tests.Infrastructure;
 namespace SlowTests.Issues
 {
     public class RavenDB_12943 : RavenTestBase
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanUseQueryMethodConverter()
         {
             using (var store = GetDocumentStore(new Options

@@ -24,7 +24,7 @@ namespace SlowTests.Issues
             public string FirstName { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void SingleEncodingInHttpQueryShouldWork()
         {
             using (var store = GetDocumentStore())
@@ -76,7 +76,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void DoubleEncodingInHttpQueryShouldWork()
         {
             using (var store = GetDocumentStore())

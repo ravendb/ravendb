@@ -1,9 +1,10 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
 using Xunit.Abstractions;
 
+using Tests.Infrastructure;
 namespace SlowTests.Issues
 {
     public class RavenDB_13387 : RavenLowLevelTestBase
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Memory)]
         public void Should_leave_low_memory_mode()
         {
             using (var database = CreateDocumentDatabase())

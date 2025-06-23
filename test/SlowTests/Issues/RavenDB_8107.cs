@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_patch_by_dynamic_collection_query()
         {
             using (var store = GetDocumentStore())
@@ -40,7 +41,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_delete_by_dynamic_collection_query()
         {
             using (var store = GetDocumentStore())
@@ -64,7 +65,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_patch_by_dynamic_all_docs_collection_query()
         {
             using (var store = GetDocumentStore())
@@ -90,7 +91,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_delete_by_dynamic_all_docs_collection_query()
         {
             using (var store = GetDocumentStore())

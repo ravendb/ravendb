@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task QueryWithInvocationExpressionInsideWhereShouldThrow()
         {
             using (var store = GetDocumentStore())
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ToStringOnErrounousQueryInspectorShouldNotCauseStackOverflow()
         {
             using (var store = GetDocumentStore())

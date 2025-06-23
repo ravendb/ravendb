@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Util;
 using Raven.Server.Documents.Expiration;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -34,7 +35,7 @@ namespace SlowTests.Issues
             await ExpirationHelper.SetupExpiration(store, Server.ServerStore, config);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ExpirationRefresh)]
         public async Task WillCleanupAllExpiredDocumentsInSingleRun_EvenWhenMoreThanBatchSize()
         {
             var count = ExpiredDocumentsCleaner.BatchSize + 10;
@@ -80,7 +81,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ExpirationRefresh)]
         public async Task CanDisableAndEnableExpirationAndRefresh()
         {
             using (var store = GetDocumentStore())

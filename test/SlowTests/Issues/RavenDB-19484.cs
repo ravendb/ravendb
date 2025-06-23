@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ public class RavenDB_19484 : RavenTestBase
     {
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.TimeSeries)]
     public void TestIncSeriesTwicePerSession()
     {
         using var store = GetDocumentStore();

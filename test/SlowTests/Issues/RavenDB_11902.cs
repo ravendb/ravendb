@@ -1,8 +1,9 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents.Operations;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_insert_doc_with_single_quotation_char_in_id()
         {
             using (var store = GetDocumentStore())

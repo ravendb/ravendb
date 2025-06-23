@@ -3,6 +3,7 @@ using System.IO.Compression;
 using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void CanCompactDataFrom4_2()
         {
             var backupPath = NewDataPath(forceCreateDir: true);

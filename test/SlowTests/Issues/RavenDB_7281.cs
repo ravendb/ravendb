@@ -5,6 +5,7 @@ using FastTests.Voron.FixedSize;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Fixed;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(13, 2)]
         [InlineData(5111, 2)]
         [InlineData(13, 3)]
@@ -29,7 +30,7 @@ namespace SlowTests.Issues
             DoWork(total, mod, modZero: false);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed]
         public void CanCalculateNumberOfEntriesInFst_Random(int seed)
         {

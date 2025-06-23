@@ -89,7 +89,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_query_4_dimensional_array_via_client()
         {
             using (var store = GetDocumentStore())
@@ -130,7 +130,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_query_4_dimensional_array_using_contains_via_client()
         {
             using (var store = GetDocumentStore())

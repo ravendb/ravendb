@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Server.Documents.Indexes.Static;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Issues
             public string Street { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void DynamicListShouldContainTakeMethod()
         {
             var list =

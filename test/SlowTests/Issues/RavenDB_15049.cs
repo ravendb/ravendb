@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldThrowWhenIndexMapFunctionsHaveDifferentSourceTypes()
         {
             var e = Assert.Throws<InvalidOperationException>(() =>

@@ -2,6 +2,7 @@
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanCustomizeDeserialization()
         {
             using (var documentStore = GetDocumentStore(new Options
@@ -48,7 +49,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanCustomizeSeserializationWithoutAffectingDeserialization()
         {
             using (var documentStore = base.GetDocumentStore(new Options

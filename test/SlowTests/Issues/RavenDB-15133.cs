@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_Support_Guid_In_Patch_Filter()
         {
             using (var store = GetDocumentStore())
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_Support_To_String_In_Patch_Filter()
         {
             using (var store = GetDocumentStore())
@@ -93,7 +94,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_Support_Enum_In_Patch_Filter()
         {
             using (var store = GetDocumentStore())
@@ -133,7 +134,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_Support_DateTime_In_Patch_Filter()
         {
             using (var store = GetDocumentStore())
@@ -173,7 +174,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_Support_DateTimeOffset_In_Patch_Filter()
         {
             using (var store = GetDocumentStore())
@@ -213,7 +214,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_Support_TimeSpan_In_Patch_Filter()
         {
             using (var store = GetDocumentStore())
@@ -253,7 +254,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_Support_DateTime_In_Patch()
         {
             using (var store = GetDocumentStore())

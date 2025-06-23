@@ -13,6 +13,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,7 +37,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void can_get_in_progress_operation_when_deleting_by_index()
         {
             using (var store = GetDocumentStore())
@@ -69,7 +70,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void can_get_in_progress_operation_when_patching_by_script()
         {
             using (var store = GetDocumentStore())

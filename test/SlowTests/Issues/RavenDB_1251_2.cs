@@ -64,7 +64,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Duration_Can_Filter_By_Value()
         {
             using (var store = GetDocumentStore(new Options

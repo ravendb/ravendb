@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,7 +31,7 @@ namespace SlowTests.Issues
             public string Order { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_RQL_Reserved_Words_As_Field_To_Fetch()
         {
             using (var store = GetDocumentStore())
@@ -73,7 +74,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_RQL_Reserved_Words_As_Field_To_Fetch_With_Other_Fields()
         {
             using (var store = GetDocumentStore())
@@ -123,7 +124,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_RQL_Reserved_Words_As_Field_To_Fetch_And_Select_Counter()
         {
             using (var store = GetDocumentStore())
@@ -172,7 +173,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_RQL_Reserved_Words_As_Field_To_Fetch_With_Nested_Path()
         {
             using (var store = GetDocumentStore())

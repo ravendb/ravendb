@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void Should_not_allow_having_two_revision_collection_configurations_with_collection_name_that_differs_only_in_casing()
         {
             using (var store = GetDocumentStore())

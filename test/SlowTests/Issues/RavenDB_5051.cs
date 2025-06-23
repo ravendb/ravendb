@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Studio)]
         public void FormatShouldWork()
         {
             using (var store = GetDocumentStore())

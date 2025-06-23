@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Sockets;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
             public Exception E;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanSerializeException()
         {
             using (var store = GetDocumentStore())

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Can_write_large_string()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -43,7 +44,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core | RavenTestCategory.Compression)]
         public async Task Can_write_large_compressed_stream()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())

@@ -1,6 +1,7 @@
-﻿using System.IO;
+using System.IO;
 using System.Reflection;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ public class RavenDB_20286 : NoDisposalNeeded
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void MustNotHaveMySqlConnectorUsing()
     {
         string currentDir = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);

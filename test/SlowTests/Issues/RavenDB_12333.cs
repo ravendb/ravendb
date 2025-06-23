@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FastTests;
 using Orders;
@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanDisableStrictMode()
         {
             using (var store = GetDocumentStore(new Options

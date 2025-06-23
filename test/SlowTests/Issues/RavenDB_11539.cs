@@ -1,4 +1,4 @@
-﻿
+
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -7,6 +7,7 @@ using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -29,7 +30,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void IndexQueryWithLoadAndSimpleMemberProjectionShouldGenerateCorrecetSelectPath()
         {
             using (var store = GetDocumentStore())

@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -76,7 +77,7 @@ namespace SlowTests.Issues
             public Guid UnitId { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseStringEmptyInJsProjection()
         {
             using (var store = GetDocumentStore())
@@ -108,7 +109,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseStringEmptyInJsProjection2()
         {
             using (var store = GetDocumentStore())

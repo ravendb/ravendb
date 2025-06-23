@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -24,7 +25,7 @@ namespace SlowTests.Issues
             public string[] Tags;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanJoinArraysDuringQuery()
         {
             using (var store = GetDocumentStore())

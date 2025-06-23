@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -6,6 +6,7 @@ using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,7 +19,7 @@ public class RavenDB_17260 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public async Task DeleteIndexInternalWillNotThrowAccessDeniedWhenDeletingInMemoryReplacementIndex()
     {
         using (var store = GetDocumentStore(new Options()

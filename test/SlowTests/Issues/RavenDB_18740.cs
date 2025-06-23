@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.NotificationCenter.Notifications;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ public class RavenDB_18740 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Monitoring)]
     public async Task Notifications_Are_Isolated()
     {
         using (var store1 = GetDocumentStore())
@@ -50,7 +51,7 @@ public class RavenDB_18740 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Monitoring)]
     public async Task Notifications_Are_Persisted()
     {
         var databaseName = GetDatabaseName();

@@ -13,6 +13,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task TombstonesOfArtificialDocumentsShouldNotBeRestored()
         {
             using (var store = GetDocumentStore())
@@ -93,7 +94,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task ShouldPreserveTombstoneFlagsAfterRestore()
         {
             using (var store = GetDocumentStore())

@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Newtonsoft.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
             public bool IgnoreChanges;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanIgnoreChanges()
         {
             using var store = GetDocumentStore(new Options

@@ -153,7 +153,7 @@ namespace SlowTests.Issues
             public string VATName { get; internal set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task BoolOrderTest()
         {
             using (var store = GetDocumentStore())

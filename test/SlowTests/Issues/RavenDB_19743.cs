@@ -2,6 +2,7 @@
 using Orders;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Exceptions.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.ClientApi)]
         public void DisabledConfigurationBaseCase()
         {
             using (var store = GetDocumentStore())
@@ -41,7 +42,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.ClientApi)]
         public void DisabledConfigurationGoodCase()
         {
             using (var store = GetDocumentStore())
@@ -70,7 +71,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.ClientApi)]
         public void DisabledConfigurationDefaultChange_tryToCrateDataWithDisabledSigh_shouldThrow()
         {
             using (var store = GetDocumentStore())
@@ -96,7 +97,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.ClientApi)]
         public void CrateValidConfigurationThenDisable_ShouldCrateDataWithDefaultPartSeparator()
         {
             using (var store = GetDocumentStore())

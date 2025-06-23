@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Collections.Generic;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
             public List<Document> SubDocuments { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanQueryMinMaxDatesCoalescing()
         {
             DateTimeOffset date = DateTimeOffset.UtcNow.Date;

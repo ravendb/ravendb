@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,12 +11,12 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
-        [InlineData("\u0002")]
-        [InlineData("ab\0ac")]
-        public void DocumentWithUnicodeCharacterShouldNotHaveChangesOnLoad(string description)
+        [RavenTheory(RavenTestCategory.ClientApi)]
+        [RavenData("\u0002", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData("ab\0ac", DatabaseMode = RavenDatabaseMode.All)]
+        public void DocumentWithUnicodeCharacterShouldNotHaveChangesOnLoad(Options options, string description)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 using (var session = store.OpenSession())
                 {
@@ -35,7 +36,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void DocumentWithUnicodeCharacterShouldNotHaveChangesOnLoad()
         {
             // compressed string case does not affect the comparison and should work as well 

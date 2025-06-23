@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task DeletingCounterWhenFirstPartialValueIsEmptyAndRemote_ShouldNotGenerateCorruptedDeleteCv()
         {
             var (_, leader) = await CreateRaftCluster(2);

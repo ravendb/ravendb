@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public async Task CanLoadDatabaseAndIgnoreMissingJournals()
         {
             UseNewLocalServer(new Dictionary<string, string>

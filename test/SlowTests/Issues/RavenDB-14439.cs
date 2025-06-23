@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
             public string ChangeVectorVal;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanGetChangeVectorForPatching()
         {
             using (var store = GetDocumentStore())

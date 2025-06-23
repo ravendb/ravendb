@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ public class RavenDB_18643 : RavenTestBase
     
     private record ExampleItem(string Name);
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public async Task CanGetProgressOfBulkInsert()
     {
         List<string> lastInsertedDocId = new();

@@ -12,6 +12,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData("Index")]
         [InlineData("ZIndex")]
         public async Task Can_Add_Database_Folder_With_Side_By_Side_Indexes(string indexName)
@@ -97,7 +98,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Throw_If_Creating_A_Database_With_Side_By_Side_Indexes()
         {
             using (var store = GetDocumentStore())

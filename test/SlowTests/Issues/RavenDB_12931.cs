@@ -1,6 +1,7 @@
-﻿using FastTests.Voron.Tables;
+using FastTests.Voron.Tables;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -10,7 +11,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDeleteTable()
         {
             using (var tx = Env.WriteTransaction())

@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Operations.ETL.SQL;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Can_get_db_and_server_from_oracle_connection_string()
         {
             var (db, server) = SqlConnectionStringParser.GetDatabaseAndServerFromConnectionString("Oracle.ManagedDataAccess.Client",
@@ -38,7 +39,7 @@ namespace SlowTests.Issues
             Assert.Equal("myserver/myservice:dedicated/instancename", server);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Can_check_oracle_connection_string_against_secured_channel()
         {
             var c = new SqlEtlConfiguration();

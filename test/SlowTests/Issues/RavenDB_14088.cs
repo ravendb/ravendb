@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Orders;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void NotWithExistsShouldYieldProperRql()
         {
             using (var store = GetDocumentStore())

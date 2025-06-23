@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.ETL.OLAP;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Sparrow.Platform;
@@ -29,7 +30,7 @@ namespace SlowTests.Issues
          * attempt to post external configuration script by overriding local conf. destination
          * security clearance: ClusterAdmin , Operator
          */
-        [Theory]
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Certificates)]
         [InlineData(SecurityClearance.ClusterAdmin)]
         [InlineData(SecurityClearance.Operator)]
         public void CanPostOneTimeBackupConfigurationScriptWithClusterAdminClearance(SecurityClearance sc)
@@ -72,7 +73,7 @@ namespace SlowTests.Issues
          * attempt to post external configuration script by overriding local conf. destination
          * security clearance: ValidUser
          */
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Certificates)]
         public void CannotPostOneTimeBackupConfigurationScriptWitValidUserClearance()
         {
             var dbName = GetDatabaseName();
@@ -120,7 +121,7 @@ namespace SlowTests.Issues
          * attempt to post external configuration script by overriding local conf. destination
          * security clearance: ClusterAdmin, Operator
          */
-        [Theory]
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Certificates)]
         [InlineData(SecurityClearance.ClusterAdmin)]
         [InlineData(SecurityClearance.Operator)]
         public void CanPostPeriodicBackupConfigurationScriptWithClusterAdminClearance(SecurityClearance sc)
@@ -168,7 +169,7 @@ namespace SlowTests.Issues
          * attempt to post external configuration script by overriding local conf. destination
          * security clearance: ValidUser
          */
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Certificates)]
         public void CannotPostPeriodicBackupConfigurationScriptWitValidUserClearance()
         {
             var dbName = GetDatabaseName();
@@ -216,7 +217,7 @@ namespace SlowTests.Issues
        * attempt to post external connection string script by overriding local conf. destination
        * security clearance: ClusterAdmin, Operator
        */
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Certificates)]
         [InlineData(SecurityClearance.ClusterAdmin)]
         [InlineData(SecurityClearance.Operator)]
         public void CanPostOlapConnectionStringScriptWithClusterAdminClearance(SecurityClearance sc)
@@ -265,7 +266,7 @@ namespace SlowTests.Issues
          * attempt to post external connection string script by overriding local conf. destination
          * security clearance: ValidUser
          */
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Certificates)]
         public void CannotPostOlapConnectionStringScriptWitValidUserClearance()
         {
 

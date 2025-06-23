@@ -145,7 +145,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task EmptyListAsync()
         {
             using (var store = GetDocumentStore())
@@ -182,7 +182,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task ListContainingNullAsync()
         {
             using (var store = GetDocumentStore())
@@ -282,7 +282,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task ListWithRatingNullAsync()
         {
             using (var store = GetDocumentStore())

@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
 
         private const string StatusPostfix = "/status";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ProjectionWithLoadFails()
         {
             const string documentId = "document-id";

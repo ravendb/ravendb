@@ -11,6 +11,7 @@ using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Indexes.Errors;
 using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Should_Not_Be_Able_To_Open_Index_Copied_From_Different_Database()
         {
             var options = new Options
@@ -66,7 +67,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Should_Be_Able_To_Open_Index_Copied_From_Different_Database_When_IndexStartupBehavior_Is_Set_To_ResetAndStart()
         {
             var options = new Options
@@ -111,7 +112,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Core)]
         public async Task Should_Be_Able_To_Use_Soft_Delete_And_Open_Index_Afterwards()
         {
             var path = NewDataPath();
@@ -142,7 +143,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.BackupExportImport)]
         public async Task Should_Be_Able_To_Restore_Snapshot_Backup()
         {
             var path1 = NewDataPath();

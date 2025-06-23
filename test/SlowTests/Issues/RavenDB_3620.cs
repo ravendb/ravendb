@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void VerifyLicenseRelatedLinks()
         {
             /*

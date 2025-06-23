@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -6,6 +6,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Constants = Raven.Client.Constants;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AggressivelyCacheWorksWhenTopologyUpdatesIsDisable()
         {
             using (var documentStore = GetDocumentStore())

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using FastTests;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void CanSetLogsRetentionTime()
         {
             using (var server = GetNewServer(new ServerCreationOptions{RunInMemory = true, CustomSettings = new Dictionary<string, string>
@@ -25,7 +26,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void SettingLogsRetentionTimeToVeryLowValueWillSetMinValueAnyway()
         {
             using (var server = GetNewServer(new ServerCreationOptions{ RunInMemory = true, CustomSettings = new Dictionary<string, string>

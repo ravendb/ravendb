@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_continue_incremental_backup_with_same_folder()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

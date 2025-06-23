@@ -1,7 +1,8 @@
-﻿using FastTests;
+using FastTests;
 using Orders;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues;
 
@@ -11,7 +12,7 @@ public class RavenDB_21264 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void ShouldSetSkipStatisticsAccordingly()
     {
         using (var store = GetDocumentStore())

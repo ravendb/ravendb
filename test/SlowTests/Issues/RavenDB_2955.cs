@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldDeleteAutoIndexSurpassedByAnotherAutoIndex()
         {
             using (var store = GetDocumentStore(new Options
@@ -54,7 +55,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ShouldNotDeleteAutoIndexesIfSurpassedIndexIsStale()
         {
             using (var store = GetDocumentStore())
@@ -92,7 +93,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ShouldNotDeleteStaticIndexeWhichIsSurpassedByAnotherStaticOne()
         {
             using (var store = GetDocumentStore())
@@ -118,7 +119,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ShouldNotDeleteAnyAutoIndex()
         {
             using (var store = GetDocumentStore())
@@ -143,7 +144,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldDeleteSmallerAutoIndexes()
         {
             using (var store = GetDocumentStore(new Options

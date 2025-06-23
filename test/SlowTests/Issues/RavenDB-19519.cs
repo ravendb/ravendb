@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Config.Settings;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void SchemaUpgradeAddedToInitLog()
         {
             var folder = NewDataPath(forceCreateDir: true);

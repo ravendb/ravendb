@@ -195,7 +195,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void SessionWideNoCachingShouldWork()
         {
             using (var store = GetDocumentStore())

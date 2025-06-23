@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanEnableAndDisableIndex()
         {
             using (var store = GetDocumentStore())
@@ -57,7 +58,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanChangeIndexPriority()
         {
             using (var store = GetDocumentStore())

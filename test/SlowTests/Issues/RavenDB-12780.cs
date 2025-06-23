@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_access_id_of_a_missing_loaded_document()
         {
             using (var store = GetDocumentStore())
@@ -42,7 +43,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_access_metadata_of_a_missing_loaded_document()
         {
             using (var store = GetDocumentStore())
@@ -60,7 +61,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_access_asjson_of_a_missing_loaded_document()
         {
             using (var store = GetDocumentStore())
@@ -80,7 +81,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Will_throw_when_null_passed_in_Id_extension_method()
         {
             using (var store = GetDocumentStore())
@@ -110,7 +111,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Will_throw_when_null_passed_in_MetadataFor_extension_method()
         {
             using (var store = GetDocumentStore())
@@ -137,7 +138,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Will_throw_when_null_passed_in_AsJson_extension_method()
         {
             using (var store = GetDocumentStore())

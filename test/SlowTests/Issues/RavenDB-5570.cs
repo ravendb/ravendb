@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Doing_PUT_without_commit_should_not_cause_NRE_on_subsequent_PUTs()
         {
             using (var database = CreateDocumentDatabase())

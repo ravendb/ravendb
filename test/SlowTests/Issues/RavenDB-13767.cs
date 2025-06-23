@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Replication)]
         public async Task PatchingClusterTransactionDocumentShouldWork()
         {
             var (_, leader) = await CreateRaftCluster(3);

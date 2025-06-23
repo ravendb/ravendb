@@ -18,7 +18,7 @@ namespace SlowTests.Issues
             public DateTime? DateTime;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanTranslateDateTimeMinValueMaxValue()
         {
             using (var store = GetDocumentStore())

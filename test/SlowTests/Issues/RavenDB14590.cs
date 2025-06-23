@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.ClientApi)]
         public async Task CanGetUpdatesTimeSeriesValuesUsingInclude()
         {
             using var store = GetDocumentStore();

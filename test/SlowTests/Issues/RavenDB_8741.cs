@@ -108,7 +108,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Should_throw_on_group_by_collection_use_dedicated_methods_instead()
         {
             using (var store = GetDocumentStore())
@@ -129,7 +129,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_group_by_lazy_double_value()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using FastTests;
 using Orders;
@@ -19,7 +19,7 @@ public class RavenDB_20678 : RavenTestBase
     {
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     public void CanBreakSingleTxOfCounters(Options options)
     {

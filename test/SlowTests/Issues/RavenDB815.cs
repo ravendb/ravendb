@@ -4,6 +4,7 @@ using FastTests.Utils;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -68,7 +69,7 @@ namespace SlowTests.Issues
             public string Baz { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Core)]
         public void Inner_IList_Strings_From_Array()
         {
             using (var documentStore = GetDocumentStore())
@@ -94,7 +95,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Core)]
         public void Inner_IList_Strings_From_List()
         {
             using (var documentStore = GetDocumentStore())
@@ -120,7 +121,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Core)]
         public void Inner_IEnumerable_Strings_From_Array()
         {
             using (var documentStore = GetDocumentStore())
@@ -146,7 +147,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Core)]
         public void Inner_IEnumerable_Strings_From_List()
         {
             using (var documentStore = GetDocumentStore())
@@ -172,7 +173,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Core)]
         public void Inner_List_Strings()
         {
             using (var documentStore = GetDocumentStore())
@@ -198,7 +199,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Core)]
         public void Inner_Array_Strings()
         {
             using (var documentStore = GetDocumentStore())
@@ -224,7 +225,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Core)]
         public void Inner_IList_Objects_From_Array()
         {
             using (var documentStore = GetDocumentStore())
@@ -256,7 +257,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Core)]
         public void Inner_IList_Objects_From_List()
         {
             using (var documentStore = GetDocumentStore())
@@ -288,7 +289,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Core)]
         public void Inner_IEnumerable_Objects_From_Array()
         {
             using (var documentStore = GetDocumentStore())
@@ -320,7 +321,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Core)]
         public void Inner_IEnumerable_Objects_From_List()
         {
             using (var documentStore = GetDocumentStore())
@@ -352,7 +353,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Core)]
         public void Inner_List_Objects()
         {
             using (var documentStore = GetDocumentStore())
@@ -384,7 +385,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Core)]
         public void Inner_Array_Objects()
         {
             using (var documentStore = GetDocumentStore())

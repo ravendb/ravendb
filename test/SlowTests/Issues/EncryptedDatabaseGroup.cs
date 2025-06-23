@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Cluster | RavenTestCategory.Certificates)]
         public async Task CanRemoveNodeWithNoKey()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -68,7 +68,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Cluster | RavenTestCategory.Certificates)]
         public async Task CanRemoveNodeWithWrongKey()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -135,7 +135,7 @@ namespace SlowTests.Issues
             Assert.Equal(3, record.Topology.Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Cluster | RavenTestCategory.Certificates)]
         public async Task AddingNodeToEncryptedDatabaseGroupShouldThrow()
         {
             var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3);
@@ -188,7 +188,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Cluster | RavenTestCategory.Certificates)]
         public async Task DeletingMasterKeyForExistedEncryptedDatabaseShouldFail()
         {
             var result = await Encryption.EncryptedServerAsync();
@@ -220,7 +220,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Cluster | RavenTestCategory.Certificates)]
         public async Task DeletingEncryptedDatabaseFromDatabaseGroup()
         {
             var (nodes, server, certificates) = await CreateRaftClusterWithSsl(3);
@@ -260,7 +260,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Encryption | RavenTestCategory.Cluster | RavenTestCategory.Certificates)]
         public async Task EnsureDatabaseDeletedFromCertificate()
         {
             var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3);

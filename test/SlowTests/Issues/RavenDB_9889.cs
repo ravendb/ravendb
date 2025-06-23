@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,7 +30,7 @@ namespace SlowTests.Issues
             public bool After { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseToDocumentConversionEvents()
         {
             using (IDocumentStore store = GetDocumentStore())
@@ -77,7 +78,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseToEntityConversionEvents()
         {
             using (IDocumentStore store = GetDocumentStore())

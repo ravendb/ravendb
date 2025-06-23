@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Smuggler;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -50,7 +51,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
         public async Task IncludeArtificialDocuments_Smuggler_ShouldWork()
         {
             using (var store = GetDocumentStore())
@@ -151,7 +152,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
         public async Task IncludeArtificialDocuments_Backup_ShouldWork()
         {
             using (var store = GetDocumentStore())

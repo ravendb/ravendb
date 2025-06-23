@@ -14,6 +14,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task can_export_all_documents()
         {
             var backupPath = Path.Combine(NewDataPath(forceCreateDir: true), "export.dump");

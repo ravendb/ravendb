@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -12,6 +12,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -23,7 +24,7 @@ namespace SlowTests.Issues
 
         private int _numberOfDatabasesRemoved;
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanImportIdentities()
         {
             DoNotReuseServer();

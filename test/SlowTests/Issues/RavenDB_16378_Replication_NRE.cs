@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task ShouldNotThrowNreOnReplication()
         {
             var backupPath = NewDataPath(forceCreateDir: true);

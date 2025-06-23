@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Orders;
@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ExecutingIndexOnEmptyDefaultDatabase_ShouldThrow()
         {
             using (var store = new DocumentStore

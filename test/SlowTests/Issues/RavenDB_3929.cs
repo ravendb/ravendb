@@ -6,6 +6,7 @@
 
 using FastTests;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void NullPropagationShouldNotAffectOperators()
         {
             using (var store = GetDocumentStore())

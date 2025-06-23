@@ -61,7 +61,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanProjectDefaultingToNonEmptyArray()
         {
             using (var store = GetDocumentStore())
@@ -113,7 +113,7 @@ namespace SlowTests.Issues
             public Dictionary<string, string> Dictionary { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanProjectDefaultingToEmptyList()
         {
             using (var store = GetDocumentStore())
@@ -139,7 +139,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanProjectToListWithParmeter()
         {
             using (var store = GetDocumentStore())
@@ -203,7 +203,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanProjectDefaultingToNewListWithInitializers()
         {
             using (var store = GetDocumentStore())
@@ -258,7 +258,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanProjectDefaultingToDictionary()
         {
             using (var store = GetDocumentStore())
@@ -299,7 +299,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanProjectDefaultingToHashSet()
         {
             using (var store = GetDocumentStore())

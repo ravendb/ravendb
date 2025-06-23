@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ public class RavenDB_17617 : RavenLowLevelTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public async Task Should_throw_on_attempt_to_create_auto_index()
     {
         using (var database = CreateDocumentDatabase())

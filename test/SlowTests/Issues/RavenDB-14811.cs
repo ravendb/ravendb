@@ -58,7 +58,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Project_Id_Field()
         {
             using (var store = GetDocumentStore())

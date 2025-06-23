@@ -46,7 +46,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void CustomSerializer_WithSaveChanges_AndQuery(RavenTestParameters config)
         {
@@ -91,7 +91,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void CustomSerializer_WithSaveChanges_AndLoad(RavenTestParameters config)
         {
@@ -134,7 +134,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Lucene)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
         public void CanGetResultsUsingTermVectorsAndStorage(RavenTestParameters config)
         {
@@ -177,7 +177,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Complex objects are not supposed to be indexed inside Corax.")]
         public void CanMakeDynamicDocumentQueriesWithComplexProperties(RavenTestParameters config)
@@ -229,7 +229,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Facets)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanPerformDynamicFacetedSearch_Embedded(RavenTestParameters config)
         {
@@ -284,7 +284,7 @@ WaitForUserToContinueTheTest(store);
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Facets)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
         public void CanPerformDynamicFacetedSearch_Remotely(RavenTestParameters config)
         {
@@ -342,7 +342,7 @@ WaitForUserToContinueTheTest(store);
             public string FullName { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void Can_Project_Into_Class(RavenTestParameters config)
         {
@@ -390,7 +390,7 @@ WaitForUserToContinueTheTest(store);
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void Can_Project_Into_Class_With_Let(RavenTestParameters config)
         {
@@ -448,7 +448,7 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Lucene)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
         public void CanPerformIntersectQuery(RavenTestParameters config)
         {
@@ -674,7 +674,7 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Patching)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void PatchOnEnumShouldWork(RavenTestParameters config)
         {
@@ -753,7 +753,7 @@ from 'Users' as user select output(user)", queryAsString);
 
         private string FirstCharToLower(string str) => $"{Char.ToLower(str[0])}{str.Substring(1)}";
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Patching)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void CanPatch(RavenTestParameters config)
         {
@@ -817,7 +817,7 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Patching)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void CanPatchAndModify(RavenTestParameters config)
         {
@@ -862,7 +862,7 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Indexes)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void CanPatchComplex(RavenTestParameters config)
         {
@@ -1022,7 +1022,7 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Indexes)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void ProjectInto_ShouldWork(RavenTestParameters config)
         {
@@ -1072,7 +1072,7 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Indexes)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void CanAddToArray(RavenTestParameters config)
         {
@@ -1150,7 +1150,7 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Indexes)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void CanRemoveFromArray(RavenTestParameters config)
         {
@@ -1205,7 +1205,7 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Indexes)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void CanIncrement(RavenTestParameters config)
         {
@@ -1264,7 +1264,7 @@ from 'Users' as user select output(user)", queryAsString);
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Indexes)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.All)]
         public void ShouldMergePatchCalls(RavenTestParameters config)
         {

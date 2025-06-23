@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 #pragma warning disable 1998
@@ -22,7 +23,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(1)]
         [InlineData(2)]
         [InlineData(4)]
@@ -68,7 +69,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(4)]
         [InlineData(8)]
         [InlineData(16)]
@@ -118,7 +119,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(4)]
         [InlineData(8)]
         [InlineData(16)]
@@ -166,7 +167,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ShouldThrowOnNotAwaitedAsyncMethods()
         {
             // "Running this test makes that not awaited async calls (intentional) - we need to wait for tasks to avoid heap corruption. See https://issues.hibernatingrhinos.com/issue/RavenDB-16759

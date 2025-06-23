@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldCleanEscapePositionWhenTakenFromCache()
         {
             using (var pool = new JsonContextPool())

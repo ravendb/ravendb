@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -11,12 +11,13 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
     public class RavenDB_16511 : RavenLowLevelTestBase
     {
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ReplaceIndexShouldWork()
         {
             using (var database = CreateDocumentDatabase(runInMemory: false))

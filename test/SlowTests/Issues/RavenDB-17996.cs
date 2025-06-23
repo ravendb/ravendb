@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Metadata_that_didnt_change_doesnt_cause_saveChanges()
         {
             using (var store = GetDocumentStore())
@@ -60,7 +61,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Metadata_that_changed_caused_saveChanges()
         {
             using (var store = GetDocumentStore())
@@ -108,7 +109,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Metadata_clear_caused_saveChanges()
         {
             using (var store = GetDocumentStore())
@@ -149,7 +150,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Metadata_clear_that_didnt_change_doesnt_cause_saveChanges()
         {
             using (var store = GetDocumentStore())

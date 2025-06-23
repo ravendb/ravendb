@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task InstallSnapshotShouldHandleDeletionInProgress()
         {
             var databaseName = nameof(InstallSnapshotShouldHandleDeletionInProgress) + Guid.NewGuid();

@@ -3,6 +3,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ public class RavenDB_19415 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
     public void CanAddAllCountersViaInclude()
     {
         using var store = GetDocumentStore();

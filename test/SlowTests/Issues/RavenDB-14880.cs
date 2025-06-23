@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task UpdateClientConfigurationOnlyWhenRequired(bool isServerWide)
@@ -93,7 +93,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
         public async Task UpdateTopologyWhenNeeded()
         {
             var (_, leader) = await CreateRaftCluster(3);

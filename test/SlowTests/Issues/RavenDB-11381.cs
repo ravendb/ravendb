@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,7 +33,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanSpecifyCustomIndexName()
         {
             var conventions = new DocumentConventions

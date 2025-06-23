@@ -1,9 +1,3 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenDB2408.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System;
 using System.Linq;
 using FastTests;
@@ -20,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Document_id_not_null_when_projecting(Options options)
         {

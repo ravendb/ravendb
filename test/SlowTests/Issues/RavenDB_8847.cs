@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Should_set_first_batch_timeout_of_newly_created_auto_index()
         {
             using (var store = GetDocumentStore())
@@ -62,7 +63,7 @@ namespace SlowTests.Issues
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Should_set_first_batch_timeout_of_newly_created_static_index()
         {
             using (var store = GetDocumentStore())

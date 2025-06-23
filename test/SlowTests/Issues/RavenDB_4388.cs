@@ -6,6 +6,7 @@
 
 using System.Threading;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldCleanupCache()
         {
             using (var store = GetDocumentStore())

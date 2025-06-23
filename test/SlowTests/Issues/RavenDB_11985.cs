@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using static SlowTests.Issues.RavenDB_11985.Building;
 using static SlowTests.Issues.RavenDB_11985.UsersIndexWithStoredArray;
@@ -56,7 +57,7 @@ namespace SlowTests.Issues
 
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void JSShouldReceiveValidStoredObjectsArray()
         {
             using (var store = GetDocumentStore())
@@ -101,7 +102,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Patching)]
         public void MakeSureStoredInexedValueIsNotStoredInDocumentDuringPatchOperation()
         {
             using (var store = GetDocumentStore())

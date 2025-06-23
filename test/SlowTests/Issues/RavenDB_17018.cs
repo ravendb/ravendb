@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.ClientApi)]
         public async Task ShouldStoreTotalDocumentSizeInPerformanceHint_ForLoadDocuments()
         {
             using (var store = GetDocumentStore(new Options
@@ -110,7 +110,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.Querying)]
         public async Task ShouldStoreTotalDocumentSizeInPerformanceHint_ForQueriesWithIncludes()
         {
             using (var store = GetDocumentStore(new Options
@@ -161,7 +161,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.Revisions)]
         public async Task ShouldStoreTotalDocumentsSizeInPerformanceHint_ForRevisions()
         {
             using (var store = GetDocumentStore(new Options
@@ -235,7 +235,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.CompareExchange)]
         public async Task ShouldStoreTotalDocumentSizeInPerformanceHint_ForCompareExchange()
         {
             using (var store = GetDocumentStore(new Options
@@ -283,7 +283,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange)]
         public void NullCompareExchangeValuesDoNotBreakTotalDocumentsSizeAccumulating()
         {
             using (var store = GetDocumentStore())

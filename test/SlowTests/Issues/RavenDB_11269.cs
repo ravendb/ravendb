@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
             public Address Address { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanLoadViaLetWithSimpleNonJsProjection()
         {
             using (var store = GetDocumentStore())
@@ -60,7 +61,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanLoadViaLetAndProjectMember()
         {
             using (var store = GetDocumentStore())
@@ -100,7 +101,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanDoMultipuleLoadsViaLetAndProjectMember()
         {
             using (var store = GetDocumentStore())
@@ -146,7 +147,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanLoadViaLetAndProjectNestedMember()
         {
             using (var store = GetDocumentStore())
@@ -188,7 +189,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanProjectMemberWithFromAlias()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Net.Http;
 using System.Threading.Tasks;
@@ -24,7 +24,7 @@ public class RavenDB_20084 : ClusterTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
     public async Task ShouldUpdateBackupInfoIfDatabaseUnloaded()
     {
         const int clusterSize = 3;

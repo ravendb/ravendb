@@ -24,7 +24,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Cluster)]
         public async Task EtlFromReAddedNodeShouldWork()
         {
             const string mentorTag = "A";

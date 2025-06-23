@@ -5,6 +5,7 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_group_by_composite_key_with_custom_names()
         {
             using (var store = GetDocumentStore())
@@ -93,7 +94,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Should_throw_index_compilation_error_on_attempt_to_group_by_non_existing_field()
         {
             using (var store = GetDocumentStore())

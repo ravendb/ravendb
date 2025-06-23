@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Raven.Client.ServerWide.Operations;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void DocumentStorageReadLastEtagShouldTakeIntoAccountTheLastCounterEtag()
         {
             using (var store = GetDocumentStore(new Options

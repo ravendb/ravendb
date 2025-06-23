@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CreatingNewCountersViaPatchByQueryShouldNotUpdateMetadataMoreThanOncePerDoc()
         {
             using (var store = GetDocumentStore())

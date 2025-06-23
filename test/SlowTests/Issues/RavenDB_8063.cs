@@ -1,8 +1,9 @@
-﻿using FastTests;
+using FastTests;
 using Orders;
 using Raven.Client.Documents.Commands;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void IncludeShouldNotReturnDuplicates()
         {
             using (var store = GetDocumentStore())

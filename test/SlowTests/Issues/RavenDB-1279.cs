@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,7 +28,7 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public void CanLoadWithoutClrType()
         {
             using (var store = GetDocumentStore())
@@ -51,7 +52,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public void CanIncludeWithoutClrType()
         {
             using (var store = GetDocumentStore())

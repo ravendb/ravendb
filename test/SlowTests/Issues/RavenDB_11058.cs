@@ -4,6 +4,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public void CanCopyAttachment()
         {
             using (var store = GetDocumentStore())
@@ -103,7 +104,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public void CanMoveAttachment()
         {
             using (var store = GetDocumentStore())
@@ -202,7 +203,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public void CanRenameAttachment()
         {
             using (var store = GetDocumentStore())

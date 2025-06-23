@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact(Skip="This is just a playground test for javascript indexes")]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.JavaScript, Skip="This is just a playground test for javascript indexes")]
         public void PlaygroundTest()
         {
             ExecuteIndexAndWaitForUserToContinueTheTest<SalesByCityAndSupplier>();

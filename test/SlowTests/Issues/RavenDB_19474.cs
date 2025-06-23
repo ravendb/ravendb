@@ -1,6 +1,7 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using System;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using System.Threading;
@@ -15,7 +16,7 @@ public class RavenDB_19474 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Cluster)]
     public async Task CanCreateCompareExchangeThenDatabaseUnloadThenCreateCompareExchange()
     {
         var value = new SamplesTestBase.User { Id = Guid.NewGuid().ToString(), Name = "Lev" };

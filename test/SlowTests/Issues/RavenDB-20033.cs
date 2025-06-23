@@ -8,6 +8,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Server.Extensions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -31,7 +32,7 @@ public class RavenDB_20033 : RavenTestBase
 
     private string ThrowStreamIsEmpty() => throw new InvalidDataException("stream is empty");
     
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public async Task JsonlDocumentsLoadStreamReturnsCorrectData()
     {
         var store = GetDocumentStore();

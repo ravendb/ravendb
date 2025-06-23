@@ -49,7 +49,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void CountersInSelectClauseShouldAffectQueryEtag_JsProjection_CollectionQuery()
         {
             using (var store = GetDocumentStore())
@@ -92,7 +92,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void CountersInSelectClauseShouldAffectQueryEtag_DynamicIndexQuery()
         {
             using (var store = GetDocumentStore())
@@ -136,7 +136,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void CountersInSelectClauseShouldAffectQueryEtag_JsProjection_DynamicIndexQuery()
         {
             using (var store = GetDocumentStore())
@@ -188,7 +188,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void CountersInSelectClauseShouldAffectQueryEtag_StaticIndexQuery()
         {
             using (var store = GetDocumentStore())
@@ -236,7 +236,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void CountersInSelectClauseShouldAffectQueryEtag_JsProjection_StaticIndexQuery()
         {
             using (var store = GetDocumentStore())

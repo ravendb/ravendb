@@ -86,7 +86,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void ThrowOnDatabaseRecordChanges()
         {
             const int numberOfFields = 45;

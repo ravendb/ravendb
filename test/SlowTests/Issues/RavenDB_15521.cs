@@ -1,8 +1,9 @@
-﻿using System.IO;
+using System.IO;
 using System.Text;
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void ShouldWork()
         {
             using (var store = GetDocumentStore())

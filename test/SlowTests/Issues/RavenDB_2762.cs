@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void IndexingErrorsShouldSurviveDbRestart()
         {
             var dataDir = NewDataPath();

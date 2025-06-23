@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -49,7 +50,7 @@ namespace SlowTests.Issues
         //    base.ModifyStore(store);
         //}
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void OneShardPerSessionStrategy()
         {
             //using (var store = CreateStore())
@@ -96,7 +97,7 @@ namespace SlowTests.Issues
             //}
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void OneShardPerSessionStrategyAsync()
         {
             //using (var store = CreateStore())

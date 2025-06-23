@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Spatial | RavenTestCategory.Querying)]
         public void LinqOrderByDistanceShouldGenerateQueryProperly()
         {
             using (var store = GetDocumentStore())

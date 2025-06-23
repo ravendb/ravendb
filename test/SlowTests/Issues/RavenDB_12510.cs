@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         }
 
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void MixedIndexSyntaxTypesInMultiMapIndex()
         {
             using (var store = GetDocumentStore())

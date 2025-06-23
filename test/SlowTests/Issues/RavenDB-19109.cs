@@ -9,6 +9,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,7 @@ public class RavenDB_19109 : RavenTestBase
         public string Name { get; set; }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void DatabaseThrowsOnOpenWhenDisableMarkerIsInDirectory()
     {
         DoNotReuseServer();
@@ -60,7 +61,7 @@ public class RavenDB_19109 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public void IndexThrowsOnOpenWhenDisableMarkerIsInDirectory()
     {
         DoNotReuseServer();

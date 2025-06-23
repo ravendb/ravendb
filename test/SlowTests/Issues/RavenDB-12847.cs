@@ -3,6 +3,7 @@ using System.Text;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,25 +15,25 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_user_normalize_in_index()
         {
             CanUseOverLoad(new Test_Normalize());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_use_normalize_overload_in_index()
         {
             CanUseOverLoad(new Test_Normalize_Overload());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_use_is_normalized_in_index()
         {
             CanUseOverLoad(new Test_Is_Normalized());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_use_is_normalized_overload()
         {
             CanUseOverLoad(new Test_Is_Normalized_Overload());

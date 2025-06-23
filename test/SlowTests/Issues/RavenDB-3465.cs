@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void get_metadata_for_sharded()
         {
             using (var shard1 = GetDocumentStore())
@@ -57,7 +58,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void get_metadata_for_async_sharded()
         {
             using (var shard1 = GetDocumentStore())

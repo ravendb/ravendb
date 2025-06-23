@@ -24,7 +24,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CopyToIndexDefinitionWorksProperly()
         {
             IndexDefinition a = GetNonDefaultIndexDefinition();
@@ -122,7 +122,7 @@ namespace SlowTests.Issues
             };
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task SideBySideInRecordShouldBeFaulty()
         {
             using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, });
@@ -157,7 +157,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task ModifyIndexThenRestartServer(bool stopIndex)

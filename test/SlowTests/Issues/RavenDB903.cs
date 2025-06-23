@@ -24,7 +24,7 @@ namespace SlowTests.Issues
             public string Description { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void Test1(Options options)
         {
@@ -35,7 +35,7 @@ namespace SlowTests.Issues
                                      .As<Product>(), options);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void Test2(Options options)
         {

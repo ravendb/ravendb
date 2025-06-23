@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanProjectFromDictionaryByKeyWhereKeyHasDot_RawQuery()
         {
             using (var store = GetDocumentStore())
@@ -41,7 +42,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanProjectFromDictionaryByKeyWhereKeyHasDot_SessionQuery()
         {
             using (var store = GetDocumentStore())

@@ -3,6 +3,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Indexing_Should_Not_Throw_Error_If_LoadDocument_Collection_Does_Not_Match_It_Should_Return_Null_Instead()
         {
             using (var store = GetDocumentStore())

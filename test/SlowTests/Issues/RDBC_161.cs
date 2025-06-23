@@ -1,6 +1,7 @@
-﻿using FastTests;
+using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
             public byte[] Password { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithByteArray()
         {
             using (var store = GetDocumentStore())

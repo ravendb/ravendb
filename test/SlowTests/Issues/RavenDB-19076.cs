@@ -14,7 +14,7 @@ public class RavenDB_19076 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void ExplorationQueryShouldReturnSameAmountOfResultsAsLuceneWhenFilterOnPrimitiveTypes()
     {
         using var store = GetDocumentStore();

@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Exceptions.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.ClientApi)]
         public async Task Saving_Attachment_In_Wrong_Document_When_Store_Docs_And_Attachment_In_SameRequest()
         {
 
@@ -42,7 +43,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.ClientApi)]
         public async Task Saving_Counters_In_Wrong_Document_When_Store_Docs_And_Attachment_In_SameRequest()
         {
 

@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.Certificates)]
         public async Task Can_Set_Pin_To_Node_Pull_Replication_As_Sink()
         {
             var (nodes, leader, certificates) = await CreateRaftClusterWithSsl(3, watcherCluster: true, useReservedPorts: true);

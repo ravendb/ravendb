@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanSelectLoadsInsideLetClause()
         {
             using (var store = GetDocumentStore())
@@ -109,7 +109,7 @@ from 'Orders' as doc select output(doc)", q.ToString());
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanSelectLoadsInsideLetClause_complex()
         {
             using (var store = GetDocumentStore())

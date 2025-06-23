@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void can_use_conventions_with_create_indexes_container()
         {
             using (var store = GetDocumentStore())
@@ -25,7 +26,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task can_use_conventions_with_create_indexes_async_container()
         {
             using (var store = GetDocumentStore())
@@ -35,7 +36,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void can_use_conventions_with_create_indexes()
         {
             using (var store = GetDocumentStore())
@@ -51,7 +52,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task can_use_conventions_with_create_indexes_async()
         {
             using (var store = GetDocumentStore())
@@ -67,7 +68,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void can_use_conventions_with_create_side_by_side_indexes()
         {
             using (var store = GetDocumentStore())
@@ -83,7 +84,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task can_use_conventions_with_create_side_by_side_indexes_async()
         {
             using (var store = GetDocumentStore())

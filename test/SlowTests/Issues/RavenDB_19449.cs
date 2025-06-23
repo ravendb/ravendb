@@ -1,4 +1,4 @@
-﻿#nullable enable
+#nullable enable
 using System.IO;
 using System.IO.Compression;
 using FastTests;
@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Utils;
 using SlowTests.Corax;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ public class RavenDB_19449 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public void BackwardCompatibilityForEntriesCountWrittenAsInt()
     {
         var serverPath = NewDataPath();

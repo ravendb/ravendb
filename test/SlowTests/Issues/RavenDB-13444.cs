@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ namespace SlowTests.Issues
             public double Field { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_overwrite_int_to_decimal_by_patch()
         {
             using (var store = GetDocumentStore())
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Patch_on_decimal_that_results_in_round_number_should_not_change_type_to_int()
         {
             using (var store = GetDocumentStore())

@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public async Task CanGetUpdatesCounterValueUsingInclude()
         {
             using var store = GetDocumentStore();
@@ -34,7 +35,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public async Task CanGetUpdatesCounterValueUsingInclude_UsingQuery()
         {
             using var store = GetDocumentStore();

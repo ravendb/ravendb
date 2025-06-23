@@ -88,7 +88,7 @@ public class RavenDB_19127: RavenTestBase
         public List<string> Groups { get; set; }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void CanLoadDocumentThatWasAlreadyHandledByStreamingQuery()
     {
         using var store = GetDocumentStore();

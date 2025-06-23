@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
 #pragma warning restore 649,169
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanHaveArrayInMetadata()
         {
             using (var store = GetDocumentStore())
@@ -75,7 +76,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanAddArrayToMetadataViaClient()
         {
             using (var store = GetDocumentStore())

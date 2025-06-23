@@ -1,6 +1,7 @@
 ﻿using System.Dynamic;
 using FastTests;
 using Raven.Client;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_StartsWith_In_Empty_Collection()
         {
             using (var store = GetDocumentStore())

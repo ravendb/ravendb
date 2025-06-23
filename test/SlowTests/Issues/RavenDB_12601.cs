@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task Change_vector_of_cluster_tx_updated_correctly()
         {
             using (var store = GetDocumentStore())
@@ -139,7 +139,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task Can_use_cluster_tx_mixed_with_tx()
         {
             DoNotReuseServer();

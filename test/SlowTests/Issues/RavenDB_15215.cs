@@ -9,6 +9,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents;
 using Raven.Server.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Studio | RavenTestCategory.Counters)]
         public async Task CanReduceCountersMetadataWhenLoadingDocumentsPage()
         {
             using var store = GetDocumentStore();
@@ -36,7 +37,7 @@ namespace SlowTests.Issues
             Assert.DoesNotContain(Constants.Documents.Metadata.Counters, json);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Studio | RavenTestCategory.Attachments)]
         public async Task CanReduceAttachmentsMetadataWhenLoadingDocumentsPage()
         {
             using var store = GetDocumentStore();
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
             Assert.DoesNotContain(Constants.Documents.Metadata.Attachments, json);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Studio | RavenTestCategory.TimeSeries)]
         public async Task CanReduceTimeSeriesMetadataWhenLoadingDocumentsPage()
         {
             using var store = GetDocumentStore();
@@ -70,7 +71,7 @@ namespace SlowTests.Issues
             Assert.DoesNotContain(Constants.Documents.Metadata.TimeSeries, json);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Studio)]
         public async Task CanReduceMetadataWhenLoadingDocumentsPage()
         {
             using var store = GetDocumentStore();

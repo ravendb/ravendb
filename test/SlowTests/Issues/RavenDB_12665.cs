@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void EntityShouldNotBeMarkedAsChangedWhenItContainsControlCharacters2()
         {
             var store = GetDocumentStore();
@@ -33,7 +34,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public void EntityShouldNotBeMarkedAsChangedWhenItContainsControlCharacters()
         {
             var store = GetDocumentStore();
@@ -56,7 +57,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanHaveControlCharacterInId()
         {
             var store = GetDocumentStore();

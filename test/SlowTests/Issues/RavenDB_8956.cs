@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -28,7 +29,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void OptimizedSortOnlyQuery()
         {
             using (var store = GetDocumentStore())

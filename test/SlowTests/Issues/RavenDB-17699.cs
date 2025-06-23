@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
 
         private record Item(string name);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void MultipleConditionalGetQueries()
         {
             using var store = GetDocumentStore();

@@ -6,6 +6,7 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents.Smuggler;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         public async Task WillNotThrowWhenExportingCollectionThatDoesNotHaveRevisions()
         {
             var exportFile = Path.Combine(NewDataPath(forceCreateDir: true), "export.ravendbdump");

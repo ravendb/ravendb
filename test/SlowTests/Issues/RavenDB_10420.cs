@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldWork()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

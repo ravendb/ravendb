@@ -7,6 +7,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ public class RavenDB_17708 : RavenTestBase
         
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     public async Task ProjectionOnStoredFieldsInIndexWithMixedPropertyProjection()
     {
         using var store = base.GetDocumentStore(new Options
@@ -73,7 +74,7 @@ public class RavenDB_17708 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     public async Task ProjectionOnStoredFieldsInIndexWithPropertyProjection()
     {
         using var store = GetDocumentStore(new Options
@@ -117,7 +118,7 @@ public class RavenDB_17708 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     public void ProjectionOnNonStoredFieldsInIndex()
     {
         using var store = GetDocumentStore();

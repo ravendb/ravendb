@@ -1,8 +1,9 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_serialize_with_default_enum_value()
         {
             var user = new Document

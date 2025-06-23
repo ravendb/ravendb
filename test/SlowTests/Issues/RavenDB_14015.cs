@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +29,7 @@ namespace SlowTests.Issues
             public string UserId { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldNotSimplifyJObjectProperty()
         {
             var jsonString =

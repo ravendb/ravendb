@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -58,7 +59,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Multiple_indexes_created_with_not_existing_analyzer_should_skip_only_the_invalid_index()
         {
             using (var store = GetDocumentStore())
@@ -79,7 +80,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Multiple_indexes_created_withAsync_AndWith_not_existing_analyzer_should_skip_only_the_invalid_index()
         {
             using (var store = GetDocumentStore())

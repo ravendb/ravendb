@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Exceptions;
 using Raven.Server.Config;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void Should_Limit_Database_Relative_Path()
         {
             var dataPath = NewDataPath();
@@ -37,7 +38,7 @@ namespace SlowTests.Issues
             
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void Should_Limit_Database_Absolute_Path()
         {
             var dataPath = NewDataPath();
@@ -59,7 +60,7 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void Should_Not_Limit_Database_Path()
         {
             var dataPath = NewDataPath();

@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Map_reduce_results_should_not_contains_implicit_nulls_wich_were_not_indexed(Options options)
         {

@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanSetRequestTimeoutInConventions()
         {
             var timeout1 = TimeSpan.FromSeconds(55);

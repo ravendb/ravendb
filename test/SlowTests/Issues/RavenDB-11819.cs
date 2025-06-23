@@ -6,6 +6,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Counters;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void IncrementCounter_WhenDocumentHasNoMetadata_ShouldWork()
         {
             //Arrange
@@ -60,7 +61,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void DeleteCounter_WhenHasNoCounters_ShouldNotResultInMetadataWithCounters()
         {
             //Arrange

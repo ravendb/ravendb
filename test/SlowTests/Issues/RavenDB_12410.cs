@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -41,7 +42,7 @@ namespace SlowTests.Issues
         {
             public string MyNestedObjectText { get; set; }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Nested_Documents_Get_Patched()
         {
             var now = DateTime.Now;

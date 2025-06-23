@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ThrowsWhenComparingWholeDocument()
         {
             using var store = GetDocumentStore();

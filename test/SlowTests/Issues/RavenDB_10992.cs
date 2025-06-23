@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Linq;
@@ -8,6 +8,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
             public DocumentStatus Status { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanGetDefaultNonSerializedEnumValue()
         {
             DateTimeOffset date = DateTimeOffset.UtcNow.Date;

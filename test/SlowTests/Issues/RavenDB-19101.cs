@@ -48,7 +48,7 @@ public class RavenDB_19101: RavenTestBase
         public override bool IsReadRequest => true;
      }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Certificates)]
     public void CheckIfCertificateNameIsReturned()
     {
         var certificates = Certificates.SetupServerAuthentication();

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using FastTests;
 using Raven.Client;
@@ -9,6 +9,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Three_consecutive_write_errors_should_error_index()
         {
             UseNewLocalServer();

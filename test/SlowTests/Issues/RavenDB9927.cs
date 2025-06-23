@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,7 +37,7 @@ select new {
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanDefineComplexExpressionInGroupBy()
         {
             using (var store = GetDocumentStore())

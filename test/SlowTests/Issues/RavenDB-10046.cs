@@ -29,7 +29,7 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanLoadWithWrappedParameter()
         {
             using (var store = GetDocumentStore())
@@ -79,7 +79,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanProjectWithWrappedParameter()
         {
             using (var store = GetDocumentStore())
@@ -139,7 +139,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanProjectWithWrappedParameterAndLet()
         {
             using (var store = GetDocumentStore())

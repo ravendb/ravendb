@@ -204,7 +204,7 @@ from 'Orders' as __alias0 where __alias0.Company = $p0 select output(__alias0)",
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         public void Can_Use_Let_with_Multipule_Aliases_that_are_Reserved_Words_in_RQL()
         {
             using (var store = GetDocumentStore())
@@ -288,7 +288,7 @@ from 'Orders' as __alias0 select output(__alias0)", query.ToString());
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         public void Can_Load_via_Let_with_Alias_Thats_a_Reserved_Word_in_RQL()
         {
             using (var store = GetDocumentStore())
@@ -330,7 +330,7 @@ from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)", query
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         public void Can_Load_with_Multipule_Aliases_That_are_Reserved_Words_in_RQL()
         {
             using (var store = GetDocumentStore())
@@ -384,7 +384,7 @@ from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)"
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         public void Can_do_Multipule_Loads_Where_1st_has_Alias_thats_a_Reserved_Word_and_2nd_has_LoadArg_thats_dependent_on_the_1st_Alias()
         {
             using (var store = GetDocumentStore())
@@ -447,7 +447,7 @@ from 'Orders' as o load o.Company as __alias0 select output(o, __alias0)", query
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         public void Can_Use_Let_with_Variable_Name_thats_a_Reserved_Word_in_Javascript()
         {
             using (var store = GetDocumentStore())
@@ -498,7 +498,7 @@ from 'Orders' as o select output(o)", query.ToString());
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         public void Can_Load_with_Multipule_Aliases_That_are_Reserved_Words_in_Javascript()
         {
             using (var store = GetDocumentStore())
@@ -562,7 +562,7 @@ from 'Orders' as o load o.Company as _function select output(o, _function)", que
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_RQL_Reserved_Words_As_Projections_Names()
         {
             using (var store = GetDocumentStore())
@@ -597,7 +597,7 @@ from 'Orders' as o load o.Company as _function select output(o, _function)", que
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         public void Can_Use_RQL_Reserved_Words_As_Projections_Names_Complex()
         {
             using (var store = GetDocumentStore())

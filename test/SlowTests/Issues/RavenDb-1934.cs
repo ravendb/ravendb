@@ -108,7 +108,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void TimeSpan_Can_Get_Range_VeryLarge()
         {
             using (var documentStore = GetDocumentStore())

@@ -14,7 +14,7 @@ public class RavenDB_20927 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Corax)]
     public void CanStoreEmptyOrNullAndCanDeleteIt()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));

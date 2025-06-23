@@ -2,6 +2,7 @@
 using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanStreamTimeSeriesWithFromAndTo()
         {
             using (var store = GetDocumentStore())

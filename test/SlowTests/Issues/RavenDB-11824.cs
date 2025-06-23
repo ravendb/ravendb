@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void AfterIncrementingMultipleCountersByScriptMetadataShouldHaveAllCountersNames()
         {
             using (var store = GetDocumentStore())
@@ -87,7 +88,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanModifyDocAndIncrementCounterInSameScript()
         {
             using (var store = GetDocumentStore())
@@ -141,7 +142,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void DeletingCountersViaScriptShouldRemoveDeletedCountersNamesFromMetadata()
         {
             using (var store = GetDocumentStore())

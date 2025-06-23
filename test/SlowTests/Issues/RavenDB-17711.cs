@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
             public object At;
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void ThreeDigitsFractionalDateParsingShouldWorkProperly_AutoIndex()
         {
             using var store = GetDocumentStore();
@@ -45,7 +46,7 @@ namespace SlowTests.Issues
             }
         }
           
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void ThreeDigitsFractionalDateParsingShouldWorkProperly_StaticIndex()
         {
             using var store = GetDocumentStore();

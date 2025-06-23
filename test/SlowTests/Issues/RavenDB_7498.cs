@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Http;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,7 +36,7 @@ namespace SlowTests.Issues
             return store;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanAggressivelyCacheLoads_404()
         {
             using (var store = InitAggressiveCachingWithNotTrackingMode())
@@ -87,7 +88,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanAggressivelyCacheLoads()
         {
             using (var store = InitAggressiveCachingWithNotTrackingMode())
@@ -138,7 +139,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanAggressivelyCacheLoads_Async()
         {
             using (var store = InitAggressiveCachingWithNotTrackingMode())
@@ -189,7 +190,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanAggressivelyCacheQueries()
         {
             using (var store = InitAggressiveCachingWithNotTrackingMode())
@@ -235,7 +236,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WaitForNonStaleResultsIgnoresAggressiveCaching()
         {
             using (var store = InitAggressiveCachingWithNotTrackingMode())

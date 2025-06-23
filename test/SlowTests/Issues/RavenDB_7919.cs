@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.ServerWide;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Should_use_auto_index_even_if_idle_when_match_is_complete()
         {
             using (var database = CreateDocumentDatabase())
@@ -52,7 +53,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Complete_but_idle_match_if_auto_map_index_is_idle()
         {
             using (var database = CreateDocumentDatabase())
@@ -77,7 +78,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Complete_but_idle_match_if_auto_map_reduce_index_is_idle()
         {
             using (var database = CreateDocumentDatabase())

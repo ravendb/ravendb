@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public void CanGetCounterWhichDoesntExist()
         {
             using (var store = GetDocumentStore())

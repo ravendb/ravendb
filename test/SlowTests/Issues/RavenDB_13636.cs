@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task EnsureConnectionStringNameCantBeNull()
         {
             using (var store = GetDocumentStore())

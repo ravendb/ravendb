@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
 
         private const string StatusPostfix = "/status";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void IndexComparingEnumPropertiesShouldNotError()
         {
             const string documentId = "document-id";

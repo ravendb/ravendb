@@ -1,4 +1,5 @@
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
             public string Ref;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanStreamMultipleProjectionsOfSameValue()
         {
             using var store = GetDocumentStore();
@@ -51,7 +52,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanStreamMultipleProjectionsOfSameValue_AnotherNRE()
         {
             using var store = GetDocumentStore();

@@ -24,7 +24,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public async Task QueriesShouldFailoverIfDatabaseIsCompactingSingleNode()
         {
             var storeOptions = new Options {RunInMemory = false};
@@ -77,7 +77,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task QueriesShouldFailoverIfDatabaseIsCompactingCluster()
         {
             var (nodes, leader) = await CreateRaftCluster(2);
@@ -152,7 +152,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public async Task QueriesShouldFailoverIfIndexIsCompactingSingleNode()
         {
             var storeOptions = new Options { RunInMemory = false };
@@ -205,7 +205,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task QueriesShouldFailoverIfIndexIsCompactingCluster()
         {
             var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true); // Prevent updating the db topology after getting it.

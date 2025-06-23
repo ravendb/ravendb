@@ -41,7 +41,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void RegisterIdConventionShouldWorkProperlyForDerivedTypesAsync()
         {
             using (var store = GetDocumentStore(new Options

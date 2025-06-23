@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions | RavenTestCategory.CompareExchange)]
         public async Task ConcurrencyExceptionShouldIncludeConflictsInfo_CompareExchangeClusterWide()
         {
             using (var store = GetDocumentStore())
@@ -59,7 +59,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void ConcurrencyExceptionShouldIncludeConflictsInfo_DocumentsClusterWide()
         {
             using (var store = GetDocumentStore())
@@ -106,7 +106,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ConcurrencyExceptionShouldIncludeConflictsInfo_DocumentsSingleNode()
         {
             using (var store = GetDocumentStore())
@@ -147,7 +147,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ConcurrencyExceptionShouldIncludeConflictsInfo_DocumentPut()
         {
             using (var store = GetDocumentStore())

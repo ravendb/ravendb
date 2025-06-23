@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Cluster)]
         public async Task Can_fail_over_etl_task()
         {
             var (nodes, leader) = await CreateRaftCluster(3, customSettings:

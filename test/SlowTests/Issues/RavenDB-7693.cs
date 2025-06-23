@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
 
         private static string _projectTaskId;
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task SaveEntityWithEmptyListAfterLoad()
         {
             using (var store = GetDocumentStore())

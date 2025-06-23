@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
@@ -7,6 +7,7 @@ using Raven.Client;
 using System.Threading.Tasks;
 using Tests.Infrastructure.Entities;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public async Task PatchByIndexShouldSupportDeclaredFunctions()
         {
             using (var store = GetDocumentStore())

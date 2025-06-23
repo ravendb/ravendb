@@ -3,6 +3,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Order = Tests.Infrastructure.Entities.Order;
 using Xunit.Abstractions;
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_patch_by_dynamic_query_with_filtering()
         {
             using (var store = GetDocumentStore())
@@ -61,7 +62,7 @@ UPDATE { o.Company = company.Name; } " }, new QueryOperationOptions()
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_delete_by_dynamic_query_with_filtering()
         {
             using (var store = GetDocumentStore())

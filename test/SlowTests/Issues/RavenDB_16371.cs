@@ -7,6 +7,7 @@ using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(IndexingConfiguration.IndexStartupBehaviorType.Default)]
         [InlineData(IndexingConfiguration.IndexStartupBehaviorType.Delay)]
         [InlineData(IndexingConfiguration.IndexStartupBehaviorType.Immediate)]

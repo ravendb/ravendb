@@ -9,6 +9,7 @@ using System.IO;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +29,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanSerializeYieldGetterMethods()
         {
             // If this test breaks, this is likely becaused we merged

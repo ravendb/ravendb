@@ -18,6 +18,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Indexes.Sorting;
 using Raven.Server.Documents.Queries;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,7 +30,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseCustomSorter()
         {
             var sorterName = GetDatabaseName();
@@ -62,7 +63,7 @@ namespace SlowTests.Issues
                 Assert.NotEqual(sorterName, key.Key.ResourceName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseCustomSorterWithOperations()
         {
             var sorterName = GetDatabaseName();
@@ -127,7 +128,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanGetCustomSorterDiagnostics()
         {
             var sorterName = GetDatabaseName();

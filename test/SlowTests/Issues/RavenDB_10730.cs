@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Auto;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Can_enable_errored_index()
         {
             using (var database = CreateDocumentDatabase())
@@ -39,7 +40,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Can_enable_disabled_index()
         {
             using (var database = CreateDocumentDatabase())

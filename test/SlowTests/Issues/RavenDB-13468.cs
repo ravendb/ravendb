@@ -5,6 +5,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Storage.Schema.Updates.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void CanMigrateLegacyCountersWithMultipleDbIds()
         {
             From41016.NumberOfCountersToMigrateInSingleTransaction = 20;

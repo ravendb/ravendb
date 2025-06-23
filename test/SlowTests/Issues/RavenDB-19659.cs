@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Cluster)]
         public async Task Unique_document_ids_using_hilo()
         {
             var databaseName = GetDatabaseName();

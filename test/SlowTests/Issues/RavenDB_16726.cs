@@ -10,6 +10,7 @@ using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Monitoring)]
         public async Task Should_create_performance_hint_notification_when_exceeding_max_number_of_LoadDocument_calls_per_reference()
         {
             using (var store = GetDocumentStore())
@@ -144,7 +145,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Monitoring)]
         public void Can_add_and_update_reference_load_warning_details()
         {
             var warningDetails = new IndexingReferenceLoadWarning.WarningDetails();

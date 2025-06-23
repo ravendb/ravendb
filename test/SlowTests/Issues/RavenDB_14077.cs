@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Server.Web.Studio;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void GetDataDirectoryInfoCommand_ShouldReturnRootedPath()
         {
             using (var store = GetDocumentStore())

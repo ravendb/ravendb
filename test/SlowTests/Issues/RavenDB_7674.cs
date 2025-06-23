@@ -1,4 +1,4 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using System;
@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task Group_by_entire_document_LastModified_formatting_issue()
         {
             using (var store = GetDocumentStore())

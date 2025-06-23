@@ -20,7 +20,7 @@ namespace SlowTests.Issues
 
         private const int Cntr = 5;
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanExecuteLazyLoadsInAsyncSession()
         {
             using (var store = GetDocumentStore())
@@ -41,7 +41,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanExecuteLazyLoadsInAsyncSession_CheckSingleCall()
         {
             using (var store = GetDocumentStore())

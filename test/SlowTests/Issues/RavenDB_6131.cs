@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -31,7 +32,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Configuration)]
         public async Task IndexPathsInheritance_DatabaseSpecificSettings()
         {
             var path1 = NewDataPath();
@@ -65,7 +66,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Configuration)]
         public async Task IndexPathsInheritance_ServerWideSettings()
         {
             var path1 = NewDataPath();

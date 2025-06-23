@@ -1,9 +1,3 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenDB921.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -40,7 +34,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task LowLevelRemoteStreamAsync(Options options)
         {
@@ -75,7 +69,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task HighLevelRemoteStreamAsync(Options options)
         {
@@ -109,7 +103,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task HighLevelLocalStreamWithFilterAsync(Options options)
         {
@@ -152,7 +146,7 @@ namespace SlowTests.Issues
             }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task LowLevelEmbeddedStreamAsync(Options options)
         {

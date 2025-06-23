@@ -35,7 +35,7 @@ public class RavenDB_20846 : ClusterTestBase
         public string Name { get; set; }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Revisions)]
     public async Task EnforceConfigurationForSingleCollection()
     {
         using var store = GetDocumentStore();

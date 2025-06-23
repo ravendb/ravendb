@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Indexing_func_must_return_anonymous_object()
         {
             const long currentIndexVersion = IndexDefinitionBaseServerSide.IndexVersion.CurrentVersion;

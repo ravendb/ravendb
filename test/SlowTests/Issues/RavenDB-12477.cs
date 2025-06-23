@@ -3,6 +3,7 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Can_handle_delete_revision_of_doc_that_changed_collection()
         {
             using (var store = GetDocumentStore())

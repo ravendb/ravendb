@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void AdditionalAssemblies_Runtime()
         {
             using (var store = GetDocumentStore())
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void AdditionalAssemblies_Runtime_InvalidName()
         {
             using (var store = GetDocumentStore())
@@ -63,7 +63,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RetryFact(delayBetweenRetriesMs: 1000)]
+        [RavenRetryFact(RavenTestCategory.Indexes, delayBetweenRetriesMs: 1000)]
         public void AdditionalAssemblies_NuGet()
         {
             using (var store = GetDocumentStore())
@@ -84,7 +84,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RetryFact(delayBetweenRetriesMs: 1000, Skip = "Uses NPOI and downloads 150MB of packages")]
+        [RavenRetryFact(RavenTestCategory.Indexes, delayBetweenRetriesMs: 1000, Skip = "Uses NPOI and downloads 150MB of packages")]
         public void AdditionalAssemblies_NuGet_With_Prerelease_Dependency()
         {
             using (var store = GetDocumentStore())
@@ -104,7 +104,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RetryFact(delayBetweenRetriesMs: 1000)]
+        [RavenRetryFact(RavenTestCategory.Indexes, delayBetweenRetriesMs: 1000)]
         public void AdditionalAssemblies_NuGet_InvalidName()
         {
             using (var store = GetDocumentStore())
@@ -127,7 +127,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RetryFact(delayBetweenRetriesMs: 1000)]
+        [RavenRetryFact(RavenTestCategory.Indexes, delayBetweenRetriesMs: 1000)]
         public void AdditionalAssemblies_NuGet_InvalidSource()
         {
             using (var store = GetDocumentStore())
@@ -150,7 +150,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RetryFact(delayBetweenRetriesMs: 1000)]
+        [RavenRetryFact(RavenTestCategory.Indexes, delayBetweenRetriesMs: 1000)]
         public void AdditionalAssemblies_NuGet_Live()
         {
             using (var store = GetDocumentStore())
@@ -227,7 +227,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "Uses ML.NET and downloads 350MB of packages")]
+        [RavenFact(RavenTestCategory.Indexes, Skip = "Uses ML.NET and downloads 350MB of packages")]
         public void CanUseMLNET()
         {
             using (var store = GetDocumentStore())
@@ -321,7 +321,7 @@ public static class ImageClassifier
             }
         }
 
-        [Fact(Skip = "Uses ML.NET and downloads 350MB of packages")]
+        [RavenFact(RavenTestCategory.Indexes, Skip = "Uses ML.NET and downloads 350MB of packages")]
         public void CanUseMLNET_Omnx()
         {
             using (var store = GetDocumentStore())

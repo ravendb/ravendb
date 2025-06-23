@@ -2,6 +2,7 @@ using System;
 using System.Linq;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         public RavenDB_18427(ITestOutputHelper output) : base(output)
         {
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Store_Documents2()
         {
             using (var store = GetDocumentStore())

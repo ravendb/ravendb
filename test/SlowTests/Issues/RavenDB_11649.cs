@@ -31,7 +31,7 @@ namespace SlowTests.Issues
             public InnerClass A { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WhatChanged_WhenInnerPropertyChanged_ShouldReturnThePropertyNamePlusPath()
         {
             using (var store = GetDocumentStore())
@@ -67,7 +67,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WhatChanged_WhenInnerPropertyChangedFromNull_ShouldReturnThePropertyNamePlusPath()
         {
             using (var store = GetDocumentStore())
@@ -103,7 +103,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WhatChanged_WhenPropertyOfInnerPropertyChangedToNull_ShouldReturnThePropertyNamePlusPath()
         {
             using (var store = GetDocumentStore())
@@ -139,7 +139,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WhatChanged_WhenOuterPropertyChanged_FieldPathShouldBeEmpty()
         {
             using (var store = GetDocumentStore())
@@ -175,7 +175,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WhatChanged_WhenInnerPropertyInArrayChanged_ShouldReturnWithRelevantPath()
         {
             using (var store = GetDocumentStore())
@@ -214,7 +214,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WhatChanged_WhenArrayPropertyInArrayChangedFromNull_ShouldReturnWithRelevantPath()
         {
             using (var store = GetDocumentStore())
@@ -246,7 +246,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WhatChanged_WhenInMatrixChanged_ShouldReturnWithRelevantPath()
         {
             using (var store = GetDocumentStore())
@@ -278,7 +278,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WhatChanged_WhenAllNamedAPropertiesChanged_ShouldReturnDifferentPaths()
         {
             using (var store = GetDocumentStore())

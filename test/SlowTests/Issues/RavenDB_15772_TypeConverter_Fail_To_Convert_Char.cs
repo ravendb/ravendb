@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Can_Convert_Char_To_Blittable()
         {
             var json = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(new ClientConfiguration

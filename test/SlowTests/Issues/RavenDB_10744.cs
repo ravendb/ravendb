@@ -23,7 +23,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Shold_stop_unloading_database_after_consecutive_corruptions_in_given_time()
         {
             UseNewLocalServer();
@@ -73,7 +73,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void First_index_corruption_should_not_error_it_immediately()
         {
             UseNewLocalServer();
@@ -103,7 +103,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Should_be_able_to_read_index_stats_even_if_corruption_happened()
         {
             UseNewLocalServer();

@@ -4,6 +4,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Issues
             public string MiddleName { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void IndexEntryFieldShouldNotContainNullValues()
         {
             using (var docStore = GetDocumentStore())

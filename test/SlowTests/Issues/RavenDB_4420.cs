@@ -9,6 +9,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,7 @@ namespace SlowTests.Issues
             store.Conventions.SaveEnumsAsIntegers = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CanQueryProperlyWhenSaveEnumAsIntegerIsSetToTrue()
         {
             using (var store = GetDocumentStore(new Options

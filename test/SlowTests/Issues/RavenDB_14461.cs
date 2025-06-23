@@ -87,7 +87,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task FindByEmptyCollectionShouldWork()
         {
             using (var store = GetDocumentStore())

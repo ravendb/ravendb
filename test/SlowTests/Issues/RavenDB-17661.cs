@@ -5,6 +5,7 @@ using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.Documents.Revisions;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task Can_Get_From_Revisions_Bin_When_Revisions_Are_Disabled()
         {
             using (var store = GetDocumentStore())
@@ -30,7 +31,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task Can_Delete_From_Revisions_Bin_When_Revisions_Are_Disabled()
         {
             using (var store = GetDocumentStore())

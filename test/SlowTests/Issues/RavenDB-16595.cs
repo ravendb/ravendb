@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task Able_To_Expand_Database_Group_After_Tombstone_Clean()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -72,7 +72,7 @@ namespace SlowTests.Issues
             await AssertWaitForValueAsync(async () => await GetMembersCount(store1, databaseName: store1.Database), 2);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.BackupExportImport)]
         public async Task Able_To_Expand_Group_After_Tombstone_Clean_And_Restore_Database_From_Snapshot()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

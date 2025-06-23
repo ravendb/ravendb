@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Validation()
         {
             using (var store = GetDocumentStore(new Options
@@ -59,7 +59,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task CanSwitch()
         {
             var (_, leader) = await CreateRaftCluster(3);

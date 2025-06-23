@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
 
         private static string DocId = "test";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task can_change_from_null_to_array()
         {
             using (var store = GetDocumentStore())
@@ -57,7 +58,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task can_change_from_array_to_null()
         {
             using (var store = GetDocumentStore())

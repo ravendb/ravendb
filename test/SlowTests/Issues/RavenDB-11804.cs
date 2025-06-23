@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldThrowUnknownAlias1()
         {
             using (var store = GetDocumentStore())
@@ -33,7 +34,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldThrowUnknownAlias2()
         {
             using (var store = GetDocumentStore())
@@ -55,7 +56,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldThrowUnknownAlias3()
         {
             using (var store = GetDocumentStore())
@@ -77,7 +78,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldThrowUnknownAlias4()
         {
             using (var store = GetDocumentStore())
@@ -98,7 +99,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldThrowUnknownAlias5()
         {
             using (var store = GetDocumentStore())
@@ -116,7 +117,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldThrowUnknownAlias6()
         {
             using (var store = GetDocumentStore())
@@ -137,7 +138,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldThrowUnknownAlias7()
         {
             using (var store = GetDocumentStore())
@@ -159,7 +160,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldThrowUnknownAlias8()
         {
             using (var store = GetDocumentStore())
@@ -179,7 +180,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldThrowUnknownAlias9()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 using Xunit;
 
@@ -10,7 +11,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanStreamProjectionWithMultipleResultsPerDocument()
         {
             using var store = GetDocumentStore();

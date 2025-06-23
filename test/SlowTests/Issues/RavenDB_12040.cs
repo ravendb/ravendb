@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -7,6 +7,7 @@ using Sparrow.Server;
 using Sparrow.Server.Meters;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public async Task Should_limit_number_of_stored_slow_io_hints()
         {
             var now = DateTime.UtcNow;

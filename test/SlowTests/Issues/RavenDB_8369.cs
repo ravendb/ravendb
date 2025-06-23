@@ -20,37 +20,37 @@ namespace SlowTests.Issues
             public string Foo { get; set; }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task Tombstones_should_be_cleaned_only_after_backup_with_binary_backupwhen_delete_is_last_operation()
         {
             await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType.Backup, "My backup");
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task Tombstones_should_be_cleaned_only_after_backup_with_snapshot_backupwhen_delete_is_last_operation()
         {
             await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_last_operation(BackupType.Snapshot, "My backup");
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task Tombstones_should_be_cleaned_only_after_backup_with_binary_backupwhen_delete_is_not_last_operation()
         {
             await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType.Backup, "My backup");
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task Tombstones_should_be_cleaned_only_after_backup_with_snapshot_backupwhen_delete_is_not_last_operation()
         {
             await Tombstones_should_be_cleaned_only_after_backup_when_delete_is_not_a_last_operation(BackupType.Snapshot, "My backup");
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task Tomstones_should_be_cleaned_properly_for_multiple_backup_tasks_for_snapshot()
         {
             await Tomstones_should_be_cleaned_properly_for_multiple_backup_tasks(BackupType.Snapshot);
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task Tomstones_should_be_cleaned_properly_for_multiple_backup_tasks_for_backup()
         {
             await Tomstones_should_be_cleaned_properly_for_multiple_backup_tasks(BackupType.Backup);

@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ElectionLoop()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;

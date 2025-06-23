@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -7,6 +7,7 @@ using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.ServerWide.Context;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_update_lock_mode_and_priority_of_index_even_if_indexing_is_running()
         {
             using (var database = CreateDocumentDatabase())

@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,7 +27,7 @@ namespace SlowTests.Issues
             public object Line1 { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void can_change_object_to_double()
         {
             using (var store = GetDocumentStore())
@@ -51,7 +52,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void can_change_object_to_decimal()
         {
             using (var store = GetDocumentStore())
@@ -76,7 +77,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void can_change_nested_object_to_double()
         {
             using (var store = GetDocumentStore())
@@ -104,7 +105,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void can_change_nested_object_to_decimal()
         {
             using (var store = GetDocumentStore())

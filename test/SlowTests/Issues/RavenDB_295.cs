@@ -82,7 +82,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUpdateSuggestions_AfterRestart()
         {
             var dataDir = NewDataPath();

@@ -73,7 +73,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanQueryWhenLetPresent_WithArrayParameter()
         {
             using (var store = GetDocumentStore())

@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ public class RavenDB_19932 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public void GrowableHashSetForProjectionInCoraxIndexReadOperation()
     {
         var growableHashSet = new CoraxIndexReadOperation.GrowableHashSet<ulong>(maxSizePerCollection: 100);

@@ -1,10 +1,11 @@
-﻿using System.Globalization;
+using System.Globalization;
 using System.Threading;
 using FastTests;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanGetDecimalFromLazyStringValueInCultureUsingComma()
         {
             var commaCulture = new CultureInfo("en-us") { NumberFormat = { CurrencyDecimalSeparator = ",", NumberDecimalSeparator = ",", PercentDecimalSeparator = "," } };

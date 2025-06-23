@@ -9,6 +9,7 @@ using FastTests;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void WhereEqualsShouldSendSortHintsAndDynamicIndexesShouldSetAppropriateSortOptionsThen1()
         {
             using (var store = GetDocumentStore())

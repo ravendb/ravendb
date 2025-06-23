@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Indexes)]
         public void MapWithMinValueComparison()
         {
             using (var store = GetDocumentStore())

@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
         public async Task ForceCreatedRevisionsShouldReplicate()
         {
             using var store1 = GetDocumentStore();
@@ -77,7 +77,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
         public async Task ForceCreatedRevisionsShouldReplicate_InternalReplication()
         {
             var (nodes, leader) = await CreateRaftCluster(numberOfNodes: 2, watcherCluster: true);

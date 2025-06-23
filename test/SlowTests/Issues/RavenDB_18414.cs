@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using FastTests;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ public class RavenDB_18414 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Patching)]
     public void WillNotAddTypeToNestedObjectsOfSameClass()
     {
         using var store = GetDocumentStore();

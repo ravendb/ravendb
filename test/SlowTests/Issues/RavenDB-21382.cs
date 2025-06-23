@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task EnforceConfigurationShouldntThrowNreInDeletedDocWithNoTombstone()
         {
             using var store = GetDocumentStore(new Options

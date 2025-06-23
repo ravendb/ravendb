@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -9,6 +9,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanChangeNGramConfiguration()
         {
             using (var store = GetDocumentStore())

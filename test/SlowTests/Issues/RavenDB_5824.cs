@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldBeAbleToReturnIndexStalenessReasons()
         {
             using (var store = GetDocumentStore())

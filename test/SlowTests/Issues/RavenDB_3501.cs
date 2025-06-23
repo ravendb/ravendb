@@ -6,6 +6,7 @@ using System.Threading;
 using FastTests;
 using Lucene.Net.Search;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Too_much_clauses_should_throw_proper_exception()
         {
             Interlocked.Increment(ref _numberOfTestsToDispose);
@@ -80,7 +81,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Lucene)]
         [InlineData(MaxClauseCountInTest / 4)]
         [InlineData(MaxClauseCountInTest / 2)]
         [InlineData(MaxClauseCountInTest)]

@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ProjectionShouldBeIncludedWithBothProjections()
         {
             using (var store = GetDocumentStore())
@@ -67,7 +67,7 @@ limit 1"
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ResultsFromProjectionShouldNotBeTrackedBySession()
         {
             using (var store = GetDocumentStore())

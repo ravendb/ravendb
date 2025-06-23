@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public void DocumentSessionAttachments_ShouldRespectSessionDatabase()
         {
             using (var store = GetDocumentStore())
@@ -78,7 +79,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public async Task DocumentSessionAttachments_ShouldRespectSessionDatabase_Async()
         {
             using (var store = GetDocumentStore())

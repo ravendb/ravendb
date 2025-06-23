@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task Node_Stays_Rehab_After_Connect_Again()
         {
             (var nodes, var leader) = await CreateRaftCluster(3, watcherCluster: true, shouldRunInMemory: false);

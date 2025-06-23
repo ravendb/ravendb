@@ -10,6 +10,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ namespace SlowTests.Issues
 
         private const string IndexName = "testIndex";
 
-        [Fact(Skip = "RavenDB-5919")]
+        [RavenFact(RavenTestCategory.Indexes, Skip = "RavenDB-5919")]
         public void can_create_side_by_side_index_to_replace_index_with_errors()
         {
             using (var store = GetDocumentStore())
@@ -52,7 +53,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-5919")]
+        [RavenFact(RavenTestCategory.Indexes, Skip = "RavenDB-5919")]
         public void can_create_side_by_side_index_with_errors_to_replace_index_with_errors()
         {
             using (var store = GetDocumentStore())
@@ -83,7 +84,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-5919")]
+        [RavenFact(RavenTestCategory.Indexes, Skip = "RavenDB-5919")]
         public void can_create_side_by_side_index_with_errors_to_replace_index()
         {
             using (var store = GetDocumentStore())

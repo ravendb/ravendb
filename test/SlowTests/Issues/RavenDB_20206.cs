@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -6,6 +6,7 @@ using Raven.Server;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ public class RavenDB_20206 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Cluster)]
     public async Task Should_Not_Clear_Compare_Exchange_Tombstones_Of_A_Database_With_Identical_Prefix()
     {
         using (var server = GetNewServer())

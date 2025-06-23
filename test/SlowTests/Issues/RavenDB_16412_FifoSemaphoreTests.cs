@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public async Task ShouldRespectSemaphoreLimit()
         {
             var allowed = 3;
@@ -82,7 +83,7 @@ namespace SlowTests.Issues
             Assert.Equal(numberOfTasks * numberOfLocksPerTask, totalNumberOfLocksTaken);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void ShouldNotLeaveWaitersInQueueIfOperationIsCancelledAfterCallingRelease()
         {
             var @lock = new FifoSemaphore(1);
@@ -117,7 +118,7 @@ namespace SlowTests.Issues
             Assert.Empty(@lock._waitQueue);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void ShouldNotLeaveWaitersInQueueIfTimeoutAfterCallingRelease()
         {
             var @lock = new FifoSemaphore(1);
@@ -140,7 +141,7 @@ namespace SlowTests.Issues
             Assert.Empty(@lock._waitQueue);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void RaceConditionBetweenCancellingAndReleasingWaiterFromTheQueue()
         {
             FifoSemaphore fs = new FifoSemaphore(2);

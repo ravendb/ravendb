@@ -10,6 +10,7 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Data;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
         [InlineData("SlowTests.Smuggler.Data.Northwind_3.5.35168.ravendbdump")]
         public async Task CanImportNorthwind(string file)
         {

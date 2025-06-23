@@ -1,4 +1,4 @@
-﻿using System.Linq;
+﻿﻿using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
@@ -60,7 +60,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ToQueryableShouldNotChopDeclareFunction()
         {
             using var store = GetDocumentStore();

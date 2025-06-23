@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
@@ -7,6 +7,7 @@ using Raven.Client.Exceptions.Documents.Patching;
 using Xunit;
 using Xunit.Abstractions;
 
+using Tests.Infrastructure;
 namespace SlowTests.Issues
 {
     public class RavenDB_13335 : RavenTestBase
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
             public bool Throw { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public async Task CanDisposeOfClonesEvenIfScriptsFails()
         {
             using (var store = GetDocumentStore())

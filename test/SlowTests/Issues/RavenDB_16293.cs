@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUpdateIndexWithAdditionalSources()
         {
             using (var store = GetDocumentStore())
@@ -67,7 +67,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.JavaScript)]
         public void CanUpdateIndexWithAdditionalSources_JavaScript()
         {
             using (var store = GetDocumentStore())

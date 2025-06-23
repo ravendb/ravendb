@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 namespace SlowTests.Issues
@@ -10,7 +11,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CheckIfSingleNumberCanBeAParameter()
         {
             var inputData = PrepareTestData();
@@ -22,7 +23,7 @@ namespace SlowTests.Issues
             AssertNoError( new []{inputData[0]},result );
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CheckIfTextParameterStillWorksProperly()
         {
             var inputData = PrepareTestData();
@@ -34,7 +35,7 @@ namespace SlowTests.Issues
             AssertNoError(new[] { inputData[0] }, result);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CheckIfNumberCanBeAParameter()
         {
             var inputData = PrepareTestData();
@@ -46,7 +47,7 @@ namespace SlowTests.Issues
             AssertNoError(new[] { inputData[0] }, result);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void MultipleNumberParametersWithOptionalLetter()
         {
             var inputData = PrepareTestData();

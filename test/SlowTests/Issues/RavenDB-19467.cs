@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ public class RavenDB_19467 : RavenTestBase
     {
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
     public void WhenAutoIndexWithExactExistsRavenWillNotCreateAnotherIndexForSameField(bool shouldAddDocument)
@@ -38,7 +39,7 @@ public class RavenDB_19467 : RavenTestBase
         }
     }
     
-    [Theory]
+    [RavenTheory(RavenTestCategory.Indexes)]
     [InlineData(true)]
     [InlineData(false)]
     public void AutoIndexWithoutExactWillBeDeletedAndRavenWillCreateNewIndexForBothFields(bool shouldAddDocument)

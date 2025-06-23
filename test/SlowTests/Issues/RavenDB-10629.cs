@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using SlowTests.Core.Utils.Entities.Faceted;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void LinqToRQL_CanHandleMemberExpressionWithNullExpression()
         {
             using (var store = GetDocumentStore())

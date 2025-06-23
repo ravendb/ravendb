@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange)]
         public async Task ShouldWork()
         {
             using (var store = GetDocumentStore())

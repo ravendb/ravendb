@@ -4,6 +4,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Should_Not_Throw_Nre_When_Compacting_Not_Existing_Index()
         {
             using (var documentStore = GetDocumentStore(new Options
@@ -36,3 +37,4 @@ namespace SlowTests.Issues
 
     }
 }
+

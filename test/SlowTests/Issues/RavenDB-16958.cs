@@ -273,7 +273,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task MoveOnToNextTcpAddressOnGuidFailInPingTest()
         {
             using (var serverA = CreateSecuredServer())

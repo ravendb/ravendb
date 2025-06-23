@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
 using Raven.Client;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Attachments)]
         public async Task CanIncrementNumberOfRequests()
         {
             using (var store = GetDocumentStore())
