@@ -59,7 +59,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         ConventionsToUse.Freeze();
     }
 
-    public static ChatCompletionClient CreateChatCompletionClient(IMemoryContextPool contextPool, AiConnectionString connection, string schema)
+    public static ChatCompletionClient CreateChatCompletionClient(IMemoryContextPool contextPool, AiConnectionString connection, string schema, DocumentConventions conventions = null)
     {
         if (connection.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model, out var organizationId, out var projectId) == false)
         {
@@ -69,7 +69,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         var providerType = connection.GetActiveProviderInstance().GetType();
 
-        return new ChatCompletionClient(contextPool, uri, apiKey, model, organizationId, projectId, schema, providerType);
+        return new ChatCompletionClient(contextPool, uri, apiKey, model, organizationId, projectId, schema, providerType, conventions);
     }
 
     public ChatCompletionClient(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, string structuredOutputSchema, Type providerType, DocumentConventions conventions = null)
@@ -180,6 +180,8 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
     public async Task<(string Result, string Usage)> CompleteAsync(string prompt, string context, CancellationToken token)
     {
         _forTestingPurposes?.SimulateFailure?.Invoke(context);
+        if(_forTestingPurposes?.SimulateFailureAsync != null)
+            await _forTestingPurposes.SimulateFailureAsync(context);
 
         using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext ctx);
         using var request = CreateCompletionRequest(ctx, prompt, context);
@@ -267,10 +269,9 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             {
                 writer.WriteStartObject();
 
-                if (_forTestingPurposes?.ModifyPayload != null)
+                if (_forTestingPurposes?.ModifyPayload?.Invoke(writer) == true)
                 {
-                    _forTestingPurposes?.ModifyPayload.Invoke(writer);
-                    writer.WriteEndObject();
+                    return;
                 }
 
                 writer.WritePropertyName(Constants.RequestFields.Model);

@@ -28,8 +28,9 @@ public interface IChatCompletionClientForTesting
         {
         }
 
-        internal Action<AsyncBlittableJsonTextWriter> ModifyPayload;
+        internal Func<AsyncBlittableJsonTextWriter, bool> ModifyPayload;
 
         internal Action<string> SimulateFailure;
+        internal Func<string, Task> SimulateFailureAsync;
     }
 }
