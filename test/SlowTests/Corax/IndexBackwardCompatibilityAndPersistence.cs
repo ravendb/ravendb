@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -15,6 +15,7 @@ using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -40,7 +41,7 @@ namespace SlowTests.Corax
             _index = new();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(SearchEngineType.Corax, SearchEngineType.Lucene)]
         [InlineData(SearchEngineType.Lucene, SearchEngineType.Corax)]
         public async Task AutoPersistIndexConfiguration(SearchEngineType beginType, SearchEngineType endType)
@@ -66,7 +67,7 @@ namespace SlowTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task LoadOldIndexWithoutRebuildingForNewIndexingEngine()
         {
             using (var server = GetNewServer(new ServerCreationOptions {DataDirectory = _serverPath, RunInMemory = false}))
