@@ -102,11 +102,11 @@ export function EditGenAiTaskStepSummary() {
                         {formValues.prompt}
                     </div>
                 </div>
+                {formValues.sampleObject && !formValues.jsonSchema && (
+                    <RowWithPreview label="Sample object" value={formValues.sampleObject} mode="json" />
+                )}
                 {formValues.jsonSchema && (
                     <RowWithPreview label="JSON schema" value={formValues.jsonSchema} mode="json" />
-                )}
-                {formValues.sampleObject && (
-                    <RowWithPreview label="Sample object" value={formValues.sampleObject} mode="json" />
                 )}
             </div>
             <div className="hstack justify-content-between mt-4">
