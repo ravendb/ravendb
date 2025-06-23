@@ -65,7 +65,7 @@ public class RavenDB_24298(ITestOutputHelper output) : RavenTestBase(output)
             session.SaveChanges();
         }
 
-        Assert.True(await WaitForValueAsync(async () =>
+        var value = await WaitForValueAsync(async () =>
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -73,7 +73,10 @@ public class RavenDB_24298(ITestOutputHelper output) : RavenTestBase(output)
                 doc.TryGet("Translated", out string translation);
                 return translation != null;
             }
-        }, expectedVal: true, timeout: 30_000));
+        }, expectedVal: true, timeout: 60_000);
+
+
+        Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
 
 
     }

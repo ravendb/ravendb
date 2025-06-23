@@ -125,7 +125,7 @@ if($output.Blocked)
                 return error != null;
             }, true, timeout: 60_000);
 
-            Assert.True(value);
+            Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
             Assert.NotNull(error);
             Assert.True(error.Error.Contains("Failed to apply update script"));
             Assert.True(error.Error.Contains("JavaScriptException: Property 'findIndexf' of object is not a function"));

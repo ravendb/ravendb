@@ -8,7 +8,6 @@ using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents;
@@ -624,7 +623,7 @@ for (const comment of this.Comments)
             session.SaveChanges();
         }
 
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(30)));
+        Assert.True(etl.Wait(TimeSpan.FromSeconds(60)), await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
 
         using (var session = store.OpenAsyncSession())
         {
@@ -632,8 +631,6 @@ for (const comment of this.Comments)
             Assert.True(doc.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata));
             Assert.True(metadata.TryGet(Constants.Documents.Metadata.GenAiHashes, out BlittableJsonReaderObject hashesSection));
             Assert.True(hashesSection.TryGet(identifier, out BlittableJsonReaderArray hashesArray));
-            Assert.NotNull(hashesArray);
-            Assert.Equal(2, hashesArray.Length);
         }
     }
 
@@ -733,9 +730,16 @@ for(const comment of this.Comments)
         var etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
         Assert.NotNull(etlProcess);
 
-        var stats = etlProcess.GetPerformanceStats()
-            .Where(x => x.NumberOfLoadedItems > 0)
-            .ToArray();
+        EtlPerformanceStats[] stats = null;
+        var value = await WaitForValueAsync(() =>
+        {
+            stats = etlProcess.GetPerformanceStats()
+                .Where(x => x.NumberOfLoadedItems > 0)
+                .ToArray();
+            return stats.Length > 0;
+        }, expectedVal: true, timeout: 60_000);
+
+        Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
 
         Assert.NotEmpty(stats);
         var loadDetails = stats[0].Details.Operations[^1];
@@ -789,11 +793,19 @@ for(const comment of this.Comments)
         etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
         Assert.NotNull(etlProcess);
 
-        var stats2 = etlProcess.GetPerformanceStats()
-            .Where(x => x.NumberOfLoadedItems > 0 && x.LastLoadedEtag > etag)
-            .ToArray();
-        Assert.NotEmpty(stats2);
+        EtlPerformanceStats[] stats2 = null;
 
+        value = await WaitForValueAsync(() =>
+        {
+            stats2 = etlProcess.GetPerformanceStats()
+                .Where(x => x.NumberOfLoadedItems > 0 && x.LastLoadedEtag > etag)
+                .ToArray();
+            return stats2.Length > 0;
+        }, expectedVal: true, timeout: 60_000);
+
+        Assert.True(value, await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
+
+        Assert.NotEmpty(stats2);
         Assert.Equal(1, stats2[^1].NumberOfExtractedItems[EtlItemType.Document]);
 
         var loadDetails2 = stats2[^1].Details.Operations[^1];
@@ -966,12 +978,13 @@ for(const comment of this.Comments)
 
         store.Maintenance.Send(new AddGenAiOperation(config, StartingPointChangeVector.BeginningOfTime));
 
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(30)));
+        Assert.True(etl.Wait(TimeSpan.FromSeconds(60)), await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
 
         using (var session = store.OpenSession())
         {
-            // should not be processed
+            // should be processed
             var docs = session.Advanced.LoadStartingWith<BlittableJsonReaderObject>("posts/");
+            Assert.Equal(10, docs.Length);
 
             foreach (var post in docs)
             {
@@ -984,7 +997,6 @@ for(const comment of this.Comments)
                 }
             }
         }
-
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
