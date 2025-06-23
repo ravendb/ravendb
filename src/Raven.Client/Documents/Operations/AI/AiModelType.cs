@@ -2,7 +2,6 @@
 
 public enum AiModelType
 {
-    None,
-    LLM,
-    Embeddings
+    Embeddings,
+    LLM
 }
