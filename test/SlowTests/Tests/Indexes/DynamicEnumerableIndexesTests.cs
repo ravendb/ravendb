@@ -15,7 +15,7 @@ namespace SlowTests.Tests.Indexes
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithFirstOrDefaultOnWhere(Options options)
         {
@@ -34,7 +34,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithFirstOrDefaultOnWhereWithPredicate(Options options)
         {
@@ -52,7 +52,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithFirstOnWhere(Options options)
         {
@@ -70,7 +70,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithFirstOnWhereWithPredicate(Options options)
         {
@@ -88,7 +88,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithSingleOrDefaultOnWhere(Options options)
         {
@@ -106,7 +106,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithSingleOrDefaultOnWhereWithPredicate(Options options)
         {
@@ -124,7 +124,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithSingleOnWhere(Options options)
         {
@@ -142,7 +142,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithSingleOnWhereWithPredicate(Options options)
         {
@@ -160,7 +160,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithLastOrDefaultOnWhere(Options options)
         {
@@ -178,7 +178,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithLastOrDefaultOnWhereWithPredicate(Options options)
         {
@@ -196,7 +196,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithLastOnWhere(Options options)
         {
@@ -215,7 +215,7 @@ namespace SlowTests.Tests.Indexes
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithLastOnWhereWithPredicate(Options options)
         {

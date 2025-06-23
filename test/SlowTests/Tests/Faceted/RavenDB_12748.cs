@@ -19,7 +19,7 @@ namespace SlowTests.Tests.Faceted
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets)]
         public void CanDeserializeLegacyFacetSetup()
         {
             var facets = new DynamicJsonArray

@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Tests.Linq
             public bool Active { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WhereThenFirstHasAND()
         {
             var queries = new List<string>();
@@ -44,7 +45,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WhereThenSingleHasAND()
         {
             var queries = new List<string>();

@@ -261,7 +261,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_IncludeAllQueryFunctionalityAsync(Options options)
         {
@@ -353,7 +353,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionByChangeVector(Options options)
         {
@@ -389,7 +389,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionByChangeVectorAsync(Options options)
         {
@@ -426,7 +426,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionByChangeVectors(Options options)
         {
@@ -512,7 +512,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionByChangeVectorsAsync(Options options)
         {
@@ -596,7 +596,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionsByProperty_ChangeVectorAndChangeVectors(Options options)
         {
@@ -705,7 +705,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionsByProperty_ChangeVectorAndChangeVectorsAsync(Options options)
         {
@@ -808,7 +808,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionByDateTime_VerifyUtc(Options options)
         {
@@ -863,7 +863,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Load_IncludeBuilder_IncludeRevisionByDateTime_VerifyUtcAsync(Options options)
         {
@@ -920,7 +920,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_IncludeBuilder_IncludeRevisionBefore(Options options)
         {
@@ -960,7 +960,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_IncludeBuilder_IncludeRevisionBeforeAsync(Options options)
         {
@@ -1000,7 +1000,7 @@ namespace SlowTests.Tests.Linq
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQueryChangeVectorInsidePropertyWithIndex(Options options)
         {
@@ -1049,7 +1049,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQueryChangeVectorInsidePropertyWithIndexAsync(Options options)
         {
@@ -1096,7 +1096,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQueryGetRevisionBeforeDateTime(Options options)
         {
@@ -1140,7 +1140,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQueryGetRevisionBeforeDateTimeAsync(Options options)
         {
@@ -1182,7 +1182,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQuery_IncludeRevisions_Jint_StaticIndexQuery(Options options)
         {
@@ -1242,7 +1242,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQuery_IncludeRevisions_Jint_StaticIndexQueryAsync(Options options)
         {
@@ -1301,7 +1301,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQuery_IncludeRevisions_Jint_IndexQuery(Options options)
         {
@@ -1357,7 +1357,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQuery_IncludeRevisions_beforeDateTime_Jint(Options options)
         {
@@ -1410,7 +1410,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQuery_IncludeRevisions_beforeDateTime_JintAsync(Options options)
         {
@@ -1463,7 +1463,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQuery_IncludeRevisions_Jint(Options options)
         {
@@ -1519,7 +1519,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQuery_IncludeRevisions_JintAsync(Options options)
         {
@@ -1576,7 +1576,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQuery_IncludeRevisionsArray_Jint(Options options)
         {
@@ -1682,7 +1682,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQuery_IncludeRevisionsArray_JintAsync(Options options)
         {
@@ -1776,7 +1776,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQuery_IncludeRevisionsWithoutAlias(Options options)
         {
@@ -1825,7 +1825,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQuery_IncludeRevisionsWithoutAliasAsync(Options options)
         {
@@ -1874,7 +1874,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQueryWithParameters_IncludeRevisions_Array(Options options)
         {
@@ -1963,7 +1963,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQueryWithParameters_IncludeRevisions_Array_SecondOption(Options options)
         {
@@ -2049,7 +2049,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQueryWithParameters_IncludeRevisions_Array_SecondOptionAsync(Options options)
         {
@@ -2134,7 +2134,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQueryWithParameters_AliasSyntaxError(Options options)
         {
@@ -2179,7 +2179,7 @@ select Foo(u)"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Revisions)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Query_RawQueryWithParameters_AliasSyntaxErrorAsync(Options options)
         {

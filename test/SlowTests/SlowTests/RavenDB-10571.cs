@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Newtonsoft.Json.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.SlowTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanIterateOverBlittableProperties()
         {
             using (var store = GetDocumentStore())

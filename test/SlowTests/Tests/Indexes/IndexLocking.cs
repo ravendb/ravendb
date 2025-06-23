@@ -104,7 +104,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task SetLockModeForStaticAndAutoIndexes(Options options)
         {

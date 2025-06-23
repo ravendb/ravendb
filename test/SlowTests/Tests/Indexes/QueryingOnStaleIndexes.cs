@@ -34,7 +34,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void WillGetStaleResultWhenThereArePendingTasks(Options options)
         {

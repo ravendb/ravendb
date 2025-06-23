@@ -6,6 +6,7 @@
 
 using FastTests;
 using Raven.Client.Documents.Conventions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Tests
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData("User", "Users")]
         [InlineData("Users", "Users")]
         [InlineData("tanimport", "tanimports")]

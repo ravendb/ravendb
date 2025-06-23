@@ -43,25 +43,25 @@ namespace SlowTests.Tests.Linq
             NoReport
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Test1()
         {
             DoTest<Client_ImportSummaryByDate_1>();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Test2()
         {
             DoTest<Client_ImportSummaryByDate_2>();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Test3()
         {
             DoTest<Client_ImportSummaryByDate_3>();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Test4()
         {
             DoTest<Client_ImportSummaryByDate_4>();

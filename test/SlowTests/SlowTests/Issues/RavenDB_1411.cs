@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_1411.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,6 +7,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -78,7 +79,7 @@ namespace SlowTests.SlowTests.Issues
             public string Item { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void OptimizationShouldWork_NewIndexedWillGetPrecomputedDocumentsToIndexToAvoidRetrievingAllDocumentsFromDisk()
         {
             using (var store = GetDocumentStore())
@@ -151,7 +152,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void NewIndexesForWhichOptimizationIsNotAppliedShouldBeProcessesCorrectly()
         {
             using (var store = GetDocumentStore())
@@ -181,7 +182,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldGetAllNecessaryDocumentsToIndex()
         {
             using (var store = GetDocumentStore())

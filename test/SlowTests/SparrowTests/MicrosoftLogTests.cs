@@ -190,7 +190,7 @@ public class MicrosoftLogTests : RavenTestBase
         Assert.Empty(provider.Configuration);
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Logging)]
     public async Task MicrosoftLoggerProvider_WhenSetOnlyDefaultLogLevel_AllLogsLogLevelShouldBeAsDefault()
     {
         var path = NewDataPath(forceCreateDir: true);

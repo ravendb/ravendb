@@ -1,4 +1,4 @@
-﻿using System.Linq;
+﻿﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
@@ -14,7 +14,7 @@ namespace SlowTests.SlowTests.Indexes
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void QueryForDocumentWithStoreFields(RavenTestParameters configuration)
         {

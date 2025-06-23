@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -48,7 +49,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void WillReplaceFirstWithFirstOrDefault()
         {
             var indexDefinition = new IndexWithLetInReduceFunction { Conventions = new DocumentConventions() }.CreateIndexDefinition();

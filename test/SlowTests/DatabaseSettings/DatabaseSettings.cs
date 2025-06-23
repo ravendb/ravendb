@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.DatabaseSettings
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Studio)]
         public void CheckConfigurationEntriesTypesHandledByTheDatabaseSettingsViewInStudio()
         {
             var typesHandledByStudio = new HashSet<string> { "String", "Integer", "Double", "Enum", "Boolean", "Path", "Time", "Size" };

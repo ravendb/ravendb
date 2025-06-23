@@ -1,8 +1,9 @@
-﻿using System.IO;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Exceptions;
 using Raven.Server.Config.Settings;
+using Tests.Infrastructure;
 using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
@@ -15,7 +16,7 @@ namespace SlowTests.SchemaUpgrade.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Interversion)]
         [InlineData("999")]
         [InlineData("9")]
         public async Task WillThrowSchemaErrorOnBigAndSmallDocumentSchemaAsync(string schemaNum)
@@ -48,7 +49,7 @@ namespace SlowTests.SchemaUpgrade.Issues
             Assert.True(e.Message.StartsWith($"Voron.Exceptions.SchemaErrorException: The schema version of this database is expected to be {schemaVer} but is actually {schemaNum}."));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Interversion)]
         public void WillThrowSchemaErrorOnVoronSchema()
         {
             var folder = NewDataPath(forceCreateDir: true);

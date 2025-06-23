@@ -5,6 +5,7 @@ using System.Net;
 using FastTests;
 using Raven.Client.Documents.Commands.MultiGet;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Raven.Client;
@@ -35,7 +36,7 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseMultiGetToBatchGetDocumentRequests()
         {
             using (var store = GetDocumentStore())
@@ -82,7 +83,7 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseMultiQuery()
         {
             using (var store = GetDocumentStore())
@@ -136,7 +137,7 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanHandleCaching()
         {
             using (var store = GetDocumentStore())

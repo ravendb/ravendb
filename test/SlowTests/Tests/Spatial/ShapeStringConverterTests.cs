@@ -4,6 +4,7 @@ using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Utils;
 using SlowTests.Utils.Attributes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Tests.Spatial
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Spatial)]
         [CriticalCultures]
         public void ParseBox(CultureInfo cultureInfo)
         {
@@ -29,7 +30,7 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Spatial)]
         [CriticalCultures]
         public void ParseGeoUriKilometers(CultureInfo cultureInfo)
         {
@@ -43,7 +44,7 @@ namespace SlowTests.Tests.Spatial
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Spatial)]
         [CriticalCultures]
         public void ParseGeoUriMiles(CultureInfo cultureInfo)
         {

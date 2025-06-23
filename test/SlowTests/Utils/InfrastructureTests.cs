@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Tests.Infrastructure;
 using Xunit;
@@ -12,7 +12,7 @@ namespace SlowTests.Utils
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanPropagateException()
         {
             var ioe = await Assert.ThrowsAsync<InvalidOperationException>(async () =>
@@ -37,7 +37,7 @@ namespace SlowTests.Utils
             Assert.Equal("Cows can fly!", ioe.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanCatchException()
         {
             DoNotReuseServer();
@@ -52,3 +52,4 @@ namespace SlowTests.Utils
         }
     }
 }
+

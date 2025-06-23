@@ -79,7 +79,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void can_include_by_primary_valuetype_property()
         {
             using (var store = GetDocumentStore())
@@ -105,7 +105,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void can_include_by_primary_valuetype_string_property()
         {
             using (var store = GetDocumentStore())
@@ -211,7 +211,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void can_include_by_primary_list_of_strings()
         {
             using (var store = GetDocumentStore())
@@ -246,7 +246,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void can_include_by_primary_list_of_valuetypes()
         {
             using (var store = GetDocumentStore())
@@ -282,7 +282,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void can_include_by_secondary_string_property()
         {
             using (var store = GetDocumentStore())
@@ -308,7 +308,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void can_include_by_secondary_valuetype_property()
         {
             using (var store = GetDocumentStore())
@@ -334,7 +334,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void can_include_by_list_of_secondary_string_property()
         {
             using (var store = GetDocumentStore())
@@ -376,7 +376,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void can_include_by_list_of_secondary_valuetype_property()
         {
             using (var store = GetDocumentStore())
@@ -423,7 +423,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void can_include_by_denormalized_property()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
@@ -530,7 +530,7 @@ namespace SlowTests.Sharding.BucketMigration
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void DocumentsMigrationCommandShouldThrowForNotShardedDatabase(Options options)
         {

@@ -1,8 +1,9 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Lucene.Net.Analysis;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Verifications
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanWork()
         {
             using (var store = GetDocumentStore())

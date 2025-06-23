@@ -138,7 +138,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void DoesNotSupportStrings()
         {
             using (var store = GetDocumentStore())

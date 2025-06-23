@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -116,7 +117,7 @@ namespace SlowTests.Verifications
             Indexes.WaitForIndexing(store);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void SmallLogTransformerTest()
         {
             using (var store = GetDocumentStore())
@@ -162,7 +163,7 @@ select get(d)
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void FullLogTransformerDelay()
         {
             using (var store = GetDocumentStore())

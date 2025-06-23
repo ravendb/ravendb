@@ -34,7 +34,7 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void UnlessAccessedLazyQueriesAreNoOp()
         {
             using (var store = GetDocumentStore())
@@ -137,7 +137,7 @@ namespace SlowTests.Tests.MultiGet
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WithQueuedActions_Load()
         {
             using (var store = GetDocumentStore())
@@ -247,7 +247,7 @@ namespace SlowTests.Tests.MultiGet
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void LazyWithProjection2()
         {
             using (var store = GetDocumentStore())

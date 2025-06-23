@@ -43,7 +43,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Can_perform_Skip_Take_Query(Options options)
         {
@@ -529,7 +529,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Throws_exception_when_overloaded_distinct_called()
         {
             using (var store = GetDocumentStore())
@@ -620,7 +620,7 @@ namespace SlowTests.Tests.Linq
             documentSession.SaveChanges();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_In_Array_In_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -648,7 +648,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_Strings_In_Array_In_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -694,7 +694,7 @@ namespace SlowTests.Tests.Linq
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_Enums_In_Array_In_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -721,7 +721,7 @@ namespace SlowTests.Tests.Linq
                 }
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_Enums_In_IEnumerable_In_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -751,7 +751,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_In_IEnumerable_In_Where_Clause_with_negation()
         {
             using (var store = GetDocumentStore())
@@ -781,7 +781,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_In_Params_In_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -809,7 +809,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_In_IEnumerable_In_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -838,7 +838,7 @@ namespace SlowTests.Tests.Linq
                 }
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Use_In_IEnumerable_Not_In_Where_Clause_on_Id()
         {
             using (var store = GetDocumentStore())

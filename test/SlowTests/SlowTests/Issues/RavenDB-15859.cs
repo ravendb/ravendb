@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.SlowTests.Issues
 {
@@ -15,7 +16,7 @@ namespace SlowTests.SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task QueryShouldEnd()
         {
             using var store = GetDocumentStore();
@@ -80,3 +81,4 @@ namespace SlowTests.SlowTests.Issues
         }
     }
 }
+

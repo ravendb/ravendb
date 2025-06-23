@@ -29,7 +29,7 @@ namespace SlowTests.Tests.Linq
             public string Name { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WillRespectRenames()
         {
             using (var store = GetDocumentStore())
@@ -45,7 +45,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void HandlesNegative()
         {
             using (var store = GetDocumentStore())
@@ -62,7 +62,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void HandlesNegativeEquality()
         {
             using (var store = GetDocumentStore())
@@ -79,7 +79,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void HandleDoubleRangeSearch()
         {
             using (var store = GetDocumentStore())
@@ -98,7 +98,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanHandleCasts()
         {
             using (var store = GetDocumentStore())
@@ -115,7 +115,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void StartsWith()
         {
             using (var store = GetDocumentStore())
@@ -132,7 +132,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void StartsWithEqTrue()
         {
             using (var store = GetDocumentStore())
@@ -149,7 +149,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void StartsWithEqFalse()
         {
             using (var store = GetDocumentStore())
@@ -166,7 +166,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void StartsWithNegated()
         {
             using (var store = GetDocumentStore())
@@ -184,7 +184,7 @@ namespace SlowTests.Tests.Linq
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void IsNullOrEmpty()
         {
             using (var store = GetDocumentStore())
@@ -202,7 +202,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void IsNullOrEmptyEqTrue()
         {
             using (var store = GetDocumentStore())
@@ -220,7 +220,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void IsNullOrEmptyEqFalse()
         {
             using (var store = GetDocumentStore())
@@ -238,7 +238,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void IsNullOrEmptyNegated()
         {
             using (var store = GetDocumentStore())
@@ -256,7 +256,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void IsNullOrEmpty_Any()
         {
             using (var store = GetDocumentStore())
@@ -274,7 +274,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void IsNullOrEmpty_AnyEqTrue()
         {
             using (var store = GetDocumentStore())
@@ -292,7 +292,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void IsNullOrEmpty_AnyEqFalse()
         {
             using (var store = GetDocumentStore())
@@ -310,7 +310,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void IsNullOrEmpty_AnyNegated()
         {
             using (var store = GetDocumentStore())
@@ -331,7 +331,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void AnyWithPredicateShouldBeNotSupported()
         {
             using (var store = GetDocumentStore())
@@ -347,7 +347,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void BracesOverrideOperatorPrecedence_second_method()
         {
             using (var store = GetDocumentStore())
@@ -369,7 +369,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void BracesOverrideOperatorPrecedence_third_method()
         {
             using (var store = GetDocumentStore())
@@ -389,7 +389,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanForceUsingIgnoreCase()
         {
             using (var store = GetDocumentStore())
@@ -408,7 +408,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanCompareValueThenPropertyGT()
         {
             using (var store = GetDocumentStore())
@@ -427,7 +427,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanCompareValueThenPropertyGE()
         {
             using (var store = GetDocumentStore())
@@ -446,7 +446,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanCompareValueThenPropertyLT()
         {
             using (var store = GetDocumentStore())
@@ -465,7 +465,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanCompareValueThenPropertyLE()
         {
             using (var store = GetDocumentStore())
@@ -484,7 +484,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanCompareValueThenPropertyEQ()
         {
             using (var store = GetDocumentStore())
@@ -503,7 +503,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanCompareValueThenPropertyNE()
         {
             using (var store = GetDocumentStore())
@@ -522,7 +522,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleEquality()
         {
             using (var store = GetDocumentStore())
@@ -551,7 +551,7 @@ namespace SlowTests.Tests.Linq
             return (RavenQueryInspector<IndexedUser>)session.Query<IndexedUser>("static");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleEqualityWithVariable()
         {
             using (var store = GetDocumentStore())
@@ -571,7 +571,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleContains()
         {
             using (var store = GetDocumentStore())
@@ -590,7 +590,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleContainsWithClauses()
         {
             using (var store = GetDocumentStore())
@@ -611,7 +611,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleContainsInExpression1()
         {
             using (var store = GetDocumentStore())
@@ -632,7 +632,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleContainsInExpression2()
         {
             using (var store = GetDocumentStore())
@@ -653,7 +653,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleStartsWithInExpression1()
         {
             using (var store = GetDocumentStore())
@@ -675,7 +675,7 @@ namespace SlowTests.Tests.Linq
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleStartsWithInExpression2()
         {
             using (var store = GetDocumentStore())
@@ -697,7 +697,7 @@ namespace SlowTests.Tests.Linq
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleContainsWithVariable()
         {
             using (var store = GetDocumentStore())
@@ -717,7 +717,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void NoOpShouldProduceEmptyString()
         {
             using (var store = GetDocumentStore())
@@ -732,7 +732,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandAnd()
         {
             using (var store = GetDocumentStore())
@@ -752,7 +752,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandOr()
         {
             using (var store = GetDocumentStore())
@@ -772,7 +772,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WithNoBracesOperatorPrecedenceIsHonored()
         {
             using (var store = GetDocumentStore())
@@ -793,7 +793,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void BracesOverrideOperatorPrecedence()
         {
             using (var store = GetDocumentStore())
@@ -814,7 +814,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandLessThan()
         {
             using (var store = GetDocumentStore())
@@ -833,7 +833,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void NegatingSubClauses()
         {
             using (var store = GetDocumentStore())
@@ -855,7 +855,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandEqualOnDate()
         {
             using (var store = GetDocumentStore())
@@ -874,7 +874,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandLessThanOrEqualsTo()
         {
             using (var store = GetDocumentStore())
@@ -893,7 +893,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandGreaterThan()
         {
             using (var store = GetDocumentStore())
@@ -912,7 +912,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandGreaterThanOrEqualsTo()
         {
             using (var store = GetDocumentStore())
@@ -931,7 +931,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandProjectionOfOneField()
         {
             using (var store = GetDocumentStore())
@@ -950,7 +950,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandProjectionOfMultipleFields()
         {
             using (var store = GetDocumentStore())
@@ -970,7 +970,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleEqualityOnInt()
         {
             using (var store = GetDocumentStore())
@@ -990,7 +990,7 @@ namespace SlowTests.Tests.Linq
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandGreaterThanOnInt()
         {
             using (var store = GetDocumentStore())
@@ -1009,7 +1009,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandMethodCalls()
         {
             using (var store = GetDocumentStore())
@@ -1028,7 +1028,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandConvertExpressions()
         {
             using (var store = GetDocumentStore())
@@ -1048,7 +1048,7 @@ namespace SlowTests.Tests.Linq
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanChainMultipleWhereClauses()
         {
             using (var store = GetDocumentStore())
@@ -1068,7 +1068,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleAny_Dynamic()
         {
             using (var store = GetDocumentStore())
@@ -1085,7 +1085,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleAny_Static()
         {
             using (var store = GetDocumentStore())
@@ -1102,7 +1102,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void AnyOnCollection()
         {
             using (var store = GetDocumentStore())
@@ -1118,7 +1118,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void AnyOnCollectionEqTrue()
         {
             using (var store = GetDocumentStore())
@@ -1134,7 +1134,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void AnyOnCollectionEqFalse()
         {
             using (var store = GetDocumentStore())
@@ -1150,7 +1150,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WillWrapLuceneSaveKeyword_NOT()
         {
             using (var store = GetDocumentStore())
@@ -1167,7 +1167,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WillWrapLuceneSaveKeyword_OR()
         {
             using (var store = GetDocumentStore())
@@ -1184,7 +1184,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WillWrapLuceneSaveKeyword_AND()
         {
             using (var store = GetDocumentStore())
@@ -1201,7 +1201,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WillNotWrapCaseNotMatchedLuceneSaveKeyword_And()
         {
             using (var store = GetDocumentStore())

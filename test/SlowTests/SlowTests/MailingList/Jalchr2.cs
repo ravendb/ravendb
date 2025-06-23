@@ -21,7 +21,7 @@ namespace SlowTests.SlowTests.MailingList
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenExplicitData]
         public void Streaming_documents_will_respect_the_sorting_order(RavenTestParameters config)
         {
@@ -136,3 +136,4 @@ namespace SlowTests.SlowTests.MailingList
         }
     }
 }
+

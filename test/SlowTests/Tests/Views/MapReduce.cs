@@ -17,6 +17,7 @@ using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -58,7 +59,7 @@ select new {
             }}));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanGetReducedValues()
         {
             var values = new[]
@@ -98,7 +99,7 @@ select new {
         }
 
         //issue --> indice name : scheduled_reductions_by_view -->multi-tree key commentscountperblog
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void DoesNotOverReduce()
         {
             using (var store = GetDocumentStore())
@@ -163,7 +164,7 @@ select new {
             return q;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUpdateReduceValue()
         {
             var values = new[]
@@ -213,7 +214,7 @@ select new {
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanDelete()
         {
             var values = new[]
@@ -257,7 +258,7 @@ select new {
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUpdateReduceValue_WhenChangingReduceKey()
         {
             var values = new[]

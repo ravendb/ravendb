@@ -14,7 +14,7 @@ namespace SlowTests.Tests.Bugs.Vlko
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanBeUsedForTransformResultsWithDocumentId(Options options)
         {

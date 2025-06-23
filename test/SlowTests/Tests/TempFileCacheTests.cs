@@ -1,6 +1,7 @@
 ﻿using System.IO;
 using FastTests;
 using Raven.Server.Indexing;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Util.Settings;
 using Xunit;
@@ -14,7 +15,7 @@ namespace SlowTests.Tests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Can_reuse_files_for_cache()
         {
             var path = new VoronPathSetting(NewDataPath());
@@ -30,7 +31,7 @@ namespace SlowTests.Tests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Skip_files_that_are_in_use()
         {
             var path = new VoronPathSetting(NewDataPath());

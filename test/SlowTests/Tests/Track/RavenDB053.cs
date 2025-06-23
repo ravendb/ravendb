@@ -72,7 +72,7 @@ namespace SlowTests.Tests.Track
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ChildrenHasMultipleTransports_Raven(Options options)
         {

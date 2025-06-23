@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -86,7 +87,7 @@ public class RavenDB18078 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Highlighting | RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     public async Task HighlightOfTermStartingWithCommaShouldWork()
     {
         using (var store = GetDocumentStore())

@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -8,6 +8,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.SlowTests.Bugs
 {
@@ -86,7 +87,7 @@ namespace SlowTests.SlowTests.Bugs
             store.Conventions.MaxNumberOfRequestsPerSession = 1000000; // 1 Million
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task will_timeout_query_after_some_time()
         {
             using (var store = GetDocumentStore(new Options
@@ -211,3 +212,4 @@ namespace SlowTests.SlowTests.Bugs
 
     }
 }
+
