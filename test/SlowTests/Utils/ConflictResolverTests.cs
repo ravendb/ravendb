@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using FastTests;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -6,6 +6,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Utils
 {
@@ -15,7 +16,7 @@ namespace SlowTests.Utils
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanResolveEmpty()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -32,7 +33,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanResolveIdentical()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -53,7 +54,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanResolveTwoEmptyArrays()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -74,7 +75,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanResolveOneEmptyArraysAndOneWithValue()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -97,7 +98,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanMergeAdditionalProperties()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -122,7 +123,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanDetectAndSuggestOptionsForConflict_SimpleProp()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -146,7 +147,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanMergeProperties_Nested()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -174,7 +175,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanDetectConflict_DifferentValues()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -201,7 +202,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanMergeArrays()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -225,7 +226,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanMergeArrays_SameStart()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -251,7 +252,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanResolveEmptyWithMetadata()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -270,7 +271,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanResolveIdenticalMetadata()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -297,7 +298,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanResolveTwoEmptyArraysInMetadata()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -324,7 +325,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanResolveOneEmptyArraysAndOneWithValueInMetadata()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -353,7 +354,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanMergeAdditionalMetadata()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -383,7 +384,7 @@ namespace SlowTests.Utils
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void CanDetectAndSuggestOptionsForConflict_SimpleMetadata()
         {
             using (var ctx = new JsonOperationContext(4096, 16 * 1024, 32 * 1024, SharedMultipleUseFlag.None))
@@ -414,3 +415,4 @@ namespace SlowTests.Utils
         }
     }
 }
+

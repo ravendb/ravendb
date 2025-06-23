@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
@@ -17,7 +17,7 @@ namespace SlowTests.Sharding.Client.Operations
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Sharding)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetTimeSeriesConfiguration(Options options)
         {

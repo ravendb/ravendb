@@ -1,4 +1,5 @@
-﻿using FastTests;
+using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,7 +11,7 @@ namespace SlowTests.Verifications
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void loading_documents_with_transformer_duplicate_ids()
         {
             using (var store = GetDocumentStore())
@@ -41,7 +42,7 @@ namespace SlowTests.Verifications
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void loading_documents_with_transformer_duplicate_ids_and_non_existing_document()
         {
             using (var store = GetDocumentStore())

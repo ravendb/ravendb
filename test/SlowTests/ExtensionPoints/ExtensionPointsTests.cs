@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -34,7 +34,7 @@ namespace SlowTests.ExtensionPoints
 
         private const string SystemDbName = "System";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public async Task OnDirectoryInitializeInMemoryTest()
         {
             string script;
@@ -102,7 +102,7 @@ exit 0";
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public async Task OnDirectoryInitializePersistedTest()
         {
             string script;
@@ -175,7 +175,7 @@ exit 0";
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void CanGetErrorsFromOnDirectoryInitialize()
         {
             string script;
@@ -209,7 +209,7 @@ exit 129";
             Assert.True(e.InnerException.Message.Contains("ERROR!") && e.InnerException.Message.Contains("Karmelush is ANGRY"));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void CanGetCpuCreditsFromExec()
         {
             string script;
@@ -257,7 +257,7 @@ exit 129";
             Assert.Equal(34.665476, value);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Certificates)]
         public async Task CertificateAndMasterKeyExecTest()
         {
             string script;

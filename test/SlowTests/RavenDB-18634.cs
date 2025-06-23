@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+﻿﻿using System.Threading.Tasks;
 using SlowTests.Core.AdminConsole;
 using Tests.Infrastructure;
 using Xunit;
@@ -12,7 +12,7 @@ namespace SlowTests
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Cluster | RavenTestCategory.Configuration)]
         [InlineData(true)]
         [InlineData(false)]
         public async Task DisableTcpCompressionIn1ServerOutOf2InCluster(bool watcherCluster)

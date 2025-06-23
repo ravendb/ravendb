@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using FastTests;
 using Raven.Server.Utils.Cpu;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Assert = Xunit.Assert;
 using Xunit.Abstractions;
@@ -19,7 +20,7 @@ namespace SlowTests.ExtensionPoints
 
         private const string SkipMsg = "https://github.com/dotnet/corefx/issues/30691";
 
-        [Fact(Skip = SkipMsg)]
+        [RavenFact(RavenTestCategory.Configuration, Skip = SkipMsg)]
         public void GetCpuUsage_WhenExtensionPointProcessRun_ShouldGetValue()
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
@@ -74,7 +75,7 @@ while($TRUE){{
             }
         }
 
-        [Fact(Skip = SkipMsg)]
+        [RavenFact(RavenTestCategory.Configuration, Skip = SkipMsg)]
         public void GetCpuUsage_WhenExtensionPointProcessSendMoreThen100_ShouldReturn100()
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
@@ -129,7 +130,7 @@ while($TRUE){{
             }
         }
 
-        [Fact(Skip = SkipMsg)]
+        [RavenFact(RavenTestCategory.Configuration, Skip = SkipMsg)]
         public void GetCpuUsage_WhenExtensionPointProcessExit_ShouldDisposeAndSetDataToNegative()
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
@@ -179,7 +180,7 @@ while($TRUE){{
             }
         }
 
-        [Fact(Skip = SkipMsg)]
+        [RavenFact(RavenTestCategory.Configuration, Skip = SkipMsg)]
         public void GetCpuUsage_WhenExtensionPointProcessReturnInvalidData_ShouldDisposeAndSetDataToNegative()
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
@@ -234,7 +235,7 @@ while($TRUE){{
             }
         }
 
-        [Fact(Skip = SkipMsg)]
+        [RavenFact(RavenTestCategory.Configuration, Skip = SkipMsg)]
         public void GetCpuUsage_WhenExtensionPointProcessWriteError_ShouldDisposeAndSetDataToNegative()
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));
@@ -293,7 +294,7 @@ while($TRUE){{
             }
         }
 
-        [Fact(Skip = SkipMsg)]
+        [RavenFact(RavenTestCategory.Configuration, Skip = SkipMsg)]
         public void GetCpuUsage_WhenExtensionPointProcessSendValidJsonWithoutRelevantProperties_ShouldDisposeAndSetDataToNegative()
         {
             var tempFileName = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".ps1"));

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using FastTests;
@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Indexes)]
         public void WaitForIndexesAfterSaveChangesSupportsPut()
         {
             using var store = GetDocumentStore();
@@ -51,7 +52,7 @@ namespace SlowTests
             Assert.Contains("could not verify that all indexes has caught up with the changes as of etag", exception.ToString());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Indexes)]
         public void WaitForIndexesAfterSaveChangesSupportsCopy()
         {
             using var store = GetDocumentStore();
@@ -79,7 +80,7 @@ namespace SlowTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Indexes)]
         public void WaitForIndexesAfterSaveChangesSupportsMove()
         {
             using var store = GetDocumentStore();
@@ -107,7 +108,7 @@ namespace SlowTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Indexes)]
         public void WaitForIndexesAfterSaveChangesSupportsCopyToDifferentCollection()
         {
             using var store = GetDocumentStore();
@@ -140,7 +141,7 @@ namespace SlowTests
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments | RavenTestCategory.Indexes)]
         [InlineData(false, true)]
         [InlineData(true, false)]
         [InlineData(false, false)]
@@ -180,7 +181,7 @@ namespace SlowTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Indexes)]
         public void WaitForIndexesAfterSaveChangesSupportsDelete()
         {
             using var store = GetDocumentStore();
