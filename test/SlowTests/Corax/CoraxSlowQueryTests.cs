@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -205,7 +205,7 @@ public class CoraxSlowQueryTests : RavenTestBase
     }
 
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenExplicitData(searchEngine: RavenSearchEngineMode.Corax)]
     public void CompoundOrderByWithPagination(RavenTestParameters config, int size = 10_000)
     {
@@ -258,7 +258,7 @@ public class CoraxSlowQueryTests : RavenTestBase
         }
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenExplicitData(searchEngine: RavenSearchEngineMode.Corax)]
     public void DistinctBigTestWithPagination(RavenTestParameters config, int size = 100_00)
     {
@@ -307,7 +307,7 @@ public class CoraxSlowQueryTests : RavenTestBase
         }
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void AnalyzerAreApplied(Options options)
     {
@@ -328,7 +328,7 @@ public class CoraxSlowQueryTests : RavenTestBase
         }
     }
     
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
     public void NgramSuggestionTest(Options options)
     {
@@ -374,7 +374,7 @@ public class CoraxSlowQueryTests : RavenTestBase
         public string InnerName { get; set; }
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
     public void TestOnDeep(Options options)
     {
@@ -398,7 +398,7 @@ public class CoraxSlowQueryTests : RavenTestBase
         WaitForUserToContinueTheTest(store);
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
     public void Alphanumerical(Options options)
     {
@@ -434,7 +434,7 @@ public class CoraxSlowQueryTests : RavenTestBase
 
     private record SortingData(string data);
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All)]
     public void MaxSuggestionsShouldWork(Options options)
     {
@@ -462,7 +462,7 @@ public class CoraxSlowQueryTests : RavenTestBase
         }
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void OnTermMatchCoraxShouldUseOnlyStandardAnalyzer(Options options)
     {
@@ -498,7 +498,7 @@ public class CoraxSlowQueryTests : RavenTestBase
         }
     }
     
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax)]
     public void CanSearchOnLists(Options options)
     {

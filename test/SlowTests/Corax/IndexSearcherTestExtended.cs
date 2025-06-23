@@ -10,7 +10,7 @@ public class IndexSearcherTestExtended : NoDisposalNoOutputNeeded
     {
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax)]
     [InlineData(100_000, 1028)]
     [InlineData(100_000, 2048)]
     [InlineData(100_000, 4096)]
@@ -20,7 +20,7 @@ public class IndexSearcherTestExtended : NoDisposalNoOutputNeeded
         testClass.MultiTermMatchWithBinaryOperations(setSize, stackSize);
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax)]
     [InlineData(new object[] {100000, 128})]
     [InlineData(new object[] {100000, 2046})]
     [InlineData(new object[] {11700, 18})]
@@ -31,6 +31,7 @@ public class IndexSearcherTestExtended : NoDisposalNoOutputNeeded
         testClass.AndInStatementAndWhitespaceTokenizer(setSize, stackSize);
     }
 
+    [RavenTheory(RavenTestCategory.Corax)]
     [InlineData(new object[] {100000, 2046})]
     [InlineData(new object[] {11700, 18})]
     [InlineData(new object[] {11859, 18})]
@@ -40,7 +41,7 @@ public class IndexSearcherTestExtended : NoDisposalNoOutputNeeded
         testClass.AndInStatement(setSize, stackSize);
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax)]
     [InlineData(new object[] {100000, 128})]
     [InlineData(new object[] {100000, 18})]
     public void SimpleAndOrForBiggerSet(int setSize, int stackSize)
@@ -49,7 +50,7 @@ public class IndexSearcherTestExtended : NoDisposalNoOutputNeeded
         testClass.SimpleAndOrForBiggerSet(setSize, stackSize);
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Corax)]
     [InlineData(new object[] {100000, 128})]
     [InlineData(new object[] {100000, 2046})]
     [InlineData(new object[] {11700, 18})]
