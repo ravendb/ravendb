@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using FastTests;
@@ -106,7 +106,7 @@ namespace SlowTests.Core.ScriptedPatching
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingShouldThrowProperException()
         {
             var ttl = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(15);

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Linq;
 using Xunit.Abstractions;
 
@@ -19,7 +19,7 @@ namespace SlowTests.Core.Querying
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19777 Support Intersect queries in Corax")]
         public void CanPerformIntersectQuery(Options options)

@@ -1,7 +1,8 @@
-﻿using System;
+﻿﻿﻿﻿﻿using System;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Post = SlowTests.Core.Utils.Entities.Post;
 using Xunit.Abstractions;
@@ -14,7 +15,7 @@ namespace SlowTests.Core.Commands
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanDoScriptedPatching()
         {
             using (var store = GetDocumentStore())
@@ -178,7 +179,7 @@ this.Comments = this.Comments.filter(function (c) {
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanGenerateDynamicIdsOnPutDocument()
         {
             using (var store = GetDocumentStore())
@@ -256,7 +257,7 @@ this.Comments = this.Comments.filter(function (c) {
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanTestPatches()
         {
             using (var store = GetDocumentStore())

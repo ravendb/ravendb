@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Orders;
@@ -19,7 +19,7 @@ namespace SlowTests.Core.Indexing
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task CanUpdatePatternReferencesCollectionNameWithoutConflicts()
         {
             var cluster = await CreateRaftCluster(numberOfNodes: 3, watcherCluster: true, shouldRunInMemory: false);

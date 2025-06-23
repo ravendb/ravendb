@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="QueryResultsStreaming.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -94,7 +94,7 @@ namespace SlowTests.Core.Streaming
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanStreamQueryResults_CustomizeAfterStreamExecuted()
         {
             using (var store = GetDocumentStore())
@@ -345,7 +345,7 @@ namespace SlowTests.Core.Streaming
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenExplicitData]
         public async Task QueryStream_WhenDocsContainsMultipleUniqPropertyNames_ShouldNotBeVeryVerySlow(RavenTestParameters config)
         {

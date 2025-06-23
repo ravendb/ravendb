@@ -1,4 +1,4 @@
-﻿using System.Linq;
+﻿﻿using System.Linq;
 using Xunit.Abstractions;
 
 using FastTests;
@@ -19,7 +19,7 @@ namespace SlowTests.Core.Indexing
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All )]
         public void CanCreateAndSearchMultiMapIndex(Options options)
         {

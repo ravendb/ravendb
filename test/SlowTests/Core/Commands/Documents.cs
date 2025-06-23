@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Crud.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -33,7 +33,7 @@ namespace SlowTests.Core.Commands
         {
         }
 
-        [RetryFact(delayBetweenRetriesMs: 1000)]
+        [RavenRetryFact(RavenTestCategory.ClientApi, delayBetweenRetriesMs: 1000)]
         public void CanCancelPutDocument()
         {
             var document = new { Name = "John" };
@@ -118,7 +118,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanSkipBeyondCountForEmbeddedIterator()
         {
             using (var store = GetDocumentStore())
@@ -187,7 +187,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanGetDocumentsWhoseIdStartsWithAPrefix()
         {
             using (var store = GetDocumentStore())
@@ -208,7 +208,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanStreamDocs()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+﻿﻿// -----------------------------------------------------------------------
 //  <copyright file="CoreTestServer.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -13,6 +13,7 @@ using FastTests;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Raven.Client.Exceptions.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 
 using Address = SlowTests.Core.Utils.Entities.Address;
@@ -26,7 +27,7 @@ namespace SlowTests.Core.Session
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanSaveAndLoad()
         {
             using (var store = GetDocumentStore())
@@ -52,7 +53,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanSaveAndLoadDynamicDocuments()
         {
             using (var store = GetDocumentStore())
@@ -78,7 +79,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task StoreDynamic_WhenProvideDelegateForDynamicCollectionAndType_ShouldUseIt()
         {
             const string customCollection = "CustomCollection";
@@ -113,7 +114,7 @@ namespace SlowTests.Core.Session
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanDelete()
         {
             using (var store = GetDocumentStore())
@@ -144,7 +145,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanLoadWithInclude()
         {
             using (var store = GetDocumentStore())
@@ -186,7 +187,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void DeletingEntityThatIsNotTrackedShouldThrow()
         {
             using (var store = GetDocumentStore())
@@ -199,7 +200,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void DeletingEntityByIdThatIsNotTrackedShouldThrow()
         {
             using (var store = GetDocumentStore())
@@ -226,7 +227,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void StoringDocumentWithTheSameIdInTheSameSessionShouldThrow()
         {
             using (var store = GetDocumentStore())
