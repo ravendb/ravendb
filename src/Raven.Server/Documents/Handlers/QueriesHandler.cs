@@ -58,15 +58,10 @@ namespace Raven.Server.Documents.Handlers
                         if (string.IsNullOrWhiteSpace(debug) == false)
                         {
                             await Debug(queryContext, debug, token, tracker, httpMethod);
-                            
-                            tracker.Dispose();
-                            
                             return;
                         }
 
                         await Query(queryContext, token, tracker, httpMethod);
-                        
-                        tracker.Dispose();
                     }
                 }
                 catch (Exception e)
