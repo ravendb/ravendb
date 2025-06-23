@@ -101,7 +101,7 @@ async function navigateToStep(canvas: Canvas, step: EditGenAiTaskStepId) {
     await userEvent.click(canvas.getByText("Next"));
     await userEvent.click(canvas.getAllByText("1")[0]);
     await userEvent.paste(samplePrompt);
-    await userEvent.click(canvas.getByText("Provide sample response object"));
+    await userEvent.click(canvas.getByText("Sample response object"));
     await userEvent.click(canvas.getAllByText("1")[1]);
     await userEvent.paste(sampleObject);
     await userEvent.click(canvas.getByRole("button", { name: "Test model" }));
