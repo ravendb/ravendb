@@ -35,6 +35,7 @@ import testAiConnectionStringCommand from "commands/database/cluster/testAiConne
 import saveEtlTaskCommand from "commands/database/tasks/saveEtlTaskCommand";
 import testGenAiCommand from "commands/database/tasks/testGenAiCommand";
 import geAiModelsCommand from "commands/database/tasks/geAiModelsCommand";
+import getJsonSchemaFromSampleObjectCommand from "commands/database/tasks/getJsonSchemaFromSampleObjectCommand";
 
 export default class TasksService {
     async getOngoingTasks(databaseName: string, location: databaseLocationSpecifier) {
@@ -198,5 +199,9 @@ export default class TasksService {
 
     async getAiModels(...args: ConstructorParameters<typeof geAiModelsCommand>) {
         return new geAiModelsCommand(...args).execute();
+    }
+
+    async getJsonSchemaFromSampleObject(...args: ConstructorParameters<typeof getJsonSchemaFromSampleObjectCommand>) {
+        return new getJsonSchemaFromSampleObjectCommand(...args).execute();
     }
 }

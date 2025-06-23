@@ -1,9 +1,9 @@
 import * as yup from "yup";
 
-type EditGenAiTaskSchemaProvider = "jsonSchema" | "sampleObject";
 export type GenAiStartingPoint = "Beginning of Time" | "Latest Document" | "Change Vector";
 
 export const editGenAiTaskSchema = yup.object({
+    // basic step
     name: yup.string().required(),
     identifier: yup.string(),
     state: yup.string<Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskState>().required(),
@@ -23,24 +23,33 @@ export const editGenAiTaskSchema = yup.object({
                 isStartingPoint && startingPointType === "Change Vector",
             then: (schema) => schema.required(),
         }),
+
+    // context step
     collectionName: yup.string().required(),
-    prompt: yup.string().required(),
-    schemaProvider: yup.string<EditGenAiTaskSchemaProvider>().nullable().required(),
-    jsonSchema: yup.string().when("schemaProvider", {
-        is: "jsonSchema",
-        then: (schema) => schema.required(),
-    }),
-    sampleObject: yup.string().when("schemaProvider", {
-        is: "sampleObject",
-        then: (schema) => schema.required(),
-    }),
-    updateScript: yup.string().required(),
-    isForceSendingCachedObjects: yup.boolean(),
-    isResetScript: yup.boolean(),
-    scriptToReset: yup.string().nullable(),
     script: yup.string().required(),
 
-    // Playground
+    // model step
+    prompt: yup.string().required(),
+    sampleObject: yup.string().nullable(),
+    jsonSchema: yup
+        .string()
+        .nullable()
+        .test(
+            "sampleObjectOrJsonSchema",
+            "Either 'Sample response object' or 'JSON schema' must be provided",
+            function (_, { parent }) {
+                return !!parent.sampleObject || !!parent.jsonSchema;
+            }
+        ),
+
+    // update step
+    updateScript: yup.string().required(),
+
+    // summary step
+    isResetScript: yup.boolean(),
+    scriptToReset: yup.string().nullable(),
+
+    // playground
     documentId: yup.string(),
     playgroundDocument: yup.string(),
     playgroundContexts: yup.array().of(
@@ -52,6 +61,7 @@ export const editGenAiTaskSchema = yup.object({
         })
     ),
     playgroundModelOutputs: yup.array().of(yup.object({ idx: yup.number().nullable(), value: yup.string() })),
+    isForceSendingCachedObjects: yup.boolean(),
 });
 
 export type EditGenAiTaskFormData = yup.InferType<typeof editGenAiTaskSchema>;

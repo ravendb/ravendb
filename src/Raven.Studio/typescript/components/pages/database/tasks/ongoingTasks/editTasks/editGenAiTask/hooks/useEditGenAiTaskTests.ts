@@ -42,7 +42,7 @@ export function useEditGenAiTaskTests() {
     };
 
     const handleModelInputTest = async () => {
-        const areTestRelatedFieldsValid = await trigger(["prompt", "schemaProvider", "sampleObject", "jsonSchema"]);
+        const areTestRelatedFieldsValid = await trigger(["prompt", "sampleObject", "jsonSchema"]);
         if (!areTestRelatedFieldsValid) {
             return;
         }

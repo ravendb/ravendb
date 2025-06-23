@@ -40,7 +40,7 @@ export function EditGenAiTaskStepModelFooter() {
     const { handleModelInputTest } = useEditGenAiTaskTests();
 
     const handleNext = async () => {
-        const isValid = await trigger(["prompt", "schemaProvider", "sampleObject", "jsonSchema"]);
+        const isValid = await trigger(["prompt", "sampleObject", "jsonSchema"]);
 
         if (isValid) {
             dispatch(editGenAiTaskActions.isTestOpenSet(false));

@@ -1,14 +1,15 @@
 import { FormAceEditor, FormLabel, FormGroup, FormValidationMessage } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import { Icon } from "components/common/Icon";
-import Button from "react-bootstrap/Button";
 import Badge from "react-bootstrap/Badge";
-import { ReactNode, useRef } from "react";
-import IconName from "typings/server/icons";
+import { useRef, useState } from "react";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import AceEditor from "components/common/ace/AceEditor";
 import ReactAce from "react-ace";
 import Code from "components/common/Code";
+import { useServices } from "components/hooks/useServices";
+import { useAsyncCallback } from "react-async-hook";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 export default function EditGenAiTaskModelFields() {
     const {
@@ -22,6 +23,19 @@ export default function EditGenAiTaskModelFields() {
     const promptRef = useRef<ReactAce>(null);
     const sampleObjectRef = useRef<ReactAce>(null);
     const jsonSchemaRef = useRef<ReactAce>(null);
+
+    const { tasksService } = useServices();
+
+    const [lastSampleObjectForGenerate, setLastSampleObjectForGenerate] = useState<string>("");
+
+    const asyncGenerateSchema = useAsyncCallback(async () => {
+        const result = await tasksService.getJsonSchemaFromSampleObject(JSON.parse(formValues.sampleObject));
+        setValue("jsonSchema", result.Result, { shouldValidate: true });
+        setLastSampleObjectForGenerate(formValues.sampleObject);
+    });
+
+    const canRegenerateSchema =
+        !!formValues.sampleObject && !!formValues.jsonSchema && lastSampleObjectForGenerate !== formValues.sampleObject;
 
     return (
         <>
@@ -58,150 +72,145 @@ export default function EditGenAiTaskModelFields() {
                     }}
                 />
             </FormGroup>
-            {formValues.schemaProvider == null && (
-                <div>
-                    <div className="mb-1">
-                        JSON schema
-                        <PopoverWithHoverWrapper message={<JsonSchemaTooltipBody />}>
-                            <Icon icon="info" color="info" margin="ms-1" />
-                        </PopoverWithHoverWrapper>
-                    </div>
-                    <div className="hstack gap-1">
-                        <div className="flex-grow-1 vstack w-50">
-                            <SchemaProviderButton
-                                icon="default"
-                                title={
-                                    <>
-                                        Provide sample response object <Badge bg="faded-success">Recommended</Badge>
-                                    </>
-                                }
-                                description="Use this option if you want RavenDB to automatically generate a JSON schema for you"
-                                handleClick={() => setValue("schemaProvider", "sampleObject")}
+            <div>
+                <div className="hstack gap-1">
+                    <div className="vstack w-50">
+                        <FormGroup className="vstack">
+                            <FormLabel className="flex-grow-1 hstack justify-content-between align-items-start">
+                                <div>
+                                    Sample response object
+                                    <PopoverWithHoverWrapper
+                                        message={
+                                            <>
+                                                Enter a sample JSON object that defines the structure of the response
+                                                you want to receive from the model.
+                                                <br />
+                                                <br />
+                                                RavenDB will use this example to generate a{" "}
+                                                <strong>formal JSON schema</strong>, which will be included in the
+                                                request to the model.
+                                            </>
+                                        }
+                                    >
+                                        <Icon icon="info" color="info" margin="ms-1" />
+                                    </PopoverWithHoverWrapper>
+                                </div>
+                                {!!formValues.sampleObject && !formValues.jsonSchema && (
+                                    <Badge pill bg="info" style={{ whiteSpace: "normal" }}>
+                                        Server will generate schema out of this object
+                                    </Badge>
+                                )}
+                            </FormLabel>
+                            <FormAceEditor
+                                aceRef={sampleObjectRef}
+                                control={control}
+                                name="sampleObject"
+                                mode="json"
+                                actions={[
+                                    { component: <AceEditor.FullScreenAction /> },
+                                    { component: <AceEditor.FormatAction /> },
+                                    {
+                                        component: (
+                                            <AceEditor.LoadFileAction
+                                                onLoad={(value) =>
+                                                    setValue("sampleObject", value, { shouldValidate: true })
+                                                }
+                                            />
+                                        ),
+                                    },
+                                    {
+                                        component: <AceEditor.HelpAction message={<SampleObjectSyntaxHelp />} />,
+                                        position: "bottom",
+                                    },
+                                ]}
                             />
-                        </div>
-                        <div className="flex-grow-1 vstack w-50">
-                            <SchemaProviderButton
-                                icon="edit"
-                                title="Provide JSON schema"
-                                description="Use this option if you want to provide your own JSON schema"
-                                handleClick={() => setValue("schemaProvider", "jsonSchema")}
-                            />
-                        </div>
+                        </FormGroup>
                     </div>
-                    {errors.schemaProvider && (
-                        <FormValidationMessage>{errors.schemaProvider?.message.toString()}</FormValidationMessage>
-                    )}
+                    <div className="vstack w-50">
+                        <FormGroup className="vstack">
+                            <FormLabel className="flex-grow-1 hstack justify-content-between align-items-start">
+                                <div>
+                                    JSON schema
+                                    <PopoverWithHoverWrapper
+                                        message={
+                                            <>
+                                                Enter a formal JSON schema that defines the structure of the response
+                                                you want to receive from the model.
+                                                <br />
+                                                <br />
+                                                If not provided, RavenDB will generate the schema automatically based on
+                                                the sample response object.
+                                            </>
+                                        }
+                                    >
+                                        <Icon icon="info" color="info" margin="ms-1" />
+                                    </PopoverWithHoverWrapper>
+                                </div>
+                                {!!formValues.jsonSchema && (
+                                    <Badge pill bg="info" style={{ whiteSpace: "normal" }}>
+                                        Server will use this schema to communicate with AI
+                                    </Badge>
+                                )}
+                            </FormLabel>
+                            <div className="position-relative">
+                                <FormAceEditor
+                                    aceRef={jsonSchemaRef}
+                                    control={control}
+                                    name="jsonSchema"
+                                    mode="json"
+                                    actions={[
+                                        { component: <AceEditor.FullScreenAction /> },
+                                        { component: <AceEditor.FormatAction /> },
+                                        {
+                                            component: (
+                                                <AceEditor.LoadFileAction
+                                                    onLoad={(value) =>
+                                                        setValue("jsonSchema", value, { shouldValidate: true })
+                                                    }
+                                                />
+                                            ),
+                                        },
+                                        {
+                                            component: <AceEditor.HelpAction message={<JsonSchemaSyntaxHelp />} />,
+                                            position: "bottom",
+                                        },
+                                    ]}
+                                />
+                                {!!formValues.sampleObject && !formValues.jsonSchema && (
+                                    <ButtonWithSpinner
+                                        className="rounded-pill position-absolute top-50 start-50 translate-middle"
+                                        variant="primary"
+                                        onClick={asyncGenerateSchema.execute}
+                                        isSpinning={asyncGenerateSchema.loading}
+                                        icon="refresh"
+                                    >
+                                        Generate schema
+                                    </ButtonWithSpinner>
+                                )}
+                                {canRegenerateSchema && (
+                                    <ButtonWithSpinner
+                                        className="rounded-pill position-absolute"
+                                        style={{
+                                            bottom: "20px",
+                                            right: "54px",
+                                        }}
+                                        variant="primary"
+                                        onClick={asyncGenerateSchema.execute}
+                                        isSpinning={asyncGenerateSchema.loading}
+                                        icon="refresh"
+                                    >
+                                        Re-generate schema
+                                    </ButtonWithSpinner>
+                                )}
+                            </div>
+                        </FormGroup>
+                    </div>
                 </div>
-            )}
-            {formValues.schemaProvider === "sampleObject" && (
-                <FormGroup>
-                    <FormLabel className="hstack justify-content-between">
-                        <div>
-                            Sample response object
-                            <PopoverWithHoverWrapper
-                                message={
-                                    <>
-                                        Enter a sample JSON object that defines the structure of the response you want
-                                        to receive from the model.
-                                        <br />
-                                        <br />
-                                        RavenDB will use this example to generate a <strong>formal JSON schema</strong>,
-                                        which will be included in the request to the model.
-                                    </>
-                                }
-                            >
-                                <Icon icon="info" color="info" margin="ms-1" />
-                            </PopoverWithHoverWrapper>
-                        </div>
-                        <Button variant="link" size="xs" onClick={() => setValue("schemaProvider", "jsonSchema")}>
-                            <Icon icon="edit" />
-                            Provide JSON schema
-                        </Button>
-                    </FormLabel>
-                    <FormAceEditor
-                        aceRef={sampleObjectRef}
-                        control={control}
-                        name="sampleObject"
-                        mode="json"
-                        actions={[
-                            { component: <AceEditor.FullScreenAction /> },
-                            { component: <AceEditor.FormatAction /> },
-                            {
-                                component: (
-                                    <AceEditor.LoadFileAction
-                                        onLoad={(value) => setValue("sampleObject", value, { shouldValidate: true })}
-                                    />
-                                ),
-                            },
-                            {
-                                component: <AceEditor.HelpAction message={<SampleObjectSyntaxHelp />} />,
-                                position: "bottom",
-                            },
-                        ]}
-                    />
-                </FormGroup>
-            )}
-            {formValues.schemaProvider === "jsonSchema" && (
-                <FormGroup>
-                    <FormLabel className="hstack justify-content-between">
-                        <div>
-                            JSON schema
-                            <PopoverWithHoverWrapper message={<JsonSchemaTooltipBody />}>
-                                <Icon icon="info" color="info" margin="ms-1" />
-                            </PopoverWithHoverWrapper>
-                        </div>
-                        <Button variant="link" size="xs" onClick={() => setValue("schemaProvider", "sampleObject")}>
-                            <Icon icon="default" />
-                            Provide sample response object
-                        </Button>
-                    </FormLabel>
-                    <FormAceEditor
-                        aceRef={jsonSchemaRef}
-                        control={control}
-                        name="jsonSchema"
-                        mode="json"
-                        actions={[
-                            { component: <AceEditor.FullScreenAction /> },
-                            { component: <AceEditor.FormatAction /> },
-                            {
-                                component: (
-                                    <AceEditor.LoadFileAction
-                                        onLoad={(value) => setValue("jsonSchema", value, { shouldValidate: true })}
-                                    />
-                                ),
-                            },
-                            {
-                                component: <AceEditor.HelpAction message={<JsonSchemaSyntaxHelp />} />,
-                                position: "bottom",
-                            },
-                        ]}
-                    />
-                </FormGroup>
-            )}
-        </>
-    );
-}
-
-interface SchemaProviderButtonProps {
-    icon: IconName;
-    title: ReactNode;
-    description: ReactNode;
-    handleClick: () => void;
-}
-
-function SchemaProviderButton({ icon, title, description, handleClick }: SchemaProviderButtonProps) {
-    return (
-        <div className="border border-secondary rounded p-2 cursor-pointer h-100 flex-grow-1" onClick={handleClick}>
-            <div className="text-emphasis hstack gap-2 h-100">
-                <div>
-                    <Icon icon={icon} margin="m-0" style={{ fontSize: 24 }} />
-                </div>
-                <div className="flex-grow">
-                    <h4 className="mb-1">{title}</h4>
-                    <span>{description}</span>
-                </div>
+                {errors.schemaProvider && (
+                    <FormValidationMessage>{errors.schemaProvider?.message.toString()}</FormValidationMessage>
+                )}
             </div>
-        </div>
+        </>
     );
 }
 
