@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 using FastTests;
@@ -15,7 +15,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ExecuteIndex_Success()
         {
             using (var store = GetDocumentStore())

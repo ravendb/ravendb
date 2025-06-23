@@ -49,6 +49,7 @@
 - **CRITICAL**: Multiple categorizations may apply, consider human annotated ones (the ones committed as examples of correct categorizations, they are mostly correct).
 - **CRITICAL**: Tests using client sessions (`session.Advanced.DocumentQuery<>()`, `session.Query<>()`) are client-facing tests and should use `RavenTestCategory.Querying`, NOT low-level engine categories like `RavenTestCategory.Corax` or `RavenTestCategory.Voron`.
 - **Exception**: If a test is engine-specific (e.g., uses `Options.ForSearchEngine(RavenSearchEngineMode.Corax)`), use combined categories like `RavenTestCategory.Corax | RavenTestCategory.Querying`.
+- **Search Engine Specific Tests**: For tests that use engine-specific features (e.g., Lucene analyzers, WhereLucene), set the search engine directly in GetDocumentStore() call instead of using [RavenData] attributes: `GetDocumentStore(new Options { SearchEngine = RavenSearchEngineMode.Lucene })`
 - **Index-related tests**: Use `RavenTestCategory.Indexes` for index creation/management, or `RavenTestCategory.Querying | RavenTestCategory.Indexes` for query behavior that depends on specific index functionality.
 - When upgrading [Fact]/[Theory] attributes, always analyze test content to determine correct categorization before upgrading.
 - Always run the fast tests to ensure changes do work.

@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Analyzers;
+using Tests.Infrastructure;
 using Xunit;
 using Enumerable = System.Linq.Enumerable;
 using Xunit.Abstractions;
@@ -46,7 +47,7 @@ namespace SlowTests.MailingList.Stacey
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ngram_search_not_empty()
         {
             using (var store = GetDocumentStore())

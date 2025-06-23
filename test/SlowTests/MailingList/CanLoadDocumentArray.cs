@@ -45,7 +45,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void WillSupportLoadDocumentArray()
         {
             using (var store = GetDocumentStore())

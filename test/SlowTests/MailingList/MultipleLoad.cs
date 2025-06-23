@@ -149,7 +149,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task CanSelectValuesWithCollection_Error()
         {
             using (var store = GetDocumentStore())

@@ -16,10 +16,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void ShouldNotGetErrors()
+        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void ShouldNotGetErrors(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 store.Maintenance.Send(new PutIndexesOperation(new[] {  new IndexDefinition
                 {

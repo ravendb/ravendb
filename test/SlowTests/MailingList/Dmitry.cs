@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -16,7 +17,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void DeepEqualsWorksWithTimeSpan()
         {
             var content = new MusicContent
@@ -32,7 +33,7 @@ namespace SlowTests.MailingList
             Assert.True(JToken.DeepEquals(obj, newObj));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void TimeSpanWontTriggerPut()
         {
             using (var store = GetDocumentStore())

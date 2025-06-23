@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenDynamicTests.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -82,7 +76,7 @@ namespace SlowTests.MailingList
                 }
             }
 
-            [Fact]
+            [RavenFact(RavenTestCategory.Indexes)]
             public void It_should_be_stored_in_index_custom_serialization_convention()
             {
                 using (var store = GetDocumentStore(options: new Options
@@ -116,7 +110,7 @@ namespace SlowTests.MailingList
                 }
             }
 
-            [Fact]
+            [RavenFact(RavenTestCategory.Indexes)]
             public void It_should_be_stored_be_able_to_be_searched()
             {
                 using (var store = GetDocumentStore())

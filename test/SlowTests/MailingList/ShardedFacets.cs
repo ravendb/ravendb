@@ -1,12 +1,7 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="ShardedFacets.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +13,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding | RavenTestCategory.Facets, Skip = "RavenDB-6283")]
         public void FacetTest()
         {
             using (var ds1 = GetDocumentStore())

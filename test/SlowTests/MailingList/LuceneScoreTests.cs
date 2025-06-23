@@ -1,14 +1,9 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="LuceneScoreTests.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Linq;
+﻿using System.Linq;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -56,7 +51,7 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Lucene | RavenTestCategory.Querying)]
         public void GetLuceneScoreWhileUsingSelect()
         {
             using (var store = GetDocumentStore())
@@ -96,7 +91,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Lucene | RavenTestCategory.Querying)]
         public void GetLuceneScoreWhileNotUsingSelect()
         {
             using (var store = GetDocumentStore())

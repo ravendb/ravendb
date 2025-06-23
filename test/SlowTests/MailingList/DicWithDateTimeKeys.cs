@@ -1,14 +1,9 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="DicWithDateTimeKeys.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -23,7 +18,7 @@ namespace SlowTests.MailingList
             public IDictionary<DateTimeOffset, string> Items { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanSaveAndLoad()
         {
             using (var store = GetDocumentStore())

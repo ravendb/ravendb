@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,13 +14,13 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_Reduce_Nested_List_Of_KeyValuePair_Objects()
         {
             DoTest<TestIndex1, TestIndex1.Result>();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_Reduce_Nested_Dictionaries()
         {
             DoTest<TestIndex2, TestIndex2.Result>();

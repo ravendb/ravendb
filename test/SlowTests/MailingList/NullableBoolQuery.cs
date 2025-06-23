@@ -17,7 +17,7 @@ namespace SlowTests.MailingList
             public bool? Active { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanQuery_Simple()
         {
             using (var store = GetDocumentStore())

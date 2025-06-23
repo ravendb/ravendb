@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -85,7 +86,7 @@ namespace SlowTests.MailingList.spokeypokey
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_reference_child_documents_in_index()
         {
             using (var store = GetDocumentStore())

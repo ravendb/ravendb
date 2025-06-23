@@ -1,9 +1,3 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="Kushnir.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System;
 using System.Linq;
 using FastTests;
@@ -22,7 +16,7 @@ namespace SlowTests.MailingList
 
         private const string Alphabet = "abcdefghijklmnopqrstuvwxyz";
 
-        [Fact(Skip = "RavenDB-6264")]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying, Skip = "RavenDB-6264")]
         public void SortOnMetadata()
         {
             using (var store = GetDocumentStore())

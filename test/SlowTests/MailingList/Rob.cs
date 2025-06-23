@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void CanUseIndex()
         {
             using (var store = GetDocumentStore())

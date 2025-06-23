@@ -52,7 +52,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanQueryUsingBitwiseOperations()
         {
             using (var store = GetDocumentStore(new Options

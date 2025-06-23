@@ -1,13 +1,8 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="Stockholm.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -53,7 +48,7 @@ namespace SlowTests.MailingList
             public DateTime Date { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldIndexArray()
         {
             using (var store = GetDocumentStore())

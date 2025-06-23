@@ -1,10 +1,4 @@
-﻿// //-----------------------------------------------------------------------
-// // <copyright company="Hibernating Rhinos LTD">
-// //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// // </copyright>
-// //-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using FastTests;
 using FastTests.Utils;
@@ -12,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,7 +31,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanSetPropertyOnArrayItem()
         {
             using (var store = GetDocumentStore())

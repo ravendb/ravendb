@@ -17,13 +17,13 @@ namespace SlowTests.MailingList
 
         private const string Q = "What words rhyme with concurrency and asymptotic?";
 
-        [Theory]
-        [RavenData(Q, "con cur", "con cu", SearchEngineMode = RavenSearchEngineMode.All)]
-        [RavenData(Q, "con ency", "con cy", SearchEngineMode = RavenSearchEngineMode.All)]
-        [RavenData(Q, "curr ency", "curr enc", SearchEngineMode = RavenSearchEngineMode.All)]
-        [RavenData(Q, "wo rds", "wor ds", SearchEngineMode = RavenSearchEngineMode.All)]
-        [RavenData(Q, "asymp totic", "asymp tot", SearchEngineMode = RavenSearchEngineMode.All)]
-        [RavenData(Q, "asymp totic", "asymp tic", SearchEngineMode = RavenSearchEngineMode.All)]
+        [RavenTheory(RavenTestCategory.Lucene | RavenTestCategory.Highlighting | RavenTestCategory.Querying)]
+        [RavenData(Q, "con cur", "con cu", SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(Q, "con ency", "con cy", SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(Q, "curr ency", "curr enc", SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(Q, "wo rds", "wor ds", SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(Q, "asymp totic", "asymp tot", SearchEngineMode = RavenSearchEngineMode.Lucene)]
+        [RavenData(Q, "asymp totic", "asymp tic", SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void ShouldReturnResultsWithHighlightsAndThrowException(Options options, string question, string goodSearchTerm, string badSearchTerm)
         {
             using (var store = GetDocumentStore(options))

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -90,25 +91,25 @@ namespace SlowTests.MailingList
             }			
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUseRaven20BoolIndex()
         {
             TestIndexSetup(new Raven20Style_NullableBoolean());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUseRaven25BoolIndex()
         {
             TestIndexSetup(new Raven25Style_NullableBoolean());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUseRaven20DateTimeIndex()
         {
             TestIndexSetup(new Raven20Style_NullableDateTimeOffset());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUseRaven25DateTimeIndex()
         {
             TestIndexSetup(new Raven25Style_NullableDateTimeOffset());

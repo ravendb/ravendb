@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +29,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact(Skip = "Missing feature: Tasks (operations) and their results")]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript, Skip = "Missing feature: Tasks (operations) and their results")]
         public void Test()
         {
             using (var store = GetDocumentStore())

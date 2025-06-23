@@ -65,7 +65,7 @@ namespace SlowTests.MailingList.Jabber
             #endregion
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseTransformResults(Options options)
         {

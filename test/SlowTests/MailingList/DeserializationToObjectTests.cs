@@ -2,6 +2,7 @@
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -11,7 +12,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact(Skip = "RavenDB-6124")]
+        [RavenFact(RavenTestCategory.ClientApi, Skip = "RavenDB-6124")]
         public void Query_GivenDbWithComplexObjects_ShouldDeserializePropertiesToOriginalType()
         {
             // Arrange

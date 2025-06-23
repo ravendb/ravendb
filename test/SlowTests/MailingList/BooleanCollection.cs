@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -14,7 +15,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        private class Message
+        private class Message()
         {
             public class Recipient
             {
@@ -23,10 +24,7 @@ namespace SlowTests.MailingList
                 public int HasReadInt { get; set; }
             }
 
-            public Message()
-            {
-                this.Recipients = new List<Recipient>();
-            }
+            
             public string Id { get; set; }
             public string From { get; set; }
 
@@ -79,7 +77,7 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void IndexShouldAllowToQueryOnBooleanSubcollectionProperty()
         {
             using (var store = GetDocumentStore())
@@ -99,7 +97,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void IndexShouldAllowToQueryOnIntegerSubcollectionProperty()
         {
             using (var store = GetDocumentStore())

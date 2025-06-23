@@ -20,7 +20,7 @@ namespace SlowTests.MailingList
 #pragma warning restore 414
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WontGenerateRequestOnMissing_Load()
         {
             using (var store = GetDocumentStore())

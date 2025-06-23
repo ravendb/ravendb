@@ -41,7 +41,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void SameHash()
         {
             var perFieldAnalyzerComparer = new LuceneRavenPerFieldAnalyzerWrapper.PerFieldAnalyzerComparer();

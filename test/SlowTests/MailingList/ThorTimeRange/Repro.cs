@@ -1,12 +1,7 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="Repro.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -100,7 +95,7 @@ namespace SlowTests.MailingList.ThorTimeRange
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanPersistAndLoad_WORKS()
         {
             using (var store = GetDocumentStore())
@@ -120,7 +115,7 @@ namespace SlowTests.MailingList.ThorTimeRange
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanPersistAndLoad_WORKS2()
         {
             using (var store = GetDocumentStore())
@@ -146,7 +141,7 @@ namespace SlowTests.MailingList.ThorTimeRange
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanPersistAndLoad_FAILS()
         {
             using (var store = GetDocumentStore())

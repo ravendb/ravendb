@@ -9,12 +9,8 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Verifications
 {
-    public class Tobias : RavenTestBase
+    public class Tobias(ITestOutputHelper output) : RavenTestBase(output)
     {
-        public Tobias(ITestOutputHelper output) : base(output)
-        {
-        }
-
         [RavenFact(RavenTestCategory.Indexes)]
         public void CanWork()
         {

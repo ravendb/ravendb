@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace Raven.Imports.Newtonsoft.Json.Sample
 {
@@ -67,7 +68,7 @@ namespace SlowTests.MailingList
         /// of the attribute. This test ensures that the creation of Maps in Indexes obey the same rule (i.e.
         /// they ignore the attribute on Email but obey the attribute on Postcode.
         /// </summary>
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void WillIgnoreAttribute()
         {
             using (var store = GetDocumentStore())

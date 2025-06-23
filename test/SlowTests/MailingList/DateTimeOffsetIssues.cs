@@ -3,6 +3,7 @@ using FastTests;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -18,7 +19,7 @@ namespace SlowTests.MailingList
             public string Author { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData("2011-11-05T13:09:17.5402774")]
         [InlineData("2011-11-05T13:09:17.540277")]
 
@@ -84,7 +85,7 @@ namespace SlowTests.MailingList
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData("2011-11-05T13:09:17.5402774")]
         [InlineData("2011-11-05T13:09:17.540277")]
         public void Adding_DateTime_to_metadata_should_fetch_it_as_DateTime(string expectedDateTimeString)

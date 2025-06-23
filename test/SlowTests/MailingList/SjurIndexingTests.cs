@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -55,7 +56,7 @@ namespace SlowTests.MailingList {
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void TestIndexSortWithoutCriteria() {
             var documentStore = GetDocumentStore();
             using (var session = documentStore.OpenSession()) {
@@ -121,7 +122,7 @@ namespace SlowTests.MailingList {
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void TestIndexSortWithCriteria() {
             var documentStore = GetDocumentStore();
             using (var session = documentStore.OpenSession()) {
