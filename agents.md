@@ -47,7 +47,8 @@
 - **CRITICAL**: Read RavenTestCategory.cs for instructions on how to categorize properly.
 - **CRITICAL**: Test categorization must be based on functionality being tested, not directory location.
 - **CRITICAL**: Multiple categorizations may apply, consider human annotated ones (the ones committed as examples of correct categorizations, they are mostly correct).
-- **CRITICAL**: Tests using client sessions (`session.Advanced.DocumentQuery<>()`, `session.Query<>()`) are client-facing tests and should use `RavenTestCategory.Querying` or `RavenTestCategory.QueryingWithIndexes`, NOT low-level engine categories like `RavenTestCategory.Corax` or `RavenTestCategory.Voron`.
-- **Exception**: If a test is engine-specific (e.g., uses `Options.ForSearchEngine(RavenSearchEngineMode.Corax)`), use combined categories like `RavenTestCategory.Corax | RavenTestCategory.QueryingWithIndexes`.
+- **CRITICAL**: Tests using client sessions (`session.Advanced.DocumentQuery<>()`, `session.Query<>()`) are client-facing tests and should use `RavenTestCategory.Querying`, NOT low-level engine categories like `RavenTestCategory.Corax` or `RavenTestCategory.Voron`.
+- **Exception**: If a test is engine-specific (e.g., uses `Options.ForSearchEngine(RavenSearchEngineMode.Corax)`), use combined categories like `RavenTestCategory.Corax | RavenTestCategory.Querying`.
+- **Index-related tests**: Use `RavenTestCategory.Indexes` for index creation/management, or `RavenTestCategory.Querying | RavenTestCategory.Indexes` for query behavior that depends on specific index functionality.
 - When upgrading [Fact]/[Theory] attributes, always analyze test content to determine correct categorization before upgrading.
 - Always run the fast tests to ensure changes do work.
