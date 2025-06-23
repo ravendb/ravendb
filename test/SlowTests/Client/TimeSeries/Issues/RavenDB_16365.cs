@@ -1,8 +1,9 @@
-﻿using System;
+﻿﻿using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Session.TimeSeries;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ public class RavenDB_16365: RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.TimeSeries)]
     public async Task Can_Read_NameTimeSeries_Back()
     {
         var user = new User {Name = "RavenDB"};

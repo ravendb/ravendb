@@ -14,7 +14,7 @@ namespace SlowTests.Client
         {
         }
 
-        [RetryTheory]
+        [RavenRetryTheory(RavenTestCategory.BulkInsert)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task Simple_Bulk_Insert_With_Ssl(RavenTestBase.Options options)
         {

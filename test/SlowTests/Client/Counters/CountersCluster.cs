@@ -19,7 +19,7 @@ namespace SlowTests.Client.Counters
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Cluster)]
         public async Task IncrementCounterShouldNotCreateRevisions()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -163,7 +163,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Cluster)]
         public async Task DeleteCounter()
         {
             var (_, leader) = await CreateRaftCluster(3);

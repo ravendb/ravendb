@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+﻿﻿using System.Threading.Tasks;
 using FastTests;
 using FastTests.Client;
 using Tests.Infrastructure;
@@ -13,7 +13,7 @@ namespace SlowTests.Client
         {
         }
 
-        [LicenseRequiredTheory]
+        [RavenTheory(RavenTestCategory.ClientApi, LicenseRequired = true)]
         [InlineData(1, 2, "OnBeforeRequest", "OnFailedRequest", "OnBeforeRequest", "OnAfterRequests")]
         [InlineData(2, 2, "OnBeforeRequest", "OnFailedRequest", "OnBeforeRequest")]
         public async Task OnBeforeAfterAndFailRequest(int failCount, int clusterSize, params string[] expected)

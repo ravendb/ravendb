@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -19,7 +19,7 @@ namespace SlowTests.Client.Counters
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public void IncrementCounter()
         {
             using (var store = GetDocumentStore())
@@ -108,7 +108,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public async Task GetCounterValue()
         {
             using (var store = GetDocumentStore())
@@ -169,7 +169,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public void DeleteCounter()
         {
             using (var store = GetDocumentStore())
@@ -265,7 +265,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public void MultiGet()
         {
             using (var store = GetDocumentStore())
@@ -313,7 +313,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public void MultiSetAndGetViaBatch()
         {
             using (var store = GetDocumentStore())
@@ -423,7 +423,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public void BatchWithDifferentTypesOfOperations()
         {
             using (var store = GetDocumentStore())
@@ -594,7 +594,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public void DeleteCreateWithSameNameDeleteAgain()
         {
             using (var store = GetDocumentStore())
@@ -708,7 +708,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public void IncrementAndDeleteShouldChangeDocumentMetadata()
         {
             using (var store = GetDocumentStore())
@@ -838,7 +838,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public void CounterNameShouldPreserveCase()
         {
             using (var store = GetDocumentStore())
@@ -895,7 +895,7 @@ namespace SlowTests.Client.Counters
             public int Count { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void ShouldThrowOnAttemptToAddCounterToArtificailDoc(Options options)
         {

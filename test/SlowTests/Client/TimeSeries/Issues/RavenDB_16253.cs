@@ -1,6 +1,7 @@
-﻿using System;
+﻿﻿using System;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
         private const string DocId = "users/ayende";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanAppendMinValueTimestamp()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
@@ -6,6 +6,7 @@ using Orders;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public void ForceRevisionCreationForSingleUnTrackedEntityByID()
         {
             using (var store = GetDocumentStore())
@@ -42,7 +43,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task ForceRevisionCreationForSingleUnTrackedEntityByID_Async()
         {
             using (var store = GetDocumentStore())
@@ -67,7 +68,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public void ForceRevisionCreationForMultipleUnTrackedEntitiesByID()
         {
             using (var store = GetDocumentStore())
@@ -105,7 +106,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public void CannotForceRevisionCreationForUnTrackedEntityByEntity()
         {
             using (var store = GetDocumentStore())
@@ -120,7 +121,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public void ForceRevisionCreationForNewDocumentByEntity()
         {
             using (var store = GetDocumentStore())
@@ -144,7 +145,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public void CannotForceRevisionCreationForNewDocumentBeforeSavingToServerByEntity()
         {
             using (var store = GetDocumentStore())
@@ -165,7 +166,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public void ForceRevisionCreationForTrackedEntityWithNoChangesByEntity()
         {
             using (var store = GetDocumentStore())
@@ -198,7 +199,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public void ForceRevisionCreationForTrackedEntityWithChangesByEntity()
         {
             using (var store = GetDocumentStore())
@@ -237,7 +238,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public void ForceRevisionCreationForTrackedEntityWithChangesByID()
         {
             using (var store = GetDocumentStore())
@@ -275,7 +276,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public void ForceRevisionCreationMultipleRequests()
         {
             using (var store = GetDocumentStore())
@@ -318,7 +319,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public void ForceRevisionCreationAcrossMultipleSessions()
         {
             using (var store = GetDocumentStore())
@@ -399,7 +400,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task ForceRevisionCreationWhenRevisionConfigurationIsSet()
         {
             using (var store = GetDocumentStore())
@@ -465,7 +466,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public void HasRevisionsFlagIsCreatedWhenForcingRevisionForDocumentThatHasNoRevisionsYet()
         {
             using (var store = GetDocumentStore())

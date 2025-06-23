@@ -14,7 +14,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void TestClientCacheWithPageSize()
         {
             using (var store = GetDocumentStore())
@@ -201,7 +201,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void TestClientCacheWithStart()
         {
             using (var store = GetDocumentStore())
@@ -250,7 +250,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void GetResultsWithRange()
         {
             using (var store = GetDocumentStore())
@@ -327,7 +327,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void ResultsWithRangeAndPageSize()
         {
             using (var store = GetDocumentStore())
@@ -402,7 +402,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void ResultsWithRangeAndStart()
         {
             using (var store = GetDocumentStore())

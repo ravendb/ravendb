@@ -1,21 +1,18 @@
-﻿using System;
+using System;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
 using Xunit.Abstractions;
 
 namespace SlowTests.Client.Counters
 {
-    public class PatchOnCounters : RavenTestBase
+    public class PatchOnCounters(ITestOutputHelper output) : RavenTestBase(output)
     {
-        public PatchOnCounters(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Patching)]
         public void CanIncrementSingleCounter()
         {
             using (var store = GetDocumentStore())
@@ -48,7 +45,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Patching)]
         public void CanIncrementSingleCounterWithId()
         {
             using (var store = GetDocumentStore())
@@ -81,7 +78,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Patching)]
         public void AddingNewCounterShouldUpdateMetadata()
         {
             using (var store = GetDocumentStore())
@@ -122,7 +119,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Patching)]
         public void CounterDeletionShouldUpdateMetadata()
         {
             using (var store = GetDocumentStore())
@@ -171,7 +168,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Patching)]
         public void CanGetCounterNameFromMetadataAndIncrement()
         {
             using (var store = GetDocumentStore())
@@ -206,7 +203,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Patching)]
         public void CanIncrementTwoCountersAtOnce()
         {
             using (var store = GetDocumentStore())
@@ -254,7 +251,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Patching)]
         public void CanIncrementCountersViaPatchByQuery()
         {
             using (var store = GetDocumentStore())
@@ -318,7 +315,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Patching)]
         public void CanDeleteSingleCounter()
         {
             using (var store = GetDocumentStore())
@@ -357,7 +354,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Patching)]
         public void CanDeleteSingleCounterWithId()
         {
             using (var store = GetDocumentStore())
@@ -388,7 +385,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Patching)]
         public void CanDeleteAllCountersOfDocument()
         {
             using (var store = GetDocumentStore())
@@ -441,7 +438,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Patching)]
         public void CanDeleteCountersViaPatchByQuery()
         {
             using (var store = GetDocumentStore())

@@ -1,6 +1,7 @@
-﻿using FastTests;
+﻿﻿using FastTests;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Client
             public int Votes;
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
         public void WillPreserverRemovedPropertiesAcrossSaves()
         {
             using (var store = GetDocumentStore())

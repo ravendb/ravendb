@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -17,7 +17,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanGetAll()
         {
             const string documentId = "users/ayende";
@@ -74,7 +74,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanGetAll_WithPaging()
         {
             const string documentId = "users/ayende";
@@ -134,7 +134,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void GetAllShouldReturnNotModifiedCode()
         {
             const string documentId = "users/ayende";
@@ -241,7 +241,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void GetAllShouldReturnNotModifiedCode_WithPaging()
         {
             const string documentId = "users/ayende";
@@ -369,7 +369,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanGetRanges()
         {
             const string documentId = "users/ayende";
@@ -462,7 +462,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanGetRanges_WithPaging()
         {
             const string documentId = "users/ayende";
@@ -555,7 +555,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void GetRangesShouldReturnNotModifiedCode()
         {
             const string documentId = "users/ayende";
@@ -681,7 +681,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void GetRangesShouldReturnNotModifiedCode_WithPaging()
         {
             const string documentId = "users/ayende";

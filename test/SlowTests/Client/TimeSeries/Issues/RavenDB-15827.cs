@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Queries;
@@ -15,7 +15,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         public void TimeSeriesLinqQuery_CanUseWrappedConstantVariableInGroupBy()
         {
             const string documentId = "users/ayende";

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Session;
@@ -15,7 +15,7 @@ namespace SlowTests.Client.Attachments
         public RavenDB_20601(ITestOutputHelper output) : base(output)
         {
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public async Task ConflictOfClusterTxDocumentWithAttachment()
         {
             var co = new ServerCreationOptions
@@ -69,7 +69,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public async Task ConflictOfTwoClusterTxAndAttachment()
         {
             using (var store1 = GetDocumentStore())
@@ -113,7 +113,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public async Task ConflictOfClusterTxDocumentWithAttachment2()
         {
             var co = new ServerCreationOptions

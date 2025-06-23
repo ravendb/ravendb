@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -12,18 +12,15 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Server.Documents;
 using Raven.Server.Utils;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Client.Attachments
 {
-    public class AttachmentsSmuggler : RavenTestBase
+    public class AttachmentsSmuggler(ITestOutputHelper output) : RavenTestBase(output)
     {
-        public AttachmentsSmuggler(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Attachments)]
         public async Task ExportAndDeleteAttachmentThanCreateAnotherOneAndImport()
         {
             var file = GetTempFileName();
@@ -106,7 +103,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Attachments)]
         public async Task ExportFullThanDeleteAttachmentAndCreateAnotherOneThanExportIncrementalThanImport()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -171,7 +168,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Attachments)]
         public async Task ExportAndDeleteAttachmentAndImport()
         {
             var file = GetTempFileName();
@@ -241,7 +238,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Attachments)]
         public async Task ExportWithoutAttachmentAndCreateOneAndImport()
         {
             var file = GetTempFileName();
@@ -309,7 +306,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Attachments)]
         public async Task ExportEmptyStream()
         {
             var file = GetTempFileName();
@@ -417,7 +414,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Attachments)]
         public async Task CanExportAndImportAttachmentsAndRevisionAttachments()
         {
             var file = GetTempFileName();

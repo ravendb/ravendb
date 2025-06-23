@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,7 +23,7 @@ namespace SlowTests.Client.Attachments
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Cluster)]
         public async Task PutAttachmentsWithFailover_Session()
         {
             const int size = 512 * 1024;
@@ -105,7 +105,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Cluster)]
         public async Task PutAttachmentsWithFailover_LowLevel()
         {
             const string hash = "BfKA8g/BJuHOTHYJ+A6sOt9jmFSVEDzCM3EcLLKCRMU=";

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
@@ -19,7 +19,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void TestTimeSeriesCopy()
         {
             using (var store = GetDocumentStore())
@@ -84,7 +84,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void TestTimeSeriesCopyFail()
         {
             using (var store = GetDocumentStore())
@@ -130,7 +130,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
         // RavenDB-17679
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task TimeSeriesCopyShouldNotThrowForRollupTimeSeries()
         {
             using (var store = GetDocumentStore())

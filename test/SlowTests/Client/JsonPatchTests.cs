@@ -12,6 +12,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ namespace SlowTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithEscaping()
         {
             using (var store = GetDocumentStore())
@@ -76,7 +77,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithAdd()
         {
             using (var store = GetDocumentStore())
@@ -107,7 +108,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithAddNonExistentDocId()
         {
             using (var store = GetDocumentStore())
@@ -131,7 +132,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithReplaceNestedPathEscaping()
         {
             using (var store = GetDocumentStore())
@@ -164,7 +165,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithAddNestedPath()
         {
             using (var store = GetDocumentStore())
@@ -262,7 +263,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithAddNestedPathDoesntExist()
         {
             using (var store = GetDocumentStore())
@@ -297,7 +298,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithAddMoreThanOneNonexistentProperty()
         {
             using (var store = GetDocumentStore())
@@ -326,7 +327,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithAddToArrayAtTheEnd()
         {
             dynamic testObject = new ExpandoObject();
@@ -364,7 +365,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithAddToArrayAtIndex()
         {
             dynamic testObject = new ExpandoObject();
@@ -409,7 +410,7 @@ namespace SlowTests.Client
             public string Name;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithAddToNestedArraysAtIndex()
         {
             using (var store = GetDocumentStore())
@@ -440,7 +441,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithRemove()
         {
             dynamic testObject = new ExpandoObject();
@@ -473,7 +474,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithRemoveArrayElement()
         {
             dynamic testObject = new ExpandoObject();
@@ -511,7 +512,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithReplace()
         {
             using (var store = GetDocumentStore())
@@ -542,7 +543,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithReplaceAtNonExistent()
         {
             dynamic originalCompany = new ExpandoObject();
@@ -569,7 +570,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithReplaceArrayElement()
         {
             using (var store = GetDocumentStore())
@@ -608,7 +609,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithMove()
         {
             using (var store = GetDocumentStore())
@@ -644,7 +645,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithMoveToNestedInSameObject()
         {
             using (var store = GetDocumentStore())
@@ -672,7 +673,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithMoveArrayElementFromIndexToIndex()
         {
             using (var store = GetDocumentStore())
@@ -702,7 +703,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithMultipleAddReplace()
         {
             dynamic originalObject = new ExpandoObject();
@@ -743,7 +744,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithMultipleAddRemoveObjects()
         {
             using (var store = GetDocumentStore())
@@ -779,7 +780,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithTestAsSingleOperation()
         {
             using (var store = GetDocumentStore())
@@ -802,7 +803,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithTestMultipleTests()
         {
             using (var store = GetDocumentStore(new Options
@@ -861,7 +862,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithTestAsSingleOperationNumericVsString()
         {
             using (var store = GetDocumentStore())
@@ -884,7 +885,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithTestMultipleOperations()
         {
             var originalObject = new MyClass
@@ -921,7 +922,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithTestMultipleOperationsFailure()
         {
             dynamic originalObject = new ExpandoObject();
@@ -966,7 +967,7 @@ namespace SlowTests.Client
             public string City;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithDeferSimpleAdd()
         {
             dynamic originalObject = new ExpandoObject();
@@ -1000,7 +1001,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchingWithDeferInsertToArray()
         {
             dynamic originalObject = new ExpandoObject();

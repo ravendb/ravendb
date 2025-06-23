@@ -56,7 +56,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void CanSearchUsingPhraseAndOrderBy(Options options)
         {
@@ -98,7 +98,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void CanSearchUsingPhrase_MultipleSearches(Options options)
         {
@@ -136,7 +136,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void StandardSearchWillProduceExpectedResult(Options options)
         {
@@ -160,7 +160,7 @@ namespace SlowTests.Client.Queries
 
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void SearchCanUseAnd2(Options options)
         {
@@ -182,7 +182,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void SearchCanUseAnd(Options options)
         {
@@ -204,7 +204,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void SearchCanUseOr(Options options)
         {
@@ -226,7 +226,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void SearchWillUseGuessByDefault(Options options)
         {
@@ -251,7 +251,7 @@ namespace SlowTests.Client.Queries
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void ActuallySearchWithAndAndNot(Options options)
         {
@@ -291,7 +291,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void SearchCanUseNot(Options options)
         {
@@ -313,7 +313,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void SearchCanUseNotAndAnd(Options options)
         {
@@ -335,7 +335,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void BoostingSearches(Options options)
         {
@@ -390,7 +390,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void MultipleSearches(Options options)
         {
@@ -428,7 +428,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void UsingSuggest(Options options)
         {
@@ -470,7 +470,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void Can_search_inner_words(Options options)
         {
@@ -505,7 +505,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void CanSearchFullyAnalyzedTerm(Options options)
         {
@@ -532,7 +532,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void Can_search_inner_words_with_extra_condition(Options options)
         {
@@ -570,7 +570,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void Can_have_special_characters_in_search_text(Options options)
         {
@@ -596,7 +596,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void Can_have_special_characters_in_search_text_string(Options options)
         {
@@ -618,7 +618,7 @@ namespace SlowTests.Client.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void Can_search_on_array_of_strings(Options options)
         {

@@ -1061,7 +1061,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.BulkInsert | RavenTestCategory.TimeSeries)]
         [InlineData(128)]
         [InlineData(1024)]
         [InlineData(10 * 1024)]
@@ -1113,7 +1113,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.BulkInsert | RavenTestCategory.TimeSeries)]
         [InlineData(2)]
         [InlineData(4)]
         [InlineData(8)]
@@ -1308,7 +1308,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.BulkInsert)]
         public void CreateTimeSeriesWithInvalidNameShouldThrow()
         {
             using (var store = GetDocumentStore())

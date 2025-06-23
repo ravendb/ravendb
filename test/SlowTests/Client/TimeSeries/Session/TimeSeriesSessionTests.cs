@@ -906,7 +906,7 @@ namespace SlowTests.Client.TimeSeries.Session
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries)]
         [ClassData(typeof(CanGetTimeSeriesRangeCases))]
         public void CanGetTimeSeriesRange(DateTime? from, DateTime? to, int expectedValue)
         {

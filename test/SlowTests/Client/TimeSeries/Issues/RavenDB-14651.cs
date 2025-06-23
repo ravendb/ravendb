@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -13,7 +13,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanAvoidPassingTagInBatchOperation()
         {
             const string documentId = "users/ayende";
@@ -52,7 +52,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanAvoidPassingTagInSessionAppend()
         {
             using (var store = GetDocumentStore())
@@ -85,7 +85,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanUseSingleValueInSessionAppend()
         {
             using (var store = GetDocumentStore())

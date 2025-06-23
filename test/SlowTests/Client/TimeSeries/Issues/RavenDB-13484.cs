@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests.Utils;
@@ -17,7 +17,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Revisions)]
         public async Task CanGetTimeSeriesSnapshotInRevisions()
         {
             using (var store = GetDocumentStore())

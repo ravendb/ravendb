@@ -1366,7 +1366,7 @@ namespace SlowTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
         public void SupportForEscapedCollectionAndTimeSeriesNames(RavenTestParameters config)
         {

@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -16,7 +16,7 @@ namespace SlowTests.Client.Lazy.Async
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanLazilyLoadEntity(Options options)
         {
@@ -77,7 +77,7 @@ namespace SlowTests.Client.Lazy.Async
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanExecuteAllPendingLazyOperations(Options options)
         {
@@ -113,7 +113,7 @@ namespace SlowTests.Client.Lazy.Async
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task WithQueuedActions_Load(Options options)
         {
@@ -136,7 +136,7 @@ namespace SlowTests.Client.Lazy.Async
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task LazyLoadById(Options options)
         {
@@ -240,7 +240,7 @@ select {
             public List<string> DetailIds { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task WithTransformer(Options options)
         {

@@ -20,7 +20,7 @@ namespace SlowTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Configuration)]
         public void CanSetClientConfigurationOnDatabaseCreation()
         {
             using (var store = GetDocumentStore(new Options
@@ -42,7 +42,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Configuration)]
         public void CanSetClientConfigurationAfterDatabaseCreation()
         {
             using (var store = GetDocumentStore(new Options
@@ -75,7 +75,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Configuration)]
         public void ChangeClientConfigurationForDatabase()
         {
             using (var store = GetDocumentStore())
@@ -104,7 +104,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Configuration)]
         public void DatabaseClientConfigurationHasPrecedenceOverGlobal()
         {
             DoNotReuseServer(); // we modify global server configuration, and it impacts other tests
@@ -193,7 +193,7 @@ namespace SlowTests.Client
             };
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Configuration)]
         public async Task ChangeClientConfiguration_ShouldUpdateTheClient()
         {
             var putDatabaseClientConfigDisabled = new PutClientConfigurationOperation(new ClientConfiguration { Disabled = true });
@@ -257,7 +257,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Configuration)]
         public void ChangeGloballyClientConfiguration()
         {
             DoNotReuseServer(); // we modify global server configuration, and it impacts other tests
@@ -281,7 +281,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Configuration)]
         public void RavenDB_13737()
         {
             DoNotReuseServer(); // we modify global server configuration, and it impacts other tests
@@ -311,7 +311,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Configuration)]
         public async Task PutClientConfiguration_ShouldNotChangeTopologyEtag()
         {
             using var store = GetDocumentStore();

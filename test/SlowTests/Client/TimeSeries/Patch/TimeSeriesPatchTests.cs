@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -39,7 +39,7 @@ namespace SlowTests.Client.TimeSeries.Patch
             IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         [ClassData(typeof(CannotAppendTimeSeriesWithNoValueByPatchCases))]
         public async Task CannotAppendTimeSeriesWithWrongArguments(object tag, object timeseries, object values, bool shouldPass = false)
         {
@@ -72,7 +72,7 @@ namespace SlowTests.Client.TimeSeries.Patch
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         [InlineData(59d)]
         [InlineData(new[] { 59d })]
         [InlineData(new[] { 59d, 11d, 30d })]
@@ -124,7 +124,7 @@ namespace SlowTests.Client.TimeSeries.Patch
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         public async Task CanAppendTimeSeriesByPatch_WhenDocAsIdAndTimeAsDateObject()
         {
             double[] values = { 59d };
@@ -168,7 +168,7 @@ namespace SlowTests.Client.TimeSeries.Patch
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         [InlineData(@"timeseries(id(this), args.timeseries).append(new Date(args.timestamp), args.values, null);")]
         [InlineData(@"timeseries(id(this), args.timeseries).append(new Date(args.timestamp), args.values);")]
         public async Task CanAppendTimeSeriesByPatch_WithoutTag(string script)
@@ -212,7 +212,7 @@ namespace SlowTests.Client.TimeSeries.Patch
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         public async Task CanAppendTimeSeriesByPatch_WhenAppendMultipleItems()
         {
             double[] values = { 59d };
@@ -266,7 +266,7 @@ for(i = 0; i < args.toAppend.length; i++){
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         public async Task RavenDB_15193()
         {
             const string tag = "watches/fitbit";
@@ -354,7 +354,7 @@ for(i = 0; i < args.toAppend.length; i++){
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         [InlineData(4, 7)]
         [InlineData(0, 3)]
         [InlineData(0, 9)]
@@ -424,7 +424,7 @@ for(i = 0; i < args.toAppend.length; i++){
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         [InlineData(59d)]
         [InlineData(new[] { 59d })]
         [InlineData(new[] { 59d, 11d, 30d })]
@@ -476,7 +476,7 @@ for(i = 0; i < args.toAppend.length; i++){
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         [InlineData(@"timeseries(id(this), args.timeseries).increment(new Date(args.timestamp), args.values);")]
         [InlineData(@"timeseries(id(this), args.timeseries).increment(args.values);")]
         public async Task CanIncrementTimeSeriesByPatch_WithoutTimestamp(string script)
@@ -538,7 +538,7 @@ for(i = 0; i < args.toAppend.length; i++){
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         [ClassData(typeof(GetRangeOfTimestampByPatchCases))]
         public async Task Patch_GetRangeOfTimestamp(string tag, int fromIndex, int toIndex)
         {
@@ -601,7 +601,7 @@ for(i = 0; i < args.toAppend.length; i++){
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         public async Task Patch_ReuseTimeSeriesEntries()
         {
             const string timeseries = "Heartrate";
@@ -655,7 +655,7 @@ for(i = 0; i < args.toAppend.length; i++){
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         public async Task CanPerformMultipleOperationsOnSingleTimeSeriesInstanceByPatch()
         {
             double[] values = { 59d };
@@ -764,7 +764,7 @@ for (var i = 0; i < args.todelete.length; i++)
             public string Id { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         public async Task GetStatsTestAsync()
         {
             var id = "users/1-A";

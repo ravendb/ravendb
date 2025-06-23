@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
@@ -14,7 +14,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void PreventAppendingNaN_1()
         {
             using (var store = GetDocumentStore())
@@ -38,7 +38,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void PreventAppendingNaN_2()
         {
             using (var store = GetDocumentStore())
@@ -62,7 +62,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void PreventAppendingNaN_3()
         {
             using (var store = GetDocumentStore())
@@ -90,7 +90,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void PreventAppendingNaN_4()
         {
             using (var store = GetDocumentStore())
@@ -118,7 +118,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void PreventAppendingNaN_5()
         {
             using (var store = GetDocumentStore())
@@ -154,7 +154,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void PreventAppendingNaN_6()
         {
             using (var store = GetDocumentStore())
@@ -191,7 +191,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task CanAppendDifferentNumberOfValues()
         {
             using (var store = GetDocumentStore())

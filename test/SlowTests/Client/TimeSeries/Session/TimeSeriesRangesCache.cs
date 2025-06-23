@@ -17,7 +17,7 @@ namespace SlowTests.Client.TimeSeries.Session
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void ShouldGetTimeSeriesValueFromCache()
         {
             using (var store = GetDocumentStore())
@@ -58,7 +58,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void ShouldGetPartialRangeFromCache()
         {
             using (var store = GetDocumentStore())
@@ -105,7 +105,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void ReturnCorrectStatusCodeIfNoEntriesFound()
         {
             using (var store = GetDocumentStore())
@@ -174,7 +174,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void ShouldGetPartialRangeFromCache2()
         {
             var start = 5;
@@ -389,7 +389,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void ShouldMergeTimeSeriesRangesInCache2()
         {
             using (var store = GetDocumentStore())
@@ -583,7 +583,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void ShouldMergeTimeSeriesRangesInCache3()
         {
             using (var store = GetDocumentStore())
@@ -691,7 +691,7 @@ namespace SlowTests.Client.TimeSeries.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanHandleRangesWithNoValues()
         {
             using (var store = GetDocumentStore())
