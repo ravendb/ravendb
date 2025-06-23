@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Scratch;
@@ -26,7 +27,7 @@ namespace SlowTests.Voron.Issues
             options.ScratchSpaceUsage.AddMonitor(_scratchSpaceMonitor);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanTrackScratchSpaceSize()
         {
             RequireFileBasedPager();
@@ -91,7 +92,7 @@ namespace SlowTests.Voron.Issues
             Assert.Equal(0, Env.Options.ScratchSpaceUsage.ScratchSpaceInBytes);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void ScratchSpaceSizeMustIncludeDecompressionBuffers()
         {
             RequireFileBasedPager();

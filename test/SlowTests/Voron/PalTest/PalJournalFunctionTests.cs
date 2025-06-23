@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using FastTests;
 using Sparrow.Server.Platform;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Voron.PalTest
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Pal)]
         public unsafe void rvn_get_error_string_WhenCalled_ShouldCreateFile()
         {
             var errBuffer = new byte[256];
@@ -39,7 +40,7 @@ namespace SlowTests.Voron.PalTest
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Pal)]
         public void OpenJournal_WhenCalled_ShouldCreateFile()
         {
             var file = Path.Combine(NewDataPath(forceCreateDir: true), $"test_journal.{Guid.NewGuid()}");
@@ -62,7 +63,7 @@ namespace SlowTests.Voron.PalTest
             Assert.Equal(length, actualSize);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Pal)]
         public unsafe void WriteJournal_WhenCalled_ShouldWriteOnFile()
         {
             var file = Path.Combine(NewDataPath(forceCreateDir: true), $"test_journal.{Guid.NewGuid()}");
@@ -98,7 +99,7 @@ namespace SlowTests.Voron.PalTest
             Assert.Equal(expected, bytesFromFile);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Pal)]
         public unsafe void WriteJournal_WhenOffsetNotOnFileBeginning_ShouldWriteOnFile()
         {
             var file = Path.Combine(NewDataPath(forceCreateDir: true), $"test_journal.{Guid.NewGuid()}");
@@ -134,7 +135,7 @@ namespace SlowTests.Voron.PalTest
             Assert.Equal(expected, bytesFromFile);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Pal)]
         public unsafe void ReadJournal_WhenDo_ShouldRead()
         {
             var file = Path.Combine(NewDataPath(forceCreateDir: true), $"test_journal.{Guid.NewGuid()}");
@@ -184,7 +185,7 @@ namespace SlowTests.Voron.PalTest
             Assert.Equal(expected, expected);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Pal)]
         public unsafe void ReadJournal_WhenPassingTheEnd_ShouldReadUntilTheEndAndReturnEOF()
         {
             var file = Path.Combine(NewDataPath(forceCreateDir: true), $"test_journal.{Guid.NewGuid()}");
@@ -223,19 +224,19 @@ namespace SlowTests.Voron.PalTest
                 ret = Pal.rvn_open_journal_for_reads(file, out var rHandle, out errno);
                 if (ret != PalFlags.FailCodes.Success)
                     PalHelper.ThrowLastError(ret, errno, "");
-                
+
                 ret = Pal.rvn_read_journal(rHandle, pActual, 1000, offset, out var readActualSize, out errno);
-                
+
                 if (ret != PalFlags.FailCodes.FailEndOfFile)
                     PalHelper.ThrowLastError(ret, errno, "");
-                
+
                 Assert.Equal(500, readActualSize);
             }
 
             Assert.Equal(expected, actual.Take(500));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Pal)]
         public void TruncateJournal_WhenCalled_ShouldTruncate()
         {
             var file = Path.Combine(NewDataPath(forceCreateDir: true), $"test_journal.{Guid.NewGuid()}");

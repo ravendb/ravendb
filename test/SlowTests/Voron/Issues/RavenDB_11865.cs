@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.IO;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Xunit;
@@ -20,7 +21,7 @@ namespace SlowTests.Voron.Issues
             options.MaxScratchBufferSize = 2 * Constants.Size.Megabyte;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Scratch_files_on_recyclable_area_should_be_deleted_on_dispose()
         {
             RequireFileBasedPager();

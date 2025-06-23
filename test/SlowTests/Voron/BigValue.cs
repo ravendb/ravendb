@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Xunit;
 using Voron;
 using Xunit.Abstractions;
@@ -19,7 +20,7 @@ namespace SlowTests.Voron
         }
 
    
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Memory)]
         public void CanStoreInOneTransactionReallyBigValue()
         {
             var random = new Random(43321);

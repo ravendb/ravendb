@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Files.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,6 +6,7 @@
 
 using System.IO;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,7 +20,7 @@ namespace SlowTests.Voron.Storage
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ByDefaultAllFilesShouldBeStoredInOneDirectory()
         {
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir);
@@ -28,7 +29,7 @@ namespace SlowTests.Voron.Storage
             Assert.True(options.TempPath.FullPath.StartsWith(options.BasePath.FullPath));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void TemporaryPathTest()
         {
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp", null, null, null);
@@ -37,7 +38,7 @@ namespace SlowTests.Voron.Storage
             Assert.Equal(DataDir + "Temp", options.TempPath.FullPath);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void DefaultScratchLocation()
         {
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir);
@@ -48,7 +49,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ScratchLocationWithTemporaryPathSpecified()
         {
             var options = (StorageEnvironmentOptions.DirectoryStorageEnvironmentOptions)StorageEnvironmentOptions.ForPath(DataDir, DataDir + "Temp", null, null, null);

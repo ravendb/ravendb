@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl.Journal;
@@ -22,7 +23,7 @@ namespace SlowTests.Voron
             options.IgnoreInvalidJournalErrors = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Can_successfully_sync_journals_after_recovery()
         {
             RequireFileBasedPager();

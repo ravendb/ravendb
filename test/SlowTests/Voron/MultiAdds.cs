@@ -1,7 +1,8 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Text;
 using FastTests;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,7 +28,7 @@ namespace SlowTests.Voron
             return builder.ToString();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(0500)]
         [InlineData(1000)]
         [InlineData(2000)]

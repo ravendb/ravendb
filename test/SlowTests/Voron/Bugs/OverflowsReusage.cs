@@ -1,4 +1,5 @@
-﻿using System;
+﻿﻿using System;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,7 +17,7 @@ namespace SlowTests.Voron.Bugs
             options.ManualFlushing = true;
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(2500, 2400)]
         [InlineData(7000, 5000)]
         [InlineData(9000, 2000)]
@@ -44,7 +45,7 @@ namespace SlowTests.Voron.Bugs
             {
                 var tree = tx.ReadTree("tree");
 
-                tree.Add("key", bytes2); // TryOverwriteOverflowPages will be used under the hood 
+                tree.Add("key", bytes2); // TryOverwriteOverflowPages will be used under the hood
 
                 using (var readTransaction = Env.ReadTransaction())
                 {
@@ -60,7 +61,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(2500, 2400)]
         [InlineData(7000, 5000)]
         [InlineData(9000, 2000)]

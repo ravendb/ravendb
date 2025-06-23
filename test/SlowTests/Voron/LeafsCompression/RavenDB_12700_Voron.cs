@@ -8,6 +8,7 @@ using Voron;
 using Voron.Data.BTrees;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Voron.LeafsCompression
 {
@@ -17,7 +18,7 @@ namespace SlowTests.Voron.LeafsCompression
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
         public unsafe void Must_split_compressed_page_if_cannot_compress_back_after_decompression()
         {
             using (var tx = Env.WriteTransaction())

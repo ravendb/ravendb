@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
 using FastTests.Voron;
 using Sparrow.Backups;
@@ -125,7 +125,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Recovery_must_not_throw_missing_journal_if_we_have_synced_everything()
         {
             RequireFileBasedPager();

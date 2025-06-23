@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,7 +14,7 @@ namespace SlowTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void TreeRabalancerShouldCopyNodeFlagsWhenMultiValuePageRefIsSet()
         {
             var addedIds = new Dictionary<string, string>();
@@ -115,7 +116,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldNotThrowThatPageIsFullDuringTreeRebalancing()
         {
             using (var tx = Env.WriteTransaction())
@@ -167,7 +168,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void RavenDB_2543_CouldNotEnsureThatWeHaveEnoughSpace_When_MovingLeafNode()
         {
             using (var tx = Env.WriteTransaction())

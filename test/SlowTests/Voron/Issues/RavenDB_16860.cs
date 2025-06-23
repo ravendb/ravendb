@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.IO;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Impl.Journal;
 using Xunit;
@@ -20,7 +21,7 @@ namespace SlowTests.Voron.Issues
             options.MaxNumberOfRecyclableJournals = 3;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Should_limit_number_of_recycled_journals()
         {
             RequireFileBasedPager();

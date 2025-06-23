@@ -1,8 +1,9 @@
-﻿using System;
+﻿﻿﻿using System;
 using System.Linq;
 using FastTests.Voron;
 using FastTests.Voron.Tables;
 using Sparrow.Binary;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
@@ -16,7 +17,7 @@ namespace SlowTests.Voron.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void OnDataMoveShouldForgetOldCompressionIds()
         {
             var random = new Random(357);

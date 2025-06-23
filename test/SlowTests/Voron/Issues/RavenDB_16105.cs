@@ -1,7 +1,8 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Voron.Impl;
@@ -25,7 +26,7 @@ namespace SlowTests.Voron.Issues
             options.Encryption.EncryptionBuffersPool = new EncryptionBuffersPool();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void MustNotEncryptBuffersThatWereExtraAllocatedJustToSatisfyPowerOf2Size()
         {
             RequireFileBasedPager();

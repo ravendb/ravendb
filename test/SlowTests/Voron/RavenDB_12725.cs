@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
 using FastTests.Voron;
 using Sparrow.Backups;
@@ -26,7 +26,7 @@ namespace SlowTests.Voron
             options.MaxLogFileSize = 1 * 1024 * 1024;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Recovery_must_not_delete_journals_that_havent_been_synced_yet()
         {
             RequireFileBasedPager();

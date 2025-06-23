@@ -1,8 +1,9 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
 using System.Threading;
 using FastTests.Voron;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Impl.Journal;
 using Xunit;
@@ -22,7 +23,7 @@ namespace SlowTests.Voron.Issues
             options.ManualSyncing = true;
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed()]
         public void Do_not_create_recyclable_journal_files_on_db_load(int seed)
         {
@@ -57,7 +58,7 @@ namespace SlowTests.Voron.Issues
             Assert.Equal(0, journalsForReuse.Length);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed()]
         public void Flushed_journals_should_become_recyclable_files_after_sync(int seed)
         {

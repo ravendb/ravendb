@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -17,7 +18,7 @@ namespace SlowTests.Voron.Issues
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Must_not_update_PTT_during_stage2_of_commit()
         {
             RequireFileBasedPager();

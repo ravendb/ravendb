@@ -1,4 +1,5 @@
-﻿using Voron;
+﻿using Tests.Infrastructure;
+using Voron;
 using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,7 +12,7 @@ namespace SlowTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void Overflows_overlapping_bug()
         {
             using (var tx = Env.WriteTransaction())

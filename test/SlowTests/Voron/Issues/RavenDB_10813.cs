@@ -1,6 +1,7 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests.Voron;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -22,7 +23,7 @@ namespace SlowTests.Voron.Issues
             options.Encryption.MasterKey = _masterKey.ToArray();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Journal_reader_should_skip_encryption_buffers_overwritten_by_later_allocations_on_db_recovery()
         {
             RequireFileBasedPager();

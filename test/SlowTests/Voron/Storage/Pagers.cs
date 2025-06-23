@@ -1,28 +1,34 @@
+﻿using System;
+using System.IO;
+using Tests.Infrastructure;
+using Voron.Impl.Paging;
+using Xunit;
+
 namespace SlowTests.Voron.Storage
 {
     public class Pagers
     {
 #if DEBUG_PAGER_STATE
-//        [Fact]
+//        [RavenFact(RavenTestCategory.Voron)]
 //        public void PureMemoryPagerReleasesPagerState()
 //        {
 //            PagerReleasesPagerState(() => new Win32PureMemoryPager());
 //        }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MemoryMapPagerReleasesPagerState()
         {
             PagerReleasesPagerState(() => new Win32MemoryMapPager("db.voron"));
             File.Delete("db.voron");
         }
 
-        [Fact]	
+        [RavenFact(RavenTestCategory.Voron)]
         public void MemoryMapWithoutBackingReleasePagerState()
         {
             PagerReleasesPagerState(() => new Win32PageFileBackedMemoryMappedPager("test"));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void FilePagerReleasesPagerState()
         {
             PagerReleasesPagerState(() => new FilePager("db.voron"));

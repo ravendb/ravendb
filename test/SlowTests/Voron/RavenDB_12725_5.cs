@@ -1,7 +1,8 @@
-﻿using System;
+﻿﻿﻿using System;
 using System.IO;
 using System.Linq;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl.Journal;
@@ -24,7 +25,7 @@ namespace SlowTests.Voron
             options.IgnoreInvalidJournalErrors = true;
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Should_recover_if_jounral_is_missing_but_IgnoreInvalidJournalErrors_is_set()
         {
             RequireFileBasedPager();

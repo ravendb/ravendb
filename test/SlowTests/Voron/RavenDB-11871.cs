@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.IO;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron.Impl.Journal;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,7 +14,7 @@ namespace SlowTests.Voron
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void WillNotRetainJournalsAfterSync()
         {
             RequireFileBasedPager();

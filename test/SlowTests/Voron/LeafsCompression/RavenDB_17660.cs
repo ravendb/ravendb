@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using FastTests.Voron;
@@ -6,6 +6,7 @@ using Raven.Client.Extensions.Streams;
 using Raven.Server.Config.Settings;
 using Sparrow;
 using Sparrow.Binary;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Xunit;
@@ -19,7 +20,7 @@ namespace SlowTests.Voron.LeafsCompression
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void Must_invalidate_cached_decompressed_page_with_write_usage_after_page_split()
         {
             using (var tx = Env.WriteTransaction())

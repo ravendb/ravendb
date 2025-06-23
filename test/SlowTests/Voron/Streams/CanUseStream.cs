@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.IO;
 using FastTests.Voron.FixedSize;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,7 +14,7 @@ namespace SlowTests.Voron.Streams
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(null, 129)]
         [InlineData(null, 2095)]
         [InlineData("AM4#@dF5Tas", 4096)]
@@ -54,7 +55,7 @@ namespace SlowTests.Voron.Streams
                     Assert.Equal(tag, readTag);
             }
         }
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(129)]
         [InlineData(2095)]
         [InlineData(4096)]
@@ -94,7 +95,7 @@ namespace SlowTests.Voron.Streams
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData("AM4#@dF5Tas", 129)]
         [InlineData(null, 2095)]
         [InlineData(null, 4096)]
@@ -143,7 +144,7 @@ namespace SlowTests.Voron.Streams
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(null, 50)]
         [InlineData(null, 129)]
         [InlineData(null, 2095)]
@@ -180,7 +181,7 @@ namespace SlowTests.Voron.Streams
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData("RavenDB", 1546581643)]
         [InlineDataWithRandomSeed(null)]
         [InlineDataWithRandomSeed("RavenDB")]

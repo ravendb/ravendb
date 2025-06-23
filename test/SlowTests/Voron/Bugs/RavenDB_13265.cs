@@ -1,4 +1,5 @@
-﻿using FastTests.Voron;
+using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,7 +17,7 @@ namespace SlowTests.Voron.Bugs
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void EnsurePagerStateReferenceMustAdd_Current_PagerStateToCollectionSoWeWillReleaseItsReferenceOnTxDispose()
         {
             RequireFileBasedPager();

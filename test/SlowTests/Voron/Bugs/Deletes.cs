@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.IO;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void RebalancerIssue()
         {
             const int DocumentCount = 750;

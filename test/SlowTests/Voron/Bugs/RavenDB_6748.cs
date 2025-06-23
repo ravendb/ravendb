@@ -1,4 +1,5 @@
-﻿using Voron;
+﻿using Tests.Infrastructure;
+using Voron;
 using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,7 +17,7 @@ namespace SlowTests.Voron.Bugs
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void Must_not_release_scratch_pages_which_are_visible_for_read_transaction()
         {
             using (var txw = Env.WriteTransaction())

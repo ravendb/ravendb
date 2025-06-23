@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,7 +17,7 @@ namespace SlowTests.Voron
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void SnapshotIssue()
         {
             const int DocumentCount = 50000;
@@ -70,7 +71,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void SnapshotIssue_ExplicitFlushing()
         {
             const int DocumentCount = 50000;

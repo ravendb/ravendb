@@ -1,7 +1,8 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
 using FastTests.Voron;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Voron
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed]
         public void SplittersAndRebalancersShouldNotChangeNodeVersion(int seed)
         {

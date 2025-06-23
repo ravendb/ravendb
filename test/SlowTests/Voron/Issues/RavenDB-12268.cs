@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.IO;
 using FastTests.Voron;
 using Sparrow;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -21,7 +22,7 @@ namespace SlowTests.Voron.Issues
             options.MaxScratchBufferSize = new Size(64, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void UsedScratchBuffersArentDeleted()
         {
             using (var tx = Env.WriteTransaction())

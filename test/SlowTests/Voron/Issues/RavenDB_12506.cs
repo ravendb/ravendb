@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,7 +13,7 @@ namespace SlowTests.Voron.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Error_on_db_creation_must_not_cause_failure_on_next_db_load()
         {
             var dataDir = DataDir;
@@ -39,7 +40,7 @@ namespace SlowTests.Voron.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Page_locator_must_not_return_true_on_invalid_page_number()
         {
             using (var tx = Env.WriteTransaction())

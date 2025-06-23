@@ -1,4 +1,5 @@
-﻿using System.IO;
+using System.IO;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,7 +12,7 @@ namespace SlowTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldBeEmpty()
         {
             using (var tx = Env.WriteTransaction())
@@ -31,7 +32,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void SurviveRestart()
         {
             using (var options = StorageEnvironmentOptions.CreateMemoryOnly())

@@ -3,6 +3,7 @@ using FastTests.Voron;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Voron.Issues
 {
@@ -19,7 +20,7 @@ namespace SlowTests.Voron.Issues
             options.MaxScratchBufferSize = 64 * 1024 * 4;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CannotTryToGetPreventNewTransactionsLockRecursivelyDuringFlushing()
         {
             for (int i = 0; i < 100; i++)

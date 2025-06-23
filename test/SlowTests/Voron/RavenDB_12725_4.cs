@@ -1,7 +1,8 @@
-﻿using System;
+﻿﻿﻿using System;
 using System.IO;
 using System.Linq;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Exceptions;
@@ -24,7 +25,7 @@ namespace SlowTests.Voron
             options.MaxLogFileSize = 1 * 1024 * 1024;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Should_throw_on_missing_journal_during_recovery()
         {
             RequireFileBasedPager();

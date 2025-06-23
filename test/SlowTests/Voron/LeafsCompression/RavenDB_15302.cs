@@ -3,6 +3,7 @@ using Voron.Data.BTrees;
 using Voron.Data.Compression;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Voron.LeafsCompression
 {
@@ -12,7 +13,7 @@ namespace SlowTests.Voron.LeafsCompression
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
         public void AfterCopyToOriginalDecompressedPageShouldNotBeInCacheIfCompressionWasNotNeeded()
         {
             using (var tx = Env.WriteTransaction())

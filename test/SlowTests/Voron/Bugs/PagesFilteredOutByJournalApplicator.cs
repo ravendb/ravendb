@@ -1,4 +1,5 @@
-﻿using System.IO;
+using System.IO;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Debugging;
 using Xunit;
@@ -18,7 +19,7 @@ namespace SlowTests.Voron.Bugs
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CouldNotReadPagesThatWereFilteredOutByJournalApplicator_1()
         {
             var bytes = new byte[1000];
@@ -66,7 +67,7 @@ namespace SlowTests.Voron.Bugs
             }
         } 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CouldNotReadPagesThatWereFilteredOutByJournalApplicator_2()
         {
             var bytes = new byte[1000];

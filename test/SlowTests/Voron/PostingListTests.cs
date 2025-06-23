@@ -48,7 +48,7 @@ public class PostingListTests : StorageTest
         return l;
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Corax)]
     public void CanDeleteRandomLargeNumberOfItemsFromStart()
     {
         using (var wtx = Env.WriteTransaction())
@@ -83,7 +83,7 @@ public class PostingListTests : StorageTest
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Corax)]
     public void CanStoreLargeNumberOfItemsInSequentialOrder()
     {
         using (var wtx = Env.WriteTransaction())
@@ -153,7 +153,7 @@ public class PostingListTests : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Corax)]
     public void CanDeleteLargeNumberOfItemsFromStart()
     {
         using (var wtx = Env.WriteTransaction())
@@ -188,7 +188,7 @@ public class PostingListTests : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Corax)]
     public void CanStoreLargeNumberOfItemsInRandomlyOrder()
     {
         using (var wtx = Env.WriteTransaction())
@@ -212,7 +212,7 @@ public class PostingListTests : StorageTest
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Corax)]
     public void CanDeleteLargeNumberOfItems()
     {
         using (var wtx = Env.WriteTransaction())
@@ -247,7 +247,7 @@ public class PostingListTests : StorageTest
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Corax)]
     public void CanDeleteLargeNumberOfItemsFromEnd()
     {
         using (var wtx = Env.WriteTransaction())

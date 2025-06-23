@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SplittingPageWithPrefixes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using FastTests.Voron;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Voron
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldHaveEnoughSpaceDuringTruncate()
         {
             using (var tx = Env.WriteTransaction())
@@ -78,7 +79,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(1)]
         [InlineData(3)]
         [InlineData(103)]
@@ -144,7 +145,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(0)]
         [InlineData(2)]
         [InlineData(4)]

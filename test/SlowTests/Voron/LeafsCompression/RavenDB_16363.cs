@@ -1,5 +1,6 @@
 ﻿using System.IO;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron.Data.BTrees;
 using Voron.Debugging;
 using Voron.Global;
@@ -14,7 +15,7 @@ namespace SlowTests.Voron.LeafsCompression
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
         public unsafe void MustNotCreateEmptyNonCompressedPageAfterPageSplit()
         {
             using (var tx = Env.WriteTransaction())

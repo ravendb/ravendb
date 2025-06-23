@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using FastTests;
 using Sparrow.Server.Platform;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ public class PalMapTests : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Pal)]
     public unsafe void MapFile_WhenCalled_ShouldSuccess()
     {
         //TODO To remove when mmap functions are implemented in windows
@@ -36,7 +37,7 @@ public class PalMapTests : RavenTestBase
         handle.Dispose();
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Pal)]
     public unsafe void MapFileAndAllocateMoreSpace_WhenCalled_ShouldSuccess()
     {
         //TODO To remove when mmap functions are implemented in windows
