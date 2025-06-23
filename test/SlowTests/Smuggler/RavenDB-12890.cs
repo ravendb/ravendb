@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Smuggler;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Smuggler
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanImportDumpWithoutAttachment()
         {
             using (var stream = GetType().Assembly.GetManifestResourceStream("SlowTests.Smuggler.Data.Document_Without_Attachment_Stream.ravendbdump"))
