@@ -270,14 +270,3 @@ function JsonSchemaSyntaxHelp() {
         </div>
     );
 }
-
-function JsonSchemaTooltipBody() {
-    return (
-        <>
-            Enter a JSON schema that defines the structure of the output you expect from the model.
-            <br />
-            <br />
-            If not provided, RavenDB will generate the schema automatically based on the sample response object.
-        </>
-    );
-}
