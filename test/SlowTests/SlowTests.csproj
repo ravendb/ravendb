@@ -54,6 +54,7 @@
     <None Remove="Data\RavenDB_23100\2024-11-19-10-39-25-6242058.ravendb-snapshot" />
     <None Remove="Data\RavenDB_23100\2024-11-19-10-43-34-8245899.ravendb-snapshot" />
     <None Remove="Data\RavenDB_24002\TimeseriesWithConflictedRevisions_new.ravendbdump" />
+    <None Remove="Data\RavenDB_24415\Can_push_via_filtered_replication_2.0-5.zip" />
     <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
   </ItemGroup>
@@ -159,6 +160,7 @@
     <EmbeddedResource Include="Data\RavenDB_23100\2024-11-19-10-39-25-6242058.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_23100\2024-11-19-10-43-34-8245899.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_24002\TimeseriesWithConflictedRevisions_new.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_24415\Can_push_via_filtered_replication_2.0-5.zip" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />

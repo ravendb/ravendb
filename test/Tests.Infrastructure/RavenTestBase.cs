@@ -27,6 +27,8 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
@@ -309,6 +311,8 @@ namespace FastTests
 
                     store.BeforeDispose += (sender, args) =>
                     {
+                        CheckForMissingAttachmentsAndThrowIfNeeded(store, name, serverToUse, caller);
+
                         var realException = Context.GetException();
                         try
                         {
@@ -381,6 +385,59 @@ namespace FastTests
             catch (TimeoutException te)
             {
                 throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{Cluster.GetLastStatesFromAllServersOrderedByTime()}");
+            }
+        }
+
+        private static readonly List<string> TestsToSkipForMissingAttachments =
+        [
+            "Can_Get_Missing_attachments",
+            "Can_push_via_filtered_replication" //TODO: remove when RavenDB-24415 is fixed
+        ];
+
+        private static void CheckForMissingAttachmentsAndThrowIfNeeded(DocumentStore store, string name, RavenServer serverToUse, string caller)
+        {
+            if (TestsToSkipForMissingAttachments.Contains(caller))
+            {
+                return;
+            }
+
+            try
+            {
+                var missingAttachments = store.Operations.Send(new GetMissingAttachmentsOperation(Constants.Documents.Collections.AllDocumentsCollection));
+
+                if (missingAttachments.Documents.Count != 0 || missingAttachments.Revisions.Count != 0)
+                {
+                    var sb = new StringBuilder();
+                    string missingAttachmentsInfo = missingAttachments.Documents.Count != 0 && missingAttachments.Revisions.Count != 0 ? "Documents and Revisions"
+                        : missingAttachments.Documents.Count != 0 ? "Documents" : "Revisions";
+                    sb.AppendLine($"There are missing attachments for {missingAttachmentsInfo} in database '{name}' on server '{serverToUse.ServerStore.NodeTag}'.");
+                    foreach (var kvp in missingAttachments.Documents)
+                    {
+                        sb.AppendLine($"Collection: {kvp.Key}");
+                        foreach (AttachmentHandler.MissingAttachmentInfo attachment in kvp.Value)
+                        {
+                            sb.AppendLine($"Name: {attachment.Name}, Hash: {attachment.Hash}, MissingType: {attachment.MissingSource}, AttachmentType: {attachment.AttachmentType}");
+                        }
+                    }
+                    foreach (var kvp in missingAttachments.Revisions)
+                    {
+                        sb.AppendLine($"Collection: {kvp.Key}");
+                        foreach (AttachmentHandler.MissingAttachmentInfo attachment in kvp.Value)
+                        {
+                            sb.AppendLine($"Name: {attachment.Name}, Hash: {attachment.Hash}, MissingType: {attachment.MissingSource}, AttachmentType: {attachment.AttachmentType}");
+                        }
+                    }
+                    throw new MissingAttachmentException(sb.ToString());
+                }
+            }
+            catch (Exception e)
+            {
+                if (e is MissingAttachmentException)
+                {
+                    throw;
+                }
+
+                // expected
             }
         }
 
