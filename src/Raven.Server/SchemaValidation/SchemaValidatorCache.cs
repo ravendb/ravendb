@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents;
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Raven.Server.ServerWide.Context;
@@ -128,8 +129,7 @@ public class SchemaValidatorCache : IDisposable
             if (validator.Validate(document, errorBuilder))
                 return;
 
-            //TODO: a dedicated exception
-            throw new InvalidOperationException(errorBuilder.GetErrors().ToString());
+            throw new SchemaValidationException(errorBuilder.GetErrors().ToString());
         }
     }
 
