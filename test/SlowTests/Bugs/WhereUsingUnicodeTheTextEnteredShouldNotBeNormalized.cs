@@ -1,5 +1,6 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Bugs
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         /*
          * If we fail on '??????????' we need to make sure that the generated scanner code NextState() method was not overwritten by regenerating the parser.
          */

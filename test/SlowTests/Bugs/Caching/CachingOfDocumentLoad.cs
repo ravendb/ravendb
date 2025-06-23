@@ -1,10 +1,11 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="CachingOfDocumentLoad.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
 //-----------------------------------------------------------------------
 
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,7 +28,7 @@ namespace SlowTests.Bugs.Caching
             public bool Active { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_cache_document_load()
         {
             using (var store = GetDocumentStore())
@@ -52,7 +53,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void After_modification_will_get_value_from_server()
         {
             using (var store = GetDocumentStore())

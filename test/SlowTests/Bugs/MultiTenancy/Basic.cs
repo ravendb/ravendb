@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="Basic.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -9,6 +9,7 @@ using FastTests;
 using System.Linq;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Bugs.MultiTenancy
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanCreateDatabaseUsingExtensionMethod()
         {
             DoNotReuseServer();
@@ -54,7 +55,7 @@ namespace SlowTests.Bugs.MultiTenancy
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanQueryTenantDatabase()
         {
             DoNotReuseServer();
@@ -81,7 +82,7 @@ namespace SlowTests.Bugs.MultiTenancy
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanQueryDefaultDatabase()
         {
             DoNotReuseServer();
@@ -109,7 +110,7 @@ namespace SlowTests.Bugs.MultiTenancy
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void OpenSessionUsesSpecifiedDefaultDatabase()
         {
             DoNotReuseServer();
@@ -145,7 +146,7 @@ namespace SlowTests.Bugs.MultiTenancy
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseMultipleDatabases()
         {
             DoNotReuseServer();

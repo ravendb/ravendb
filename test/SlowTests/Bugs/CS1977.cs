@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -148,7 +148,7 @@ namespace SlowTests.Bugs
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void can_create_index(Options options)
         {
@@ -159,7 +159,7 @@ namespace SlowTests.Bugs
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void can_create_index_where_reduce_uses_select(Options options)
         {

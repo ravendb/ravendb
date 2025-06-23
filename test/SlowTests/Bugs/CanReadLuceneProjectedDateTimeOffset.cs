@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.IO;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Can_read_date_time_offset_from_lucene_query()
         {
             var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateDeserializer();

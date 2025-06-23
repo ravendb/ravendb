@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -97,7 +97,7 @@ namespace SlowTests.Bugs.Indexing
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Lucene API for create field")]
         public void CanCreateCompletelyDynamicFields(Options options)
@@ -131,7 +131,7 @@ namespace SlowTests.Bugs.Indexing
             }
         }        
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Lucene API for create field")]
         public void CanCreateCompletelyDynamicFieldsWithProjection(Options options)
@@ -169,7 +169,7 @@ Color: product.Color
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Lucene API for create field")]
         public void CanCreateCompletelyDynamicNumericFields(Options options)
@@ -203,7 +203,7 @@ Color: product.Color
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Lucene API for create field")]
         public void CanCreateCompletelyDynamicNumericFieldsUsingField(Options options)
@@ -237,7 +237,7 @@ Color: product.Color
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Lucene API for create field")]
         public void CanQueryCompletelyDynamicNumericFieldsWithNegativeRangeUsingInt(Options options)
@@ -271,7 +271,7 @@ Color: product.Color
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Lucene API for create field")]
         public void CanQueryCompletelyDynamicNumericFieldsWithNegativeRange(Options options)

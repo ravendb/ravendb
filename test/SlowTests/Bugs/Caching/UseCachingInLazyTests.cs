@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -12,6 +12,7 @@ using Raven.Client.Http;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.LowMemory;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Size = Sparrow.Size;
@@ -45,7 +46,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [MemberData(nameof(AsyncTestCases))]
         public async Task LazilyLoadAsync_WhenDoNotTrackChanges_ShouldNotCreateExtraRequest(string xunitId, AsyncTestCaseHolder testCaseHolder)
         {
@@ -56,7 +57,7 @@ namespace SlowTests.Bugs.Caching
             Assert.Equal(0, numberOfRequest);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LazilyLoadAsync_WhenTrackChangesAndChange_ShouldCreateExtraRequest()
         {
             using var store = GetDocumentStore();
@@ -66,7 +67,7 @@ namespace SlowTests.Bugs.Caching
             Assert.Equal(1, numberOfRequest);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LazilyLoadAsync_WhenTrackChangesAndDoesntChange_ShouldNotCreateExtraRequest()
         {
             using var store = GetDocumentStore();
@@ -144,7 +145,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [MemberData(nameof(TestCases))]
         public async Task LazilyLoad_WhenDoNotTrackChanges_ShouldNotCreateExtraRequest(string caseName, TestCaseHolder testCaseHolder)
         {
@@ -155,7 +156,7 @@ namespace SlowTests.Bugs.Caching
             Assert.Equal(0, numberOfRequest);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LazilyLoad_WhenTrackChangesAndChange_ShouldCreateExtraRequest()
         {
             using var store = GetDocumentStore();
@@ -166,7 +167,7 @@ namespace SlowTests.Bugs.Caching
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LazilyLoad_WhenTrackChangesAndDoesntChange_ShouldNotCreateExtraRequest()
         {
             using var store = GetDocumentStore();
@@ -230,7 +231,7 @@ namespace SlowTests.Bugs.Caching
             public string Version { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LazilyLoad_WhenOneOfLoadedIsCachedAndNotModified_ShouldNotBeNull()
         {
             const string cachedId = "TestObjs/cached";
@@ -260,7 +261,7 @@ namespace SlowTests.Bugs.Caching
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LazilyLoad_WhenSessionTrackResultFromFreedCacheItems_ShouldUseUnfreedMemory()
         {
             const int docsCount = 50;
@@ -316,7 +317,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LazilyLoad_WhenTheCachedCleanedBeforeUsingTheResults_ShouldGetUnfreedResults()
         {
             var random = new Random(0);
@@ -415,7 +416,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LazilyLoad_WhenUseNotFoundCacheItem_ShouldUseItReleaseAtTheEnd()
         {
             const string notExistDocId = "NotExistDocId";
@@ -440,7 +441,7 @@ namespace SlowTests.Bugs.Caching
             //If not all of the `HttpCacheItem`s were released we will get an exception in the `HttpCacheItem` finalizer
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LazilyLoad_WhenQueryForNotFoundNotModified_ShouldUseCache()
         {
             const string notExistDocId = "NotExistDocId";
@@ -470,7 +471,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LazilyLoad_WhenUsed_ShouldNotUseFreedMemory()
         {
             const int cacheSize = 10000;

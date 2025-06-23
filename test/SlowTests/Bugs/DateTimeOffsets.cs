@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using FastTests;
 using Xunit;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
@@ -12,7 +13,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_save_and_load()
         {
             var dateTimeOffset = DateTimeOffset.Now;
@@ -44,7 +45,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_perform_eq_query()
         {
             var dateTimeOffset = DateTimeOffset.Now;
@@ -72,7 +73,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_perform_range_query()
         {
             var dateTimeOffset = DateTimeOffset.Now;

@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         private void StoreAndGetDateTimeOffsetTest()
         {
             using (var store = GetDocumentStore())

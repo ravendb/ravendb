@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="LastModifiedRemote.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -8,6 +8,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Bugs.Metadata
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanProperlyEscapeQuotesInMetadata_Remote_1()
         {
             var name = "CanProperlyEscapeQuotesInMetadata_Remote_1";
@@ -47,7 +48,7 @@ namespace SlowTests.Bugs.Metadata
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanProperlyEscapeQuotesInMetadata_Remote_2()
         {
             var name = "CanProperlyEscapeQuotesInMetadata_Remote_2";

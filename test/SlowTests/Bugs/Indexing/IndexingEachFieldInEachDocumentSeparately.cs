@@ -1,4 +1,5 @@
-﻿using FastTests;
+using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,7 +11,7 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Fact(Skip = "Missing feature : RavenDB-6152 ")]
+        [RavenFact(RavenTestCategory.Querying, Skip = "Missing feature : RavenDB-6152 ")]
         public void ForIndexing()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Conventions;
@@ -15,7 +15,7 @@ namespace SlowTests.Bugs.Indexing
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldCastNullToThePropertyType(Options options)
         {
@@ -25,7 +25,7 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void ShouldWorkAlsoWithAnonymousResultTypeWhichRequiredExplicitlyCast(Options options)
         {
@@ -35,7 +35,7 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void NullableIndexDoesNotCastTwice()
         {
             var indexDefinition = new NullableIndex { Conventions = new DocumentConventions() }.CreateIndexDefinition();
@@ -45,7 +45,7 @@ namespace SlowTests.Bugs.Indexing
             Assert.False(indexDefinition.Maps.Contains("(System.String)(System.String)"));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void AnonymousNullableIndexDoesNotCastTwice()
         {
             var indexDefinition = new AnonymousNullableIndex { Conventions = new DocumentConventions() }.CreateIndexDefinition();

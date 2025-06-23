@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using FastTests;
 using Xunit;
 using System.Linq;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
@@ -17,7 +18,7 @@ namespace SlowTests.Bugs
             public string Id { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldWork_WithCount()
         {
             using (var documentStore = GetDocumentStore())
@@ -48,7 +49,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldWork_WithAnotherQuery()
         {
             using (var documentStore = GetDocumentStore())

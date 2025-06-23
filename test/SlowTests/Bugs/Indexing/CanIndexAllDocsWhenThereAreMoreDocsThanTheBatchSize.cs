@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
@@ -26,7 +26,7 @@ namespace SlowTests.Bugs.Indexing
             public bool Active { get; set; }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData]
         public void WillIndexAllWhenCreatingIndex(RavenTestParameters config)
         {
@@ -65,7 +65,7 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData()]
         public void WillIndexAllAfterCreatingIndex(RavenTestParameters config)
         {

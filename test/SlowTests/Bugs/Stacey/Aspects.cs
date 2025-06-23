@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
@@ -156,7 +156,7 @@ namespace SlowTests.Bugs.Stacey
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Index_can_be_queried()
         {
             using (var store = GetDocumentStore())

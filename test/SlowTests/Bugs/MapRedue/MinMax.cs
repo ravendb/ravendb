@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -44,7 +45,7 @@ namespace SlowTests.Bugs.MapRedue
             public DateTimeOffset? LoggedInAtWithOffset { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task CanUseMaxOnNullableDateTimeOffset()
         {
             using (var store = GetDocumentStore())

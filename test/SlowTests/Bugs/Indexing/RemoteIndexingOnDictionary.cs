@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using FastTests;
 using Xunit.Abstractions;
 using Tests.Infrastructure;

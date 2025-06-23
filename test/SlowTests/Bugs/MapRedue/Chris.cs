@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
@@ -13,7 +13,7 @@ namespace SlowTests.Bugs.MapRedue
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMakeIndexWork(Options options)
         {
@@ -23,7 +23,7 @@ namespace SlowTests.Bugs.MapRedue
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithoutLetShouldWork(Options options)
         {
@@ -33,7 +33,7 @@ namespace SlowTests.Bugs.MapRedue
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IndexWithLetShouldWork(Options options)
         {

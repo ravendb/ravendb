@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="CanDetectChanges.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -6,6 +6,7 @@
 
 using System;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanDetectChangesOnNewItem()
         {
             using (var store = GetDocumentStore())
@@ -35,7 +36,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanDetectChangesOnExistingItem()
         {
             using (var store = GetDocumentStore())
@@ -64,7 +65,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanDetectChangesOnExistingItemFromQuery()
         {
             using (var store = GetDocumentStore())
@@ -95,7 +96,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WillNotCreateNewDocuments()
         {
             using (var store = GetDocumentStore())
@@ -131,7 +132,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanDetectChangesOnExistingItem_ByteArray()
         {
             using (var store = GetDocumentStore())

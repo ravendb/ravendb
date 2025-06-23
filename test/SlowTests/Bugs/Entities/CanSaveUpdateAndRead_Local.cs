@@ -1,5 +1,6 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Bugs.Entities
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_read_entity_name_after_update()
         {
             using(var store = GetDocumentStore())

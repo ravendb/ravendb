@@ -1,4 +1,4 @@
-﻿using FastTests;
+using FastTests;
 using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
