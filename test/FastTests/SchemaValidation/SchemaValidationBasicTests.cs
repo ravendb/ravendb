@@ -37,14 +37,14 @@ public class SchemaValidationBasicTests : RavenTestBase
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new User { Age = 17 }, "users/1");
-                var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+                var error = await Assert.ThrowsAsync<SchemaValidationException>(async () => await session.SaveChangesAsync());
                 Assert.Contains("The value '17' at 'Age' should be greater than or equal to 21.0.", error.Message);
             }
 
             using (var session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(new User { Age = 80 }, "users/1");
-                var error = await Assert.ThrowsAsync<RavenException>(async () => await session.SaveChangesAsync());
+                var error = await Assert.ThrowsAsync<SchemaValidationException>(async () => await session.SaveChangesAsync());
                 Assert.Contains("The value '80' at 'Age' should be less than or equal to 67.0.", error.Message);
             }
 
