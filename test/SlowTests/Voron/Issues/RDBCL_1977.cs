@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,7 +20,7 @@ namespace SlowTests.Voron.Issues
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MustNotAllowToCreateWriteTransactionAfterCatastrophicError()
         {
             var exceptionDuringStage3OfCommit = Assert.Throws<InvalidOperationException>(() =>
@@ -53,7 +54,7 @@ namespace SlowTests.Voron.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MustNotAllowToCommitWriteTransactionDuringAfterCommitWhenNewTransactionsPrevented()
         {
             var ex = Assert.Throws<InvalidOperationException>(() =>
@@ -72,7 +73,7 @@ namespace SlowTests.Voron.Issues
             Assert.Equal("Cannot commit already committed transaction.", ex.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MustNotAllowToCreateWriteTransactionDuringAfterCommitWhenNewTransactionsPrevented()
         {
             var ex = Assert.Throws<InvalidOperationException>(() =>

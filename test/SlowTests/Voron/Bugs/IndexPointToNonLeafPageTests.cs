@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="IndexPointToNotLeafPageTests.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -6,6 +6,7 @@
 
 using System.IO;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -23,7 +24,7 @@ namespace SlowTests.Voron.Bugs
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldProperlyMovePositionForNextPageAllocationInScratchBufferPool()
         {
             var sequentialLargeIds = TestDataUtil.ReadData("non-leaf-page-seq-id-large-values.txt");

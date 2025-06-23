@@ -1,5 +1,6 @@
-﻿using System.IO;
+using System.IO;
 using System.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,7 +19,7 @@ namespace SlowTests.Voron.Bugs
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldNotThrowAccessViolation()
         {
             var trees = CreateTrees(Env, 1, "tree");

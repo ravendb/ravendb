@@ -43,7 +43,7 @@ public class RavenDB_19278 : StorageTest
             options.Encryption.MasterKey = _masterKey.ToArray();
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Voron)]
     [InlineData(false)]
     [InlineData(true)]
     public void StopRecoveryAndRaisePartiallyRecoveredAlertAfterGettingInvalidHashOfTransaction(bool encrypted)

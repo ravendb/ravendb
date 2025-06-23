@@ -1,4 +1,5 @@
-﻿using Voron.Data.BTrees;
+﻿using Tests.Infrastructure;
+using Voron.Data.BTrees;
 using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,7 +12,7 @@ namespace SlowTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Should_not_throw_if_didnt_find_exact_match_when_looking_for_parent_of_branch()
         {
             var key = "test" + new string('-', 256);

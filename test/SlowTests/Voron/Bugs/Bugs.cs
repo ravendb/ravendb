@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using FastTests.Voron.Tables;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Util.Conversion;
@@ -20,7 +21,7 @@ namespace SlowTests.Voron.Bugs
         public const int Transactions = 10;
         public const string Template = "000000000000000000000000000000000000000000000000000";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void RavenDB_13840()
         {
             using (var tx = Env.WriteTransaction())
@@ -67,7 +68,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void RepeatedInsertingInTheSameTransaction()
         {
             var schema = new TableSchema()
@@ -123,7 +124,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanInsertThenDeleteBySecondary2()
         {
             using (var tx = Env.WriteTransaction())

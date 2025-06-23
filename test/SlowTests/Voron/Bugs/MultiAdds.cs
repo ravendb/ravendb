@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Text;
 using FastTests;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,7 +28,7 @@ namespace SlowTests.Voron.Bugs
             return builder.ToString();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void SplitterIssue()
         {
             const int DocumentCount = 10;
@@ -49,7 +50,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void SplitterIssue2()
         {
             var storageEnvironmentOptions = StorageEnvironmentOptions.CreateMemoryOnly();
@@ -129,7 +130,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddMultiValuesUnderTheSameKeyToBatch()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))

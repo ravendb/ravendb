@@ -5,6 +5,7 @@ using Sparrow.Platform;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Voron.Issues
 {
@@ -21,7 +22,7 @@ namespace SlowTests.Voron.Issues
             options.Encryption.RegisterForJournalCompressionHandler();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
         public void WeNeedToTakeWriteLockWhenZeroCompressionBufferIsCalled()
         {
             var testingActionWasCalled = false;

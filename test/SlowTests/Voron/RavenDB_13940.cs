@@ -4,6 +4,7 @@ using System.IO.Compression;
 using System.Runtime.InteropServices;
 using FastTests.Voron;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Exceptions;
 using Voron.Global;
@@ -34,7 +35,7 @@ namespace SlowTests.Voron
             options.IgnoreDataIntegrityErrorsOfAlreadySyncedTransactions = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CorruptedSingleTransactionPage_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet()
         {
             RequireFileBasedPager();
@@ -116,7 +117,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void CorruptedSingleByteInTransactionPageOfFirstTransaction_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet()
         {
             RequireFileBasedPager();
@@ -198,7 +199,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void CorruptionAcrossMultipleTransactions_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet()
         {
             RequireFileBasedPager();
@@ -280,7 +281,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CorruptionOfTransactionHeaderLastPageNumber_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet()
         {
             RequireFileBasedPager();
@@ -362,7 +363,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void ShouldFailBecauseFirstValidTransactionIsTheOneWhichIsNotSynced()
         {
             RequireFileBasedPager();
@@ -425,7 +426,7 @@ namespace SlowTests.Voron
             Assert.Throws<InvalidJournalException>(StartDatabase);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void ShouldNotFailBecauseAllCorruptedTransactionsWereSynced()
         {
             // similar test like above but all corrupted transactions were synced so no errors on startup
@@ -512,7 +513,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData("storage-with-reused-journal-and-synced-data.zip")]
         [InlineData("storage-with-reused-journal-and-synced-data-2.zip")]
         public void ShouldNotInvokeIntegrityError(string fileName)

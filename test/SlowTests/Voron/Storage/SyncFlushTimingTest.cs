@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Data;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using TimeoutException = System.TimeoutException;
@@ -25,14 +26,14 @@ namespace SlowTests.Voron.Storage
             options.ManualSyncing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         // As part of the sync operation, there are stages where the sync operation needs the flush lock
         // and as part of the flush operation, there are stages the flush operation needs transaction write lock
         // this can lead to a situation where the sync is waiting to flush waiting to write transaction
-        // so the sync pass his work that needs the flush lock to the flush operation if the lock is occupied 
+        // so the sync pass his work that needs the flush lock to the flush operation if the lock is occupied
         // and if the flush operation can do it while it waits to write transaction lock
 
-        //In this test, the sync is called while the flush is running and waiting to write transaction so the sync should not be blocked 
+        //In this test, the sync is called while the flush is running and waiting to write transaction so the sync should not be blocked
         public void CanSyncWhileFlushWaiteToWriteTransaction()
         {
             var syncMayFinishedEvent = new AutoResetEvent(false);
@@ -105,7 +106,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact(Timeout = 10 * 1000)]
+        [RavenFact(RavenTestCategory.Voron, Timeout = 10 * 1000)]
         // https://issues.hibernatingrhinos.com/issue/RavenDB-12525
         // The problem was when sync operates while there is no data to sync
         // the sync operation continued with default properties
@@ -141,7 +142,7 @@ namespace SlowTests.Voron.Storage
             return Task.CompletedTask;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void LockTaskResponsible_WhenLockTakenAndNoOneRunTaskIfNotAlreadyRan_ShouldKeepWaiting()
         {
             var tokenSource = new CancellationTokenSource();
@@ -165,7 +166,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void LockTaskResponsible_WhenLockTakenAndNoOneRunTaskIfNotAlreadyRanAndCancelToken_ShouldContinueWithoutDoJob()
         {
             var tokenSource = new CancellationTokenSource();
@@ -183,7 +184,7 @@ namespace SlowTests.Voron.Storage
             Assert.Equal(null, worker.Exception);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void LockTaskResponsible_WhenLockTakenAndRelease_JobShouldBeDone()
         {
             var tokenSource = new CancellationTokenSource();
@@ -212,7 +213,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void LockTaskResponsible_WhenLockTaken_ShouldBeDoneByRunTaskIfNotAlreadyRan()
         {
             var tokenSource = new CancellationTokenSource();
@@ -244,7 +245,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void LockTaskResponsible_WhenLockTakenAndJobFailed_ShouldBeDoneByRunTaskIfNotAlreadyRanAndReturnFalse()
         {
             var tokenSource = new CancellationTokenSource();
@@ -279,7 +280,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void LockTaskResponsible_WhenLockTakenAndDoneByRunTaskIfNotAlreadyRan_ShouldBeWaitUntilTheJobDone()
         {
             var tokenSource = new CancellationTokenSource();
@@ -326,7 +327,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void LockTaskResponsible_WhenTwoThreadsAreWaitingToTaskToBeDone_TheRunThreadShouldRunOnlyOneForCallAndEventuallyCompleteAll()
         {
             var tokenSource = new CancellationTokenSource();
@@ -371,7 +372,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void LockTaskResponsible_WhenLockNotTaken_WorkShouldBeDone()
         {
             var tokenSource = new CancellationTokenSource();
@@ -397,7 +398,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void LockTaskResponsible_WhenLockNotTakenAndJobFailed_WorkShouldReturnFalse()
         {
             var tokenSource = new CancellationTokenSource();
@@ -426,7 +427,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void LockTaskResponsible_WhenLockNotTakenAndWaitTwice_WorkShouldBeDone()
         {
             var tokenSource = new CancellationTokenSource();
@@ -453,7 +454,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void LockTaskResponsible_WhenLockTakenAndJobThrow_ShouldThrowToTheWaiter()
         {
             var tokenSource = new CancellationTokenSource();
@@ -490,7 +491,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void LockTaskResponsible_WhenTwoThreadsAreWaitingOneOfThemDoThrowJob_ShouldCompleteTheSecondJob()
         {
             var tokenSource = new CancellationTokenSource();

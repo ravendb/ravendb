@@ -1,10 +1,11 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests.Voron;
 using FastTests.Voron.FixedSize;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl;
@@ -19,7 +20,7 @@ namespace SlowTests.Voron.LeafsCompression
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(777, 2048, false, 1)]
         [InlineData(777, 2048, false, 2019845912)]
         [InlineData(8192, 512, true, 1)]

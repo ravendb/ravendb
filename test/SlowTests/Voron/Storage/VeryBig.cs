@@ -1,5 +1,6 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Voron.Storage
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanGrowBeyondInitialSize()
         {
             using (var tx = Env.WriteTransaction())
@@ -37,7 +38,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanGrowBeyondInitialSize_Root()
         {
             var buffer = new byte[1024 * 512];
@@ -56,7 +57,7 @@ namespace SlowTests.Voron.Storage
                 }
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanGrowBeyondInitialSize_WithAnotherTree()
         {
             using (var tx = Env.WriteTransaction())

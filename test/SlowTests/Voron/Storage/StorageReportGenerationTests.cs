@@ -1,15 +1,10 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="Stats.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using FastTests.Voron.FixedSize;
 using Sparrow;
+using Tests.Infrastructure;
 using Voron.Data.BTrees;
 using Voron.Debugging;
 using Voron.Global;
@@ -26,7 +21,7 @@ namespace SlowTests.Voron.Storage
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void AllocatedSpaceOfDataFileEqualsToSumOfSpaceInUseAndFreeSpace()
         {
             using (var tx = Env.ReadTransaction())
@@ -37,7 +32,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(0)]
         [InlineData(1)]
         [InlineData(13)]
@@ -87,7 +82,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(0)]
         [InlineData(7)]
         [InlineData(14)]
@@ -150,7 +145,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(0)]
         [InlineData(7)]
         [InlineData(14)]
@@ -182,7 +177,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(0)]
         [InlineData(7)]
         [InlineData(14)]
@@ -216,7 +211,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(1)]
         [InlineData(5)]
         [InlineData(15)]
@@ -261,7 +256,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(new[] { "key" }, 1000)]
         [InlineData(new[] { "key1", "key2" }, 1000)]
         [InlineData(new[] { "key" }, 1)]
@@ -295,7 +290,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void TreeReportContainsInformationAboutPagesOfChildMultiTrees()
         {
             using (var tx = Env.WriteTransaction())
@@ -315,7 +310,7 @@ namespace SlowTests.Voron.Storage
                 var report = Env.GenerateDetailedReport(tx, includeDetails: true);
 
                 Assert.True(report.Trees[1].MultiValues.PageCount > 0);
-                Assert.Equal(report.Trees[1].MultiValues.PageCount, 
+                Assert.Equal(report.Trees[1].MultiValues.PageCount,
                     report.Trees[1].MultiValues.LeafPages + report.Trees[1].MultiValues.BranchPages + report.Trees[1].MultiValues.OverflowPages);
             }
 
@@ -336,12 +331,12 @@ namespace SlowTests.Voron.Storage
                 var report = Env.GenerateDetailedReport(tx, includeDetails: true);
 
                 Assert.True(report.Trees[1].MultiValues.PageCount == 0);
-                Assert.Equal(report.Trees[1].MultiValues.PageCount, 
+                Assert.Equal(report.Trees[1].MultiValues.PageCount,
                     report.Trees[1].MultiValues.LeafPages + report.Trees[1].MultiValues.BranchPages + report.Trees[1].MultiValues.OverflowPages);
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed(1)]
         [InlineDataWithRandomSeed(5)]
         [InlineDataWithRandomSeed(15)]
@@ -392,7 +387,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed(1)]
         [InlineDataWithRandomSeed(5)]
         [InlineDataWithRandomSeed(15)]

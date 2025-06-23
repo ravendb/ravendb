@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
@@ -15,7 +15,7 @@ namespace SlowTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Overflow_shrink_needs_to_update_scratch_buffer_page_to_avoid_data_override_after_restart()
         {
             using (var store = GetDocumentStore(new Options
@@ -42,7 +42,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Applying_new_diff_requires_to_zero_destination_bytes_first()
         {
             using (var store = GetDocumentStore(new Options

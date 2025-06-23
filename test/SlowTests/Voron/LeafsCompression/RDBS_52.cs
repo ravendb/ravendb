@@ -4,6 +4,7 @@ using Voron.Data.BTrees;
 using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Voron.LeafsCompression
 {
@@ -13,7 +14,7 @@ namespace SlowTests.Voron.LeafsCompression
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.Compression)]
         public unsafe void MustNotCreateEmptyNonCompressedPage()
         {
             using (var tx = Env.WriteTransaction())

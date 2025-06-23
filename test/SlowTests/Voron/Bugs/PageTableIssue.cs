@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Xunit;
@@ -19,7 +20,7 @@ namespace SlowTests.Voron.Bugs
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MissingScratchPagesInPageTable()
         {
             var bytes = new byte[1000];

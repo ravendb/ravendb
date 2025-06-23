@@ -1,13 +1,8 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="LargeFixedSizeTrees.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections;
 using FastTests.Voron;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Util.Conversion;
 using Xunit;
@@ -21,7 +16,7 @@ namespace SlowTests.Voron
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(8)]
         [InlineData(16)]
         [InlineData(128)]
@@ -68,7 +63,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(8)]
         [InlineData(16)]
         [InlineData(128)]
@@ -113,7 +108,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(8)]
         [InlineData(16)]
         [InlineData(128)]
@@ -163,7 +158,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(8)]
         [InlineData(16)]
         [InlineData(128)]
@@ -238,7 +233,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(8)]
         [InlineData(16)]
         [InlineData(128)]
@@ -293,7 +288,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed(250)]
         [InlineDataWithRandomSeed(1000)]
         public void CanDeleteRange_TryToFindABranchNextToLeaf(int count, int seed)
@@ -377,7 +372,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed(1000)]
         [InlineDataWithRandomSeed(100000)]
         [InlineDataWithRandomSeed(500000)]
@@ -435,7 +430,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed(100)]
         [InlineDataWithRandomSeed(10000)]
         [InlineDataWithRandomSeed(75000)]
@@ -489,7 +484,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(8)]
         [InlineData(12)]
         [InlineData(16)]

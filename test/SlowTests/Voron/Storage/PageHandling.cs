@@ -1,4 +1,5 @@
-﻿using Sparrow;
+﻿﻿using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,7 +11,7 @@ namespace SlowTests.Voron.Storage
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void AllocateOverflowPages()
         {
             long pageNumber;
@@ -46,7 +47,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ReadModifyReadPagesInSameTransaction()
         {
             using (var tx = Env.WriteTransaction())
@@ -73,7 +74,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void EnsureDataPointerChangesAfterModifyInSameTransaction()
         {
             long pageNumber;

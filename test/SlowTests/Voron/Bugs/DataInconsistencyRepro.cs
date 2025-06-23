@@ -1,4 +1,4 @@
-﻿
+
 // -----------------------------------------------------------------------
 //  <copyright file="DataInconsistencyRepro.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
@@ -11,6 +11,7 @@ using System.Linq;
 using System.Threading;
 using FastTests.Voron;
 using SlowTests.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Xunit;
@@ -24,7 +25,7 @@ namespace SlowTests.Voron.Bugs
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed(5000, 10000)]
         [InlineDataWithRandomSeed(1000, 5000)]
         [InlineData(1000, 1500, 1396255086)]

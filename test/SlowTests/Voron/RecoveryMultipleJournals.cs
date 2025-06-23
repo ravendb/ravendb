@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using FastTests.Voron;
 using Sparrow.Utils;
@@ -25,7 +25,7 @@ namespace SlowTests.Voron
             options.MaxScratchBufferSize = 1 * 1024 * 1024 * 1024;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanRecoverAfterRestartWithMultipleFilesInSingleTransaction()
         {
 
@@ -68,7 +68,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanResetLogInfoAfterBigUncommitedTransaction()
         {
             using (var tx = Env.WriteTransaction())
@@ -145,7 +145,7 @@ namespace SlowTests.Voron
             Assert.Equal(currentJournalInfo.CurrentJournal + 1, Env.Journal.GetCurrentJournalInfo().CurrentJournal);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanResetLogInfoAfterBigUncommitedTransactionWithRestart()
         {
             RequireFileBasedPager();
@@ -188,7 +188,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CorruptingOneTransactionWillThrow()
         {
             RequireFileBasedPager();
@@ -221,7 +221,7 @@ namespace SlowTests.Voron
             Assert.Throws<InvalidJournalException>(() => StartDatabase());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CorruptingAllLastTransactionsConsideredAsEndOfJournal()
         {
             RequireFileBasedPager();
@@ -275,7 +275,7 @@ namespace SlowTests.Voron
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CorruptingLastTransactionsInNotLastJournalShouldThrow()
         {
             RequireFileBasedPager();
@@ -348,7 +348,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldThrowIfFirstTransactionIsCorruptedBecauseWeCannotAccessMetadataThen()
         {
             RequireFileBasedPager();

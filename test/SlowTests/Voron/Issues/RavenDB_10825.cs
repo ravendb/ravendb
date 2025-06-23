@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Impl;
 using Voron.Impl.Paging;
@@ -25,7 +26,7 @@ namespace SlowTests.Voron.Issues
             options.ManualFlushing = true;
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void Encryption_buffer_of_freed_scratch_page_must_not_affect_another_overflow_allocation_on_tx_commit()
         {
             using (var tx = Env.WriteTransaction())

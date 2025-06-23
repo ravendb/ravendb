@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -21,7 +22,7 @@ namespace SlowTests.Voron.Issues
             options.MaxNumberOfPagesInJournalBeforeFlush = 2; // low value to ensure it will flush
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldNotSayThatThereIsNothingToFlush()
         {
             for (int i = 0; i < 100; i++)

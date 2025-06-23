@@ -1,6 +1,7 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,7 +14,7 @@ namespace SlowTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MultiTreeIteratorShouldBeIsolated1()
         {
             IOExtensions.DeleteDirectory(DataDir);
@@ -51,7 +52,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MultiTreeIteratorShouldBeIsolated2()
         {
             IOExtensions.DeleteDirectory(DataDir);
@@ -114,7 +115,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ScratchPagesShouldNotBeReleasedUntilNotUsed()
         {
             var options = StorageEnvironmentOptions.ForPath(DataDir);

@@ -1,10 +1,11 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
 using System.Threading;
 using FastTests.Voron;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Voron.Issues
 {
@@ -19,7 +20,7 @@ namespace SlowTests.Voron.Issues
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Recyclable_journal_files_are_deleted_on_dispose()
         {
             RequireFileBasedPager();

@@ -1,10 +1,11 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
 using FastTests.Voron;
 using Voron;
 using Voron.Impl.Journal;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Voron.Issues
 {
@@ -20,7 +21,7 @@ namespace SlowTests.Voron.Issues
             options.MaxNumberOfRecyclableJournals = 0;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Can_disable_journals_recycling()
         {
             RequireFileBasedPager();

@@ -1,6 +1,7 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
 using FastTests;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -13,7 +14,7 @@ namespace SlowTests.Voron.Storage
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldWork()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnly()))
