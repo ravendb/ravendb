@@ -1,0 +1,135 @@
+﻿using System;
+using System.Collections.Generic;
+using FastTests;
+using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations.Attachments.Retired;
+using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Exceptions.Security;
+using Raven.Client.ServerWide.Operations.Certificates;
+using Sparrow.Logging;
+using Tests.Infrastructure;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace SlowTests.Issues
+{
+    public class RavenDB_24162 : RavenTestBase
+    {
+        public RavenDB_24162(ITestOutputHelper output) : base(output)
+        {
+        }
+
+        private RetiredAttachmentsConfiguration SampleConfig() => new RetiredAttachmentsConfiguration
+        {
+            Disabled = true,
+            RetireFrequencyInSec = 123456,
+            S3Settings = new S3Settings
+            {
+                BucketName = "test-bucket-does-not-exist", AwsRegionName = "us-west-2", AwsAccessKey = "AKIAFAKEKEY", AwsSecretKey = "FAKESECRET"
+            }
+        };
+
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanGetRetireConfigWithValidUserPermission(Options options)
+        {
+            LoggingSource.AuditLog.SetupLogMode(LogMode.Information, "c:/temp", TimeSpan.MaxValue, null, false);
+
+            var certs = Certificates.SetupServerAuthentication();
+            var db = GetDatabaseName();
+
+            var adminCert = Certificates.RegisterClientCertificate(
+                certs.ServerCertificate.Value,
+                certs.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess> { [db] = DatabaseAccess.Admin },
+                SecurityClearance.ClusterAdmin);
+
+            var userCert = Certificates.RegisterClientCertificate(
+                certs.ServerCertificate.Value,
+                certs.ClientCertificate2.Value,
+                new Dictionary<string, DatabaseAccess> { [db] = DatabaseAccess.Read },
+                SecurityClearance.ValidUser);
+
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => db;
+
+            using (var store = GetDocumentStore(options))
+            {
+                var cfg = store.Maintenance.Send(new GetRetireAttachmentsConfigurationOperation());
+                Assert.Null(cfg);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanAddRetireConfigWithDatabaseAdminPermission(Options options)
+        {
+            LoggingSource.AuditLog.SetupLogMode(LogMode.Information, "c:/temp", TimeSpan.MaxValue, null, false);
+
+            var certs = Certificates.SetupServerAuthentication();
+            var db = GetDatabaseName();
+
+            var adminCert = Certificates.RegisterClientCertificate(
+                certs.ServerCertificate.Value,
+                certs.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess> { [db] = DatabaseAccess.Admin },
+                SecurityClearance.ClusterAdmin);
+
+            var userCert = Certificates.RegisterClientCertificate(
+                certs.ServerCertificate.Value,
+                certs.ClientCertificate2.Value,
+                new Dictionary<string, DatabaseAccess> { [db] = DatabaseAccess.Admin });
+
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => db;
+
+            using (var store = GetDocumentStore(options))
+            {
+                var cfg = SampleConfig();
+
+                store.Maintenance.Send(new ConfigureRetiredAttachmentsOperation(cfg));
+
+                var returned = store.Maintenance.Send(new GetRetireAttachmentsConfigurationOperation());
+                Assert.True(returned.Disabled);
+                var x = returned.RetireFrequencyInSec;
+                Assert.Equal(123456, returned.RetireFrequencyInSec);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CannotAddRetireConfigWithoutDatabaseAdminPermission(Options options)
+        {
+            LoggingSource.AuditLog.SetupLogMode(LogMode.Information, "c:/temp", TimeSpan.MaxValue, null, false);
+
+            var certs = Certificates.SetupServerAuthentication();
+            var db = GetDatabaseName();
+
+            var adminCert = Certificates.RegisterClientCertificate(
+                certs.ServerCertificate.Value,
+                certs.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess> { [db] = DatabaseAccess.Admin },
+                SecurityClearance.ClusterAdmin);
+
+            var userCert = Certificates.RegisterClientCertificate(
+                certs.ServerCertificate.Value,
+                certs.ClientCertificate2.Value,
+                new Dictionary<string, DatabaseAccess> { [db] = DatabaseAccess.ReadWrite },
+                SecurityClearance.ValidUser);
+
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => db;
+
+            using (var store = GetDocumentStore(options))
+            {
+                var cfg = SampleConfig();
+
+                Assert.Throws<AuthorizationException>(() =>
+                    store.Maintenance.Send(new ConfigureRetiredAttachmentsOperation(cfg)));
+            }
+        }
+    }
+}

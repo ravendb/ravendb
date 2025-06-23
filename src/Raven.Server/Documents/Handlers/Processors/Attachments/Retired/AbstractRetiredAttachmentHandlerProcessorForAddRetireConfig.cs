@@ -5,6 +5,7 @@ using Raven.Server.Documents.Handlers.Processors.Databases;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired;
 
@@ -30,6 +31,8 @@ internal abstract class AbstractRetiredAttachmentHandlerProcessorForAddRetireCon
 
     protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, RetiredAttachmentsConfiguration configuration, string raftRequestId)
     {
+        if (LoggingSource.Instance.IsInfoEnabled)
+            RequestHandler.LogAuditFor(RequestHandler.DatabaseName, $"User '{RequestHandler.HttpContext.User?.Identity?.Name}' updated retire-attachments configuration", "retired_attachments-config");
         return RequestHandler.ServerStore.ModifyDatabaseAttachmentsRetire(context, RequestHandler.DatabaseName, configuration, raftRequestId);
     }
 }

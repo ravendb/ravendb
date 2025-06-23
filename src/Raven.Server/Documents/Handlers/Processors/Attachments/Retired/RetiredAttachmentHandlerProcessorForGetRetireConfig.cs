@@ -3,6 +3,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Retired;
 
@@ -22,6 +23,10 @@ internal sealed class RetiredAttachmentHandlerProcessorForGetRetireConfig : Abst
             {
                 configuration = rawRecord?.RetiredAttachmentsConfiguration;
             }
+
+            if (LoggingSource.Instance.IsInfoEnabled)
+                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, $"User '{RequestHandler.HttpContext.User?.Identity}' fetched retire-attachment configurations ",
+                    "retired_attachments-config");
             return ValueTask.FromResult(configuration);
         }
     }
