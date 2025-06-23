@@ -47,51 +47,50 @@ namespace Raven.Server.Documents.Handlers
 
         public async Task HandleQuery(HttpMethod httpMethod)
         {
-            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "Query"))
+            RequestTimeTracker tracker = null;
+
+            try
             {
-                try
+                using (var token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
+                using (var queryContext = QueryOperationContext.Allocate(Database))
                 {
-                    using (var token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
-                    using (var queryContext = QueryOperationContext.Allocate(Database))
+                    tracker = new RequestTimeTracker(HttpContext, Logger, Database, "Query");
+                    var debug = GetStringQueryString("debug", required: false);
+                    if (string.IsNullOrWhiteSpace(debug) == false)
                     {
-                        var debug = GetStringQueryString("debug", required: false);
-                        if (string.IsNullOrWhiteSpace(debug) == false)
-                        {
-                            await Debug(queryContext, debug, token, tracker, httpMethod);
-                            
-                            tracker.Dispose();
-                            
-                            return;
-                        }
-
-                        await Query(queryContext, token, tracker, httpMethod);
-                        
-                        tracker.Dispose();
-                    }
-                }
-                catch (Exception e)
-                {
-                    if (tracker.Query == null)
-                    {
-                        string errorMessage;
-                        if (e is EndOfStreamException || e is ArgumentException)
-                        {
-                            errorMessage = "Failed: " + e.Message;
-                        }
-                        else
-                        {
-                            errorMessage = "Failed: " +
-                                           HttpContext.Request.Path.Value +
-                                           e.ToString();
-                        }
-
-                        tracker.Query = errorMessage;
-                        if (TrafficWatchManager.HasRegisteredClients)
-                            AddStringToHttpContext(errorMessage, TrafficWatchChangeType.Queries);
+                        await Debug(queryContext, debug, token, tracker, httpMethod);
+                        return;
                     }
 
-                    throw;
+                    await Query(queryContext, token, tracker, httpMethod);
                 }
+            }
+            catch (Exception e)
+            {
+                if (tracker != null && tracker.Query == null)
+                {
+                    string errorMessage;
+                    if (e is EndOfStreamException || e is ArgumentException)
+                    {
+                        errorMessage = "Failed: " + e.Message;
+                    }
+                    else
+                    {
+                        errorMessage = "Failed: " +
+                                       HttpContext.Request.Path.Value +
+                                       e.ToString();
+                    }
+
+                    tracker.Query = errorMessage;
+                    if (TrafficWatchManager.HasRegisteredClients)
+                        AddStringToHttpContext(errorMessage, TrafficWatchChangeType.Queries);
+                }
+
+                throw;
+            }
+            finally
+            {
+                tracker?.Dispose();
             }
         }
 

@@ -137,9 +137,9 @@ namespace Raven.Server.Documents.Handlers.Streaming
         public async Task StreamQueryGet()
         {
             // ReSharper disable once ArgumentsStyleLiteral
-            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
             using (var token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
             using (var queryContext = QueryOperationContext.Allocate(Database))
+            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
             {
                 var documentId = GetStringQueryString("fromDocument", false);
                 string overrideQuery = null;
@@ -234,9 +234,9 @@ namespace Raven.Server.Documents.Handlers.Streaming
         public async Task StreamQueryPost()
         {
             // ReSharper disable once ArgumentsStyleLiteral
-            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
             using (var token = CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
             using (var queryContext = QueryOperationContext.Allocate(Database))
+            using (var tracker = new RequestTimeTracker(HttpContext, Logger, Database, "StreamQuery", doPerformanceHintIfTooLong: false))
             {
                 var stream = TryGetRequestFromStream("ExportOptions") ?? RequestBodyStream();
                 var queryJson = await queryContext.Documents.ReadForMemoryAsync(stream, "index/query");
