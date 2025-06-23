@@ -1,24 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Server.Documents;
-using Raven.Server.Documents.AI;
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using Sparrow.Server.Logging;
 
 namespace Raven.Server.SchemaValidation;
 
 public class SchemaValidatorCache : IDisposable
 {
+    private readonly RavenLogger _logger;
     private readonly (IDisposable Return, JsonOperationContext Value) _context;
     private Dictionary<string, SchemaValidator> _schemaValidatorsPerCollection;
     private bool _disabled;
 
-    public SchemaValidatorCache(DocumentsContextPool contextPool)
+    public SchemaValidatorCache(DocumentsContextPool contextPool, RavenLogger logger)
     {
         _context.Return = contextPool.AllocateOperationContext(out _context.Value);
+        _logger = logger;
     }
 
     public void Update(Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration configuration)
@@ -50,27 +52,30 @@ public class SchemaValidatorCache : IDisposable
                 SchemaDefinition = validator.SchemaDefinition
             };
 
-            //TODO: don't throw if it fails here - someone can put an invalid schema definition in the database record
-            var blittable = _context.Value.Sync.ReadForMemory(validator.SchemaDefinition, "schema-validation");
-            if (blittable.TryGet(SchemaValidatorConstants.AdditionalProperties, out object additionalProperties) && additionalProperties is false &&
-                blittable.TryGet(SchemaValidatorConstants.Properties, out BlittableJsonReaderObject properties) &&
-                properties.Contains(Client.Constants.Documents.Metadata.Key) == false)
+            try
             {
-                properties.Modifications = new DynamicJsonValue(properties)
+                var blittable = _context.Value.Sync.ReadForMemory(validator.SchemaDefinition, "schema-validation");
+                if (blittable.TryGet(SchemaValidatorConstants.AdditionalProperties, out object additionalProperties) && additionalProperties is false &&
+                    blittable.TryGet(SchemaValidatorConstants.Properties, out BlittableJsonReaderObject properties) &&
+                    properties.Contains(Client.Constants.Documents.Metadata.Key) == false)
                 {
-                    [Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue()
-                };
+                    properties.Modifications = new DynamicJsonValue(properties) { [Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue() };
 
-                blittable.Modifications = new DynamicJsonValue(blittable)
-                {
-                    [SchemaValidatorConstants.Properties] = properties
-                };
+                    blittable.Modifications = new DynamicJsonValue(blittable) { [SchemaValidatorConstants.Properties] = properties };
 
-                using (_ = blittable)
-                    blittable = _context.Value.ReadObject(blittable, "modified-schema-validation");
+                    using (_ = blittable)
+                        blittable = _context.Value.ReadObject(blittable, "modified-schema-validation");
+                }
+
+                schemaValidator.Init(blittable);
             }
+            catch (Exception e)
+            {
+                if (_logger.IsErrorEnabled)
+                    _logger.Error($"Failed to parse the schema validator for collection {collection}", e);
 
-            schemaValidator.Init(blittable);
+                continue;
+            }
 
             schemaValidatorsToAdd ??= new List<(string, SchemaValidator)>();
             schemaValidatorsToAdd.Add((collection, schemaValidator));
