@@ -82,6 +82,8 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
     public async Task<(string Result, string Usage)> CompleteAsync(string prompt, string context, CancellationToken token)
     {
         _forTestingPurposes?.SimulateFailure?.Invoke(context);
+        if (_forTestingPurposes?.SimulateFailureAsync != null)
+            await _forTestingPurposes.SimulateFailureAsync(context);
 
         using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext ctx);
         using var request = CreateCompletionRequest(ctx, prompt, context);
@@ -163,10 +165,9 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
             {
                 writer.WriteStartObject();
 
-                if (_forTestingPurposes?.ModifyPayload != null)
+                if (_forTestingPurposes?.ModifyPayload?.Invoke(writer) == true)
                 {
-                    _forTestingPurposes?.ModifyPayload.Invoke(writer);
-                    writer.WriteEndObject();
+                    return;
                 }
 
                 writer.WritePropertyName(Constants.RequestFields.Model);
