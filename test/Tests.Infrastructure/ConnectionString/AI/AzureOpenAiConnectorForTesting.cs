@@ -25,7 +25,7 @@ public sealed class EmbeddingsAzureOpenAiConnectorForTesting : AbstractEmbedding
 
         return new AiConnectionString
         {
-            ModelType = AiModelType.Embeddings,
+            ModelType = AiModelType.TextEmbeddings,
             AzureOpenAiSettings = new AzureOpenAiSettings(apiKey, endpoint, Model, deploymentName)
         };
     }

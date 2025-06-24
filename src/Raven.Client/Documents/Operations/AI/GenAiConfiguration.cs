@@ -77,8 +77,8 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         if (validateConnection && TestMode == false)
         {
             Connection.Validate(errors);
-            if (Connection.ModelType != AiModelType.LLM)
-                errors.Add($"{nameof(Connection.ModelType)} of GenAI configuration must be {nameof(AiModelType.LLM)}");
+            if (Connection.ModelType != AiModelType.Chat)
+                errors.Add($"{nameof(Connection.ModelType)} of GenAI configuration must be {nameof(AiModelType.Chat)}");
         }
 
         if (string.IsNullOrEmpty(Collection))

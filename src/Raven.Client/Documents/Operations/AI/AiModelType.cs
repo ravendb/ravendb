@@ -2,6 +2,6 @@
 
 public enum AiModelType
 {
-    Embeddings,
-    LLM
+    TextEmbeddings,
+    Chat
 }
