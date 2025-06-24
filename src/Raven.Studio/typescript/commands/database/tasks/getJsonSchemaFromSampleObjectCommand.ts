@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
 class getJsonSchemaFromSampleObjectCommand extends commandBase {
-    constructor(private payload: any) {
+    constructor(private payload: object) {
         super();
     }
 
