@@ -22,7 +22,7 @@ export default function EditGenAiTaskReadOnlyVirtualList({ data, name }: EditGen
     const listRef = useRef<HTMLDivElement>(null);
 
     const virtualizer = useVirtualizer({
-        count: data.length,
+        count: data?.length ?? 0,
         estimateSize: () => 200,
         getScrollElement: () => listRef.current,
         overscan: 5,
@@ -38,6 +38,10 @@ export default function EditGenAiTaskReadOnlyVirtualList({ data, name }: EditGen
 
         return null;
     };
+
+    if (!data || data.length === 0) {
+        return null;
+    }
 
     return (
         <div className="flex-grow-1 overflow-auto" ref={listRef}>

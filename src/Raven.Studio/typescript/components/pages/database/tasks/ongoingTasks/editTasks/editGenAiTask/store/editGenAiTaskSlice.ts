@@ -9,6 +9,7 @@ interface ModelUsage {
     totalTokens: number;
     promptTokens: number;
     completionTokens: number;
+    cachedTokens: number;
 }
 
 interface EditGenAiTaskState {
@@ -148,17 +149,20 @@ export const editGenAiTaskSlice = createSlice({
                 let totalTokens = 0;
                 let promptTokens = 0;
                 let completionTokens = 0;
+                let cachedTokens = 0;
 
                 for (const result of action.payload.Results) {
-                    totalTokens += result.ModelOutput?.Usage.total_tokens ?? 0;
-                    promptTokens += result.ModelOutput?.Usage.prompt_tokens ?? 0;
-                    completionTokens += result.ModelOutput?.Usage.completion_tokens ?? 0;
+                    totalTokens += result.ModelOutput?.Usage.TotalTokens ?? 0;
+                    promptTokens += result.ModelOutput?.Usage.PromptTokens ?? 0;
+                    completionTokens += result.ModelOutput?.Usage.CompletionTokens ?? 0;
+                    cachedTokens += result.ModelOutput?.Usage.CachedTokens ?? 0;
                 }
 
                 state.modelUsage = createSuccessState({
                     totalTokens,
                     promptTokens,
                     completionTokens,
+                    cachedTokens,
                 });
             })
             .addCase(testUpdateScript.pending, (state) => {
