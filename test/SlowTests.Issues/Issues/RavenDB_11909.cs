@@ -4,14 +4,18 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Replication;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Integrations;
 using Raven.Server.ServerWide;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
 
 namespace SlowTests.Issues
 {
@@ -106,7 +110,8 @@ namespace SlowTests.Issues
                 nameof(DatabaseRecord.QueueSinks),
                 nameof(DatabaseRecord.SnowflakeEtls),
                 nameof(DatabaseRecord.EmbeddingsGenerations),
-                nameof(DatabaseRecord.GenAis)
+                nameof(DatabaseRecord.GenAis),
+                nameof(DatabaseRecord.SchemaValidation)
             };
 
             var dbRecordType = typeof(DatabaseRecord);
