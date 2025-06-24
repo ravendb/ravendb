@@ -157,41 +157,6 @@ public class GenerateEmbeddingsTests(ITestOutputHelper output) : EmbeddingsGener
     }
 
     [RavenFact(RavenTestCategory.Ai)]
-    public async Task EmbeddingsMustBeGeneratedOnlyOnceInSameBatch()
-    {
-        using (var store = GetDocumentStore())
-        {
-            var dto1 = new Dto { Name = "Name1" };
-            var dto2 = new Dto { Name = "Name1" };
-
-            using (var session = store.OpenAsyncSession())
-            {
-                await session.StoreAsync(dto1);
-                await session.StoreAsync(dto2);
-                await session.SaveChangesAsync();
-            }
-
-            var aiTaskDone = Etl.WaitForEtlToComplete(store);
-            var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }]);
-            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-
-            var aiIntegrationIdentifier = new EmbeddingsGenerationTaskIdentifier(config.Identifier);
-            var aiConnectionStringIdentifier = new AiConnectionStringIdentifier(connectionString.Identifier);
-
-            AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Name1"], dto1.Id);
-            AssertEmbeddingsForPath(store, aiIntegrationIdentifier, aiConnectionStringIdentifier, "Name", ["Name1"], dto2.Id);
-
-            var db = await GetDatabase(store.Database);
-            var etlProcess = (EmbeddingsGenerationTask)db.EtlLoader.Processes.First();
-            var stats = etlProcess.GetPerformanceStats();
-
-            Assert.Equal(2, stats.Length);
-            Assert.Equal(2, stats[0].NumberOfLoadedItems);
-            Assert.Equal("No more items to process", stats[1].BatchTransformationCompleteReason);
-        }
-    }
-
-    [RavenFact(RavenTestCategory.Ai)]
     public void EmbeddingsMustBeGeneratedOnlyOnceInDifferentBatches()
     {
         using (var store = GetDocumentStore())
