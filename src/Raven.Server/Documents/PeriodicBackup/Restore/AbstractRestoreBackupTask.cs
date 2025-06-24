@@ -617,6 +617,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.AiAgents = smugglerDatabaseRecord.AiAgents;
                     databaseRecord.EmbeddingsGenerations = smugglerDatabaseRecord.EmbeddingsGenerations;
                     databaseRecord.GenAis = smugglerDatabaseRecord.GenAis;
+                    databaseRecord.SchemaValidation = smugglerDatabaseRecord.SchemaValidation;
 
                     ServerStore.Engine.StateMachine.AssertAllLicenseLimitsOnRestore(ServerStore, databaseRecord);
                 };

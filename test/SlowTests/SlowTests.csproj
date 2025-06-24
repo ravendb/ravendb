@@ -213,6 +213,7 @@
   <ItemGroup>
     <Folder Include="Core\AdminConsole" />
     <Folder Include="SchemaUpgrade\Issues\VoronCurrentVersion\" />
+    <Folder Include="SchemaValidation\" />
     <Folder Include="Server\Basic" />
     <Folder Include="Server\Documents\AI\Embeddings\QueryEmbeddingsBatchTest\" />
     <Folder Include="Server\Documents\Notifications" />
