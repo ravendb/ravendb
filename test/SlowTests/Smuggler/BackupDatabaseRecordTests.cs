@@ -29,6 +29,7 @@ using Raven.Client.Documents.Operations.QueueSink;
 using Raven.Client.Documents.Operations.Refresh;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Client.Documents.Operations.Revisions;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
@@ -43,6 +44,8 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Issues;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -258,6 +261,23 @@ namespace SlowTests.Smuggler
                     
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                     
+                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    {
+                        var schemaDefinitionObj =
+                            new DynamicJsonValue { ["properties"] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { ["maxLength"] = 3 } } };
+
+                        using var schemaDefinition = context.ReadObject(schemaDefinitionObj, "test object");
+                        var configuration = new SchemaValidationConfiguration
+                        {
+                            Disabled = false,
+                            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+                            {
+                                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                            }
+                        };
+                        await store1.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+                    }                    
+                    
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
@@ -337,6 +357,11 @@ namespace SlowTests.Smuggler
                     Assert.Equal("aiconnection", record.EmbeddingsGenerations.First().ConnectionStringName);
                     Assert.Equal(true, record.EmbeddingsGenerations.First().AllowEtlOnNonEncryptedChannel);
                     Assert.Equal(true, record.EmbeddingsGenerations.First().Disabled);
+                    
+                    Assert.NotNull(record.SchemaValidation);
+                    Assert.False(record.SchemaValidation.Disabled);
+                    Assert.True(record.SchemaValidation.ValidatorsByCollection.ContainsKey("TestObjs"));
+                    Assert.NotNull(record.SchemaValidation.ValidatorsByCollection["TestObjs"].SchemaDefinition);                    
                 }
             }
             finally
@@ -1336,6 +1361,23 @@ namespace SlowTests.Smuggler
                 await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
                 Backup.UpdateConfigAndRunBackup(Server, config, store);
 
+                using (var context = JsonOperationContext.ShortTermSingleUse())
+                {
+                    var schemaDefinitionObj =
+                        new DynamicJsonValue { ["properties"] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { ["maxLength"] = 3 } } };
+
+                    using var schemaDefinition = context.ReadObject(schemaDefinitionObj, "test object");
+                    var configuration = new SchemaValidationConfiguration
+                    {
+                        Disabled = false,
+                        ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+                        {
+                            { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                        }
+                    };
+                    await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+                }
+
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
                 using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                 {
@@ -1443,6 +1485,11 @@ namespace SlowTests.Smuggler
                     Assert.False(record.EmbeddingsGenerations.First().Disabled);
                     Assert.Equal("generate-embeddings", record.EmbeddingsGenerations.First().Name);
                     Assert.Equal("aiconnection", record.EmbeddingsGenerations.First().ConnectionStringName);;
+                    
+                    Assert.NotNull(record.SchemaValidation);
+                    Assert.False(record.SchemaValidation.Disabled);
+                    Assert.True(record.SchemaValidation.ValidatorsByCollection.ContainsKey("TestObjs"));
+                    Assert.NotNull(record.SchemaValidation.ValidatorsByCollection["TestObjs"].SchemaDefinition);
                 }
             }
         }
