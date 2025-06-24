@@ -3,12 +3,17 @@ import Certificates from "components/pages/resources/manageServer/certificates/C
 import { MockedValue } from "test/mocks/services/AutoMockService";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
-import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
+import {
+    withStorybookContexts,
+    withBootstrap5,
+    securityClearanceArgType,
+    withForceRerender,
+} from "test/storybookTestUtils";
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 
 export default {
     title: "Pages/Manage Server/Certificates",
-    decorators: [withStorybookContexts, withBootstrap5],
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 
 interface CertificatesStoryArgs {
@@ -17,6 +22,7 @@ interface CertificatesStoryArgs {
     certificates: MockedValue<CertificatesResponseDto>;
     serverCertSetupMode: MockedValue<Raven.Server.Commercial.SetupMode>;
     serverCertRenewalDate: MockedValue<string>;
+    securityClearance: securityClearance;
 }
 
 export const CertificatesStory: StoryObj<CertificatesStoryArgs> = {
@@ -25,6 +31,7 @@ export const CertificatesStory: StoryObj<CertificatesStoryArgs> = {
         const { manageServerService } = mockServices;
         const { accessManager, databases, cluster, license } = mockStore;
 
+        accessManager.with_securityClearance(args.securityClearance);
         accessManager.with_isServerSecure(args.isSecureServer);
         accessManager.with_clientCertificateThumbprint(ManageServerStubs.certificates().Certificates[1].Thumbprint);
         databases.with_Single();
@@ -43,10 +50,14 @@ export const CertificatesStory: StoryObj<CertificatesStoryArgs> = {
         return <Certificates />;
     },
     args: {
+        securityClearance: "ClusterAdmin",
         isSecureServer: true,
         hasReadOnlyCertificates: true,
         certificates: ManageServerStubs.certificates(),
         serverCertSetupMode: ManageServerStubs.serverCertificateSetupMode(),
         serverCertRenewalDate: ManageServerStubs.serverCertificateRenewalDate(),
+    },
+    argTypes: {
+        securityClearance: securityClearanceArgType,
     },
 };
