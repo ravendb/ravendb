@@ -166,6 +166,7 @@ describe("Certificates", () => {
                         x.Certificates = [serverCert, clientCert];
                         x.Certificates[1].SecurityClearance = "Operator";
                     }}
+                    securityClearance="Operator"
                 />
             );
 
@@ -179,6 +180,7 @@ describe("Certificates", () => {
                         x.Certificates = [serverCert, clientCert];
                         x.Certificates[1].SecurityClearance = "ClusterAdmin";
                     }}
+                    securityClearance="Operator"
                 />
             );
 
