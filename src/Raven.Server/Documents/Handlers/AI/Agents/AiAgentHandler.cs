@@ -4,7 +4,6 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using NuGet.Protocol;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
@@ -53,7 +52,8 @@ public class AiAgentHandler : DatabaseRequestHandler
         var configuration = GetAiAgentConfiguration(name);
 
         using var _ = ContextPool.AllocateOperationContext(out JsonOperationContext context);
-        var body = await ReadStartChatBodyAsync(context, token.Token);
+        var options = await context.ReadForMemoryAsync(RequestBodyStream(), "ai-agent", token.Token);
+        var body = GetStartChatOptions(options);
         var chat = new ChatDocument(name, body.Parameter);
         
         chat.Initialize(context, configuration.SystemPrompt, body.UserPrompt);
@@ -182,7 +182,7 @@ public class AiAgentHandler : DatabaseRequestHandler
         var options = await context.ReadForMemoryAsync(RequestBodyStream(), "ai-agent", token.Token);
         var cfg = JsonDeserializationClient.AiAgentConfiguration(options);
 
-        var body = await ReadStartChatBodyAsync(context, token.Token);
+        var body = GetStartChatOptions(options);
         var chat = new ChatDocument("test", body.Parameter);
         chat.Initialize(context, cfg.SystemPrompt, body.UserPrompt);
 
@@ -190,12 +190,11 @@ public class AiAgentHandler : DatabaseRequestHandler
 
         await WriteResponseAsync(context, "test", r);
     }
-    private async Task<(BlittableJsonReaderObject Parameter, string UserPrompt)> ReadStartChatBodyAsync(JsonOperationContext context, CancellationToken token)
+    private (BlittableJsonReaderObject Parameter, string UserPrompt) GetStartChatOptions(BlittableJsonReaderObject obj)
     {
-        var body = await context.ReadForMemoryAsync(RequestBodyStream(), "ai-agent", token);
-        if (body.TryGet(nameof(StartChatBody.Parameters), out BlittableJsonReaderObject parameters) == false)
+        if (obj.TryGet(nameof(StartChatBody.Parameters), out BlittableJsonReaderObject parameters) == false)
             throw new ArgumentException(nameof(StartChatBody.Parameters));
-        if (body.TryGet(nameof(StartChatBody.Prompt), out string userPrompt) == false)
+        if (obj.TryGet(nameof(StartChatBody.Prompt), out string userPrompt) == false)
             throw new ArgumentException($"User prompt is missing");
 
         return (parameters, userPrompt);

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.AI;
@@ -196,6 +197,53 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.NotNull(r2.Response.Answer);
             Assert.NotNull(r2.Usage);
             Assert.NotNull(r2.ChatId);
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+        public async Task CanRunTest(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore(options);
+            await store.Maintenance.SendAsync(new CreateSampleDataOperation());
+
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+
+            var body = @$"{{
+    ""ConnectionStringName"": ""{config.ConnectionStringName}"",
+    ""SystemPrompt"": ""You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well."",
+    ""OutputSchema"": ""{{\""Answer\"": \""Answer to the user question\"", \""Relevant\"": true, \""RelevantOrdersId\"":[\""The order ids relevant to the query or response\""], \""MatchingProductsId\"":[\""All the product ids referenced either by the user or the system\""] }}"",
+    ""Parameters"": {{
+        ""company"": ""companies/90-A""
+    }},
+    ""Prompt"": ""Help to find something more to my recent order"",
+    ""Persistence"": {{
+        ""Collection"": ""Chats"",
+        ""Expires"": ""3.00:00:00""
+    }},
+    ""Queries"": [
+        {{
+            ""Name"": ""ProductSearch"",
+            ""Description"": ""semantic search the store product catalog"",
+            ""Query"": ""from Products where vector.search(embedding.text(Name), $query)"",
+            ""ParametersSchema"": ""{{\""query\"": [\""term or phrase to search in the catalog\""]}}""
+        }},
+        {{
+            ""Name"": ""RecentOrder"",
+            ""Description"": ""Get the recent orders of the current user"",
+            ""Query"": ""from Orders where Company = $company order by OrderedAt desc limit 10"",
+            ""ParametersSchema"": ""{{}}""
+        }}
+    ]
+}}";
+            using var test = new HttpRequestMessage
+            {
+                RequestUri = new Uri($"{store.Urls[0]}/databases/{store.Database}/ai/agent/test", UriKind.Absolute),
+                Method = HttpMethod.Post, 
+                Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json")
+            };
+            using var r = await store.GetRequestExecutor().HttpClient.SendAsync(test);
+            Assert.True(r.IsSuccessStatusCode);
         }
     }
 }
