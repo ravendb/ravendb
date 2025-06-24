@@ -51,7 +51,10 @@ namespace Raven.Client.Documents.Smuggler
                                                                                   DatabaseRecordItemType.QueueSinks |
                                                                                   DatabaseRecordItemType.SnowflakeEtls |
                                                                                   DatabaseRecordItemType.SnowflakeConnectionStrings |
-                                                                                  DatabaseRecordItemType.GenAiEtls;
+                                                                                  DatabaseRecordItemType.GenAiEtls |
+                                                                                  DatabaseRecordItemType.EmbeddingsGenerations |
+                                                                                  DatabaseRecordItemType.AiConnectionStrings |
+                                                                                  DatabaseRecordItemType.AiAgents;
 
         internal const DatabaseItemType OperateOnFirstShardOnly = DatabaseItemType.Indexes |
                                                               DatabaseItemType.DatabaseRecord |

@@ -24,8 +24,9 @@ public class AiAgentBackupRestore : ReplicationTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
-    public async Task CanBackupAndRestoreAiAgents(Options options, GenAiConfiguration aiConfig)
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Data = new object[] { BackupType.Backup })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Data = new object[] { BackupType.Snapshot })]
+    public async Task CanBackupAndRestoreAiAgents(Options options, GenAiConfiguration aiConfig, BackupType backupType)
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");
 
@@ -41,11 +42,15 @@ public class AiAgentBackupRestore : ReplicationTestBase
                 await source.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agentName, agentConfig));
             }
 
-            var config = new PeriodicBackupConfiguration { LocalSettings = new LocalSettings { FolderPath = backupPath }, IncrementalBackupFrequency = "0 0 */12 * *" };
-            var backupTaskId = (await source.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config))).TaskId;
-
-            var backupStatus = await source.Maintenance.SendAsync(new StartBackupOperation(false, backupTaskId));
-            await backupStatus.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
+            var backupOperation = await source.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
+            {
+                BackupType = backupType,
+                LocalSettings = new LocalSettings
+                {
+                    FolderPath = backupPath
+                }
+            }));
+            var result = (BackupResult)await backupOperation.WaitForCompletionAsync(TimeSpan.FromSeconds(30));
 
             using var dis = Backup.RestoreDatabase(destination,
                 new RestoreBackupConfiguration
