@@ -52,14 +52,15 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
     private IChatCompletionClient GetClient()
     {
-        if (string.IsNullOrWhiteSpace(Configuration.JsonSchema))
-            Configuration.JsonSchema = OllamaChatCompletionClient.GetSchemaFor(Configuration.SampleObject);
+        var schema = Configuration.JsonSchema;
+        if (string.IsNullOrWhiteSpace(schema))
+            schema = OllamaChatCompletionClient.GetSchemaFor(Configuration.SampleObject);
 
         var connectorType = Configuration.Connection.GetActiveProvider();
         IChatCompletionClient client = connectorType switch
         {
-            AiConnectorType.Ollama => new OllamaChatCompletionClient(Configuration, Database.ServerStore.ContextPool, IChatCompletionClient.DefaultConventions),
-            AiConnectorType.OpenAi => new OpenAiChatCompletionClient(Configuration, Database.ServerStore.ContextPool, IChatCompletionClient.DefaultConventions),
+            AiConnectorType.Ollama => new OllamaChatCompletionClient(Configuration, schema, Database.ServerStore.ContextPool, IChatCompletionClient.DefaultConventions),
+            AiConnectorType.OpenAi => new OpenAiChatCompletionClient(Configuration, schema, Database.ServerStore.ContextPool, IChatCompletionClient.DefaultConventions),
             _ => throw new NotSupportedException($"The specified model (\"{connectorType.ToString()}\") is not supported.")
         };
 

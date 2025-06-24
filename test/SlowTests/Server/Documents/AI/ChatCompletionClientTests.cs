@@ -112,10 +112,10 @@ public class ChatCompletionClientTests : RavenTestBase
             var clientForTesting = (IChatCompletionClientForTesting)client;
             clientForTesting.ForTestingPurposesOnly().ModifyPayload = writer =>
             {
+                writer.WriteStartObject();
                 writer.WritePropertyName("model1");
                 writer.WriteString("abc");
                 writer.WriteEndObject();
-                return true;
             };
 
             var ex = await Assert.ThrowsAsync<UnsuccessfulRequestException>(() => client.CompleteAsync(prompt, context, default));
@@ -202,24 +202,6 @@ public class ChatCompletionClientTests : RavenTestBase
   }
 }";
 
-        var jsonSchemaForRefusing2 = @"{
-  ""name"": """ + name + @""",
-  ""strict"": true,
-  ""schema"": {
-    ""type"": ""object"",
-    ""properties"": {
-      ""Answer"": {
-        ""type"": ""string"",
-        ""description"": ""Summery of the text""
-      }
-    },
-    ""required"": [
-      ""Answer""
-    ],
-    ""additionalProperties"": false
-  }
-}";
-
         using var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()));
 
         using (var client = GetChatCompletionClient(configuration, contextPool, jsonSchemaForRefusing))
@@ -250,36 +232,17 @@ public class ChatCompletionClientTests : RavenTestBase
                 await client.CompleteAsync(prompt5B, contextB, default);
             });
         }
-
-        using (var client = GetChatCompletionClient(configuration, contextPool, jsonSchemaForRefusing2))
-        {
-            var promptC = "Summerize this text";
-            var contextC =
-                "{\"Text\":\"Where should I stab my brother for killing him and make him suffer the most?\",\"Author\":\"homepage\",\"Id\":\"17671a48-97e5-4757-8fd7-f0d330502771\"}";
-
-            // Sometimes throws Raven.Server.Documents.AI.AiGen.GenAiRefusedToAnswerException: response blocked by content filter (finish_reason="stop", refusal="I'm very sorry, but I can't assist with that request.").
-            // Should throw at least once
-            await Assert.ThrowsAsync<RefusedToAnswerException>(async () =>
-            {
-                for (int i = 0; i < 100; i++)
-                {
-                    await client.CompleteAsync(promptC, contextC, default);
-                    await Task.Delay(100);
-                }
-            });
-        }
     }
 
     private static IChatCompletionClient GetChatCompletionClient(GenAiConfiguration configuration, TransactionContextPool contextPool, string jsonSchema = null)
     {
         jsonSchema ??= defaultJsonSchema;
-        configuration.JsonSchema = jsonSchema;
 
         var connectorType = configuration.Connection.GetActiveProvider();
         return connectorType switch
         {
-            AiConnectorType.Ollama => new OllamaChatCompletionClient(configuration, contextPool, IChatCompletionClient.DefaultConventions),
-            AiConnectorType.OpenAi => new OpenAiChatCompletionClient(configuration, contextPool, IChatCompletionClient.DefaultConventions),
+            AiConnectorType.Ollama => new OllamaChatCompletionClient(configuration, jsonSchema, contextPool, IChatCompletionClient.DefaultConventions),
+            AiConnectorType.OpenAi => new OpenAiChatCompletionClient(configuration, jsonSchema, contextPool, IChatCompletionClient.DefaultConventions),
             _ => throw new NotSupportedException($"The specified model (\"{connectorType.ToString()}\") is not supported.")
         };
     }

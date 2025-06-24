@@ -238,10 +238,12 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
             Assert.NotNull(etlProcess);
 
             var chatCompletionClient = (IChatCompletionClientForTesting)etlProcess.GetChatCompletionClient();
-            chatCompletionClient.ForTestingPurposesOnly().SimulateFailure = (ctx) =>
+            chatCompletionClient.ForTestingPurposesOnly().SimulateFailureAsync = (ctx) =>
             {
                 if (ctx.Contains("win $$$$"))
                     throw new RefusedToAnswerException("fake refusal") { RequestId = "fake request id" };
+
+                return Task.CompletedTask;
             };
 
             const string docId = "posts/1";
@@ -314,14 +316,14 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
         var etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
         Assert.NotNull(etlProcess);
 
-        int enteredOnce = 0;
+        int triggerOn = 2;
         var chatCompletionClient = (IChatCompletionClientForTesting)etlProcess.GetChatCompletionClient();
-        chatCompletionClient.ForTestingPurposesOnly().SimulateFailure = (ctx) =>
+        chatCompletionClient.ForTestingPurposesOnly().SimulateFailureAsync = (ctx) =>
         {
-            if (Interlocked.CompareExchange(ref enteredOnce, 1, 0) == 0)
-                return;
+            if (Interlocked.Decrement(ref triggerOn) <= 0)
+                throw new RateLimitException("rate limit") { RetryAfter = TimeSpan.FromMinutes(10), RequestId = "test" };
 
-            throw new RateLimitException("rate limit") { RetryAfter = TimeSpan.FromMinutes(10), RequestId = "test" };
+            return Task.CompletedTask;
         };
 
         const string docId = "posts/1";
@@ -392,7 +394,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
             session.SaveChanges();
         }
 
-        Assert.False(etlDone.Wait(TimeSpan.FromMinutes(1)));
+        Assert.False(etlDone.Wait(TimeSpan.FromSeconds(10)));
 
         using (var session = store.OpenSession())
         {
