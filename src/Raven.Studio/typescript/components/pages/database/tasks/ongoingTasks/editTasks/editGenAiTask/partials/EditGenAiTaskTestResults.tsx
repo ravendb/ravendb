@@ -122,6 +122,10 @@ function ModelUsage() {
                             <span>Completion tokens</span>
                             <span>{modelUsage.data.completionTokens}</span>
                         </div>
+                        <div className="hstack justify-content-between gap-3">
+                            <span>Cached tokens</span>
+                            <span>{modelUsage.data.cachedTokens}</span>
+                        </div>
                         <hr className="my-1" />
                         <div className="hstack justify-content-between gap-3">
                             <span>Tokens usage</span>

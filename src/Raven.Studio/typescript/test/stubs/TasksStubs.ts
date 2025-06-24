@@ -766,9 +766,10 @@ namespace Orders
                     },
                     ModelOutput: {
                         Usage: {
-                            prompt_tokens: 32,
-                            completion_tokens: 48,
-                            total_tokens: 80,
+                            PromptTokens: 22,
+                            CompletionTokens: 48,
+                            CachedTokens: 10,
+                            TotalTokens: 80,
                         },
                         Output: {
                             Blocked: true,
@@ -790,9 +791,10 @@ namespace Orders
                     },
                     ModelOutput: {
                         Usage: {
-                            prompt_tokens: 33,
-                            completion_tokens: 78,
-                            total_tokens: 111,
+                            PromptTokens: 23,
+                            CompletionTokens: 78,
+                            CachedTokens: 10,
+                            TotalTokens: 111,
                         },
                         Output: {
                             Blocked: false,
@@ -848,9 +850,10 @@ namespace Orders
                     },
                     ModelOutput: {
                         Usage: {
-                            prompt_tokens: 32,
-                            completion_tokens: 48,
-                            total_tokens: 80,
+                            PromptTokens: 22,
+                            CompletionTokens: 48,
+                            CachedTokens: 10,
+                            TotalTokens: 80,
                         },
                         Output: {
                             Blocked: true,
@@ -872,9 +875,10 @@ namespace Orders
                     },
                     ModelOutput: {
                         Usage: {
-                            prompt_tokens: 33,
-                            completion_tokens: 78,
-                            total_tokens: 111,
+                            PromptTokens: 23,
+                            CompletionTokens: 78,
+                            CachedTokens: 10,
+                            TotalTokens: 111,
                         },
                         Output: {
                             Blocked: false,
