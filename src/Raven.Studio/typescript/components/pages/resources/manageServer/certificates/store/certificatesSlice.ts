@@ -146,10 +146,14 @@ const fetchData = createAsyncThunk<
     }
 >(certificatesSlice.name + "/fetchData", async (_, { getState }) => {
     const nodeTags = getState().cluster.nodes.ids;
+    const securityClearance = getState().accessManager.securityClearance;
+    const isClusterAdminOrClusterNode = securityClearance === "ClusterAdmin" || securityClearance === "ClusterNode";
 
     const certificatesDto = await services.manageServerService.getCertificates(true);
 
-    const serverCertificateSetupMode = await services.manageServerService.getServerCertificateSetupMode();
+    const serverCertificateSetupMode = isClusterAdminOrClusterNode
+        ? await services.manageServerService.getServerCertificateSetupMode()
+        : null;
 
     const serverCertificateRenewalDate =
         serverCertificateSetupMode === "LetsEncrypt"
