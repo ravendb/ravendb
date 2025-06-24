@@ -407,11 +407,11 @@ class notificationCenter {
         }
     }
 
-    private getOperationsWatch(db: database) {
+    private getOperationsWatch(db: database | string) {
         return db ? this.databaseOperationsWatch : this.globalOperationsWatch;
     }
 
-    monitorOperation(db: database,
+    monitorOperation(db: database | string,
         operationId: number,
         onProgress: (progress: unknown) => void = null): JQueryPromise<unknown> {
 
@@ -494,7 +494,7 @@ class notificationCenter {
             });
     }
 
-    openDetailsForOperationById(db: database, operationId: number): void {
+    openDetailsForOperationById(db: database | string, operationId: number): void {
         const existingNotification = this.getOperationById(db, operationId);
         if (existingNotification) {
             this.openDetails(existingNotification);
@@ -509,7 +509,7 @@ class notificationCenter {
         }
     }
 
-    private getOperationById(db: database, operationId: number) {
+    private getOperationById(db: database | string, operationId: number) {
         const notificationsArray = db ? this.databaseNotifications() : this.globalNotifications();
         const topLevelNotification = notificationsArray.find(x => x instanceof operation && x.operationId() === operationId);
         if (topLevelNotification) {

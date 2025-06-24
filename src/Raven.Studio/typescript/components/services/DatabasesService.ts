@@ -67,6 +67,8 @@ import getIdentitiesCommand from "commands/database/identities/getIdentitiesComm
 import seedIdentityCommand from "commands/database/identities/seedIdentityCommand";
 import getRevisionsBinCleanerConfigurationCommand from "commands/database/settings/getRevisionsBinCleanerConfigurationCommand";
 import saveRevisionsBinCleanerConfigurationCommand from "commands/database/settings/saveRevisionsBinCleanerConfigurationCommand";
+import deleteDocumentsCommand from "commands/database/documents/deleteDocumentsCommand";
+import deleteCollectionCommand from "commands/database/documents/deleteCollectionCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -318,5 +320,13 @@ export default class DatabasesService {
 
     async seedIdentity(...args: ConstructorParameters<typeof seedIdentityCommand>) {
         return new seedIdentityCommand(...args).execute();
+    }
+
+    async deleteDocuments(...args: ConstructorParameters<typeof deleteDocumentsCommand>) {
+        return new deleteDocumentsCommand(...args).execute();
+    }
+
+    async deleteCollection(...args: ConstructorParameters<typeof deleteCollectionCommand>) {
+        return new deleteCollectionCommand(...args).execute();
     }
 }
