@@ -910,6 +910,19 @@ namespace Raven.Server.Smuggler.Documents
                             _log.Info("Wasn't able to import the Supported Features from smuggler file. Skipping.", e);
                     }
                 }
+
+                if (reader.TryGet(nameof(databaseRecord.SchemaValidation), out BlittableJsonReaderObject schemaValidation) && schemaValidation != null)
+                {
+                    try
+                    {
+                        databaseRecord.SchemaValidation = JsonDeserializationCluster.SchemaValidationConfiguration(schemaValidation);
+                    }
+                    catch (Exception e)
+                    {
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the Supported Features from smuggler file. Skipping.", e);
+                    }
+                }
             });
 
             return databaseRecord;

@@ -380,6 +380,13 @@ namespace Raven.Server.Smuggler.Documents
                     WriteShardingConfiguration(databaseRecord.Sharding);
                 }
 
+                if (databaseRecord.SchemaValidation != null)
+                {
+                    _writer.WriteComma();
+                    _writer.WritePropertyName(nameof(databaseRecord.SchemaValidation));
+                    _context.Write(_writer, databaseRecord.SchemaValidation.ToJson());
+                }
+                
                 switch (authorizationStatus)
                 {
                     case AuthorizationStatus.DatabaseAdmin:

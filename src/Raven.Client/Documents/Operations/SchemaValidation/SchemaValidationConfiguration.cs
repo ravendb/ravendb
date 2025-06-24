@@ -6,9 +6,9 @@ namespace Raven.Client.Documents.Operations.SchemaValidation;
 
 public sealed class SchemaValidationConfiguration
 {
-    public bool Disabled;
+    public bool Disabled { get; set; }
 
-    public Dictionary<string, Validator> ValidatorsByCollection;
+    public Dictionary<string, Validator> ValidatorsByCollection { get; set; }
 
     public DynamicJsonValue ToJson()
     {
