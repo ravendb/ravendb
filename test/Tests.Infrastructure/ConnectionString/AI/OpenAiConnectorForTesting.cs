@@ -13,7 +13,7 @@ public class EmbeddingsOpenAiConnectorForTesting : AbstractEmbeddingsConnectorFo
     }
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.OpenAi);
 
-    protected override AiConnectionString CreateAiConnectionStringImpl() => OpenAiConnectorHelper.CreateAiConnectionString(Model, AiModelType.Embeddings);
+    protected override AiConnectionString CreateAiConnectionStringImpl() => OpenAiConnectorHelper.CreateAiConnectionString(Model, AiModelType.TextEmbeddings);
 }
 
 public class GenAiOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiOpenAiConnectorForTesting>
@@ -26,7 +26,7 @@ public class GenAiOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<G
     }
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.OpenAi);
 
-    protected override AiConnectionString CreateAiConnectionStringImpl() => OpenAiConnectorHelper.CreateAiConnectionString(Model, AiModelType.LLM);
+    protected override AiConnectionString CreateAiConnectionStringImpl() => OpenAiConnectorHelper.CreateAiConnectionString(Model, AiModelType.Chat);
     
 }
 

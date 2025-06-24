@@ -37,7 +37,7 @@ public class EmbeddingsOllamaConnectorForTesting : AbstractEmbeddingsConnectorFo
     }
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama);
 
-    protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.Embeddings);
+    protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.TextEmbeddings);
 }
 
 public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiOllamaConnectorForTesting>
@@ -50,7 +50,7 @@ public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<G
     }
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama);
 
-    protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.LLM);
+    protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.Chat);
 }
 
 internal static class OllamaConnectorHelper

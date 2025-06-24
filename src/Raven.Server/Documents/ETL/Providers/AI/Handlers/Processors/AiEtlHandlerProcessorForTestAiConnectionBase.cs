@@ -84,7 +84,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
 
                 switch (aiConnectionString.ModelType)
                 {
-                    case AiModelType.Embeddings:
+                    case AiModelType.TextEmbeddings:
                         var aiEtlConfiguration = new EmbeddingsGenerationConfiguration { Connection = aiConnectionString };
                         (ITextEmbeddingGenerationService service, logger) = AiHelper.CreateEmbeddingServicesForTest(aiEtlConfiguration);
                         var embeddings = await service.GenerateEmbeddingsAsync(EmbeddingsHelper.ValuesListToVerifyConnection, cancellationToken: token.Token);
@@ -93,11 +93,11 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                             throw new EmbeddingsMismatchException(
                                 $"Failed to generate embeddings for test values. Expected '{EmbeddingsHelper.ValuesListToVerifyConnection.Count}' result, but got '{embeddings.Count}'.");
                         break;
-                    case AiModelType.LLM:
+                    case AiModelType.Chat:
                         if (aiConnectionString.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model) == false)
                             throw new InvalidOperationException(
-                                $"Invalid provider settings for {nameof(AiConnectionString)} with model type '{nameof(AiConnectionString.ModelType.LLM)}'. " +
-                                $"Supported providers for '{nameof(AiConnectionString.ModelType.LLM)}' model type are '{nameof(AiConnectorType.OpenAi)}' and '{nameof(AiConnectorType.Ollama)}'");
+                                $"Invalid provider settings for {nameof(AiConnectionString)} with model type '{nameof(AiConnectionString.ModelType.Chat)}'. " +
+                                $"Supported providers for '{nameof(AiConnectionString.ModelType.Chat)}' model type are '{nameof(AiConnectorType.OpenAi)}' and '{nameof(AiConnectorType.Ollama)}'");
                         
                         using (var client = new GenericChatCompletionClientForTesting(uri, model, apiKey, organizationId: null, projectId: null, ServerStore.ContextPool))
                         {
