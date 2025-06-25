@@ -31,6 +31,8 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
         if (aiConnectorType == AiConnectorType.None)
             throw new ArgumentException($"AI connector type cannot be '{AiConnectorType.None}'");
 
+        var modelType = RequestHandler.GetEnumQueryString<AiModelType>("modelType");
+
         InMemoryLoggerProvider logger = null;
         try
         {
@@ -39,7 +41,7 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
             {
                 var json = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "etl/test/script");
 
-                var aiConnectionString = new AiConnectionString();
+                var aiConnectionString = new AiConnectionString { ModelType = modelType };
 
                 switch (aiConnectorType)
                 {
