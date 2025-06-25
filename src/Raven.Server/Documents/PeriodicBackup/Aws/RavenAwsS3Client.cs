@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -252,6 +253,30 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
         public ListObjectsResult ListObjects(string prefix, string delimiter, bool listFolders, bool includeFolders = false, int? take = null, string continuationToken = null, string startAfter = null)
         {
             return AsyncHelpers.RunSync(() => ListObjectsAsync(prefix, delimiter, listFolders, includeFolders, take, continuationToken, startAfter));
+        }
+
+        public IDictionary<string, string> GetObjectMetadata(string key)
+        {
+            return AsyncHelpers.RunSync(() => GetObjectMetadataAsync(key));
+        }
+
+        public async Task<IDictionary<string, string>> GetObjectMetadataAsync(string key)
+        {
+            try
+            {
+                GetObjectMetadataResponse response = await _client.GetObjectMetadataAsync(_bucketName, key, _cancellationToken);
+
+                return ConvertMetadata(response.Metadata);
+            }
+            catch (AmazonS3Exception e)
+            {
+                await MaybeHandleExceptionAsync(e);
+
+                if (e.StatusCode == HttpStatusCode.NotFound)
+                    return null;
+
+                throw;
+            }
         }
 
         public async Task<RavenStorageClient.Blob> GetObjectAsync(string key)

@@ -1,7 +1,7 @@
 ﻿using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
-using Sparrow.Json;
+using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -14,10 +14,20 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         public RavenEtlItem(Tombstone tombstone, string collection, EtlItemType type) : base(tombstone, collection, type)
         {
-            if (tombstone.Type == Tombstone.TombstoneType.Attachment)
-            {
-                AttachmentTombstoneId = tombstone.LowerId;
-            }
+        }
+
+        public RavenEtlItem(DocumentsOperationContext context, AttachmentTombstoneReplicationItem attachment)
+        {
+            DocumentId = context.GetLazyString(attachment.Key.ToString());
+
+            Collection = "__undefined";
+            Type = EtlItemType.Document;
+            IsDelete = true;
+
+            Etag = attachment.Etag;
+            ChangeVector = attachment.ChangeVector;
+
+            AttachmentTombstone = attachment;
         }
 
         public RavenEtlItem(CounterGroupDetail counter, string collection)
@@ -51,9 +61,5 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             TimeSeriesDeletedRangeItem = deletedRange;
 
         }
-
-        public LazyStringValue AttachmentTombstoneId { get; }
-
-        public bool IsAttachmentTombstone => AttachmentTombstoneId != null;
     }
 }

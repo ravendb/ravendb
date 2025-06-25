@@ -15,8 +15,9 @@ namespace Raven.Server.Documents.Commands.Attachments
         public sealed class Response
         {
             public string Hash { get; set; }
-
-            public long Count { get; set; }
+            public long TotalCount { get; set; }
+            public long RegularCount { get; set; }
+            public long RetiredCount { get; set; }
         }
 
         public GetAttachmentHashCountCommand([NotNull] string hash)

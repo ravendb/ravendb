@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -15,10 +16,11 @@ namespace Raven.Server.Documents.Sharding.Handlers.Processors.Attachments
         {
         }
 
-        protected override async ValueTask PutAttachmentsAsync(TransactionOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, CancellationToken token)
+        protected override async ValueTask PutAttachmentsAsync(TransactionOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, 
+            DateTime? retireAtDt, CancellationToken token)
         {
             int shardNumber = RequestHandler.DatabaseContext.GetShardNumberFor(context, id);
-            var op = new PutAttachmentOperation.PutAttachmentCommand(id, name, requestBodyStream, contentType, changeVector, validateStream: false);
+            var op = new PutAttachmentOperation.PutAttachmentCommand(id, name, requestBodyStream, contentType, changeVector, retireAtDt, validateStream: false);
             await RequestHandler.ShardExecutor.ExecuteSingleShardAsync(new ProxyCommand<AttachmentDetails>(op, RequestHandler.HttpContext), shardNumber, token);
         }
     }

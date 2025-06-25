@@ -2,11 +2,53 @@
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server;
 using Voron;
+using Voron.Data.Tables;
+using static Raven.Server.Documents.Schemas.Tombstones;
 
 namespace Raven.Server.Documents.Replication.ReplicationItems
 {
     public sealed class TombstoneReplicationItem
     {
+        public static ReplicationBatchItem From(DocumentsOperationContext context, ref TableValueReader tvr)
+        {
+            var doc = DocumentsStorage.TableValueToTombstone(context, ref tvr);
+            switch (doc.Type)
+            {
+                case Tombstone.TombstoneType.Attachment:
+                    AttachmentTombstoneReplicationItem item = AttachmentTombstoneReplicationItem(context, ref tvr, doc);
+
+                    return item;
+                default:
+                    return From(context, doc);
+            }
+        }
+
+        public static AttachmentTombstoneReplicationItem AttachmentTombstoneReplicationItem(DocumentsOperationContext context, ref TableValueReader tvr, Tombstone doc)
+        {
+            AttachmentTombstoneReplicationItem item = AttachmentTombstoneReplicationItemInternal(context, doc);
+            //TODO: egor check if I can use this??
+            //if (DocumentsStorage.ExtractAttachmentTombstoneFlag(ref tvr, doc))
+            //{
+            //    item.TombstoneFlags = AttachmentTombstoneFlags.FromStorageOnly;
+            //}
+            //else
+            //{
+            //    item.TombstoneFlags = AttachmentTombstoneFlags.None;
+            //}
+            var enumVal = DocumentsStorage.TableValueToInt((int)TombstoneTable.Flags, ref tvr);
+            if (enumVal == (int)AttachmentTombstoneFlags.FromStorageOnly)
+            {
+                item.TombstoneFlags = AttachmentTombstoneFlags.FromStorageOnly;
+            }
+            else
+            {
+                item.Flags = DocumentsStorage.TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
+                item.TombstoneFlags = AttachmentTombstoneFlags.None;
+            }
+
+            return item;
+        }
+
         public static unsafe ReplicationBatchItem From(DocumentsOperationContext context, Tombstone doc)
         {
             switch (doc.Type)
@@ -25,17 +67,9 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                     };
 
                 case Tombstone.TombstoneType.Attachment:
-                    var item = new AttachmentTombstoneReplicationItem
-                    {
-                        Type = ReplicationBatchItem.ReplicationItemType.AttachmentTombstone,
-                        Etag = doc.Etag,
-                        TransactionMarker = doc.TransactionMarker,
-                        ChangeVector = doc.ChangeVector,
-                        Flags = doc.Flags,
-                        LastModifiedTicks = doc.LastModified.Ticks,
-                    };
+                    AttachmentTombstoneReplicationItem item = AttachmentTombstoneReplicationItemInternal(context, doc);
+                    item.Flags = doc.Flags;
 
-                    item.ToDispose(Slice.From(context.Allocator, doc.LowerId.Buffer, doc.LowerId.Size, ByteStringType.Immutable, out item.Key));
                     return item;
 
                 case Tombstone.TombstoneType.Revision:
@@ -52,6 +86,21 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 default:
                     throw new ArgumentOutOfRangeException(nameof(doc.Type));
             }
+        }
+
+        private static unsafe AttachmentTombstoneReplicationItem AttachmentTombstoneReplicationItemInternal(DocumentsOperationContext context, Tombstone doc)
+        {
+            var item = new AttachmentTombstoneReplicationItem
+            {
+                Type = ReplicationBatchItem.ReplicationItemType.AttachmentTombstone,
+                Etag = doc.Etag,
+                TransactionMarker = doc.TransactionMarker,
+                ChangeVector = doc.ChangeVector,
+                LastModifiedTicks = doc.LastModified.Ticks,
+            };
+
+            item.ToDispose(Slice.From(context.Allocator, doc.LowerId.Buffer, doc.LowerId.Size, ByteStringType.Immutable, out item.Key));
+            return item;
         }
     }
 }

@@ -292,6 +292,7 @@ export class DatabasesStubs {
             DatabaseChangeVector:
                 "A:2568-F9I6Egqwm0Kz+K0oFVIR9Q, A:13366-IG4VwBTOnkqoT/uwgm2OQg, A:2568-OSKWIRBEDEGoAxbEIiFJeQ, A:8807-jMR/KF8hz0uMKFDXnmrQJA",
             CountOfTimeSeriesDeletedRanges: 9,
+            CountOfRetiredAttachments: essential.CountOfAttachments - 9,
             Is64Bit: true,
             NumberOfTransactionMergerQueueOperations: 0,
             DatabaseId: "jMR/KF8hz0uMKFDXnmrQJA",

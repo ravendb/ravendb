@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
@@ -9,6 +10,7 @@ using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Client.Documents.Operations.Configuration;
@@ -192,6 +194,9 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, DeleteDatabaseResult> DeleteDatabaseResult = GenerateJsonDeserializationRoutine<DeleteDatabaseResult>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureExpirationOperationResult> ConfigureExpirationOperationResult = GenerateJsonDeserializationRoutine<ConfigureExpirationOperationResult>();
+     
+        internal static readonly Func<BlittableJsonReaderObject, ConfigureRetireAttachmentsOperationResult> ConfigureRetireAttachmentsOperationResult = GenerateJsonDeserializationRoutine<ConfigureRetireAttachmentsOperationResult>();
+        internal static readonly Func<BlittableJsonReaderObject, RetiredAttachmentsConfiguration> RetiredAttachmentsConfiguration = GenerateJsonDeserializationRoutine<RetiredAttachmentsConfiguration>();
 
         internal static readonly Func<BlittableJsonReaderObject, ConfigureRevisionsBinCleanerOperationResult> ConfigureRevisionsBinCleanerOperationResult = GenerateJsonDeserializationRoutine<ConfigureRevisionsBinCleanerOperationResult>();
         

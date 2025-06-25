@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Json;
@@ -31,7 +32,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Stats
                 stats.CountOfIdentities = RequestHandler.ServerStore.Cluster.GetNumberOfIdentities(context.Server, RequestHandler.Database.Name);
                 stats.CountOfCompareExchange = RequestHandler.ServerStore.Cluster.GetNumberOfCompareExchange(context.Server, RequestHandler.Database.Name);
                 stats.CountOfCompareExchangeTombstones = RequestHandler.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context.Server, RequestHandler.Database.Name);
-
+                stats.CountOfRetiredAttachments = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachmentsForFlag(context.Documents, AttachmentFlags.Retired);
                 return WriteResultAsync(stats);
             }
         }

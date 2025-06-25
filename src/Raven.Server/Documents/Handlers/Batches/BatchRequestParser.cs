@@ -66,6 +66,11 @@ namespace Raven.Server.Documents.Handlers.Batches
             public string DestinationName;
             public string ContentType;
             public AttachmentType AttachmentType;
+            public AttachmentFlags Flags;
+            public long SizeInBytes;
+            public DateTime? RetireAt;
+            public string Hash;
+            public bool StorageOnly;
             public MergedBatchCommand.AttachmentStream AttachmentStream { get; set; }// used for bulk insert only
 
             #endregion Attachment
@@ -330,6 +335,62 @@ namespace Raven.Server.Documents.Handlers.Batches
                                 break;
                         }
                         break;
+                    case CommandPropertyName.Flags:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                        if (state.CurrentTokenType != JsonParserToken.String)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.String, state);
+                        }
+                        commandData.Flags = GetAttachmentFlag(state, ctx);
+                        break;
+                    case CommandPropertyName.SizeInBytes:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                        if (state.CurrentTokenType != JsonParserToken.Integer)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.Integer, state);
+                        }
+                        commandData.SizeInBytes = state.Long;
+
+                        break;
+                    case CommandPropertyName.RetireAt:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.RetireAt = null;
+                                break;
+
+                            case JsonParserToken.String:
+                                commandData.RetireAt = DateTime.Parse(GetStringPropertyValue(state)).ToUniversalTime();
+                                break;
+
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                                break;
+                        }
+
+                        break;
+                    case CommandPropertyName.Hash:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                        switch (state.CurrentTokenType)
+                        {
+                            case JsonParserToken.Null:
+                                commandData.Hash = null;
+                                break;
+
+                            case JsonParserToken.String:
+                                commandData.Hash = GetStringPropertyValue(state);
+                                break;
+
+                            default:
+                                ThrowUnexpectedToken(JsonParserToken.String, state);
+                                break;
+                        }
+                        break;
 
                     case CommandPropertyName.Document:
                         while (parser.Read() == false)
@@ -474,6 +535,18 @@ namespace Raven.Server.Documents.Handlers.Batches
                         commandData.FromEtl = state.CurrentTokenType == JsonParserToken.True;
                         break;
 
+                    case CommandPropertyName.StorageOnly:
+                        while (parser.Read() == false)
+                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+
+                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
+                        {
+                            ThrowUnexpectedToken(JsonParserToken.True, state);
+                        }
+
+                        commandData.StorageOnly = state.CurrentTokenType == JsonParserToken.True;
+                        break;
+                        
                     case CommandPropertyName.AttachmentType:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
@@ -699,7 +772,11 @@ namespace Raven.Server.Documents.Handlers.Batches
             DestinationName,
             ContentType,
             AttachmentType,
-
+            Flags,
+            SizeInBytes,
+            RetireAt,
+            Hash,
+            StorageOnly,
             #endregion Attachment
 
             #region Counter
@@ -756,6 +833,8 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     if ("Counters"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Counters;
+                    if ("RetireAt"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.RetireAt;
 
                     return CommandPropertyName.NoSuchProperty;
 
@@ -766,14 +845,18 @@ namespace Raven.Server.Documents.Handlers.Batches
                         return CommandPropertyName.Name;
                     if ("From"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.From;
-
+                    if ("Hash"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.Hash;
                     return CommandPropertyName.NoSuchProperty;
 
+     
                 case 5:
                     if ("Index"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Index;
                     if ("Patch"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Patch;
+                    if ("Flags"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.Flags;
 
                     return CommandPropertyName.NoSuchProperty;
 
@@ -789,7 +872,10 @@ namespace Raven.Server.Documents.Handlers.Batches
                 case 11:
                     if ("ContentType"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ContentType;
-
+                    if ("StorageOnly"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.StorageOnly;
+                    if ("SizeInBytes"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.SizeInBytes;
                     return CommandPropertyName.NoSuchProperty;
 
                 case 12:
@@ -797,7 +883,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         return CommandPropertyName.ChangeVector;
 
                     return CommandPropertyName.NoSuchProperty;
-
+                    
                 case 7:
                     if ("FromEtl"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.FromEtl;
@@ -874,6 +960,42 @@ namespace Raven.Server.Documents.Handlers.Batches
             }
 
             return 0;
+        }
+
+        private static unsafe AttachmentFlags GetAttachmentFlag(JsonParserState state, JsonOperationContext ctx)
+        {
+            // here we confirm that the value is matching our expectation, in order to save CPU instructions
+            // we compare directly against the precomputed values
+            switch (state.StringSize)
+            {
+                case 4:
+                    if ("None"u8.IsEqualConstant(state.StringBuffer))
+                        return AttachmentFlags.None;
+
+                    ThrowInvalidProperty(state, ctx);
+                    break;
+
+                case 7:
+
+                    if ("Retired"u8.IsEqualConstant(state.StringBuffer))
+                        return AttachmentFlags.Retired;
+
+                    ThrowInvalidProperty(state, ctx);
+                    break;
+
+                case 10:
+                    if ("Compressed"u8.IsEqualConstant(state.StringBuffer))
+                        return AttachmentFlags.Compressed;
+
+                    ThrowInvalidProperty(state, ctx);
+                    break;
+
+                default:
+                    ThrowInvalidProperty(state, ctx);
+                    break;
+            }
+
+            return AttachmentFlags.None;
         }
 
         private static unsafe AttachmentType GetAttachmentType(JsonParserState state, JsonOperationContext ctx)

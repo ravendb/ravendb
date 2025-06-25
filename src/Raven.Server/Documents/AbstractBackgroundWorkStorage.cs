@@ -13,7 +13,7 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
 using Voron.Impl;
-
+using Voron.Util;
 
 namespace Raven.Server.Documents;
 
@@ -21,12 +21,12 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 {
     protected readonly DocumentDatabase Database;
     protected readonly string MetadataPropertyName;
-    private readonly string _treeName;
+    protected readonly string _treeName;
 
     protected AbstractBackgroundWorkStorage(Transaction tx, DocumentDatabase database, string treeName, string metadataPropertyName)
     {
         tx.CreateTree(treeName);
-        
+
         Database = database;
         _treeName = treeName;
         MetadataPropertyName = metadataPropertyName;
@@ -90,37 +90,11 @@ public abstract unsafe class AbstractBackgroundWorkStorage
                             if (cancellationToken.IsCancellationRequested)
                                 return toProcess;
 
-                            var clonedId = multiIt.CurrentKey.Clone(options.Context.Transaction.InnerTransaction.Allocator);
-
-                            try
-                            {
-                                using (var document = Database.DocumentsStorage.Get(options.Context, clonedId,
-                                           DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector))
-                                {
-                                    if (document == null ||
-                                        document.TryGetMetadata(out var metadata) == false ||
-                                        HasPassed(metadata, options.CurrentTime, MetadataPropertyName) ==
-                                        false)
-                                    {
-                                        toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id: null));
-                                        totalCount++;
-                                        continue;
-                                    }
-
-                                    if (ShouldHandleWorkOnCurrentNode(options.DatabaseTopology, options.NodeTag) == false)
-                                        break;
-
-                                    toProcess.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, document.Id));
-                                    totalCount++;
-                                }
-                            }
-                            catch (DocumentConflictException)
-                            {
-                                HandleDocumentConflict(options, ticksAsSlice, clonedId, toProcess, ref totalCount);
-                            }
+                            if (TryEnqueueItemToProcess(options, ref totalCount, multiIt.CurrentKey, ticksAsSlice, toProcess) == false)
+                                break;
 
                         } while (multiIt.MoveNext()
-                                 && toProcess.Count < options.AmountToTake 
+                                 && toProcess.Count < options.AmountToTake
                                  && totalCount < options.MaxItemsToProcess);
                     }
                 }
@@ -132,8 +106,41 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         }
     }
 
+    protected bool TryEnqueueItemToProcess(BackgroundWorkParameters options, ref int totalCount, Slice key, Slice ticksAsSlice, Queue<DocumentExpirationInfo> toProcess)
+    {
+        var clonedId = key.Clone(options.Context.Transaction.InnerTransaction.Allocator);
+
+        try
+        {
+            var item = GetDocumentAndIdOrCollection(options, clonedId, ticksAsSlice);
+            if (item.Document == null)
+            {
+                toProcess.Enqueue(item);
+                totalCount++;
+                return true;
+            }
+
+            using (item.GetDocumentDisposable())
+            {
+                if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
+                    return false;
+
+                toProcess.Enqueue(item);
+                totalCount++;
+            }
+            return true;
+        }
+        catch (DocumentConflictException)
+        {
+            HandleDocumentConflict(options, ticksAsSlice, clonedId, toProcess, ref totalCount);
+        }
+
+        return false;
+    }
+
     public class DocumentExpirationInfo
     {
+        public Document Document { get; set; }
         public Slice Ticks { get; }
         public Slice LowerId { get; }
         public string Id { get; }
@@ -148,6 +155,31 @@ public abstract unsafe class AbstractBackgroundWorkStorage
             LowerId = lowerId;
             Id = id;
         }
+
+        public IDisposable GetDocumentDisposable()
+        {
+            return new DisposableAction(() =>
+            {
+                Document?.Dispose();
+                Document = null;
+            });
+        }
+    }
+
+    protected virtual DocumentExpirationInfo GetDocumentAndIdOrCollection(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
+    {
+        var document = Database.DocumentsStorage.Get(options.Context, clonedId, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
+        if (document == null ||
+            document.TryGetMetadata(out var metadata) == false ||
+            HasPassed(metadata, options.CurrentTime, MetadataPropertyName) == false)
+        {
+            return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+        }
+
+        return new DocumentExpirationInfo(ticksSlice, clonedId, id: document.Id)
+        {
+            Document = document
+        };
     }
 
     protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount);

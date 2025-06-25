@@ -1,6 +1,6 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
@@ -8,41 +8,38 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
     public sealed class AttachmentTombstonesToRavenEtlItems : IEnumerator<RavenEtlItem>
     {
         private readonly DocumentsOperationContext _context;
-        private readonly IEnumerator<Tombstone> _tombstones;
+        private readonly IEnumerator<AttachmentTombstoneReplicationItem> _tombstones;
         private readonly List<string> _collections;
 
-        public AttachmentTombstonesToRavenEtlItems(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
+        public AttachmentTombstonesToRavenEtlItems(DocumentsOperationContext context, IEnumerator<AttachmentTombstoneReplicationItem> tombstones, List<string> collections)
         {
             _context = context;
             _tombstones = tombstones;
-            _collections = collections ?? throw new ArgumentNullException(nameof(collections));
+            _collections = collections;
         }
 
         private bool Filter(RavenEtlItem item)
         {
-            var tombstone = _tombstones.Current;
-            if (tombstone.Type != Tombstone.TombstoneType.Attachment)
-                TombstonesToRavenEtlItems.ThrowInvalidTombstoneType(Tombstone.TombstoneType.Attachment, tombstone.Type);
-
-            if (tombstone.Flags.Contain(DocumentFlags.Artificial))
+            if (item.AttachmentTombstone.Flags.Contain(DocumentFlags.Artificial))
                 return true;
 
-            if (FilterAttachment(_context, item))
-                return true;
-
-            return _collections.Contains(item.Collection) == false;
+            return FilterAttachment(_context, item);
         }
 
-        public static bool FilterAttachment(DocumentsOperationContext context, RavenEtlItem item)
+        public bool FilterAttachment(DocumentsOperationContext context, RavenEtlItem item)
         {
-            var documentId = AttachmentsStorage.AttachmentKey.ExtractDocIdAndAttachmentName(context, item.AttachmentTombstoneId).DocId;
-            var document = context.DocumentDatabase.DocumentsStorage.Get(context, documentId);
+            var documentId = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(item.AttachmentTombstone.Key).DocId;
+            using var document = context.DocumentDatabase.DocumentsStorage.Get(context, documentId);
             if (document == null)
                 return true; // document could be deleted, no need to send DELETE of tombstone, we can filter it out
-            
+
             var collection = context.DocumentDatabase.DocumentsStorage.ExtractCollectionName(context, document.Data).Name;
             item.Collection = collection;
-            return false;
+
+            if (_collections == null)
+                return false;
+
+            return _collections.Contains(item.Collection) == false;
         }
 
         public bool MoveNext()
@@ -50,7 +47,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven.Enumerators
             if (_tombstones.MoveNext() == false)
                 return false;
 
-            Current = new RavenEtlItem(_tombstones.Current, "__undefined", EtlItemType.Document);
+            Current = new RavenEtlItem(_context, _tombstones.Current);
             Current.Filtered = Filter(Current);
 
             return true;

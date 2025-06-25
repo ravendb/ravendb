@@ -50,5 +50,21 @@ namespace Raven.Client.Documents.Session
         /// Returns the revision attachment by the document id and attachment name.
         /// </summary>
         Task<AttachmentResult> GetRevisionAsync(string documentId, string name, string changeVector, CancellationToken token = default);
+
+        /// <summary>
+        ///     Marks the specified document's retired attachment for deletion. The attachment will be deleted when
+        ///     <see cref="IDocumentSession.SaveChanges" /> is called.
+        /// </summary>
+        /// <param name="documentId">The ID of the document which holds the retired attachment.</param>
+        /// <param name="name">The name of the retired attachment.</param>
+        Task DeleteAsync(string documentId, string name);
+
+        /// <summary>
+        ///     Marks the specified document's retired attachment for deletion. The attachment will be deleted when
+        ///     <see cref="IDocumentSession.SaveChanges" /> is called.
+        /// </summary>
+        /// <param name="entity">The entity of the document which holds the retired attachment.</param>
+        /// <param name="name">The name of the retired attachment.</param>
+        Task DeleteAsync(object entity, string name);
     }
 }

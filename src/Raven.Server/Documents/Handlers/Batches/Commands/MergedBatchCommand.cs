@@ -4,15 +4,20 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
+using Elastic.Clients.Elasticsearch;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents.Handlers.Processors.Attachments;
+using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
+using Raven.Server.Web;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Batches.Commands;
@@ -160,15 +165,32 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     break;
 
                 case CommandType.AttachmentPUT:
-                    attachmentIterator.MoveNext();
-                    var attachmentStream = attachmentIterator.Current;
-                    var stream = attachmentStream.Stream;
-                    _toDispose.Add(stream);
-
                     var docId = EtlGetDocIdFromPrefixIfNeeded(cmd.Id, cmd, lastPutResult);
 
-                    var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
-                        cmd.ContentType, attachmentStream.Hash, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                    // TODO: egor AttachmentStorage  do here something normal and don't pass so many params and flags 
+
+                    AttachmentDetailsServer attachmentPutResult;
+                    if (cmd.FromEtl)
+                    {
+                        if (cmd.Flags != AttachmentFlags.Retired)
+                        {
+                            AttachmentStream attachmentStream = GetAttachmentStream(attachmentIterator, out Stream stream);
+                            attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
+                                cmd.ContentType, attachmentStream.Hash, cmd.Flags, cmd.SizeInBytes, cmd.RetireAt, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
+                        }
+                        else
+                        {
+                            attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
+                                cmd.ContentType, cmd.Hash, cmd.Flags, cmd.SizeInBytes, cmd.RetireAt, cmd.ChangeVector, stream: null, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
+                        }
+                    }
+                    else
+                    {
+                        AttachmentStream attachmentStream = GetAttachmentStream(attachmentIterator, out Stream stream);
+                        attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
+                            cmd.ContentType, attachmentStream.Hash, flags: AttachmentFlags.None, stream.Length, retireAtDt: cmd.RetireAt, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                    }
+
                     LastChangeVector = attachmentPutResult.ChangeVector;
 
                     var apReply = new DynamicJsonValue
@@ -200,7 +222,44 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     break;
 
                 case CommandType.AttachmentDELETE:
-                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out var collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                    CollectionName collectionName;
+
+                    //TODO: egor btw I think I dont care if its from ETL
+                    if (cmd.FromEtl == false)
+                    {
+                        if (cmd.Flags == AttachmentFlags.Retired)
+                        {
+                            //retired attachment
+                            if (cmd.StorageOnly)
+                            {
+                                // keep the retired attachment on cloud storage
+                                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                            }
+                            else
+                            {
+                                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                            }
+                        }
+                        else
+                        {
+                            //TODO: egor we can remove this check, because we never delete attachments from cloud storage
+                            //Attachment attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, cmd.Id, cmd.Name, AttachmentType.Document, changeVector: null);
+                            //RegularDeleteAttachmentStrategyProcessor.CheckAttachmentFlagAndThrowIfNeededInternal(context, attachment, Database, cmd.Id, cmd.Name);
+                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+
+                        }
+                    }
+                    else
+                    {
+                        if (cmd.Flags == AttachmentFlags.Retired)
+                        {
+                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                        }
+                        else
+                        {
+                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                        }
+                    }
 
                     if (collectionName != null)
                         ModifiedCollections?.Add(collectionName.Name);
@@ -494,6 +553,15 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
             Debug.Assert(Reply.Count == 0);
 
         return Reply.Count;
+    }
+
+    private AttachmentStream GetAttachmentStream(IEnumerator<AttachmentStream> attachmentIterator, out Stream stream)
+    {
+        attachmentIterator.MoveNext();
+        var attachmentStream = attachmentIterator.Current;
+        stream = attachmentStream.Stream;
+        _toDispose.Add(stream);
+        return attachmentStream;
     }
 
     public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, DocumentMergedTransactionCommand> ToDto(DocumentsOperationContext context)
