@@ -101,13 +101,12 @@ public class ChatCompletionClientStressTests : RavenTestBase
     private static IChatCompletionClient GetChatCompletionClient(GenAiConfiguration configuration, TransactionContextPool contextPool, string jsonSchema = null)
     {
         jsonSchema ??= defaultJsonSchema;
-        configuration.JsonSchema = jsonSchema;
 
         var connectorType = configuration.Connection.GetActiveProvider();
         return connectorType switch
         {
-            AiConnectorType.Ollama => new OllamaChatCompletionClient(configuration, contextPool, IChatCompletionClient.DefaultConventions),
-            AiConnectorType.OpenAi => new OpenAiChatCompletionClient(configuration, contextPool, IChatCompletionClient.DefaultConventions),
+            AiConnectorType.Ollama => new OllamaChatCompletionClient(configuration, jsonSchema, contextPool, IChatCompletionClient.DefaultConventions),
+            AiConnectorType.OpenAi => new OpenAiChatCompletionClient(configuration, jsonSchema, contextPool, IChatCompletionClient.DefaultConventions),
             _ => throw new NotSupportedException($"The specified model (\"{connectorType.ToString()}\") is not supported.")
         };
     }

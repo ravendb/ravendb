@@ -8,14 +8,14 @@ namespace Raven.Server.Documents.AI.GenAi
 {
     internal class OpenAiChatCompletionClient : AbstractChatCompletionClient<TransactionOperationContext>
     {
-        public OpenAiChatCompletionClient(GenAiConfiguration configuration, TransactionContextPool contextPool, DocumentConventions conventions)
+        public OpenAiChatCompletionClient(GenAiConfiguration configuration, string structuredOutputSchema, TransactionContextPool contextPool, DocumentConventions conventions)
             : base(
                 baseUri: new Uri(configuration.Connection.OpenAiSettings.Endpoint),
                 model: configuration.Connection.OpenAiSettings.Model,
                 apiKey: configuration.Connection.OpenAiSettings.ApiKey,
                 organizationId: configuration.Connection.OpenAiSettings.OrganizationId,
                 projectId: configuration.Connection.OpenAiSettings.ProjectId,
-                structuredOutputSchema: configuration.JsonSchema,
+                structuredOutputSchema,
                 contextPool, conventions)
         {
         }
@@ -23,14 +23,14 @@ namespace Raven.Server.Documents.AI.GenAi
 
     internal class OllamaChatCompletionClient : AbstractChatCompletionClient<TransactionOperationContext>
     {
-        public OllamaChatCompletionClient(GenAiConfiguration configuration, TransactionContextPool contextPool, DocumentConventions conventions)
+        public OllamaChatCompletionClient(GenAiConfiguration configuration, string structuredOutputSchema, TransactionContextPool contextPool, DocumentConventions conventions)
             : base(
                 baseUri: new Uri(configuration.Connection.OllamaSettings.Uri),
                 model: configuration.Connection.OllamaSettings.Model,
                 apiKey: null,
                 organizationId: null,
                 projectId: null,
-                structuredOutputSchema: configuration.JsonSchema,
+                structuredOutputSchema,
                 contextPool,
                 conventions)
         {
