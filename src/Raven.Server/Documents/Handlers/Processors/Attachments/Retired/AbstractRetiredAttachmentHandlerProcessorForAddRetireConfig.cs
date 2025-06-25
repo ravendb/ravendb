@@ -31,7 +31,7 @@ internal abstract class AbstractRetiredAttachmentHandlerProcessorForAddRetireCon
 
     protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, RetiredAttachmentsConfiguration configuration, string raftRequestId)
     {
-        if (LoggingSource.Instance.IsInfoEnabled)
+        if (LoggingSource.AuditLog.IsInfoEnabled)
             RequestHandler.LogAuditFor(RequestHandler.DatabaseName, $"User '{RequestHandler.HttpContext.User?.Identity?.Name}' updated retire-attachments configuration", "retired_attachments-config");
         return RequestHandler.ServerStore.ModifyDatabaseAttachmentsRetire(context, RequestHandler.DatabaseName, configuration, raftRequestId);
     }

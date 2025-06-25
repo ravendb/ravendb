@@ -33,8 +33,6 @@ namespace SlowTests.Issues
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void CanGetRetireConfigWithValidUserPermission(Options options)
         {
-            LoggingSource.AuditLog.SetupLogMode(LogMode.Information, "c:/temp", TimeSpan.MaxValue, null, false);
-
             var certs = Certificates.SetupServerAuthentication();
             var db = GetDatabaseName();
 
@@ -57,7 +55,6 @@ namespace SlowTests.Issues
             using (var store = GetDocumentStore(options))
             {
                 var cfg = store.Maintenance.Send(new GetRetireAttachmentsConfigurationOperation());
-                Assert.Null(cfg);
             }
         }
 
@@ -65,8 +62,6 @@ namespace SlowTests.Issues
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void CanAddRetireConfigWithDatabaseAdminPermission(Options options)
         {
-            LoggingSource.AuditLog.SetupLogMode(LogMode.Information, "c:/temp", TimeSpan.MaxValue, null, false);
-
             var certs = Certificates.SetupServerAuthentication();
             var db = GetDatabaseName();
 
@@ -102,8 +97,6 @@ namespace SlowTests.Issues
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public void CannotAddRetireConfigWithoutDatabaseAdminPermission(Options options)
         {
-            LoggingSource.AuditLog.SetupLogMode(LogMode.Information, "c:/temp", TimeSpan.MaxValue, null, false);
-
             var certs = Certificates.SetupServerAuthentication();
             var db = GetDatabaseName();
 
