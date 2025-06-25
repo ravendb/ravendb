@@ -8,7 +8,7 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Handlers;
 using Sparrow.Json;
 
-namespace Tests.Infrastructure;
+namespace Tests.Infrastructure.Operations;
 
 public class GetMissingAttachmentsOperation : IOperation<MissingAttachmentsResult>
 {

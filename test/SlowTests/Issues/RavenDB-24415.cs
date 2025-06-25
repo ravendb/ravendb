@@ -7,6 +7,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config.Settings;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
