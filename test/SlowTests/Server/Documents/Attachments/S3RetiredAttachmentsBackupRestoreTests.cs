@@ -24,9 +24,11 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AmazonS3RetryTheory]
-        [InlineData(1, 3)]
-        [InlineData(64, 3)]
-        public async Task CanBackupAndRestoreDeletedRetiredAttachments(int attachmentsCount, int size)
+        [InlineData(1, 3, BackupType.Backup)]
+        [InlineData(64, 3, BackupType.Backup)]
+        [InlineData(1, 3, BackupType.Snapshot)]
+        [InlineData(64, 3, BackupType.Snapshot)]
+        public async Task CanBackupAndRestoreDeletedRetiredAttachments(int attachmentsCount, int size, BackupType type)
         {
             await using (var holder = CreateCloudSettings())
             {
@@ -47,23 +49,22 @@ namespace SlowTests.Server.Documents.Attachments
                     var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                     await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
 
-                    
-                        await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
-             
+
+                    await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount);
+
 
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
-                    var config = Backup.CreateBackupConfiguration(backupPath);
+                    var config = Backup.CreateBackupConfiguration(backupPath, type);
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
-                    Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                    using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),
                         DatabaseName = restoredDatabaseName
-                    });
-
+                    }))
                     using (var restoredStore = new DocumentStore
                     {
                         Urls = store.Urls,
@@ -85,9 +86,11 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AmazonS3RetryTheory]
-        [InlineData(1, 3)]
-        [InlineData(64, 3)]
-        public async Task CanBackupAndRestoreRetiredAttachments(int attachmentsCount, int size)
+        [InlineData(1, 3, BackupType.Backup)]
+        [InlineData(64, 3, BackupType.Backup)]
+        [InlineData(1, 3, BackupType.Snapshot)]
+        [InlineData(64, 3, BackupType.Snapshot)]
+        public async Task CanBackupAndRestoreRetiredAttachments(int attachmentsCount, int size, BackupType type)
         {
             await using (var holder = CreateCloudSettings())
             {
@@ -101,17 +104,16 @@ namespace SlowTests.Server.Documents.Attachments
                     await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
-                    var config = Backup.CreateBackupConfiguration(backupPath);
+                    var config = Backup.CreateBackupConfiguration(backupPath, type);
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
-                    Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                    using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),
                         DatabaseName = restoredDatabaseName
-                    });
-
+                    }))
                     using (var restoredStore = new DocumentStore
                     {
                         Urls = store.Urls,
@@ -139,16 +141,18 @@ namespace SlowTests.Server.Documents.Attachments
                             });
 
                         }
-                      
+
                     }
                 }
             }
         }
 
         [AmazonS3RetryTheory]
-        [InlineData(1, 1024 * 1024 * 10)] // 10 MB
-        [InlineData(5, 1024 * 1024 * 50)] // 50 MB
-        public async Task CanBackupAndRestoreLargeRetiredAttachments(int attachmentsCount, int size)
+        [InlineData(1, 1024 * 1024 * 10, BackupType.Backup)] // 10 MB
+        [InlineData(3, 1024 * 1024 * 10, BackupType.Backup)] // 10 MB
+        [InlineData(1, 1024 * 1024 * 10, BackupType.Snapshot)] // 10 MB
+        [InlineData(3, 1024 * 1024 * 10, BackupType.Snapshot)] // 10 MB
+        public async Task CanBackupAndRestoreLargeRetiredAttachments(int attachmentsCount, int size, BackupType type)
         {
             await using (var holder = CreateCloudSettings())
             {
@@ -163,17 +167,16 @@ namespace SlowTests.Server.Documents.Attachments
 
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
-                    var config = Backup.CreateBackupConfiguration(backupPath);
+                    var config = Backup.CreateBackupConfiguration(backupPath, type);
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
-                    Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                    using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),
                         DatabaseName = restoredDatabaseName
-                    });
-
+                    }))
                     using (var restoredStore = new DocumentStore
                     {
                         Urls = store.Urls,
@@ -207,8 +210,9 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AmazonS3RetryTheory]
-        [InlineData(64, 3)]
-        public async Task CanBackupAndRestoreRetiredAttachmentsFromMultipleCollections(int attachmentsCount, int size)
+        [InlineData(64, 3, BackupType.Backup)]
+        [InlineData(64, 3, BackupType.Snapshot)]
+        public async Task CanBackupAndRestoreRetiredAttachmentsFromMultipleCollections(int attachmentsCount, int size, BackupType type)
         {
             Assert.True(attachmentsCount > 32, "this test meant to have more than 32 attachments so we will have more than one document");
             await using (var holder = CreateCloudSettings())
@@ -225,17 +229,16 @@ namespace SlowTests.Server.Documents.Attachments
 
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
-                    var config = Backup.CreateBackupConfiguration(backupPath);
+                    var config = Backup.CreateBackupConfiguration(backupPath, type);
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
 
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
-                    Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                    using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),
                         DatabaseName = restoredDatabaseName
-                    });
-
+                    }))
                     using (var restoredStore = new DocumentStore
                     {
                         Urls = store.Urls,
@@ -269,12 +272,13 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         // TODO: egor Also I wonder if when I do explicit overwrite of attahcment ( PutNewAttachment with already existing name but new hash) I should delete the old attachment regradless purgeondelete? so I don't have duplicates in cloud storage!
-        [AmazonS3RetryFact]
-        public async Task CanBackupAndRestoreOverwrittenRetiredAttachmentWithIncrementalBackups()
+        [AmazonS3RetryTheory]
+        [InlineData(1, 3, BackupType.Backup)]
+        [InlineData(64, 3, BackupType.Backup)]
+        [InlineData(1, 3, BackupType.Snapshot)]
+        [InlineData(64, 3, BackupType.Snapshot)]
+        public async Task CanBackupAndRestoreOverwrittenRetiredAttachmentWithIncrementalBackups(int attachmentsCount, int size, BackupType type)
         {
-            int attachmentsCount = 1;
-            int size = 3;
-
             await using (var holder = CreateCloudSettings())
             {
                 int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
@@ -291,7 +295,7 @@ namespace SlowTests.Server.Documents.Attachments
                     using (var documentInfoHelper = new DocumentInfoHelper(context))
                     {
                         var attachments = database.DocumentsStorage.AttachmentsStorage.GetAllAttachments(context).ToList();
-                        Assert.Equal(1, attachments.Count);
+                        Assert.Equal(attachmentsCount, attachments.Count);
 
                         var attachment = attachments.FirstOrDefault();
                         Assert.NotNull(attachment);
@@ -305,25 +309,25 @@ namespace SlowTests.Server.Documents.Attachments
                             t.Hash = attachment.Base64Hash.ToString();
                             t.RetireAt = attachment.RetireAt;
                             t.Flags = attachment.Flags;
-                            t.RetiredKey = $"{Settings.RemoteFolderName}/{t.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(attachment.Key))}";
+                            t.RetiredKey = $"{Settings.RemoteFolderName}/{t.Hash}";
                             Attachments.Add(t);
                         }
                     }
 
                     // Perform initial backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
-                    var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 * * *");
+                    var config = Backup.CreateBackupConfiguration(backupPath, type, incrementalBackupFrequency: "0 0 * * *");
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                     config.TaskId = backupTaskId;
-
+                    var newAttachments = attachmentsCount;
                     // Make some changes (e.g., add more attachments, retire them)
                     await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc);
-                    Assert.Equal(attachmentsCount + 1, Attachments.Count);
+                    Assert.Equal(attachmentsCount + newAttachments, Attachments.Count);
 
                     // move in time & start retire
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                     await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
-                    var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount + 1, 15_000);
+                    var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount + newAttachments, 15_000);
 
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
@@ -331,7 +335,7 @@ namespace SlowTests.Server.Documents.Attachments
                     {
                         var attachments = database.DocumentsStorage.AttachmentsStorage.GetAllAttachments(context).ToList();
 
-                        Assert.Equal(1, attachments.Count);
+                        Assert.Equal(newAttachments, attachments.Count);
 
                         var attachment = attachments.FirstOrDefault();
 
@@ -347,7 +351,7 @@ namespace SlowTests.Server.Documents.Attachments
                             t.Hash = attachment.Base64Hash.ToString();
                             t.RetireAt = attachment.RetireAt;
                             t.Flags = attachment.Flags;
-                            t.RetiredKey = $"{Settings.RemoteFolderName}/{t.Collection}/{Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(attachment.Key))}";
+                            t.RetiredKey = $"{Settings.RemoteFolderName}/{t.Hash}";
                             Attachments.Add(t);
 
                             t.Stream.Position = 0;
@@ -362,12 +366,11 @@ namespace SlowTests.Server.Documents.Attachments
 
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
-                    Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                    using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),
                         DatabaseName = restoredDatabaseName
-                    });
-
+                    }))
                     using (var restoredStore = new DocumentStore
                     {
                         Urls = store.Urls,
@@ -401,9 +404,11 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AmazonS3RetryTheory]
-        [InlineData(1, 3)]
-        [InlineData(64, 3)]
-        public async Task CanBackupAndRestoreRetiredAttachmentsWithIncrementalBackups(int attachmentsCount, int size)
+        [InlineData(1, 3, BackupType.Backup)]
+        [InlineData(64, 3, BackupType.Backup)]
+        [InlineData(1, 3, BackupType.Snapshot)]
+        [InlineData(64, 3, BackupType.Snapshot)]
+        public async Task CanBackupAndRestoreRetiredAttachmentsWithIncrementalBackups(int attachmentsCount, int size, BackupType type)
         {
             await using (var holder = CreateCloudSettings())
             {
@@ -418,7 +423,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                     // Perform initial backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
-                    var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 * * *");
+                    var config = Backup.CreateBackupConfiguration(backupPath, type, incrementalBackupFrequency: "0 0 * * *");
                     var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
                     config.TaskId = backupTaskId;
                     // Make some changes (e.g., add more attachments, retire them)
@@ -441,12 +446,11 @@ namespace SlowTests.Server.Documents.Attachments
                     Backup.RunBackup(Server, config.TaskId, store, isFullBackup: false);
                     // Restore the backup
                     var restoredDatabaseName = GetDatabaseName();
-                    Backup.RestoreDatabase(store, new RestoreBackupConfiguration
+                    using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
                     {
                         BackupLocation = Directory.GetDirectories(backupPath).First(),
                         DatabaseName = restoredDatabaseName
-                    });
-
+                    }))
                     using (var restoredStore = new DocumentStore
                     {
                         Urls = store.Urls,
