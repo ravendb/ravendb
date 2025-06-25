@@ -208,6 +208,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
         Type: "Ai",
         Name: connection.name,
         Identifier: connection.identifier,
+        ModelType: connection.modelType,
         AzureOpenAiSettings:
             connection.connectorType === "azureOpenAiSettings"
                 ? {

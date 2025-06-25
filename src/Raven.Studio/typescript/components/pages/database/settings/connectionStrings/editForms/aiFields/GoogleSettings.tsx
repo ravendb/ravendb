@@ -33,7 +33,7 @@ export default function GoogleSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "Google", {
+        return tasksService.testAiConnectionString(databaseName, "Google", formValues.modelType, {
             AiVersion: formValues.googleSettings.aiVersion,
             ApiKey: formValues.googleSettings.apiKey,
             Model: formValues.googleSettings.model,

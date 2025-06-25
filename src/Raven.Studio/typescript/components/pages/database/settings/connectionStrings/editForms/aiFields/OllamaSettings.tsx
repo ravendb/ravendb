@@ -32,7 +32,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "Ollama", {
+        return tasksService.testAiConnectionString(databaseName, "Ollama", formValues.modelType, {
             Model: formValues.ollamaSettings.model,
             Uri: formValues.ollamaSettings.uri,
         });
@@ -91,7 +91,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     isLoading={asyncGetModelOptions.loading}
                 />
             </div>
-            <EmbeddingsMaxConcurrentBatches baseName="ollamaSettings" />
+            {formValues.modelType === "TextEmbeddings" && <EmbeddingsMaxConcurrentBatches baseName="ollamaSettings" />}
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner

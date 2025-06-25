@@ -6,6 +6,7 @@ class testAiConnectionStringCommand extends commandBase {
     constructor(
         private db: database | string,
         private type: Raven.Client.Documents.Operations.AI.AiConnectorType,
+        private modelType: Raven.Client.Documents.Operations.AI.AiModelType,
         private settings: Partial<AiConnectionStringsSettings>
     ) {
         super();
@@ -14,6 +15,7 @@ class testAiConnectionStringCommand extends commandBase {
     execute(): JQueryPromise<Raven.Server.Web.System.NodeConnectionTestResult> {
         const args = {
             type: this.type,
+            modelType: this.modelType,
         };
 
         const url = endpoints.databases.aiIntegrationConnection.adminAiTestConnection + this.urlEncodeArgs(args);

@@ -20,7 +20,7 @@ import MistralAiSettings from "./aiFields/MistralAiSettings";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import TaskUtils from "components/utils/TaskUtils";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
-import { connectionStringSelectors, ConnectionStringsViewContext } from "../store/connectionStringsSlice";
+import { connectionStringSelectors } from "../store/connectionStringsSlice";
 import { useAppSelector } from "components/store";
 import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
 import { components, OptionProps } from "react-select";
@@ -28,6 +28,7 @@ import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import classNames from "classnames";
 import Form from "react-bootstrap/Form";
+import ModelTypeField from "./aiFields/ModelTypeField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -37,7 +38,6 @@ export interface AiConnectionStringProps extends EditConnectionStringFormProps {
 
 export default function AiConnectionString({ initialConnection, isForNewConnection, onSave }: AiConnectionStringProps) {
     const usedNames = useAppSelector(connectionStringSelectors.connections)["Ai"].map((x) => x.name);
-    const viewContext = useAppSelector(connectionStringSelectors.viewContext);
 
     const form = useForm<FormData>({
         mode: "all",
@@ -59,7 +59,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
     const { forCurrentDatabase } = useAppUrls();
 
     const formValues = useWatch({ control });
-    const { connectorType } = formValues;
+    const { connectorType, modelType } = formValues;
 
     const handleGenerateIdentifier = () => {
         setValue("identifier", TaskUtils.getGeneratedIdentifier(formValues.name));
@@ -122,21 +122,21 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         }
                     />
                 </div>
+                <ModelTypeField />
                 <div className="mb-2">
                     <FormLabel>Connector</FormLabel>
                     <FormSelect
                         control={control}
                         name="connectorType"
-                        placeholder="Select connector"
-                        options={getConnectorOptions(viewContext)}
-                        isDisabled={isUsedByAnyTask}
+                        placeholder={`Select connector${modelType == null ? " (select model type first)" : ""}`}
+                        options={getConnectorOptions(modelType)}
+                        isDisabled={isUsedByAnyTask || modelType == null}
                         components={{
                             Option: SettingsOptionComponent,
                             SingleValue: SingleValueWithIcon,
                         }}
                     />
                 </div>
-
                 {connectorType === "azureOpenAiSettings" && <AzureOpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "googleSettings" && <GoogleSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "huggingFaceSettings" && <HuggingFaceSettings isUsedByAnyTask={isUsedByAnyTask} />}
@@ -180,9 +180,7 @@ export function SettingsOptionComponent(props: OptionProps<SelectOptionWithIcon>
     );
 }
 
-function getConnectorOptions(
-    viewContext: ConnectionStringsViewContext
-): SelectOptionWithIcon<FormData["connectorType"]>[] {
+function getConnectorOptions(modelType: FormData["modelType"]): SelectOptionWithIcon<FormData["connectorType"]>[] {
     const allOptions: SelectOptionWithIcon<FormData["connectorType"]>[] = [
         { label: "Azure OpenAI", value: "azureOpenAiSettings", icon: "openai" },
         { label: "Google AI", value: "googleSettings", icon: "google-gemini" },
@@ -193,7 +191,7 @@ function getConnectorOptions(
         { label: "Embedded (bge-micro-v2)", value: "embeddedSettings", icon: "onnx" },
     ];
 
-    if (viewContext === "taskGenAi") {
+    if (modelType === "Chat") {
         return [
             ...allOptions.filter(
                 (x) => x.value === "ollamaSettings" || x.value === "openAiSettings" || x.value === "azureOpenAiSettings"
@@ -217,6 +215,7 @@ const schema = yupObjectSchema<FormData>({
             return /^[a-z0-9-]+$/.test(value);
         }),
     connectorType: yup.string<FormData["connectorType"]>().nullable().required(),
+    modelType: yup.string<Raven.Client.Documents.Operations.AI.AiModelType>().nullable().required(),
     azureOpenAiSettings: yup.object({
         apiKey: yup
             .string()
@@ -365,6 +364,7 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
             name: null,
             identifier: null,
             connectorType: null,
+            modelType: initialConnection?.modelType ?? null,
             azureOpenAiSettings: {
                 apiKey: null,
                 endpoint: null,

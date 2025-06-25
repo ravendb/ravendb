@@ -31,7 +31,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "AzureOpenAi", {
+        return tasksService.testAiConnectionString(databaseName, "AzureOpenAi", formValues.modelType, {
             ApiKey: formValues.azureOpenAiSettings.apiKey,
             Endpoint: formValues.azureOpenAiSettings.endpoint,
             Model: formValues.azureOpenAiSettings.model,
@@ -125,29 +125,33 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                 </FormLabel>
                 <FormInput control={control} name="azureOpenAiSettings.deploymentName" type="text" />
             </div>
-            <div className="mb-2">
-                <FormLabel>
-                    Dimensions <OptionalLabel />
-                    <PopoverWithHoverWrapper
-                        message={
-                            <>
-                                The number of dimensions for the output embeddings.
-                                <br />
-                                Supported only in &quot;text-embedding-3&quot; and later models.
-                            </>
-                        }
-                    >
-                        <Icon icon="info" color="info" id="dimensions" margin="ms-1" />
-                    </PopoverWithHoverWrapper>
-                </FormLabel>
-                <FormInput
-                    control={control}
-                    name="azureOpenAiSettings.dimensions"
-                    type="number"
-                    disabled={isUsedByAnyTask}
-                />
-            </div>
-            <EmbeddingsMaxConcurrentBatches baseName="azureOpenAiSettings" />
+            {formValues.modelType === "TextEmbeddings" && (
+                <div className="mb-2">
+                    <FormLabel>
+                        Dimensions <OptionalLabel />
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    The number of dimensions for the output embeddings.
+                                    <br />
+                                    Supported only in &quot;text-embedding-3&quot; and later models.
+                                </>
+                            }
+                        >
+                            <Icon icon="info" color="info" id="dimensions" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
+                    <FormInput
+                        control={control}
+                        name="azureOpenAiSettings.dimensions"
+                        type="number"
+                        disabled={isUsedByAnyTask}
+                    />
+                </div>
+            )}
+            {formValues.modelType === "TextEmbeddings" && (
+                <EmbeddingsMaxConcurrentBatches baseName="azureOpenAiSettings" />
+            )}
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner

@@ -33,7 +33,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "OpenAi", {
+        return tasksService.testAiConnectionString(databaseName, "OpenAi", formValues.modelType, {
             ApiKey: formValues.openAiSettings.apiKey,
             Endpoint: formValues.openAiSettings.endpoint,
             Model: formValues.openAiSettings.model,
@@ -173,21 +173,23 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 </FormLabel>
                 <FormInput control={control} name="openAiSettings.projectId" type="text" />
             </div>
-            <div className="mb-2">
-                <FormLabel>
-                    Dimensions <OptionalLabel />
-                    <PopoverWithHoverWrapper message="The number of dimensions for the output embeddings.">
-                        <Icon icon="info" color="info" id="dimensions" margin="ms-1" />
-                    </PopoverWithHoverWrapper>
-                </FormLabel>
-                <FormInput
-                    control={control}
-                    name="openAiSettings.dimensions"
-                    type="number"
-                    disabled={isUsedByAnyTask}
-                />
-            </div>
-            <EmbeddingsMaxConcurrentBatches baseName="openAiSettings" />
+            {formValues.modelType === "TextEmbeddings" && (
+                <div className="mb-2">
+                    <FormLabel>
+                        Dimensions <OptionalLabel />
+                        <PopoverWithHoverWrapper message="The number of dimensions for the output embeddings.">
+                            <Icon icon="info" color="info" id="dimensions" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
+                    <FormInput
+                        control={control}
+                        name="openAiSettings.dimensions"
+                        type="number"
+                        disabled={isUsedByAnyTask}
+                    />
+                </div>
+            )}
+            {formValues.modelType === "TextEmbeddings" && <EmbeddingsMaxConcurrentBatches baseName="openAiSettings" />}
             <div className="d-flex mb-2">
                 <FlexGrow />
                 <ButtonWithSpinner

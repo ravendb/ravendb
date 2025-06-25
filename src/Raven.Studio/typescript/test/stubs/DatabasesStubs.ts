@@ -590,6 +590,7 @@ export class DatabasesStubs {
                     Type: "Ai",
                     Name: "ai-name",
                     Identifier: "some-identifier",
+                    ModelType: "TextEmbeddings",
                     GoogleSettings: {
                         ApiKey: "some-api-key",
                         Model: "some-model",

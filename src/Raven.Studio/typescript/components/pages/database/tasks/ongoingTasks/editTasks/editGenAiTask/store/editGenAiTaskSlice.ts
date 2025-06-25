@@ -232,11 +232,13 @@ const testConnectionString = createAsyncThunk(
     async (payload: {
         databaseName: string;
         connectorType: Raven.Client.Documents.Operations.AI.AiConnectorType;
+        modelType: Raven.Client.Documents.Operations.AI.AiModelType;
         settings: AiConnectionStringsSettings;
     }): Promise<Raven.Server.Web.System.NodeConnectionTestResult> => {
         return services.tasksService.testAiConnectionString(
             payload.databaseName,
             payload.connectorType,
+            payload.modelType,
             payload.settings
         );
     }

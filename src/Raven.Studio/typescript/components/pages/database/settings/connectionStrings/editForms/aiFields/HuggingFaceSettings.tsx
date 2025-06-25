@@ -31,7 +31,7 @@ export default function HuggingFaceSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "HuggingFace", {
+        return tasksService.testAiConnectionString(databaseName, "HuggingFace", formValues.modelType, {
             ApiKey: formValues.huggingFaceSettings.apiKey,
             Endpoint: formValues.huggingFaceSettings.endpoint,
             Model: formValues.huggingFaceSettings.model,

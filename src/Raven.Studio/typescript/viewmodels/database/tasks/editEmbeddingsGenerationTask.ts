@@ -82,7 +82,8 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             component: EditConnectionStrings.default,
             props: {
                 initialConnection: {
-                    type: "Ai"
+                    type: "Ai",
+                    modelType: "TextEmbeddings"
                 },
                 afterSave: async (name: string) => {
                     await this.getAllConnectionStrings();
@@ -100,7 +101,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         super.activate(args);
         const deferred = $.Deferred<void>();
 
-        storeCompat.globalDispatch(connectionStringsSlice.connectionStringsActions.viewContextSet("taskEmbeddings"));
+        storeCompat.globalDispatch(connectionStringsSlice.connectionStringsActions.viewContextSet("aiConnectionStrings"));
         this.sourceView(args.sourceView);
         
         this.loadPossibleMentors();

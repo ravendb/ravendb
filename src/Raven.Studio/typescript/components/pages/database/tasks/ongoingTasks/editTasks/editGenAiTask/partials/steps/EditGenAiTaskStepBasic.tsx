@@ -63,6 +63,7 @@ export function EditGenAiTaskStepBasicFooter() {
             editGenAiTaskActions.testConnectionString({
                 databaseName,
                 connectorType: getConnectorType(connectionString),
+                modelType: connectionString.ModelType,
                 settings: mapAiConnectionStringToSettingsDto(connectionString),
             })
         );

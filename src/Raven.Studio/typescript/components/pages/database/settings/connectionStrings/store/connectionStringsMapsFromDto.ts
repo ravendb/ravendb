@@ -370,6 +370,7 @@ export function mapAiConnectionsFromDto(
                 usedByTasks: getConnectionStringUsedTasks(ongoingTasks, type, connection.Name),
                 identifier: connection.Identifier,
                 connectorType: getConnectorType(connection),
+                modelType: connection.ModelType,
                 azureOpenAiSettings: {
                     apiKey: connection.AzureOpenAiSettings?.ApiKey,
                     endpoint: connection.AzureOpenAiSettings?.Endpoint,

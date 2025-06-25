@@ -131,6 +131,7 @@ export interface AiConnection extends ConnectionBase {
         | "embeddedSettings"
         | "openAiSettings"
         | "mistralAiSettings";
+    modelType?: Raven.Client.Documents.Operations.AI.AiModelType;
     azureOpenAiSettings?: {
         apiKey?: string;
         endpoint?: string;

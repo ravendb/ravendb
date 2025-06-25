@@ -31,7 +31,7 @@ export default function MistralAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask
             return;
         }
 
-        return tasksService.testAiConnectionString(databaseName, "MistralAi", {
+        return tasksService.testAiConnectionString(databaseName, "MistralAi", formValues.modelType, {
             ApiKey: formValues.mistralAiSettings.apiKey,
             Endpoint: formValues.mistralAiSettings.endpoint,
             Model: formValues.mistralAiSettings.model,
