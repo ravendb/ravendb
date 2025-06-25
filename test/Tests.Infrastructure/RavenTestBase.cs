@@ -29,9 +29,11 @@ using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Collections;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
+using XunitLogger;
 
 namespace FastTests
 {
@@ -125,7 +127,7 @@ namespace FastTests
 
                     options.ModifyDatabaseRecord?.Invoke(doc);
 
-                    var isCompressionTest = IsCompressionTest();
+                    var isCompressionTest = IsRavenTestCategoryTest(Context, RavenTestCategory.Compression);
 
                     if (doc.DocumentsCompression != null && isCompressionTest == false)
                     {
@@ -222,7 +224,7 @@ namespace FastTests
 
                     store.BeforeDispose += (sender, args) =>
                     {
-                        CheckForMissingAttachmentsAndThrowIfNeeded(store, name, serverToUse, caller);
+                        CheckForMissingAttachmentsAndThrowIfNeeded(store, Context, name, serverToUse, caller);
 
                         var realException = Context.GetException();
                         try
@@ -254,35 +256,36 @@ namespace FastTests
 
                     return store;
 
-                    bool IsCompressionTest()
-                    {
-                        try
-                        {
-                            var testMethod = Context?.Test?.TestCase?.TestMethod?.Method as ReflectionMethodInfo;
-                            if (testMethod == null)
-                                return false;
-
-                            var ravenFactAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenFactAttribute>();
-                            if (ravenFactAttribute != null)
-                                return ravenFactAttribute.Category.HasFlag(RavenTestCategory.Compression);
-
-                            var ravenTheoryAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenTheoryAttribute>();
-                            if (ravenTheoryAttribute != null)
-                                return ravenTheoryAttribute.Category.HasFlag(RavenTestCategory.Compression);
-
-                            return false;
-                        }
-                        catch
-                        {
-                            // if we can't determine if it's a compression test, we assume it's not 
-                            return false;
-                        }
-                    }
                 }
             }
             catch (TimeoutException te)
             {
                 throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{Cluster.GetLastStatesFromAllServersOrderedByTime()}");
+            }
+        }
+
+        public static bool IsRavenTestCategoryTest(Context context, RavenTestCategory flags)
+        {
+            try
+            {
+                var testMethod = context?.Test?.TestCase?.TestMethod?.Method as ReflectionMethodInfo;
+                if (testMethod == null)
+                    return false;
+
+                var ravenFactAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenFactAttribute>();
+                if (ravenFactAttribute != null)
+                    return (ravenFactAttribute.Category & flags) != 0;
+
+                var ravenTheoryAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenTheoryAttribute>();
+                if (ravenTheoryAttribute != null)
+                    return (ravenTheoryAttribute.Category & flags) != 0;
+
+                return false;
+            }
+            catch
+            {
+                // if we can't determine if it's a compression test, we assume it's not 
+                return false;
             }
         }
 
@@ -292,8 +295,11 @@ namespace FastTests
             "Can_push_via_filtered_replication" //TODO: remove when RavenDB-24415 is fixed
         ];
 
-        private static void CheckForMissingAttachmentsAndThrowIfNeeded(DocumentStore store, string name, RavenServer serverToUse, string caller)
+        private static void CheckForMissingAttachmentsAndThrowIfNeeded(DocumentStore store, Context context, string name, RavenServer serverToUse, string caller)
         {
+            if (IsRavenTestCategoryTest(context, RavenTestCategory.Attachments | RavenTestCategory.Replication) == false)
+                return;
+
             if (TestsToSkipForMissingAttachments.Contains(caller))
             {
                 return;

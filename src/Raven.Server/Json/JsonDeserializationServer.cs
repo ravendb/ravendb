@@ -234,6 +234,8 @@ namespace Raven.Server.Json
 
         public static readonly Func<BlittableJsonReaderObject, EventListenerToLog.EventListenerConfiguration> EventListenerConfiguration = GenerateJsonDeserializationRoutine<EventListenerToLog.EventListenerConfiguration>();
 
+        public static readonly Func<BlittableJsonReaderObject, AttachmentHandler.MissingAttachmentInfo> MissingAttachmentInfo = GenerateJsonDeserializationRoutine<AttachmentHandler.MissingAttachmentInfo>();
+
         public class Parameters
         {
             private Parameters()

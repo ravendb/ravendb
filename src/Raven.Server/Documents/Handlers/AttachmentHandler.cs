@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -471,7 +472,6 @@ namespace Raven.Server.Documents.Handlers
 
         private static async Task WriteMissingAttachments(DocumentDatabase database, IEnumerable<Document> results, DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, AttachmentType attachmentType, OperationCancelToken token)
         {
-            var deserializationRoutine = JsonDeserializationBase.GenerateJsonDeserializationRoutine<MissingAttachmentInfo>();
             bool firstResult = true;
             foreach (var result in results)
             {
@@ -480,7 +480,7 @@ namespace Raven.Server.Documents.Handlers
                     token.ThrowIfCancellationRequested();
                     if (result.Flags.Contain(DocumentFlags.HasAttachments))
                     {
-                        var currentAttachmentsInMetadata = AttachmentsStorage.GetAttachmentsFromDocumentMetadata(result.Data).Select(x => deserializationRoutine(x)).ToList();
+                        var currentAttachmentsInMetadata = AttachmentsStorage.GetAttachmentsFromDocumentMetadata(result.Data).Select(x => JsonDeserializationServer.MissingAttachmentInfo(x)).ToList();
                         var currentAttachmentsInTable = database.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, attachmentType, result.Id, result.ChangeVector).ToList();
 
                         var missing = new List<MissingAttachmentInfo>();

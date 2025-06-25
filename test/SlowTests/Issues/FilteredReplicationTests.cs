@@ -450,7 +450,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task Can_push_via_filtered_replication()
         {
             var certificates = Certificates.SetupServerAuthentication();
