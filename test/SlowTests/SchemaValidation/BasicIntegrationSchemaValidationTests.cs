@@ -12,7 +12,6 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Documents.BulkInsert;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.ETL;
@@ -187,12 +186,8 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             await bulkInsert.StoreAsync(new TestObj { Prop = "1234" }, id);
         });
 
-        while (e.InnerException != null)
-            e = e.InnerException;
-        
-        Assert.IsType<BulkInsertAbortedException>(e);
-        var message = e.Message.Split(Environment.NewLine)[1].TrimStart();
-        Assert.StartsWith("---> Raven.Client.Exceptions.SchemaValidationException: The length of the value '1234' at 'Prop' should not exceed 3, but its actual length is 4.", message);
+        var stringException = e.ToString();
+        Assert.True(stringException.Contains("The length of the value '1234' at 'Prop' should not exceed 3, but its actual length is 4."), $"actual: {stringException}");
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]

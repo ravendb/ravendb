@@ -1347,20 +1347,6 @@ namespace SlowTests.Smuggler
                     Scripts = new List<QueueSinkScript>(){ new QueueSinkScript(){Script = "from Users", Disabled = false, Name = "QueueSinkScript"}}
                 }));
                 
-                using (var session = store.OpenAsyncSession())
-                {
-                    await session.StoreAsync(new User
-                    {
-                        Name = "oren"
-                    }, "users/1");
-                    await session.SaveChangesAsync();
-                }
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 */5 * * *", name: "Real");
-                var config2 = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 */1 * * *", incrementalBackupFrequency: "0 */6 * * *", mentorNode: "A", name: "Backup");
-
-                await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
-                Backup.UpdateConfigAndRunBackup(Server, config, store);
-
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var schemaDefinitionObj =
@@ -1377,6 +1363,20 @@ namespace SlowTests.Smuggler
                     };
                     await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
                 }
+                
+                using (var session = store.OpenAsyncSession())
+                {
+                    await session.StoreAsync(new User
+                    {
+                        Name = "oren"
+                    }, "users/1");
+                    await session.SaveChangesAsync();
+                }
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 */5 * * *", name: "Real");
+                var config2 = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 */1 * * *", incrementalBackupFrequency: "0 */6 * * *", mentorNode: "A", name: "Backup");
+
+                await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config2));
+                Backup.UpdateConfigAndRunBackup(Server, config, store);
 
                 var databaseName = $"restored_database-{Guid.NewGuid()}";
                 using (Backup.RestoreDatabase(store, new RestoreBackupConfiguration
@@ -1484,7 +1484,7 @@ namespace SlowTests.Smuggler
                     Assert.Equal(1, record.EmbeddingsGenerations.Count);
                     Assert.False(record.EmbeddingsGenerations.First().Disabled);
                     Assert.Equal("generate-embeddings", record.EmbeddingsGenerations.First().Name);
-                    Assert.Equal("aiconnection", record.EmbeddingsGenerations.First().ConnectionStringName);;
+                    Assert.Equal("aiconnection", record.EmbeddingsGenerations.First().ConnectionStringName);
                     
                     Assert.NotNull(record.SchemaValidation);
                     Assert.False(record.SchemaValidation.Disabled);
