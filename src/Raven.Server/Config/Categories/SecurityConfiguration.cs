@@ -33,7 +33,7 @@ namespace Raven.Server.Config.Categories
         [Description("The name of the audit log file.")]
         [DefaultValue("server.audit.log")]
         [ConfigurationEntry("Security.AuditLog.FileName", ConfigurationEntryScope.ServerWideOnly)]
-        public PathSetting AuditLogFileName { get; set; }
+        public string AuditLogFileName { get; set; }
 
         [Description("The largest size (in megabytes) that an audit log file may reach " +
                      "before it is archived and logging is directed to a new file.")]

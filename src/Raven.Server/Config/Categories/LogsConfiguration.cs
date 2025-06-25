@@ -24,7 +24,7 @@ namespace Raven.Server.Config.Categories
         [Description("The name of the log file.")]
         [DefaultValue("server.log")]
         [ConfigurationEntry("Logs.FileName", ConfigurationEntryScope.ServerWideOnly)]
-        public PathSetting FileName { get; set; }
+        public string FileName { get; set; }
 
         [Description("Determines the minimum logging level.")]
         [DefaultValue(LogLevel.Info)]
