@@ -2133,7 +2133,7 @@ namespace Raven.Server.ServerWide
             return await SendToLeaderAsync(modifyPeriodicBackup);
         }
 
-        public async Task<(long, object)> AddEtl(TransactionOperationContext context,
+        public async Task<(long Index, object Result)> AddEtl(TransactionOperationContext context,
             string databaseName, BlittableJsonReaderObject etlConfiguration, string changeVector, string raftRequestId)
         {
             UpdateDatabaseCommand command;
