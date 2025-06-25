@@ -53,7 +53,8 @@ namespace Raven.Client.Documents.Smuggler
                                                                                   DatabaseRecordItemType.SnowflakeConnectionStrings |
                                                                                   DatabaseRecordItemType.EmbeddingsGenerations |
                                                                                   DatabaseRecordItemType.AiConnectionStrings |
-                                                                                  DatabaseRecordItemType.GenAiEtls;
+                                                                                  DatabaseRecordItemType.GenAiEtls |   
+                                                                                  DatabaseRecordItemType.RetireAttachments;
 
         internal const DatabaseItemType OperateOnFirstShardOnly = DatabaseItemType.Indexes |
                                                               DatabaseItemType.DatabaseRecord |

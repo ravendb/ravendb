@@ -11,7 +11,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         where TOperationContext : JsonOperationContext 
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-        private readonly bool _isDocument;
+        protected readonly bool _isDocument;
 
         protected AbstractAttachmentHandlerProcessorForGetAttachment([NotNull] TRequestHandler requestHandler, bool isDocument) : base(requestHandler)
         {

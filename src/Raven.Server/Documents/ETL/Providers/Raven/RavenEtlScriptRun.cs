@@ -2,13 +2,18 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Jint.Native;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -55,6 +60,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         }
         
         public void PutFullDocument(
+            DocumentsOperationContext context,
             string id, 
             BlittableJsonReaderObject doc, 
             List<Attachment> attachments = null, 
@@ -67,19 +73,29 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 return;
 
             var commands = _fullDocuments[id] = new List<ICommandData>();
+            bool hasAttachments = attachments is { Count: > 0 };
+            if (hasAttachments)
+            {
+                DropRetiredAttachmentFlagFromAttachmentMetadataIfNeeded(context, id, doc, out doc);
+            }
 
             string remoteDocumentId = GetRemoteDocumentId(id);
-            commands.Add(new PutCommandDataWithBlittableJson(remoteDocumentId, null,null, doc));
+            commands.Add(new PutCommandDataWithBlittableJson(remoteDocumentId, null, null, doc));
 
             _stats.IncrementBatchSize(doc.Size);
 
-            if (attachments != null && attachments.Count > 0)
+            if (hasAttachments)
             {
                 foreach (var attachment in attachments)
                 {
-                    commands.Add(new PutAttachmentCommandData(remoteDocumentId, attachment.Name, attachment.Stream, attachment.ContentType, null, fromEtl: true));
+                    commands.Add(new PutAttachmentCommandData(remoteDocumentId, attachment.Name, attachment.Stream, attachment.ContentType, null, attachment.RetireAt, attachment.Size, attachment.Flags, attachment.Base64Hash.ToString(), fromEtl: true));
 
-                    _stats.IncrementBatchSize(attachment.Stream.Length);
+                    if (attachment.Stream == null)
+                    {
+                        Debug.Assert(attachment.Size != 0, "attachment.Size != 0");
+                    }
+
+                    _stats.IncrementBatchSize(attachment.Stream?.Length ?? attachment.Size);
                 }
             }
 
@@ -101,6 +117,65 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     });    
                 }
             }
+        }
+
+        internal static bool DropRetiredAttachmentFlagFromAttachmentMetadataIfNeeded(DocumentsOperationContext context, string id,
+            BlittableJsonReaderObject src, out BlittableJsonReaderObject dest)
+        {
+            dest = src;
+
+            if (src.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) != false &&
+                metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray att) != false)
+            {
+                var attachmentsToSave = new DynamicJsonArray();
+
+                var hasRetired = false;
+                foreach (BlittableJsonReaderObject attachment in att)
+                {
+                    if (attachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false)
+                        throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
+
+                    if (flags == AttachmentFlags.Retired)
+                    {
+                        hasRetired = true;
+                        attachment.Modifications = new DynamicJsonValue(attachment)
+                        {
+                            [nameof(AttachmentName.Flags)] = AttachmentFlags.None
+                        };
+                            
+                        attachmentsToSave.Add(context.ReadObject(attachment, $"{id}_attachment", BlittableJsonDocumentBuilder.UsageMode.ToDisk));
+                    }
+                    else
+                    {
+                        attachmentsToSave.Add(attachment);
+                    }
+
+                }
+
+                if (hasRetired)
+                {
+                    metadata.Modifications = new DynamicJsonValue(metadata)
+                    {
+                        [Client.Constants.Documents.Metadata.Attachments] = attachmentsToSave
+                    };
+
+                    metadata = context.ReadObject(metadata, $"{id}_metadata", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+
+                    src.Modifications = new DynamicJsonValue(src)
+                    {
+                        [Client.Constants.Documents.Metadata.Key] = metadata
+                    };
+
+                    using (var old = src)
+                    {
+                        dest = context.ReadObject(src, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                    }
+
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public void Put(string id, JsValue instance, BlittableJsonReaderObject doc)
@@ -147,9 +222,19 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _stats.IncrementBatchSize(attachment.Stream.Length);
         }
 
-        public void DeleteAttachment(string documentId, string name)
+        public void DeleteAttachment(RavenEtlItem item)
         {
-            _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null));
+            var (documentId, name) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(item.AttachmentTombstone.Key);
+
+            if (item.AttachmentTombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
+            {
+                _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null, storageOnly: true, fromEtl: true, AttachmentFlags.Retired));
+            }
+            else
+            {
+                _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null, storageOnly: false, fromEtl: true, AttachmentFlags.None));
+            }
+            
         }
 
         public void AddCounter(JsValue instance, JsValue counterReference)
@@ -299,7 +384,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         foreach (var addAttachment in putAttachments)
                         {
                             commands.Add(new PutAttachmentCommandData(remoteDocumentId, addAttachment.Name, addAttachment.Attachment.Stream, addAttachment.Attachment.ContentType,
-                                null, fromEtl: true));
+                                null, addAttachment.Attachment.RetireAt, addAttachment.Attachment.Size, addAttachment.Attachment.Flags, addAttachment.Attachment.Base64Hash.ToString(), fromEtl: true));
                         }
                     }
 

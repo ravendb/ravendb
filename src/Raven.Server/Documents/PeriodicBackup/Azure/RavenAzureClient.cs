@@ -29,6 +29,8 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         string RemoteFolderName { get; }
         Size MaxUploadPutBlob { get; set; }
         Size MaxSingleBlockSize { get; set; }
+        IDictionary<string, string> GetObjectMetadata(string key);
+        Task<IDictionary<string, string>> GetObjectMetadataAsync(string key);
     }
 
     public sealed class RavenAzureClient : IProgress<long>, IRavenAzureClient
@@ -213,9 +215,17 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         {
             result.List = page.Values
                 .Where(x => listFolders || x.IsBlob)
-                .Select(x => listFolders ? RestorePointsBase.GetDirectoryName(x.IsPrefix ? x.Prefix : x.Blob.Name) : x.Blob.Name)
+                .Select(x =>
+                {
+                    if (listFolders)
+                        return new RavenStorageClient.BlobProperties
+                        {
+                            Name = RestorePointsBase.GetDirectoryName(x.IsPrefix ? x.Prefix : x.Blob.Name), LastModified = x.Blob?.Properties.LastModified
+                        };
+                    else
+                        return new RavenStorageClient.BlobProperties { Name = x.Blob.Name, LastModified = x.Blob.Properties.LastModified };
+                })
                 .Distinct()
-                .Select(x => new RavenStorageClient.BlobProperties { Name = x })
                 .ToList();
 
             if (string.IsNullOrWhiteSpace(page.ContinuationToken) == false)
@@ -254,6 +264,35 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         public IMultiPartUploader GetUploader(string key, Dictionary<string, string> metadata)
         {
             return new AzureMultiPartUploader(_client, key, metadata, _progress, _cancellationToken);
+        }
+
+        public IDictionary<string, string> GetObjectMetadata(string key)
+        {
+            return AsyncHelpers.RunSync(() => GetObjectMetadataAsync(key));
+        }
+
+        public async Task<IDictionary<string, string>> GetObjectMetadataAsync(string key)
+        {
+            try
+            {
+                var client = _client.GetBlobClient(key);
+                var response = await client.GetPropertiesAsync(cancellationToken: _cancellationToken);
+
+                var metadata = new Dictionary<string, string>();
+                foreach (var kvp in response.Value.Metadata)
+                {
+                    metadata[kvp.Key] = kvp.Value;
+                }
+
+                return metadata;
+            }
+            catch (RequestFailedException e)
+            {
+                if (e.Status == (int)System.Net.HttpStatusCode.NotFound)
+                    return null;
+
+                throw;
+            }
         }
     }
 }

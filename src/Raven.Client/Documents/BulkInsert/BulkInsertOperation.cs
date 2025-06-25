@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Conventions;
@@ -1012,7 +1013,7 @@ namespace Raven.Client.Documents.BulkInsert
 
             public async Task StoreAsync(string id, string name, Stream stream, string contentType = null, CancellationToken token = default)
             {
-                PutAttachmentCommandHelper.ValidateStream(stream);
+                PutAttachmentCommandHelper.TryValidateStream(AttachmentFlags.None, stream);
 
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _token);
                 using (await _operation.ConcurrencyCheckAsync().ConfigureAwait(false))

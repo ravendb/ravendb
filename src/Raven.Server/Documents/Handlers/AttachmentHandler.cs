@@ -15,9 +15,12 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using static Raven.Server.Documents.AttachmentsStorage;
 
 namespace Raven.Server.Documents.Handlers
 {
+
+
     public sealed class AttachmentHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/attachments", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -41,95 +44,19 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        [RavenAction("/databases/*/attachments/bulk", "POST", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/attachments/bulk", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public async Task GetAttachments()
         {
-            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var request = await context.ReadForDiskAsync(RequestBodyStream(), "GetAttachments");
-
-                if (request.TryGet(nameof(AttachmentType), out string typeString) == false || Enum.TryParse(typeString, out AttachmentType type) == false)
-                    throw new ArgumentException($"The '{nameof(AttachmentType)}' field in the body request is mandatory");
-
-                if (request.TryGet(nameof(GetAttachmentsOperation.GetAttachmentsCommand.Attachments), out BlittableJsonReaderArray attachments) == false)
-                    throw new ArgumentException($"The '{nameof(GetAttachmentsOperation.GetAttachmentsCommand.Attachments)}' field in the body request is mandatory");
-
-                var attachmentsStreams = new List<Stream>();
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
-                {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName(nameof(GetAttachmentsOperation.GetAttachmentsCommand.AttachmentsMetadata));
-                    writer.WriteStartArray();
-                    var first = true;
-                    foreach (BlittableJsonReaderObject bjro in attachments)
-                    {
-                        if (bjro.TryGet(nameof(AttachmentRequest.DocumentId), out string id) == false)
-                            throw new ArgumentException($"Could not parse {nameof(AttachmentRequest.DocumentId)}");
-                        if (bjro.TryGet(nameof(AttachmentRequest.Name), out string name) == false)
-                            throw new ArgumentException($"Could not parse {nameof(AttachmentRequest.Name)}");
-
-                        var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, id, name, type, changeVector: null);
-                        if (attachment == null)
-                            continue;
-
-                        if (first == false)
-                            writer.WriteComma();
-                        first = false;
-
-                        attachment.Size = attachment.Stream.Length;
-                        attachmentsStreams.Add(attachment.Stream);
-                        WriteAttachmentDetails(writer, attachment, id);
-
-                        await writer.MaybeFlushAsync(Database.DatabaseShutdown);
-                    }
-
-                    writer.WriteEndArray();
-                    writer.WriteEndObject();
-
-                    await writer.FlushAsync(Database.DatabaseShutdown);
-                }
-
-                using (context.GetMemoryBuffer(out var buffer))
-                {
-                    var responseStream = ResponseBodyStream();
-                    foreach (var stream in attachmentsStreams)
-                    {
-                        await using (var tmpStream = stream)
-                        {
-                            var count = await tmpStream.ReadAsync(buffer.Memory.Memory);
-                            while (count > 0)
-                            {
-                                await responseStream.WriteAsync(buffer.Memory.Memory.Slice(0, count), Database.DatabaseShutdown);
-                                count = await tmpStream.ReadAsync(buffer.Memory.Memory);
-                            }
-                        }
-                    }
-                }
-            }
+            using (var processor = new AttachmentHandlerProcessorForBulkPostAttachment(this))
+                await processor.ExecuteAsync();
         }
 
-        private static void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId)
+        //TODO: egor add DeleteAttachmentsOperation
+        [RavenAction("/databases/*/attachments/bulk", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
+        public async Task DeleteAttachments()
         {
-            writer.WriteStartObject();
-            writer.WritePropertyName(nameof(AttachmentDetails.Name));
-            writer.WriteString(attachment.Name);
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentDetails.Hash));
-            writer.WriteString(attachment.Base64Hash.ToString());
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentDetails.ContentType));
-            writer.WriteString(attachment.ContentType);
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentDetails.Size));
-            writer.WriteInteger(attachment.Size);
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentDetails.ChangeVector));
-            writer.WriteString(attachment.ChangeVector);
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentDetails.DocumentId));
-            writer.WriteString(documentId);
-            writer.WriteEndObject();
+            using (var processor = new AttachmentHandlerProcessorForBulkDeleteAttachment(this))
+                await processor.ExecuteAsync();
         }
 
         [RavenAction("/databases/*/debug/attachments/hash", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
@@ -196,10 +123,11 @@ namespace Raven.Server.Documents.Handlers
             public string ContentType;
             public Stream Stream;
             public string Hash;
+            public DateTime? RetireAt;
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, ExpectedChangeVector, Stream);
+                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, flags: AttachmentFlags.None, Stream.Length, RetireAt, ExpectedChangeVector, Stream);
                 return 1;
             }
 
@@ -212,12 +140,50 @@ namespace Raven.Server.Documents.Handlers
                     ExpectedChangeVector = ExpectedChangeVector,
                     ContentType = ContentType,
                     Stream = Stream,
-                    Hash = Hash
+                    Hash = Hash,
+                    RetireAt = RetireAt
                 };
             }
         }
 
-        internal sealed class MergedDeleteAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+        public class MergedDeleteRetiredAttachmentCommand : AttachmentHandler.MergedDeleteAttachmentCommand
+        {
+            public AttachmentsStorage.DeleteAttachmentState DeleteState;
+
+            protected override long ExecuteCmd(DocumentsOperationContext context)
+            {
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedChangeVector, collectionName: out _);
+                return 1;
+            }
+
+            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+            {
+                return new MergedDeleteRetiredAttachmentCommandDto
+                {
+                    DocumentId = DocumentId,
+                    Name = Name,
+                    ExpectedChangeVector = ExpectedChangeVector,
+                    DeleteState = DeleteState
+                };
+            }
+
+            internal sealed class MergedDeleteRetiredAttachmentCommandDto : MergedDeleteAttachmentCommandDto
+            {
+                public AttachmentsStorage.DeleteAttachmentState DeleteState;
+                public override MergedDeleteRetiredAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+                {
+                    return new MergedDeleteRetiredAttachmentCommand
+                    {
+                        DocumentId = DocumentId,
+                        Name = Name,
+                        ExpectedChangeVector = ExpectedChangeVector,
+                        DeleteState = DeleteState,
+                        Database = database
+                    };
+                }
+            }
+        }
+        public class MergedDeleteAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public string DocumentId;
             public string Name;
@@ -250,6 +216,7 @@ namespace Raven.Server.Documents.Handlers
         public string ContentType;
         public Stream Stream;
         public string Hash;
+        public DateTime? RetireAt;
 
         public AttachmentHandler.MergedPutAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
@@ -261,18 +228,19 @@ namespace Raven.Server.Documents.Handlers
                 ContentType = ContentType,
                 Stream = Stream,
                 Hash = Hash,
-                Database = database
+                Database = database,
+                RetireAt = RetireAt
             };
         }
     }
 
-    internal sealed class MergedDeleteAttachmentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AttachmentHandler.MergedDeleteAttachmentCommand>
+    internal class MergedDeleteAttachmentCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, AttachmentHandler.MergedDeleteAttachmentCommand>
     {
         public string DocumentId;
         public string Name;
         public LazyStringValue ExpectedChangeVector;
 
-        public AttachmentHandler.MergedDeleteAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        public virtual AttachmentHandler.MergedDeleteAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new AttachmentHandler.MergedDeleteAttachmentCommand
             {
@@ -281,6 +249,69 @@ namespace Raven.Server.Documents.Handlers
                 ExpectedChangeVector = ExpectedChangeVector,
                 Database = database
             };
+        }
+    }
+
+    public class MergedDeleteAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+    {
+        public List<AttachmentRequest> Deletes;
+        public DocumentDatabase Database;
+
+        protected override long ExecuteCmd(DocumentsOperationContext context)
+        {
+            foreach (var delete in Deletes)
+            {
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment( context, delete.DocumentId, delete.Name, null, collectionName: out _);
+            }
+
+            return 1;
+        }
+
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction,
+            MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+        {
+            return new MergedDeleteAttachmentsCommandDto { Deletes = Deletes };
+        }
+    }
+
+    internal class MergedDeleteAttachmentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedDeleteAttachmentsCommand>
+    {
+        public List<AttachmentRequest> Deletes;
+        public virtual MergedDeleteAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        {
+            return new MergedDeleteAttachmentsCommand { Deletes = Deletes, Database = database };
+        }
+    }
+
+
+    internal sealed class MergedDeleteRetiredAttachmentsCommand : MergedDeleteAttachmentsCommand
+    {
+        public DeleteAttachmentState DeleteState;
+
+        protected override long ExecuteCmd(DocumentsOperationContext context)
+        {
+            foreach (var delete in Deletes)
+            {
+                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, delete.DocumentId, delete.Name, null, collectionName: out _);
+            }
+
+            return 1;
+        }
+
+        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction,
+            MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
+        {
+            return new MergedDeleteRetiredAttachmentsCommandDto { Deletes = Deletes, DeleteState = DeleteState };
+        }
+
+        internal sealed class MergedDeleteRetiredAttachmentsCommandDto : MergedDeleteAttachmentsCommandDto
+        {
+            public DeleteAttachmentState DeleteState;
+
+            public override MergedDeleteRetiredAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            {
+                return new MergedDeleteRetiredAttachmentsCommand { Deletes = Deletes, Database = database };
+            }
         }
     }
 }

@@ -110,6 +110,7 @@ namespace Voron
 
             return Memory.CompareInline(prefixPtr, valuePtr, prefix.Size) == 0;
         }
+
     }
 
     public struct SliceStructComparer : IEqualityComparer<Slice>, IComparer<Slice>

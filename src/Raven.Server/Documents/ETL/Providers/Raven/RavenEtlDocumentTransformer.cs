@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using Jint;
 using Jint.Native;
@@ -15,8 +16,10 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Util;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
+using Raven.Server.Documents.PeriodicBackup.DirectDownload;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
@@ -35,12 +38,14 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         private PropertyDescriptor _addCounterMethod;
         private PropertyDescriptor _addTimeSeriesMethod;
         private RavenEtlScriptRun _currentRun;
+        private readonly Lazy<DirectFileDownloader> _downloader;
 
         public RavenEtlDocumentTransformer(Transformation transformation, DocumentDatabase database, DocumentsOperationContext context, ScriptInput script)
             : base(database, context, script.Transformation, script.BehaviorFunctions)
         {
             _transformation = transformation;
             _script = script;
+            _downloader = new Lazy<DirectFileDownloader>(() => Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(new(database.DatabaseShutdown)));
 
             LoadToDestinations = _script.LoadToCollections;
         }
@@ -274,7 +279,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             var attachments = GetAttachmentsFor(item);
                             var counterOperations = GetCounterOperationsFor(item);
                             var timeSeriesOperations = ShouldLoadTimeSeriesWithDoc(item, state) ? GetTimeSeriesOperationsFor(item) : null;
-                            _currentRun.PutFullDocument(item.DocumentId, item.Document.Data, attachments, counterOperations, timeSeriesOperations);
+                            _currentRun.PutFullDocument(Context, item.DocumentId, item.Document.Data, attachments, counterOperations, timeSeriesOperations);
                         }
                         break;
                     case EtlItemType.CounterGroup:
@@ -310,20 +315,19 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                             break;
                         if (_script.HasTransformation)
                         {
-                            Debug.Assert(item.IsAttachmentTombstone == false, "attachment tombstones are tracked only if script is empty");
+                            Debug.Assert(item.AttachmentTombstone == null, "attachment tombstones are tracked only if script is empty");
 
                             ApplyDeleteCommands(item, OperationType.Delete, out _);
                         }
                         else
                         {
-                            if (item.IsAttachmentTombstone == false)
+                            if (item.AttachmentTombstone == null)
                             {
                                 _currentRun.Delete(item.DocumentId);
                             }
                             else
                             {
-                                var (doc, attachmentName) = AttachmentsStorage.AttachmentKey.ExtractDocIdAndAttachmentName(Context, item.AttachmentTombstoneId);
-                                _currentRun.DeleteAttachment(doc, attachmentName);
+                                _currentRun.DeleteAttachment(item);
                             }
                         }
                         break;
@@ -476,7 +480,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     var counterOperations = GetCounterOperationsFor(etlExtractedItem);
                     // We don't need to put time series operations yet, it's handled outside this scope
                     
-                    _currentRun.PutFullDocument(docId, doc.Data, attachments, counterOperations);
+                    _currentRun.PutFullDocument(Context, docId, doc.Data, attachments, counterOperations);
                 }
             }
 
@@ -785,7 +789,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (attachmentInfo.TryGet(nameof(AttachmentName.Name), out string name))
                 {
                     var attachmentData = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, item.DocumentId, name, AttachmentType.Document, null);
-
+                    if (attachmentData.Flags == AttachmentFlags.Retired)
+                    {
+                        using Stream stream = AsyncHelpers.RunSync(() => Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(_downloader.Value, attachmentData.Base64Hash.ToString()));
+                        var memStream = new MemoryStream();
+                        stream.CopyTo(memStream);
+                        memStream.Position = 0;
+                        attachmentData.Stream = memStream;
+                        attachmentData.Flags = AttachmentFlags.None; // we are loading retired attachment, so we need to reset the flag
+                    }
                     results.Add(attachmentData);
                 }
             }

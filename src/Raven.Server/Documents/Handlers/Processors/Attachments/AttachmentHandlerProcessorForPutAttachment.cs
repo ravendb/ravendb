@@ -16,7 +16,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
-        protected override async ValueTask PutAttachmentsAsync(DocumentsOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, CancellationToken token)
+        protected override async ValueTask PutAttachmentsAsync(DocumentsOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, 
+            DateTime? retireAtDt, CancellationToken token)
         {
             AttachmentDetails result;
             using (var streamsTempFile = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetTempFile("put"))
@@ -55,7 +56,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     Name = name,
                     Stream = stream,
                     Hash = hash,
-                    ContentType = contentType
+                    ContentType = contentType,
+                    RetireAt = retireAtDt
                 };
                 await stream.FlushAsync(token);
                 await RequestHandler.Database.TxMerger.Enqueue(cmd);
@@ -90,6 +92,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
                 writer.WritePropertyName(nameof(AttachmentDetails.Size));
                 writer.WriteInteger(result.Size);
+
+                if (result.RetireAt.HasValue)
+                {
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(AttachmentDetails.RetireAt));
+                    writer.WriteDateTime(result.RetireAt.Value, true);
+                }
 
                 writer.WriteEndObject();
             }

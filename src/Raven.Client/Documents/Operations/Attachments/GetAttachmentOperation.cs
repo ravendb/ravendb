@@ -154,6 +154,20 @@ namespace Raven.Client.Documents.Operations.Attachments
                 if (response.Headers.TryGetValues("Attachment-Size", out IEnumerable<string> sizeVal))
                     long.TryParse(sizeVal.First(), out size);
 
+                DateTime? attachmentRetireAt = null;
+                if (response.Headers.TryGetValues(Constants.Headers.AttachmentRetireAt, out IEnumerable<string> dt))
+                {
+                    if (DateTime.TryParse(dt.First(), out var retireAt))
+                    {
+                        attachmentRetireAt = retireAt;
+                    }
+                }
+
+                int flags = 0;
+                if (response.Headers.TryGetValues(Constants.Headers.AttachmentFlags, out IEnumerable<string> flagsVal))
+                    int.TryParse(flagsVal.First(), out flags);
+
+                var collection = response.Headers.TryGetValues(Constants.Headers.AttachmentCollection, out IEnumerable<string> collectionVal) ? collectionVal.First() : null;
                 var attachmentDetails = new AttachmentDetails
                 {
                     ContentType = contentType,
@@ -161,7 +175,10 @@ namespace Raven.Client.Documents.Operations.Attachments
                     Hash = hash,
                     Size = size,
                     ChangeVector = changeVector,
-                    DocumentId = _documentId
+                    DocumentId = _documentId,
+                    RetireAt = attachmentRetireAt,
+                    Flags = (AttachmentFlags)flags,
+                    Collection = collection
                 };
 
                 var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);

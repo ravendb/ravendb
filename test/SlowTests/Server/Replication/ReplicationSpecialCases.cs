@@ -959,7 +959,7 @@ namespace SlowTests.Server.Replication
                     var attachment = attachmentStorage.GetAttachment(context, documentId1, attachmentName1, AttachmentType.Document, null);
                     using (var stream = new MemoryStream(new byte[] { 1, 2, 3 }))
                     {
-                        attachmentStorage.PutAttachment(context, documentId1, attachmentName1, contentType, attachment.Base64Hash.ToString(), null, stream, updateDocument: false);
+                        attachmentStorage.PutAttachment(context, documentId1, attachmentName1, contentType, attachment.Base64Hash.ToString(), flags: AttachmentFlags.None, stream.Length, retireAtDt: null, null, stream, updateDocument: false);
                     }
                     tx.Commit();
                 }

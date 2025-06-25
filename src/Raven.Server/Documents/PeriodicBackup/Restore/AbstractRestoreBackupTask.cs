@@ -616,6 +616,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.AiConnectionStrings = smugglerDatabaseRecord.AiConnectionStrings;
                     databaseRecord.EmbeddingsGenerations = smugglerDatabaseRecord.EmbeddingsGenerations;
                     databaseRecord.GenAis = smugglerDatabaseRecord.GenAis;
+                    databaseRecord.RetiredAttachments = smugglerDatabaseRecord.RetiredAttachments;
                 };
             }
 
@@ -623,9 +624,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             {
                 // need to enable revisions before import
                 database.DocumentsStorage.RevisionsStorage.InitializeFromDatabaseRecord(smugglerDatabaseRecord);
-                
+                //RetireAttachmentsSender.LoadConfigurations(database, smugglerDatabaseRecord, null);
+
                 database.SupportedFeatures = new SupportedFeature(smugglerDatabaseRecord);
             };
+
+
         }
 
         private async Task OnErrorAsync(Action<IOperationProgress> onProgress, Exception e)

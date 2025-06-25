@@ -66,13 +66,12 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             return new DocumentsToElasticSearchItems(docs, collection);
         }
 
-        protected override IEnumerator<ElasticSearchItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection,
-            bool trackAttachments)
+        protected override IEnumerator<ElasticSearchItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
         {
             return new TombstonesToElasticSearchItems(tombstones, collection);
         }
 
-        protected override IEnumerator<ElasticSearchItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
+        protected override IEnumerator<ElasticSearchItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<AttachmentTombstoneReplicationItem> tombstones,
             List<string> collections)
         {
             throw new NotSupportedException("Attachment tombstones aren't supported by ElasticSearch ETL");

@@ -1,4 +1,6 @@
 ﻿using System;
+using System.IO;
+using Raven.Client.Documents.Attachments;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Attachments
@@ -26,13 +28,81 @@ namespace Raven.Client.Documents.Operations.Attachments
     internal sealed class AttachmentNameWithCount : AttachmentName
     {
         public long Count { get; set; }
+        public long RetiredCount { get; set; }
+        public long TotalCount { get; set; }
 
         internal override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(Count)] = Count;
+            json[nameof(RetiredCount)] = RetiredCount;
+            json[nameof(TotalCount)] = TotalCount;
 
             return json;
+        }
+    }
+
+    public interface IStoreAttachmentParameters
+    {
+        /// <summary>
+        /// The name of the attachment.
+        /// </summary>
+        string Name { get; set; }
+
+        /// <summary>
+        /// The stream of the attachment.
+        /// </summary>
+        Stream Stream { get; set; }
+
+        /// <summary>
+        /// The change vector of the attachment for concurrency control.
+        /// </summary>
+        string ChangeVector { get; set; }
+
+        /// <summary>
+        /// The MIME type of the attachment.
+        /// </summary>
+        string ContentType { get; set; }
+
+        /// <summary>
+        /// The date to upload the attachment to cloud.
+        /// </summary>
+        DateTime? RetireAt { get; set; }
+    }
+
+    /// <summary>
+    /// The parameters for storing an attachment in the database.
+    /// </summary>
+    public class StoreAttachmentParameters : IStoreAttachmentParameters
+    {
+        /// <inheritdoc />
+        public string Name { get; set; }
+        /// <inheritdoc />
+        public Stream Stream { get; set; }
+
+        /// <inheritdoc />
+        public string ChangeVector { get; set; }
+
+        /// <inheritdoc />
+        public string ContentType { get; set; }
+
+        /// <inheritdoc />
+        public DateTime? RetireAt { get; set; }
+
+        public StoreAttachmentParameters(string name, Stream stream)
+        {
+            if (string.IsNullOrWhiteSpace(name))
+                throw new ArgumentNullException(nameof(name), "Attachment name cannot be null or whitespace.");
+            if (stream == null)
+                throw new ArgumentNullException(nameof(stream), "Attachment stream cannot be null.");
+
+            Name = name;
+            Stream = stream;
+        }
+
+        internal StoreAttachmentParameters()
+        {
+            // Parameterless constructor for serialization
         }
     }
 
@@ -64,16 +134,23 @@ namespace Raven.Client.Documents.Operations.Attachments
         /// The size of the attachment in bytes.
         /// </summary>
         public long Size;
+        public AttachmentFlags Flags;
+        public DateTime? RetireAt;
+        public string Collection;
 
         internal virtual DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
+            var json = new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
                 [nameof(Hash)] = Hash,
                 [nameof(ContentType)] = ContentType,
                 [nameof(Size)] = Size
             };
+            json[nameof(Flags)] = Flags.ToString();
+            json[nameof(RetireAt)] = RetireAt;
+            json[nameof(Collection)] = Collection;
+            return json;
         }
     }
 
@@ -116,5 +193,8 @@ namespace Raven.Client.Documents.Operations.Attachments
         /// Gets the ID of the document associated with the attachment.
         /// </summary>
         public string DocumentId { get; }
+
+
+        internal AttachmentFlags Flags;
     }
 }

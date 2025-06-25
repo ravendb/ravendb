@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Sparrow;
 using Sparrow.Binary;
@@ -19,6 +20,7 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util;
+using static Sparrow.Server.Utils.ThreadNames.ThreadDetails;
 using static Voron.Data.Tables.TableSchema;
 using Constants = Voron.Global.Constants;
 
@@ -1285,21 +1287,26 @@ namespace Voron.Data.Tables
             return true;
         }
 
-        private IEnumerable<TableValueHolder> GetSecondaryIndexForValue(Tree tree, Slice value, TableSchema.AbstractTreeIndexDef index)
+        private IEnumerable<TableValueHolder> GetSecondaryIndexForValue(Tree tree, Slice value, TableSchema.AbstractTreeIndexDef index, bool pullTvr = true)
         {
             try
             {
                 var fstIndex = GetFixedSizeTree(tree, value, 0, index.IsGlobal);
+                var result = new TableValueHolder();
                 using (var it = fstIndex.Iterate())
                 {
                     if (it.Seek(long.MinValue) == false)
                         yield break;
 
-                    var result = new TableValueHolder();
                     do
                     {
-                        ReadById(it.CurrentKey, out result.Reader);
+                        if (pullTvr)
+                        {
+                            ReadById(it.CurrentKey, out result.Reader);
+                        }
+
                         yield return result;
+
                     } while (it.MoveNext());
                 }
             }
@@ -1558,36 +1565,91 @@ namespace Voron.Data.Tables
             return fstIndex.NumberOfEntries;
         }
 
-        public IEnumerable<SeekResult> SeekByPrefix(DynamicKeyIndexDef def, Slice requiredPrefix, Slice startAfter, long skip)
+        public long GetCountOfMatchesForPrefix(DynamicKeyIndexDef index, Slice prefix)
+        {
+            return SeekByPrefix(index, prefix, Slices.Empty, 0, pullTvr: false).Count();
+        }
+
+        public IEnumerable<SeekResult> SeekByPrefix(DynamicKeyIndexDef def, Slice requiredPrefix, Slice startAfter, long skip, bool pullTvr = true)
         {
             var isStartAfter = startAfter.Equals(Slices.Empty) == false;
 
             var tree = GetTree(def);
             if (tree == null)
                 yield break;
-            
-            using (var it = tree.Iterate(_prefetch))
+
+            if (def.SupportDuplicateKeys == false)
             {
-                it.SetRequiredPrefix(requiredPrefix);
-
-                var seekValue = isStartAfter ? startAfter : requiredPrefix;
-                if (it.Seek(seekValue) == false)
-                    yield break;
-
-                if (it.Skip(skip) == false)
-                    yield break;
-
-                do
+                var result = new TableValueHolder();
+                using (var it = tree.Iterate(_prefetch))
                 {
-                    var result = new TableValueHolder();
-                    GetTableValueReader(it, out result.Reader);
-                    yield return new SeekResult
+                    it.SetRequiredPrefix(requiredPrefix);
+
+                    var seekValue = isStartAfter ? startAfter : requiredPrefix;
+                    if (it.Seek(seekValue) == false)
+                        yield break;
+
+                    if (it.Skip(skip) == false)
+                        yield break;
+
+                    do
                     {
-                        Key = it.CurrentKey,
-                        Result = result
-                    };
+                        if (pullTvr)
+                        {
+                            GetTableValueReader(it, out result.Reader);
+
+                            yield return new SeekResult
+                            {
+                                Key = it.CurrentKey,
+                                Result = result
+                            };
+                        }
+                        else
+                        {
+                            yield return default;
+                        }
+                    }
+                    while (it.MoveNext());
                 }
-                while (it.MoveNext());
+            }
+            else
+            {
+                using (var it = tree.Iterate(true))
+                {
+                    it.SetRequiredPrefix(requiredPrefix);
+
+                    var seekValue = isStartAfter ? startAfter : requiredPrefix;
+                    if (it.Seek(seekValue) == false)
+                        yield break;
+
+                    if (it.Skip(skip) == false)
+                        yield break;
+
+                    do
+                    {
+                        foreach (var result in GetSecondaryIndexForValue(tree, it.CurrentKey.Clone(_tx.Allocator), def, pullTvr))
+                        {
+                            if (skip > 0)
+                            {
+                                skip--;
+                                continue;
+                            }
+
+                            if (pullTvr)
+                            {
+                                yield return new SeekResult
+                                {
+                                    Key = it.CurrentKey,
+                                    Result = result
+                                };
+                            }
+                            else
+                            {
+                                yield return default;
+                            }
+                        }
+                    } while (it.MoveNext());
+                }
             }
         }
 

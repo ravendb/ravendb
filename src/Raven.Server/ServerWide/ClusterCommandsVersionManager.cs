@@ -206,6 +206,7 @@ namespace Raven.Server.ServerWide
             [nameof(AddGenAiCommand)] = 71_000,
             [nameof(UpdateGenAiCommand)] = 71_000
 
+            [nameof(EditRetireAttachmentsCommand)] = EditRetireAttachmentsCommand.CommandVersion
         };
 
         public bool CanPutCommand(string command)

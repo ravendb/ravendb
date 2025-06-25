@@ -1330,7 +1330,7 @@ loadToOrders(partitionBy(key), o);
             const string salesTableName = "Sales";
             const string partitionColumn = "order_date";
 
-            var settings = GetS3Settings();
+            var settings = Etl.GetS3Settings($"olap/tests/{nameof(ShardedEtlTests)}-{Guid.NewGuid()}");
 
             try
             {
@@ -2231,30 +2231,6 @@ loadToAddresses(this.Address);
                     Name = connectionStringName,
                     Nodes = ElasticSearchTestNodes.Instance.VerifiedNodes.Value
                 });
-        }
-
-        private static S3Settings GetS3Settings([CallerMemberName] string caller = null)
-        {
-            var s3Settings = AmazonS3RetryFactAttribute.S3Settings;
-            if (s3Settings == null)
-                return null;
-
-            var prefix = $"olap/tests/{nameof(ShardedEtlTests)}-{Guid.NewGuid()}";
-            var remoteFolderName = prefix;
-            if (string.IsNullOrEmpty(caller) == false)
-                remoteFolderName = $"{remoteFolderName}/{caller}";
-
-            if (string.IsNullOrEmpty(s3Settings.RemoteFolderName) == false)
-                remoteFolderName = $"{s3Settings.RemoteFolderName}/{remoteFolderName}";
-
-            return new S3Settings
-            {
-                BucketName = s3Settings.BucketName,
-                RemoteFolderName = remoteFolderName,
-                AwsAccessKey = s3Settings.AwsAccessKey,
-                AwsSecretKey = s3Settings.AwsSecretKey,
-                AwsRegionName = s3Settings.AwsRegionName
-            };
         }
 
         private IDisposable GetElasticClient(out ElasticsearchClient client)

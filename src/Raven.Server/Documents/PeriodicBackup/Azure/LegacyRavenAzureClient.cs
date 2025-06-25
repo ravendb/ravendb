@@ -711,5 +711,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
         {
             throw new NotSupportedException("Multi part uploader isn't supported for the legacy azure client");
         }
+
+        public IDictionary<string, string> GetObjectMetadata(string key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task<IDictionary<string, string>> GetObjectMetadataAsync(string key)
+        {
+            throw new NotImplementedException();
+        }
     }
 }

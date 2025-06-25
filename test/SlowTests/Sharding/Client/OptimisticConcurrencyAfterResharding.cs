@@ -144,7 +144,7 @@ public class OptimisticConcurrencyAfterResharding : RavenTestBase
             // update attachment stream with optimistic concurrency 
             // should not throw concurrency exception
 
-            var operation = new PutAttachmentOperation(id, attachmentName, newProfileStream, contentType : "image/jpg", changeVector: changeVector);
+            var operation = new PutAttachmentOperation(id, attachmentName, newProfileStream, contentType: "image/jpg", changeVector: changeVector);
             await store.Operations.SendAsync(operation);
         }
     }

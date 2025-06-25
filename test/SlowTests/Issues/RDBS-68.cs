@@ -1,7 +1,5 @@
 ﻿using System.Collections.Generic;
 using System.Threading;
-using Xunit.Abstractions;
-using Xunit;
 using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
@@ -13,6 +11,8 @@ using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Tests.Infrastructure;
+using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Issues
 {
@@ -100,18 +100,18 @@ namespace SlowTests.Issues
                     using (context.OpenReadTransaction())
                     {
                         var currentTime = database.Time.GetUtcNow();
-                        
-                        DatabaseTopology topology;
+
+                        DatabaseRecord dbRecord;
                         string nodeTag;
                         
                         using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverContext))
                         using (serverContext.OpenReadTransaction())
                         {
-                            topology = database.ServerStore.Cluster.ReadDatabaseTopology(serverContext, database.Name);
+                            dbRecord = database.ServerStore.Cluster.ReadDatabase(serverContext, database.Name);
                             nodeTag = database.ServerStore.NodeTag;
                         }
                         
-                        var options = new BackgroundWorkParameters(context, currentTime, topology, nodeTag, batchSize);
+                        var options = new BackgroundWorkParameters(context, currentTime, dbRecord, nodeTag, batchSize);
                         var totalCount = 0;
                         var expired = database.DocumentsStorage.ExpirationStorage.GetDocuments(options, ref totalCount, out _, CancellationToken.None);
                         Assert.Equal(expected, totalCount);

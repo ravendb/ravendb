@@ -8,6 +8,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
@@ -1115,6 +1116,19 @@ namespace Raven.Server.Documents
             }
         }
 
+        public Document Get(DocumentsOperationContext context, LazyStringValue id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
+        {
+            if (id == null)
+                throw new ArgumentException("Argument is null or whitespace", nameof(id));
+            if (context.Transaction == null)
+                throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
+
+            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            {
+                return Get(context, lowerId, fields, throwOnConflict);
+            }
+        }
+
         public Document Get(DocumentsOperationContext context, Slice lowerId, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true, bool skipValidationInDebug = false)
         {
             if (GetTableValueReaderForDocument(context, lowerId, throwOnConflict, out TableValueReader tvr) == false)
@@ -1278,7 +1292,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
             {
-                var tombstoneItem = TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Reader));
+                var tombstoneItem = TombstoneReplicationItem.From(context, ref result.Reader);
 
                 if (revisionTombstonesWithId == false && tombstoneItem is RevisionTombstoneReplicationItem revisionTombstone)
                     revisionTombstone.StripDocumentIdFromKeyIfNeeded(context);
@@ -1287,7 +1301,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<Tombstone> GetAttachmentTombstonesFrom(
+        public IEnumerable<AttachmentTombstoneReplicationItem> GetAttachmentTombstonesFrom(
             DocumentsOperationContext context,
             long etag,
             long start,
@@ -1301,10 +1315,19 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, start))
             {
+
                 if (take-- <= 0)
                     yield break;
+                var t = TableValueToTombstone(context, ref result.Reader);
+                var attachmentTombstone = TombstoneReplicationItem.AttachmentTombstoneReplicationItem(context, ref result.Reader, t);
+                unsafe
+                {
+                    var disposable = Slice.From(context.Allocator, t.LowerId.Buffer, t.LowerId.Size, ByteStringType.Immutable, out attachmentTombstone.Key);
 
-                yield return TableValueToTombstone(context, ref result.Reader);
+                    attachmentTombstone.ToDispose(disposable);
+                }
+                yield return attachmentTombstone;
+
             }
         }
 
@@ -1606,7 +1629,6 @@ namespace Raven.Server.Documents
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out int _),
                 ChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr),
                 LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr),
-                Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr)
             };
 
             switch (result.Type)
@@ -1614,13 +1636,37 @@ namespace Raven.Server.Documents
                 case Tombstone.TombstoneType.Document:
                     result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
                     result.LowerId = UnwrapLowerIdIfNeeded(context, result.LowerId);
+                    result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
+
                     break;
                 case Tombstone.TombstoneType.Revision:
                     result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
+                    result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
+                    break;
+                case Tombstone.TombstoneType.Attachment:
+                    ExtractAttachmentTombstoneFlag(ref tvr, result);
+                    break;
+                case Tombstone.TombstoneType.Counter:
+                    result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                     break;
             }
 
             return result;
+        }
+
+        public static bool ExtractAttachmentTombstoneFlag(ref TableValueReader tvr, Tombstone result)
+        {
+            var enumVal = DocumentsStorage.TableValueToInt((int)TombstoneTable.Flags, ref tvr);
+            if (enumVal == (int)AttachmentTombstoneFlags.FromStorageOnly)
+            {
+                result.Flags = DocumentFlags.None;
+                return true;
+            }
+            else
+            {
+                result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
+                return false;
+            }
         }
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, DocumentFlags flags)
@@ -2893,6 +2939,20 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int TableValueToInt(int index, ref TableValueReader tvr)
+        {
+            return *(int*)tvr.Read(index, out _);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static AttachmentFlags TableValueToAttachmentFlags(int index, ref TableValueReader tvr)
+        {
+            var ptr = tvr.Read(index, out _);
+            var etag = Bits.SwapBytes(*(int*)ptr);
+            return (AttachmentFlags)etag;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static short TableValueToShort(int index, string name, ref TableValueReader tvr)
         {
             var value = *(short*)tvr.Read(index, out int size);
@@ -2919,6 +2979,14 @@ namespace Raven.Server.Documents
             return new DateTime(*(long*)tvr.Read(index, out _), DateTimeKind.Utc);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static DateTime? TableValueToNullableDateTime(int index, ref TableValueReader tvr)
+        {
+            var ticks = *(long*)tvr.Read(index, out _);
+            if (ticks < 0)
+                return null;
+            return new DateTime(ticks, DateTimeKind.Utc);
+        }
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static LazyStringValue TableValueToString(JsonOperationContext context, int index, ref TableValueReader tvr)
         {

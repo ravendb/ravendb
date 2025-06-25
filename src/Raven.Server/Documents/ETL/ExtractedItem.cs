@@ -70,6 +70,8 @@ namespace Raven.Server.Documents.ETL
         
         public LazyStringValue CounterTombstoneId { get; protected set; }
 
+        public AttachmentTombstoneReplicationItem AttachmentTombstone { get; protected set; }
+
         public void Dispose()
         {
             Document?.Dispose();

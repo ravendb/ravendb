@@ -12,6 +12,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Config;
+using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
@@ -317,8 +318,33 @@ namespace Raven.Server.Documents.Replication.Incoming
                 _isInternal = isInternal;
             }
 
-            protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
+            protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item, List<IDisposable> disposables)
             {
+                if (_isInternal == false)
+                {
+                    switch (item)
+                    {
+                        case AttachmentReplicationItem attachmentReplicationItem:
+                            if (attachmentReplicationItem.Flags == AttachmentFlags.Retired)
+                            {
+                                attachmentReplicationItem.Flags = AttachmentFlags.None;
+                            }
+                            break;
+
+                        case DocumentReplicationItem document:
+
+                            if (document.Type != ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
+                            {
+                                if (RavenEtlScriptRun.DropRetiredAttachmentFlagFromAttachmentMetadataIfNeeded(context, document.Id, document.Data, out document.Data))
+                                {
+                                    disposables.Add(document.Data);
+                                }
+                            }
+
+                            break;
+                    }
+                }
+
                 return context.GetChangeVector(item.ChangeVector).Order;
             }
 
@@ -369,7 +395,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                         operationsCount++;
 
-                        var changeVectorToMerge = PreProcessItem(context, item);
+                        var changeVectorToMerge = PreProcessItem(context, item, toDispose);
 
                         var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
                         var changeVectorVersion = incomingChangeVector.Version;
@@ -385,11 +411,12 @@ namespace Raven.Server.Documents.Replication.Incoming
                             case AttachmentReplicationItem attachment:
 
                                 var result = AttachmentOrTombstone.GetAttachmentOrTombstone(context, attachment.Key);
+                                var isRevision = AttachmentsStorage.AttachmentKey.GetAttachmentType(attachment.Key) == AttachmentType.Revision;
                                 if (_replicationInfo.ReplicatedAttachmentStreams?.TryGetValue(attachment.Base64Hash, out var attachmentStream) == true)
                                 {
                                     if (database.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, attachment.Base64Hash) == false)
                                     {
-                                        Debug.Assert(result.Attachment == null || AttachmentsStorage.AttachmentKey.GetAttachmentType(attachment.Key) != AttachmentType.Revision,
+                                        Debug.Assert(result.Attachment == null || isRevision == false,
                                             "the stream should have been written when the revision was added by the document");
                                         database.DocumentsStorage.AttachmentsStorage.PutAttachmentStream(context, attachment.Key, attachmentStream.Base64Hash, attachmentStream.Stream);
                                     }
@@ -399,6 +426,8 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
+                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Collection, out _, out Slice collectionSlice));
+
 
                                 var local = context.GetChangeVector(result.ChangeVector);
                                 var newChangeVector = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local) switch
@@ -413,7 +442,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 if (newChangeVector != null)
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, newChangeVector);
+                                        contentType, attachment.Base64Hash, attachment.RetireAtUtc, collectionSlice, attachment.Flags, attachment.AttachmentSize, isRevision, newChangeVector);
                                 }
 
                                 break;
@@ -437,9 +466,20 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     _ => throw new ArgumentOutOfRangeException()
                                 };
 
-                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    newChangeVector,
-                                    attachmentTombstone.LastModifiedTicks);
+                                if (attachmentTombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
+                                {
+                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                        newChangeVector,
+                                        attachmentTombstone.LastModifiedTicks);
+                                }
+                                else
+                                {
+                                    // Here it is a document attachment or retired attachment that need to be deleted from both cloud && storage
+                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirectDocumentOrRetiredCloudAndStorage(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                        newChangeVector,
+                                        attachmentTombstone.LastModifiedTicks);
+                                }
+
                                 break;
 
                             case RevisionTombstoneReplicationItem revisionTombstone:
