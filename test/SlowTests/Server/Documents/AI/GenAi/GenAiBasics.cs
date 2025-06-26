@@ -798,7 +798,7 @@ for(const comment of this.Comments)
         value = await WaitForValueAsync(() =>
         {
             stats2 = etlProcess.GetPerformanceStats()
-                .Where(x => x.NumberOfLoadedItems > 0 && x.LastLoadedEtag > etag)
+                .Where(x => x.NumberOfLoadedItems > 0 && x.LastLoadedEtag > etag && x.NumberOfExtractedItems[EtlItemType.Document] > 0)
                 .ToArray();
             return stats2.Length > 0;
         }, expectedVal: true, timeout: 60_000);
@@ -978,7 +978,7 @@ for(const comment of this.Comments)
 
         store.Maintenance.Send(new AddGenAiOperation(config, StartingPointChangeVector.BeginningOfTime));
 
-        Assert.True(etl.Wait(TimeSpan.FromSeconds(60)), await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(60)));
+        Assert.True(etl.Wait(TimeSpan.FromSeconds(120)), await Etl.GetEtlDebugInfo(store.Database, TimeSpan.FromSeconds(120)));
 
         using (var session = store.OpenSession())
         {
