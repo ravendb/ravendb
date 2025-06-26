@@ -109,6 +109,8 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         href={appUrl.forEditGenAi(db.name)}
                         className="ai-etl"
                         target="GenAi"
+                        disabled={isSharded}
+                        disableReason={getDisableReasonForSharded()}
                     >
                         <Icon icon="ai-etl" margin="m-0" />
                         <h4 className="mt-1 mb-0">GenAI</h4>
