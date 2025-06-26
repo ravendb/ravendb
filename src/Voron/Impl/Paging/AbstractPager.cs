@@ -805,6 +805,8 @@ namespace Voron.Impl.Paging
 
         public void Write(long posBy4Kbs, int numberOf4Kbs, byte* source)
         {
+            PagingStatistics.MarkWrite(numberOf4Kbs / 2 + numberOf4Kbs % 2);
+            
             const int pageSizeTo4KbRatio = (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
             var pageNumber = posBy4Kbs / pageSizeTo4KbRatio;
             var offsetBy4Kb = posBy4Kbs % pageSizeTo4KbRatio;
