@@ -344,12 +344,16 @@ namespace Voron.Impl.Paging
 
         public virtual byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
-            return AcquirePagePointerInternal(tx, pageNumber, pagerState);
+            byte* p = AcquirePagePointerInternal(tx, pageNumber, pagerState);
+            PagingStatistics.MarkRead(VirtualPagerLegacyExtensions.GetNumberOfPages((PageHeader*)p));
+            return p;
         }
 
         public virtual byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
         {
-            return AcquirePagePointerInternal(tx, pageNumber, pagerState);
+            byte* p = AcquirePagePointerInternal(tx, pageNumber, pagerState);
+            PagingStatistics.MarkRead(numberOfPages);
+            return p;
         }
         
         public virtual T AcquirePagePointerHeader<T>(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null) where T : unmanaged

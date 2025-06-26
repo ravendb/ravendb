@@ -102,6 +102,14 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("IO wait in %")]
             public const string MachineIoWait = "1.5.4";
 
+            [SnmpDataType(SnmpType.Counter64)]
+            [Description("Total number of pages read by the server since last start (across all databases & indexes)")]
+            public const string TotalPagesRead = "1.5.5.1";
+            
+            [SnmpDataType(SnmpType.Counter64)]
+            [Description("Total number of pages written by the server since last start (across all databases & indexes)")]
+            public const string TotalPagesWritten = "1.5.5.2";
+            
             [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server allocated memory in MB")]
             public const string TotalMemory = "1.6.1";
