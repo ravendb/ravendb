@@ -284,6 +284,24 @@ class licenseModel {
         const label = licenseModel.supportLabel();
         return label.toLocaleLowerCase();
     });
+    
+    static licenseStatusTooltip = ko.pureComputed(() => {
+        const status = licenseModel.licenseStatus();
+        
+        if (!status || status.Type === "None") {
+            return 'No license - AGPLv3 restrictions applied';
+        }
+        
+        if (status.Type === "Invalid") {
+            return 'Invalid license';
+        }
+        
+        if (status.Status.includes("Expired")) {
+            return 'License has expired';
+        }
+        
+        return 'Valid license';
+    });
 }
 
 export = licenseModel;

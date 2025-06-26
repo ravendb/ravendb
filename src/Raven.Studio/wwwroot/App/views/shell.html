@@ -255,7 +255,7 @@
                 <a title="License Information" data-bind="attr: { href: urlForAbout, class: licenseBgColorClass() + ' license btn btn-sm d-flex gap-1' }">
                     <i class="icon-license-information"></i>
                     <span data-bind="text: licenseTypeShortText()"></span>
-                    <span data-bind="attr: { class: licenseClass() + ' license-status'}"></span>
+                    <span data-bind="attr: { title: licenseStatusTooltip(), class: licenseClass() + ' license-status'}"></span>
                 </a>
             </div>
             <div class="footer-item">
