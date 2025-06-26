@@ -1,21 +1,48 @@
 ﻿.footer-item {
     .license {
-        &.valid {
-            background-color: @btn-success-bg;
-            border-color: @btn-success-border;
-            color: @brand-success-light;
+        &.enterprise {
+            background-color: var(--license-enterprise);
         }
-        
-        &.invalid, &.no-license {
-            background-color: @btn-danger-bg;
-            border-color: @btn-danger-border;
-            color: @brand-danger-light;
+
+        &.enterprise-ai {
+            background: linear-gradient(135.89deg, #388EE9 0%, #7B51FF 85.4%);
         }
-        
-        &.expired {
-            background-color: @btn-warning-bg;
-            border-color: @btn-warning-border;
-            color: @brand-warning-light;
+
+        &.community {
+            background-color: var(--license-community);
+        }
+
+        &.professional {
+            background-color: var(--license-professional);
+        }
+
+        &.developer {
+            color: var(--bs-secondary);
+            background-color: var(--license-developer);
+        }
+
+        &.no-background {
+            background-color: @gray-600; // Default footer background color
+        }
+
+
+        &-status {
+            width: 0.5rem;
+            height: 0.5rem;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+
+            &.valid {
+                background-color: @btn-success-bg;
+            }
+
+            &.invalid, &.no-license {
+                background-color: @btn-danger-bg;
+            }
+
+            &.expired {
+                background-color: @btn-warning-bg;
+            }
         }
     }
     
@@ -33,4 +60,3 @@
         }
     }
 }
-

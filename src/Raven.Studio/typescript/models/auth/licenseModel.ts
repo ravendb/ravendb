@@ -38,7 +38,37 @@ class licenseModel {
 
         return licenseType;
     }
-
+    
+    static licenseTypeShortText = ko.pureComputed(() => licenseModel.licenseTypeShortTextProvider(licenseModel.licenseStatus()));
+    
+    static licenseTypeShortTextProvider(licenseStatus: LicenseStatus): string {
+        if (!licenseStatus || licenseStatus.Type === "None") {
+            return "AGPL";
+        }
+        
+        if (licenseStatus.Type === "Invalid") {
+            return "Invalid";
+        }
+        
+        switch (licenseStatus.Type) {
+            case "EnterpriseAi":
+                return "AI";
+            case "Enterprise":
+                return "Enterprise";
+            case "Professional":
+                return "Professional";
+            case "Community":
+                return "Community";
+            case "Developer":
+                return "Developer";
+            case "Essential":
+                return "Essential";
+            default:
+                return licenseStatus.Type;
+        }
+    }
+    
+    
     static formattedExpiration = ko.pureComputed(() => {
         const licenseStatus = licenseModel.licenseStatus();
         if (!licenseStatus || !licenseStatus.SubscriptionExpiration) {
@@ -172,6 +202,7 @@ class licenseModel {
     
     static licenseCssClass = ko.pureComputed(() => {
         const status = licenseModel.licenseStatus();
+        
         if (!status || status.Type === "None") {
             return 'no-license';
         }
@@ -181,6 +212,28 @@ class licenseModel {
             return 'invalid';
         } else {
             return 'valid';
+        }
+    });
+    
+    static licenseBgColorClass = ko.pureComputed(() => {
+        const licenseType = licenseModel.licenseType();
+        
+        switch (licenseType) {
+            case "Community":
+                return "community";
+            case "Developer":
+                return "developer";
+            case "Enterprise":
+                return "enterprise";
+            case "EnterpriseAi":
+                return "enterprise-ai";
+            case "Professional":
+                return "professional";
+            case "Invalid":
+                return "danger";
+            case "Essential":
+            default:
+                return "no-background";
         }
     });
 
