@@ -4,7 +4,7 @@ import reactUtils = require("common/reactUtils");
 import AiConnectionStrings = require("components/pages/database/aiHub/aiConnectionStrings/AiConnectionStrings");
 import AiTasks = require("components/pages/database/aiHub/aiTasks/AiTasks");
 import AiAgents = require("components/pages/database/aiHub/aiAgents/AiAgents");
-import EditAiAgent = require("components/pages/database/aiHub/aiAgents/EditAiAgent");
+import EditAiAgent = require("components/pages/database/aiHub/aiAgents/edit/EditAiAgent");
 
 export = getAiHubMenuItem;
 
