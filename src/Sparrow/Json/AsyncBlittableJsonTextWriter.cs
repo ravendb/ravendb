@@ -17,13 +17,6 @@ namespace Sparrow.Json
             _cancellationToken = cancellationToken;
         }
 
-
-        public static ConfiguredAsyncDisposable Create(JsonOperationContext context, Stream stream, out AsyncBlittableJsonTextWriter writer, CancellationToken cancellationToken = default)
-        {
-            writer = new AsyncBlittableJsonTextWriter(context, stream, cancellationToken);
-            return writer.ConfigureAwait(false);
-        }
-
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<int> MaybeOuterFlushAsync()
         {
@@ -95,18 +88,30 @@ namespace Sparrow.Json
             return bytesCount;
         }
 
+        public Action OnDebug_DisposeStart { get; set; }
+        public Action OnDebug_DisposeAfterDisposeInternal { get; set; }
+        public Action OnDebug_DisposeAfterFlush { get; set; }
+        public Action OnDebug_DisposeAfterOutputStreamFlush { get; set; }
+        public Action OnDebug_DisposeCompleted { get; set; }
+        
         public async ValueTask DisposeAsync()
         {
+            OnDebug_DisposeStart?.Invoke();
             DisposeInternal();
-
+            OnDebug_DisposeAfterDisposeInternal?.Invoke();
             if (await FlushAsync().ConfigureAwait(false) > 0)
+            {
+                OnDebug_DisposeAfterFlush?.Invoke();
                 await _outputStream.FlushAsync().ConfigureAwait(false);
+                OnDebug_DisposeAfterOutputStreamFlush?.Invoke();
+            }
 
 #if !NETSTANDARD2_0
             await _stream.DisposeAsync().ConfigureAwait(false);
 #else
             _stream.Dispose();
 #endif
+            OnDebug_DisposeCompleted?.Invoke();
         }
 
         private void ThrowInvalidTypeException(Type typeOfStream)

@@ -287,8 +287,14 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         ReadTransaction?.DebugInfo_Add("WriteDocumentsByIdResultAsync: About to create writer");
 
-        await using (AsyncBlittableJsonTextWriter.Create(context, RequestHandler.ResponseBodyStream(), out var writer))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
+            writer.OnDebug_DisposeStart = () => ReadTransaction?.DebugInfo_Add("AsyncBlittableJsonTextWriter: Disposing writer");
+            writer.OnDebug_DisposeAfterDisposeInternal = () => ReadTransaction?.DebugInfo_Add("AsyncBlittableJsonTextWriter: Writer disposed internally");
+            writer.OnDebug_DisposeAfterFlush = () => ReadTransaction?.DebugInfo_Add("AsyncBlittableJsonTextWriter: Writer flushed");
+            writer.OnDebug_DisposeAfterOutputStreamFlush = () => ReadTransaction?.DebugInfo_Add("AsyncBlittableJsonTextWriter: Output stream flushed");
+            writer.OnDebug_DisposeCompleted = () => ReadTransaction?.DebugInfo_Add("AsyncBlittableJsonTextWriter: Writer dispose completed");
+            
             ReadTransaction?.DebugInfo_Add("WriteDocumentsByIdResultAsync: Writer created, starting JSON");
 
             writer.WriteStartObject();
@@ -389,7 +395,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         long numberOfResults;
         long totalDocumentsSizeInBytes;
 
-        await using (AsyncBlittableJsonTextWriter.Create(context, RequestHandler.ResponseBodyStream(), out var writer))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream()))
         {
             writer.WriteStartObject();
             writer.WritePropertyName("Results");
