@@ -180,14 +180,18 @@ function CollectionsInfo({
                              currentCollection,
                          }: CollectionsInfoProps) {
     const collectionName = currentCollection().name === collection.allDocumentsCollectionName ? "all" : currentCollection().name;
+    const isAllDocuments = collectionName === "all";
+    
     return (
         <LazyLoad active={collectionsList.loading}>
-            <div>
-                <p>
-                    All documents from <b>{collectionName}</b> collections will be deleted
-                    ({genUtils.formatNumberToStringFixed(virtualGridSelection.count, 0)} documents).
-                </p>
-            </div>
+            <p>
+                All documents from {isAllDocuments ? (
+                <b className="text-uppercase">{collectionName}</b>
+            ) : (
+                <>collection <b>{collectionName}</b></>
+            )} will be deleted
+                ({genUtils.formatNumberToStringFixed(virtualGridSelection.count, 0)} documents).
+            </p>
         </LazyLoad>
     );
 }
