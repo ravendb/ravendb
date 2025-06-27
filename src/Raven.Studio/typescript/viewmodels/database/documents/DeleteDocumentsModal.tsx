@@ -28,34 +28,34 @@ interface DeleteDocumentsModalProps {
 }
 
 export default function DeleteDocumentsModal({
-                                                 close,
-                                                 gridController,
-                                                 onDeleteCompleted,
-                                                 currentCollection,
-                                             }: DeleteDocumentsModalProps) {
+    close,
+    gridController,
+    onDeleteCompleted,
+    currentCollection,
+}: DeleteDocumentsModalProps) {
     const selection = gridController.selection();
-    
+
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
-    
+
     const { confirmText, handleTextChange, isConfirmed } = useDeleteConfirmation();
     const { tasksService } = useServices();
     const collectionsList = useAsync(() => tasksService.fetchCollectionsStats(dbName), []);
-    
+
     const deleteCollection = useDeleteCollection(
         currentCollection,
-        selection.excluded.map(doc => doc.getId()),
+        selection.excluded.map((doc) => doc.getId()),
         selection.count,
         close,
-        onDeleteCompleted,
+        onDeleteCompleted
     );
-    
+
     const onConfirm = async () => {
         if (!isConfirmed) {
             return;
         }
         await deleteCollection.execute();
     };
-    
+
     return (
         <Modal show contentClassName="modal-border bulge-danger">
             <Modal.Header closeButton className="vstack gap-4" onCloseClick={close}>
@@ -71,14 +71,8 @@ export default function DeleteDocumentsModal({
                     currentCollection={currentCollection}
                 />
                 <Form.Group>
-                    <Form.Label className="fw-bold">
-                        Type DELETE to confirm
-                    </Form.Label>
-                    <Form.Control
-                        placeholder="DELETE"
-                        value={confirmText}
-                        onChange={handleTextChange}
-                    />
+                    <Form.Label className="fw-bold">Type DELETE to confirm</Form.Label>
+                    <Form.Control placeholder="DELETE" value={confirmText} onChange={handleTextChange} />
                 </Form.Group>
             </Modal.Body>
             <Modal.Footer>
@@ -101,11 +95,11 @@ export default function DeleteDocumentsModal({
 
 function useDeleteConfirmation() {
     const [confirmText, setConfirmText] = useState("");
-    
+
     const handleTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setConfirmText(e.target.value.trim());
     };
-    
+
     return {
         confirmText,
         handleTextChange,
@@ -113,10 +107,16 @@ function useDeleteConfirmation() {
     };
 }
 
-function useDeleteCollection(currentCollection: KnockoutObservable<collection>, excludedIds: string[], documentCount: number, close: () => void, onDeleteCompleted: () => void) {
+function useDeleteCollection(
+    currentCollection: KnockoutObservable<collection>,
+    excludedIds: string[],
+    documentCount: number,
+    close: () => void,
+    onDeleteCompleted: () => void
+) {
     const { databasesService } = useServices();
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
-    
+
     const deleteCollectionAsync = useAsyncCallback(
         async () => {
             const collectionNameForApi = currentCollection().isAllDocuments ? "@all_docs" : currentCollection().name;
@@ -125,21 +125,24 @@ function useDeleteCollection(currentCollection: KnockoutObservable<collection>, 
         },
         {
             onError: (error) => messagePublisher.reportError("Failed to delete collection", error.message),
-        },
+        }
     );
-    
+
     const monitorOperationAsync = useAsyncCallback(
         async (operationId: number) => {
             notificationCenter.instance.openDetailsForOperationById(dbName, operationId);
             close();
-            await notificationCenter.instance.databaseOperationsWatch.monitorOperation(operationId)
+            await notificationCenter.instance.databaseOperationsWatch
+                .monitorOperation(operationId)
                 .done(() => {
                     if (excludedIds.length === 0) {
                         messagePublisher.reportSuccess(`Deleted collection ${currentCollection().name}`);
                     } else {
-                        messagePublisher.reportSuccess(`Deleted ${pluralizeHelpers.pluralize(documentCount, "document", "documents")} from ${currentCollection().name}`);
+                        messagePublisher.reportSuccess(
+                            `Deleted ${pluralizeHelpers.pluralize(documentCount, "document", "documents")} from ${currentCollection().name}`
+                        );
                     }
-                    
+
                     if (excludedIds.length === 0) {
                         // if entire collection was deleted then go to 'all documents'
                         const allDocsCollection = collectionsTracker.default.getAllDocumentsCollection();
@@ -152,16 +155,16 @@ function useDeleteCollection(currentCollection: KnockoutObservable<collection>, 
         },
         {
             onError: (error) => messagePublisher.reportError("Failed to monitor delete operation", error.message),
-        },
+        }
     );
-    
+
     const execute = async () => {
         const operationId = await deleteCollectionAsync.execute();
         if (operationId) {
             await monitorOperationAsync.execute(operationId);
         }
     };
-    
+
     return {
         execute,
         loading: deleteCollectionAsync.loading || monitorOperationAsync.loading,
@@ -174,23 +177,23 @@ interface CollectionsInfoProps {
     currentCollection: KnockoutObservable<collection>;
 }
 
-function CollectionsInfo({
-                             virtualGridSelection,
-                             collectionsList,
-                             currentCollection,
-                         }: CollectionsInfoProps) {
-    const collectionName = currentCollection().name === collection.allDocumentsCollectionName ? "all" : currentCollection().name;
+function CollectionsInfo({ virtualGridSelection, collectionsList, currentCollection }: CollectionsInfoProps) {
+    const collectionName =
+        currentCollection().name === collection.allDocumentsCollectionName ? "all" : currentCollection().name;
     const isAllDocuments = collectionName === "all";
-    
+
     return (
         <LazyLoad active={collectionsList.loading}>
             <p>
-                All documents from {isAllDocuments ? (
-                <b className="text-uppercase">{collectionName}</b>
-            ) : (
-                <>collection <b>{collectionName}</b></>
-            )} will be deleted
-                ({genUtils.formatNumberToStringFixed(virtualGridSelection.count, 0)} documents).
+                All documents from{" "}
+                {isAllDocuments ? (
+                    <b className="text-uppercase">{collectionName}</b>
+                ) : (
+                    <>
+                        collection <b>{collectionName}</b>
+                    </>
+                )}{" "}
+                will be deleted ({genUtils.formatNumberToStringFixed(virtualGridSelection.count, 0)} documents).
             </p>
         </LazyLoad>
     );
