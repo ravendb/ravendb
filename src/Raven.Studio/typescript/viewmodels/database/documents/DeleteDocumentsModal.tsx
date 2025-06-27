@@ -187,7 +187,9 @@ function CollectionsInfo({ virtualGridSelection, collectionsList, currentCollect
             <p>
                 All documents from{" "}
                 {isAllDocuments ? (
-                    <b className="text-uppercase">{collectionName}</b>
+                    <>
+                        <b className="text-uppercase">{collectionName}</b> collections
+                    </>
                 ) : (
                     <>
                         collection <b>{collectionName}</b>
