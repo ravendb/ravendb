@@ -62,7 +62,7 @@ namespace SlowTests.Issues
 
                 using (var store = GetDocumentStore())
                 {
-                    await ChangeLicense(Server, RL_COMM);
+                    await ChangeLicense(Server, RL_COMM, store);
                     var importOperation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), file);
                     await importOperation.WaitForCompletionAsync(TimeSpan.FromMinutes(5));
 
@@ -96,7 +96,7 @@ namespace SlowTests.Issues
 
                 using (var store = GetDocumentStore())
                 {
-                    await ChangeLicense(Server, RL_COMM);
+                    await ChangeLicense(Server, RL_COMM, store);
 
                     var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     {
@@ -137,7 +137,7 @@ namespace SlowTests.Issues
 
                 using (var store = GetDocumentStore())
                 {
-                    await ChangeLicense(Server, RL_PRO);
+                    await ChangeLicense(Server, RL_PRO, store);
 
                     var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     {
@@ -186,7 +186,7 @@ namespace SlowTests.Issues
 
                 using (var store = GetDocumentStore())
                 {
-                    await ChangeLicense(Server, RL_COMM);
+                    await ChangeLicense(Server, RL_COMM, store);
 
                     var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     {
@@ -228,7 +228,7 @@ namespace SlowTests.Issues
                         var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                         await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
-                        await ChangeLicense(server, RL_COMM);
+                        await ChangeLicense(server, RL_COMM, store2);
 
                         var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                         {
@@ -276,7 +276,7 @@ namespace SlowTests.Issues
 
                 using (var store = GetDocumentStore())
                 {
-                    await ChangeLicense(Server, RL_COMM);
+                    await ChangeLicense(Server, RL_COMM, store);
 
                     var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     {
@@ -312,7 +312,7 @@ namespace SlowTests.Issues
 
                 using (var store = GetDocumentStore())
                 {
-                    await ChangeLicense(Server, RL_COMM);
+                    await ChangeLicense(Server, RL_COMM, store);
 
                     var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     {
@@ -348,7 +348,7 @@ namespace SlowTests.Issues
 
                 using (var store = GetDocumentStore())
                 {
-                    await ChangeLicense(Server, RL_PRO);
+                    await ChangeLicense(Server, RL_PRO, store);
 
                     var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     {
@@ -387,7 +387,7 @@ namespace SlowTests.Issues
 
                 using (var store = GetDocumentStore())
                 {
-                    await ChangeLicense(Server, RL_COMM);
+                    await ChangeLicense(Server, RL_COMM, store);
 
                     var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     {
@@ -422,7 +422,7 @@ namespace SlowTests.Issues
 
                 using (var store = GetDocumentStore())
                 {
-                    await ChangeLicense(Server, RL_COMM);
+                    await ChangeLicense(Server, RL_COMM, store);
 
                     var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     {
@@ -457,7 +457,7 @@ namespace SlowTests.Issues
 
                 using (var store = GetDocumentStore())
                 {
-                    await ChangeLicense(Server, RL_PRO);
+                    await ChangeLicense(Server, RL_PRO, store);
 
                     var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     {
@@ -508,7 +508,7 @@ namespace SlowTests.Issues
 
                 using (var store = GetDocumentStore())
                 {
-                    await ChangeLicense(Server, RL_COMM);
+                    await ChangeLicense(Server, RL_COMM, store);
 
                     var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                     {
@@ -526,11 +526,11 @@ namespace SlowTests.Issues
         }
 
 
-        private static async Task ChangeLicense(RavenServer server, string licenseType)
+        private static async Task ChangeLicense(RavenServer server, string licenseType, DocumentStore store)
         {
             var license = Environment.GetEnvironmentVariable(licenseType);
             LicenseHelper.TryDeserializeLicense(license, out License li);
-
+            await RavenDB_21427.DisableRevisionCompression(server, store);
             await server.ServerStore.PutLicenseAsync(li, RaftIdGenerator.NewId());
         }
     }

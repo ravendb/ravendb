@@ -2732,7 +2732,7 @@ namespace Raven.Server.ServerWide
                         return;
                     }
 
-                    AssertLicenseLimits(type, serverStore, databaseRecord, items, context);
+                    AssertLicenseLimits(type, serverStore, databaseRecord, items, context, updateCommand);
 
                     UpdateIndexForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);

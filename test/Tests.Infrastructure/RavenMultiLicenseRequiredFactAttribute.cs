@@ -1,5 +1,4 @@
 ﻿using System;
-using Xunit;
 
 namespace Tests.Infrastructure
 {
@@ -11,7 +10,7 @@ namespace Tests.Infrastructure
         private static readonly bool RavenLicenseProfessional;
 
         internal static readonly bool HasLicense;
-
+        private string _skip;
         internal static string SkipMessage = $"Requires Licenses to be set via environment variable. : " +
                                              $"'RAVEN_LICENSE' - {IsSet(RavenLicense)} . " +
                                              $"'RAVEN_LICENSE_DEVELOPER' - {IsSet(RavenLicenseDeveloper)} . " +
@@ -40,11 +39,17 @@ namespace Tests.Infrastructure
         {
             get
             {
+                // Added support for the Skip option to allow temporarily skipping tests.
+                // Currently used for tests affected by RavenDB-24118 until the issue is resolved.
+                if (_skip != null)
+                    return _skip;
+
                 if (ShouldSkip(licenseRequired: true))
                     return SkipMessage;
 
                 return null;
             }
+            set => _skip = value;
         }
 
         internal static bool ShouldSkip(bool licenseRequired)
