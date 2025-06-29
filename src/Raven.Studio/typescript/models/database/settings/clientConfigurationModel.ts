@@ -39,13 +39,19 @@ class clientConfigurationModel {
             if (dto.LoadBalanceBehavior === "UseSessionContext") {
                 this.isDefined.push("useSessionContextForLoadBehavior");
                 this.useSessionContextForLoadBehavior("UseSessionContext");
-                
+
                 if (dto.LoadBalancerContextSeed || dto.LoadBalancerContextSeed === 0) {
                     this.isDefined.push("loadBalanceContextSeed");
                     this.loadBalanceContextSeed(dto.LoadBalancerContextSeed);
                     this.setLoadBalanceSeed(true);
                 }
-            } else if (dto.ReadBalanceBehavior != null) {
+            }
+            else if (dto.LoadBalanceBehavior === "None") {
+                this.isDefined.push("useSessionContextForLoadBehavior");
+                this.useSessionContextForLoadBehavior("None");
+            }
+
+            if (dto.ReadBalanceBehavior != null) {
                 this.isDefined.push("readBalanceBehavior");
                 this.readBalanceBehavior(dto.ReadBalanceBehavior);
             }
