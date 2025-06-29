@@ -178,7 +178,7 @@ class clientConfigurationModel {
     toDto(): Raven.Client.Documents.Operations.Configuration.ClientConfiguration {
         return {
             IdentityPartsSeparator: _.includes(this.isDefined(), "identityPartsSeparator") ? this.identityPartsSeparator() : null,
-            LoadBalanceBehavior: _.includes(this.isDefined(), "useSessionContextForLoadBehavior") ? "UseSessionContext" : "None",
+            LoadBalanceBehavior: _.includes(this.isDefined(), "useSessionContextForLoadBehavior") ? this.useSessionContextForLoadBehavior() : null,
             LoadBalancerContextSeed: _.includes(this.isDefined(), "useSessionContextForLoadBehavior") && _.includes(this.isDefined(), "loadBalanceContextSeed") ? this.loadBalanceContextSeed() : null,
             ReadBalanceBehavior: _.includes(this.isDefined(), "readBalanceBehavior") ? this.readBalanceBehavior() : null,
             MaxNumberOfRequestsPerSession: _.includes(this.isDefined(), "maxNumberOfRequestsPerSession") ? this.maxNumberOfRequestsPerSession() : null,
