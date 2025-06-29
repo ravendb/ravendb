@@ -17,7 +17,7 @@
 - All agents must ensure their changes build successfully via: dotnet build RavenDB.sln
 
 - $root/src/ folder contains the RavenDB main source.
-    - Sparrow:	Low-level system utilities: memory, compression, hashing. No RavenDB logic here.
+    - Sparrow:    Low-level system utilities: memory, compression, hashing. No RavenDB logic here.
     - Sparrow.Server: Utility logic used only by the server, built on top of Sparrow.
     - Voron: Storage engine: page management, transactions, trees, compression.
     - Corax: Search engine: indexing pipeline, tokenization, analyzers, inverted indexes.
@@ -37,7 +37,7 @@
     - BenchmarkTests: BenchmarkDotNet-based performance profiling.    
     - ConcurrencyTests: Race conditions and threading correctness.
     - EmbeddedTests: Tests targeting embedded RavenDB behavior.
-    - LicenseTests:	Licensing and activation flows.
+    - LicenseTests:    Licensing and activation flows.
     - InterversionTests: Cross-version compatibility and upgrade checks.
     - Tryouts: Scratch or experimental code. Don't depend on stability.
 
@@ -52,4 +52,6 @@
 - **Search Engine Specific Tests**: For tests that use engine-specific features (e.g., Lucene analyzers, WhereLucene), set the search engine directly in GetDocumentStore() call instead of using [RavenData] attributes: `GetDocumentStore(new Options { SearchEngine = RavenSearchEngineMode.Lucene })`
 - **Index-related tests**: Use `RavenTestCategory.Indexes` for index creation/management, or `RavenTestCategory.Querying | RavenTestCategory.Indexes` for query behavior that depends on specific index functionality.
 - When upgrading [Fact]/[Theory] attributes, always analyze test content to determine correct categorization before upgrading.
+- **CRITICAL**: Always read the complete test method content before categorizing. Do not rely solely on test names or file locations for categorization.
+- **CRITICAL**: Examine the test implementation to understand what functionality is actually being tested (e.g., indexing operations, query behavior, patching logic, etc.).
 - Always run the fast tests to ensure changes do work.

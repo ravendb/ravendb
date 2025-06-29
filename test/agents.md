@@ -1,9 +1,74 @@
-﻿??# General
+# General
 - Always run a full build of the entire project at the end of a task to verify that all changes are correct and don't break anything.
 - Use lower verbosity for tests by default and only enable normal or higher verbosity when absolutely necessary to avoid consuming too much context.
 - Run tests in release mode to make them faster using: dotnet test --configuration Release
 
 # Test Categorization Rules
+
+## CRITICAL Guidelines
+- Always categorize based on PRIMARY functionality being tested, not file location
+- Prefer specific categories over `RavenTestCategory.Core`
+- Use `Core` ONLY for truly foundational, low-level functionality
+- Add `using Tests.Infrastructure;` when upgrading to [RavenFact]/[RavenTheory]
+
+## Quick Categorization Guide
+
+### API-Based Rules:
+- **Patching operations** → `Patching`: `session.Advanced.Patch()`, `PatchByQueryOperation`
+- **Query operations** → `Querying`: `session.Query<>()`, `session.Advanced.DocumentQuery<>()`
+- **Index operations** → `Indexes`: `AbstractIndexCreationTask`, index creation/management
+- **Basic CRUD** → `ClientApi`: `session.Store()`, `session.Load()`, `session.SaveChanges()`
+- **Configuration** → `Configuration`: Database settings, name validation, server config
+- **Counter operations** → `Counters`: `Increment()`, counter operations (even in patch files)
+- **TimeSeries operations** → `TimeSeries`: `session.TimeSeriesFor()`, time series functionality
+- **Attachments** → `Attachments`: `session.Advanced.Attachments.*`
+
+### Voron vs Corax Distinction:
+- **Voron (Storage Engine)** → `Voron`: `CompactTreeFor()`, `LookupFor()`, `OpenPostingList()`, `OpenContainer()`, `Container.Allocate/Delete`, PostingList operations, compression algorithms
+- **Corax (Search Engine)** → `Corax`: `IndexWriter`, `IndexSearcher`, `TermQuery`, `TermsReader`, analyzers, tokenization, ranking, suggestions
+- **Client-facing Corax** → `Corax | Querying`: `session.Query<>()` with `RavenSearchEngineMode.Corax`
+- **Client-facing Corax indexing** → `Corax | Indexes`: Index behavior testing with Corax engine
+
+### Mixed Voron/Corax Tests:
+- Categorize based on PRIMARY purpose
+- Count API calls to determine main focus
+- Directory location is NOT reliable (FastTests/Corax may test Voron components)
+
+### Core Category (Use Sparingly):
+- Low-level data structures and algorithms
+- Basic infrastructure NOT specific to any subsystem
+- Cross-cutting utilities like merged enumerators
+
+## Decision Process for AI Agents:
+1. **Examine test content** - What APIs are primarily used?
+2. **Identify primary purpose** - What would cause the test to fail?
+3. **Choose most specific category** - Don't default to Core
+4. **Validate** - Would developers find this test under this category?
+
+## Common Mistakes to Avoid:
+- Using `Core` for patching, querying, or CRUD operations
+- Categorizing based on file location instead of functionality
+- Combining categories unnecessarily
+- Defaulting to `Core` when unsure
+
+## Template for New Tests:
+```csharp
+using Tests.Infrastructure;
+using Xunit;
+
+[RavenFact(RavenTestCategory.SpecificCategory)]  // Choose most specific
+public void TestName()
+{
+    // Test implementation
+}
+```
+
+## Combined Categories:
+Only use combined categories when BOTH aspects are equally critical:
+- `ClientApi | Core`: When testing both client operations AND low-level behavior
+- `Querying | Indexes`: When testing query behavior dependent on specific index functionality
+
+**CRITICAL**: See test/Tests.Infrastructure/RavenTestCategory.cs for complete category definitions and examples.
 
 ## Critical Category Distinctions
 
