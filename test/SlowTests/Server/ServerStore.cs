@@ -8,6 +8,7 @@ using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Server
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Server_store_basic_read_write_should_work()
         {
             using (GetDocumentStore())
@@ -54,7 +55,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact(Skip = "RavenDB-8758")]
+        [RavenFact(RavenTestCategory.Core, Skip = "RavenDB-8758")]
         public async Task Server_store_write_should_throw_concurrency_exception_if_relevant()
         {
             using (GetDocumentStore())

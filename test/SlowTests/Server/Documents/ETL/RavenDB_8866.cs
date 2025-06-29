@@ -136,7 +136,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact(Skip = "RavenDB-14127")]
+        [RavenFact(RavenTestCategory.Etl, Skip = "RavenDB-14127")]
         public async Task CanResetEtl3()
         {
             using (var src = GetDocumentStore())

@@ -45,7 +45,7 @@ namespace SlowTests.Server.Replication
 
         private class New_User2 : User { }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void All_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
         {
             var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22) };
@@ -66,7 +66,7 @@ namespace SlowTests.Server.Replication
             Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void All_local_etags_lower_than_remote_should_return_Update_at_conflict_status()
         {
             var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22) };
@@ -88,7 +88,7 @@ namespace SlowTests.Server.Replication
             Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Some_remote_etags_lower_than_local_and_some_higher_should_return_Conflict_at_conflict_status()
         {
             var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22) };
@@ -110,7 +110,7 @@ namespace SlowTests.Server.Replication
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Some_remote_etags_lower_than_local_and_some_higher_should_return_Conflict_at_conflict_status_with_different_order()
         {
             var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22) };
@@ -132,7 +132,7 @@ namespace SlowTests.Server.Replication
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Remote_change_vector_larger_size_than_local_should_return_Update_at_conflict_status()
         {
             var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22) };
@@ -155,7 +155,7 @@ namespace SlowTests.Server.Replication
             Assert.Equal(ConflictStatus.Update, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Remote_change_vector_with_different_dbId_set_than_local_should_return_Conflict_at_conflict_status()
         {
             var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22) };
@@ -172,7 +172,7 @@ namespace SlowTests.Server.Replication
             Assert.Equal(ConflictStatus.Conflict, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Remote_change_vector_smaller_than_local_and_all_remote_etags_lower_than_local_should_return_AlreadyMerged_at_conflict_status()
         {
             var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22), new string('4', 22) };
@@ -195,7 +195,7 @@ namespace SlowTests.Server.Replication
             Assert.Equal(ConflictStatus.AlreadyMerged, ChangeVectorUtils.GetConflictStatus(remote.SerializeVector(), local.SerializeVector()));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void Remote_change_vector_smaller_than_local_and_some_remote_etags_higher_than_local_should_return_Conflict_at_conflict_status()
         {
             var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22), new string('4', 22) };
@@ -1638,7 +1638,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public void LocalIsLongerThanRemote()
         {
             var dbIds = new List<string> { new string('1', 22), new string('2', 22), new string('3', 22) };

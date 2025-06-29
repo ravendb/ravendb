@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -30,7 +31,7 @@ namespace SlowTests.Server.Documents.Queries
             _sut = new DynamicQueryToIndexMatcher(_documentDatabase.IndexStore);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Failure_if_matching_index_has_lot_of_errors()
         {
             Initialize();

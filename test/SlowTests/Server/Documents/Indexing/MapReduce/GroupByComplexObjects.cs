@@ -12,6 +12,7 @@ using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task By_single_complex_object()
         {
             using (var database = CreateDocumentDatabase())
@@ -79,7 +80,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task By_single_array_object()
         {
             using (var database = CreateDocumentDatabase())
@@ -142,7 +143,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task By_multiple_complex_objects()
         {
             using (var database = CreateDocumentDatabase())
@@ -212,7 +213,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task By_complex_object_and_array()
         {
             using (var database = CreateDocumentDatabase())

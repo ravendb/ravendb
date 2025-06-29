@@ -49,7 +49,7 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Subscriptions)]
     public async Task DataSubscriptionWillOperateOnlyOnArchivedDocuments()
     {
         using (var store = GetDocumentStore())
@@ -92,7 +92,7 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Subscriptions)]
     public async Task DataSubscriptionWillOperateOnlyOnArchivedDocuments_AfterChangingDefaultBehavior()
     {
         Options options = new()
@@ -139,7 +139,7 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Subscriptions)]
     public async Task DataSubscriptionWillOperateOnlyOnUnarchivedDocuments()
     {
         using (var store = GetDocumentStore())
@@ -179,7 +179,7 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Subscriptions)]
     public async Task DataSubscriptionWillOperateOnlyOnBothArchivedAndUnarchivedDocuments()
     {
         using (var store = GetDocumentStore())
@@ -224,7 +224,7 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Subscriptions)]
     public async Task ArchivedDocumentsDataSubscription_BehaviorWillBeTheSameAfterRestart()
     {
         using (var store = GetDocumentStore())
@@ -254,7 +254,7 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Subscriptions)]
     public async Task DataSubscriptionsArchivedBehaviorIsPersisted_DatabaseConfigurationChangeWontAffectExistingSubscription()
     {
         Options options = new()
@@ -424,7 +424,7 @@ public class DataArchivalDataSubscriptionsTests : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Subscriptions)]
     public async Task DataSubscriptionTryoutResultsAreConsistentWithCurrentArchivedDataBehavior()
     {
         Options options = new()

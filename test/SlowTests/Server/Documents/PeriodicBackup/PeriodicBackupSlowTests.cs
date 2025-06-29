@@ -69,7 +69,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             _output = output;
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_to_directory()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -108,7 +108,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_to_directory_multiple_backups_with_long_interval()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -161,7 +161,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task periodic_backup_should_work_with_long_intervals()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -215,7 +215,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_to_directory_multiple_backups()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -256,7 +256,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanImportTombstonesFromIncrementalBackup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -295,7 +295,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_restore_smuggler_correctly()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -359,7 +359,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_and_restore()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -434,7 +434,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory, Trait("Category", "Smuggler")]
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
         [InlineData("* * * * *", null)]
         [InlineData(null, "* * * * *")]
         [InlineData("0 0 1 * *", null)]
@@ -563,7 +563,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanBackupAndRestoreSnapshotExcludingIndexes()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -719,7 +719,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             public string Prop { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWideTransaction_WhenImportWithoutCompareExchange_ShouldNotFailOnAfterImportModification()
         {
             const string id = "test/1";
@@ -878,7 +878,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_and_restore_with_timeseries()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -980,7 +980,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_and_restore_snapshot_with_timeseries()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1062,7 +1062,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task RestoreSnapshotWithTimeSeriesCollectionConfiguration_WhenConfigurationInFirstSnapshot()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1089,7 +1089,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task RestoreSnapshotWithTimeSeriesCollectionConfiguration_WhenConfigurationInIncrementalSnapshot()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1153,7 +1153,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact(Skip = "RavenDB-18206/Sharding-Restore-Import"), Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport, Skip = "RavenDB-18206/Sharding-Restore-Import")]
         public async Task restore_settings_tests()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1223,7 +1223,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task periodic_backup_should_export_starting_from_last_etag()
         {
             //https://issues.hibernatingrhinos.com/issue/RavenDB-11395
@@ -1312,7 +1312,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task periodic_backup_with_timeseries_should_export_starting_from_last_etag()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1423,7 +1423,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task periodic_backup_with_incremental_timeseries_should_export_starting_from_last_etag()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1531,7 +1531,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task IncrementTimeSeriesBackup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1600,7 +1600,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task BackupTaskShouldStayOnTheOriginalNode()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1658,7 +1658,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullBackupWithSeveralCompareExchange()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1718,7 +1718,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task incremental_and_full_check_last_file_for_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1789,7 +1789,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             return op.Id;
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_run_incremental_with_no_changes()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1836,7 +1836,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_create_local_snapshot_and_restore_using_restore_point()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1902,7 +1902,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task SuccessfulFullBackupAfterAnErrorOneShouldClearTheErrorStatesFromBackupStatusAndLocalBackup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1984,7 +1984,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task FullBackupShouldSkipDeadSegments()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2032,7 +2032,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task IncrementalBackupShouldIncludeDeadSegments()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2088,7 +2088,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanAbortOneTimeBackupAndRestore()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2132,7 +2132,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory, Trait("Category", "Smuggler")]
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
         [InlineData(BackupType.Snapshot)]
         [InlineData(BackupType.Backup)]
         public async Task CanCreateOneTimeBackupAndRestore(BackupType backupType)
@@ -2232,7 +2232,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task PeriodicBackup_WhenEnabledAndDefinesNoDestinations_ShouldThrows()
         {
             using var store = GetDocumentStore();
@@ -2245,7 +2245,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             Assert.Contains(message, exception.Message);
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ManualBackup_WhenDefinesNoDestinations_ShouldThrowsOnServerAsWell()
         {
             using var store = GetDocumentStore();
@@ -2267,7 +2267,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task OneTimeBackupWithInvalidConfigurationShouldThrow()
         {
             using (var store = GetDocumentStore())
@@ -2288,7 +2288,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanGetOneTimeBackupStatusFromDatabasesInfo()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2330,7 +2330,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task IncrementalBackupWithNoChangesShouldSet_BackupStatus_IsFull_ToFalse()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2361,7 +2361,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_move_database_with_backup()
         {
             DoNotReuseServer();
@@ -2432,7 +2432,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Backup_WhenContainRevisionWithoutConfiguration_ShouldBackupRevisions()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2481,7 +2481,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Should_throw_on_document_with_changed_collection_when_no_tombstones_processed()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2563,7 +2563,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Can_restore_backup_when_document_changed_collection_between_backups()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2652,7 +2652,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Can_restore_snapshot_when_document_changed_collection_between_backups()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2741,7 +2741,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Can_restore_backup_when_document_with_attachment_changed_collection_between_backups()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2827,7 +2827,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldKeepTheBackupRunningIfItGotActiveByOtherNodeWhileRunning()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2883,7 +2883,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldCancelTheBackupRunningIfItGotDisabledWhileRunning()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -2940,7 +2940,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldHaveFailoverForFirstBackupInNewBackupTask()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3001,7 +3001,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanDelayBackupTask()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3065,7 +3065,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldDelayBackupOnNotResponsibleNode()
         {
             const int clusterSize = 3;
@@ -3245,7 +3245,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldScheduleNextBackupAfterServerRestartCorrectly()
         {
             const int clusterSize = 3;
@@ -3343,7 +3343,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task EveryNodeHasDelayInMemory()
         {
             const int clusterSize = 3;
@@ -3417,7 +3417,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldDelayOnCurrentNodeIfClusterDown()
         {
             const int clusterSize = 3;
@@ -3476,7 +3476,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task NumberOfCurrentlyRunningBackupsShouldBeCorrectAfterBackupTaskDelay()
         {
             DoNotReuseServer();
@@ -3543,7 +3543,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldRearrangeTheBackupTimer_IfItGot_ActiveByOtherNode_Then_ActiveByCurrentNode_WhileRunning()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3613,7 +3613,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_restore_smuggler_with_escaped_quotes()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3653,7 +3653,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task can_backup_and_restore_cluster_transactions_with_document_collection_change()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3748,7 +3748,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(5) : TimeSpan.FromSeconds(60);
 
-        [Theory, Trait("Category", "Smuggler")]
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Subscriptions)]
         [InlineData(BackupType.Snapshot)]
         public async Task can_incremental_snapshot_and_restore_with_subscription(BackupType backupType)
         {
@@ -3845,7 +3845,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory, Trait("Category", "Smuggler")]
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Subscriptions)]
         [InlineData(BackupType.Snapshot)]
         public async Task can_snapshot_and_restore_with_subscription(BackupType backupType)
         {
@@ -3923,7 +3923,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory, Trait("Category", "Smuggler")]
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Subscriptions)]
         [InlineData(BackupType.Snapshot)]
         [InlineData(BackupType.Backup)]
         public async Task can_backup_and_restore_with_subscription(BackupType backupType)

@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.Revisions
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertByMultipleCollections_ShouldRemoveDocWhichCreatedAfterTheMinDate()
         {
             var batchSizeLimitInBytes = 32 * 1_024; //32kb
@@ -116,7 +116,7 @@ namespace SlowTests.Server.Documents.Revisions
             return sb.ToString();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertByCollection()
         {
             var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "companies" };
@@ -170,7 +170,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertByCollectionForNonRevisionsConfiguredCollection()
         {
             var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "Products", "User" };
@@ -236,7 +236,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertByMultipleCollections()
         {
             var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "companies", "users" };
@@ -302,7 +302,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertByMultipleExistingAndDeletedCollections()
         {
             var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { "companies", "users" };
@@ -375,7 +375,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertByWrongCollection()
         {
             var collections = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
@@ -422,7 +422,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertByCollection_EndPointCheck()
         {
             var collections = new string[] { "companies" };
@@ -470,7 +470,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertByCollectionForNonRevisionsConfiguredCollection_EndPointCheck()
         {
             var collections = new string[] { "Products", "User" };
@@ -530,7 +530,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertByMultipleCollections_EndPointCheck()
         {
             var collections = new string[] { "companies", "users" };
@@ -590,7 +590,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertByMultipleExistingAndDeletedCollections_EndPointCheck()
         {
             var collections = new string[] { "companies", "users" };
@@ -657,7 +657,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevertByWrongCollection_EndPointCheck()
         {
             var collections = new string[]
@@ -701,7 +701,7 @@ namespace SlowTests.Server.Documents.Revisions
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task Revert_EndPointCheck()
         {
             var company = new Company { Name = "Company Name" };

@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
         public async Task CreateFullAndIncrementalBackupWithIndexInTheMiddle()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -90,7 +91,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeInTheMiddle()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -163,7 +164,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithIdentitiesInTheMiddle()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

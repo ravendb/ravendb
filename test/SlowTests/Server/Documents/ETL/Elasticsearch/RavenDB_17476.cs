@@ -99,7 +99,7 @@ loadTo" + OrdersIndexName + @"(orderData);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task TestScriptWillHaveDocumentIdPropertiesNotAddedExplicitlyInTheScript()
         {
             using (var store = GetDocumentStore())

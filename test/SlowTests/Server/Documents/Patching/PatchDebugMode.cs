@@ -16,7 +16,7 @@ namespace SlowTests.Server.Documents.Patching
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void DebugResultsWhenLoadingData()
         {
             using (var store = GetDocumentStore())
@@ -106,7 +106,7 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void DebugResultsWhenModifyingDocuments()
         {
             using (var store = GetDocumentStore())
@@ -143,7 +143,7 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void DebugResultsWhenModifyingCounters()
         {
             using (var store = GetDocumentStore())
@@ -198,7 +198,7 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void DebugResultsWhenModifyingTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -274,7 +274,7 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void DebugResultsWhenDeletingDocumentsAndCounters()
         {
             using (var store = GetDocumentStore())
@@ -312,7 +312,7 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void DebugResultsWhenDeletingTimeSeries()
         {
             using (var store = GetDocumentStore())
@@ -375,7 +375,7 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void DebugResultsWhenModifyingData()
         {
             using (var store = GetDocumentStore())
@@ -491,7 +491,7 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void DebugResultsWhenDeletingData()
         {
             using (var store = GetDocumentStore())

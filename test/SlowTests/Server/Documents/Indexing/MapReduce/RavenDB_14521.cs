@@ -4,6 +4,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanProvideMultipleStringInterpolations()
         {
             using (var store = GetDocumentStore())
@@ -28,7 +29,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldThrowOnUsingNonUniqueFields()
         {
             using (var store = GetDocumentStore())

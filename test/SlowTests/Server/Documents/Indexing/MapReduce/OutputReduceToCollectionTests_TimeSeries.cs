@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
         public async Task ReduceResultsBackAsDocuments()
         {
             using (var store = GetDocumentStore())
@@ -43,7 +43,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
         public async Task ForbidOutputReduceDocumentsOnTheDocumentsWeMap()
         {
             using (var store = GetDocumentStore())
@@ -55,7 +55,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
         public async Task ForbidOutputReduceDocumentsOnTheDocumentsWeLoadInMap()
         {
             using (var store = GetDocumentStore())
@@ -67,7 +67,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
         public async Task ForbidOutputReduceDocumentsInAInfiniteLoop()
         {
             using (var store = GetDocumentStore())
@@ -81,7 +81,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
         public async Task ForbidOutputReduceDocumentsInAInfiniteLoopCausedByLoadDocument()
         {
             using (var store = GetDocumentStore())
@@ -99,7 +99,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
         public async Task ForbidOutputReduceDocumentsToExistingCollectionWhichHaveDocuments()
         {
             using (var store = GetDocumentStore())

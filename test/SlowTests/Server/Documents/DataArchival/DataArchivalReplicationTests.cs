@@ -29,7 +29,7 @@ public class DataArchivalReplicationTests : ReplicationTestBase
         await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Replication)]
     public async Task CanIndexOnlyUnarchivedDocuments_AutoMapIndex_WithReplication()
     {
         using (var store1 = GetDocumentStore())

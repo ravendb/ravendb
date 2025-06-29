@@ -37,7 +37,7 @@ public class DataArchivalIndexingTests : RavenTestBase
         await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task CanIndexOnlyUnarchivedDocuments_AutoMapIndex()
     {
         using (var store = GetDocumentStore())
@@ -329,7 +329,7 @@ public class DataArchivalIndexingTests : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task CanIndexOnlyArchivedDocuments_AfterChangingConfiguration_MapSearchIndex()
     {
         Options options = new()
@@ -415,7 +415,7 @@ public class DataArchivalIndexingTests : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task CanGetArchivedDataProcessingBehaviorFromIndexStatistics()
     {
         using (var store = GetDocumentStore())
@@ -743,7 +743,7 @@ public class DataArchivalIndexingTests : RavenTestBase
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task SettingArchivedDataProcessingBehaviorIndexWillThrowNotSupportedException()
     {
         using (var store = GetDocumentStore())
@@ -752,7 +752,7 @@ public class DataArchivalIndexingTests : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task SettingArchivedDataProcessingBehaviorOnTimeSeriesIndexWillThrowNotSupportedException()
     {
         using (var store = GetDocumentStore())
@@ -1072,7 +1072,7 @@ public class DataArchivalIndexingTests : RavenTestBase
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task CanIndexOnlyUnarchivedDocuments_JavaScriptMapReduceIndex()
     {
         using (var store = GetDocumentStore())
@@ -1121,7 +1121,7 @@ public class DataArchivalIndexingTests : RavenTestBase
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task CanIndexOnlyArchivedDocuments_JavaScriptMapReduceIndex()
     {
         using (var store = GetDocumentStore())
@@ -1169,7 +1169,7 @@ public class DataArchivalIndexingTests : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task CanIndexAllDocuments_JavaScriptMapReduceIndex()
     {
         using (var store = GetDocumentStore())
@@ -1217,7 +1217,7 @@ public class DataArchivalIndexingTests : RavenTestBase
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task CanIndexOnlyUnarchivedDocuments_JavaScriptMapIndex()
     {
         using (var store = GetDocumentStore())
@@ -1266,7 +1266,7 @@ public class DataArchivalIndexingTests : RavenTestBase
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task CanIndexOnlyArchivedDocuments_JavaScriptMapIndex()
     {
         using (var store = GetDocumentStore())
@@ -1314,7 +1314,7 @@ public class DataArchivalIndexingTests : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task CanIndexAllDocuments_JavaScriptMapIndex()
     {
         using (var store = GetDocumentStore())
@@ -1380,7 +1380,7 @@ User: counter.DocumentId
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task SettingArchivedDataProcessingBehaviorOnJSCountersIndexWillThrowNotSupportedException()
     {
         using (var store = GetDocumentStore())
@@ -1389,7 +1389,7 @@ User: counter.DocumentId
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Indexes)]
     public async Task CanChangeDefaultArchivedDataProcessingBehaviorForAutoIndexes()
     {
         Options options = new()

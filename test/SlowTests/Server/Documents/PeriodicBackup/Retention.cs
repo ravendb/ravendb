@@ -42,7 +42,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             });
         }
 
-        [Theory, Trait("Category", "Smuggler")]
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
         [InlineData(7, 3, false)]
         [InlineData(10, 3, true)]
         [InlineData(7, 3, false, "/E/G/O/R/../../../..")]
@@ -124,7 +124,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task configuration_validation()
         {
             await Locker.WaitAsync();

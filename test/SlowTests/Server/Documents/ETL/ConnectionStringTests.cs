@@ -286,7 +286,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void CannotAddSqlConnectionStringWithInvalidFactoryName()
         {
             using (var store = GetDocumentStore())

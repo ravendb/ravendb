@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Server.Basic
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task CanDeleteCollection()
         {
             using (var store = GetDocumentStore())

@@ -13,6 +13,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task BackupWithIdentityAndCompareExchangeShouldHaveOnlyOwnValues()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder1");
@@ -115,7 +116,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void AllCompareExchangeAndIdentitiesPreserveAfterSchemaUpgradeFrom12()
         {
             var folder = NewDataPath(forceCreateDir: true);
@@ -153,7 +154,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         [InlineData("SchemaUpgrade/Issues/SystemVersion/Identities_CompareExchange_RavenData_from13.zip", 1024)]
         [InlineData("SchemaUpgrade/Issues/SystemVersion/after_from12.zip", 1024)]
         [InlineData("SchemaUpgrade/Issues/SystemVersion/after_from13.zip", 1024)]

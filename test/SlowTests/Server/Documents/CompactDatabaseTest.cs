@@ -22,7 +22,7 @@ namespace SlowTests.Server.Documents
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanCompactDatabase()
         {
             var path = NewDataPath();
@@ -63,7 +63,7 @@ namespace SlowTests.Server.Documents
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanCompactDatabaseWithAttachment()
         {
             var path = NewDataPath();
@@ -109,7 +109,7 @@ namespace SlowTests.Server.Documents
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanCompactDatabaseWithTxThatSurpassedMaxScratchBufferSize()
         {
             var path = NewDataPath();

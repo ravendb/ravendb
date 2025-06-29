@@ -8,6 +8,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Server.NotificationCenter
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Huge_document_hints_are_stored_and_can_be_read()
         {
             using (var store = GetDocumentStore())
@@ -65,7 +66,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Huge_document_hints_are_available_for_empty_document_ids()
         {
             using (var store = GetDocumentStore(new Options
@@ -116,7 +117,7 @@ namespace SlowTests.Server.NotificationCenter
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Core)]
         public async Task Huge_document_hints_are_available_for_patched_documents()
         {
             using (var store = GetDocumentStore(new Options

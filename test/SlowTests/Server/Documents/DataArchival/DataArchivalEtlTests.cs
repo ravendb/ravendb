@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Util;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -30,7 +31,7 @@ public class DataArchivalEtlTests : RavenTestBase
         await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Etl)]
     public async Task CanFilterOutUnarchivedDocumentsInEtl()
     {
         using (var src = GetDocumentStore())
@@ -115,7 +116,7 @@ public class DataArchivalEtlTests : RavenTestBase
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Etl)]
     public async Task CanFilterOutArchivedDocumentsInEtl()
     {
         using (var src = GetDocumentStore())

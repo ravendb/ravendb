@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public async Task Should_match_auto_map_reduce_index_if_analyzed_field_isnt_used_in_where()
         {
             using (var db = CreateDocumentDatabase())
@@ -43,7 +44,7 @@ select count() as Count, Artist"));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public async Task Should_match_auto_map_index_if_analyzed_field_isnt_used_in_where()
         {
             using (var db = CreateDocumentDatabase())

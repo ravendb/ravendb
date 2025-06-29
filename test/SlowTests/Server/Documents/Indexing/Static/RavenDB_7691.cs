@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Exceptions;
 using Sparrow.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -139,7 +140,7 @@ from EdgeCaseValues as e select MyProjection(e)";
             public double simpleDoubleX;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanParseFieldsEdgeCasesValuesInDocuments()
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
@@ -162,7 +163,7 @@ from EdgeCaseValues as e select MyProjection(e)";
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanParseNumericEdgeCasesRawValuesInJSProjection()
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
@@ -189,7 +190,7 @@ from EdgeCaseValues as e select MyProjection(e)";
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanParseNumericPercisionEdgeCasesRawValuesInJSProjection()
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCasePercisionValues();
@@ -216,7 +217,7 @@ from EdgeCaseValues as e select MyProjection(e)";
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ScalarToRawThrowsOnIllegalLambdas()
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
@@ -281,7 +282,7 @@ from EdgeCaseValues as e select MyProjection(e)"
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanModifyRawAndOriginalValuesTogether()
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();
@@ -416,7 +417,7 @@ from EdgeCaseValues as e select MyProjection(e)"
             }
         }
 
-        [Fact(Skip = "RavenDB-15952")]
+        [RavenFact(RavenTestCategory.Indexes, Skip = "RavenDB-15952")]
         public async Task CanIndexBigNumbersEdgeCases()
         {
             EdgeCaseValues edgeCaseValues = GenerateEdgeCaseValues();

@@ -10,6 +10,7 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.OutputToCollection;
 using Raven.Server.Documents.Indexes.Static;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCreateIndexesWithPattern()
         {
             using (var store = GetDocumentStore())
@@ -54,7 +55,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanDefinePatternForReferenceDocumentsOfReduceOutputs()
         {
             using (var store = GetDocumentStore())
@@ -139,7 +140,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void MultipleReduceOutputsIntoSingleReferenceDocument()
         {
             using (var store = GetDocumentStore())
@@ -236,7 +237,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanUpdateIndexWithPatternForOutputReduceToCollectionReferences()
         {
             using (var store = GetDocumentStore())
@@ -297,7 +298,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanPersistPatternForOutputReduceToCollectionReferences()
         {
             using (var store = GetDocumentStore())
@@ -317,7 +318,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldCreateIndexErrorIfPatternFormattingIsNotValid()
         {
             using (var store = GetDocumentStore())
@@ -356,7 +357,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanUpdatePatternForOutputReduceToCollection()
         {
             using (var store = GetDocumentStore())
@@ -396,7 +397,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanUpdatePatternFieldInIndexDefinitionSoItWillAffectReferenceDocuments()
         {
             using (var store = GetDocumentStore())
@@ -440,7 +441,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void OutputReferencesPatternTests()
         {
             var sut = new OutputReferencesPattern(null, "reports/daily/{OrderedAt:yyyy-MM-dd}");

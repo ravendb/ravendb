@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task MultipleAggregationFunctionsCanBeUsed()
         {
             using (var db = CreateDocumentDatabase())

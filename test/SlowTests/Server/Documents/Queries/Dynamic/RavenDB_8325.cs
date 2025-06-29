@@ -3,6 +3,7 @@ using Raven.Client;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Queries;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic
             public long Value { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Numeric_values_should_to_be_sorted_lexically_if_not_specified_explicitly()
         {
             using (var store = GetDocumentStore())

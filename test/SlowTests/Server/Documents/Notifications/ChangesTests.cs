@@ -24,7 +24,7 @@ namespace SlowTests.Server.Documents.Notifications
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ChangesApi)]
         public async Task CanGetNotificationAboutDocumentPut()
         {
             using (var store = GetDocumentStore())
@@ -52,7 +52,7 @@ namespace SlowTests.Server.Documents.Notifications
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ChangesApi)]
         public async Task CanGetAllNotificationAboutDocument_ALotOfDocuments()
         {
             using (var store = GetDocumentStore())
@@ -86,7 +86,7 @@ namespace SlowTests.Server.Documents.Notifications
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ChangesApi)]
         public async Task CanGetNotificationAboutDocumentDelete()
         {
             using (var store = GetDocumentStore())
@@ -122,7 +122,7 @@ namespace SlowTests.Server.Documents.Notifications
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ChangesApi)]
         public async Task CanCreateMultipleNotificationsOnSingleConnection()
         {
             using (var store = GetDocumentStore())
@@ -158,7 +158,7 @@ namespace SlowTests.Server.Documents.Notifications
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ChangesApi)]
         public async Task NotificationOnWrongDatabase_ShouldNotCrashServer()
         {
             using (var store = GetDocumentStore())
@@ -171,7 +171,7 @@ namespace SlowTests.Server.Documents.Notifications
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ChangesApi)]
         public async Task CanGetNotificationAboutSideBySideIndexReplacement()
         {
             using (var store = GetDocumentStore())
@@ -201,7 +201,7 @@ namespace SlowTests.Server.Documents.Notifications
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ChangesApi)]
         public async Task CanGetNotificationAboutDocumentsStartingWith()
         {
             using (var store = GetDocumentStore())
@@ -242,7 +242,7 @@ namespace SlowTests.Server.Documents.Notifications
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ChangesApi)]
         public async Task CanGetNotificationAboutDocumentsFromCollection()
         {
             using (var store = GetDocumentStore())

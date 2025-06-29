@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Replication.Senders;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Server
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Returns_items_in_order()
         {
             using (var merged = new MergedEnumerator<int>(new IntComparer()))
@@ -34,7 +35,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Returns_items_in_order_async()
         {
             await using (var merged = new MergedAsyncEnumerator<int>(new IntComparer()))
@@ -53,7 +54,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Returns_items_in_order_for_ETL()
         {
             using (var merged = new ExtractedItemsEnumerator<Item, EtlStatsScope, EtlPerformanceOperation>(new EtlStatsScope(new EtlRunStats())))

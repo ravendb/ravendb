@@ -18,7 +18,7 @@ public class PinOnGoingTaskToMentorNodeServerWide : ReplicationTestBase
         DoNotReuseServer();
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Replication)]
     public async Task Can_Set_Pin_To_Node_Server_Wide_External_Replication()
     {
         using (var store = GetDocumentStore())
