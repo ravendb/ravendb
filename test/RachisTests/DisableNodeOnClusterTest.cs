@@ -16,7 +16,7 @@ namespace RachisTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task BackToFirstNodeAfterRevive()
         {
             // we don't want to move the node to rehab, since it should be restored to the top of the list.

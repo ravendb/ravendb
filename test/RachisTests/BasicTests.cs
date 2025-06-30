@@ -20,7 +20,7 @@ namespace RachisTests
         {
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData(2)]
         [InlineData(3)]
         [InlineData(4)]
@@ -59,7 +59,7 @@ namespace RachisTests
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void RavenDB_13659()
         {
             EnableCaptureWriteTransactionStackTrace = true;

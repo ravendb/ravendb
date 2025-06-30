@@ -24,7 +24,7 @@ namespace RachisTests
             public string Name { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RequestExecutor_failover_with_only_one_database_should_properly_fail()
         {
             var (_, leader) = await CreateRaftCluster(1);
@@ -58,7 +58,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RequestExecutor_failover_to_database_topology_should_work()
         {
             var (nodes, leader) = await CreateRaftCluster(3);

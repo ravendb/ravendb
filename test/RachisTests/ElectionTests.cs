@@ -21,7 +21,7 @@ namespace RachisTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task Follower_as_a_single_node_becomes_leader_automatically()
         {
             var node = SetupServer(true);
@@ -35,7 +35,7 @@ namespace RachisTests
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RavenDB_13922()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -94,7 +94,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanElectOnDivergence4()
         {
             var firstLeader = await CreateNetworkAndGetLeader(3);
@@ -177,7 +177,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanElectOnDivergence3()
         {
             var firstLeader = await CreateNetworkAndGetLeader(3);
@@ -256,7 +256,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanElectOnDivergence2()
         {
             var firstLeader = await CreateNetworkAndGetLeader(3);
@@ -292,7 +292,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanElectOnDivergence()
         {
             var firstLeader = await CreateNetworkAndGetLeader(3);
@@ -368,7 +368,7 @@ namespace RachisTests
             Assert.Equal(3, RachisConsensuses.Count);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData(2)]
         [InlineData(3)]
         [InlineData(5)]
@@ -387,7 +387,7 @@ namespace RachisTests
         /// </summary>
         /// <param name="numberOfNodes">The number of nodes in the cluster</param>
         /// <returns></returns>
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData(3)]
         [InlineData(5)]
         [InlineData(7)]
@@ -462,7 +462,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RavenDB_13228()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;

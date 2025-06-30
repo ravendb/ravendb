@@ -19,7 +19,7 @@ namespace RachisTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task PreventConcurrentBootstrap()
         {
             var a = SetupServer();
@@ -43,7 +43,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWithFiveNodesAndMultipleElections()
         {
             PredictableSeeds = true;
@@ -99,7 +99,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWithThreeNodesAndElections()
         {
             var a = SetupServer(true);
@@ -134,7 +134,7 @@ namespace RachisTests
             await Task.WhenAny(bLeader, cLeader);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWithLateJoiningNodeRequiringSnapshot()
         {
             var expected = "0123456789";
@@ -163,7 +163,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWithTwoNodes()
         {
             var expected = "0123456789";
@@ -190,7 +190,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanSetupSingleNode()
         {
             var rachis = SetupServer(true);

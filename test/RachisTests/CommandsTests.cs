@@ -16,7 +16,7 @@ namespace RachisTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task Command_sent_twice_should_not_throw_timeout_error()
         {
             var leader = await CreateNetworkAndGetLeader(3);
@@ -49,7 +49,7 @@ namespace RachisTests
             Assert.True(await waitForAllCommits.WaitWithoutExceptionAsync(LongWaitTime), "didn't commit in time");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task When_command_committed_CompletionTaskSource_is_notified()
         {
             const int commandCount = 10;
@@ -75,7 +75,7 @@ namespace RachisTests
             Assert.True(await Task.WhenAny(waitForNotificationsOnTasks, Task.Delay(LongWaitTime)) == waitForNotificationsOnTasks, "Some commands didn't complete");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task Command_not_committed_after_timeout_CompletionTaskSource_is_notified()
         {
             const int commandCount = 3;

@@ -43,7 +43,7 @@ namespace RachisTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task FailOnAddingNonPassiveNode()
         {
             var (_, raft1) = await CreateRaftCluster(1);
@@ -54,7 +54,7 @@ namespace RachisTests
             Assert.True(await WaitForValueAsync(() => raft1.ServerStore.GetClusterErrors().Count > 0, true));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ReAddWatcherNode()
         {
             var cluster = await CreateRaftCluster(2, watcherCluster: true);
@@ -100,7 +100,7 @@ namespace RachisTests
             await Task.WhenAll(list);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData(false)]
         public async Task ReAddMemberNode(bool withManyCompareExchange)
         {
@@ -148,7 +148,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task PutDatabaseOnHealthyNodes()
         {
             var (_, leader) = await CreateRaftCluster(5, leaderIndex: 0);
@@ -175,7 +175,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task EqualChangeVectorAfterAddingNode()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -224,7 +224,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task DisallowAddingNodeWithInvalidSourcePublicServerUrl()
         {
             var (_, raft1) = await CreateRaftCluster(1, customSettings: new Dictionary<string, string>
@@ -254,7 +254,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task DisallowAddingNodeWithInvalidSourcePublicTcpServerUrl()
         {
             var (_, raft1) = await CreateRaftCluster(1, customSettings: new Dictionary<string, string>
@@ -284,7 +284,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task DisallowAddingNodeWithInvalidDestinationPublicServerUrl()
         {
             var (_, raft1) = await CreateRaftCluster(1);
@@ -315,7 +315,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task DisallowAddingNodeWithInvalidDestinationPublicTcpServerUrl()
         {
             var (_, raft1) = await CreateRaftCluster(1);
@@ -345,7 +345,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task AddDatabaseOnDisconnectedNode()
         {
             var clusterSize = 3;
@@ -371,7 +371,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RemoveNodeWithDb()
         {
             var dbMain = GetDatabaseName();
@@ -511,7 +511,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RemoveRedundantPromotable()
         {
             var clusterSize = 3;
@@ -558,7 +558,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RemoveRedundantRehabs()
         {
             var clusterSize = 3;
@@ -616,7 +616,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RemoveRedundantNodes()
         {
             var clusterSize = 5;
@@ -677,7 +677,7 @@ namespace RachisTests
                    $"\nrecord.DeletionInProgress={string.Join(',', record.DeletionInProgress)}";
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task FailOnAddingNodeWhenLeaderHasPortZero()
         {
             var (_, leader) = await CreateRaftCluster(1);
@@ -694,7 +694,7 @@ namespace RachisTests
                             "has port '0' in 'Configuration.Core.ServerUrls' setting", ex.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task WhoseTaskIsItShouldNotSelectRemovedNode()
         {
             var clusterSize = 5;
@@ -737,7 +737,7 @@ namespace RachisTests
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task FailOnAddingNodeThatHasPortZero()
         {
             var (_, leader) = await CreateRaftCluster(1);
@@ -759,7 +759,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanSnapshotCompareExchangeTombstones()
         {
             var (_, leader) = await CreateRaftCluster(1);
@@ -857,7 +857,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClientRequestExecutorTopologyWillUpdateWhenAddingNewNodeToCluster_RavenDB_20702()
         {
             var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true);
@@ -899,7 +899,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task DatabaseRequestExecutorTopologyWillUpdateWhenAddingNewNode_RavenDB_20702()
         {
             var name = GetDatabaseName();
@@ -1033,7 +1033,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task AddNodeToClusterWithoutError()
         {
             var (_, leader) = await CreateRaftCluster(1);
@@ -1056,7 +1056,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task AddingNodeToClusterUpdatesClusterRequestExecutorTopology_RavenDB_20702()
         {
             var (nodes, leader) = await CreateRaftCluster(3, leaderIndex: 0, watcherCluster: true);
@@ -1122,7 +1122,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ResetServerShouldPreserveTopology()
         {
             var cluster = await CreateRaftCluster(3, shouldRunInMemory: false);
