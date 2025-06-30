@@ -142,7 +142,7 @@ namespace FastTests.Client
             }
         }
 
-        [RetryFact]
+        [RavenRetryFact(RavenTestCategory.BulkInsert)]
         public async Task Bulk_Insert_Should_Throw_On_StoreAsync_Concurrent_Calls()
         {
             using (var store = GetDocumentStore())

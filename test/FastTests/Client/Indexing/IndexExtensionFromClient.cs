@@ -531,7 +531,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Fact(Skip = "need to use DynamicDictionary. waiting for PR from Egor")]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes, Skip = "need to use DynamicDictionary. waiting for PR from Egor")]
         public void CanUseMethodFromExtensionsInIndex_DictionaryFunctions()
         {
             using (var store = GetDocumentStore())

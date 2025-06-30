@@ -1,5 +1,6 @@
 ﻿using System;
 using Sparrow.Compression;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace FastTests.Sparrow
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void ReadAndWriteMaxValues()
         {
             byte* stack = stackalloc byte[16];
@@ -41,7 +42,7 @@ namespace FastTests.Sparrow
             Assert.Equal(long.MaxValue, VariableSizeEncoding.Read<long>(stack, out _));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void ReadAndWriteMinValues()
         {
             byte* stack = stackalloc byte[16];
@@ -59,7 +60,7 @@ namespace FastTests.Sparrow
             Assert.Equal(long.MinValue, VariableSizeEncoding.Read<long>(stack, out _));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CorruptedValues()
         {
             byte* stack = stackalloc byte[16];
@@ -77,7 +78,7 @@ namespace FastTests.Sparrow
             Assert.Throws<FormatException>(() => VariableSizeEncoding.Read<ulong>(stack, out _));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Memory)]
         [InlineData(1337)]
         public void EnsureCompatibility(int seed)
         {

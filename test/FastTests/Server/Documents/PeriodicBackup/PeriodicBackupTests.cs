@@ -39,7 +39,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void CanSetupConfiguration()
         {
             var allDestinations = new HashSet<string>(BackupConfiguration._allDestinations);
@@ -84,7 +84,7 @@ namespace FastTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void CanGetGenerateTheCorrectBackupName()
         {
             var configuration = new PeriodicBackupConfiguration

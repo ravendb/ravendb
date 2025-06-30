@@ -12,7 +12,7 @@ namespace FastTests.Sparrow
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void Lifecycle()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None))
@@ -39,7 +39,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void ConstructionInsideWholeSegment()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
@@ -54,7 +54,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void ConstructionInsideWholeSegmentWithHistory()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
@@ -77,7 +77,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void ConstructionReleaseForReuseTheLeftOver()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
@@ -92,7 +92,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void AllocateAndReleaseShouldReuse()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
@@ -115,7 +115,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void AllocateAndReleaseShouldReuseAsSegment()
         {
             int allocationBlockSize = 2 * ByteStringContext.MinBlockSizeInBytes + 128 + sizeof(ByteStringStorage);
@@ -146,7 +146,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void AllocateAndReleaseShouldReuseRepeatedly()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
@@ -230,7 +230,7 @@ namespace FastTests.Sparrow
         }
 
 #if VALIDATE
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void ValidationKeyAfterAllocateAndReleaseReuseShouldBeDifferent()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
@@ -246,7 +246,7 @@ namespace FastTests.Sparrow
         } 
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void FailValidationTryingToReleaseInAnotherContext()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
@@ -257,7 +257,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void FailValidationReleasingAnAliasAfterReleasingOriginal()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
@@ -270,7 +270,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void DetectImmutableChangeOnValidation()
         {
             using (var context = new ByteStringContext<ByteStringDirectAllocator>(SharedMultipleUseFlag.None, ByteStringContext.MinBlockSizeInBytes))
@@ -287,7 +287,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void DetectImmutableChangeOnContextDispose()
         {
             Assert.Throws<ByteStringValidationException>(() =>
