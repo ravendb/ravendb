@@ -17,7 +17,7 @@ namespace StressTests.Server.Encryption
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanLockMemoryUnderHighContention() // this is a probabilistic test
         {
             using var process = Process.GetCurrentProcess();

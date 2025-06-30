@@ -12,7 +12,7 @@ namespace StressTests.Voron.Bugs
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineDataWithRandomSeed(1000, 50000)]
         public void FaultyOverflowPagesHandling_CannotModifyReadOnlyPages(int initialNumberOfDocs,
             int numberOfModifications, int seed)

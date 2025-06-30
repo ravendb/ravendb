@@ -34,7 +34,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanUseChangesApiAndToggleServer()
         {
             var server = GetNewServer(new ServerCreationOptions

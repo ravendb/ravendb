@@ -18,7 +18,7 @@ namespace StressTests.Cluster
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task ShouldThrowTimeoutException()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;

@@ -24,7 +24,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanSplitLowerCasedAndUpperCasedCounterNames()
         {
             using (var storeA = GetDocumentStore())
@@ -62,7 +62,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task SplitCounterShouldRemoveUnusedEntries()
         {
             using (var store = GetDocumentStore())
@@ -147,7 +147,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanSplitAndReplicateRandomCounterName()
         {
             using (var storeA = GetDocumentStore())
@@ -200,7 +200,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CounterOperationsShouldBeCaseInsensitiveToCounterName()
         {
             using (var store = GetDocumentStore())
@@ -304,7 +304,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CountersShouldBeCaseInsensitive()
         {
             // RavenDB-14753
@@ -355,7 +355,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void DeletedCounterShouldNotBePresentInMetadataCounters()
         {
             // RavenDB-14753
@@ -403,7 +403,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task GetCountersForDocumentShouldReturnNamesInTheirOriginalCasing()
         {
             using (var store = GetDocumentStore())
@@ -445,7 +445,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanDeleteAndReInsertCounter()
         {
             using (var store = GetDocumentStore())
@@ -511,7 +511,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CountersSessionCacheShouldBeCaseInsensitiveToCounterName()
         {
             using (var store = GetDocumentStore())
@@ -551,7 +551,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task ExportAndImportCountersShouldKeepOriginalCasing()
         {
             var file = GetTempFileName();

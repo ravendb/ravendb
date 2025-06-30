@@ -12,7 +12,7 @@ namespace StressTests.Client.Attachments
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(1000)]
         [InlineData(10_000)]
         public void PutLotOfAttachments(int count)
@@ -23,7 +23,7 @@ namespace StressTests.Client.Attachments
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(1000)]
         [InlineData(10_000)]
         public async Task PutLotOfAttachmentsAsync(int count)

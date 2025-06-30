@@ -36,7 +36,7 @@ namespace StressTests.Voron
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineDataWithRandomSeed(300000)]
         public void CanDeleteRange_RandomRanges_WithGaps(int count, int seed)
         {

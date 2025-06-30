@@ -126,7 +126,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void BloomFilter_Version()
         {
             using (var context = new TransactionOperationContext(Env, 1024, 1024, 32 * 1024, SharedMultipleUseFlag.None))

@@ -121,7 +121,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task IndexingWhenEncryptedTransactionSizeLimitLimitExceeded()
         {
             string dbName = Encryption.SetupEncryptedDatabase(out var certificates, out var _);

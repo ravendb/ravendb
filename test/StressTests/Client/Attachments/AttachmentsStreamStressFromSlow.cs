@@ -33,7 +33,7 @@ namespace StressTests.Client.Attachments
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(1_000, 32768)]
         [InlineData(10_000, 1)]
         public void CanGetListOfAttachmentsAndSkip(int count, int size)
@@ -44,7 +44,7 @@ namespace StressTests.Client.Attachments
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(1_000, 32768)]
         [InlineData(10_000, 1)]
         public void CanGetListOfAttachmentsAndReadOrdered(int count, int size)
@@ -55,7 +55,7 @@ namespace StressTests.Client.Attachments
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(1_000, 32768)]
         [InlineData(10_000, 1)]
         public async Task CanGetListOfAttachmentsAndReadOrderedAsync(int count, int size)

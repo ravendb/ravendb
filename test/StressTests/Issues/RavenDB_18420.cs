@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ public class RavenDB_18420 : RavenTestBase
     {
 
     }
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public async Task ShouldRescheduleBackupTimerIfDocumentDatabaseFailedToLoad()
     {
         var db2 = GetDatabaseName();

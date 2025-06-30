@@ -14,6 +14,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,7 @@ public class RavenDB_19149 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void LuceneOptimizeIsNotHanging()
     {
         using var store = GetDocumentStore(new Options()
@@ -52,7 +53,7 @@ public class RavenDB_19149 : RavenTestBase
         operation.WaitForCompletion(TimeSpan.FromMinutes(1));
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public async Task LuceneOptimizeEndpoint()
     {
         using var store = GetDocumentStore(new Options()

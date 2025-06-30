@@ -284,7 +284,7 @@ public class IndexSearcherTest : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void BigContainsTest()
     {
         var ids = ArrayPool<long>.Shared.Rent(2048);

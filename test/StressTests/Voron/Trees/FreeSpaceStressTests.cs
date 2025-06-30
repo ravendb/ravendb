@@ -12,7 +12,7 @@ namespace StressTests.Voron.Trees
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(400000, 60, 2)] // originally set in the test
         [InlineDataWithRandomSeed(400000, 60)]
         [InlineDataWithRandomSeed(-1, -1)] // random 'maxPageNumber' and 'numberOfFreedPages'

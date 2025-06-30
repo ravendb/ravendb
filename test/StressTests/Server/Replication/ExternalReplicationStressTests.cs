@@ -21,7 +21,7 @@ namespace StressTests.Server.Replication
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task TwoWayExternalReplicationShouldNotLoadIdleDatabase()
         {
             using (var server = GetNewServer(new ServerCreationOptions
@@ -157,7 +157,7 @@ namespace StressTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task ExternalReplicationShouldNotLoadIdleDatabase()
         {
             using (var server = GetNewServer(new ServerCreationOptions
@@ -242,7 +242,7 @@ namespace StressTests.Server.Replication
 
         private List<RavenServer> _nodes;
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanIdleDatabaseInCluster()
         {
             const int clusterSize = 3;

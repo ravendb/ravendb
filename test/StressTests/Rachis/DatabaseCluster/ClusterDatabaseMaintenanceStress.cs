@@ -28,7 +28,7 @@ namespace StressTests.Rachis.DatabaseCluster
             public int Age { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task MoveLoadingNodeToLast()
         {
             var clusterSize = 3;
@@ -91,7 +91,7 @@ namespace StressTests.Rachis.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task MoveLoadingNodeToLastAndRestoreToFixedOrder()
         {
             var clusterSize = 3;

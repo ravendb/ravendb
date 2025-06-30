@@ -143,7 +143,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<SuccessTestDataType>))]
         [ClassData(typeof(TestDataForDocChangeTracking<SuccessTestDataType>))]
         [ClassData(typeof(FailedTestDataForDocAndTimeSeriesChangeTracking<FailTestDataType>))]

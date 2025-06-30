@@ -15,7 +15,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Should_not_throw_timeout_and_out_of_memory()
         {
             await Parallel.ForEachAsync(Enumerable.Range(0, 3), RavenTestHelper.DefaultParallelOptions, async (_, __) =>
