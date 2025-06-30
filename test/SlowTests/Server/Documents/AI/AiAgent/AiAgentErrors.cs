@@ -1,14 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Tests.Infrastructure;
@@ -23,14 +21,14 @@ public class AiAgentErrors : RavenTestBase
     {
     }
 
-    public class CustomerOutputSchema
+    private class CustomerOutputSchema
     {
         public string Answer = "Answer to the user question";
 
         public List<string> RelevantCustomersIds = ["The customers ids relevant to the query or response"];
     }
 
-    public class Customer
+    private class Customer
     {
         public string Id { get; set; }
         public string Name { get; set; }
@@ -39,9 +37,56 @@ public class AiAgentErrors : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    public async Task BadParametersSchema(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new Customer { Id = "Customers/1", Name = "Shahar" });
+            await session.StoreAsync(new Customer { Id = "Customers/2", Name = "Karmel" });
+            await session.StoreAsync(new Customer { Id = "Customers/3", Name = "Aviv" });
+            await session.StoreAsync(new Customer { Id = "Customers/4", Name = "Shahar", NumberOfOrders = 9 });
+            await session.StoreAsync(new Customer { Id = "Customers/5", Name = "Aviv" });
+            await session.StoreAsync(new Customer { Id = "Customers/6", Name = "Shahar", NumberOfOrders = 8 });
+            await session.SaveChangesAsync();
+        }
+
+        var agent = new AiAgentConfiguration(
+            config.ConnectionStringName,
+            "You are customer manager"
+        )
+        {
+            Persistence = new AiAgentConfiguration.PersistenceConfiguration { Collection = "Chats", Expires = TimeSpan.FromDays(1) },
+            Queries =
+            [
+                new AiAgentConfiguration.ToolQuery
+                {
+                    Name = "CustomersSearchByName",
+                    Description = "search customers by name",
+                    Query = "from 'Customers' where Name == $name",
+                    ParametersSchema = "{\"name\": \"the name you search by\"}"
+                }
+            ]
+        };
+
+        await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<CustomerOutputSchema>("customers-agent", agent));
+
+        var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
+            new StartChatOperation<CustomerOutputSchema>(
+                "customers-agent",
+                "How many customers do we have with the name \"Shahar\"?"
+            )));
+
+        Assert.Contains("Invalid schema for function 'CustomersSearchByName'", e.Message);
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
     public async Task BadParameters(Options options, GenAiConfiguration config)
     {
-        const string agentParametersSchema = "{\"name\": [\"the name you search by\"]}"; // valid parameter: "{\"name\": \"the name you search by\"}" (not array)
+        const string agentParametersSampleObject = "{\"name\": [\"the name you search by\"]}"; // valid parameter: "{\"name\": \"the name you search by\"}" (not array)
 
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -70,7 +115,7 @@ public class AiAgentErrors : RavenTestBase
                     Name = "CustomersSearchByName",
                     Description = "search customers by name",
                     Query = "from 'Customers' where Name == $name",
-                    ParametersSchema = agentParametersSchema
+                    ParametersSampleObject = agentParametersSampleObject
                 }
             ]
         };
@@ -79,8 +124,10 @@ public class AiAgentErrors : RavenTestBase
         // Raven.Client.Exceptions.InvalidQueryException: Parameter value '["Shahar"]' of type Sparrow.Json.BlittableJsonReaderArray is not supported
         // Query: from 'Customers' where Name == $name
         // Parameters: {"name":["Shahar"]}
-        await Assert.ThrowsAsync<InvalidQueryException>(() => store.Maintenance.SendAsync(
+        var e = await Assert.ThrowsAsync<InvalidQueryException>(() => store.Maintenance.SendAsync(
             new StartChatOperation<CustomerOutputSchema>("customers-agent", "How many customers do we have with the name \"Shahar\"?")));
+
+        Assert.Contains("Parameter value '[\"Shahar\"]' of type Sparrow.Json.BlittableJsonReaderArray is not supported", e.Message);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -114,7 +161,7 @@ public class AiAgentErrors : RavenTestBase
                     Name = "CustomersSearchByName",
                     Description = "search customers by name",
                     Query = "blablabla $name",
-                    ParametersSchema = "{\"name\": \"the name you search by\"}"
+                    ParametersSampleObject = "{\"name\": \"the name you search by\"}"
                 }
             ]
         };
@@ -123,8 +170,10 @@ public class AiAgentErrors : RavenTestBase
 
         //Raven.Client.Exceptions.RavenException: Raven.Server.Documents.Queries.Parser.QueryParser+ParseException: 1:1 Expected FROM clause but got: blablabla
         // Query: blablabla $name
-        await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
+        var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
             new StartChatOperation<CustomerOutputSchema>("customers-agent", "How many customers do we have with the name \"Shahar\"?")));
+
+        Assert.Contains("1:1 Expected FROM clause but got: blablabla", e.Message);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -163,7 +212,7 @@ public class AiAgentErrors : RavenTestBase
                     Name = "CustomersSearchByName",
                     Description = "search customers by name",
                     Query = "from index 'Customers/ByName' where Name1 == $name",
-                    ParametersSchema = "{\"name\": \"the name you search by\"}"
+                    ParametersSampleObject = "{\"name\": \"the name you search by\"}"
                 }
             ]
         };
@@ -172,8 +221,10 @@ public class AiAgentErrors : RavenTestBase
 
         // Raven.Client.Exceptions.RavenException: System.ArgumentException: The field 'Name1' is not indexed in 'Customers/ByName',
 
-        await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
+        var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
            new StartChatOperation<CustomerOutputSchema>("customers-agent", "How many customers do we have with the name \"Shahar\"?")));
+
+        Assert.Contains("The field 'Name1' is not indexed in 'Customers/ByName'", e.Message);
     }
 
     private class Customers_ByName : AbstractIndexCreationTask<Customer>
@@ -220,7 +271,7 @@ public class AiAgentErrors : RavenTestBase
                     Name = "CustomersSearchByName",
                     Description = "search customers by name",
                     Query = "from 'Customers' where Name == $name",
-                    ParametersSchema = "{\"name\": \"the name you search by\"}"
+                    ParametersSampleObject = "{\"name\": \"the name you search by\"}"
                 }
             ]
         };
@@ -242,14 +293,16 @@ public class AiAgentErrors : RavenTestBase
         //Document 'Chats/0000000000000000007-ABAD_CHAT_ID' does not exist.
         var badChatId = r.ChatId + "BAD_CHAT_ID";
 
-        await Assert.ThrowsAsync<DocumentDoesNotExistException>(() =>
-            store.Maintenance.SendAsync(new ResumeChatOperation<CustomerOutputSchema>("customers-agent", badChatId,
+        var e = await Assert.ThrowsAsync<DocumentDoesNotExistException>(() =>
+            store.Maintenance.SendAsync(new ResumeChatOperation<CustomerOutputSchema>(badChatId,
                 userPrompt: "How many of them have more then 1 orders?"))
         );
+
+        Assert.Contains("ABAD_CHAT_ID' does not exist", e.Message);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Skip = "Waiting for RavenDB-24457")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
     public async Task BadApiKey(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -279,7 +332,7 @@ public class AiAgentErrors : RavenTestBase
                     Name = "CustomersSearchByName",
                     Description = "search customers by name",
                     Query = "from 'Customers' where Name == $name",
-                    ParametersSchema = "{\"name\": \"the name you search by\"}"
+                    ParametersSampleObject = "{\"name\": \"the name you search by\"}"
                 }
             ]
         };
@@ -287,12 +340,13 @@ public class AiAgentErrors : RavenTestBase
         await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<CustomerOutputSchema>("customers-agent", agent));
 
         // Raven.Client.Exceptions.RavenException: Raven.Server.Documents.AI.UnsuccessfulRequestException: Incorrect API key provided
-        await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
+        var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
             new StartChatOperation<CustomerOutputSchema>(
                 "customers-agent",
                 "How many customers do we have with the name \"Shahar\"?"
             )
         ));
+        Assert.Contains("Incorrect API key provided", e.Message);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -326,7 +380,7 @@ public class AiAgentErrors : RavenTestBase
                     Name = "CustomersSearchByName",
                     Description = "search customers by name",
                     Query = "from 'Customers' where Name == $name",
-                    ParametersSchema = "{\"name\": \"the name you search by\"}"
+                    ParametersSampleObject = "{\"name\": \"the name you search by\"}"
                 }
             ]
         };
@@ -334,16 +388,18 @@ public class AiAgentErrors : RavenTestBase
         await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<CustomerOutputSchema>("customers-agent", agent));
 
         // Raven.Client.Exceptions.RavenException: Raven.Server.Documents.AI.UnsuccessfulRequestException: The model `gpt-4oxyz` does not exist or you do not have access to it
-        await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
+        var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
             new StartChatOperation<CustomerOutputSchema>(
                 "customers-agent",
                 "How many customers do we have with the name \"Shahar\"?"
             )
         ));
+
+        Assert.Contains("The model `gpt-4oxyz` does not exist or you do not have access to it", e.Message);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Skip = "Waiting for RavenDB-24457")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
     public async Task WrongUrl(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -374,7 +430,7 @@ public class AiAgentErrors : RavenTestBase
                     Name = "CustomersSearchByName",
                     Description = "search customers by name",
                     Query = "from 'Customers' where Name == $name",
-                    ParametersSchema = "{\"name\": \"the name you search by\"}"
+                    ParametersSampleObject = "{\"name\": \"the name you search by\"}"
                 }
             ]
         };
@@ -382,20 +438,22 @@ public class AiAgentErrors : RavenTestBase
         await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<CustomerOutputSchema>("customers-agent", agent));
 
         // Raven.Client.Exceptions.RavenException: System.IO.InvalidDataException:  Cannot have a '<' in this position at  (1,2) ...
-        await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
+        var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
             new StartChatOperation<CustomerOutputSchema>(
                 "customers-agent",
                 "How many customers do we have with the name \"Shahar\"?"
             )
         ));
+
+        Assert.Contains("Cannot have a '<' in this position at", e.Message);
     }
 
 
-    public class QuestionOutputSchema
+    private class QuestionOutputSchema
     {
         public string Answer = "Combined answer of the answers for the questions ";
 
-        public bool RefusedToAnswer;
+        public bool RefusedToAnswer = false;
 
         public List<string> RelevantQuestionsIds = ["The questions ids relevant to the query or response"];
     }
@@ -451,7 +509,7 @@ public class AiAgentErrors : RavenTestBase
                     Name = "QuestionsSearchByAuthor",
                     Description = "search questions by author name",
                     Query = "from 'Questions' where Author == $author",
-                    ParametersSchema = "{\"author\": \"the name of the author you search by\"}"
+                    ParametersSampleObject = "{\"author\": \"the name of the author you search by\"}"
                 }
             ]
         };
@@ -474,7 +532,6 @@ public class AiAgentErrors : RavenTestBase
 
         var karmel = await store.Maintenance.SendAsync(
             new ResumeChatOperation<QuestionOutputSchema>(
-                "knowledge-agent",
                 chatId,
                 "Can you answer Karmel questions?"
             )
@@ -487,7 +544,6 @@ public class AiAgentErrors : RavenTestBase
 
         var shahar = await store.Maintenance.SendAsync(
             new ResumeChatOperation<QuestionOutputSchema>(
-                "knowledge-agent",
                 chatId,
                 "Can you answer Shahar questions?"
             )
