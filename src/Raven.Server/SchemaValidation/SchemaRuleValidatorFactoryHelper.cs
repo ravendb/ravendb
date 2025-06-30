@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.Collections.Frozen;
 using System.Linq;
 using System.Reflection;
 using Raven.Server.SchemaValidation.ErrorMessage;
@@ -11,7 +11,7 @@ namespace Raven.Server.SchemaValidation;
 
 public abstract class SchemaRuleValidatorFactoryHelper
 {
-    private static readonly Dictionary<string, ISchemaRuleValidatorFactory> SchemaRuleValidatorFactories;
+    private static readonly FrozenDictionary<string, ISchemaRuleValidatorFactory> SchemaRuleValidatorFactories;
     private static readonly ObjectSchemaRuleValidatorFactory ObjectSchemaRuleValidatorFactory = new ObjectSchemaRuleValidatorFactory();
     private static readonly ArraySchemaRuleValidatorFactory ArraySchemaRuleValidatorFactory = new ArraySchemaRuleValidatorFactory();
 
@@ -36,7 +36,7 @@ public abstract class SchemaRuleValidatorFactoryHelper
                 return new { Rule = rule, FactoryInstance = factoryInstance };
             })
             .Where(x => x != null) // Filter out nulls
-            .ToDictionary(x => x.Rule, x => x!.FactoryInstance);
+            .ToFrozenDictionary(x => x.Rule, x => x!.FactoryInstance);
     }
 
     public static bool TryCreateValidator(string rule, BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas,
@@ -59,6 +59,9 @@ public abstract class SchemaRuleValidatorFactoryHelper
     {
         return ArraySchemaRuleValidatorFactory.Create(schemaDefinition, schemaPath, refSchemas);
     }
-    
-    internal static string[] ForTestGetRuleNames() => SchemaRuleValidatorFactories.Keys.ToArray();
+
+    internal static class TestingStuff
+    {
+        public static string[] GetRuleNames() => SchemaRuleValidatorFactories.Keys.ToArray();
+    } 
 }
