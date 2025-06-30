@@ -43,7 +43,7 @@ namespace Raven.Client.Documents
         /// </summary>
         public bool WasDisposed { get; protected set; }
 
-        public abstract DatabaseAiAgents AiAgents { get; }
+        public abstract AiOperations AI { get; }
 
         /// <summary>
         /// Subscribe to change notifications from the server

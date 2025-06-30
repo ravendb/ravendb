@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Util;
 
@@ -10,33 +11,35 @@ namespace Raven.Client.Documents.AI;
 /// <summary>
 /// Manages AI agents and chat interactions in a specific RavenDB database.
 /// </summary>
-public class DatabaseAiAgents
+public class AiOperations
 {
     private string _databaseName;
     private IDocumentStore _store;
+    private readonly MaintenanceOperationExecutor _executor;
 
     /// <summary>
-    /// Initializes a new instance of <see cref="DatabaseAiAgents"/> for a given document store and optional database name.
+    /// Initializes a new instance of <see cref="AiOperations"/> for a given document store and optional database name.
     /// </summary>
     /// <param name="store">The RavenDB document store.</param>
     /// <param name="databaseName">The name of the database. If null, uses the default database from the store.</param>
-    public DatabaseAiAgents(IDocumentStore store, string databaseName = null)
+    public AiOperations(IDocumentStore store, string databaseName = null)
     {
         _databaseName = databaseName ?? store.Database;
         _store = store;
+        _executor = _store.Maintenance.ForDatabase(_databaseName);
     }
 
     /// <summary>
-    /// Returns a <see cref="DatabaseAiAgents"/> for a different database.
+    /// Returns a <see cref="AiOperations"/> for a different database.
     /// </summary>
     /// <param name="databaseName">The name of the target database.</param>
-    /// <returns>A new or existing <see cref="DatabaseAiAgents"/> instance.</returns>
-    public DatabaseAiAgents ForDatabase(string databaseName)
+    /// <returns>A new or existing <see cref="AiOperations"/> instance.</returns>
+    public AiOperations ForDatabase(string databaseName)
     {
         if (string.Equals(_databaseName, databaseName, StringComparison.OrdinalIgnoreCase))
             return this;
 
-        return new DatabaseAiAgents(_store, databaseName);
+        return new AiOperations(_store, databaseName);
     }
 
     /// <summary>
@@ -48,7 +51,7 @@ public class DatabaseAiAgents
     /// <returns>The result of the creation or update operation.</returns>
     public async Task<AiAgentConfigurationResult> CreateAgentAsync<TSchema>(string agentName, AiAgentConfiguration configuration, CancellationToken token = default) where TSchema : new()
     {
-        return await _store.Maintenance.ForDatabase(_databaseName).SendAsync(new AddOrUpdateAiAgentOperation<TSchema>(agentName, configuration), token).ConfigureAwait(false);
+        return await _executor.SendAsync(new AddOrUpdateAiAgentOperation<TSchema>(agentName, configuration), token).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -69,12 +72,11 @@ public class DatabaseAiAgents
     /// <typeparam name="TSchema">The schema type for the chat.</typeparam>
     /// <param name="agentName">The name of the AI agent to chat with.</param>
     /// <param name="prompt">The initial user prompt.</param>
-    /// <param name="func">A builder function to define RAG parameters.</param>
+    /// <param name="builder">A builder function to define RAG parameters.</param>
     /// <returns>The result of the chat.</returns>
-    public Task<ChatResult<TSchema>> StartChatAsync<TSchema>(string agentName, string prompt, Func<AiAgentParametersBuilder, AiAgentParametersBuilder> func, CancellationToken token = default) where TSchema : new()
+    public Task<ChatResult<TSchema>> StartChatAsync<TSchema>(string agentName, string prompt, Func<AiAgentParametersBuilder, AiAgentParametersBuilder> builder, CancellationToken token = default) where TSchema : new()
     {
-        var builder = func.Invoke(new AiAgentParametersBuilder());
-        var parameters = builder.GetParameters();
+        var parameters = builder.Invoke(new AiAgentParametersBuilder()).GetParameters();
         return StartChatAsync<TSchema>(agentName, prompt, parameters, token);
     }
 
@@ -84,11 +86,11 @@ public class DatabaseAiAgents
     /// <typeparam name="TSchema">The schema type for the chat.</typeparam>
     /// <param name="agentName">The name of the AI agent to chat with.</param>
     /// <param name="prompt">The initial user prompt.</param>
-    /// <param name="func">A builder function to define RAG parameters.</param>
+    /// <param name="builder">A builder function to define RAG parameters.</param>
     /// <returns>The result of the chat.</returns>
-    public ChatResult<TSchema> StartChat<TSchema>(string agentName, string prompt, Func<AiAgentParametersBuilder, AiAgentParametersBuilder> func) where TSchema : new()
+    public ChatResult<TSchema> StartChat<TSchema>(string agentName, string prompt, Func<AiAgentParametersBuilder, AiAgentParametersBuilder> builder) where TSchema : new()
     {
-        return AsyncHelpers.RunSync(() => StartChatAsync<TSchema>(agentName, prompt, func));
+        return AsyncHelpers.RunSync(() => StartChatAsync<TSchema>(agentName, prompt, builder));
     }
 
     /// <summary>
@@ -101,7 +103,7 @@ public class DatabaseAiAgents
     /// <returns>The result of the chat.</returns>
     public async Task<ChatResult<TSchema>> StartChatAsync<TSchema>(string agentName, string prompt, Dictionary<string, object> parameters = null, CancellationToken token = default) where TSchema : new()
     {
-        return await _store.Maintenance.ForDatabase(_databaseName).SendAsync(new StartChatOperation<TSchema>(agentName, prompt, parameters), token).ConfigureAwait(false);
+        return await _executor.SendAsync(new StartChatOperation<TSchema>(agentName, prompt, parameters), token).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -140,7 +142,7 @@ public class DatabaseAiAgents
     /// <returns>The result of the continued chat.</returns>
     public async Task<ChatResult<TSchema>> ContinueChatAsync<TSchema>(string chatId, string prompt, CancellationToken token = default) where TSchema : new()
     {
-        return await _store.Maintenance.ForDatabase(_databaseName).SendAsync(new ResumeChatOperation<TSchema>(chatId, userPrompt: prompt), token).ConfigureAwait(false);
+        return await _executor.SendAsync(new ResumeChatOperation<TSchema>(chatId, userPrompt: prompt), token).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -166,7 +168,7 @@ public class DatabaseAiAgents
     /// <returns>The result of the continued chat.</returns>
     public async Task<ChatResult<TSchema>> ContinueChatAsync<TSchema>(string chatId, List<ToolResponse> toolResponses, CancellationToken token = default) where TSchema : new()
     {
-        return await _store.Maintenance.ForDatabase(_databaseName).SendAsync(new ResumeChatOperation<TSchema>(chatId, toolResponses: toolResponses), token).ConfigureAwait(false);
+        return await _executor.SendAsync(new ResumeChatOperation<TSchema>(chatId, toolResponses: toolResponses), token).ConfigureAwait(false);
     }
 
     public class AiAgentParametersBuilder

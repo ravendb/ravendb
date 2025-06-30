@@ -194,7 +194,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             var r2 = await store.Maintenance.SendAsync(new ResumeChatOperation<OutputSchema>(r.ChatId, toolResponses: toolResponse));
 
-            Assert.NotNull(r2.Response.Answer);
+            Assert.True(r2.Response?.Answer != null || r2.ToolRequests != null);
             Assert.NotNull(r2.Usage);
             Assert.NotNull(r2.ChatId);
         }

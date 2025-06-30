@@ -47,9 +47,9 @@ namespace Raven.Client.Documents
 
         private string _identifier;
 
-        private DatabaseAiAgents _aiAgents;
+        private AiOperations _ai;
 
-        public override DatabaseAiAgents AiAgents => _aiAgents ??= new DatabaseAiAgents(this);
+        public override AiOperations AI => _ai ??= new AiOperations(this);
 
         public override IHiLoIdGenerator HiLoIdGenerator => _asyncMultiDbHiLo ?? throw new InvalidOperationException($"Overwriting {nameof(DocumentConventions.AsyncDocumentIdGenerator)} convention does not allow usage of default HiLo generator, you should use your own one.");
 

@@ -255,7 +255,7 @@ namespace Raven.Client.Documents
 
         DatabaseSmuggler Smuggler { get; }
 
-        DatabaseAiAgents AiAgents { get; }
+        AiOperations AI { get; }
 
         IDisposable SetRequestTimeout(TimeSpan timeout, string database = null);
     }
