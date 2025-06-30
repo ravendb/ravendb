@@ -1,8 +1,10 @@
-﻿using Tests.Infrastructure.ConnectionString;
+﻿using System;
+using Tests.Infrastructure.ConnectionString;
 using Xunit;
 
 namespace Tests.Infrastructure;
 
+[Obsolete("Use RavenFact(RavenTestCategory.YourCategory, MsSqlRequired = true) instead")]
 public class RequiresMsSqlFactAttribute : FactAttribute
 {
     public RequiresMsSqlFactAttribute()

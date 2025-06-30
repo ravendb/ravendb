@@ -33,7 +33,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Monitoring, LicenseRequired = true)]
         public async Task ServerMonitoringTest()
         {
             DoNotReuseServer();
@@ -101,7 +101,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Monitoring, LicenseRequired = true)]
         public async Task DatabasesMonitoringTest()
         {
             DoNotReuseServer();
@@ -168,7 +168,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Monitoring, LicenseRequired = true)]
         public async Task IndexesMonitoringTest()
         {
             DoNotReuseServer();
@@ -220,7 +220,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Monitoring, LicenseRequired = true)]
         public async Task CollectionsMonitoringTest()
         {
             DoNotReuseServer();

@@ -1,9 +1,11 @@
-﻿using Tests.Infrastructure.ConnectionString;
+﻿using System;
+using Tests.Infrastructure.ConnectionString;
 using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public class RequiresOracleSqlFactAttribute : FactAttribute
+    [Obsolete("Use RavenFact(RavenTestCategory.YourCategory, OracleSqlRequired = true) instead - Note: OracleSqlRequired parameter may need to be added to RavenFact")]
+public class RequiresOracleSqlFactAttribute : FactAttribute
     {
         public RequiresOracleSqlFactAttribute()
         {

@@ -863,7 +863,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [RequiresMsSqlFact]
+        [RavenFact(RavenTestCategory.Etl, MsSqlRequired = true)]
         public void CanGetConnectionStringByName()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -898,7 +898,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [RequiresMsSqlFact]
+        [RavenFact(RavenTestCategory.Etl, MsSqlRequired = true)]
         public void CanGetAllConnectionStrings()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -945,7 +945,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [RequiresMsSqlFact]
+        [RavenFact(RavenTestCategory.Etl, MsSqlRequired = true)]
         public void CanAddAndRemoveConnectionStrings()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1002,7 +1002,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [RequiresMsSqlFact]
+        [RavenFact(RavenTestCategory.Etl, MsSqlRequired = true)]
         public void CanUpdateConnectionStrings()
         {
             using (var store = Sharding.GetDocumentStore())
@@ -1200,7 +1200,7 @@ person.addCounter(loadCounter('down'));
             }
         }
 
-        [RequiresMsSqlFact]
+        [RavenFact(RavenTestCategory.Etl, MsSqlRequired = true)]
         public async Task SqlEtl_ReplicateMultipleBatches()
         {
             using (var store = Sharding.GetDocumentStore())

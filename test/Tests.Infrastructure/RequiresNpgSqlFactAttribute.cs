@@ -1,9 +1,11 @@
-﻿using Tests.Infrastructure.ConnectionString;
+﻿using System;
+using Tests.Infrastructure.ConnectionString;
 using Xunit;
 
 namespace Tests.Infrastructure
 {
-    public class RequiresNpgSqlFactAttribute : FactAttribute
+    [Obsolete("Use RavenFact(RavenTestCategory.YourCategory, NpgSqlRequired = true) instead - Note: NpgSqlRequired parameter may need to be added to RavenFact")]
+public class RequiresNpgSqlFactAttribute : FactAttribute
     {
         public RequiresNpgSqlFactAttribute()
         {

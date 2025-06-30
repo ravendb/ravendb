@@ -3,6 +3,7 @@ using Xunit;
 
 namespace Tests.Infrastructure
 {
+    [Obsolete("Use RavenFact(RavenTestCategory.YourCategory, LicenseRequired = true) instead")]
     public class LicenseRequiredFactAttribute : FactAttribute
     {
         internal static readonly bool HasLicense;

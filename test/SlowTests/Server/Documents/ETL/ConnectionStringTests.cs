@@ -25,7 +25,7 @@ namespace SlowTests.Server.Documents.ETL
         {
         }
 
-        [RequiresMsSqlFact]
+        [RavenFact(RavenTestCategory.Etl, MsSqlRequired = true)]
         public void CanAddAndRemoveConnectionStrings()
         {
             using (var store = GetDocumentStore())
@@ -115,7 +115,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [RequiresMsSqlFact]
+        [RavenFact(RavenTestCategory.Etl, MsSqlRequired = true)]
         public void CanUpdateConnectionStrings()
         {
             using (var store = GetDocumentStore())
@@ -184,7 +184,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [RequiresMsSqlFact]
+        [RavenFact(RavenTestCategory.Etl, MsSqlRequired = true)]
         public void CanGetAllConnectionStrings()
         {
             using (var store = GetDocumentStore())
@@ -244,7 +244,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [RequiresMsSqlFact]
+        [RavenFact(RavenTestCategory.Etl, MsSqlRequired = true)]
         public void CanGetConnectionStringByName()
         {
             using (var store = GetDocumentStore())
