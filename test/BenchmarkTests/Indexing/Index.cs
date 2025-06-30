@@ -29,7 +29,7 @@ namespace BenchmarkTests.Indexing
         private const string ReIndexDatabaseName = "ReIndex_Companies";
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Simple_Map()
         {
             using (var store = GetSimpleDocumentStore(IndexDatabaseName, deleteDatabaseOnDispose: false))
@@ -48,7 +48,7 @@ namespace BenchmarkTests.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Simple_Map_FullText_Search()
         {
             using (var store = GetSimpleDocumentStore(IndexDatabaseName, deleteDatabaseOnDispose: false))
@@ -67,7 +67,7 @@ namespace BenchmarkTests.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Simple_Map_ReIndex()
         {
             using (var store = GetSimpleDocumentStore(ReIndexDatabaseName, deleteDatabaseOnDispose: false))
@@ -89,7 +89,7 @@ namespace BenchmarkTests.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Simple_MapReduce()
         {
             using (var store = GetSimpleDocumentStore(IndexDatabaseName, deleteDatabaseOnDispose: true))
@@ -108,7 +108,7 @@ namespace BenchmarkTests.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Simple_MapReduce_ReIndex()
         {
             using (var store = GetSimpleDocumentStore(ReIndexDatabaseName, deleteDatabaseOnDispose: true))
