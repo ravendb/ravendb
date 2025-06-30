@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using Raven.Server.Exceptions.SchemaValidation;
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Raven.Server.SchemaValidation.Validators;
 using Sparrow.Json;
@@ -8,7 +9,8 @@ namespace Raven.Server.SchemaValidation;
 
 public class RefSchemas
 {
-    private readonly Dictionary<string, RefSchema> _data = new Dictionary<string, RefSchema>();
+    // References are case-sensitive
+    private readonly Dictionary<string, RefSchema> _data = new Dictionary<string, RefSchema>(StringComparer.Ordinal);
 
     public bool TryGet(string refPath, out ElementSchemaRuleValidator validator)
     {
