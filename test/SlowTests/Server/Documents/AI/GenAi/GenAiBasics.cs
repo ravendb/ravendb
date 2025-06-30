@@ -395,7 +395,7 @@ for(const comment of this.Comments)
                 {
                     ["Context"] = ctxBlittable,
                     ["Prompt"] = "Check if the following blog post comment is spam or not",
-                    ["Schema"] = ChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new
+                    ["Schema"] = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new
                     {
                         Blocked = true,
                         Reason = "Concise reason for why this comment was marked as spam or ham"
@@ -558,7 +558,7 @@ for(const comment of this.Comments)
                     OriginalLanguage = "the original language of the provided text",
                     TranslatedTo = "the language that you translated the text to"
                 });
-                config.JsonSchema = ChatCompletionClient.GetSchemaFor(newSample);
+                config.JsonSchema = ChatCompletionClient.GetSchemaFromSampleObject(newSample);
             }
         );
     }
@@ -694,7 +694,7 @@ for(const comment of this.Comments)
         store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
         var sampleObject = JsonConvert.SerializeObject(new { Translation = "translated text" });
-        var schema = ChatCompletionClient.GetSchemaFor(sampleObject);
+        var schema = ChatCompletionClient.GetSchemaFromSampleObject(sampleObject);
 
         config.Prompt = "Translate this text to Polish";
         config.JsonSchema = schema;

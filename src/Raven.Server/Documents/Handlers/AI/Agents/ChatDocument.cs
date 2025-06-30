@@ -136,13 +136,13 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
         };
     }
 
-    public BlittableJsonReaderArray GenerateTools(JsonOperationContext context, AiAgentConfiguration configuration)
+    public List<BlittableJsonReaderObject> GenerateTools(JsonOperationContext context, AiAgentConfiguration configuration)
     {
-        DynamicJsonArray tools = [];
+        List<BlittableJsonReaderObject> tools = [];
         foreach (var q in configuration.Queries ?? [])
         {
             string paramsSchema = ChatCompletionClient.GenerateJsonObjectFromSampleObject(q.ParametersSchema);
-            tools.Add(new DynamicJsonValue
+            var tool = new DynamicJsonValue
             {
                 ["type"] = "function",
                 ["function"] = new DynamicJsonValue
@@ -152,12 +152,13 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
                     ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
                 },
                 ["strict"] = true
-            });
+            };
+            tools.Add(context.ReadObject(tool, "tool"));
         }
         foreach (var a in configuration.Actions ?? [])
         {
             string paramsSchema = ChatCompletionClient.GenerateJsonObjectFromSampleObject(a.ParametersSchema);
-            tools.Add(new DynamicJsonValue
+            var tool = new DynamicJsonValue
             {
                 ["type"] = "function",
                 ["function"] = new DynamicJsonValue
@@ -167,13 +168,11 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
                     ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
                 },
                 ["strict"] = true
-            });
+            };
+            tools.Add(context.ReadObject(tool, "tool"));
         }
 
-        var obj = context.ReadObject(new DynamicJsonValue { ["_"] = tools }, "ai-rag/tools");
-        BlittableJsonReaderObject.PropertyDetails prop = default;
-        obj.GetPropertyByIndex(0, ref prop);
-        return (BlittableJsonReaderArray)prop.Value;
+        return tools;
     }
 
     public void UpdateUsage(AiUsage usage)

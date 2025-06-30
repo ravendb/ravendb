@@ -176,7 +176,7 @@ public abstract class AbstractGenAiConnectorForTesting<T> : BaseAiConnectorForTe
     protected override bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token)
     {
         var configuration = _aiIntegrationConfiguration.Value;
-        var schema = ChatCompletionClient.GetSchemaFor("{ \"Answer\" : \"answer here\" }");
+        var schema = ChatCompletionClient.GetSchemaFromSampleObject("{ \"Answer\" : \"answer here\" }");
         using (var contextPool = new JsonContextPool())
         using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection, schema))
         {

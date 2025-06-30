@@ -302,7 +302,6 @@ namespace Raven.Server.Web.Studio
                 string apiKey = null;
                 string organization = null;
                 string project = null;
-                Type type;
                 switch (request.ConnectorType)
                 {
                     case AiConnectorType.OpenAi:
@@ -310,23 +309,20 @@ namespace Raven.Server.Web.Studio
                         apiKey = request.OpenAiSettings.ApiKey;
                         organization = request.OpenAiSettings.OrganizationId;
                         project = request.OpenAiSettings.ProjectId;
-                        type = request.OpenAiSettings.GetType();
                         break;
                     case AiConnectorType.AzureOpenAi:
                         uri = request.AzureOpenAiSettings.Endpoint;
                         apiKey = request.AzureOpenAiSettings.ApiKey;
-                        type = request.AzureOpenAiSettings.GetType();
                         break;
                     case AiConnectorType.Ollama:
                         uri = request.OllamaSettings.Uri;
-                        type = request.OllamaSettings.GetType();
                         break;
                     default:
                         throw new NotSupportedException($"Unsupported connector type: {request.ConnectorType}");
                 }
 
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
-                using (var chat = new ChatCompletionClient(ServerStore.ContextPool, uri, apiKey, model: null, organization, project, structuredOutputSchema: null, type))
+                using (var chat = new ChatCompletionClient(ServerStore.ContextPool, uri, apiKey, model: null, organization, project, structuredOutputSchema: null))
                 {
                     await chat.ProxyModelsAsync(HttpContext.Response, cts.Token);
                 }
@@ -353,7 +349,7 @@ namespace Raven.Server.Web.Studio
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var schema = ChatCompletionClient.GetSchemaFor(sampleObj.ToString());
+                    var schema = ChatCompletionClient.GetSchemaFromSampleObject(sampleObj.ToString());
 
                     writer.WriteStartObject();
                     writer.WritePropertyName("Result");

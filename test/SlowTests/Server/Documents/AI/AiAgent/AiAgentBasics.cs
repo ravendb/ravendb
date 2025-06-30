@@ -212,7 +212,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var body = @$"{{
     ""ConnectionStringName"": ""{config.ConnectionStringName}"",
     ""SystemPrompt"": ""You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well."",
-    ""OutputSchema"": ""{{\""Answer\"": \""Answer to the user question\"", \""Relevant\"": true, \""RelevantOrdersId\"":[\""The order ids relevant to the query or response\""], \""MatchingProductsId\"":[\""All the product ids referenced either by the user or the system\""] }}"",
+    ""SampleObject"": ""{{\""Answer\"": \""Answer to the user question\"", \""Relevant\"": true, \""RelevantOrdersId\"":[\""The order ids relevant to the query or response\""], \""MatchingProductsId\"":[\""All the product ids referenced either by the user or the system\""] }}"",
     ""Parameters"": {{
         ""company"": ""companies/90-A""
     }},

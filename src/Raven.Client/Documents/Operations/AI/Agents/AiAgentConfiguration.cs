@@ -1,7 +1,5 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.Linq.Expressions;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Client.Util;
@@ -46,7 +44,7 @@ public class AiAgentConfiguration : IDynamicJson
     public string SystemPrompt { get; set; }
 
     /// <summary>
-    /// A JSON schema (as string) describing the expected structure of the AI agent's output.
+    /// A sample object (as string) describing an example for an AI agent's output.
     /// This allows validation and parsing of the AI-generated response according to a known format.
     ///
     /// For example:
@@ -58,6 +56,12 @@ public class AiAgentConfiguration : IDynamicJson
     ///   "MatchingProductsId": ["All the product ids referenced either by the user or the system"]
     /// }
     /// </code>
+    /// </summary>
+    public string SampleObject { get; set; }
+
+    /// <summary>
+    /// A JSON schema describing the expected structure of the AI agent's output.
+    /// This allows validation and parsing of the AI-generated response according to a known format.
     /// </summary>
     public string OutputSchema { get; set; }
 
@@ -170,6 +174,7 @@ public class AiAgentConfiguration : IDynamicJson
             [nameof(ConnectionStringName)] = ConnectionStringName,
             [nameof(SystemPrompt)] = SystemPrompt,
             [nameof(OutputSchema)] = OutputSchema,
+            [nameof(SampleObject)] = SampleObject,
             [nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null,
             [nameof(Actions)] = Actions != null ? new DynamicJsonArray(Actions) : null,
             [nameof(Persistence)] = Persistence?.ToJson()

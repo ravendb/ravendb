@@ -16,7 +16,6 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Http;
-using Microsoft.CodeAnalysis;
 using Microsoft.IdentityModel.Tokens;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
@@ -67,12 +66,10 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             throw new NotSupportedException($"The specified provider (\"{connectorType.ToString()}\") is not supported.");
         }
 
-        var providerType = connection.GetActiveProviderInstance().GetType();
-
-        return new ChatCompletionClient(contextPool, uri, apiKey, model, organizationId, projectId, schema, providerType);
+        return new ChatCompletionClient(contextPool, uri, apiKey, model, organizationId, projectId, schema);
     }
 
-    public ChatCompletionClient(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, string structuredOutputSchema, Type providerType, DocumentConventions conventions = null)
+    public ChatCompletionClient(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, string structuredOutputSchema, DocumentConventions conventions = null)
     {
         _model = model ?? throw new ArgumentNullException(nameof(model));
         _organizationId = organizationId;
@@ -80,10 +77,10 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         conventions ??= ConventionsToUse;
 
-        _httpClientCacheKey = new HttpClientCacheKey(certificate: null, conventions.UseHttpDecompression,
+        _httpClientCacheKey = new HttpClientCacheKey(conventions.UseHttpDecompression,
             conventions.HasExplicitlySetDecompressionUsage, conventions.HttpPooledConnectionLifetime,
             conventions.HttpPooledConnectionIdleTimeout, conventions.GlobalHttpClientTimeout,
-            httpClientType: providerType, conventions.ConfigureHttpMessageHandler);
+            baseUri, apiKey, conventions.ConfigureHttpMessageHandler);
 
         _client = DefaultRavenHttpClientFactory.Instance.GetHttpClient(_httpClientCacheKey, handler => new HttpClient(handler)
         {
@@ -95,29 +92,15 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             }
         });
 
-        _structuredOutputSchema = structuredOutputSchema ?? GetSchemaFor("{}");
+        _structuredOutputSchema = structuredOutputSchema ?? GetSchemaFromSampleObject("{}");
         _contextPool = contextPool;
     }
 
-    public async Task<AiResponse> CompleteAsync2(JsonOperationContext context, List<BlittableJsonReaderObject> messages, BlittableJsonReaderArray tools, AiUsage usage,
-        CancellationToken token)
+    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, AiUsage usage, CancellationToken token)
     {
-        using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext ctx);
-
-        var bodyJson = new DynamicJsonValue
-        {
-            ["model"] = _model,
-            ["messages"] = messages,
-            ["tools"] = tools,
-            ["response_format"] = new DynamicJsonValue
-            {
-                ["type"] = "json_schema", 
-                ["json_schema"] = context.Sync.ReadForMemory(_structuredOutputSchema, "json/schema"),
-            }
-        };
-        using var request = GetRequest2(ctx, bodyJson);
+        using var request = CreateCompletionRequest(context, messages, tools);
         using var response = await _client.SendAsync(request, token).ConfigureAwait(false);
-        using var responseContent = await GetResponseContentAsync(ctx, response, token);
+        using var responseContent = await GetResponseContentAsync(context, response, token);
 
         if (response.IsSuccessStatusCode == false)
         {
@@ -125,31 +108,34 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             Debug.Assert(false, "we should never get here");
         }
 
-        if (responseContent.TryGet("choices", out BlittableJsonReaderArray choices) == false || choices.Length == 0)
+        if (responseContent.TryGet(Constants.ResponseFields.Choices, out BlittableJsonReaderArray choices) == false || choices.Length == 0)
         {
             throw new UnexpectedResponseException("No choices in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
         }
 
         var choice0 = (BlittableJsonReaderObject)choices[0];
         
-        if (choice0.TryGet("message", out BlittableJsonReaderObject msg) == false ||
-            msg.TryGet("content", out string content) == false)
+        if (choice0.TryGet(Constants.ResponseFields.Message, out BlittableJsonReaderObject msg) == false ||
+            msg.TryGet(Constants.ResponseFields.Content, out string content) == false)
         {
             throw new UnexpectedResponseException("No message/content property in choice: " + responseContent) { RequestId = GetRequestId(response.Headers) };
         }
         
         messages.Add(context.ReadObject(msg,"copy-msg"));
         
-        if (responseContent.TryGet("usage", out BlittableJsonReaderObject usageJson) == false)
+        if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson) == false)
             throw new UnexpectedResponseException("No choices property in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
 
-        usage.UpdateFrom(usageJson);
+        using (usageJson)
+        {
+            usage.UpdateFrom(usageJson);
+        }
 
         if (string.IsNullOrEmpty(content))
         {
-            if (choice0.TryGet("finish_reason", out string finishReason) && 
-                finishReason == "tool_calls" && 
-                msg.TryGet("tool_calls", out BlittableJsonReaderArray calls))
+            if (choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason) && 
+                finishReason == Constants.ResponseFields.ToolCalls && 
+                msg.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray calls))
             {
                 var resp = new AiResponse(AiResponseType.Tool) { ToolCalls = [] };
                 foreach (BlittableJsonReaderObject call in calls)
@@ -158,14 +144,17 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                         call.TryGet("function", out BlittableJsonReaderObject function) is false ||
                         function.TryGet("name", out string name) is false ||
                         function.TryGet("arguments", out string args) is false)
-                        throw new InvalidOperationException("Invalid function call");//TODO: raise proper error with details here
+                        throw new UnexpectedResponseException("Invalid function call: " + call.ToString())
+                        {
+                            RequestId = GetRequestId(response.Headers)
+                        };
                     resp.ToolCalls.Add(new AiToolCall(callId, name, args));
                 }
                 
                 return resp;
             }
             
-            choice0.TryGet("refusal", out string refusal); 
+            choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal); 
             //TODO: full output if we get here?
             throw new RefusedToAnswerException("The request was refused by the model")
             {
@@ -183,90 +172,26 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             await _forTestingPurposes.SimulateFailureAsync(context);
 
         using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext ctx);
-        using var request = CreateCompletionRequest(ctx, prompt, context);
-        using var response = await _client.SendAsync(request, token).ConfigureAwait(false);
-        using var responseContent = await GetResponseContentAsync(ctx, response, token);
 
-        if (response.IsSuccessStatusCode == false)
+        var msg1 = new DynamicJsonValue
         {
-            HandleUnsuccessfulResponse(response, responseContent);
-            Debug.Assert(false, "we should never get here");
-        }
-
-        if (responseContent.TryGet(Constants.ResponseFields.Choices, out BlittableJsonReaderArray choices) == false || choices.Length == 0)
+            [Constants.RequestFields.Role] = Constants.RequestFields.RoleSystemValue,
+            [Constants.RequestFields.Content] = prompt
+        };
+        var msg2 = new DynamicJsonValue
         {
-            throw new UnexpectedResponseException("No choices in response: " + responseContent)
-            {
-                RequestId = GetRequestId(response.Headers)
-            };
-        }
-
-        var choice0 = (BlittableJsonReaderObject)choices[0];
-        if (choice0.TryGet(Constants.ResponseFields.Message, out BlittableJsonReaderObject msg) == false ||
-             msg.TryGet(Constants.ResponseFields.Content, out string content) == false)
-        {
-            throw new UnexpectedResponseException("No message/content property in choice: " + responseContent)
-            {
-                RequestId = GetRequestId(response.Headers)
-            };
-        }
-
-        if (string.IsNullOrEmpty(content))
-        {
-            choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
-            choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal);
-
-            throw new RefusedToAnswerException("The request was refused by the model")
-            {
-                Refusal = refusal,
-                FinishReason = finishReason,
-                RequestId = GetRequestId(response.Headers)
-            };
-        }
-
-        if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usage) == false)
-            throw new UnexpectedResponseException("No choices property in response: " + responseContent)
-            {
-                RequestId = GetRequestId(response.Headers)
-            };
-
-        var aiUsage = new AiUsage();
-        using (usage)
-        {
-            aiUsage.UpdateFrom(usage);
-        }
-
-        return (content, aiUsage);
-    }
-
-    private HttpRequestMessage GetRequest2(JsonOperationContext ctx, DynamicJsonValue body)
-    {
-        var content = new BlittableJsonContent(async stream =>
-        {
-            using var bodyJson = ctx.ReadObject(body, "ai-agent/request");
-            await using var writer = new AsyncBlittableJsonTextWriter(ctx, stream);
-            writer.WriteObject(bodyJson);
-        }, ConventionsToUse);
-
-        content.Headers.Add(Constants.RequestFields.HeaderContentType, Constants.RequestFields.MediaTypeApplicationJson);
-        var request = new HttpRequestMessage
-        {
-            Method = HttpMethod.Post, 
-            Content = content, 
-            RequestUri = new Uri(Constants.RequestFields.DefaultRelativeUri, UriKind.Relative)
+            [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
+            [Constants.RequestFields.Content] = context
         };
 
-        if (string.IsNullOrEmpty(_organizationId) == false)
-            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiOrganization, _organizationId);
+        var messages = new List<BlittableJsonReaderObject>() { ctx.ReadObject(msg1, "system/msg"), ctx.ReadObject(msg2, "user/msg") };
+        var usage = new AiUsage();
+        var results = await CompleteAsync(ctx, messages, tools: null, usage, token);
 
-        if (string.IsNullOrEmpty(_projectId) == false)
-            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiProject, _projectId);
-
-        return request;
+        return (results.Result.ToString(), usage);
     }
 
-
-    private HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, string prompt, string context)
+    private HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools)
     {
         var content = new BlittableJsonContent(async stream =>
         {
@@ -284,25 +209,15 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                 writer.WriteString(_model);
                 writer.WriteComma();
 
-                writer.WritePropertyName(Constants.RequestFields.Messages);
-                writer.WriteStartArray();
-                writer.WriteStartObject();
-                writer.WritePropertyName(Constants.RequestFields.Role);
-                writer.WriteString(Constants.RequestFields.RoleSystemValue);
+                writer.WriteArray(Constants.RequestFields.Messages, messages ?? new List<BlittableJsonReaderObject>());
                 writer.WriteComma();
-                writer.WritePropertyName(Constants.RequestFields.Content);
-                writer.WriteString(prompt);
-                writer.WriteEndObject();
-                writer.WriteComma();
-                writer.WriteStartObject();
-                writer.WritePropertyName(Constants.RequestFields.Role);
-                writer.WriteString(Constants.RequestFields.RoleUserValue);
-                writer.WriteComma();
-                writer.WritePropertyName(Constants.RequestFields.Content);
-                writer.WriteString(context);
-                writer.WriteEndObject();
-                writer.WriteEndArray();
-                writer.WriteComma();
+
+                // Optional
+                if (tools?.Count > 0)
+                {
+                    writer.WriteArray(Constants.RequestFields.Tools, tools);
+                    writer.WriteComma();
+                }
 
                 writer.WritePropertyName(Constants.RequestFields.ResponseFormat);
                 writer.WriteStartObject();
@@ -537,18 +452,13 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    internal static string GetSchemaFor(string schemaOrSampleObject)
+    internal static string GetSchemaFromSampleObject(string sampleObject)
     {
-        var doc = JsonDocument.Parse(schemaOrSampleObject);
-        if (doc.RootElement.TryGetProperty(Constants.JsonSchemaFields.Type, out _) &&
-            doc.RootElement.TryGetProperty(Constants.JsonSchemaFields.AdditionalProperties, out _) &&
-            doc.RootElement.TryGetProperty(Constants.JsonSchemaFields.Properties, out _) &&
-            doc.RootElement.TryGetProperty(Constants.JsonSchemaFields.Required, out _))
-            return schemaOrSampleObject; // probably a schema, let's use that
+        var doc = JsonDocument.Parse(sampleObject);
 
         var schema = new JsonObject
         {
-            [Constants.JsonSchemaFields.Name] = GetAllowedUniqueName(schemaOrSampleObject), // ensures a unique name
+            [Constants.JsonSchemaFields.Name] = GetAllowedUniqueName(sampleObject), // ensures a unique name
             [Constants.JsonSchemaFields.Strict] = true,
             [Constants.JsonSchemaFields.Schema] = GenerateJsonSchemaObjectFromSampleObject(doc.RootElement)
         };
@@ -655,6 +565,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string Message = "message";
             public const string Content = "content";
             public const string FinishReason = "finish_reason";
+            public const string ToolCalls = "tool_calls";
             public const string Refusal = "refusal";
             public const string Usage = "usage";
             public const string Error = "error";
@@ -701,6 +612,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             // JSON property names
             public const string Model = "model";
             public const string Messages = "messages";
+            public const string Tools = "tools";
             public const string Role = "role";
             public const string Content = "content";
             public const string ResponseFormat = "response_format";

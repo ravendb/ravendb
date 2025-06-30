@@ -26,7 +26,7 @@ public class RavenDB_24298(ITestOutputHelper output) : RavenTestBase(output)
         store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
         var sampleObject = JsonConvert.SerializeObject(new { Translation = "translated text" });
-        var schema = ChatCompletionClient.GetSchemaFor(sampleObject);
+        var schema = ChatCompletionClient.GetSchemaFromSampleObject(sampleObject);
 
         config.Prompt = "Translate this text to Polish";
         config.JsonSchema = schema;

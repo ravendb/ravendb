@@ -1442,7 +1442,7 @@ for (const comment of this.Comments)
 
         config.Collection = "Posts";
         config.Prompt = "Check if the following blog post comment is spam or not";
-        config.JsonSchema = ChatCompletionClient.GetSchemaFor(JsonConvert.SerializeObject(new
+        config.JsonSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new
         {
             Blocked = true, Reason = "Concise reason for why this comment was marked as spam or harmful"
         }));

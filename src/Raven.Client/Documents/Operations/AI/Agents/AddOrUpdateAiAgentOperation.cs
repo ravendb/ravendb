@@ -13,8 +13,8 @@ namespace Raven.Client.Documents.Operations.AI.Agents
     {
         public AddOrUpdateAiAgentOperation(string name, AiAgentConfiguration configuration) : base(name, configuration)
         {
-            if (string.IsNullOrEmpty(configuration.OutputSchema))
-                throw new ArgumentException("OutputSchema cannot be null or empty.", nameof(configuration.OutputSchema));
+            if (string.IsNullOrWhiteSpace(configuration.OutputSchema) && string.IsNullOrWhiteSpace(configuration.SampleObject))
+                throw new ArgumentException($"Please provide a non-empty value for either {configuration.OutputSchema} or {nameof(configuration.SampleObject)} is required.");
         }
     }
 
@@ -22,6 +22,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents
     {
         private readonly string _name;
         private readonly AiAgentConfiguration _configuration;
+        private static readonly TSchema Instance = new();
 
         public AddOrUpdateAiAgentOperation(string name, AiAgentConfiguration configuration)
         {
@@ -59,7 +60,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(async stream =>
                     {
-                        _configuration.OutputSchema ??= DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new TSchema(), ctx).ToString();
+                        _configuration.SampleObject ??= DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(Instance, ctx).ToString();
                         await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false);
                     }, _conventions)
                 };
