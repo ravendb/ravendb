@@ -70,7 +70,6 @@ namespace Raven.Server.Documents.Handlers.Batches
             public long SizeInBytes;
             public DateTime? RetireAt;
             public string Hash;
-            public bool StorageOnly;
             public MergedBatchCommand.AttachmentStream AttachmentStream { get; set; }// used for bulk insert only
 
             #endregion Attachment
@@ -535,18 +534,6 @@ namespace Raven.Server.Documents.Handlers.Batches
                         commandData.FromEtl = state.CurrentTokenType == JsonParserToken.True;
                         break;
 
-                    case CommandPropertyName.StorageOnly:
-                        while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
-
-                        if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
-                        {
-                            ThrowUnexpectedToken(JsonParserToken.True, state);
-                        }
-
-                        commandData.StorageOnly = state.CurrentTokenType == JsonParserToken.True;
-                        break;
-                        
                     case CommandPropertyName.AttachmentType:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
@@ -776,7 +763,6 @@ namespace Raven.Server.Documents.Handlers.Batches
             SizeInBytes,
             RetireAt,
             Hash,
-            StorageOnly,
             #endregion Attachment
 
             #region Counter
@@ -872,8 +858,6 @@ namespace Raven.Server.Documents.Handlers.Batches
                 case 11:
                     if ("ContentType"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.ContentType;
-                    if ("StorageOnly"u8.IsEqualConstant(state.StringBuffer))
-                        return CommandPropertyName.StorageOnly;
                     if ("SizeInBytes"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.SizeInBytes;
                     return CommandPropertyName.NoSuchProperty;

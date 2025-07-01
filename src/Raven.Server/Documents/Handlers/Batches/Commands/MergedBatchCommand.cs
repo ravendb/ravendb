@@ -222,44 +222,8 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     break;
 
                 case CommandType.AttachmentDELETE:
-                    CollectionName collectionName;
 
-                    //TODO: egor btw I think I dont care if its from ETL
-                    if (cmd.FromEtl == false)
-                    {
-                        if (cmd.Flags == AttachmentFlags.Retired)
-                        {
-                            //retired attachment
-                            if (cmd.StorageOnly)
-                            {
-                                // keep the retired attachment on cloud storage
-                                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
-                            }
-                            else
-                            {
-                                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
-                            }
-                        }
-                        else
-                        {
-                            //TODO: egor we can remove this check, because we never delete attachments from cloud storage
-                            //Attachment attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, cmd.Id, cmd.Name, AttachmentType.Document, changeVector: null);
-                            //RegularDeleteAttachmentStrategyProcessor.CheckAttachmentFlagAndThrowIfNeededInternal(context, attachment, Database, cmd.Id, cmd.Name);
-                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
-
-                        }
-                    }
-                    else
-                    {
-                        if (cmd.Flags == AttachmentFlags.Retired)
-                        {
-                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
-                        }
-                        else
-                        {
-                            Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
-                        }
-                    }
+                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out CollectionName collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
 
                     if (collectionName != null)
                         ModifiedCollections?.Add(collectionName.Name);

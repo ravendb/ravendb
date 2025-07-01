@@ -1153,7 +1153,6 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     AttachmentContentType = attachment.ContentType,
                     AttachmentHash = attachment.Hash,
                     AttachmentSize = attachment.Size,
-                    AttachmentContent = attachment.GetContentAsString(),
                     AttachmentFlags = attachment.Flags,
                     AttachmentRetiredAt = attachment.RetireAt
                 };

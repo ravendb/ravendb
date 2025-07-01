@@ -1655,17 +1655,8 @@ namespace Raven.Server.Documents
 
         public static bool ExtractAttachmentTombstoneFlag(ref TableValueReader tvr, Tombstone result)
         {
-            var enumVal = DocumentsStorage.TableValueToInt((int)TombstoneTable.Flags, ref tvr);
-            if (enumVal == (int)AttachmentTombstoneFlags.FromStorageOnly)
-            {
-                result.Flags = DocumentFlags.None;
-                return true;
-            }
-            else
-            {
                 result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                 return false;
-            }
         }
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, DocumentFlags flags)
