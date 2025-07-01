@@ -798,7 +798,7 @@ for(const comment of this.Comments)
         value = await WaitForValueAsync(() =>
         {
             stats2 = etlProcess.GetPerformanceStats()
-                .Where(x => x.NumberOfLoadedItems > 0 && x.LastLoadedEtag > etag && x.NumberOfExtractedItems[EtlItemType.Document] > 0)
+                .Where(x => x.NumberOfLoadedItems > 0 && x.LastLoadedEtag == etag + 1 && x.NumberOfExtractedItems[EtlItemType.Document] > 0)
                 .ToArray();
             return stats2.Length > 0;
         }, expectedVal: true, timeout: 60_000);
