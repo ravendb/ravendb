@@ -396,6 +396,10 @@ namespace Raven.Server.Web.System
 
                 foreach (var indexPath in Directory.GetDirectories(indexesPath))
                 {
+                    var pathSetting = new PathSetting(indexPath);
+                    if (databaseConfiguration.Indexing.SharedJournalsPath.Equals(pathSetting))
+                        continue;
+
                     Index index = null;
                     try
                     {

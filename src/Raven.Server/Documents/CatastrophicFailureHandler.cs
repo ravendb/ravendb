@@ -5,6 +5,7 @@ using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
+using Sparrow.Collections;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 
@@ -17,6 +18,7 @@ namespace Raven.Server.Documents
         internal TimeSpan NoFailurePeriod = TimeSpan.FromMinutes(15);
 
         private readonly ConcurrentDictionary<Guid, FailureStats> _errorsPerEnvironment = new ConcurrentDictionary<Guid, FailureStats>();
+        private readonly ConcurrentSet<string> _errorsPerPath = new ConcurrentSet<string>();
 
         private readonly DatabasesLandlord _databasesLandlord;
         private readonly ServerStore _serverStore;
@@ -36,9 +38,13 @@ namespace Raven.Server.Documents
             return false;
         }
 
+        public bool ErrorAtPath(string path) => _errorsPerPath.Contains(path);
+
         public void Execute(string databaseName, Exception e, Guid environmentId, string path, string stacktrace)
         {
             var stats = _errorsPerEnvironment.GetOrAdd(environmentId, x => FailureStats.Create(MaxDatabaseUnloads));
+            if (string.IsNullOrEmpty(path) == false)
+                _errorsPerPath.TryAdd(path);
 
             if (stats.WillUnloadDatabase == false)
             {
