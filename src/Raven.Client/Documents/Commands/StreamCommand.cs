@@ -31,15 +31,20 @@ namespace Raven.Client.Documents.Commands
         {
             var responseStream = await response.Content.ReadAsStreamWithZstdSupportAsync().ConfigureAwait(false);
 
-            var timeout = (int)(Timeout ?? StreamWithTimeout.DefaultReadTimeout).TotalMilliseconds;
+            var streamWithTimeout = new StreamWithTimeout(responseStream);
+
+            if (Timeout != null)
+            {
+                var timeout = (int)Timeout.Value.TotalMilliseconds;
+                
+                streamWithTimeout.ReadTimeout = timeout;
+                streamWithTimeout.WriteTimeout = timeout;           
+            }
+            
             Result = new StreamResult
             {
                 Response = response,
-                Stream = new StreamWithTimeout(responseStream)
-                {
-                    ReadTimeout = timeout,
-                    WriteTimeout = timeout
-                }
+                Stream = streamWithTimeout
             };
 
             return ResponseDisposeHandling.Manually;

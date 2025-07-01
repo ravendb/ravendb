@@ -6,9 +6,13 @@ using System.Threading.Tasks;
 
 namespace Raven.Client.Util
 {
-    internal sealed class StreamWithTimeout : Stream
+    internal sealed class StreamWithTimeout : Stream, IAsyncDisposable
     {
+        private static readonly TimeSpan DefaultWriteTimeout = TimeSpan.FromSeconds(120);
         internal static TimeSpan DefaultReadTimeout { get; } = TimeSpan.FromSeconds(120);
+
+        private static readonly int DefaultMinimumWriteDelayTimeInMs = (int)(DefaultWriteTimeout.TotalMilliseconds / 3);
+        private static readonly int DefaultMinimumReadDelayTimeInMs = (int)(DefaultReadTimeout.TotalMilliseconds / 3);
 
         private Stopwatch _writeSw;
         private Stopwatch _readSw;
@@ -16,8 +20,10 @@ namespace Raven.Client.Util
         internal readonly Stream _stream;
         private int _writeTimeout;
         private int _readTimeout;
-        private int _minimumWriteDelayTimeInMs;
-        private int _minimumReadDelayTimeInMs;
+        private int _minimumWriteDelayTimeInMs = DefaultMinimumWriteDelayTimeInMs;
+        private int _minimumReadDelayTimeInMs = DefaultMinimumReadDelayTimeInMs;
+        private bool _canBaseStreamTimeoutOnWrite;
+        private bool _canBaseStreamTimeoutOnRead;
         private CancellationTokenSource _writeCts;
         private CancellationTokenSource _readCts;
 
@@ -26,12 +32,83 @@ namespace Raven.Client.Util
         private CancellationToken _requestWriteCts;
 #endif
 
-        private long _totalRead;
-        private long _totalWritten;
+        private long _totalRead = 0;
+        private long _totalWritten = 0;
 
         public StreamWithTimeout(Stream stream)
         {
             _stream = stream;
+            SetWriteTimeoutIfNeeded(DefaultWriteTimeout);
+            SetReadTimeoutIfNeeded(DefaultReadTimeout);
+        }
+
+        private void SetReadTimeoutIfNeeded(TimeSpan readTimeout)
+        {
+            try
+            {
+                _readTimeout = (int)readTimeout.TotalMilliseconds;
+                _canBaseStreamTimeoutOnRead = _stream.CanRead && _stream.CanTimeout;
+
+                if (_canBaseStreamTimeoutOnRead)
+                {
+                    var streamReadTimeout = _stream.ReadTimeout;
+                    if (streamReadTimeout > 0)
+                    {
+                        ReadTimeout = streamReadTimeout;
+                        return;
+                    }
+
+                    try
+                    {
+                        _stream.ReadTimeout = _readTimeout;
+                    }
+                    catch
+                    {
+                        if (streamReadTimeout <= _readTimeout)
+                            ReadTimeout = streamReadTimeout;
+                        else
+                            _canBaseStreamTimeoutOnRead = false;
+                    }
+                }
+            }
+            catch
+            {
+                _canBaseStreamTimeoutOnRead = false;
+            }
+        }
+
+        private void SetWriteTimeoutIfNeeded(TimeSpan writeTimeout)
+        {
+            try
+            {
+                _writeTimeout = (int)writeTimeout.TotalMilliseconds;
+                _canBaseStreamTimeoutOnWrite = _stream.CanWrite && _stream.CanTimeout;
+
+                if (_canBaseStreamTimeoutOnWrite)
+                {
+                    var streamWriteTimeout = _stream.WriteTimeout;
+                    if (streamWriteTimeout > 0)
+                    {
+                        WriteTimeout = streamWriteTimeout;
+                        return;
+                    }
+                    try
+                    {
+                        _stream.WriteTimeout = _writeTimeout;
+                    }
+                    catch
+                    {
+                        if (streamWriteTimeout <= _writeTimeout)
+                            WriteTimeout = streamWriteTimeout;
+                        else
+                            _canBaseStreamTimeoutOnWrite = false;
+                    }
+                }
+            }
+            catch
+            {
+                _canBaseStreamTimeoutOnWrite = false;
+            }
         }
 
         public override int ReadTimeout
@@ -39,11 +116,9 @@ namespace Raven.Client.Util
             get => _readTimeout;
             set
             {
-                if (_stream.CanRead && _stream.CanTimeout)
-                {
+                if (_canBaseStreamTimeoutOnRead)
                     _stream.ReadTimeout = value; // we only need to set it when base stream supports that, if not we are handling that ourselves
-                    return;
-                }
+
                 _readTimeout = value;
                 _minimumReadDelayTimeInMs = value / 3;
             }
@@ -54,11 +129,8 @@ namespace Raven.Client.Util
             get => _writeTimeout;
             set
             {
-                if (_stream.CanWrite && _stream.CanTimeout)
-                {
+                if (_canBaseStreamTimeoutOnWrite)
                     _stream.WriteTimeout = value;  // we only need to set it when base stream supports that, if not we are handling that ourselves
-                    return;
-                }
 
                 _writeTimeout = value;
                 _minimumWriteDelayTimeInMs = value / 3;
@@ -79,7 +151,7 @@ namespace Raven.Client.Util
 
         public override int Read(byte[] buffer, int offset, int count)
         {
-            if (_readTimeout == 0)
+            if (_canBaseStreamTimeoutOnRead)
             {
                 var read = _stream.Read(buffer, offset, count);
                 _totalRead += read;
@@ -98,21 +170,19 @@ namespace Raven.Client.Util
 
         private async Task<int> ReadAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (_readTimeout > 0)
+            if (_readCts == null)
             {
-                if (_readCts == null)
-                {
                 _readCts = GenerateCancellationTokenWithTimeout(_readTimeout, cancellationToken);
-                    _readSw = Stopwatch.StartNew();
+                _readSw = Stopwatch.StartNew();
 
 #if DEBUG
-                    _requestReadCts = cancellationToken;
+                _requestReadCts = cancellationToken;
 #endif
-                }
-                else if (_readSw.ElapsedMilliseconds > _minimumReadDelayTimeInMs)
-                {
-                    _readSw.Restart();
-                    _readCts.CancelAfter(_readTimeout);
+            }
+            else if (_readSw.ElapsedMilliseconds > _minimumReadDelayTimeInMs)
+            {
+                _readSw.Restart();
+                _readCts.CancelAfter(_readTimeout);
 
                 if (_readCts.IsCancellationRequested)
                 {
@@ -121,15 +191,12 @@ namespace Raven.Client.Util
                 }
 
 #if DEBUG
-                    if (_requestReadCts != cancellationToken)
-                        throw new InvalidOperationException("The cancellation token was changed during the request");
+                if (_requestReadCts != cancellationToken)
+                    throw new InvalidOperationException("The cancellation token was changed during the request");
 #endif
-                }
-
-                cancellationToken = _readCts.Token;
             }
 
-            var read = await _stream.ReadAsync(buffer, offset, count, cancellationToken).ConfigureAwait(false);
+            var read = await _stream.ReadAsync(buffer, offset, count, _readCts.Token).ConfigureAwait(false);
             _totalRead += read;
             return read;
         }
@@ -148,7 +215,7 @@ namespace Raven.Client.Util
         {
             _totalWritten += count;
 
-            if (_writeTimeout == 0)
+            if (_canBaseStreamTimeoutOnWrite)
             {
                 _stream.Write(buffer, offset, count);
                 return;
@@ -166,21 +233,19 @@ namespace Raven.Client.Util
 
         private Task WriteAsyncWithTimeout(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            if (_writeTimeout > 0)
+            if (_writeCts == null)
             {
-                if (_writeCts == null)
-                {
                 _writeCts = GenerateCancellationTokenWithTimeout(_writeTimeout, cancellationToken);
-                    _writeSw = Stopwatch.StartNew();
+                _writeSw = Stopwatch.StartNew();
 
 #if DEBUG
-                    _requestWriteCts = cancellationToken;
+                _requestWriteCts = cancellationToken;
 #endif
-                }
-                else if (_writeSw.ElapsedMilliseconds > _minimumWriteDelayTimeInMs)
-                {
-                    _writeSw.Restart();
-                    _writeCts.CancelAfter(_writeTimeout);
+            }
+            else if (_writeSw.ElapsedMilliseconds > _minimumWriteDelayTimeInMs)
+            {
+                _writeSw.Restart();
+                _writeCts.CancelAfter(_writeTimeout);
 
                 if (_writeCts.IsCancellationRequested)
                 {
@@ -189,15 +254,12 @@ namespace Raven.Client.Util
                 }
 
 #if DEBUG
-                    if (_requestWriteCts != cancellationToken)
-                        throw new InvalidOperationException("The cancellation token was changed during the request");
+                if (_requestWriteCts != cancellationToken)
+                    throw new InvalidOperationException("The cancellation token was changed during the request");
 #endif
-                }
-
-                cancellationToken = _writeCts.Token;
             }
 
-            return _stream.WriteAsync(buffer, offset, count, cancellationToken);
+            return _stream.WriteAsync(buffer, offset, count, _writeCts.Token);
         }
 
         private static CancellationTokenSource GenerateCancellationTokenWithTimeout(int timeout, CancellationToken ct)
