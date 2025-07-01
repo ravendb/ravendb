@@ -1,5 +1,4 @@
 ﻿using System;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;

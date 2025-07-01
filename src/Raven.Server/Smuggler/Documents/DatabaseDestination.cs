@@ -651,25 +651,8 @@ namespace Raven.Server.Smuggler.Documents
                                     var attachmentId = key.Content.Substring(idEnd);
                                     idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(attachmentId);
 
-                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirectDocumentOrRetiredCloudAndStorage(
+                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(
                                         context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks);
-                                    
-                                    
-                                    //TODO: egor 
-                                    //if (tombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
-                                    //{
-                                    //    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage, context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    //        newChangeVector,
-                                    //        attachmentTombstone.LastModifiedTicks);
-                                    //}
-                                    //else
-                                    //{
-                                    //    // Here it is a document attachment or retired attachment that need to be deleted from both cloud && storage
-
-                                    //    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirectDocumentOrRetiredCloudAndStorage(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                    //        newChangeVector,
-                                    //        attachmentTombstone.LastModifiedTicks);
-                                    //}
 
                                     break;
 

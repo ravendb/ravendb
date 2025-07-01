@@ -146,43 +146,6 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
-        public class MergedDeleteRetiredAttachmentCommand : AttachmentHandler.MergedDeleteAttachmentCommand
-        {
-            public AttachmentsStorage.DeleteAttachmentState DeleteState;
-
-            protected override long ExecuteCmd(DocumentsOperationContext context)
-            {
-                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, DocumentId, Name, ExpectedChangeVector, collectionName: out _);
-                return 1;
-            }
-
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
-            {
-                return new MergedDeleteRetiredAttachmentCommandDto
-                {
-                    DocumentId = DocumentId,
-                    Name = Name,
-                    ExpectedChangeVector = ExpectedChangeVector,
-                    DeleteState = DeleteState
-                };
-            }
-
-            internal sealed class MergedDeleteRetiredAttachmentCommandDto : MergedDeleteAttachmentCommandDto
-            {
-                public AttachmentsStorage.DeleteAttachmentState DeleteState;
-                public override MergedDeleteRetiredAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
-                {
-                    return new MergedDeleteRetiredAttachmentCommand
-                    {
-                        DocumentId = DocumentId,
-                        Name = Name,
-                        ExpectedChangeVector = ExpectedChangeVector,
-                        DeleteState = DeleteState,
-                        Database = database
-                    };
-                }
-            }
-        }
         public class MergedDeleteAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public string DocumentId;
@@ -286,8 +249,6 @@ namespace Raven.Server.Documents.Handlers
 
     internal sealed class MergedDeleteRetiredAttachmentsCommand : MergedDeleteAttachmentsCommand
     {
-        public DeleteAttachmentState DeleteState;
-
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
             foreach (var delete in Deletes)
@@ -301,13 +262,11 @@ namespace Raven.Server.Documents.Handlers
         public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction,
             MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
         {
-            return new MergedDeleteRetiredAttachmentsCommandDto { Deletes = Deletes, DeleteState = DeleteState };
+            return new MergedDeleteRetiredAttachmentsCommandDto { Deletes = Deletes };
         }
 
         internal sealed class MergedDeleteRetiredAttachmentsCommandDto : MergedDeleteAttachmentsCommandDto
         {
-            public DeleteAttachmentState DeleteState;
-
             public override MergedDeleteRetiredAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
                 return new MergedDeleteRetiredAttachmentsCommand { Deletes = Deletes, Database = database };

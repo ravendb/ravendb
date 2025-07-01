@@ -1,4 +1,5 @@
 ﻿using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Databases;
@@ -31,8 +32,11 @@ internal abstract class AbstractRetiredAttachmentHandlerProcessorForAddRetireCon
 
     protected override Task<(long Index, object Result)> OnUpdateConfiguration(TransactionOperationContext context, RetiredAttachmentsConfiguration configuration, string raftRequestId)
     {
-        if (LoggingSource.AuditLog.IsInfoEnabled)
-            RequestHandler.LogAuditFor(RequestHandler.DatabaseName, $"User '{RequestHandler.HttpContext.User?.Identity?.Name}' updated retire-attachments configuration", "retired_attachments-config");
+        if (RavenLogManager.Instance.IsAuditEnabled)
+        {
+            RequestHandler.LogAuditForDatabase("PUT", "retire-attachments configuration");
+        }
+
         return RequestHandler.ServerStore.ModifyDatabaseAttachmentsRetire(context, RequestHandler.DatabaseName, configuration, raftRequestId);
     }
 }

@@ -1315,7 +1315,6 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[CollectionEtagsSlice], etag, start))
             {
-
                 if (take-- <= 0)
                     yield break;
                 var t = TableValueToTombstone(context, ref result.Reader);

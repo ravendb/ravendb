@@ -302,7 +302,7 @@ namespace Voron.Data.BTrees
                 _requireValidation = _maxKey.HasValue || _requiredPrefix.HasValue;
             }
         }
-        
+
         private void DecompressedCurrentPage()
         {
             Debug.Assert(_tree.IsLeafCompressionSupported);

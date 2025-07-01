@@ -14,16 +14,12 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
 
         public override AttachmentHandler.MergedDeleteRetiredAttachmentCommand CreateMergedDeleteAttachmentCommand(string docId, string name, LazyStringValue changeVector)
         {
-            //TODO: egor not retired attachment will be always storageOnly = true 
-            var storageOnly = RequestHandler.GetBoolValueQueryString("storageOnly", required: false) ?? false;
-
             var cmd = new AttachmentHandler.MergedDeleteRetiredAttachmentCommand
             {
                 Database = RequestHandler.Database,
                 ExpectedChangeVector = changeVector,
                 DocumentId = docId,
-                Name = name,
-                DeleteState = storageOnly ? AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentStorage : AttachmentsStorage.DeleteAttachmentState.DocumentRetiredAttachmentCloudStorage
+                Name = name
 
             };
             return cmd;
