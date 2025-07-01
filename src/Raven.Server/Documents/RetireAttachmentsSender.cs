@@ -274,35 +274,6 @@ namespace Raven.Server.Documents
                 };
             }
         }
-
-        internal sealed class UpdateExistingAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
-        {
-            private readonly Queue<DocumentExpirationInfo> _attachments;
-            private readonly DocumentDatabase _database;
-
-            public int ProcessedCount;
-
-            public UpdateExistingAttachmentsCommand(Queue<DocumentExpirationInfo> attachments, DocumentDatabase database)
-            {
-                _attachments = attachments;
-                _database = database;
-            }
-
-            protected override long ExecuteCmd(DocumentsOperationContext context)
-            {
-                ProcessedCount = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.ProcessAddRetiredAtToExistingAttachments(context, _attachments);
-
-                return ProcessedCount;
-            }
-
-            public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
-            {
-                return new UpdateExistingAttachmentsCommandDto
-                {
-                    Attachments = _attachments.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id)).ToArray()
-                };
-            }
-        }
     }
 
     internal class RetireAttachmentsStatsScope
@@ -338,21 +309,5 @@ namespace Raven.Server.Documents
         public (Slice, Slice, string)[] Retired { get; set; }
 
         public DateTime CurrentTime { get; set; }
-    }
-
-    internal sealed class UpdateExistingAttachmentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, RetireAttachmentsSender.UpdateExistingAttachmentsCommand>
-    {
-        public RetireAttachmentsSender.UpdateExistingAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
-        {
-            var retired = new Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo>();
-            foreach (var item in Attachments)
-            {
-                retired.Enqueue(new AbstractBackgroundWorkStorage.DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3));
-            }
-            var command = new RetireAttachmentsSender.UpdateExistingAttachmentsCommand(retired, database);
-            return command;
-        }
-
-        public (Slice, Slice, string)[] Attachments { get; set; }
     }
 }

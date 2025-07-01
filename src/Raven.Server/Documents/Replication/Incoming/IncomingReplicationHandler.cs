@@ -466,19 +466,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                                     _ => throw new ArgumentOutOfRangeException()
                                 };
 
-                                if (attachmentTombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
-                                {
-                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                        newChangeVector,
-                                        attachmentTombstone.LastModifiedTicks);
-                                }
-                                else
-                                {
-                                    // Here it is a document attachment or retired attachment that need to be deleted from both cloud && storage
-                                    database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirectDocumentOrRetiredCloudAndStorage(context, attachmentTombstone.Key, false, "$fromReplication", null,
-                                        newChangeVector,
-                                        attachmentTombstone.LastModifiedTicks);
-                                }
+                                database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, attachmentTombstone.Key, false, "$fromReplication", null,
+                                    newChangeVector,
+                                    attachmentTombstone.LastModifiedTicks);
 
                                 break;
 

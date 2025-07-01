@@ -24,9 +24,11 @@ internal sealed class RetiredAttachmentHandlerProcessorForGetRetireConfig : Abst
                 configuration = rawRecord?.RetiredAttachmentsConfiguration;
             }
 
-            if (LoggingSource.AuditLog.IsInfoEnabled)
-                RequestHandler.LogAuditFor(RequestHandler.DatabaseName, $"User '{RequestHandler.HttpContext.User?.Identity}' fetched retire-attachment configurations ",
-                    "retired_attachments-config");
+            if (RavenLogManager.Instance.IsAuditEnabled)
+            {
+                RequestHandler.LogAuditForDatabase("GET", "retire-attachment configurations");
+            }
+
             return ValueTask.FromResult(configuration);
         }
     }

@@ -44,6 +44,9 @@
     <EmbeddedResource Include="Documents\Patch\*.js;Web\Studio\EmbeddedData\*.ravendbdump;Web\Studio\EmbeddedData\*.cs;Commercial\RavenDB.public.json" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Remove="Documents\Handlers\Processors\Attachments\Strategies\AbstractDeleteAttachmentStrategyProcessor.cs" />
+    <Compile Remove="Documents\Handlers\Processors\Attachments\Strategies\RegularDeleteAttachmentStrategyProcessor.cs" />
+    <Compile Remove="Documents\Handlers\Processors\Attachments\Strategies\RetiredDeleteAttachmentStrategyProcessor.cs" />
     <Compile Remove="Web\Studio\EmbeddedData\NorthwindModel.cs" />
   </ItemGroup>
   <ItemGroup>
