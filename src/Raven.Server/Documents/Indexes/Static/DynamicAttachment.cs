@@ -95,8 +95,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public string GetContentAsString(Encoding encoding)
         {
             if (_attachment.Flags == AttachmentFlags.Retired)
-                throw new RetiredAttachmentIndexingException($"Attempted to {nameof(GetContentAsString)} retired attachment '{_attachment.Name}' (storage id: {_attachment.StorageId});" +
-                                                             $" retired attachments are no longer available locally.");
+                ThrowRetiredAttachmentException(nameof(GetContentAsString));
 
             if (_contentAsString == null)
             {
@@ -112,9 +111,7 @@ namespace Raven.Server.Documents.Indexes.Static
         public Stream GetContentAsStream()
         {
             if (_attachment.Flags == AttachmentFlags.Retired)
-                throw new RetiredAttachmentIndexingException($"Attempted to {nameof(GetContentAsStream)} on retired attachment '{_attachment.Name}' (storage id: {_attachment.StorageId});" +
-                                                             $" retired attachments are no longer available locally.");
-            
+                ThrowRetiredAttachmentException(nameof(GetContentAsStream));
 
             _attachment.Stream.Position = 0;
 
@@ -125,6 +122,13 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             result = DynamicNullObject.Null;
             return true;
+        }
+
+        private void ThrowRetiredAttachmentException(string methodName)
+        {
+            throw new RetiredAttachmentIndexingException(
+                $"Attempted to {methodName} retired attachment '{_attachment.Name}' (storage id: {_attachment.StorageId});" +
+                " retired attachments are no longer available locally.");
         }
     }
 }
