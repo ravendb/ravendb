@@ -8,8 +8,8 @@ namespace Tests.Infrastructure
         {
             get
             {
-                if (LicenseRequiredFactAttribute.ShouldSkip())
-                    return LicenseRequiredFactAttribute.SkipMessage;
+                if (RavenFactAttribute.ShouldSkipLicense(out var skipMessage))
+                    return skipMessage;
 
                 return null;
             }

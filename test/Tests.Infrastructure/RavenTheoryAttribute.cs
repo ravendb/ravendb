@@ -22,19 +22,58 @@ public class RavenTheoryAttribute : TheoryAttribute, ITraitAttribute
 
     public bool AzureRequired { get; set; }
 
+    public RavenServiceRequirement Requires { get; set; } = RavenServiceRequirement.None;
+
+    // Legacy properties for backward compatibility
+    public bool MsSqlRequired 
+    { 
+        get => Requires.HasFlag(RavenServiceRequirement.MsSql);
+        set => Requires = value ? Requires | RavenServiceRequirement.MsSql : Requires & ~RavenServiceRequirement.MsSql;
+    }
+
+    public bool ElasticSearchRequired 
+    { 
+        get => Requires.HasFlag(RavenServiceRequirement.ElasticSearch);
+        set => Requires = value ? Requires | RavenServiceRequirement.ElasticSearch : Requires & ~RavenServiceRequirement.ElasticSearch;
+    }
+
+    public bool AzureQueueStorageRequired 
+    { 
+        get => Requires.HasFlag(RavenServiceRequirement.AzureQueueStorage);
+        set => Requires = value ? Requires | RavenServiceRequirement.AzureQueueStorage : Requires & ~RavenServiceRequirement.AzureQueueStorage;
+    }
+
+    public bool OracleSqlRequired 
+    { 
+        get => Requires.HasFlag(RavenServiceRequirement.OracleSql);
+        set => Requires = value ? Requires | RavenServiceRequirement.OracleSql : Requires & ~RavenServiceRequirement.OracleSql;
+    }
+
+    public bool NpgSqlRequired 
+    { 
+        get => Requires.HasFlag(RavenServiceRequirement.NpgSql);
+        set => Requires = value ? Requires | RavenServiceRequirement.NpgSql : Requires & ~RavenServiceRequirement.NpgSql;
+    }
+
+    public bool MongoDBRequired 
+    { 
+        get => Requires.HasFlag(RavenServiceRequirement.MongoDB);
+        set => Requires = value ? Requires | RavenServiceRequirement.MongoDB : Requires & ~RavenServiceRequirement.MongoDB;
+    }
+
     public override string Skip
     {
         get
         {
-            return ShouldSkip(_skip, Category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, s3Required: S3Required, azureRequired: AzureRequired);
+            return ShouldSkip(_skip, Category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, serviceRequirement: Requires, s3Required: S3Required, azureRequired: AzureRequired);
         }
 
         set => _skip = value;
     }
 
-    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, bool s3Required, bool azureRequired)
+    internal static string ShouldSkip(string skip, RavenTestCategory category, bool licenseRequired, bool nightlyBuildRequired, RavenServiceRequirement serviceRequirement, bool s3Required, bool azureRequired)
     {
-        var s = RavenFactAttribute.ShouldSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired);
+        var s = RavenFactAttribute.ShouldSkip(skip, category, licenseRequired: licenseRequired, nightlyBuildRequired: nightlyBuildRequired, serviceRequirement: serviceRequirement);
         if (s != null)
             return s;
 

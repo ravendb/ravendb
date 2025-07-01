@@ -13,7 +13,7 @@ namespace SlowTests.Server.Documents.Migration
         {
         }
 
-        [RequiresNpgSqlFact]
+        [RavenFact(RavenTestCategory.BackupExportImport, Requires = RavenServiceRequirement.NpgSql)]
         public void CanFetchSchema()
         {
             using (WithSqlDatabase(MigrationProvider.NpgSQL, out var connectionString, out string schemaName, includeData: false))
