@@ -3,6 +3,7 @@ using System.IO;
 using System.Text;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Exceptions;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
@@ -94,7 +95,8 @@ namespace Raven.Server.Documents.Indexes.Static
         public string GetContentAsString(Encoding encoding)
         {
             if (_attachment.Flags == AttachmentFlags.Retired)
-                return DynamicNullObject.Null;
+                throw new RetiredAttachmentIndexingException($"Attempted to {nameof(GetContentAsString)} retired attachment '{_attachment.Name}' (storage id: {_attachment.StorageId});" +
+                                                             $" retired attachments are no longer available locally.");
 
             if (_contentAsString == null)
             {
@@ -110,7 +112,9 @@ namespace Raven.Server.Documents.Indexes.Static
         public Stream GetContentAsStream()
         {
             if (_attachment.Flags == AttachmentFlags.Retired)
-                return null;
+                throw new RetiredAttachmentIndexingException($"Attempted to {nameof(GetContentAsStream)} on retired attachment '{_attachment.Name}' (storage id: {_attachment.StorageId});" +
+                                                             $" retired attachments are no longer available locally.");
+            
 
             _attachment.Stream.Position = 0;
 
