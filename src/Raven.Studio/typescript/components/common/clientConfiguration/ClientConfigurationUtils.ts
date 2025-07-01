@@ -90,11 +90,15 @@ export default class ClientConfigurationUtils {
         }
 
         return {
-            IdentityPartsSeparator: formData.identityPartsSeparatorValue,
-            LoadBalanceBehavior: formData.loadBalancerValue,
+            IdentityPartsSeparator: formData.identityPartsSeparatorEnabled
+                ? formData.identityPartsSeparatorValue
+                : null,
+            LoadBalanceBehavior: formData.loadBalancerEnabled ? formData.loadBalancerValue : null,
             LoadBalancerContextSeed: formData.loadBalancerSeedEnabled ? formData.loadBalancerSeedValue : null,
-            ReadBalanceBehavior: formData.readBalanceBehaviorValue,
-            MaxNumberOfRequestsPerSession: formData.maximumNumberOfRequestsValue,
+            ReadBalanceBehavior: formData.readBalanceBehaviorEnabled ? formData.readBalanceBehaviorValue : null,
+            MaxNumberOfRequestsPerSession: formData.maximumNumberOfRequestsEnabled
+                ? formData.maximumNumberOfRequestsValue
+                : null,
             Disabled: !formData.overrideConfig,
             Etag: undefined,
         };
