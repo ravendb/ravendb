@@ -601,7 +601,7 @@ public class RavenDB_14548 : RavenTestBase
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/debug/info-package/analyzer/{endpointInfoSuffixWithParameters.TrimStart("/")}";
+            url = $"{node.Url}/debug/info-package/analyzer/{endpointInfoSuffixWithParameters.TrimStart('/')}";
 
             return new HttpRequestMessage { Method = HttpMethod.Get };
         }
