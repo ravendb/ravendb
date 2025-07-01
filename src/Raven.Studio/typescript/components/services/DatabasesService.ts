@@ -328,6 +328,7 @@ export default class DatabasesService {
 
     async deleteDocuments(...args: ConstructorParameters<typeof deleteDocumentsCommand>) {
         return new deleteDocumentsCommand(...args).execute();
+    }
 
     async getRevisionsPreview(...args: ConstructorParameters<typeof getRevisionsPreviewCommand>) {
         return new getRevisionsPreviewCommand(...args).execute();
@@ -336,7 +337,6 @@ export default class DatabasesService {
     async deleteCollection(...args: ConstructorParameters<typeof deleteCollectionCommand>) {
         return new deleteCollectionCommand(...args).execute();
     }
-}
 
     async deleteRevisionsForDocuments(...args: ConstructorParameters<typeof deleteRevisionsForDocumentsCommand>) {
         return new deleteRevisionsForDocumentsCommand(...args).execute();
