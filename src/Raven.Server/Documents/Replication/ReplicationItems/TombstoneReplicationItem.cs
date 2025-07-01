@@ -26,25 +26,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public static AttachmentTombstoneReplicationItem AttachmentTombstoneReplicationItem(DocumentsOperationContext context, ref TableValueReader tvr, Tombstone doc)
         {
             AttachmentTombstoneReplicationItem item = AttachmentTombstoneReplicationItemInternal(context, doc);
-            //TODO: egor check if I can use this??
-            //if (DocumentsStorage.ExtractAttachmentTombstoneFlag(ref tvr, doc))
-            //{
-            //    item.TombstoneFlags = AttachmentTombstoneFlags.FromStorageOnly;
-            //}
-            //else
-            //{
-            //    item.TombstoneFlags = AttachmentTombstoneFlags.None;
-            //}
-            var enumVal = DocumentsStorage.TableValueToInt((int)TombstoneTable.Flags, ref tvr);
-            if (enumVal == (int)AttachmentTombstoneFlags.FromStorageOnly)
-            {
-                item.TombstoneFlags = AttachmentTombstoneFlags.FromStorageOnly;
-            }
-            else
-            {
-                item.Flags = DocumentsStorage.TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
-                item.TombstoneFlags = AttachmentTombstoneFlags.None;
-            }
+
+            item.Flags = DocumentsStorage.TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
 
             return item;
         }

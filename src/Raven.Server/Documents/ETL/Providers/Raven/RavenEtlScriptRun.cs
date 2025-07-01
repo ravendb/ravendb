@@ -226,15 +226,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             var (documentId, name) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(item.AttachmentTombstone.Key);
 
-            if (item.AttachmentTombstone.TombstoneFlags.HasFlag(AttachmentTombstoneFlags.FromStorageOnly))
-            {
-                _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null, storageOnly: true, fromEtl: true, AttachmentFlags.Retired));
-            }
-            else
-            {
-                _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null, storageOnly: false, fromEtl: true, AttachmentFlags.None));
-            }
-            
+            _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null, fromEtl: true, AttachmentFlags.None));
         }
 
         public void AddCounter(JsValue instance, JsValue counterReference)
