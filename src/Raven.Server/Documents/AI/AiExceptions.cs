@@ -4,8 +4,16 @@ using System.Net;
 namespace Raven.Server.Documents.AI
 {
     /// <summary>Base for all Gen‑AI service errors.</summary>
-    public class AiException(string message) : Exception(message)
+    public class AiException : Exception
     {
+        public AiException(string message) : base(message)
+        {
+        }
+
+        public AiException(string message, Exception e) : base(message, e)
+        {
+        }
+
         public required string RequestId { get; set; }
     }
 
@@ -15,8 +23,14 @@ namespace Raven.Server.Documents.AI
         public string FinishReason;
     }
 
-    public sealed class UnexpectedResponseException(string message) : AiException(message)
+    public sealed class UnexpectedResponseException : AiException
     {
+        public UnexpectedResponseException(string message) : base(message)
+        {
+        }
+        public UnexpectedResponseException(string message, Exception e) : base(message, e)
+        {
+        }
     }
 
     public class UnsuccessfulRequestException : AiException
