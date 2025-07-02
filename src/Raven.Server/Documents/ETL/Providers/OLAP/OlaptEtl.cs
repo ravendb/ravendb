@@ -135,7 +135,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             throw new NotSupportedException("Time series deletes aren't supported by OLAP ETL");
         }
 
-        protected override EtlTransformer<ToOlapItem, OlapTransformedItems, OlapEtlStatsScope, OlapEtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ToOlapItem, OlapTransformedItems, OlapEtlStatsScope, OlapEtlPerformanceOperation> GetTransformer(DocumentsOperationContext context, OlapEtlStatsScope stats)
         {
             return new OlapDocumentTransformer(Transformation, Database, context, Configuration);
         }

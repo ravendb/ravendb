@@ -78,7 +78,7 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
     }
 
     protected override EtlTransformer<EmbeddingsGenerationItem, EmbeddingGenerationScriptResult, EmbeddingsGenerationStatsScope, EmbeddingsGenerationPerformanceOperation>
-        GetTransformer(DocumentsOperationContext context)
+        GetTransformer(DocumentsOperationContext context, EmbeddingsGenerationStatsScope stats)
     {
         return new EmbeddingsGenerationScriptTransformer(Database, context, Transformation, null, Configuration);
     }

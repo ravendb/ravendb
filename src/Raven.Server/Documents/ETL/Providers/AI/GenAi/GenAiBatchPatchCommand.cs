@@ -104,7 +104,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
 
                         statsScope.UpdateFailures++;
                         _statistics.RecordPartialLoadError(msg, item.DocId);
-                        _logger.Log(LogLevel.Warn, msg);
+                        _logger.Warn(msg);
                     }
                 }
             }

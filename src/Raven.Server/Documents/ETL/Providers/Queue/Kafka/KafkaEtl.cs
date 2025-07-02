@@ -30,7 +30,7 @@ public sealed class KafkaEtl : QueueEtl<KafkaItem>
     }
 
 
-    protected override EtlTransformer<QueueItem, QueueWithItems<KafkaItem>, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<QueueItem, QueueWithItems<KafkaItem>, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context, EtlStatsScope stats)
     {
         return new KafkaDocumentTransformer<KafkaItem>(Transformation, Database, context, Configuration);
     }

@@ -38,7 +38,7 @@ public sealed class AmazonSqsEtl : QueueEtl<AmazonSqsItem>
 
     protected override
         EtlTransformer<QueueItem, QueueWithItems<AmazonSqsItem>, EtlStatsScope, EtlPerformanceOperation>
-        GetTransformer(DocumentsOperationContext context)
+        GetTransformer(DocumentsOperationContext context, EtlStatsScope stats)
     {
         return new AmazonSqsDocumentTransformer<AmazonSqsItem>(Transformation, Database, context,
             Configuration);

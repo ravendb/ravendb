@@ -110,10 +110,9 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         throw new NotSupportedException($"{nameof(ConvertTimeSeriesDeletedRangeEnumerator)} is not supported for {nameof(GenAiTask)}");
     }
 
-    protected override EtlTransformer<GenAiItem, GenAiScriptResult, GenAiStatsScope, GenAiPerformanceOperation>
-        GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<GenAiItem, GenAiScriptResult, GenAiStatsScope, GenAiPerformanceOperation> GetTransformer(DocumentsOperationContext context, GenAiStatsScope stats)
     {
-        return new GenAiScriptTransformer(Database, context, Transformation, null, Configuration);
+        return new GenAiScriptTransformer(Database, context, Transformation, null, Configuration, stats);
     }
 
     protected override string LoadFailureMessage =>
@@ -296,7 +295,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                         $"{singleEx}";
 
                     Statistics.RecordPartialLoadError(msg, item.DocId);
-                    Logger.Log(LogLevel.Warn, msg);
+                    Logger.Warn(msg);
                     return null;
                 default:
                     // something bad happened, but this isn't the fault of this item (run out of rate limit, TCP error, etc.)

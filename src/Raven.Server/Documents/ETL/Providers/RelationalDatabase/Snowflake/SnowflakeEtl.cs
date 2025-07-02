@@ -16,7 +16,7 @@ public sealed class SnowflakeEtl(Transformation transformation, SnowflakeEtlConf
 
     public override EtlType EtlType => EtlType.Snowflake;
 
-    protected override EtlTransformer<RelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<RelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context, EtlStatsScope stats)
     {
         return new SnowflakeDocumentTransformer(Transformation, Database, context, Configuration);
     }

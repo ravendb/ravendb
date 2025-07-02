@@ -327,11 +327,11 @@ namespace Raven.Server.Documents.ETL
             }
         }
 
-        protected abstract EtlTransformer<TExtracted, TTransformed, TStatsScope, TEtlPerformanceOperation> GetTransformer(DocumentsOperationContext context);
+        protected abstract EtlTransformer<TExtracted, TTransformed, TStatsScope, TEtlPerformanceOperation> GetTransformer(DocumentsOperationContext context, TStatsScope stats);
 
         public IEnumerable<TTransformed> Transform(IEnumerable<TExtracted> items, DocumentsOperationContext context, TStatsScope stats, EtlProcessState state)
         {
-            using (var transformer = GetTransformer(context))
+            using (var transformer = GetTransformer(context, stats))
             {
                 try
                 {

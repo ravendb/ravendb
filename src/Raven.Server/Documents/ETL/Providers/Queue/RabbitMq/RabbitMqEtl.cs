@@ -29,7 +29,7 @@ public sealed class RabbitMqEtl : QueueEtl<RabbitMqItem>
     {
     }
 
-    protected override EtlTransformer<QueueItem, QueueWithItems<RabbitMqItem>, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<QueueItem, QueueWithItems<RabbitMqItem>, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context, EtlStatsScope stats)
     {
         return new RabbitMqDocumentTransformer<RabbitMqItem>(Transformation, Database, context, Configuration);
     }

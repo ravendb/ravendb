@@ -96,7 +96,7 @@ namespace Raven.Server.Documents.ETL.Providers.ElasticSearch
             throw new NotSupportedException("Time series aren't supported by ElasticSearch ETL");
         }
 
-        protected override EtlTransformer<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+        protected override EtlTransformer<ElasticSearchItem, ElasticSearchIndexWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context, EtlStatsScope stats)
         {
             return new ElasticSearchDocumentTransformer(Transformation, Database, context, Configuration);
         }

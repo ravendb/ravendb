@@ -27,11 +27,12 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
     private byte[] _configurationPartialHash;
     private readonly PatchRequest _mainScript;
     private List<GenAiScriptResult> _currentRun;
-    private GenAiStatsScope _stats;
+    private readonly GenAiStatsScope _stats;
 
-    public GenAiScriptTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, GenAiConfiguration configuration) : base(database, context, null, behaviorFunctions)
+    public GenAiScriptTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, GenAiConfiguration configuration, GenAiStatsScope stats) : base(database, context, null, behaviorFunctions)
     {
         _configuration = configuration;
+        _stats = stats.For(EtlOperations.Transform, start: false);
         _mainScript = new PatchRequest(transformation.Script, PatchRequestType.GenAi);
     }
 
@@ -82,7 +83,8 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
 
     public override void Transform(GenAiItem item, GenAiStatsScope stats, EtlProcessState state)
     {
-        _stats = stats.For(EtlOperations.Transform);
+        _stats.Start();
+
         Current = item;
         _currentRun ??= [];
 

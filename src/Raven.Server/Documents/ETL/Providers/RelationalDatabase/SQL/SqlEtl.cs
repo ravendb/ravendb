@@ -16,7 +16,7 @@ public sealed class SqlEtl(Transformation transformation, SqlEtlConfiguration co
 
     public override EtlType EtlType => EtlType.Sql;
 
-    protected override EtlTransformer<RelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context)
+    protected override EtlTransformer<RelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(DocumentsOperationContext context, EtlStatsScope stats)
     {
         return new SqlDocumentTransformer(Transformation, Database, context, Configuration);
     }

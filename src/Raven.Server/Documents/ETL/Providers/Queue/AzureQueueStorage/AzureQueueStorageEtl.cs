@@ -24,7 +24,7 @@ public sealed class AzureQueueStorageEtl : QueueEtl<AzureQueueStorageItem>
 
     protected override
         EtlTransformer<QueueItem, QueueWithItems<AzureQueueStorageItem>, EtlStatsScope, EtlPerformanceOperation>
-        GetTransformer(DocumentsOperationContext context)
+        GetTransformer(DocumentsOperationContext context, EtlStatsScope stats)
     {
         return new AzureQueueStorageDocumentTransformer<AzureQueueStorageItem>(Transformation, Database, context,
             Configuration);

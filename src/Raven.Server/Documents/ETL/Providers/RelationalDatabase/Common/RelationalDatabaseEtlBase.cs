@@ -78,7 +78,7 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
     public override bool ShouldTrackTimeSeries() => false;
 
     protected abstract override EtlTransformer<RelationalDatabaseItem, RelationalDatabaseTableWithRecords, EtlStatsScope, EtlPerformanceOperation> GetTransformer(
-        DocumentsOperationContext context);
+        DocumentsOperationContext context, EtlStatsScope stats);
 
     protected override int LoadInternal(IEnumerable<RelationalDatabaseTableWithRecords> records, DocumentsOperationContext context, EtlStatsScope scope)
     {
