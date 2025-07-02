@@ -29,6 +29,7 @@ import { licenseSelectors } from "components/common/shell/licenseSlice";
 import classNames from "classnames";
 import Form from "react-bootstrap/Form";
 import ModelTypeField from "./aiFields/ModelTypeField";
+import { withNestedSubmit } from "components/utils/common";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -76,7 +77,11 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
 
     return (
         <FormProvider {...form}>
-            <Form id="connection-string-form" onSubmit={handleSubmit(handleSave)} className="vstack gap-3">
+            <Form
+                id="connection-string-form"
+                onSubmit={withNestedSubmit(handleSubmit(handleSave))}
+                className="vstack gap-3"
+            >
                 <div className="mb-2">
                     <FormLabel>Name</FormLabel>
                     <FormInput

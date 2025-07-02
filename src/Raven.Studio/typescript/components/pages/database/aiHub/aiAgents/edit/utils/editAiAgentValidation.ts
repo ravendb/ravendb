@@ -8,18 +8,25 @@ const schema = yup.object({
     outputSchema: yup.string().required(),
     persistenceCollectionName: yup.string().required(),
     persistenceExpires: yup.string().required(),
-    parameters: yup.object().required(),
+    parameters: yup.object(),
     queries: yup.array().of(
         yup.object({
             name: yup.string().required(),
             description: yup.string().required(),
             query: yup.string().required(),
-            parametersSchema: yup.string().required(),
+            parametersSchema: yup.array().of(
+                yup.object({
+                    parameter: yup.string().required(),
+                    description: yup.string().required(),
+                })
+            ),
+            isSaved: yup.boolean(),
+            isEditing: yup.boolean(),
         })
     ),
 
     // test
-    prompt: yup.string().required(),
+    prompt: yup.string(),
 });
 
 export const editAiAgentYupResolver = yupResolver(schema);

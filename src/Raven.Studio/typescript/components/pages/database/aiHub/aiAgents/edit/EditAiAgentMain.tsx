@@ -15,7 +15,7 @@ import EditConnectionStrings from "components/pages/database/settings/connection
 import { useAppSelector } from "components/store";
 import { sortBy } from "lodash";
 import { useAsync } from "react-async-hook";
-import { useFormContext } from "react-hook-form";
+import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "./utils/editAiAgentValidation";
 import InputGroup from "react-bootstrap/InputGroup";
 import useBoolean from "components/hooks/useBoolean";
@@ -25,9 +25,20 @@ import AceEditor from "components/common/ace/AceEditor";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
+import Table from "react-bootstrap/Table";
+import { EmptySet } from "components/common/EmptySet";
 
 export default function EditAiAgentMain() {
     const { control, setValue } = useFormContext<EditAiAgentFormData>();
+
+    const formValues = useWatch({
+        control,
+    });
+
+    const queriesFieldArray = useFieldArray({
+        name: "queries",
+        control,
+    });
 
     const systemPromptRef = useRef<ReactAce>(null);
     const outputSchemaRef = useRef<ReactAce>(null);
@@ -160,12 +171,198 @@ export default function EditAiAgentMain() {
                         </div>
                         Tool queries
                     </div>
-                    <Button variant="primary" className="rounded-pill">
+                    <Button
+                        variant="primary"
+                        className="rounded-pill"
+                        onClick={() =>
+                            queriesFieldArray.append({
+                                name: "",
+                                description: "",
+                                query: "",
+                                parametersSchema: [],
+                                isSaved: false,
+                            })
+                        }
+                    >
                         <Icon icon="plus" />
                         Add new
                     </Button>
                 </div>
+                <div className="vstack">
+                    {queriesFieldArray.fields.map((field, index) => (
+                        <QueryField
+                            key={field.id}
+                            index={index}
+                            remove={() => queriesFieldArray.remove(index)}
+                            save={() =>
+                                queriesFieldArray.update(index, { ...formValues.queries[index], isSaved: true })
+                            }
+                            edit={() =>
+                                queriesFieldArray.update(index, { ...formValues.queries[index], isEditing: true })
+                            }
+                            cancelEdit={() =>
+                                queriesFieldArray.update(index, { ...formValues.queries[index], isEditing: false })
+                            }
+                        />
+                    ))}
+                </div>
             </div>
         </>
+    );
+}
+
+function QueryField({
+    index,
+    remove,
+    save,
+    edit,
+    cancelEdit,
+}: {
+    index: number;
+    remove: () => void;
+    save: () => void;
+    edit: () => void;
+    cancelEdit: () => void;
+}) {
+    const { control } = useFormContext<EditAiAgentFormData>();
+
+    const queryAceRef = useRef<ReactAce>(null);
+
+    const parametersFieldArray = useFieldArray({
+        name: `queries.${index}.parametersSchema`,
+        control,
+    });
+
+    const formValues = useWatch({
+        control,
+    });
+
+    const queryItem = formValues.queries[index];
+
+    if (queryItem.isSaved) {
+        return (
+            <div className="well p-2 rounded-2 border border-secondary mt-2 hstack justify-content-between align-items-center">
+                <div>
+                    <h4 className="m-0">{queryItem.name}</h4>
+                    <small>{queryItem.description}</small>
+                </div>
+                <div className="hstack gap-2">
+                    <Button variant="secondary" onClick={edit}>
+                        <Icon icon="edit" margin="m-0" />
+                    </Button>
+                    <Button variant="danger" onClick={remove}>
+                        <Icon icon="trash" margin="m-0" />
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="well p-2 rounded-2 border border-secondary mt-2">
+            <div className="hstack justify-content-between">
+                <h4 className="m-0">Add new tool</h4>
+                <div className="hstack gap-2">
+                    <Button variant="outline-secondary" onClick={cancelEdit}>
+                        Cancel
+                    </Button>
+                    <Button variant="info">
+                        <Icon icon="test" />
+                        Test
+                    </Button>
+                    <Button variant="success" onClick={save}>
+                        <Icon icon="save" />
+                        Save
+                    </Button>
+                </div>
+            </div>
+            <hr />
+            <FormGroup>
+                <FormLabel>Name</FormLabel>
+                <FormInput
+                    type="text"
+                    control={control}
+                    name={`queries.${index}.name`}
+                    placeholder="e.g. GetCustomerInfo"
+                />
+            </FormGroup>
+            <FormGroup>
+                <FormLabel>Description</FormLabel>
+                <FormInput
+                    type="text"
+                    control={control}
+                    name={`queries.${index}.description`}
+                    placeholder="e.g. Get details about a customer by ID"
+                />
+            </FormGroup>
+            <FormGroup>
+                <FormLabel>Query</FormLabel>
+                <FormAceEditor
+                    aceRef={queryAceRef}
+                    control={control}
+                    name={`queries.${index}.query`}
+                    mode="text" // TODO RQL
+                    actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
+                />
+            </FormGroup>
+            <FormGroup>
+                <FormLabel className="hstack justify-content-between">
+                    Parameters schema
+                    <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => parametersFieldArray.append({ parameter: "", description: "" })}
+                    >
+                        <Icon icon="plus" />
+                        Add new
+                    </Button>
+                </FormLabel>
+                {parametersFieldArray.fields.length === 0 && (
+                    <div className="panel-bg-1 p-2 rounded-2 border border-secondary d-flex justify-content-center align-items-center">
+                        <EmptySet compact>No parameters added</EmptySet>
+                    </div>
+                )}
+                {parametersFieldArray.fields.length > 0 && (
+                    <Table bordered striped className="parameters-table">
+                        <thead>
+                            <tr>
+                                <th>Parameter</th>
+                                <th>Description</th>
+                                <th style={{ width: "70px" }}></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {parametersFieldArray.fields.map((field, index) => (
+                                <tr key={field.id}>
+                                    <td>
+                                        <FormInput
+                                            type="text"
+                                            control={control}
+                                            name={`queries.${index}.parametersSchema.${index}.parameter`}
+                                        />
+                                    </td>
+                                    <td>
+                                        <FormInput
+                                            type="text"
+                                            control={control}
+                                            name={`queries.${index}.parametersSchema.${index}.description`}
+                                        />
+                                    </td>
+                                    <td>
+                                        <Button
+                                            variant="link"
+                                            onClick={() => parametersFieldArray.remove(index)}
+                                            className="text-danger"
+                                        >
+                                            <Icon icon="trash" margin="m-0" />
+                                        </Button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </Table>
+                )}
+            </FormGroup>
+        </div>
     );
 }

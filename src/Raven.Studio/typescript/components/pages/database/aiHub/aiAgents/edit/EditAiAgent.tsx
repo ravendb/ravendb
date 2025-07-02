@@ -1,12 +1,19 @@
+import "./EditAiAgent.scss";
 import { AboutViewHeading } from "components/common/AboutView";
 import useResizableWidth from "../hooks/useResizableWidth";
-import { FormProvider, useForm } from "react-hook-form";
+import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { EditAiAgentFormData, editAiAgentYupResolver } from "./utils/editAiAgentValidation";
 import EditAiAgentMain from "./EditAiAgentMain";
 import EditAiAgentFooter from "./EditAiAgentFooter";
-import EditAiAgentTestResults from "./EditAiAgentTestResults";
+import EditAiAgentTestPanel from "./EditAiAgentTestPanel";
+import { tryHandleSubmit } from "components/utils/common";
+import { useServices } from "components/hooks/useServices";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 export default function EditAiAgent() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+
     const form = useForm<EditAiAgentFormData>({
         resolver: editAiAgentYupResolver,
     });
@@ -22,8 +29,29 @@ export default function EditAiAgent() {
         maxWidth: 1000,
     });
 
-    const saveAgent = (data: EditAiAgentFormData) => {
-        console.log(data);
+    const { aiAgentService } = useServices();
+
+    const saveAgent: SubmitHandler<EditAiAgentFormData> = async (formData) => {
+        return tryHandleSubmit(async () => {
+            const dto: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration = {
+                ConnectionStringName: formData.connectionStringName,
+                SystemPrompt: formData.systemPrompt,
+                OutputSchema: formData.outputSchema,
+                Persistence: {
+                    Collection: formData.persistenceCollectionName,
+                    Expires: "3.00:00:00", // TODO
+                },
+                Queries: formData.queries.map((x) => ({
+                    Name: x.name,
+                    Description: x.description,
+                    Query: x.query,
+                    ParametersSchema: "{}", // TODO
+                })),
+                Actions: [],
+            };
+
+            await aiAgentService.saveAiAgent(databaseName, formData.name, dto);
+        });
     };
 
     console.log("kalczur error", errors);
@@ -49,10 +77,10 @@ export default function EditAiAgent() {
                             position: "relative",
                             borderLeft: `1px solid ${testAreaResizable.isDragging ? "#ccc" : "#4c4c63"}`,
                         }}
-                        className="panel-bg-1 h-100"
+                        className="panel-bg-1 h-100 vstack"
                     >
                         <ColumnResize handleMouseDown={testAreaResizable.handleMouseDown} />
-                        <EditAiAgentTestResults />
+                        <EditAiAgentTestPanel />
                     </div>
                 </div>
             </form>
