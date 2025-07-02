@@ -32,7 +32,7 @@ function getAiHubMenuItem(appUrls: computedAppUrls) {
             title: 'AI Agent',
             nav: false,
             css: "icon-plus",
-            dynamicHash: appUrls.editAiAgent,
+            dynamicHash: appUrls.editAiAgentUrl,
             itemRouteToHighlight: 'databases/ai/agents',
             search: {
                 overrideTitle: "Add New AI Agent",

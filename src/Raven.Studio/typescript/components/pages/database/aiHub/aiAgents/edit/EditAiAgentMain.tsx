@@ -19,24 +19,33 @@ import { useFieldArray, useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "./utils/editAiAgentValidation";
 import InputGroup from "react-bootstrap/InputGroup";
 import useBoolean from "components/hooks/useBoolean";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import ReactAce from "react-ace/lib/ace";
 import AceEditor from "components/common/ace/AceEditor";
 import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
-import Table from "react-bootstrap/Table";
+import { LoadingView } from "components/common/LoadingView";
+import rqlLanguageService from "common/rqlLanguageService";
+import Badge from "react-bootstrap/Badge";
 import { EmptySet } from "components/common/EmptySet";
 
 export default function EditAiAgentMain() {
-    const { control, setValue } = useFormContext<EditAiAgentFormData>();
+    const { control, setValue, formState } = useFormContext<EditAiAgentFormData>();
 
     const formValues = useWatch({
         control,
     });
 
+    console.log("kalczur formValues", formValues);
+
     const queriesFieldArray = useFieldArray({
         name: "queries",
+        control,
+    });
+
+    const actionsFieldArray = useFieldArray({
+        name: "actions",
         control,
     });
 
@@ -73,6 +82,10 @@ export default function EditAiAgentMain() {
         value: x,
         label: x,
     }));
+
+    if (formState.isLoading) {
+        return <LoadingView />;
+    }
 
     return (
         <>
@@ -156,9 +169,10 @@ export default function EditAiAgentMain() {
                 </FormGroup>
                 <FormGroup>
                     <FormLabel>Expire in</FormLabel>
-                    <FormDurationPicker control={control} name="persistenceExpires" showDays />
+                    <FormDurationPicker control={control} name="persistenceExpiresInSeconds" showDays />
                 </FormGroup>
             </div>
+            <ParametersField />
             <h3 className="m-0 mt-3">Define agent tools</h3>
             <div className="mb-1">
                 Define tool queries to let AI retrieve data, and tool actions to let perform tasks.
@@ -179,7 +193,7 @@ export default function EditAiAgentMain() {
                                 name: "",
                                 description: "",
                                 query: "",
-                                parametersSchema: [],
+                                parametersSchema: "",
                                 isSaved: false,
                             })
                         }
@@ -195,7 +209,11 @@ export default function EditAiAgentMain() {
                             index={index}
                             remove={() => queriesFieldArray.remove(index)}
                             save={() =>
-                                queriesFieldArray.update(index, { ...formValues.queries[index], isSaved: true })
+                                queriesFieldArray.update(index, {
+                                    ...formValues.queries[index],
+                                    isSaved: true,
+                                    isEditing: false,
+                                })
                             }
                             edit={() =>
                                 queriesFieldArray.update(index, { ...formValues.queries[index], isEditing: true })
@@ -206,6 +224,127 @@ export default function EditAiAgentMain() {
                         />
                     ))}
                 </div>
+            </div>
+            <div className="panel-bg-1 p-2 rounded-2 border border-secondary mt-2">
+                <div className="hstack justify-content-between">
+                    <div className="hstack gap-2">
+                        <div className="p-1 rounded-2 bg-faded-primary border border-primary">
+                            <Icon icon="force" color="primary" margin="m-0" />
+                        </div>
+                        Tool actions
+                    </div>
+                    <Button
+                        variant="primary"
+                        className="rounded-pill"
+                        onClick={() =>
+                            actionsFieldArray.append({
+                                name: "",
+                                description: "",
+                                parametersSchema: "",
+                                isSaved: false,
+                                isEditing: true,
+                            })
+                        }
+                    >
+                        <Icon icon="plus" />
+                        Add new
+                    </Button>
+                </div>
+                <div className="vstack">
+                    {actionsFieldArray.fields.map((field, index) => (
+                        <ActionField
+                            key={field.id}
+                            index={index}
+                            remove={() => actionsFieldArray.remove(index)}
+                            save={() =>
+                                actionsFieldArray.update(index, {
+                                    ...formValues.queries[index],
+                                    isSaved: true,
+                                    isEditing: false,
+                                })
+                            }
+                            edit={() =>
+                                actionsFieldArray.update(index, { ...formValues.queries[index], isEditing: true })
+                            }
+                            cancelEdit={() =>
+                                actionsFieldArray.update(index, { ...formValues.queries[index], isEditing: false })
+                            }
+                        />
+                    ))}
+                </div>
+            </div>
+        </>
+    );
+}
+
+function ParametersField() {
+    const { control, setValue, trigger } = useFormContext<EditAiAgentFormData>();
+
+    const parametersFieldArray = useFieldArray({
+        name: "parameters",
+        control,
+    });
+
+    const formValues = useWatch({
+        control,
+    });
+
+    const handleAddParameter = async () => {
+        const isValid = await trigger("parameterInput");
+        if (!isValid || !formValues.parameterInput) {
+            return;
+        }
+
+        parametersFieldArray.append({ name: formValues.parameterInput });
+        setValue("parameterInput", "");
+    };
+
+    return (
+        <>
+            <h3 className="m-0 mt-3">Set agent parameters</h3>
+            <div className="mb-1">
+                Create parameters to control and restrict data that you want your agent to have access to.
+            </div>
+            <div className="panel-bg-1 p-2 rounded-2 border border-secondary">
+                <FormGroup>
+                    <FormLabel>Define a parameter</FormLabel>
+                    <FormInput
+                        type="text"
+                        control={control}
+                        name="parameterInput"
+                        placeholder="e.g. company"
+                        addon={
+                            <Button variant="link" className="text-reset" onClick={handleAddParameter}>
+                                <Icon icon="plus" />
+                                Add parameter
+                            </Button>
+                        }
+                    />
+                </FormGroup>
+                <FormGroup>
+                    <FormLabel>List of parameters</FormLabel>
+                    {parametersFieldArray.fields.length === 0 ? (
+                        <EmptySet compact className="text-muted">
+                            No parameters have been defined yet
+                        </EmptySet>
+                    ) : (
+                        <div className="d-flex gap-2 flex-wrap">
+                            {parametersFieldArray.fields.map((field, index) => (
+                                <Badge key={field.id} bg="primary" pill>
+                                    {field.name}
+                                    <Button
+                                        variant="link"
+                                        className="p-0"
+                                        onClick={() => parametersFieldArray.remove(index)}
+                                        size="xs"
+                                    >
+                                        <Icon icon="trash" margin="m-0" color="light" />
+                                    </Button>
+                                </Badge>
+                            ))}
+                        </div>
+                    )}
+                </FormGroup>
             </div>
         </>
     );
@@ -227,24 +366,127 @@ function QueryField({
     const { control } = useFormContext<EditAiAgentFormData>();
 
     const queryAceRef = useRef<ReactAce>(null);
-
-    const parametersFieldArray = useFieldArray({
-        name: `queries.${index}.parametersSchema`,
-        control,
-    });
+    const parametersSchemaAceRef = useRef<ReactAce>(null);
 
     const formValues = useWatch({
         control,
     });
 
+    const rqlLanguageService = useRqlLanguageService();
+
     const queryItem = formValues.queries[index];
 
-    if (queryItem.isSaved) {
+    if (!queryItem.isEditing) {
         return (
             <div className="well p-2 rounded-2 border border-secondary mt-2 hstack justify-content-between align-items-center">
                 <div>
                     <h4 className="m-0">{queryItem.name}</h4>
                     <small>{queryItem.description}</small>
+                </div>
+                <div className="hstack gap-2">
+                    <Button variant="secondary" onClick={edit}>
+                        <Icon icon="edit" margin="m-0" />
+                    </Button>
+                    <Button variant="danger" onClick={remove}>
+                        <Icon icon="trash" margin="m-0" />
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    return (
+        <div className="well p-2 rounded-2 border border-secondary mt-2">
+            <div className="hstack justify-content-between">
+                <h4 className="m-0">Add new tool</h4>
+                <div className="hstack gap-2">
+                    <Button variant="outline-secondary" onClick={cancelEdit}>
+                        Cancel
+                    </Button>
+                    <Button variant="info">
+                        <Icon icon="test" />
+                        Test (TODO)
+                    </Button>
+                    <Button variant="success" onClick={save}>
+                        <Icon icon="save" />
+                        Save
+                    </Button>
+                </div>
+            </div>
+            <hr />
+            <FormGroup>
+                <FormLabel>Name</FormLabel>
+                <FormInput
+                    type="text"
+                    control={control}
+                    name={`queries.${index}.name`}
+                    placeholder="e.g. GetCustomerInfo"
+                />
+            </FormGroup>
+            <FormGroup>
+                <FormLabel>Description</FormLabel>
+                <FormInput
+                    type="text"
+                    control={control}
+                    name={`queries.${index}.description`}
+                    placeholder="e.g. Get details about a customer by ID"
+                />
+            </FormGroup>
+            <FormGroup>
+                <FormLabel>Query</FormLabel>
+                <FormAceEditor
+                    aceRef={queryAceRef}
+                    control={control}
+                    name={`queries.${index}.query`}
+                    mode="rql"
+                    languageService={rqlLanguageService}
+                    actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
+                />
+            </FormGroup>
+
+            <FormGroup>
+                <FormLabel>Parameters schema</FormLabel>
+                <FormAceEditor
+                    aceRef={parametersSchemaAceRef}
+                    control={control}
+                    name={`queries.${index}.parametersSchema`}
+                    mode="json"
+                    actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
+                />
+            </FormGroup>
+        </div>
+    );
+}
+
+function ActionField({
+    index,
+    remove,
+    save,
+    edit,
+    cancelEdit,
+}: {
+    index: number;
+    remove: () => void;
+    save: () => void;
+    edit: () => void;
+    cancelEdit: () => void;
+}) {
+    const { control } = useFormContext<EditAiAgentFormData>();
+
+    const parametersSchemaAceRef = useRef<ReactAce>(null);
+
+    const formValues = useWatch({
+        control,
+    });
+
+    const actionItem = formValues.actions[index];
+
+    if (!actionItem.isEditing) {
+        return (
+            <div className="well p-2 rounded-2 border border-secondary mt-2 hstack justify-content-between align-items-center">
+                <div>
+                    <h4 className="m-0">{actionItem.name}</h4>
+                    <small>{actionItem.description}</small>
                 </div>
                 <div className="hstack gap-2">
                     <Button variant="secondary" onClick={edit}>
@@ -282,7 +524,7 @@ function QueryField({
                 <FormInput
                     type="text"
                     control={control}
-                    name={`queries.${index}.name`}
+                    name={`actions.${index}.name`}
                     placeholder="e.g. GetCustomerInfo"
                 />
             </FormGroup>
@@ -291,78 +533,35 @@ function QueryField({
                 <FormInput
                     type="text"
                     control={control}
-                    name={`queries.${index}.description`}
+                    name={`actions.${index}.description`}
                     placeholder="e.g. Get details about a customer by ID"
                 />
             </FormGroup>
             <FormGroup>
-                <FormLabel>Query</FormLabel>
+                <FormLabel>Parameters schema</FormLabel>
                 <FormAceEditor
-                    aceRef={queryAceRef}
+                    aceRef={parametersSchemaAceRef}
                     control={control}
-                    name={`queries.${index}.query`}
-                    mode="text" // TODO RQL
+                    name={`actions.${index}.parametersSchema`}
+                    mode="json"
                     actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
                 />
             </FormGroup>
-            <FormGroup>
-                <FormLabel className="hstack justify-content-between">
-                    Parameters schema
-                    <Button
-                        variant="link"
-                        size="sm"
-                        onClick={() => parametersFieldArray.append({ parameter: "", description: "" })}
-                    >
-                        <Icon icon="plus" />
-                        Add new
-                    </Button>
-                </FormLabel>
-                {parametersFieldArray.fields.length === 0 && (
-                    <div className="panel-bg-1 p-2 rounded-2 border border-secondary d-flex justify-content-center align-items-center">
-                        <EmptySet compact>No parameters added</EmptySet>
-                    </div>
-                )}
-                {parametersFieldArray.fields.length > 0 && (
-                    <Table bordered striped className="parameters-table">
-                        <thead>
-                            <tr>
-                                <th>Parameter</th>
-                                <th>Description</th>
-                                <th style={{ width: "70px" }}></th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {parametersFieldArray.fields.map((field, index) => (
-                                <tr key={field.id}>
-                                    <td>
-                                        <FormInput
-                                            type="text"
-                                            control={control}
-                                            name={`queries.${index}.parametersSchema.${index}.parameter`}
-                                        />
-                                    </td>
-                                    <td>
-                                        <FormInput
-                                            type="text"
-                                            control={control}
-                                            name={`queries.${index}.parametersSchema.${index}.description`}
-                                        />
-                                    </td>
-                                    <td>
-                                        <Button
-                                            variant="link"
-                                            onClick={() => parametersFieldArray.remove(index)}
-                                            className="text-danger"
-                                        >
-                                            <Icon icon="trash" margin="m-0" />
-                                        </Button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </Table>
-                )}
-            </FormGroup>
         </div>
     );
+}
+
+function useRqlLanguageService(): rqlLanguageService {
+    const db = useAppSelector(databaseSelectors.activeDatabase);
+    const { databasesService } = useServices();
+    const asyncGetIndexNames = useAsync(async () => {
+        const dto = await databasesService.getEssentialStats(db.name);
+        return dto?.Indexes?.map((x) => x.Name);
+    }, []);
+    const languageService = useMemo(
+        () => new rqlLanguageService(db, () => asyncGetIndexNames.result ?? [], "Select"),
+        [asyncGetIndexNames.result, db]
+    );
+
+    return languageService;
 }

@@ -10,11 +10,26 @@ import { tryHandleSubmit } from "components/utils/common";
 import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import genUtils from "common/generalUtils";
 
-export default function EditAiAgent() {
+interface QueryParams {
+    agentName: string;
+}
+
+export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<QueryParams>) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const { aiAgentService } = useServices();
 
     const form = useForm<EditAiAgentFormData>({
+        defaultValues: async () => {
+            if (!queryParams?.agentName) {
+                return getDefaultValues(null);
+            }
+
+            const agent = await aiAgentService.getAiAgents(databaseName, queryParams.agentName);
+
+            return getDefaultValues(queryParams.agentName, agent);
+        },
         resolver: editAiAgentYupResolver,
     });
 
@@ -29,8 +44,6 @@ export default function EditAiAgent() {
         maxWidth: 1000,
     });
 
-    const { aiAgentService } = useServices();
-
     const saveAgent: SubmitHandler<EditAiAgentFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
             const dto: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration = {
@@ -39,15 +52,19 @@ export default function EditAiAgent() {
                 OutputSchema: formData.outputSchema,
                 Persistence: {
                     Collection: formData.persistenceCollectionName,
-                    Expires: "3.00:00:00", // TODO
+                    Expires: genUtils.formatAsTimeSpan(formData.persistenceExpiresInSeconds * 1000),
                 },
                 Queries: formData.queries.map((x) => ({
                     Name: x.name,
                     Description: x.description,
                     Query: x.query,
-                    ParametersSchema: "{}", // TODO
+                    ParametersSchema: x.parametersSchema,
                 })),
-                Actions: [],
+                Actions: formData.actions.map((x) => ({
+                    Name: x.name,
+                    Description: x.description,
+                    ParametersSchema: x.parametersSchema,
+                })),
             };
 
             await aiAgentService.saveAiAgent(databaseName, formData.name, dto);
@@ -102,4 +119,50 @@ function ColumnResize({ handleMouseDown }: { handleMouseDown: (e: React.MouseEve
             onMouseDown={handleMouseDown}
         />
     );
+}
+
+function getDefaultValues(
+    name: string,
+    dto?: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration
+): EditAiAgentFormData {
+    if (!name) {
+        return {
+            name: "",
+            connectionStringName: "",
+            systemPrompt: "",
+            outputSchema: "",
+            persistenceCollectionName: "",
+            persistenceExpiresInSeconds: 2592000, // 30 days
+            parameters: [],
+            queries: [],
+            actions: [],
+            testPrompt: "",
+        };
+    }
+
+    return {
+        name,
+        connectionStringName: dto.ConnectionStringName,
+        systemPrompt: dto.SystemPrompt,
+        outputSchema: dto.OutputSchema,
+        persistenceCollectionName: dto.Persistence.Collection,
+        persistenceExpiresInSeconds: genUtils.timeSpanToSeconds(dto.Persistence.Expires),
+        parameters: [], // TODO: map parameters
+        queries: dto.Queries.map((x) => ({
+            name: x.Name,
+            description: x.Description,
+            query: x.Query,
+            parametersSchema: x.ParametersSchema,
+            isSaved: true,
+            isEditing: false,
+        })),
+        actions: dto.Actions.map((x) => ({
+            name: x.Name,
+            description: x.Description,
+            parametersSchema: x.ParametersSchema,
+            isSaved: true,
+            isEditing: false,
+        })),
+        testPrompt: "",
+    };
 }

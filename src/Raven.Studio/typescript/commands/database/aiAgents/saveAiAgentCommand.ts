@@ -2,8 +2,11 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
 class saveAiAgentCommand extends commandBase {
-
-    constructor(private db: string, private name: string, private dto: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration) {
+    constructor(
+        private db: string,
+        private name: string,
+        private dto: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration
+    ) {
         super();
     }
 
@@ -14,8 +17,9 @@ class saveAiAgentCommand extends commandBase {
 
         const url = endpoints.databases.aiAgent.adminAiAgent + this.urlEncodeArgs(args);
 
-        // TODO handle error
-        return this.put(url, JSON.stringify(this.dto), this.db);
+        return this.put(url, JSON.stringify(this.dto), this.db).fail((response: JQueryXHR) =>
+            this.reportError("Failed to save AI agent", response.responseText, response.statusText)
+        );
     }
 }
 

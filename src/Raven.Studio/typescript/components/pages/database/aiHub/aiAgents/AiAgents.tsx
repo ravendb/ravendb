@@ -7,11 +7,14 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useServices } from "components/hooks/useServices";
-import { useAsync } from "react-async-hook";
+import { useAsync, useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import Button from "react-bootstrap/Button";
 import Col from "react-bootstrap/Col";
 import { useState } from "react";
+import { CustomDropdownToggle } from "components/common/Dropdown";
+import Dropdown from "react-bootstrap/Dropdown";
+import useConfirm from "components/common/ConfirmDialog";
 
 export default function AiAgents() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -82,22 +85,70 @@ interface AiAgentCardProps {
     config: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
 }
 
-function AiAgentCard(props: AiAgentCardProps) {
+function AiAgentCard({ name, config }: AiAgentCardProps) {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const { aiAgentService } = useServices();
+    const { forCurrentDatabase } = useAppUrls();
+    const confirm = useConfirm();
+
+    const asyncDeleteAiAgent = useAsyncCallback(() => aiAgentService.deleteAiAgent(databaseName, name));
+
+    const handleDelete = async () => {
+        const isConfirmed = await confirm({
+            title: (
+                <>
+                    You&apos;re about to delete <strong>{name}</strong>
+                </>
+            ),
+            message: (
+                <div className="text-center">
+                    This action will permanently delete all the data and can&apos;t be undone.
+                    <br />
+                    If this was the action that you wanted to do, please confirm your choice, or cancel.
+                </div>
+            ),
+            icon: "trash",
+            confirmText: "Delete agent",
+            actionColor: "danger",
+        });
+
+        if (isConfirmed) {
+            asyncDeleteAiAgent.execute();
+        }
+    };
+
     return (
         <Col className="panel-bg-1 p-2 rounded-2 border border-secondary" sm={12} xl={6} xxl={4}>
-            <h4 className="m-0">{props.name}</h4>
+            <h4 className="m-0">{name}</h4>
             <div className="text-muted">Last run: TODO</div>
-            <div className="mt-2 text-truncate" title={props.config.SystemPrompt}>
-                {props.config.SystemPrompt}
+            <div className="mt-2 text-truncate" title={config.SystemPrompt}>
+                {config.SystemPrompt}
             </div>
             <div className="hstack justify-content-between mt-2">
                 <Button variant="primary">
                     <Icon icon="rocket" />
                     Test agent
                 </Button>
-                <Button variant="secondary">
-                    <Icon icon="more" margin="m-0" />
-                </Button>
+                <Dropdown>
+                    <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="secondary">
+                        <Icon icon="more" margin="m-0" />
+                    </Dropdown.Toggle>
+                    <Dropdown.Menu>
+                        <Dropdown.Item href={forCurrentDatabase.editAiAgent(name)()}>
+                            <Icon icon="edit" /> Edit agent
+                        </Dropdown.Item>
+                        <Dropdown.Item>
+                            <Icon icon="copy" /> Clone agent (TODO)
+                        </Dropdown.Item>
+                        <Dropdown.Item
+                            className="text-danger"
+                            onClick={handleDelete}
+                            disabled={asyncDeleteAiAgent.loading}
+                        >
+                            <Icon icon="trash" /> Delete agent
+                        </Dropdown.Item>
+                    </Dropdown.Menu>
+                </Dropdown>
             </div>
         </Col>
     );
