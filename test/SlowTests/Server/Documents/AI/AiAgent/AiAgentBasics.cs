@@ -57,7 +57,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     Name = "ProductSearch", 
                     Description =  "semantic search the store product catalog",
                     Query = "from Products where vector.search(embedding.text(Name), $query)",
-                    ParametersSchema = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
                 new AiAgentConfiguration.ToolQuery
@@ -65,7 +65,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     Name = "RecentOrder",
                     Description = "Get the recent orders of the current user",
                     Query = "from Orders where Company = $company order by OrderedAt desc limit 10",
-                    ParametersSchema = "{}"
+                    ParametersSampleObject = "{}"
                 }
             ];
 
@@ -108,7 +108,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     Name = "ProductSearch", 
                     Description =  "semantic search the store product catalog",
                     Query = "from Products where vector.search(embedding.text(Name), $query)",
-                    ParametersSchema = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
                 new AiAgentConfiguration.ToolQuery
@@ -116,7 +116,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     Name = "RecentOrder",
                     Description = "Get the recent orders of the current user",
                     Query = "from Orders where Company = $company order by OrderedAt desc limit 10",
-                    ParametersSchema = "{}"
+                    ParametersSampleObject = "{}"
                 }
             ];
 
@@ -163,14 +163,14 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 {
                     Name = "ProductSearch", 
                     Description =  "semantic search the store product catalog",
-                    ParametersSchema = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
                 new AiAgentConfiguration.ToolAction
                 {
                     Name = "RecentOrder",
                     Description = "Get the recent orders of the current user",
-                    ParametersSchema = "{}"
+                    ParametersSampleObject = "{}"
                 }
             ];
 
@@ -226,13 +226,13 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             ""Name"": ""ProductSearch"",
             ""Description"": ""semantic search the store product catalog"",
             ""Query"": ""from Products where vector.search(embedding.text(Name), $query)"",
-            ""ParametersSchema"": ""{{\""query\"": [\""term or phrase to search in the catalog\""]}}""
+            ""ParametersSampleObject"": ""{{\""query\"": [\""term or phrase to search in the catalog\""]}}""
         }},
         {{
             ""Name"": ""RecentOrder"",
             ""Description"": ""Get the recent orders of the current user"",
             ""Query"": ""from Orders where Company = $company order by OrderedAt desc limit 10"",
-            ""ParametersSchema"": ""{{}}""
+            ""ParametersSampleObject"": ""{{}}""
         }}
     ]
 }}";
@@ -243,7 +243,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json")
             };
             using var r = await store.GetRequestExecutor().HttpClient.SendAsync(test);
-            Assert.True(r.IsSuccessStatusCode);
+            Assert.True(r.IsSuccessStatusCode, "status code: " + r.StatusCode);
         }
     }
 }

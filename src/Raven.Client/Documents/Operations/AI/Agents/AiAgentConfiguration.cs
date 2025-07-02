@@ -102,6 +102,7 @@ public class AiAgentConfiguration : IDynamicJson
     {
         public string Name { get; set; }
         public string Description { get; set; }
+        public string ParametersSampleObject { get; set; }
         public string ParametersSchema { get; set; }
         public DynamicJsonValue ToJson()
         {
@@ -109,6 +110,7 @@ public class AiAgentConfiguration : IDynamicJson
             {
                 [nameof(Name)] = Name,
                 [nameof(Description)] = Description,
+                [nameof(ParametersSampleObject)] = ParametersSampleObject,
                 [nameof(ParametersSchema)] = ParametersSchema
             };
         }
@@ -125,7 +127,7 @@ public class AiAgentConfiguration : IDynamicJson
                     Name = name,
                     Description = description,
                     Query = dq.ToString(),
-                    ParametersSchema = context.ReadObject(DynamicJsonValue.Convert(dq.QueryParameters), "params").ToString()
+                    ParametersSampleObject = context.ReadObject(DynamicJsonValue.Convert(dq.QueryParameters), "params").ToString()
                 };
             }
         }
@@ -133,6 +135,7 @@ public class AiAgentConfiguration : IDynamicJson
         public string Name { get; set; }
         public string Description { get; set; }
         public string Query { get; set; }
+        public string ParametersSampleObject { get; set; }
         public string ParametersSchema { get; set; }
         public DynamicJsonValue ToJson()
         {
@@ -141,6 +144,7 @@ public class AiAgentConfiguration : IDynamicJson
                 [nameof(Name)] = Name,
                 [nameof(Description)] = Description,
                 [nameof(Query)] = Query,
+                [nameof(ParametersSampleObject)] = ParametersSampleObject,
                 [nameof(ParametersSchema)] = ParametersSchema
             };
         }

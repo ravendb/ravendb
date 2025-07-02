@@ -445,7 +445,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return true;
     }
 
-    public static string GetSchema(string schema, string sampleObject)
+    public static string GetSchema(string schema, string sampleObject, bool forParameters = false)
     {
         if (string.IsNullOrWhiteSpace(schema) == false)
         {
@@ -454,7 +454,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         if (string.IsNullOrWhiteSpace(sampleObject) == false)
         {
-            return ChatCompletionClient.GetSchemaFromSampleObject(sampleObject);
+            return forParameters ? GenerateJsonObjectFromSampleObject(sampleObject) : GetSchemaFromSampleObject(sampleObject);
         }
        
         throw new InvalidOperationException("Missing output schema and sample object in configuration (there must be at least one of them)");

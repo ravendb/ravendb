@@ -9,6 +9,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Server.Documents.AI;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -34,8 +35,9 @@ public class AiAgentClientApiBasics : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
-    public async Task AiAgentClientApiBasicTest(Options options, GenAiConfiguration config)
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Data = new object[] { true })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Data = new object[] { false })]
+    public async Task AiAgentClientApiBasicTest(Options options, GenAiConfiguration config, bool sendSchema)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new CreateSampleDataOperation());
@@ -53,18 +55,25 @@ public class AiAgentClientApiBasics : RavenTestBase
             Expires = TimeSpan.FromDays(30)
         };
 
-        agent.Queries =
-        [
-            AiAgentConfiguration.ToolQuery.Build(
-                    "ProductSearch",
-                    "semantic search the store product catalog",
-                    session.Query<Product>().VectorSearch(v => v.WithText(p => p.Name), v => v.ByText("$query")))
-                ,
-                AiAgentConfiguration.ToolQuery.Build(
-                    "RecentOrder",
-                    "Get the recent orders of the current user",
-                    session.Query<Query.Order>().Where(o => o.Company == "$company").OrderByDescending(o => o.OrderedAt).Take(10))
-        ];
+        var queryTool1 = AiAgentConfiguration.ToolQuery.Build(
+            "ProductSearch",
+            "semantic search the store product catalog",
+            session.Query<Product>().VectorSearch(v => v.WithText(p => p.Name), v => v.ByText("$query")));
+        
+        var queryTool2 = AiAgentConfiguration.ToolQuery.Build(
+            "RecentOrder",
+            "Get the recent orders of the current user",
+            session.Query<Query.Order>().Where(o => o.Company == "$company").OrderByDescending(o => o.OrderedAt).Take(10));
+
+        if (sendSchema)
+        {
+            queryTool1.ParametersSchema = ChatCompletionClient.GetSchema(null, queryTool1.ParametersSampleObject, forParameters: true);
+            queryTool2.ParametersSchema = ChatCompletionClient.GetSchema(null, queryTool2.ParametersSampleObject, forParameters: true);
+            queryTool1.ParametersSampleObject = null;
+            queryTool2.ParametersSampleObject = null;
+        }
+
+        agent.Queries = [ queryTool1, queryTool2 ];
 
         await store.AI.CreateAgentAsync<OutputSchema>("shopping assistant", agent);
 
@@ -88,8 +97,9 @@ public class AiAgentClientApiBasics : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
-    public async Task AiAgentClientApiAnswerActionTool(Options options, GenAiConfiguration config)
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Data = new object[] { true })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Data = new object[] { false })]
+    public async Task AiAgentClientApiAnswerActionTool(Options options, GenAiConfiguration config, bool sendSchema)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new CreateSampleDataOperation());
@@ -107,22 +117,30 @@ public class AiAgentClientApiBasics : RavenTestBase
             Expires = TimeSpan.FromDays(30)
         };
 
-        agent.Actions =
-        [
-            new AiAgentConfiguration.ToolAction
-            {
-                Name = "ProductSearch",
-                Description =  "semantic search the store product catalog",
-                ParametersSchema = "{\"query\": [\"term or phrase to search in the catalog\"]}"
-            }
-            ,
-            new AiAgentConfiguration.ToolAction
-            {
-                Name = "RecentOrder",
-                Description = "Get the recent orders of the current user",
-                ParametersSchema = "{}"
-            }
-        ];
+        var tool1 = new AiAgentConfiguration.ToolAction
+        {
+            Name = "ProductSearch",
+            Description = "semantic search the store product catalog",
+        };
+        var tool1sampleObj = "{\"query\": [\"term or phrase to search in the catalog\"]}";
+        var tool2 = new AiAgentConfiguration.ToolAction
+        {
+            Name = "RecentOrder", 
+            Description = "Get the recent orders of the current user"
+        };
+        var tool2sampleObj = "{}";
+        if (sendSchema)
+        {
+            tool1.ParametersSchema = ChatCompletionClient.GetSchema(null, tool1sampleObj, forParameters: true);
+            tool2.ParametersSchema = ChatCompletionClient.GetSchema(null, tool2sampleObj, forParameters: true);
+        }
+        else
+        {
+            tool1.ParametersSampleObject = tool1sampleObj;
+            tool2.ParametersSampleObject = tool2sampleObj;
+        }
+
+        agent.Actions = [ tool1, tool2 ];
 
         await store.AI.CreateAgentAsync<OutputSchema>("shopping assistant", agent);
 

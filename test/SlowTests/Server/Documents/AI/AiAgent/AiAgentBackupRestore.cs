@@ -98,14 +98,14 @@ public class AiAgentBackupRestore : ReplicationTestBase
                 Name = "ProductSearch",
                 Description = "semantic search the store product catalog",
                 Query = "from Products where vector.search(embedding.text(Name), $query)",
-                ParametersSchema = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+                ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
             },
             new AiAgentConfiguration.ToolQuery
             {
                 Name = "RecentOrder",
                 Description = "Get the recent orders of the current user",
                 Query = "from Orders where Company = $company order by OrderedAt desc limit 10",
-                ParametersSchema = "{}"
+                ParametersSampleObject = "{}"
             }
         ];
 
@@ -121,9 +121,9 @@ public class AiAgentBackupRestore : ReplicationTestBase
             {
                 Name = "ProductSearch",
                 Description = "semantic search the store product catalog",
-                ParametersSchema = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+                ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
             },
-            new AiAgentConfiguration.ToolAction { Name = "RecentOrder", Description = "Get the recent orders of the current user", ParametersSchema = "{}" }
+            new AiAgentConfiguration.ToolAction { Name = "RecentOrder", Description = "Get the recent orders of the current user", ParametersSampleObject = "{}" }
         ];
 
         return new Dictionary<string, AiAgentConfiguration>() { { "shopping assistant", agent0 }, { "warehouse manager", agent1 } };
