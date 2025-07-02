@@ -1,8 +1,10 @@
 ﻿using System;
+using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.AI.GenAi
 {
@@ -23,6 +25,8 @@ namespace Raven.Server.Documents.AI.GenAi
 
     internal class OllamaChatCompletionClient : AbstractChatCompletionClient<TransactionOperationContext>
     {
+        private readonly OllamaSettings _ollamaSettings;
+
         public OllamaChatCompletionClient(GenAiConfiguration configuration, string structuredOutputSchema, TransactionContextPool contextPool, DocumentConventions conventions)
             : base(
                 baseUri: new Uri(configuration.Connection.OllamaSettings.Uri),
@@ -34,6 +38,23 @@ namespace Raven.Server.Documents.AI.GenAi
                 contextPool,
                 conventions)
         {
+            _ollamaSettings = configuration.Connection.OllamaSettings;
+        }
+
+        /// <summary>
+        /// Override to add Ollama-specific parameters like "think" to the request payload.
+        /// The "think" parameter controls whether thinking models engage their reasoning process.
+        /// Setting think=false skips reasoning entirely, providing faster responses and lower token usage.
+        /// </summary>
+        protected override void WriteCustomParameters(AsyncBlittableJsonTextWriter writer)
+        {
+            // Add Ollama-specific "think" parameter if specified
+            if (_ollamaSettings.Think.HasValue)
+            {
+                writer.WriteComma();
+                writer.WritePropertyName("think");
+                writer.WriteBool(_ollamaSettings.Think.Value);
+            }
         }
     }
 

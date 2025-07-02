@@ -156,6 +156,7 @@ export interface AiConnection extends ConnectionBase {
     ollamaSettings?: {
         model?: string;
         uri?: string;
+        think?: boolean;
         embeddingsMaxConcurrentBatches?: number;
     };
     embeddedSettings?: {

@@ -209,6 +209,9 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
                 writer.WriteObject(GetStructuredOutputSchemaAsBlittable());
                 writer.WriteEndObject();
 
+                // Allow derived classes to add custom parameters
+                WriteCustomParameters(writer);
+
                 writer.WriteEndObject();
             }
         }, IChatCompletionClient.DefaultConventions);
@@ -480,6 +483,16 @@ public abstract class AbstractChatCompletionClient<TContext> : IChatCompletionCl
 
             return jsonObj;
         }
+    }
+
+    /// <summary>
+    /// Virtual method that allows derived classes to add custom parameters to the request payload.
+    /// Override this method in provider-specific implementations to add custom parameters.
+    /// </summary>
+    protected virtual void WriteCustomParameters(AsyncBlittableJsonTextWriter writer)
+    {
+        // Default implementation does nothing
+        // Derived classes can override to add custom parameters like Ollama's "think" parameter
     }
 
     public void Dispose()

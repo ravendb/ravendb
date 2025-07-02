@@ -29,6 +29,15 @@ public sealed class OllamaSettings : AbstractAiSettings
     /// </summary>
     public string Model { get; set; }
 
+    /// <summary>
+    /// Controls whether thinking models engage their reasoning process before responding.
+    /// When true, thinking models will perform their internal reasoning process (uses more tokens, slower, better quality for complex tasks).
+    /// When false, thinking models skip the reasoning process and respond directly (fewer tokens, faster, may reduce quality for complex reasoning).
+    /// When null, the parameter is not sent (backwards compatible).
+    /// Disable thinking for speed/efficiency in simple tasks, enable for complex tasks requiring reasoning.
+    /// </summary>
+    public bool? Think { get; set; } = true;
+
     public override void ValidateFields(List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(Uri))
@@ -51,6 +60,9 @@ public sealed class OllamaSettings : AbstractAiSettings
         if (Uri != ollamaSettings.Uri)
             differences |= AiSettingsCompareDifferences.EndpointConfiguration;
 
+        if (Think != ollamaSettings.Think)
+            differences |= AiSettingsCompareDifferences.EndpointConfiguration;
+
         return differences;
     }
 
@@ -59,6 +71,7 @@ public sealed class OllamaSettings : AbstractAiSettings
         var json = base.ToJson();
         json[nameof(Model)] = Model;
         json[nameof(Uri)] = Uri;
+        json[nameof(Think)] = Think;
 
         return json;
     }
