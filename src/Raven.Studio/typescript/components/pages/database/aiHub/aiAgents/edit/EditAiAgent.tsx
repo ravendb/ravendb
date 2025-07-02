@@ -11,6 +11,9 @@ import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import genUtils from "common/generalUtils";
+import { useDirtyFlag } from "components/hooks/useDirtyFlag";
+import router from "plugins/router";
+import { useAppUrls } from "components/hooks/useAppUrls";
 
 interface QueryParams {
     agentName: string;
@@ -23,55 +26,38 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const form = useForm<EditAiAgentFormData>({
         defaultValues: async () => {
             if (!queryParams?.agentName) {
-                return getDefaultValues(null);
+                return mapFromDto(null);
             }
 
             const agent = await aiAgentService.getAiAgents(databaseName, queryParams.agentName);
 
-            return getDefaultValues(queryParams.agentName, agent);
+            return mapFromDto(queryParams.agentName, agent);
         },
         resolver: editAiAgentYupResolver,
     });
 
-    const {
-        handleSubmit,
-        formState: { errors },
-    } = form;
+    const { handleSubmit, formState, reset } = form;
 
+    const { setIsDirty } = useDirtyFlag(formState.isDirty);
+
+    // It's not working as expected, let's fix it later
     const testAreaResizable = useResizableWidth({
         initialWidth: 500,
         minWidth: 500,
         maxWidth: 1000,
     });
 
+    const { appUrl } = useAppUrls();
+
     const saveAgent: SubmitHandler<EditAiAgentFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
-            const dto: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration = {
-                ConnectionStringName: formData.connectionStringName,
-                SystemPrompt: formData.systemPrompt,
-                OutputSchema: formData.outputSchema,
-                Persistence: {
-                    Collection: formData.persistenceCollectionName,
-                    Expires: genUtils.formatAsTimeSpan(formData.persistenceExpiresInSeconds * 1000),
-                },
-                Queries: formData.queries.map((x) => ({
-                    Name: x.name,
-                    Description: x.description,
-                    Query: x.query,
-                    ParametersSchema: x.parametersSchema,
-                })),
-                Actions: formData.actions.map((x) => ({
-                    Name: x.name,
-                    Description: x.description,
-                    ParametersSchema: x.parametersSchema,
-                })),
-            };
+            await aiAgentService.saveAiAgent(databaseName, formData.name, mapToDto(formData));
 
-            await aiAgentService.saveAiAgent(databaseName, formData.name, dto);
+            reset(formData);
+            setIsDirty(false);
+            router.navigate(appUrl.forAiAgents(databaseName));
         });
     };
-
-    console.log("kalczur error", errors);
 
     return (
         <FormProvider {...form}>
@@ -121,7 +107,7 @@ function ColumnResize({ handleMouseDown }: { handleMouseDown: (e: React.MouseEve
     );
 }
 
-function getDefaultValues(
+function mapFromDto(
     name: string,
     dto?: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration
 ): EditAiAgentFormData {
@@ -164,5 +150,28 @@ function getDefaultValues(
             isEditing: false,
         })),
         testPrompt: "",
+    };
+}
+
+function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration {
+    return {
+        ConnectionStringName: formData.connectionStringName,
+        SystemPrompt: formData.systemPrompt,
+        OutputSchema: formData.outputSchema,
+        Persistence: {
+            Collection: formData.persistenceCollectionName,
+            Expires: genUtils.formatAsTimeSpan(formData.persistenceExpiresInSeconds * 1000),
+        },
+        Queries: formData.queries.map((x) => ({
+            Name: x.name,
+            Description: x.description,
+            Query: x.query,
+            ParametersSchema: x.parametersSchema,
+        })),
+        Actions: formData.actions.map((x) => ({
+            Name: x.name,
+            Description: x.description,
+            ParametersSchema: x.parametersSchema,
+        })),
     };
 }

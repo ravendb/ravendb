@@ -37,8 +37,6 @@ export default function EditAiAgentMain() {
         control,
     });
 
-    console.log("kalczur formValues", formValues);
-
     const queriesFieldArray = useFieldArray({
         name: "queries",
         control,
@@ -169,7 +167,7 @@ export default function EditAiAgentMain() {
                 </FormGroup>
                 <FormGroup>
                     <FormLabel>Expire in</FormLabel>
-                    <FormDurationPicker control={control} name="persistenceExpiresInSeconds" showDays />
+                    <FormDurationPicker control={control} name="persistenceExpiresInSeconds" showDays isFlexGrow />
                 </FormGroup>
             </div>
             <ParametersField />
@@ -195,6 +193,7 @@ export default function EditAiAgentMain() {
                                 query: "",
                                 parametersSchema: "",
                                 isSaved: false,
+                                isEditing: true,
                             })
                         }
                     >
@@ -218,9 +217,13 @@ export default function EditAiAgentMain() {
                             edit={() =>
                                 queriesFieldArray.update(index, { ...formValues.queries[index], isEditing: true })
                             }
-                            cancelEdit={() =>
-                                queriesFieldArray.update(index, { ...formValues.queries[index], isEditing: false })
-                            }
+                            cancelEdit={() => {
+                                if (formValues.queries[index].isSaved) {
+                                    queriesFieldArray.update(index, { ...formValues.queries[index], isEditing: false });
+                                } else {
+                                    queriesFieldArray.remove(index);
+                                }
+                            }}
                         />
                     ))}
                 </div>
@@ -258,17 +261,21 @@ export default function EditAiAgentMain() {
                             remove={() => actionsFieldArray.remove(index)}
                             save={() =>
                                 actionsFieldArray.update(index, {
-                                    ...formValues.queries[index],
+                                    ...formValues.actions[index],
                                     isSaved: true,
                                     isEditing: false,
                                 })
                             }
                             edit={() =>
-                                actionsFieldArray.update(index, { ...formValues.queries[index], isEditing: true })
+                                actionsFieldArray.update(index, { ...formValues.actions[index], isEditing: true })
                             }
-                            cancelEdit={() =>
-                                actionsFieldArray.update(index, { ...formValues.queries[index], isEditing: false })
-                            }
+                            cancelEdit={() => {
+                                if (formValues.actions[index].isSaved) {
+                                    actionsFieldArray.update(index, { ...formValues.actions[index], isEditing: false });
+                                } else {
+                                    actionsFieldArray.remove(index);
+                                }
+                            }}
                         />
                     ))}
                 </div>

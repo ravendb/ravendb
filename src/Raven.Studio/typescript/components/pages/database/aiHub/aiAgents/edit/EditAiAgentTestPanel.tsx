@@ -147,6 +147,10 @@ function ParametersField() {
         control,
     });
 
+    if (formValues.testParameters.length === 0) {
+        return null;
+    }
+
     return (
         <div className="flex-grow-1 text-center w-100">
             <Icon icon="metrics" color="primary" size="lg" className="mt-3" />

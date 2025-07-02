@@ -5,11 +5,12 @@ import { editAiAgentActions } from "./store/editAiAgentSlice";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "./utils/editAiAgentValidation";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 export default function EditAiAgentFooter() {
     const dispatch = useAppDispatch();
 
-    const { control, setValue } = useFormContext<EditAiAgentFormData>();
+    const { control, setValue, formState } = useFormContext<EditAiAgentFormData>();
 
     const formValues = useWatch({
         control,
@@ -40,10 +41,15 @@ export default function EditAiAgentFooter() {
                     Test
                 </Button>
 
-                <Button type="submit" variant="primary" className="rounded-pill">
-                    <Icon icon="save" />
+                <ButtonWithSpinner
+                    type="submit"
+                    variant="primary"
+                    className="rounded-pill"
+                    icon="save"
+                    isSpinning={formState.isSubmitting}
+                >
                     Save
-                </Button>
+                </ButtonWithSpinner>
             </div>
         </div>
     );

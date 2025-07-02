@@ -1,5 +1,8 @@
+import classNames from "classnames";
 import React, { ChangeEvent, useEffect, useState } from "react";
 import Form from "react-bootstrap/Form";
+import FormGroup from "react-bootstrap/FormGroup";
+import FormLabel from "react-bootstrap/FormLabel";
 
 interface Duration {
     days: number;
@@ -20,10 +23,11 @@ export interface DurationPickerProps {
         minutes?: string;
         seconds?: string;
     };
+    isFlexGrow?: boolean;
 }
 
 export default function DurationPicker(props: DurationPickerProps) {
-    const { totalSeconds, onChange, showDays, placeholder, showSeconds, disabled } = props;
+    const { totalSeconds, onChange, showDays, placeholder, showSeconds, disabled, isFlexGrow } = props;
 
     const initialValues = getInitialValues(totalSeconds, showDays);
 
@@ -47,66 +51,54 @@ export default function DurationPicker(props: DurationPickerProps) {
     };
 
     return (
-        <div className="d-flex gap-1">
+        <div className={classNames("d-flex gap-1", { "flex-grow-1": isFlexGrow })}>
             {showDays && (
-                <div>
-                    <Form.Label htmlFor="days" className="small-label">
-                        Days
-                    </Form.Label>
+                <FormGroup controlId="days" className={classNames({ "flex-grow-1": isFlexGrow })}>
+                    <FormLabel className="small-label">Days</FormLabel>
                     <Form.Control
                         type="number"
-                        id="days"
                         min={0}
                         value={days}
                         placeholder={placeholder?.days}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setDays(getInputValue(e))}
                         disabled={disabled}
                     />
-                </div>
+                </FormGroup>
             )}
-            <div>
-                <Form.Label htmlFor="hours" className="small-label">
-                    Hours
-                </Form.Label>
+            <FormGroup controlId="hours" className={classNames({ "flex-grow-1": isFlexGrow })}>
+                <FormLabel className="small-label">Hours</FormLabel>
                 <Form.Control
                     type="number"
                     min={0}
-                    id="hours"
                     value={hours}
                     placeholder={placeholder?.hours}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setHours(getInputValue(e))}
                     disabled={disabled}
                 />
-            </div>
-            <div>
-                <Form.Label htmlFor="minutes" className="small-label">
-                    Minutes
-                </Form.Label>
+            </FormGroup>
+            <FormGroup controlId="minutes" className={classNames({ "flex-grow-1": isFlexGrow })}>
+                <FormLabel className="small-label">Minutes</FormLabel>
                 <Form.Control
                     type="number"
-                    id="minutes"
                     min={0}
                     value={minutes}
                     placeholder={placeholder?.minutes}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setMinutes(getInputValue(e))}
                     disabled={disabled}
                 />
-            </div>
+            </FormGroup>
             {showSeconds && (
-                <div>
-                    <Form.Label htmlFor="seconds" className="small-label">
-                        Seconds
-                    </Form.Label>
+                <FormGroup controlId="seconds" className={classNames({ "flex-grow-1": isFlexGrow })}>
+                    <FormLabel className="small-label">Seconds</FormLabel>
                     <Form.Control
                         type="number"
-                        id="seconds"
                         min={0}
                         value={seconds}
                         placeholder={placeholder?.seconds}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setSeconds(getInputValue(e))}
                         disabled={disabled}
                     />
-                </div>
+                </FormGroup>
             )}
         </div>
     );

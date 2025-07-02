@@ -127,7 +127,7 @@ function AiAgentCard({ name, config }: AiAgentCardProps) {
             <div className="hstack justify-content-between mt-2">
                 <Button variant="primary">
                     <Icon icon="rocket" />
-                    Test agent
+                    Start new chat (TODO)
                 </Button>
                 <Dropdown>
                     <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="secondary">
