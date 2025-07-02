@@ -448,11 +448,14 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
 
         public GenAiConfiguration Configuration { get; set; }
 
+        public string ChangeVector { get; set; }
+
         public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(ConnectionStringName)] = ConnectionStringName;
             json[nameof(Configuration)] = Configuration?.ToJson();
+            json[nameof(ChangeVector)] = ChangeVector;
             return json;
         }
     }

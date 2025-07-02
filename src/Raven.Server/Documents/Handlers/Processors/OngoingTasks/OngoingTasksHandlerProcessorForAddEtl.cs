@@ -1,9 +1,11 @@
-﻿using System.Threading.Tasks;
-using JetBrains.Annotations;
-using Raven.Client;
+﻿using JetBrains.Annotations;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 {
@@ -11,6 +13,21 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
     {
         public OngoingTasksHandlerProcessorForAddEtl([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
+        }
+
+        protected override void OnBeforeResponseWrite(TransactionOperationContext _, DynamicJsonValue responseJson, BlittableJsonReaderObject configuration, long index)
+        {
+            base.OnBeforeResponseWrite(_, responseJson, configuration, index);
+
+            switch (EtlConfiguration<ConnectionString>.GetEtlType(configuration))
+            {
+                case EtlType.GenAi:
+                    responseJson[nameof(GenAi.ChangeVector)] = GetChangeVector();
+                    break;
+                default:
+                    return;
+            }
+
         }
 
         protected override string GetChangeVector()

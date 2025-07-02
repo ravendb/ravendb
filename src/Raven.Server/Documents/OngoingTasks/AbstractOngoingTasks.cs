@@ -20,6 +20,7 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.Util;
+using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.ServerWide;
@@ -688,6 +689,7 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
         databaseRecord.AiConnectionStrings.TryGetValue(configuration.ConnectionStringName, out var connection);
         var connectionStatus = GetEtlTaskConnectionStatus(databaseRecord, configuration, out var tag, out var error);
         var taskState = OngoingTasksHandler.GetEtlTaskState(configuration);
+        var etlProcessState = EtlProcess.GetProcessState(_server, databaseRecord.DatabaseName, configuration.Name, configuration.Transforms[0].Name);
 
         return new GenAi
         {
@@ -700,8 +702,8 @@ public abstract class AbstractOngoingTasks<TSubscriptionConnectionsState>
             ConnectionStringName = configuration.ConnectionStringName,
             ResponsibleNode = new NodeId { NodeTag = tag, NodeUrl = clusterTopology.GetUrlFromTag(tag) },
             Error = error,
-            Configuration = configuration
+            Configuration = configuration,
+            ChangeVector = etlProcessState.ChangeVector
         };
-
     }
 }

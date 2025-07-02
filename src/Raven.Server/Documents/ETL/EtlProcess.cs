@@ -113,11 +113,15 @@ namespace Raven.Server.Documents.ETL
         public static EtlProcessState GetProcessState(DocumentDatabase database, string configurationName, string transformationName)
         {
             var databaseName = ShardHelper.ToDatabaseName(database.Name);
+            return GetProcessState(database.ServerStore, databaseName, configurationName, transformationName);
+        }
 
-            using (database.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        public static EtlProcessState GetProcessState(ServerStore serverStore, string database, string configurationName, string transformationName)
+        {
+            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var stateBlittable = database.ServerStore.Cluster.Read(context, EtlProcessState.GenerateItemName(databaseName, configurationName, transformationName));
+                var stateBlittable = serverStore.Cluster.Read(context, EtlProcessState.GenerateItemName(database, configurationName, transformationName));
 
                 if (stateBlittable != null)
                 {
@@ -128,7 +132,6 @@ namespace Raven.Server.Documents.ETL
             }
         }
     }
-
     public abstract class EtlProcess<TExtracted, TTransformed, TConfiguration, TConnectionString, TStatsScope, TEtlPerformanceOperation> : EtlProcess, ILowMemoryHandler where TExtracted : ExtractedItem
         where TConfiguration : EtlConfiguration<TConnectionString>
         where TConnectionString : ConnectionString

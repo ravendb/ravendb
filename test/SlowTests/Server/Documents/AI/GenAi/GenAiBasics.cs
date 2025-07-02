@@ -132,9 +132,44 @@ for(const comment of this.Comments)
 
         store.Maintenance.Send(new AddGenAiOperation(config));
 
+        const string id = "posts/1";
+        using (var session = store.OpenSession())
+        {
+            session.Store(new Post(
+                [
+                    new Comment("Surefire investment property in caiman islands, win $$$$ for sure, qucik!", "homepage"),
+                    new Comment("Probably... That piece of code was written (and never looked at) in 2017, IIRC It wasn't a real issue (since it is cached) except for this particular scenario.", "Oren Eini")
+                ],
+                "I, pencil",
+                "A B52 pencil..."), id);
+            session.SaveChanges();
+        }
+
+        var db = await GetDatabase(store.Database);
+
+        var etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
+        Assert.NotNull(etlProcess);
+
+        var etlDone = await WaitForValueAsync(() =>
+        {
+            var stats = etlProcess.GetPerformanceStats()
+                .Where(x => x.NumberOfLoadedItems > 0 && x.LastLoadedEtag > 1)
+                .ToArray();
+
+            return stats.Length > 0;
+        }, expectedVal: true, timeout: 30_000);
+        Assert.True(etlDone);
+
+        string changeVector = null;
+        using (var session = store.OpenSession())
+        {
+            var doc = session.Load<Post>(id);
+            changeVector = session.Advanced.GetChangeVectorFor(doc);
+        }
+        Assert.NotNull(changeVector);
+
         var op = new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi);
         var taskInfo = await store.Maintenance.SendAsync(op);
-
         Assert.NotNull(taskInfo);
         Assert.Equal(config.Name, taskInfo.TaskName);
         Assert.Equal(OngoingTaskType.GenAi, taskInfo.TaskType);
@@ -149,6 +184,8 @@ for(const comment of this.Comments)
         Assert.Equal(config.UpdateScript, genAiTaskInfo.Configuration.UpdateScript);
         // Assert.Equal(config.AiConnectorType, genAiTaskInfo.Configuration.AiConnectorType); // todo: fix serverside return 'AiConnectorType: None'
         Assert.Equal(config.GenAiTransformation.Script, genAiTaskInfo.Configuration.GenAiTransformation.Script);
+        Assert.Equal(changeVector, genAiTaskInfo.ChangeVector);
+
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -445,7 +482,6 @@ for(const comment of this.Comments)
         };
 
         store.Maintenance.Send(new AddGenAiOperation(configuration));
-
 
         var db = await GetDatabase(store.Database);
 
