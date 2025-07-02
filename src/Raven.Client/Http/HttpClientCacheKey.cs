@@ -22,21 +22,25 @@ internal readonly struct HttpClientCacheKey
 
     public readonly string AsString;
 
-    internal HttpClientCacheKey(bool useHttpDecompression, bool hasExplicitlySetDecompressionUsage, TimeSpan? pooledConnectionLifetime,
+    internal static HttpClientCacheKey CreateHttpWithApiKey(bool useHttpDecompression, bool hasExplicitlySetDecompressionUsage, TimeSpan? pooledConnectionLifetime,
         TimeSpan? pooledConnectionIdleTimeout, TimeSpan globalHttpClientTimeout, string baseUri, string apiKey, Action<HttpMessageHandler> configureHttpMessageHandler)
-        : this(certificate: null, useHttpDecompression, hasExplicitlySetDecompressionUsage, pooledConnectionLifetime, pooledConnectionIdleTimeout, globalHttpClientTimeout,
-            httpClientType: null, baseUri, apiKey, configureHttpMessageHandler)
     {
         ValidationMethods.AssertNotNullOrEmpty(baseUri, nameof(baseUri));
         // apiKey can be null (or empty)
+
+        return new HttpClientCacheKey(certificate: null, useHttpDecompression, hasExplicitlySetDecompressionUsage, pooledConnectionLifetime, pooledConnectionIdleTimeout,
+            globalHttpClientTimeout,
+            httpClientType: null, baseUri, apiKey, configureHttpMessageHandler);
     }
 
-    internal HttpClientCacheKey(X509Certificate2 certificate, bool useHttpDecompression, bool hasExplicitlySetDecompressionUsage, TimeSpan? pooledConnectionLifetime,
+    internal static HttpClientCacheKey Create(X509Certificate2 certificate, bool useHttpDecompression, bool hasExplicitlySetDecompressionUsage, TimeSpan? pooledConnectionLifetime,
         TimeSpan? pooledConnectionIdleTimeout, TimeSpan globalHttpClientTimeout, Type httpClientType, Action<HttpMessageHandler> configureHttpMessageHandler)
-        : this(certificate, useHttpDecompression, hasExplicitlySetDecompressionUsage, pooledConnectionLifetime, pooledConnectionIdleTimeout, globalHttpClientTimeout,
-            httpClientType, baseUri: null, apiKey: null, configureHttpMessageHandler)
     {
         ValidationMethods.AssertNotNullOrEmpty(httpClientType, nameof(httpClientType));
+
+        return new HttpClientCacheKey(certificate, useHttpDecompression, hasExplicitlySetDecompressionUsage, pooledConnectionLifetime, pooledConnectionIdleTimeout,
+            globalHttpClientTimeout,
+            httpClientType, baseUri: null, apiKey: null, configureHttpMessageHandler);
     }
 
     private HttpClientCacheKey(X509Certificate2 certificate, bool useHttpDecompression, bool hasExplicitlySetDecompressionUsage, TimeSpan? pooledConnectionLifetime, TimeSpan? pooledConnectionIdleTimeout, TimeSpan globalHttpClientTimeout, Type httpClientType, string baseUri, string apiKey, Action<HttpMessageHandler> configureHttpMessageHandler)

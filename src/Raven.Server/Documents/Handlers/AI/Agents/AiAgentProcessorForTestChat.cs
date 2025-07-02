@@ -5,7 +5,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-internal class AiAgentProcessorForTestChat : AbstractSingleAiAgentTalkProcessor
+internal class AiAgentProcessorForTestChat : AbstractSingleAiAgentProcessor
 {
     public AiAgentProcessorForTestChat([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

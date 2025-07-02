@@ -14,9 +14,9 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 namespace Raven.Server.Documents.Handlers.AI.Agents
 {
-    internal abstract class AbstractSingleAiAgentTalkProcessor : AbstractAiAgentTalkProcessor<DatabaseRequestHandler, DocumentsOperationContext>
+    internal abstract class AbstractSingleAiAgentProcessor : AbstractAiAgentProcessor<DatabaseRequestHandler, DocumentsOperationContext>
     {
-        public AbstractSingleAiAgentTalkProcessor([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.Database.ServerStore.ContextPool)
+        public AbstractSingleAiAgentProcessor([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler, requestHandler.Database.ServerStore.ContextPool)
         {
         }
 

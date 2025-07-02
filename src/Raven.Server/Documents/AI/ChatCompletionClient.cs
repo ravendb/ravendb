@@ -77,7 +77,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         conventions ??= ConventionsToUse;
 
-        _httpClientCacheKey = new HttpClientCacheKey(conventions.UseHttpDecompression,
+        _httpClientCacheKey = HttpClientCacheKey.CreateHttpWithApiKey(conventions.UseHttpDecompression,
             conventions.HasExplicitlySetDecompressionUsage, conventions.HttpPooledConnectionLifetime,
             conventions.HttpPooledConnectionIdleTimeout, conventions.GlobalHttpClientTimeout,
             baseUri, apiKey, conventions.ConfigureHttpMessageHandler);
@@ -209,7 +209,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                 writer.WriteString(_model);
                 writer.WriteComma();
 
-                writer.WriteArray(Constants.RequestFields.Messages, messages ?? new List<BlittableJsonReaderObject>());
+                writer.WriteArray(Constants.RequestFields.Messages, messages);
                 writer.WriteComma();
 
                 // Optional
@@ -443,6 +443,21 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             }
         }
         return true;
+    }
+
+    public static string GetSchema(string schema, string sampleObject)
+    {
+        if (string.IsNullOrWhiteSpace(schema) == false)
+        {
+            return schema;
+        }
+
+        if (string.IsNullOrWhiteSpace(sampleObject) == false)
+        {
+            return ChatCompletionClient.GetSchemaFromSampleObject(sampleObject);
+        }
+       
+        throw new InvalidOperationException("Missing output schema and sample object in configuration (there must be at least one of them)");
     }
 
     public static string GenerateJsonObjectFromSampleObject(string s)

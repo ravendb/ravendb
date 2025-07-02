@@ -17,14 +17,14 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
 {
-    internal abstract class AbstractAiAgentTalkProcessor<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    internal abstract class AbstractAiAgentProcessor<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
         where TOperationContext : JsonOperationContext
     {
 
         private IMemoryContextPool _contextPool;
 
-        public AbstractAiAgentTalkProcessor([NotNull] TRequestHandler requestHandler, IMemoryContextPool contextPool) : base(requestHandler)
+        public AbstractAiAgentProcessor([NotNull] TRequestHandler requestHandler, IMemoryContextPool contextPool) : base(requestHandler)
         {
             _contextPool = contextPool;
         }
@@ -56,17 +56,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             var conStr = GetAiConnectionString(configuration.ConnectionStringName);
 
-            string schema;
-            if (string.IsNullOrWhiteSpace(configuration.OutputSchema) == false)
-            {
-                schema = configuration.OutputSchema;
-            }
-            else if (string.IsNullOrWhiteSpace(configuration.SampleObject) == false)
-            {
-                schema = ChatCompletionClient.GetSchemaFromSampleObject(configuration.SampleObject);
-            }
-            else
-                throw new InvalidOperationException("Missing output schema and sample object in configuration (there must be at least one of them)");
+            var schema = ChatCompletionClient.GetSchema(configuration.OutputSchema, configuration.SampleObject);
 
             using var client = ChatCompletionClient.CreateChatCompletionClient(_contextPool, conStr, schema);
 
