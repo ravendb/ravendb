@@ -83,14 +83,15 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
 
     public override void Transform(GenAiItem item, GenAiStatsScope stats, EtlProcessState state)
     {
-        _stats.Start();
+        using (_stats.Start())
+        {
+            Current = item;
+            _currentRun ??= [];
 
-        Current = item;
-        _currentRun ??= [];
+            Debug.Assert(item.IsDelete is false);
 
-        Debug.Assert(item.IsDelete is false);
-        
-        DocumentScript.Run(Context, Context, "execute", [Current.Document]);
+            DocumentScript.Run(Context, Context, "execute", [Current.Document]);
+        }
     }
     
     private JsValue AddContext(JsValue self, JsValue[] args)
