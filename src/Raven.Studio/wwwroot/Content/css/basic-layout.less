@@ -442,6 +442,12 @@
 
         a {
             text-decoration: none !important;
+            transition: var(--transition-base);
+
+            &:hover {
+                filter: var(--hover-filter);
+                transition: none;
+            }
         }
     }
 }
