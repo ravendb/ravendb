@@ -1,6 +1,6 @@
 ﻿import { DistributionItem, DistributionLegend, LocationDistribution } from "components/common/LocationDistribution";
 import React, { useState } from "react";
-import { DatabaseSharedInfo } from "components/models/databases";
+import { DatabaseSharedInfo, NodeInfo } from "components/models/databases";
 import classNames from "classnames";
 import { useAppSelector } from "components/store";
 import genUtils from "common/generalUtils";
@@ -54,20 +54,21 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
             </DistributionLegend>
 
             {dbState.map((localState) => {
+                const shardNumber = localState.location.shardNumber;
+
                 const shard = (
                     <div className="top shard">
-                        {localState.location.shardNumber != null && (
+                        {shardNumber != null && (
                             <>
                                 <Icon icon="shard" />
-                                {localState.location.shardNumber}
+                                {shardNumber}
                             </>
                         )}
                     </div>
                 );
 
-                const shardNumber = localState.location.shardNumber;
+                const nodesToUse = getNodes(db, shardNumber);
 
-                const nodesToUse = db.isSharded ? db.shards[localState.location.shardNumber].nodes : db.nodes;
                 const node = nodesToUse.find((x) => x.tag === localState.location.nodeTag);
 
                 const uptime = localState.data ? DatabaseUtils.formatUptime(localState.data.upTime) : "";
@@ -82,10 +83,10 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
                         key={genUtils.formatLocation(localState.location)}
                         loading={localState.status === "idle" || localState.status === "loading"}
                         className={classNames("distribution-item pb-2", {
-                            [`shard-${localState.location.shardNumber}`]: isSharded && shardNumber != null,
+                            [`shard-${shardNumber}`]: isSharded && shardNumber != null,
                             hovered: isSharded ? shardNumber === hoveredShardNumber : false,
                         })}
-                        onMouseEnter={() => setHoveredShardNumber(localState.location.shardNumber)}
+                        onMouseEnter={() => setHoveredShardNumber(shardNumber)}
                         onMouseLeave={() => setHoveredShardNumber(null)}
                     >
                         {isSharded && shard}
@@ -112,4 +113,12 @@ export function DatabaseDistribution(props: DatabaseDistributionProps) {
             })}
         </LocationDistribution>
     );
+}
+
+function getNodes(db: DatabaseSharedInfo, shardNumber: number): NodeInfo[] {
+    if (db.isSharded) {
+        return db.shards.find((x) => DatabaseUtils.shardNumber(x.name) === shardNumber)?.nodes ?? [];
+    }
+
+    return db.nodes;
 }
