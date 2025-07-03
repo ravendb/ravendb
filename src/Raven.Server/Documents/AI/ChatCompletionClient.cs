@@ -445,7 +445,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return true;
     }
 
-    public static string GetSchema(string schema, string sampleObject, bool forParameters = false)
+    public static string GetSchemaForRequest(string schema, string sampleObject)
     {
         if (string.IsNullOrWhiteSpace(schema) == false)
         {
@@ -454,17 +454,27 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         if (string.IsNullOrWhiteSpace(sampleObject) == false)
         {
-            return forParameters ? GenerateJsonObjectFromSampleObject(sampleObject) : GetSchemaFromSampleObject(sampleObject);
+            return GetSchemaFromSampleObject(sampleObject);
         }
        
         throw new InvalidOperationException("Missing output schema and sample object in configuration (there must be at least one of them)");
     }
 
-    public static string GenerateJsonObjectFromSampleObject(string s)
+    public static string GetSchemaForTool(string schema, string sampleObject)
     {
-        var doc = JsonDocument.Parse(s);
-        var element = GenerateJsonSchemaObjectFromSampleObject(doc.RootElement);
-        return JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = true });
+        if (string.IsNullOrWhiteSpace(schema) == false)
+        {
+            return schema;
+        }
+
+        if (string.IsNullOrWhiteSpace(sampleObject) == false)
+        {
+            var doc = JsonDocument.Parse(sampleObject);
+            var element = GenerateJsonSchemaObjectFromSampleObject(doc.RootElement);
+            return JsonSerializer.Serialize(element, new JsonSerializerOptions { WriteIndented = true });
+        }
+
+        throw new InvalidOperationException("Missing output schema and sample object in configuration (there must be at least one of them)");
     }
 
     internal static string GetSchemaFromSampleObject(string sampleObject)
@@ -481,7 +491,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return JsonSerializer.Serialize(schema, new JsonSerializerOptions { WriteIndented = true });
     }
 
-    public static JsonObject GenerateJsonSchemaObjectFromSampleObject(JsonElement element)
+    private static JsonObject GenerateJsonSchemaObjectFromSampleObject(JsonElement element)
     {
         var jsonObj = new JsonObject();
 

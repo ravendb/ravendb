@@ -8,7 +8,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-internal class AiAgentProcessorForResumeChat : AbstractSingleAiAgentProcessor
+internal class AiAgentProcessorForResumeChat : AbstractAiAgentProcessor
 {
     public AiAgentProcessorForResumeChat([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

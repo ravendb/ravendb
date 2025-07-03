@@ -4,7 +4,7 @@ using JetBrains.Annotations;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-internal class AiAgentProcessorForStartChat : AbstractSingleAiAgentProcessor
+internal class AiAgentProcessorForStartChat : AbstractAiAgentProcessor
 {
     public AiAgentProcessorForStartChat([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {

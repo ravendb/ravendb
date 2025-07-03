@@ -14,19 +14,18 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using System.Net;
+using Raven.Client.Exceptions;
+using Raven.Server.Documents.Handlers.Processors.MultiGet;
+using Sparrow;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
 {
-    internal abstract class AbstractAiAgentProcessor<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
-        where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
-        where TOperationContext : JsonOperationContext
+    internal abstract class AbstractAiAgentProcessor : AbstractDatabaseHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
     {
 
-        private IMemoryContextPool _contextPool;
-
-        public AbstractAiAgentProcessor([NotNull] TRequestHandler requestHandler, IMemoryContextPool contextPool) : base(requestHandler)
+        public AbstractAiAgentProcessor([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
-            _contextPool = contextPool;
         }
 
         public (BlittableJsonReaderObject Parameter, string UserPrompt) GetStartChatOptions(BlittableJsonReaderObject obj)
@@ -56,9 +55,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             var conStr = GetAiConnectionString(configuration.ConnectionStringName);
 
-            var schema = ChatCompletionClient.GetSchema(configuration.OutputSchema, configuration.SampleObject);
+            var schema = ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
 
-            using var client = ChatCompletionClient.CreateChatCompletionClient(_contextPool, conStr, schema);
+            using var client = ChatCompletionClient.CreateChatCompletionClient(ContextPool, conStr, schema);
 
             var tools = document.GenerateTools(context, configuration);
 
@@ -87,9 +86,6 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             document.UpdateUsage(usage);
             return (usage, userToolRequests, aiResponse.Result, document.ToBlittable(context, configuration));
         }
-
-        // there’s a difference between sharded and single
-        protected abstract Task HandleQueryToolCallsAsync(JsonOperationContext context, AiAgentConfiguration cfg, ChatDocument document, AiResponse result);
 
         private bool TryGetUserTools(AiAgentConfiguration configuration, AiResponse result, out List<ToolRequest> userTools)
         {
@@ -163,6 +159,80 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 return ServerStore.Cluster.ReadRawDatabaseRecord(serverCtx, RequestHandler.DatabaseName).GetAiConnectionString(name)
                        ?? throw new InvalidOperationException("Cannot find connection string: " + name);
             }
+        }
+
+        public async Task HandleQueryToolCallsAsync(JsonOperationContext context, AiAgentConfiguration cfg, ChatDocument document, AiResponse result)
+        {
+            // TODO: handle a response that does both query & action
+            DynamicJsonArray reqs = [];
+            List<string> toolCallsIds = [];
+            var queryUrl = $"/databases/{RequestHandler.DatabaseName}/queries";
+            foreach (var call in result.ToolCalls)
+            {
+                var q = cfg.FindQuery(call.Name);
+                if (q is null)
+                    continue;
+
+                toolCallsIds.Add(call.Id);
+                reqs.Add(new DynamicJsonValue
+                {
+                    ["Url"] = queryUrl,
+                    ["Query"] = null,
+                    ["Method"] = "POST",
+                    ["Content"] = new DynamicJsonValue
+                    {
+                        ["Query"] = q.Query,
+                        // TODO: need to dispose this? Or maybe use a dedicated context per each tool call to avoid high memory?
+                        ["QueryParameters"] = CreateParameters(context, call, document.Parameters)
+                    }
+                });
+            }
+
+            using (var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-agent/multi-query"))
+            using (var handler = new MultiGetHandlerProcessorForPost(RequestHandler))
+            using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
+            {
+                await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
+                memoryStream.Position = 0;
+                // TODO: have to verify that we got a successful result here!
+                using var resp = context.Sync.ReadForMemory(memoryStream, "query/response");
+                if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false)// TODO: shouldn't happen, but add error handling
+                    throw new InvalidOperationException("Missing Results from multi-get reply");
+
+                for (int i = 0; i < results.Length; i++)
+                {
+                    var queryResponse = (BlittableJsonReaderObject)results[i];
+                    if (queryResponse.TryGet("StatusCode", out int statusCode) == false)
+                        throw new InvalidOperationException("Missing status code"); // TODO: shouldn't happen, but add error handling
+                    if (queryResponse.TryGet("Result", out BlittableJsonReaderObject queryResponseResult) is false)
+                        throw new InvalidOperationException("Missing Result from query request output"); // TODO: shouldn't happen, but add error handling
+
+                    if (statusCode != 200)
+                        throw ExceptionDispatcher.Get(queryResponseResult, (HttpStatusCode)statusCode);
+
+                    if (queryResponseResult.TryGet("Results", out BlittableJsonReaderArray queryResult) is false)
+                        throw new InvalidOperationException("Missing Results from query output"); // TODO: shouldn't happen, but add error handling
+
+                    document.Messages.Add(context.ReadObject(new DynamicJsonValue
+                    {
+                        ["tool_call_id"] = toolCallsIds[i],
+                        ["role"] = "tool",
+                        ["content"] = queryResult.ToString()
+                    }, "tool-call/response"));
+                }
+            }
+        }
+
+        public async Task<string> TryPersistAsync(AiAgentConfiguration configuration, string chatId, BlittableJsonReaderObject docBjro)
+        {
+            if (configuration.Persistence is not null)
+            {
+                // we don't pass change vector here, so last write wins
+                MergedPutCommand putCmd = new(docBjro, chatId, changeVector: null, RequestHandler.Database);
+                await RequestHandler.Database.TxMerger.Enqueue(putCmd);
+                return putCmd.PutResult.Id;
+            }
+            return null;
         }
     }
 }

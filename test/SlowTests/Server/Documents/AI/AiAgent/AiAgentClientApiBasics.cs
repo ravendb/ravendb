@@ -67,8 +67,8 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         if (sendSchema)
         {
-            queryTool1.ParametersSchema = ChatCompletionClient.GetSchema(null, queryTool1.ParametersSampleObject, forParameters: true);
-            queryTool2.ParametersSchema = ChatCompletionClient.GetSchema(null, queryTool2.ParametersSampleObject, forParameters: true);
+            queryTool1.ParametersSchema = ChatCompletionClient.GetSchemaForTool(null, queryTool1.ParametersSampleObject);
+            queryTool2.ParametersSchema = ChatCompletionClient.GetSchemaForTool(null, queryTool2.ParametersSampleObject);
             queryTool1.ParametersSampleObject = null;
             queryTool2.ParametersSampleObject = null;
         }
@@ -131,8 +131,8 @@ public class AiAgentClientApiBasics : RavenTestBase
         var tool2sampleObj = "{}";
         if (sendSchema)
         {
-            tool1.ParametersSchema = ChatCompletionClient.GetSchema(null, tool1sampleObj, forParameters: true);
-            tool2.ParametersSchema = ChatCompletionClient.GetSchema(null, tool2sampleObj, forParameters: true);
+            tool1.ParametersSchema = ChatCompletionClient.GetSchemaForTool(null, tool1sampleObj);
+            tool2.ParametersSchema = ChatCompletionClient.GetSchemaForTool(null, tool2sampleObj);
         }
         else
         {

@@ -141,7 +141,7 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
         List<BlittableJsonReaderObject> tools = [];
         foreach (var q in configuration.Queries ?? [])
         {
-            var paramsSchema = ChatCompletionClient.GetSchema(q.ParametersSchema, q.ParametersSampleObject, forParameters: true);
+            var paramsSchema = ChatCompletionClient.GetSchemaForTool(q.ParametersSchema, q.ParametersSampleObject);
             var tool = new DynamicJsonValue
             {
                 ["type"] = "function",
@@ -157,7 +157,7 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
         }
         foreach (var a in configuration.Actions ?? [])
         {
-            string paramsSchema = ChatCompletionClient.GetSchema(a.ParametersSchema, a.ParametersSampleObject, forParameters: true);
+            string paramsSchema = ChatCompletionClient.GetSchemaForTool(a.ParametersSchema, a.ParametersSampleObject);
             var tool = new DynamicJsonValue
             {
                 ["type"] = "function",
