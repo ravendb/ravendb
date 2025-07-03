@@ -130,7 +130,14 @@ for(const comment of this.Comments)
 "
         };
 
+        var etlDone = Etl.WaitForEtlToComplete(store);
+
         store.Maintenance.Send(new AddGenAiOperation(config));
+
+        var db = await GetDatabase(store.Database);
+
+        var etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
+        Assert.NotNull(etlProcess);
 
         const string id = "posts/1";
         using (var session = store.OpenSession())
@@ -145,20 +152,17 @@ for(const comment of this.Comments)
             session.SaveChanges();
         }
 
-        var db = await GetDatabase(store.Database);
+        Assert.True(etlDone.Wait(TimeSpan.FromSeconds(60)));
 
-        var etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
-        Assert.NotNull(etlProcess);
-
-        var etlDone = await WaitForValueAsync(() =>
+        var secondBatchCompleted = await WaitForValueAsync(() =>
         {
             var stats = etlProcess.GetPerformanceStats()
                 .Where(x => x.NumberOfLoadedItems > 0 && x.LastLoadedEtag > 1)
                 .ToArray();
 
             return stats.Length > 0;
-        }, expectedVal: true, timeout: 30_000);
-        Assert.True(etlDone);
+        }, expectedVal: true, timeout: 60_000);
+        Assert.True(secondBatchCompleted);
 
         string changeVector = null;
         using (var session = store.OpenSession())
