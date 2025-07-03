@@ -18,7 +18,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         }
 
         protected abstract ValueTask GetAttachmentsAsync(TOperationContext context, BlittableJsonReaderArray attachments, AttachmentType type, OperationCancelToken operationCancelToken);
-     //   protected abstract void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId);
 
         public override async ValueTask ExecuteAsync()
         {

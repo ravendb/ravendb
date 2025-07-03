@@ -1802,121 +1802,110 @@ namespace Raven.Server.Smuggler.Documents
 
                     // hashBySize == null means there were no attachment streams in the dump
 
-                    //TODO: egor do this only if the dump is old (pre v6.2) (LessThenCurrent)
-                    if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray att) && att.Length > 0)
+                    //TODO: egor change that according to feature version
+                    if (_buildVersionType < BuildVersionType.V7)
                     {
-                        var didWork = false;
-                        var results = new DynamicJsonArray();
-                        for (var i = 0; i < att.Length; i++)
+                        if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray att) && att.Length > 0)
                         {
-                            var attachmentInMetadata = (BlittableJsonReaderObject)att[i];
-                            if (attachmentInMetadata.TryGet(nameof(AttachmentName.Hash), out string hash) == false)
+                            var didWork = false;
+                            var results = new DynamicJsonArray();
+                            for (var i = 0; i < att.Length; i++)
                             {
-                                // this should skip this attachment from the results array
-                                didWork = true;
-                                if (_log.IsInfoEnabled)
-                                    _log.Info($"Ignoring an attachment because couldn't parse its hash: {attachmentInMetadata}");
-                                continue;
-                            }
-
-                            if (attachmentInMetadata.TryGet(nameof(AttachmentName.Size), out long _) == false)
-                            {
-                                if (hashBySize.ContainsKey(hash) == false)
+                                var attachmentInMetadata = (BlittableJsonReaderObject)att[i];
+                                if (attachmentInMetadata.TryGet(nameof(AttachmentName.Hash), out string hash) == false)
                                 {
-                                    //TODO: egor can this happen? we dont have size in attachment metadata and dont have stream 
-                                    //  didWork = true;
+                                    // this should skip this attachment from the results array
+                                    didWork = true;
                                     if (_log.IsInfoEnabled)
-                                        _log.Info($"Ignoring an attachment with hash '{hash}' for document '{modifier.Id}' because couldn't find its size. Attachment metadata: {attachmentInMetadata}");
-                                    // continue;
-                                    Debug.Assert(false, "imported attachment doesn't have size & stream");
-                                    attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
+                                        _log.Info($"Ignoring an attachment because couldn't parse its hash: {attachmentInMetadata}");
+                                    continue;
+                                }
+
+                                if (attachmentInMetadata.TryGet(nameof(AttachmentName.Size), out long _) == false)
+                                {
+                                    if (hashBySize.ContainsKey(hash) == false)
                                     {
-                                        [nameof(AttachmentName.Size)] = 0L
-                                    };
+                                        if (_log.IsInfoEnabled)
+                                            _log.Info(
+                                                $"Ignoring an attachment with hash '{hash}' for document '{modifier.Id}' because couldn't find its size. Attachment metadata: {attachmentInMetadata}");
+                                        Debug.Assert(false, "imported attachment doesn't have size & stream");
+                                        attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata) { [nameof(AttachmentName.Size)] = 0L };
+                                    }
+                                    else
+                                    {
+                                        attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
+                                        {
+                                            [nameof(AttachmentName.Size)] = hashBySize[hash]
+                                        };
+                                    }
+                                }
+
+                                if (attachmentInMetadata.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false)
+                                {
+                                    flags |= AttachmentFlags.None;
+                                    if (attachmentInMetadata.Modifications == null)
+                                    {
+                                        attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
+                                        {
+                                            [nameof(AttachmentName.Flags)] = flags.ToString()
+                                        };
+                                    }
+                                    else
+                                    {
+                                        attachmentInMetadata.Modifications[nameof(AttachmentName.Flags)] = flags.ToString();
+                                    }
+                                }
+
+                                if (attachmentInMetadata.TryGet(nameof(AttachmentName.RetireAt), out DateTime? _) == false)
+                                {
+                                    if (attachmentInMetadata.Modifications == null)
+                                    {
+                                        attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata) { [nameof(AttachmentName.RetireAt)] = null };
+                                    }
+                                    else
+                                    {
+                                        attachmentInMetadata.Modifications[nameof(AttachmentName.RetireAt)] = null;
+                                    }
+                                }
+
+                                if (attachmentInMetadata.TryGet(nameof(AttachmentName.Collection), out string _) == false)
+                                {
+                                    if (attachmentInMetadata.Modifications == null)
+                                    {
+
+                                        Debug.Assert(collectionName != null);
+                                        attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
+                                        {
+                                            [nameof(AttachmentName.Collection)] = collectionName
+                                        };
+                                    }
+                                    else
+                                    {
+                                        attachmentInMetadata.Modifications[nameof(AttachmentName.Collection)] = collectionName;
+                                    }
+                                }
+
+
+                                if (attachmentInMetadata.Modifications != null)
+                                {
+                                    didWork = true;
+                                }
+
+                                results.Add(attachmentInMetadata);
+                            }
+
+                            if (didWork)
+                            {
+                                metadata.Modifications = new DynamicJsonValue(metadata) { [Constants.Documents.Metadata.Attachments] = results };
+
+                                if (data.Modifications != null)
+                                {
+                                    data.Modifications[Constants.Documents.Metadata.Key] = metadata;
                                 }
                                 else
                                 {
-                                    attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
-                                    {
-                                        [nameof(AttachmentName.Size)] = hashBySize[hash]
-                                    };
+                                    data.Modifications = new DynamicJsonValue(data) { [Constants.Documents.Metadata.Key] = metadata };
                                 }
-                            }
-
-                            if (attachmentInMetadata.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false)
-                            {
-                                flags |= AttachmentFlags.None;
-                                if (attachmentInMetadata.Modifications == null)
-                                {
-                                    attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
-                                    {
-                                        [nameof(AttachmentName.Flags)] = flags.ToString()
-                                    };
-                                }
-                                else
-                                {
-                                    attachmentInMetadata.Modifications[nameof(AttachmentName.Flags)] = flags.ToString();
-                                }
-                            }
-
-                            if (attachmentInMetadata.TryGet(nameof(AttachmentName.RetireAt), out DateTime? _) == false)
-                            {
-                                if (attachmentInMetadata.Modifications == null)
-                                {
-                                    attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
-                                    {
-                                        [nameof(AttachmentName.RetireAt)] = null
-                                    };
-                                }
-                                else
-                                {
-                                    attachmentInMetadata.Modifications[nameof(AttachmentName.RetireAt)] = null;
-                                }
-                            }
-
-                            if (attachmentInMetadata.TryGet(nameof(AttachmentName.Collection), out string _) == false)
-                            {
-                                if (attachmentInMetadata.Modifications == null)
-                                {
-
-                                    Debug.Assert(collectionName != null);
-                                    attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
-                                    {
-                                        [nameof(AttachmentName.Collection)] = collectionName
-                                    };
-                                }
-                                else
-                                {
-                                    attachmentInMetadata.Modifications[nameof(AttachmentName.Collection)] = collectionName;
-                                }
-                            }
-
-                      
-                            if (attachmentInMetadata.Modifications != null)
-                            {
-                                didWork = true;
-                            }
-
-                            results.Add(attachmentInMetadata);
-                        }
-
-                        if (didWork)
-                        {
-                            metadata.Modifications = new DynamicJsonValue(metadata)
-                            {
-                                [Constants.Documents.Metadata.Attachments] = results
-                            };
-
-                            if (data.Modifications != null)
-                            {
-                                data.Modifications[Constants.Documents.Metadata.Key] = metadata;
-                            }
-                            else
-                            {
-                                data.Modifications = new DynamicJsonValue(data)
-                                {
-                                    [Constants.Documents.Metadata.Key] = metadata
-                                };
                             }
                         }
                     }

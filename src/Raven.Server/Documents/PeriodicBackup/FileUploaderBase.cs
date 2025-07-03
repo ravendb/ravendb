@@ -84,7 +84,6 @@ public abstract class FileUploaderBase
 
         if (_exceptions.IsEmpty == false)
         {
-            Console.WriteLine("Execute: _exceptions.IsEmpty == false");
             if (_exceptions.Count == 1)
                 throw _exceptions.First();
 

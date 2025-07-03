@@ -9,19 +9,14 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionMerger.Commands;
-using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Smuggler.Documents;
 using Raven.Server.Utils;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Sparrow.Utils;
 using Voron;
-using static Raven.Server.NotificationCenter.Notifications.DatabaseStatsChanged;
-using static Raven.Server.Utils.MetricCacher.Keys;
 
 namespace Raven.Server.Documents.Replication
 {
@@ -525,29 +520,13 @@ namespace Raven.Server.Documents.Replication
                             stream: null, expectedChangeVector: null,  updateDocument: false);
                         continue;
                     }
-                    
+
                     if (resolvedToLatest)
                     {
                         // delete duplicates
-
-                        if (attachment.Flags == AttachmentFlags.Retired)
-                        {
-                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, collectionName: out _,
-                                updateDocument: false,
-                                attachment.Hash, attachment.ContentType, usePartialKey: false);
-                        }
-                        else
-                        {
-                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, collectionName: out _,
-                                updateDocument: false,
-                                attachment.Hash, attachment.ContentType, usePartialKey: false);
-                        }
-
-
-
-
-                   //     Database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentWhenStateUnknown(config, context, cmd.Id, cmd.Name, cmd.ChangeVector, out var collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
-
+                        _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, resolved.LowerId, attachment.Name, expectedChangeVector: null, collectionName: out _,
+                            updateDocument: false,
+                            attachment.Hash, attachment.ContentType, usePartialKey: false);
                     }
                     else
                     {

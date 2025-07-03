@@ -2,12 +2,12 @@
 using System.IO;
 using System.Text;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Indexes;
+using Raven.Server.Documents.Indexes.Static.Attachments;
 using Raven.Server.Exceptions;
 
 namespace Raven.Server.Documents.Indexes.Static
 {
-    public sealed class DynamicAttachment : AbstractDynamicObject, IAttachmentObject
+    public sealed class DynamicAttachment : AbstractDynamicObject, IAttachmentIndexObject
     {
         private readonly Attachment _attachment;
 
@@ -65,14 +65,13 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public DateTime? RetireAt
+        public dynamic RetireAt
         {
             get
             {
                 if (_attachment.RetireAt.HasValue == false)
                 {
-                    return null;
-                    // TODO: egor can I return simply null here? or return DynamicNullObject.Null; ? (also in GetContentAsStream)
+                    return DynamicNullObject.ExplicitNull;
                 }
 
                 return _attachment.RetireAt.Value;

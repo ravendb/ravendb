@@ -51,7 +51,6 @@ namespace Raven.Server.Documents.Handlers
                 await processor.ExecuteAsync();
         }
 
-        //TODO: egor add DeleteAttachmentsOperation
         [RavenAction("/databases/*/attachments/bulk", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
         public async Task DeleteAttachments()
         {
@@ -243,34 +242,6 @@ namespace Raven.Server.Documents.Handlers
         public virtual MergedDeleteAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new MergedDeleteAttachmentsCommand { Deletes = Deletes, Database = database };
-        }
-    }
-
-
-    internal sealed class MergedDeleteRetiredAttachmentsCommand : MergedDeleteAttachmentsCommand
-    {
-        protected override long ExecuteCmd(DocumentsOperationContext context)
-        {
-            foreach (var delete in Deletes)
-            {
-                Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, delete.DocumentId, delete.Name, null, collectionName: out _);
-            }
-
-            return 1;
-        }
-
-        public override IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction,
-            MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>> ToDto(DocumentsOperationContext context)
-        {
-            return new MergedDeleteRetiredAttachmentsCommandDto { Deletes = Deletes };
-        }
-
-        internal sealed class MergedDeleteRetiredAttachmentsCommandDto : MergedDeleteAttachmentsCommandDto
-        {
-            public override MergedDeleteRetiredAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
-            {
-                return new MergedDeleteRetiredAttachmentsCommand { Deletes = Deletes, Database = database };
-            }
         }
     }
 }

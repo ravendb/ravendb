@@ -82,9 +82,12 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                     value = new PropertyDescriptor(new JsString(_attachment.Hash), writable: false, enumerable: false, configurable: false);
                 else if (property == nameof(IAttachmentObject.Size))
                     value = new PropertyDescriptor(_attachment.Size, writable: false, enumerable: false, configurable: false);
+                else if (property == nameof(IAttachmentObject.Flags))
+                    value = new PropertyDescriptor((int)_attachment.Flags, writable: false, enumerable: false, configurable: false);
+                else if (property == nameof(IAttachmentObject.RetireAt))
+                    value = _attachment.RetireAt.HasValue ? new PropertyDescriptor(new JsDate(_engine, _attachment.RetireAt.Value), writable: false, enumerable: false, configurable: false) : null;
                 else if (property == GetContentAsStringMethodName)
                     value = new PropertyDescriptor(new ClrFunction(Engine, GetContentAsStringMethodName, GetContentAsString), writable: false, enumerable: false, configurable: false);
-
                 if (value != null)
                     _properties[property] = value;
             }

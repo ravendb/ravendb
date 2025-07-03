@@ -167,29 +167,10 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                 case CommandType.AttachmentPUT:
                     var docId = EtlGetDocIdFromPrefixIfNeeded(cmd.Id, cmd, lastPutResult);
 
-                    // TODO: egor AttachmentStorage  do here something normal and don't pass so many params and flags 
+                    AttachmentStream attachmentStream = GetAttachmentStream(attachmentIterator, out Stream stream);
+                    AttachmentDetailsServer attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, attachmentStream.Hash, flags: AttachmentFlags.None, stream.Length, cmd.RetireAt, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
 
-                    AttachmentDetailsServer attachmentPutResult;
-                    if (cmd.FromEtl)
-                    {
-                        if (cmd.Flags != AttachmentFlags.Retired)
-                        {
-                            AttachmentStream attachmentStream = GetAttachmentStream(attachmentIterator, out Stream stream);
-                            attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
-                                cmd.ContentType, attachmentStream.Hash, cmd.Flags, cmd.SizeInBytes, cmd.RetireAt, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
-                        }
-                        else
-                        {
-                            attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
-                                cmd.ContentType, cmd.Hash, cmd.Flags, cmd.SizeInBytes, cmd.RetireAt, cmd.ChangeVector, stream: null, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
-                        }
-                    }
-                    else
-                    {
-                        AttachmentStream attachmentStream = GetAttachmentStream(attachmentIterator, out Stream stream);
-                        attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name,
-                            cmd.ContentType, attachmentStream.Hash, flags: AttachmentFlags.None, stream.Length, retireAtDt: cmd.RetireAt, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
-                    }
+                    Debug.Assert(cmd.Flags != AttachmentFlags.Retired, "cmd.Flags != AttachmentFlags.Retired");
 
                     LastChangeVector = attachmentPutResult.ChangeVector;
 

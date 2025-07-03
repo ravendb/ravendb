@@ -12,7 +12,6 @@ using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 

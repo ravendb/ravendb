@@ -10,7 +10,7 @@ namespace Raven.Client.Documents.Commands.Batches
 {
     public sealed class PutAttachmentCommandData : ICommandData
     {
-        [Obsolete("This method is deprecated and will be removed in next RavenDB major version, use the overload with retireAt instead")]
+        [Obsolete("This constructor is deprecated and will be removed in next RavenDB major version, use the overload with retireAt instead")]
         public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector)
             : this(documentId, name, stream, contentType, changeVector, retireAt: null, size: null, flags: AttachmentFlags.None, hash: null, fromEtl: false)
         {

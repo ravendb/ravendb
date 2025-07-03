@@ -95,28 +95,5 @@ namespace Raven.Client.Documents.Session
                 return await Session.Operations.SendAsync(operation, sessionInfo: SessionInfo, token).ConfigureAwait(false);
             }
         }
-
-        public async Task DeleteAsync(string documentId, string name)
-        {
-            using (Session.AsyncTaskHolder())
-            {
-                var command = new DeleteAttachmentOperation.DeleteAttachmentCommand(documentId, name, null);
-                Session.IncrementRequestCount();
-                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo).ConfigureAwait(false);
-            }
-        }
-
-        public async Task DeleteAsync(object entity, string name)
-        {
-            using (Session.AsyncTaskHolder())
-            {
-                if (Session.DocumentsByEntity.TryGetValue(entity, out DocumentInfo document) == false)
-                    ThrowEntityNotInSessionOrMissingId(entity);
-
-                var command = new DeleteAttachmentOperation.DeleteAttachmentCommand(document.Id, name, null);
-                Session.IncrementRequestCount();
-                await RequestExecutor.ExecuteAsync(command, Context, sessionInfo: SessionInfo).ConfigureAwait(false);
-            }
-        }
     }
 }

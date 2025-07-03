@@ -15,7 +15,6 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
-using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Server.Logging;
 using Voron;
@@ -84,9 +83,7 @@ namespace Raven.Server.Documents
             var currentTime = _database.Time.GetUtcNow();
             try
             {
-                var lazyDirectUpload = new Lazy<DirectFileUploader>(() => new DirectFileUploader(_uploaderSettings, retentionPolicyParameters: null, Logger,
-                    FileUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _token));
-
+                var directUpload = new DirectFileUploader(_uploaderSettings, retentionPolicyParameters: null, Logger, FileUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _token);
                 using var _ = _database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
                 while (totalCount < maxItemsToProcess)
                 {
@@ -117,7 +114,6 @@ namespace Raven.Server.Documents
                             return totalCount;
                         }
 
-                        var directUpload = lazyDirectUpload.Value;
                         using (directUpload.Initialize())
                         {
                             // upload the attachments to cloud and update the document
