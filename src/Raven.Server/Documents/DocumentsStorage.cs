@@ -1119,7 +1119,7 @@ namespace Raven.Server.Documents
         public Document Get(DocumentsOperationContext context, LazyStringValue id, DocumentFields fields = DocumentFields.All, bool throwOnConflict = true)
         {
             if (id == null)
-                throw new ArgumentException("Argument is null or whitespace", nameof(id));
+                throw new ArgumentException("Argument is null", nameof(id));
             if (context.Transaction == null)
                 throw new ArgumentException("Context must be set with a valid transaction before calling Get", nameof(context));
 

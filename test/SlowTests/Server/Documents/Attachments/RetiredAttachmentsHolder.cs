@@ -7,6 +7,7 @@ using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
+using Elastic.Clients.Elasticsearch;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
@@ -1030,12 +1031,15 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 await CreateDocs(store, docsCount, ids);
                 await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc);
 
+
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                 GetStorageAttachmentsMetadataFromAllAttachments(database);
                 Assert.Equal(attachmentsCount, Attachments.Count);
 
                 var index = new MultipleAttachmentsIndex();
                 await index.ExecuteAsync(store);
+                WaitForUserToContinueTheTest(store);
+
                 await Indexes.WaitForIndexingAsync(store);
                 using (var session = store.OpenSession())
                 {

@@ -417,7 +417,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                 using (var session = store.OpenAsyncSession())
                 {
-                    await session.Advanced.Attachments.DeleteAsync(id, "test.png");
+                    session.Advanced.Attachments.Delete(id, "test.png");
                     await session.SaveChangesAsync();
 
                     var exists = await session.Advanced.Attachments.ExistsAsync(id, "test.png");
@@ -458,7 +458,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     var order = await session.LoadAsync<Order>(id);
-                    await session.Advanced.Attachments.DeleteAsync(order, "test.png");
+                    session.Advanced.Attachments.Delete(order, "test.png");
                     await session.SaveChangesAsync();
 
                     var exists = await session.Advanced.Attachments.ExistsAsync(id, "test.png");

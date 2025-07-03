@@ -505,9 +505,6 @@ namespace Raven.Server.Documents.Replication.Senders
                     if (ShouldSendAttachmentStream(attachment))
                     {
                         stats.RecordRetiredAttachmentStreamOutput(attachment.Size);
-                        //TODO: egor - I need a better way read teh stream, since this will fill the memory with attachment, the issue is I need to write the stream size first, and with network streams I can't do that,
-                        //so need to change the replication algorithm to allow for that
-                   
                         var hash = attachment.Base64Hash.ToString();
                         using Stream stream = Client.Util.AsyncHelpers.RunSync(() => _parent._database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(_downloader.Value, hash));
                         var memStream = new MemoryStream();

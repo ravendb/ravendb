@@ -51,8 +51,8 @@ internal class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHa
             }
             catch (ArgumentException e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Skip Content-Disposition header because of not valid file name: {attachment.Name}", e);
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Skip Content-Disposition header because of not valid file name: {attachment.Name}", e);
             }
 
             try
@@ -61,8 +61,8 @@ internal class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHa
             }
             catch (InvalidOperationException e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Skip Content-Type header because of not valid content type: {attachment.ContentType}", e);
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Skip Content-Type header because of not valid content type: {attachment.ContentType}", e);
                 if (HttpContext.Response.Headers.ContainsKey(Constants.Headers.ContentType))
                     HttpContext.Response.Headers.Remove(Constants.Headers.ContentType);
             }

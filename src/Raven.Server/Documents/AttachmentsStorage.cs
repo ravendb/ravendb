@@ -203,7 +203,7 @@ namespace Raven.Server.Documents
 
                 var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
                 if (table.ReadByKey(keySlice, out TableValueReader attachmentTvr) == false)
-                    throw new AttachmentDoesNotExistException($"Cannot retire attachment '{attachment.Name}' because it doesn't exists.");
+                    throw new AttachmentDoesNotExistException($"Cannot retire attachment '{keySlice}' that belongs to document '{attachment.DocumentId}' because it doesn't exists.");
 
                 var attachmentEtag = _documentsStorage.GenerateNextEtag();
                 var changeVector = _documentsStorage.GetNewChangeVector(context, attachmentEtag);
@@ -218,7 +218,6 @@ namespace Raven.Server.Documents
 
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
-                    // add Retired flag
                     tvb.Add(keySlice.Content.Ptr, keySlice.Size);
                     tvb.Add(Bits.SwapBytes(attachmentEtag));
                     tvb.Add(nameSlice);
@@ -227,7 +226,7 @@ namespace Raven.Server.Documents
                     tvb.Add(context.GetTransactionMarker());
                     tvb.Add(changeVectorSlice);
                     tvb.Add(size);
-                    tvb.Add(Bits.SwapBytes((int)AttachmentFlags.Retired));
+                    tvb.Add(Bits.SwapBytes((int)AttachmentFlags.Retired)); // add Retired flag
                     tvb.Add(retireAt);
                     tvb.Add(collectionSlice);
                     table.Update(attachmentTvr.Id, tvb);
@@ -1375,12 +1374,14 @@ namespace Raven.Server.Documents
                 table.ReadByKey(key, out tvr) == false)
             {
                 if (expectedChangeVector != null)
+                {
                     throw new ConcurrencyException($"Attachment {name} with key '{key}' does not exist, " +
                                                    $"but delete was called with change vector '{expectedChangeVector}'. " +
                                                    "Optimistic concurrency violation, transaction will be aborted.")
                     {
                         ExpectedChangeVector = expectedChangeVector
                     };
+                }
 
                 // This basically means that we tried to delete attachment that doesn't exist.
                 long attachmentEtag;
@@ -1634,26 +1635,6 @@ namespace Raven.Server.Documents
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using var scope = SliceFromAttachmentFlagAndSeparator(context, flag, out var slice);
             return table.GetCountOfMatchesForPrefix(AttachmentsSchema.DynamicKeyIndexes[AttachmentsFlagAndHashSlice], slice);
-        }
-
-        public IEnumerable<ResourceWithDisposable<Slice, IDisposable>> GetAttachmentKeysByFlagAndHashIndexPrefix(DocumentsOperationContext context, AttachmentFlags flag, long take = long.MaxValue)
-        {
-            if (take <= 0)
-                yield break;
-
-            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            using (SliceFromAttachmentFlagAndSeparator(context, flag, out var requiredPrefix))
-            {
-                foreach (var seek in table.SeekByPrefix(AttachmentsSchema.DynamicKeyIndexes[AttachmentsFlagAndHashSlice], requiredPrefix, Slices.Empty, 0, pullTvr: true))
-                {
-                    // disposed by the caller
-                    var scope = TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref seek.Result.Reader, out var keySlice);
-                    yield return new ResourceWithDisposable<Slice, IDisposable>(scope, keySlice);
-
-                    if (--take <= 0)
-                        break;
-                }
-            }
         }
 
         private static ByteStringContext<ByteStringMemoryCache>.InternalScope SliceFromAttachmentFlagAndSeparator(DocumentsOperationContext context, AttachmentFlags flag, out Slice slice)

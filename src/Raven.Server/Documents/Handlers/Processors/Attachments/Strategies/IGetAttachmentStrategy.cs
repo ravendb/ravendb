@@ -40,11 +40,6 @@ public interface IGetAttachmentStrategy
                 $"Cannot {method} retired attachment '{name}' on document '{documentId}' because {nameof(RetiredAttachmentsConfiguration)} is disabled.");
         }
 
-        //if (config.RetirePeriods.ContainsKey(collectionStr) == false)
-        //{
-        //    throw new InvalidOperationException($"Cannot {method} retired attachment '{name}' on document '{documentId}' because doesn't have {nameof(RetiredAttachmentsConfiguration)} for collection: '{collectionStr}'.");
-        //}
-
         return collectionStr;
     }
 

@@ -5,7 +5,14 @@ using Raven.Client.Documents.Attachments;
 
 namespace Raven.Client.Documents.Indexes
 {
-    public interface IAttachmentObject
+    public interface IAttachmentObject : IAttachmentObjectBase
+    {
+        public DateTime? RetireAt { get; }
+
+        public AttachmentFlags Flags { get; }
+    }
+
+    public interface IAttachmentObjectBase
     {
         public string Name { get; }
 
@@ -14,10 +21,6 @@ namespace Raven.Client.Documents.Indexes
         public string ContentType { get; }
 
         public long Size { get; }
-
-        public DateTime? RetireAt { get; }
-
-        public AttachmentFlags Flags { get; }
 
         public string GetContentAsString();
 
