@@ -80,12 +80,13 @@ $prefix: "bs-";
     color: var(--text-color);
 }
 
-.wizard-content, .wizard-sidebar {
+.wizard-content,
+.wizard-sidebar {
     color: #{$base-text-color};
 
     .form-control::placeholder {
         color: #{$text-muted-color};
-        opacity: .5;
+        opacity: 0.5;
     }
 
     .input-group-text {
