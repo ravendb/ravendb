@@ -4,11 +4,11 @@ using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.AI;
+using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats;
@@ -50,8 +50,22 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             _chatCompletionClient = GetClient();
     }
 
-    private IChatCompletionClient GetClient() => ChatCompletionClient.CreateChatCompletionClient(Database.DocumentsStorage.ContextPool, Configuration.Connection,
-        schema: ChatCompletionClient.GetSchemaForRequest(Configuration.JsonSchema, Configuration.SampleObject));
+    private IChatCompletionClient GetClient()
+    {
+        var schema = Configuration.JsonSchema;
+        if (string.IsNullOrWhiteSpace(schema))
+            schema = OllamaChatCompletionClient.GetSchemaFor(Configuration.SampleObject);
+
+        var connectorType = Configuration.Connection.GetActiveProvider();
+        IChatCompletionClient client = connectorType switch
+        {
+            AiConnectorType.Ollama => new OllamaChatCompletionClient(Configuration, schema, Database.ServerStore.ContextPool, IChatCompletionClient.DefaultConventions),
+            AiConnectorType.OpenAi => new OpenAiChatCompletionClient(Configuration, schema, Database.ServerStore.ContextPool, IChatCompletionClient.DefaultConventions),
+            _ => throw new NotSupportedException($"The specified model (\"{connectorType.ToString()}\") is not supported.")
+        };
+
+        return client;
+    }
 
     public override EtlType EtlType => EtlType.GenAi;
     public override bool ShouldTrackCounters() => false;

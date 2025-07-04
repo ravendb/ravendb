@@ -58,9 +58,6 @@ namespace Raven.Client.Exceptions.Commercial
         [Description("Gen AI")]
         GenAi,
 
-        [Description("AI Agent")]
-        AiAgent,
-
         [Description("Cores Limit")]
         Cores,
 

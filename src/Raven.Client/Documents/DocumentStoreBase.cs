@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.AI;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
@@ -42,8 +41,6 @@ namespace Raven.Client.Documents
         /// Whether the instance has been disposed
         /// </summary>
         public bool WasDisposed { get; protected set; }
-
-        public abstract AiOperations AI { get; }
 
         /// <summary>
         /// Subscribe to change notifications from the server

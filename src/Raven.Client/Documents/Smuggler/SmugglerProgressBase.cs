@@ -115,8 +115,6 @@ public abstract class SmugglerProgressBase : IOperationProgress
         
         public bool AiConnectionStringsUpdated { get; set; }
 
-        public bool AiAgentsUpdated { get; set; }
-
         public bool ClientConfigurationUpdated { get; set; }
 
         public bool UnusedDatabaseIdsUpdated { get; set; }
@@ -174,9 +172,6 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (AiConnectionStringsUpdated)
                 json[nameof(AiConnectionStringsUpdated)] = AiConnectionStringsUpdated;
-
-            if (AiAgentsUpdated)
-                json[nameof(AiAgentsUpdated)] = AiAgentsUpdated;
 
             if (ClientConfigurationUpdated)
                 json[nameof(ClientConfigurationUpdated)] = ClientConfigurationUpdated;
@@ -279,9 +274,6 @@ public abstract class SmugglerProgressBase : IOperationProgress
 
             if (AiConnectionStringsUpdated)
                 sb.AppendLine("- AI Connection Strings");
-
-            if (AiAgentsUpdated)
-                sb.AppendLine("- AI Agents");
 
             if (ConflictSolverConfigUpdated)
                 sb.AppendLine("- Conflicts Solvers");

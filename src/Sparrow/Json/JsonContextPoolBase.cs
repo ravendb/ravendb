@@ -9,7 +9,7 @@ using Sparrow.Utils;
 
 namespace Sparrow.Json
 {
-    public abstract class JsonContextPoolBase<T> : ILowMemoryHandler, IMemoryContextPool
+    public abstract class JsonContextPoolBase<T> : ILowMemoryHandler, IDisposable
         where T : JsonOperationContext
     {
         private readonly IRavenLogger _logger;

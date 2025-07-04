@@ -71,5 +71,4 @@ public enum LicenseAttribute
     SnowflakeEtl,
     AiEmbeddingsGen,
     GenAi,
-    AiAgent
 }

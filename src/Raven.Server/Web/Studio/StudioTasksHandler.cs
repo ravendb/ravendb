@@ -9,6 +9,7 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
+using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.Indexes;
@@ -322,7 +323,7 @@ namespace Raven.Server.Web.Studio
                 }
 
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
-                using (var chat = new ChatCompletionClient(ServerStore.ContextPool, uri, apiKey, model: null, organization, project, structuredOutputSchema: null))
+                using (var chat = new GenericChatCompletionClientForTesting(uri, model: null, apiKey: apiKey, organizationId: organization, projectId: project, ServerStore.ContextPool))
                 {
                     await chat.ProxyModelsAsync(HttpContext.Response, cts.Token);
                 }
@@ -349,7 +350,7 @@ namespace Raven.Server.Web.Studio
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var schema = ChatCompletionClient.GetSchemaFromSampleObject(sampleObj.ToString());
+                    var schema = AbstractChatCompletionClient<JsonOperationContext>.GetSchemaFor(sampleObj.ToString());
 
                     writer.WriteStartObject();
                     writer.WritePropertyName("Result");

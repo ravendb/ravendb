@@ -8,7 +8,6 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
@@ -337,14 +336,5 @@ namespace Raven.Client.Json.Serialization
 
         public static readonly Func<BlittableJsonReaderObject, GenAi> GetOngoingTaskGenAiResult = GenerateJsonDeserializationRoutine<GenAi>();
 
-        public static readonly Func<BlittableJsonReaderObject, AiAgentConfiguration> AiAgentConfiguration = GenerateJsonDeserializationRoutine<AiAgentConfiguration>();
-        
-        public static readonly Func<BlittableJsonReaderObject, AiAgentConfigurationResult> AiAgentConfigurationResult = GenerateJsonDeserializationRoutine<AiAgentConfigurationResult>();
-        
-        public static readonly Func<BlittableJsonReaderObject, AiUsage> AiUsage = GenerateJsonDeserializationRoutine<AiUsage>();
-
-        public static readonly Func<BlittableJsonReaderObject, ToolRequest> ToolRequest = GenerateJsonDeserializationRoutine<ToolRequest>();
-
-        public static readonly Func<BlittableJsonReaderObject, ToolResponse> ToolResponse = GenerateJsonDeserializationRoutine<ToolResponse>();
     }
 }

@@ -6,6 +6,7 @@ using Microsoft.SemanticKernel.Embeddings;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
+using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Json;
 using Raven.Server.Web.System;
@@ -95,7 +96,12 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                             $"Failed to generate embeddings for test values. Expected '{EmbeddingsHelper.ValuesListToVerifyConnection.Count}' result, but got '{embeddings.Count}'.");
                         break;
                     case AiModelType.Chat:
-                        using (var client = ChatCompletionClient.CreateChatCompletionClient( ServerStore.ContextPool, aiConnectionString, schema: null))
+                        if (aiConnectionString.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model) == false)
+                            throw new InvalidOperationException(
+                                $"Invalid provider settings for {nameof(AiConnectionString)} with model type '{nameof(AiConnectionString.ModelType.Chat)}'. " +
+                                $"Supported providers for '{nameof(AiConnectionString.ModelType.Chat)}' model type are '{nameof(AiConnectorType.OpenAi)}' and '{nameof(AiConnectorType.Ollama)}'");
+                        
+                        using (var client = new GenericChatCompletionClientForTesting(uri, model, apiKey, organizationId: null, projectId: null, ServerStore.ContextPool))
                         {
                             await client.CompleteAsync("foo", "bar", HttpContext.RequestAborted);
                         }

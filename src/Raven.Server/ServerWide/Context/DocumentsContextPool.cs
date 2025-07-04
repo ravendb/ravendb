@@ -11,7 +11,7 @@ using Sparrow.Logging;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public sealed class DocumentsContextPool : JsonContextPoolBase<DocumentsOperationContext>, ITransactionContextPool<DocumentsOperationContext>
+    public sealed class DocumentsContextPool : JsonContextPoolBase<DocumentsOperationContext>, IDocumentsContextPool
     {
         private DocumentDatabase _database;
 

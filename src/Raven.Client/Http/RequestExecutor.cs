@@ -256,7 +256,7 @@ namespace Raven.Client.Http
             TimeSpan? httpPooledConnectionIdleTimeout = null;
 #endif
 
-            return HttpClientCacheKey.Create(Certificate, Conventions.UseHttpDecompression, Conventions.HasExplicitlySetDecompressionUsage, httpPooledConnectionLifetime, httpPooledConnectionIdleTimeout, GlobalHttpClientTimeout, Conventions.HttpClientType, Conventions.ConfigureHttpMessageHandler);
+            return new HttpClientCacheKey(Certificate, Conventions.UseHttpDecompression, Conventions.HasExplicitlySetDecompressionUsage, httpPooledConnectionLifetime, httpPooledConnectionIdleTimeout, GlobalHttpClientTimeout, Conventions.HttpClientType, Conventions.ConfigureHttpMessageHandler);
         }
 
         private static bool ShouldRemoveHttpClient(SocketException exception)

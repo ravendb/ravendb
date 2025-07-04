@@ -202,7 +202,7 @@ public sealed class AiConnectionString : ConnectionString
         return provider?.EmbeddingsMaxConcurrentBatches ?? globalQueryEmbeddingsMaxConcurrentBatches;
     }
 
-    internal AbstractAiSettings GetActiveProviderInstance()
+    private AbstractAiSettings GetActiveProviderInstance()
     {
         return OpenAiSettings ??
                AzureOpenAiSettings ??
@@ -213,23 +213,11 @@ public sealed class AiConnectionString : ConnectionString
                (AbstractAiSettings)MistralAiSettings;
     }
 
-    internal bool TryGetParametersForGenAiTesting(out string uri, out string apiKey, out string model, out string organizationId, out string projectId)
+    internal bool TryGetParametersForGenAiTesting(out string uri, out string apiKey, out string model)
     {
         uri = null;
         apiKey = null;
         model = null;
-        organizationId = null;
-        projectId = null;
-
-        switch (ModelType)
-        {
-            case AiModelType.Chat:
-                break;
-            default:
-                throw new InvalidOperationException(
-                    $"Invalid provider settings for '{Name}' with model type '{ModelType}'. " +
-                    $"Supported providers for '{nameof(ModelType.Chat)}' model type are '{nameof(AiConnectorType.OpenAi)}' and '{nameof(AiConnectorType.Ollama)}'");
-        }
 
         var provider = GetActiveProvider();
         switch (provider)
@@ -238,8 +226,6 @@ public sealed class AiConnectionString : ConnectionString
                 uri = OpenAiSettings.Endpoint;
                 apiKey = OpenAiSettings.ApiKey;
                 model = OpenAiSettings.Model;
-                organizationId = OpenAiSettings.OrganizationId;
-                projectId = OpenAiSettings.ProjectId;
                 return true;
             case AiConnectorType.Ollama:
                 uri = OllamaSettings.Uri; 

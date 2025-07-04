@@ -104,7 +104,6 @@ export class LicenseStubs {
             IsCloud: false,
             HasEmbeddingsGeneration: true,
             HasGenAi: true,
-            HasAiAgent: true,
             HasDocumentsCompression: true,
             HasTimeSeriesRollupsAndRetention: true,
             HasAdditionalAssembliesFromNuGet: true,

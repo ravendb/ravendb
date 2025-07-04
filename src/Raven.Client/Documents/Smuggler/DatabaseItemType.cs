@@ -66,7 +66,6 @@ namespace Raven.Client.Documents.Smuggler
         SnowflakeEtls = 1 << 31,
         EmbeddingsGenerations = 1L << 32,
         AiConnectionStrings = 1L << 33,
-        GenAiEtls = 1L << 34,
-        AiAgents = 1L << 35,
+        GenAiEtls = 1L << 34
     }
 }
