@@ -125,11 +125,8 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         
         if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson) == false)
             throw new UnexpectedResponseException("No choices property in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
-
-        using (usageJson)
-        {
-            usage.UpdateFrom(usageJson);
-        }
+        
+        usage.UpdateFrom(usageJson);
 
         if (string.IsNullOrEmpty(content))
         {
