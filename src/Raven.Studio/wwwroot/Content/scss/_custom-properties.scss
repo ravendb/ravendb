@@ -79,3 +79,55 @@ $prefix: "bs-";
 
     color: var(--text-color);
 }
+
+.wizard-content, .wizard-sidebar {
+    color: #{$base-text-color};
+
+    .form-control::placeholder {
+        color: #{$text-muted-color};
+        opacity: .5;
+    }
+
+    .input-group-text {
+        --panel-bg-2: #{$panel-bg-2};
+    }
+
+    .react-select-container .react-select__control .react-select__value-container * {
+        color: #{$text-color};
+    }
+
+    .ace-editor {
+        --text-color: #{$text-color};
+        --text-muted: #{$text-muted-color};
+
+        .ace_editor {
+            .ace_cursor {
+                color: var(--text-color);
+            }
+        }
+
+        .actions {
+            --panel-bg-2: #{$panel-bg-2};
+
+            .btn-link {
+                color: var(--text-color) !important;
+            }
+        }
+    }
+
+    .tab-content {
+        --text-emphasis: #{$text-emphasis-color};
+        --text-color: inherit;
+
+        .react-select-container {
+            --text-color: #{$text-color};
+
+            .react-select__menu {
+                --panel-bg-1: #{$panel-bg-1};
+                --border-color-light: #{$border-color-light};
+                --panel-bg-2: #{$panel-bg-2};
+                --text-emphasis: #{$text-emphasis-color};
+            }
+        }
+    }
+}

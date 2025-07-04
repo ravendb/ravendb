@@ -182,7 +182,7 @@ export default function EditGenAiTaskPlayground() {
                 <div className="panel-bg-1 border border-secondary rounded-2 mt-1">
                     <Tab.Container id="playground-tabs" activeKey={activeTab}>
                         <div className="hstack panel-bg-2 border-bottom border-secondary p-2 justify-content-between border-top-left-radius border-top-right-radius">
-                            <Nav>
+                            <Nav className="gap-2">
                                 <Nav.Item onClick={() => setActiveTab("document")}>
                                     <ConditionalPopover
                                         conditions={{
@@ -201,8 +201,8 @@ export default function EditGenAiTaskPlayground() {
                                     >
                                         <Nav.Link
                                             eventKey="document"
-                                            className={classNames({
-                                                "text-muted":
+                                            className={classNames("no-decor", {
+                                                "opacity-50":
                                                     currentStep !== "context" && currentStep !== "updateScript",
                                             })}
                                         >
@@ -213,7 +213,7 @@ export default function EditGenAiTaskPlayground() {
                                 </Nav.Item>
                                 {(currentStep === "modelInput" || currentStep === "updateScript") && (
                                     <Nav.Item onClick={() => setActiveTab("context")}>
-                                        <Nav.Link eventKey="context">
+                                        <Nav.Link eventKey="context" className="no-decor">
                                             <Icon icon="indent" />
                                             Context input
                                         </Nav.Link>
@@ -230,7 +230,9 @@ export default function EditGenAiTaskPlayground() {
                                         >
                                             <Nav.Link
                                                 eventKey="modelOutput"
-                                                className={classNames({ "text-muted": currentStep !== "updateScript" })}
+                                                className={classNames("no-decor", {
+                                                    "text-muted": currentStep !== "updateScript",
+                                                })}
                                             >
                                                 <Icon icon="resources" />
                                                 Model output
@@ -245,7 +247,7 @@ export default function EditGenAiTaskPlayground() {
                                     toggleSelection={(e) => handleEditModeToggle(e.target.checked)}
                                     selected={isPlaygroundEditMode}
                                     color="info"
-                                    className="mt-1"
+                                    className="mb-0"
                                 >
                                     Edit mode
                                     <PopoverWithHoverWrapper

@@ -29,7 +29,7 @@
     .sidebar {
         grid-area: 1 / 4 / 13 / 6;
         padding: sizes.$gutter;
-        background-color: colors.$panel-bg-1;
+        background-color: colors.$panel-bg-1-var;
     }
 
     .nav-item {
@@ -39,7 +39,7 @@
             padding: 3px 6px;
 
             &.active {
-                background-color: colors.$panel-bg-3;
+                background-color: colors.$panel-bg-3-var;
             }
 
             &:hover {
@@ -73,15 +73,15 @@
             }
 
             .diff-wrapper {
-                border: 1px solid colors.$border-color-light;
+                border: 1px solid colors.$border-color-light-var;
                 border-radius: sizes.$border-radius;
 
                 .diff-header {
                     text-align: center;
-                    border-bottom: 1px solid colors.$border-color-light;
+                    border-bottom: 1px solid colors.$border-color-light-var;
                     border-top-left-radius: sizes.$border-radius;
                     border-top-right-radius: sizes.$border-radius;
-                    background-color: colors.$panel-bg-2;
+                    background-color: colors.$panel-bg-2-var;
                     padding: 2px sizes.$gutter;
                 }
             }

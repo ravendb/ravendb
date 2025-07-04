@@ -192,7 +192,7 @@ export default function EditGenAiTaskModelFields() {
                                 )}
                                 {canRegenerateSchema && (
                                     <ButtonWithSpinner
-                                        className="rounded-pill position-absolute"
+                                        className="rounded-pill position-absolute z-1"
                                         style={{
                                             bottom: "20px",
                                             right: "54px",

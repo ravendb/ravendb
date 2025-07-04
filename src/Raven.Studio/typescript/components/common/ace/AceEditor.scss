@@ -28,11 +28,11 @@ $pre-bg: colors.$well-bg-var;
         .fullScreenModeLabel {
             position: absolute;
             font-size: 12px;
-            opacity: 0.4;
-            bottom: 42px;
-            right: 38px;
+            bottom: sizes.$gutter;
+            right: sizes.$gutter-md;
             height: 0;
             opacity: 0.3;
+            color: colors.$text-color-var;
         }
 
         .actions {

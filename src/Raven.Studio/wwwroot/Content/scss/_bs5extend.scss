@@ -667,3 +667,14 @@ $filtering-input-bg: $toggle-bg !default;
     width: 100%;
     height: 100%;
 }
+
+.input-group {
+    .react-select__control {
+        border-top-right-radius: 0;
+        border-bottom-right-radius: 0;
+    }
+
+    .input-group-text {
+        z-index: 1;
+    }
+}
