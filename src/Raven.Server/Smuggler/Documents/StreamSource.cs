@@ -561,6 +561,32 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
+                if (reader.TryGet(nameof(databaseRecord.AiAgents), out BlittableJsonReaderObject aiAgents) && aiAgents != null)
+                {
+                    try
+                    {
+                        foreach (var agentName in aiAgents.GetPropertyNames())
+                        {
+                            if (aiAgents.TryGet(agentName, out BlittableJsonReaderObject agentConfig) == false)
+                            {
+                                if (_log.IsInfoEnabled)
+                                    _log.Info($"Wasn't able to import the AI agent {agentName} from smuggler file. Skipping.");
+
+                                continue;
+                            }
+
+                            databaseRecord.AiAgents[agentName] = JsonDeserializationCluster.AiAgentConfiguration(agentConfig);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        databaseRecord.AiAgents.Clear();
+                        if (_log.IsInfoEnabled)
+                            _log.Info("Wasn't able to import the AI agents from smuggler file. Skipping.", e);
+                    }
+                }
+
+
                 if (reader.TryGet(nameof(databaseRecord.SqlConnectionStrings), out BlittableJsonReaderObject sqlConnectionStrings) &&
                     sqlConnectionStrings != null)
                 {

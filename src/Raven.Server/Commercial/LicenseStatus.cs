@@ -240,6 +240,8 @@ namespace Raven.Server.Commercial
 
         public bool HasGenAi => Enabled(LicenseAttribute.GenAi);
 
+        public bool HasAiAgent => Enabled(LicenseAttribute.AiAgent);
+
         public bool HasPowerBI => Enabled(LicenseAttribute.PowerBI);
 
         public bool HasPostgreSqlIntegration => Enabled(LicenseAttribute.PostgreSqlIntegration);

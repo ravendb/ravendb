@@ -204,7 +204,10 @@ namespace Raven.Server.ServerWide
             [nameof(RemoveAiConnectionStringCommand)] = 70_001,
             
             [nameof(AddGenAiCommand)] = 71_000,
-            [nameof(UpdateGenAiCommand)] = 71_000
+            [nameof(UpdateGenAiCommand)] = 71_000,
+
+            [nameof(AddOrUpdateAiAgentCommand)] = 71_001,
+            [nameof(DeleteAiAgentCommand)] = 71_001,
 
         };
 

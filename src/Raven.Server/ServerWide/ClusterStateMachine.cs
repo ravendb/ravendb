@@ -460,6 +460,8 @@ namespace Raven.Server.ServerWide
                     case nameof(AddQueueSinkCommand):
                     case nameof(AddSnowflakeEtlCommand):
                     case nameof(AddEmbeddingsGenerationCommand):
+                    case nameof(AddOrUpdateAiAgentCommand):
+                    case nameof(DeleteAiAgentCommand):
                     case nameof(UpdateRavenEtlCommand):
                     case nameof(UpdateSqlEtlCommand):
                     case nameof(UpdateOlapEtlCommand):
@@ -2799,6 +2801,8 @@ namespace Raven.Server.ServerWide
                 case nameof(AddSnowflakeEtlCommand):
                 case nameof(AddEmbeddingsGenerationCommand): 
                 case nameof(AddGenAiCommand):
+                case nameof(AddOrUpdateAiAgentCommand):
+                case nameof(DeleteAiAgentCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
                 case nameof(DeleteIndexCommand):

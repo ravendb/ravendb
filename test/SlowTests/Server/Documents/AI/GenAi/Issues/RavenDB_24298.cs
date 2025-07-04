@@ -6,7 +6,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
-using Raven.Server.Documents.AI.GenAi;
+using Raven.Server.Documents.AI;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -18,7 +18,7 @@ public class RavenDB_24298(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
-    private async Task ConfigurationUpdateShouldTakeAffect(Options options, GenAiConfiguration config)
+    public async Task ConfigurationUpdateShouldTakeAffect(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore();
         const string docId = "posts/1";
@@ -26,7 +26,7 @@ public class RavenDB_24298(ITestOutputHelper output) : RavenTestBase(output)
         store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
         var sampleObject = JsonConvert.SerializeObject(new { Translation = "translated text" });
-        var schema = OllamaChatCompletionClient.GetSchemaFor(sampleObject);
+        var schema = ChatCompletionClient.GetSchemaFromSampleObject(sampleObject);
 
         config.Prompt = "Translate this text to Polish";
         config.JsonSchema = schema;

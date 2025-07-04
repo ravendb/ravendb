@@ -12,6 +12,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.BulkInsert;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
@@ -45,6 +46,10 @@ namespace Raven.Client.Documents
         private DatabaseSmuggler _smuggler;
 
         private string _identifier;
+
+        private AiOperations _ai;
+
+        public override AiOperations AI => _ai ??= new AiOperations(this);
 
         public override IHiLoIdGenerator HiLoIdGenerator => _asyncMultiDbHiLo ?? throw new InvalidOperationException($"Overwriting {nameof(DocumentConventions.AsyncDocumentIdGenerator)} convention does not allow usage of default HiLo generator, you should use your own one.");
 

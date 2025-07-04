@@ -38,54 +38,58 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
         using (ContextPool.AllocateOperationContext(out JsonOperationContext context))
         {
             var input = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "multi_get");
-            if (input.TryGet("Requests", out BlittableJsonReaderArray requests) == false)
-                Raven.Server.Web.RequestHandler.ThrowRequiredPropertyNameInRequest("Requests");
+            await ExecuteMultiGetAsync(context, input, 
+                RequestHandler.ResponseBodyStream());
+        }
+    }
 
-            using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
+    public async Task ExecuteMultiGetAsync(JsonOperationContext context, BlittableJsonReaderObject input, Stream responseBodyStream)
+    {
+        if (input.TryGet("Requests", out BlittableJsonReaderArray requests) == false)
+            Raven.Server.Web.RequestHandler.ThrowRequiredPropertyNameInRequest("Requests");
+
+        StringValues httpEncodings = HttpContext.Request.Headers.AcceptEncoding;
+        using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
+        {
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, memoryStream))
             {
-                Stream responseBodyStream = RequestHandler.ResponseBodyStream();
-                var httpEncodings = HttpContext.Request.Headers.AcceptEncoding;
+                writer.WriteStartObject();
+                writer.WritePropertyName("Results");
+                writer.WriteStartArray();
+                var resultProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Result));
+                var statusProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.StatusCode));
+                var headersProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Headers));
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, memoryStream))
+                var features = new FeatureCollection(HttpContext.Features);
+                features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature());
+                features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(memoryStream));
+                var httpContext = new DefaultHttpContext(features);
+                var host = HttpContext.Request.Host;
+                var scheme = HttpContext.Request.Scheme;
+                StringBuilder trafficWatchStringBuilder = null;
+                if (TrafficWatchManager.HasRegisteredClients)
+                    trafficWatchStringBuilder = new StringBuilder();
+                for (var i = 0; i < requests.Length; i++)
                 {
-                    writer.WriteStartObject();
-                    writer.WritePropertyName("Results");
-                    writer.WriteStartArray();
-                    var resultProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Result));
-                    var statusProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.StatusCode));
-                    var headersProperty = context.GetLazyStringForFieldWithCaching(nameof(GetResponse.Headers));
+                    if (i != 0)
+                        writer.WriteComma();
 
-                    var features = new FeatureCollection(HttpContext.Features);
-                    features.Set<IHttpResponseFeature>(new MultiGetHttpResponseFeature());
-                    features.Set<IHttpResponseBodyFeature>(new StreamResponseBodyFeature(memoryStream));
-                    var httpContext = new DefaultHttpContext(features);
-                    var host = HttpContext.Request.Host;
-                    var scheme = HttpContext.Request.Scheme;
-                    StringBuilder trafficWatchStringBuilder = null;
-                    if (TrafficWatchManager.HasRegisteredClients)
-                        trafficWatchStringBuilder = new StringBuilder();
-                    for (var i = 0; i < requests.Length; i++)
-                    {
-                        if (i != 0)
-                            writer.WriteComma();
+                    var request = (BlittableJsonReaderObject)requests[i];
+                    await HandleRequestAsync(request, context, memoryStream, writer, httpContext, httpEncodings, host, scheme, resultProperty, statusProperty, headersProperty, trafficWatchStringBuilder);
 
-                        var request = (BlittableJsonReaderObject)requests[i];
-                        await HandleRequestAsync(request, context, memoryStream, writer, httpContext, httpEncodings, host, scheme, resultProperty, statusProperty, headersProperty, trafficWatchStringBuilder);
-
-                        // flush to the network after every lazy request, to avoid holding too much in memory
-                        memoryStream.Position = 0;
-                        await memoryStream.CopyToAsync(responseBodyStream);
-                        memoryStream.SetLength(0);
-                    }
-                    if (trafficWatchStringBuilder != null)
-                        RequestHandler.AddStringToHttpContext(trafficWatchStringBuilder.ToString(), TrafficWatchChangeType.MultiGet);
-                    writer.WriteEndArray();
-                    writer.WriteEndObject();
+                    // flush to the network after every lazy request, to avoid holding too much in memory
+                    memoryStream.Position = 0;
+                    await memoryStream.CopyToAsync(responseBodyStream);
+                    memoryStream.SetLength(0);
                 }
-
-                memoryStream.Position = 0;
-                await memoryStream.CopyToAsync(responseBodyStream);
+                if (trafficWatchStringBuilder != null)
+                    RequestHandler.AddStringToHttpContext(trafficWatchStringBuilder.ToString(), TrafficWatchChangeType.MultiGet);
+                writer.WriteEndArray();
+                writer.WriteEndObject();
             }
+
+            memoryStream.Position = 0;
+            await memoryStream.CopyToAsync(responseBodyStream);
         }
     }
 

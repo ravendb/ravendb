@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide;
@@ -640,7 +641,20 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
 
             result.DatabaseRecord.AiConnectionStringsUpdated = true;
         }
-        
+
+        if (databaseRecord.AiAgents.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.AiAgents))
+        {
+            if (_log.IsInfoEnabled)
+                _log.Info("Configuring AI Agents from smuggler");
+
+            foreach (var (agentName, config) in databaseRecord.AiAgents)
+            {
+                tasks.Add(_server.SendToLeaderAsync(new AddOrUpdateAiAgentCommand(_name, agentName, config, RaftIdGenerator.DontCareId)));
+            }
+
+            result.DatabaseRecord.AiAgentsUpdated = true;
+        }
+
         if (databaseRecord.SnowflakeEtls.Count > 0 && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SnowflakeEtls))
         {
             if (_log.IsInfoEnabled)
