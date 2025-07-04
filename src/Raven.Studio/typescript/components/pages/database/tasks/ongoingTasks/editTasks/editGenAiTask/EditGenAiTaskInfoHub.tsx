@@ -103,7 +103,7 @@ export default function EditGenAiTaskInfoHub() {
 const defaultFeatureAvailability: FeatureAvailabilityData[] = [
     {
         featureName: "GenAI",
-        featureIcon: "ai-etl",
+        featureIcon: "genai",
         community: { value: false },
         professional: { value: false },
         enterprise: { value: false },

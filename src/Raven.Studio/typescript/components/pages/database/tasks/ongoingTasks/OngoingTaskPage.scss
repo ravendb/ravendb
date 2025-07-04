@@ -3,7 +3,7 @@
 @use "Content/scss/sizes";
 
 .ongoing-tasks-page {
-    .icon-ai-etl::before {
+    .icon-ai-etl::before, .icon-genai::before {
         background: colors.$ai-gradient;
         background-clip: text;
         -webkit-background-clip: text;

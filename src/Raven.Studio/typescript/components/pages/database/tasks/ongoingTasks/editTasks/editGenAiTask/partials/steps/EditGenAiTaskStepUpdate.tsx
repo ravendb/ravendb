@@ -26,7 +26,7 @@ export function EditGenAiTaskStepUpdate() {
     return (
         <>
             <div className="hstack justify-content-between">
-                <AboutViewHeading title="Provide update script" marginBottom={2} icon="ai-etl" />
+                <AboutViewHeading title="Provide update script" marginBottom={2} icon="genai" />
                 <EditGenAiTaskInfoHub />
             </div>
             <p className="mb-4">

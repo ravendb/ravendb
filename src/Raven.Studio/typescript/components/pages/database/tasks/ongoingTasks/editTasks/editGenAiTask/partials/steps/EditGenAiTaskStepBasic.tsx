@@ -25,7 +25,7 @@ export function EditGenAiTaskStepBasic() {
                 <AboutViewHeading
                     title="Configure GenAI task basic settings"
                     marginBottom={2}
-                    icon="ai-etl"
+                    icon="genai"
                     licenseBadgeText={hasGenAi ? null : "Enterprise AI"}
                 />
                 <EditGenAiTaskInfoHub />

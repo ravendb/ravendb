@@ -425,7 +425,7 @@ export function OngoingTasksPage() {
                         {genAiTasks.length > 0 && (
                             <div key="genAI">
                                 <HrHeader className="ai-etl" count={genAiTasks.length}>
-                                    <Icon icon="ai-etl" />
+                                    <Icon icon="genai" />
                                     GenAI
                                 </HrHeader>
 

@@ -112,7 +112,7 @@ export default function OngoingTaskAddModal(props: OngoingTaskAddModalProps) {
                         disabled={isSharded}
                         disableReason={getDisableReasonForSharded()}
                     >
-                        <Icon icon="ai-etl" margin="m-0" />
+                        <Icon icon="genai" margin="m-0" />
                         <h4 className="mt-1 mb-0">GenAI</h4>
                         {!hasGenAi && <LicenseRestrictedBadge licenseRequired="Enterprise AI" />}
                     </TaskItem>
