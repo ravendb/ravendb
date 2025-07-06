@@ -1,9 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Raven.Client.Documents.Linq;
-using Raven.Client.Documents.Session;
 using Raven.Client.Util;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
@@ -84,6 +81,12 @@ public class AiAgentConfiguration : IDynamicJson
     /// </summary>
     public PersistenceConfiguration Persistence { get; set; }
 
+    /// <summary>
+    /// Names of the required parameters that are used in the agent's queries and actions.
+    /// Which has to be provided by the user each time we start a new chat.
+    /// </summary>
+    public HashSet<string> Parameters { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
     public class PersistenceConfiguration : IDynamicJson
     {
         public string Collection { get; set; }
@@ -115,28 +118,15 @@ public class AiAgentConfiguration : IDynamicJson
             };
         }
     }
+
     public class ToolQuery : IDynamicJson
     {
-        public static ToolQuery Build<T>(string name, string description, IRavenQueryable<T> query)
-        {
-            var dq = (AsyncDocumentQuery<T>)query.ToAsyncDocumentQuery();
-            using (var context = JsonOperationContext.ShortTermSingleUse())
-            {
-                return new ToolQuery
-                {
-                    Name = name,
-                    Description = description,
-                    Query = dq.ToString(),
-                    ParametersSampleObject = context.ReadObject(DynamicJsonValue.Convert(dq.QueryParameters), "params").ToString()
-                };
-            }
-        }
-
         public string Name { get; set; }
         public string Description { get; set; }
         public string Query { get; set; }
         public string ParametersSampleObject { get; set; }
         public string ParametersSchema { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
@@ -181,7 +171,8 @@ public class AiAgentConfiguration : IDynamicJson
             [nameof(SampleObject)] = SampleObject,
             [nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null,
             [nameof(Actions)] = Actions != null ? new DynamicJsonArray(Actions) : null,
-            [nameof(Persistence)] = Persistence?.ToJson()
+            [nameof(Persistence)] = Persistence?.ToJson(),
+            [nameof(Parameters)] = new DynamicJsonArray(Parameters)
         };
     }
 }

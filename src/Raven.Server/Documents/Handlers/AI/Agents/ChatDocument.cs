@@ -18,15 +18,21 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
     public BlittableJsonReaderObject Parameters = parameters ;
     public List<BlittableJsonReaderObject> Messages = [];
     public AiUsage TotalUsage;
-    public void Initialize(JsonOperationContext context, string systemPrompt, string userPrompt)
+    public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration, string userPrompt)
     {
         if (Messages.Count > 0)
             throw new InvalidOperationException("Chat document is already initialized. Cannot re-initialize.");
 
+        foreach (var parameter in configuration.Parameters)
+        {
+            if (Parameters == null || Parameters.TryGet(parameter, out object _) == false)
+                throw new ArgumentException($"Parameter '{parameter}' is missing.");
+        }
+
         AddMessage(context, context.ReadObject(new DynamicJsonValue
         {
             ["role"] = "system",
-            ["content"] = systemPrompt
+            ["content"] = configuration.SystemPrompt
         }, "system/msg"));
 
         AddMessage(context, context.ReadObject(new DynamicJsonValue

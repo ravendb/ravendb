@@ -6,6 +6,8 @@ using FastTests;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Exceptions;
+using Raven.Server.Documents.Handlers.AI.Agents;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -35,7 +37,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         public async Task CanCreateAiAgent(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
-            await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
@@ -49,7 +50,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 Collection = "Chats",
                 Expires = TimeSpan.FromDays(30)
             };
-
+            agent.Parameters.Add("company");
             agent.Queries =
             [
                 new AiAgentConfiguration.ToolQuery
@@ -100,7 +101,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 Collection = "Chats",
                 Expires = TimeSpan.FromDays(30)
             };
-
+            agent.Parameters.Add("company");
             agent.Queries =
             [
                 new AiAgentConfiguration.ToolQuery
@@ -204,23 +205,24 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         public async Task CanRunTest(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
-            await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
 
-            var body = @$"{{
+            var body = @$"{{    
+""{nameof(AiAgentProcessorForTestChat.AiAgentTestRequest.Parameters)}"": {{
+        ""company"": ""companies/90-A""
+    }},
+""{nameof(AiAgentProcessorForTestChat.AiAgentTestRequest.Prompt)}"": ""Help to find something more to my recent order"",
+""{nameof(AiAgentProcessorForTestChat.AiAgentTestRequest.Configuration)}"":{{
     ""ConnectionStringName"": ""{config.ConnectionStringName}"",
     ""SystemPrompt"": ""You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well."",
     ""SampleObject"": ""{{\""Answer\"": \""Answer to the user question\"", \""Relevant\"": true, \""RelevantOrdersId\"":[\""The order ids relevant to the query or response\""], \""MatchingProductsId\"":[\""All the product ids referenced either by the user or the system\""] }}"",
-    ""Parameters"": {{
-        ""company"": ""companies/90-A""
-    }},
-    ""Prompt"": ""Help to find something more to my recent order"",
     ""Persistence"": {{
         ""Collection"": ""Chats"",
         ""Expires"": ""3.00:00:00""
     }},
+    ""Parameters"": [""company""],
     ""Queries"": [
         {{
             ""Name"": ""ProductSearch"",
@@ -235,7 +237,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             ""ParametersSampleObject"": ""{{}}""
         }}
     ]
-}}";
+}}}}";
             using var test = new HttpRequestMessage
             {
                 RequestUri = new Uri($"{store.Urls[0]}/databases/{store.Database}/ai/agent/test", UriKind.Absolute),

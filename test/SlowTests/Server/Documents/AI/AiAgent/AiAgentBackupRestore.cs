@@ -90,7 +90,7 @@ public class AiAgentBackupRestore : ReplicationTestBase
             "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
         agent0.Persistence = new AiAgentConfiguration.PersistenceConfiguration { Collection = "Chats", Expires = TimeSpan.FromDays(30) };
-
+        agent0.Parameters.Add("company");
         agent0.Queries =
         [
             new AiAgentConfiguration.ToolQuery

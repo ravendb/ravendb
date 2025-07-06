@@ -22,7 +22,7 @@ internal class AiAgentProcessorForStartChat : AbstractAiAgentProcessor
         var body = GetStartChatOptions(options);
         var chat = new ChatDocument(name, body.Parameter);
 
-        chat.Initialize(context, configuration.SystemPrompt, body.UserPrompt);
+        chat.Initialize(context, configuration, body.UserPrompt);
         var r = await TalkAsync(context, configuration, chat, token);
 
         var conversationId = await TryPersistAsync(configuration, $"{configuration.Persistence.Collection}{RequestHandler.Database.IdentityPartsSeparator}", r.Document);

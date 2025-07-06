@@ -30,11 +30,18 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public QueryScanner Scanner;
 
+        public Query Query;
+
         public void Init(string q)
         {
             _depth = 0;
             Scanner.Init(q);
+            Query = new Query
+            {
+                QueryText = Scanner.Input
+            };
         }
+
 
         public Query Parse(QueryType queryType = QueryType.Select, bool recursive = false)
         {
@@ -46,10 +53,7 @@ namespace Raven.Server.Documents.Queries.Parser
 
         public bool TryParse(out Query query, out string message, QueryType queryType = QueryType.Select, bool recursive = false)
         {
-            query = new Query
-            {
-                QueryText = Scanner.Input
-            };
+            query = Query;
             message = string.Empty;
 
             while (Scanner.TryScan("DECLARE"))
@@ -1460,6 +1464,8 @@ Grouping by 'Tag' or Field is supported only as a second grouping-argument.";
                     Scanner.Token,
                     ValueTokenType.Parameter
                 );
+
+                Query.Parameters.Add(Scanner.Token);
                 return true;
             }
             val = null;

@@ -585,7 +585,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return _forTestingPurposes = new IChatCompletionClientForTesting.TestingStuff();
     }
 
-    private static class Constants
+    public static class Constants
     {
         public static class ResponseFields
         {
