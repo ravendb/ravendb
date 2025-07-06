@@ -17,6 +17,7 @@ using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Utils;
+using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
@@ -1037,6 +1038,73 @@ for(const comment of this.Comments)
                 }
             }
         }
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    private async Task CanUpdateGenAiChangeVector(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore();
+
+        // configure GenAi task
+        store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        var sampleObject = JsonConvert.SerializeObject(new { Translation = "translated text" });
+        var schema = OllamaChatCompletionClient.GetSchemaFor(sampleObject);
+
+        config.Prompt = "Translate this text to Polish";
+        config.JsonSchema = schema;
+        config.UpdateScript = "this.TextInPolish = $output.Translation;";
+        config.Collection = "Posts";
+        config.GenAiTransformation = new GenAiTransformation { Script = "ai.genContext({ Text: this.Body });" };
+        config.Identifier = "posts-translation-check";
+
+        for (int i = 1; i <= 10; i++)
+        {
+            using (var session = store.OpenSession())
+            {
+                // Intentionally store documents in a different collection
+                // to ensure that the ChangeVector in the GenAI process state remains unchanged.
+                // This allows us to verify that the ChangeVector passed to the add/update operation is correctly saved.
+
+                session.Store(new User(), "users/" + i); 
+                session.SaveChanges();
+            }
+        }
+
+        // expected change vector is "LastDocument" (the default value for AddGenAi)
+        string expectedChangeVector;
+        using (var session = store.OpenSession())
+        {
+            var lastDoc = session.Load<Post>("users/10");
+            expectedChangeVector = session.Advanced.GetChangeVectorFor(lastDoc);
+        }
+
+        // add GenAI task
+        store.Maintenance.Send(new AddGenAiOperation(config));
+
+        // assert change vector
+        var taskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi));
+        var genAiTaskInfo = taskInfo as Raven.Client.Documents.Operations.OngoingTasks.GenAi;
+        Assert.NotNull(genAiTaskInfo);
+        Assert.Equal(expectedChangeVector, genAiTaskInfo.ChangeVector);
+
+        // edit the task in order to update the change vector 
+        string updatedCv;
+        using (var session = store.OpenSession())
+        {
+            var someOtherDoc = session.Load<Post>("users/5");
+            updatedCv = expectedChangeVector = session.Advanced.GetChangeVectorFor(someOtherDoc);
+        }
+
+        var result = store.Maintenance.Send(new UpdateGenAiOperation(taskInfo.TaskId, config, StartingPointChangeVector.From(updatedCv)));
+        await Server.ServerStore.Cluster.WaitForIndexNotification(result.RaftCommandIndex, TimeSpan.FromSeconds(15));
+
+        // assert change vector
+        taskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi));
+        genAiTaskInfo = taskInfo as Raven.Client.Documents.Operations.OngoingTasks.GenAi;
+        Assert.NotNull(genAiTaskInfo);
+        Assert.Equal(expectedChangeVector, genAiTaskInfo.ChangeVector);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
