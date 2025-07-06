@@ -107,11 +107,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                 if (Database.ForTestingPurposes != null && Database.ForTestingPurposes.ActionToCallOnGetTempPath != null)
                     Database.ForTestingPurposes.ActionToCallOnGetTempPath?.Invoke(_tempBackupPath);
 
-                if (runningBackupStatus.LocalBackup == null)
-                    runningBackupStatus.LocalBackup = new LocalBackup();
-
-                if (runningBackupStatus.LastRaftIndex == null)
-                    runningBackupStatus.LastRaftIndex = new LastRaftIndex();
+                runningBackupStatus.LocalBackup ??= new LocalBackup();
+                runningBackupStatus.LastRaftIndex ??= new LastRaftIndex();
 
                 runningBackupStatus.IsFull = _isFullBackup;
 
@@ -123,15 +120,12 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 if (_isFullBackup == false)
                 {
-                    // if we come from old version the _previousBackupStatus won't have LastRaftIndex
+                    // if we come from the old version, the _previousBackupStatus won't have LastRaftIndex
                     _previousBackupStatus.LastRaftIndex ??= new LastRaftIndex();
 
                     // no-op if nothing has changed
                     var (currentLastEtag, currentChangeVector) = Database.ReadLastEtagAndChangeVector();
                     var currentLastRaftIndex = GetDatabaseEtagForBackup();
-
-                    // if we come from old version the _previousBackupStatus won't have LastRaftIndex
-                    _previousBackupStatus.LastRaftIndex ??= new LastRaftIndex();
 
                     if (currentLastEtag == _previousBackupStatus.LastEtag
                         && currentChangeVector == _previousBackupStatus.LastDatabaseChangeVector
@@ -198,9 +192,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                 runningBackupStatus.FolderName = folderName;
 
                 if (_isFullBackup)
+                {
                     runningBackupStatus.LastFullBackup = _startTimeUtc;
+                    runningBackupStatus.LastRaftIndex.LastFullBackupEtag = internalBackupResult.LastRaftIndex;
+                }
                 else
+                {
                     runningBackupStatus.LastIncrementalBackup = _startTimeUtc;
+                }
 
                 totalSw.Stop();
 

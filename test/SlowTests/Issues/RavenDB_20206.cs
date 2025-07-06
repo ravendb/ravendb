@@ -61,7 +61,7 @@ public class RavenDB_20206 : RavenTestBase
             }
 
                 // clean tombstones
-                var cleanupState1 = await CompareExchangeTombstoneCleanerTestHelper.Clean(server.ServerStore.Engine.ContextPool, store1.Database, server, ignoreClustrTrx: true);
+                var cleanupState1 = await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store1.Database, ignoreClustrTrx: true);
                 Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState1);
 
             using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -79,7 +79,7 @@ public class RavenDB_20206 : RavenTestBase
             }
 
             // clean tombstones
-            var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(server.ServerStore.Engine.ContextPool, store2.Database, server, ignoreClustrTrx: true);
+            var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store2.Database,ignoreClustrTrx: true);
             Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
 
             using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -96,24 +96,5 @@ public class RavenDB_20206 : RavenTestBase
                 Assert.Equal(2, numOfCompareExchanges);
             }
         }
-    }
-
-    private static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> CleanupCompareExchangeTombstonesAsync(RavenServer server, string database, ClusterOperationContext context)
-    {
-        var merged = ClusterObserver.MergedDatabaseObservationState.GetEmpty();
-        merged.States.Add(0, null);
-        var cmd = server.ServerStore.Observer.GetCompareExchangeTombstonesToCleanup(database, merged, context, out var cleanupState);
-        if (cleanupState != ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones)
-            return cleanupState;
-
-        Assert.NotNull(cmd);
-
-        var result = await server.ServerStore.SendToLeaderAsync(cmd);
-        await server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
-
-        var hasMore = (bool)result.Result;
-        return hasMore
-            ? ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones
-            : ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones;
     }
 }

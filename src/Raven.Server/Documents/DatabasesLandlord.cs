@@ -14,7 +14,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.NotificationCenter.Notifications.Server;
@@ -1384,7 +1383,7 @@ namespace Raven.Server.Documents
                     {
                         case IdleDatabaseActivityType.UpdateBackupStatusOnly:
 
-                            PeriodicBackupStatus backupStatus = BackupUtils.GetLocalBackupStatus(_serverStore, databaseName, nextIdleDatabaseActivity.TaskId);
+                            PeriodicBackupStatus backupStatus = _serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(databaseName, nextIdleDatabaseActivity.TaskId);
 
                             backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextIdleDatabaseActivity.DateTime;
                             backupStatus.LocalBackup.LastIncrementalBackup = nextIdleDatabaseActivity.DateTime;

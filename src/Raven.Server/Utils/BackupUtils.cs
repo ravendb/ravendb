@@ -123,7 +123,6 @@ internal static class BackupUtils
                 // OnParsingError and OnMissingNextBackupInfo are null's - for skipping error messages notification and log
                 Configuration = periodicBackup.Configuration,
                 BackupStatus = status,
-                ResponsibleNodeTag = parameters.ServerStore.NodeTag,
                 NodeTag = parameters.ServerStore.NodeTag
             });
             if (nextBackup == null)
@@ -297,7 +296,7 @@ internal static class BackupUtils
 
         Debug.Assert(parameters.Configuration.TaskId != 0);
 
-        var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup, parameters.ResponsibleNodeTag);
+        var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup);
         var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus?.DelayUntil);
         var nextBackupTimeUtc = nextBackupTimeLocal.ToUniversalTime();
         var timeSpan = nextBackupTimeUtc - nowUtc;
@@ -375,7 +374,7 @@ internal static class BackupUtils
 
     private static bool IsFullBackup(PeriodicBackupStatus backupStatus,
         PeriodicBackupConfiguration configuration,
-        DateTime? nextFullBackup, DateTime? nextIncrementalBackup, string responsibleNodeTag)
+        DateTime? nextFullBackup, DateTime? nextIncrementalBackup)
     {
         if (backupStatus == null ||
             backupStatus?.LastFullBackup == null ||
@@ -508,8 +507,8 @@ internal static class BackupUtils
             return null;
         }
         
-        // local node is responsible for the backup
-        PeriodicBackupStatus backupStatus = GetLocalBackupStatus(parameters.ServerStore, parameters.Context, parameters.DatabaseName, parameters.Configuration.TaskId);
+        // the local node is responsible for the backup
+        var backupStatus = parameters.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(parameters.Context, parameters.DatabaseName, parameters.Configuration.TaskId);
         if (parameters.IsIdle == false)
         {
             if (backupStatus == null)
@@ -530,7 +529,6 @@ internal static class BackupUtils
             OnParsingError = parameters.OnParsingError,
             Configuration = parameters.Configuration,
             BackupStatus = backupStatus,
-            ResponsibleNodeTag = responsibleNodeTag,
             DatabaseWakeUpTimeUtc = parameters.DatabaseWakeUpTimeUtc,
             NodeTag = parameters.ServerStore.NodeTag,
             OnMissingNextBackupInfo = parameters.OnMissingNextBackupInfo
@@ -592,48 +590,6 @@ internal static class BackupUtils
         return new IdleDatabaseActivity(IdleDatabaseActivityType.UpdateBackupStatusOnly, nextBackup.DateTime, parameters.Configuration.TaskId, parameters.LastEtag);
     }
 
-    public static PeriodicBackupStatus GetLocalBackupStatus(ServerStore serverStore, string databaseName, long taskId)
-    {
-        using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-        using (context.OpenReadTransaction())
-        {
-            return GetLocalBackupStatus(serverStore, context, databaseName, taskId);
-        }
-    }
-
-    public static PeriodicBackupStatus GetLocalBackupStatus(ServerStore serverStore, ClusterOperationContext context, string databaseName, long taskId)
-    {
-        var localStatus = BackupStatusStorage.GetBackupStatus(databaseName, serverStore._env.Base64Id, taskId, context);
-        if (localStatus != null)
-            return localStatus;
-
-        // backwards compatibility - fallback to cluster status - only if node tag matches
-        var clusterStatus = GetBackupStatusFromCluster(serverStore, context, databaseName, taskId);
-
-        if (clusterStatus == null || clusterStatus.NodeTag != serverStore.NodeTag)
-            return null;
-
-        return clusterStatus;
-    }
-
-    public static BlittableJsonReaderObject GetLocalBackupStatusBlittable(ServerStore serverStore, ClusterOperationContext context, string databaseName, long taskId)
-    {
-        var localStatus = BackupStatusStorage.GetBackupStatusBlittable(context, databaseName, serverStore._env.Base64Id, taskId);
-        if (localStatus != null)
-            return localStatus;
-
-        // backwards compatibility - fallback to cluster status - only if node tag matches
-        var clusterStatus = GetBackupStatusFromClusterBlittable(serverStore, context, databaseName, taskId);
-
-        if (clusterStatus == null || clusterStatus.TryGet(nameof(PeriodicBackupStatus.NodeTag), out string nodeTag) == false || string.IsNullOrEmpty(nodeTag))
-            return null;
-
-        if (nodeTag == serverStore.NodeTag)
-            return clusterStatus;
-
-        return null;
-    }
-
     public static void SaveBackupStatus(PeriodicBackupStatus status, string databaseName, ServerStore serverStore, Logger logger,
         BackupResult backupResult = default, Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
     {
@@ -690,6 +646,49 @@ internal static class BackupUtils
         }
     }
 
+    internal static readonly DateTime BackupScheduleSearchLowerBound = new(year: 2015, month: 1, day: 1);
+
+    /// <summary>
+    /// Finds the last occurrence of a cron schedule at or before a given point in time.
+    /// Throws ArgumentOutOfRangeException for dates before 2015-01-01.
+    /// </summary>
+    internal static DateTime? GetLastOccurrence(CrontabSchedule schedule, DateTime baseTime)
+    {
+        if (baseTime < BackupScheduleSearchLowerBound)
+            throw new ArgumentOutOfRangeException(nameof(baseTime), $"Dates before {BackupScheduleSearchLowerBound:yyyy-MM-dd} are not supported for backup calculations.");
+
+        // This solves all exact match cases.
+        if (schedule.GetNextOccurrence(baseTime.AddTicks(-1)) == baseTime)
+            return baseTime;
+
+        // Estimate the schedule's interval to calculate a safe starting point for our backward search.
+        var t1 = schedule.GetNextOccurrence(BackupScheduleSearchLowerBound);
+        var t2 = schedule.GetNextOccurrence(t1);
+        var interval = t2 - t1;
+
+        if (interval < TimeSpan.FromMinutes(1))
+            interval = TimeSpan.FromMinutes(1); // Ensure a minimum jump to prevent excessive iterations
+
+        var searchStart = baseTime.Subtract(interval.Multiply(2));
+
+        if (searchStart < BackupScheduleSearchLowerBound)
+            searchStart = BackupScheduleSearchLowerBound;
+
+        DateTime? lastFound = null;
+        // We start searching from one tick *before* our searchStart to ensure searchStart itself is included if it's a valid time.
+        var searchCursor = searchStart.AddTicks(-1);
+
+        while (true)
+        {
+            searchCursor = schedule.GetNextOccurrence(searchCursor);
+
+            if (searchCursor >= baseTime)
+                return lastFound;
+
+            lastFound = searchCursor;
+        }
+    }
+
     public sealed class NextBackupOccurrenceParameters
     {
         public string BackupFrequency { get; set; }
@@ -715,8 +714,6 @@ internal static class BackupUtils
         public PeriodicBackupConfiguration Configuration { get; set; }
 
         public PeriodicBackupStatus BackupStatus { get; set; }
-
-        public string ResponsibleNodeTag { get; set; }
 
         public DateTime? DatabaseWakeUpTimeUtc { get; set; }
 

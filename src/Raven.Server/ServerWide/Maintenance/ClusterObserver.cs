@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
+using NCrontab.Advanced;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
@@ -26,7 +26,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Server.Utils;
 
 namespace Raven.Server.ServerWide.Maintenance
@@ -281,7 +280,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
                         if (cleanupTombstones)
                         {
-                            var cmd = GetCompareExchangeTombstonesToCleanup(database, mergedState, context, out var cleanupState);
+                            var cmd = GetCleanCompareExchangeTombstonesCommand(database, mergedState, context, out var cleanupState);
                             switch (cleanupState)
                             {
                                 case CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState:
@@ -608,38 +607,44 @@ namespace Raven.Server.ServerWide.Maintenance
             return cleanupCommands;
         }
 
-        internal CleanCompareExchangeTombstonesCommand GetCompareExchangeTombstonesToCleanup(string databaseName, MergedDatabaseObservationState mergedState, ClusterOperationContext context, out CompareExchangeTombstonesCleanupState cleanupState)
+        internal CleanCompareExchangeTombstonesCommand GetCleanCompareExchangeTombstonesCommand(string databaseName, MergedDatabaseObservationState mergedState, ClusterOperationContext context, out CompareExchangeTombstonesCleanupState cleanupState)
         {
+            var onDiagnosticLog = ForTestingPurposes?.OnDiagnosticLog;
+
             Debug.Assert(ShardHelper.IsShardName(databaseName) == false, $"Compare exchanges are put in cluster under sharded database name, so can't delete them from under shard name {databaseName}");
             const int amountToDelete = 8192;
 
-            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Starting {nameof(GetCompareExchangeTombstonesToCleanup)}:");
-            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Database: `{databaseName}`");
-            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"RawDatabaseRecord: `{mergedState.RawDatabase?.DatabaseName}`, IsSharded: `{mergedState.RawDatabase?.IsSharded}`");
-            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"PeriodicBackupTaskIds: {(mergedState.RawDatabase?.PeriodicBackupsTaskIds is { Count: > 0 } ? string.Join(", ", mergedState.RawDatabase.PeriodicBackupsTaskIds) : "none")}");
+            // ReSharper disable once UseNullPropagation
+            if (onDiagnosticLog != null) onDiagnosticLog($"Starting {nameof(GetCleanCompareExchangeTombstonesCommand)} for " +
+                                                         $"{(mergedState.RawDatabase?.IsSharded == true ? "Sharded" : "Not Sharded")} database '{databaseName}'" +
+                                                         $" with PeriodicBackupTaskIds: {(mergedState.RawDatabase?.PeriodicBackupsTaskIds is { Count: > 0 } ? string.Join(", ", mergedState.RawDatabase.PeriodicBackupsTaskIds) : "none")}");
 
             if (_server.Cluster.HasCompareExchangeTombstones(context, databaseName) == false)
             {
-                ForTestingPurposes?.OnDiagnosticLog?.Invoke("No tombstones found in cluster.");
+                // ReSharper disable once UseNullPropagation
+                if (onDiagnosticLog != null) onDiagnosticLog("No tombstones found in the cluster.");
+
                 cleanupState = CompareExchangeTombstonesCleanupState.NoMoreTombstones;
                 return null;
             }
 
-            cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(context, databaseName, mergedState, out long maxEtag);
-            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Computed maxEtag: `{maxEtag}`");
+            cleanupState = GetMaxCompareExchangeTombstonesEtagToDelete(mergedState, out long maxRaftIndex);
+
+            // ReSharper disable once UseNullPropagation
+            if (onDiagnosticLog != null) onDiagnosticLog($"Computed maxRaftIndex: `{maxRaftIndex}`");
 
             if (cleanupState != CompareExchangeTombstonesCleanupState.HasMoreTombstones)
             {
-                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Exiting early, cleanupState: `{cleanupState}`");
+                // ReSharper disable once UseNullPropagation
+                if (onDiagnosticLog != null) onDiagnosticLog($"Exiting early, cleanupState: `{cleanupState}`");
+
                 return null;
             }
 
-            ForTestingPurposes?.OnDiagnosticLog?.Invoke("Sending cleanup command with details:");
-            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"databaseName: `{databaseName}`, maxEtag: `{maxEtag}`, amountToDelete: `{amountToDelete}`");
+            // ReSharper disable once UseNullPropagation
+            if (onDiagnosticLog != null) onDiagnosticLog($"Sending cleanup command for database '{databaseName}' with maxRaftIndex: `{maxRaftIndex}` and amountToDelete: `{amountToDelete}`");
 
-            return cleanupState == CompareExchangeTombstonesCleanupState.HasMoreTombstones
-                ? new CleanCompareExchangeTombstonesCommand(databaseName, maxEtag, amountToDelete, RaftIdGenerator.NewId())
-                : null;
+            return new CleanCompareExchangeTombstonesCommand(databaseName, maxRaftIndex, amountToDelete, RaftIdGenerator.NewId());
         }
 
         public enum CompareExchangeTombstonesCleanupState
@@ -650,184 +655,169 @@ namespace Raven.Server.ServerWide.Maintenance
             NoMoreTombstones
         }
 
-        private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete(ClusterOperationContext context, string databaseName, MergedDatabaseObservationState mergedState, out long maxEtag)
+        private CompareExchangeTombstonesCleanupState GetMaxCompareExchangeTombstonesEtagToDelete(MergedDatabaseObservationState mergedState, out long maxEtag)
         {
             maxEtag = -1;
-            long minClusterWideTransactionIndex = -1;
-            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Starting {nameof(GetMaxCompareExchangeTombstonesEtagToDelete)}...");
-            var isSharded = mergedState.RawDatabase.IsSharded;
+            var onDiagnosticLog = ForTestingPurposes?.OnDiagnosticLog;
+            var utcNow = DateTime.UtcNow;
 
-            foreach (var (shardNumber, state) in mergedState.States)
+            // ReSharper disable once UseNullPropagation
+            if (onDiagnosticLog != null) onDiagnosticLog($"Executing {nameof(GetMaxCompareExchangeTombstonesEtagToDelete)} for '{mergedState.RawDatabase.DatabaseName}' at {utcNow:O}.");
+
+            if (mergedState.IsValid(onDiagnosticLog) == false)
             {
-                //if sharded, we have to get backup status by shard name
-                var shardName = isSharded ? ShardHelper.ToShardName(databaseName, shardNumber) : databaseName;
+                // ReSharper disable once UseNullPropagation
+                if (onDiagnosticLog != null) onDiagnosticLog("Aborting: MergedDatabaseObservationState is invalid. Reports may be missing or malformed.");
 
-                // we are checking this here, not in the main loop, to avoid returning 'NoMoreTombstones' when maxEtag is 0
-                foreach (var nodeTag in state.DatabaseTopology.AllNodes)
+                return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+            }
+
+            var minEtagFromAllTasks = long.MaxValue;
+
+            var periodicBackups = mergedState.RawDatabase.PeriodicBackups;
+            if (periodicBackups is { Count: > 0 })
+            {
+                foreach (var backupConfig in periodicBackups)
                 {
-                    if (state.Current.ContainsKey(nodeTag) == false) // we have a state change, do not remove anything
+                    if (string.IsNullOrWhiteSpace(backupConfig.FullBackupFrequency))
                     {
-                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"[ERROR] Invalid state: Missing report for node '{nodeTag}'");
-                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                        // ReSharper disable once UseNullPropagation
+                        if (onDiagnosticLog != null) onDiagnosticLog($"[Task {backupConfig.TaskId}] Found a task without FullBackupFrequency. This implies only incremental backups can be made, so we should never clean tombstones");
+
+                        return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
                     }
 
-                    ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' report found.");
-                }
-
-                foreach (var nodeTag in state.DatabaseTopology.AllNodes)
-                {
-                    var hasState = state.Current.TryGetValue(nodeTag, out var nodeReport);
-
-                    Debug.Assert(hasState, $"Could not find state for node '{nodeTag}' for database '{state.Name}'.");
-
-                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                    if (hasState == false)
+                    // Step 1: Find the MOST RECENT full backup for this task to use as our anchor
+                    var allHistoricalFullBackups = new List<(DateTime Time, long Etag)>();
+                    foreach (var databaseState in mergedState.States.Values)
                     {
-                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Missing state for node '{nodeTag}'");
-                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+                        foreach (var nodeTag in databaseState.DatabaseTopology.AllNodes)
+                        {
+                            if (databaseState.GetCurrentDatabaseReport(nodeTag)?.BackupStatuses.TryGetValue(backupConfig.TaskId, out var statusReport) == true &&
+                                statusReport.LastFullBackupInternal.HasValue &&
+                                statusReport.LastFullBackupRaftIndexEtag.HasValue)
+                            {
+                                allHistoricalFullBackups.Add((statusReport.LastFullBackupInternal.Value, statusReport.LastFullBackupRaftIndexEtag.Value));
+                            }
+                        }
                     }
 
-                    var hasReport = nodeReport.Report.TryGetValue(state.Name, out var report);
-                    Debug.Assert(hasReport || nodeReport.Error != null, $"Could not find report for node '{nodeTag}' for database '{state.Name}'.");
-                    // ReSharper disable once ConditionIsAlwaysTrueOrFalse
-                    if (hasReport == false)
+                    if (allHistoricalFullBackups.Count == 0)
                     {
-                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Missing report for node '{nodeTag}' for database '{state.Name}'");
-                        return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
-                    }
+                        // ReSharper disable once UseNullPropagation
+                        if (onDiagnosticLog != null) onDiagnosticLog($"[Task {backupConfig.TaskId}] CRITICAL: No full backup has ever been recorded for this task. Cleanup is blocked.");
 
-                    ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}': LastClusterWideTransactionRaftIndex = {(report.LastClusterWideTransactionRaftIndex == long.MaxValue ? "long.MaxValue" : report.LastClusterWideTransactionRaftIndex.ToString())}");
-                    if (report.BackupStatuses == null)
-                    {
-                        // the node wasn't updated to a version that supports it
-                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' doesn't have backup statuses.");
+                        // If no full backup has EVER been made, we cannot clean anything.
                         return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
                     }
 
-                    foreach (var (taskId, status) in report.BackupStatuses)
+                    var latestFullBackup = allHistoricalFullBackups.OrderByDescending(b => b.Time).First();
+
+                    // ReSharper disable once UseNullPropagation
+                    if (onDiagnosticLog != null) onDiagnosticLog($"[Task {backupConfig.TaskId}] Anchor backup identified: Time=`{latestFullBackup.Time:O}`, Etag=`{latestFullBackup.Etag}`. This backup defines the relevant cycle.");
+
+                    // Step 2: Based on the anchor, determine the start of its cycle
+                    var schedule = CrontabSchedule.Parse(backupConfig.FullBackupFrequency);
+                    var cycleStartTime = BackupUtils.GetLastOccurrence(schedule, latestFullBackup.Time);
+                    if (cycleStartTime == null)
                     {
-                        if (status == null)
-                        {
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null status for taskId '{taskId}'");
-                            var clusterStatus = BackupUtils.GetBackupStatusFromClusterBlittable(_server, context, shardName, taskId);
-                            if (clusterStatus == null)
-                            {
-                                // existing backup hasn't run yet for the first time, we don't want to delete anything until we have a first status
-                                maxEtag = 0;
-                                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null status for taskId '{taskId}' and no cluster status.");
-                                return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
-                            }
+                        // ReSharper disable once UseNullPropagation
+                        if (onDiagnosticLog != null) onDiagnosticLog($"[Task {backupConfig.TaskId}] Could not determine cycle start time for the anchor backup at `{latestFullBackup.Time:O}`. Cleanup is blocked for safety.");
 
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null status for taskId '{taskId}' but has a cluster status.");
-                            continue;
-                        }
-
-                        var lastFullBackupInternal = status.LastFullBackupInternal;
-                        if (lastFullBackupInternal == null)
-                        {
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null lastFullBackupInternal for taskId '{taskId}'");
-                            // never backed up yet
-                            if (status.LastIncrementalBackupInternal == null)
-                            {
-                                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null lastIncrementalBackupInternal for taskId '{taskId}'");
-                                continue;
-                            }
-                        }
-
-                        var backupConfiguration = state.RawDatabase.GetPeriodicBackupConfiguration(taskId);
-
-                        if (backupConfiguration == null)
-                        {
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null backupConfiguration for taskId '{taskId}'");
-                            return CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
-                        }
-
-                        if (backupConfiguration.FullBackupFrequency == null)
-                            if (backupConfiguration.IncrementalBackupFrequency == null)
-                            {
-                                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has no FullBackupFrequency and no IncrementalBackupFrequency for taskId '{taskId}'");
-                                continue; // not valid but possible, we treat it the same as if there is no backup at all
-                            }
-                            else
-                            {
-                                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has no FullBackupFrequency and has IncrementalBackupFrequency for taskId '{taskId}'");
-                                return CompareExchangeTombstonesCleanupState.NoMoreTombstones; // we only run incremental backups - never delete tombstones
-                            }
-
-                        if (status.LastRaftIndex == null)
-                        {
-                            if (status.Error)
-                            {
-                                // backup errored on first run (lastRaftIndex == null) => cannot remove ANY tombstones
-                                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has an errored backup on first run (lastRaftIndex == null) => cannot remove ANY tombstones");
-                                return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
-                            }
-
-                            continue;
-                        }
-
-                        var lastRaftIndex = status.LastRaftIndex.LastEtag;
-                        if (lastRaftIndex == null)
-                        {
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a null lastRaftIndex for taskId '{taskId}'");
-                            continue;
-                        }
-
-                        if (maxEtag == -1 || lastRaftIndex < maxEtag)
-                            maxEtag = lastRaftIndex.Value;
-
-                        // there can't be a lower etag, we can stop checking here
-                        if (maxEtag == 0)
-                        {
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a maxEtag of 0, returning {CompareExchangeTombstonesCleanupState.NoMoreTombstones}");
-                            return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
-                        }
+                        return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
                     }
 
-                    var clusterWideTransactionIndex = report.LastClusterWideTransactionRaftIndex;
+                    // ReSharper disable once UseNullPropagation
+                    if (onDiagnosticLog != null) onDiagnosticLog($"[Task {backupConfig.TaskId}] The cycle for the anchor backup started at: `{cycleStartTime.Value:O}`.");
 
-                    if (_server.ForTestingPurposes?.IgnoreClusterTransactionIndexInCompareExchangeCleaner == true)
-                        clusterWideTransactionIndex = long.MaxValue;
+                    // Step 3: Find all full backups that fall within THIS evidence-based cycle
+                    var etagsInCycle = allHistoricalFullBackups
+                        .Where(b => b.Time >= cycleStartTime.Value)
+                        .Select(b => b.Etag)
+                        .ToList();
 
-                    if (minClusterWideTransactionIndex == -1 || clusterWideTransactionIndex < minClusterWideTransactionIndex)
-                        minClusterWideTransactionIndex = clusterWideTransactionIndex;
+                    Debug.Assert(etagsInCycle.Count > 0, "The anchor backup must be present in its own cycle.");
 
-                    foreach (var kvp in report.LastIndexStats)
+                    // Step 4: The limit for this task is the EARLIEST backup from this cycle
+                    var limitForThisTask = etagsInCycle.Min();
+
+                    // ReSharper disable once UseNullPropagation
+                    if (onDiagnosticLog != null) onDiagnosticLog($"[Task {backupConfig.TaskId}] Found {etagsInCycle.Count} backups in this cycle. The limit (earliest etag) for this task is: `{limitForThisTask}`.");
+
+                    // Step 5: Update the overall minimum etag across all tasks
+                    if (limitForThisTask < minEtagFromAllTasks)
+                        minEtagFromAllTasks = limitForThisTask;
+                }
+            }
+            else
+            {
+                // ReSharper disable once UseNullPropagation
+                if (onDiagnosticLog != null) onDiagnosticLog("No periodic backup tasks configured. Tombstone cleanup is not constrained by backups.");
+            }
+
+            maxEtag = minEtagFromAllTasks == long.MaxValue
+                ? -1
+                : minEtagFromAllTasks;
+
+            // Apply final constraints
+            // ReSharper disable once UseNullPropagation
+            if (onDiagnosticLog != null) onDiagnosticLog($"Backup-based Etag limit is `{(maxEtag == -1 ? "unconstrained" : maxEtag.ToString())}`. Applying constraints from cluster transactions and indexes.");
+
+            long minClusterConstraintEtag = -1;
+
+            foreach (var databaseState in mergedState.States.Values)
+            {
+                foreach (var nodeTag in databaseState.DatabaseTopology.AllNodes)
+                {
+                    var report = databaseState.GetCurrentDatabaseReport(nodeTag);
+                    if (report == null)
+                        continue;
+
+                    var clusterTxIndex = report.LastClusterWideTransactionRaftIndex;
+                    if (minClusterConstraintEtag == -1 || clusterTxIndex < minClusterConstraintEtag)
                     {
-                        var lastIndexedCompareExchangeReferenceTombstoneEtag = kvp.Value.LastIndexedCompareExchangeReferenceTombstoneEtag;
-                        ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}', index '{kvp.Key}': LastIndexedCompareExchangeReferenceTombstoneEtag = {lastIndexedCompareExchangeReferenceTombstoneEtag}");
-                        if (lastIndexedCompareExchangeReferenceTombstoneEtag == null)
-                        {
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"{nameof(lastIndexedCompareExchangeReferenceTombstoneEtag)} is null, continuing...");
+                        // ReSharper disable once UseNullPropagation
+                        if (onDiagnosticLog != null) onDiagnosticLog($"[Node {nodeTag}] Found new minimum constraint from cluster-wide tx: `{clusterTxIndex}`.");
+
+                        minClusterConstraintEtag = clusterTxIndex;
+                    }
+
+                    foreach ((string indexName, DatabaseStatusReport.ObservedIndexStatus indexStats) in report.LastIndexStats)
+                    {
+                        if (indexStats.LastIndexedCompareExchangeReferenceTombstoneEtag.HasValue == false)
                             continue;
-                        }
 
-                        if (minClusterWideTransactionIndex == -1 || lastIndexedCompareExchangeReferenceTombstoneEtag < minClusterWideTransactionIndex)
-                        {
-                            minClusterWideTransactionIndex = lastIndexedCompareExchangeReferenceTombstoneEtag.Value;
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Updated {nameof(minClusterWideTransactionIndex)} to {minClusterWideTransactionIndex} based on node '{nodeTag}', index '{kvp.Key}'");
-                        }
+                        long indexEtag = indexStats.LastIndexedCompareExchangeReferenceTombstoneEtag.Value;
+                        if (minClusterConstraintEtag != -1 && indexEtag >= minClusterConstraintEtag)
+                            continue;
 
-                        if (minClusterWideTransactionIndex == 0)
-                        {
-                            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Node '{nodeTag}' has a minClusterWideTransactionIndex of 0, returning {CompareExchangeTombstonesCleanupState.NoMoreTombstones}");
-                            return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
-                        }
+                        // ReSharper disable once UseNullPropagation
+                        if (onDiagnosticLog != null) onDiagnosticLog($"[Node {nodeTag}][Index {indexName}] Found new minimum constraint from index: `{indexEtag}`.");
+
+                        minClusterConstraintEtag = indexEtag;
                     }
                 }
             }
 
-            // there are cluster transactions that haven't happened on some of the nodes yet, only delete up to the ones that happened on all
-            if (maxEtag == -1 || minClusterWideTransactionIndex < maxEtag)
-                maxEtag = minClusterWideTransactionIndex;
-
-            if (maxEtag == 0)
+            if (maxEtag == -1 || (minClusterConstraintEtag != -1 && minClusterConstraintEtag < maxEtag))
             {
-                ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Final {nameof(maxEtag)} is 0, returning {CompareExchangeTombstonesCleanupState.NoMoreTombstones}.");
+                // ReSharper disable once UseNullPropagation
+                if (onDiagnosticLog != null) onDiagnosticLog($"Cluster-wide constraint ({minClusterConstraintEtag}) is stricter than backup-based limit (`{(maxEtag == -1 ? "none" : maxEtag.ToString())}`). Applying stricter limit.");
+
+                maxEtag = minClusterConstraintEtag;
+            }
+
+            if (maxEtag <= 0)
+            {
+                // ReSharper disable once UseNullPropagation
+                if (onDiagnosticLog != null) onDiagnosticLog($"Final cleanup Etag is {maxEtag}. No tombstones will be cleaned this time.");
+
                 return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
             }
 
-            ForTestingPurposes?.OnDiagnosticLog?.Invoke($"Finished {nameof(GetMaxCompareExchangeTombstonesEtagToDelete)}. Returning {CompareExchangeTombstonesCleanupState.HasMoreTombstones}.");
+            // ReSharper disable once UseNullPropagation
+            if (onDiagnosticLog != null) onDiagnosticLog($"Final decision: tombstones can be cleaned up to Etag `{maxEtag}`.");
+
             return CompareExchangeTombstonesCleanupState.HasMoreTombstones;
         }
 
@@ -972,9 +962,72 @@ namespace Raven.Server.ServerWide.Maintenance
                 States[shardNumber] = state;
             }
 
-            public static MergedDatabaseObservationState GetEmpty()
+            [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
+            [SuppressMessage("ReSharper", "HeuristicUnreachableCode")]
+            internal bool IsValid(Action<string> onDiagnosticLog)
             {
-                return new MergedDatabaseObservationState();
+                foreach (DatabaseObservationState databaseObservationState in States.Values)
+                {
+                    foreach (var nodeTag in databaseObservationState.DatabaseTopology.AllNodes)
+                    {
+                        var hasClusterNodeStatusReport = databaseObservationState.Current.TryGetValue(nodeTag, out var clusterNodeStatusReport);
+                        Debug.Assert(hasClusterNodeStatusReport, $"[Node {nodeTag}] Missing cluster node status report for database '{databaseObservationState.Name}'.");
+                        if (hasClusterNodeStatusReport == false)
+                        {
+                            // ReSharper disable once UseNullPropagation
+                            if (onDiagnosticLog != null) onDiagnosticLog($"[Node {nodeTag}] Missing cluster node status report for database '{databaseObservationState.Name}'.");
+
+                            return false;
+                        }
+
+                        var hasDatabaseStatusReport = clusterNodeStatusReport.Report.TryGetValue(databaseObservationState.Name, out var databaseStatusReport);
+                        Debug.Assert(hasDatabaseStatusReport || clusterNodeStatusReport.Error != null, $"[Node {nodeTag}] Missing database status report for database '{databaseObservationState.Name}'.");
+                        if (hasDatabaseStatusReport == false)
+                        {
+                            // ReSharper disable once UseNullPropagation
+                            if (onDiagnosticLog != null) onDiagnosticLog($"[Node {nodeTag}] Missing database status report for database '{databaseObservationState.Name}'.");
+
+                            return false;
+                        }
+
+                        if (databaseStatusReport.BackupStatuses == null)
+                        {
+                            // ReSharper disable once UseNullPropagation
+                            if (onDiagnosticLog != null) onDiagnosticLog($"[Node {nodeTag}] BackupStatuses is null for database '{databaseObservationState.Name}'.");
+
+                            return false;
+                        }
+
+                        // ReSharper disable once UseNullPropagation
+                        if (onDiagnosticLog != null) onDiagnosticLog($"[Node {nodeTag}] {nameof(DatabaseStatusReport.LastClusterWideTransactionRaftIndex)} = {(databaseStatusReport.LastClusterWideTransactionRaftIndex == long.MaxValue ? "long.MaxValue" : databaseStatusReport.LastClusterWideTransactionRaftIndex.ToString())}");
+
+                        foreach ((long taskId, PeriodicBackupStatusReport backupStatusReport) in databaseStatusReport.BackupStatuses)
+                        {
+                            if (backupStatusReport.IsValid(nodeTag, onDiagnosticLog) == false)
+                                return false;
+
+                            var backupConfiguration = RawDatabase.GetPeriodicBackupConfiguration(taskId);
+                            Debug.Assert(backupConfiguration != null, $"[Node {nodeTag}] Should not happen, if {nameof(RawDatabase.PeriodicBackupsTaskIds)} contains taskId '{taskId}', it should have a configuration.");
+                            if (backupConfiguration == null)
+                            {
+                                // ReSharper disable once UseNullPropagation
+                                if (onDiagnosticLog != null) onDiagnosticLog($"[Node {nodeTag}] Missing backup configuration for taskId '{taskId}' in database '{databaseObservationState.Name}'. Should not happen, probably a bug.");
+
+                                return false;
+                            }
+
+                            if (backupConfiguration.FullBackupFrequency == null && backupConfiguration.IncrementalBackupFrequency == null)
+                            {
+                                // ReSharper disable once UseNullPropagation
+                                if (onDiagnosticLog != null) onDiagnosticLog($"[Node {nodeTag}] Backup configuration for taskId '{taskId}' has no FullBackupFrequency and no IncrementalBackupFrequency. Should not happen, probably a bug.");
+
+                                return false;
+                            }
+                        }
+                    }
+                }
+
+                return true;
             }
         }
 

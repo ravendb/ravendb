@@ -40,9 +40,8 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
                 BackupStatusStorage.InsertBackupStatusBlittable(context, status.Value, DatabaseName, serverStore._env.Base64Id, PeriodicBackupStatus.TaskId);
             }
 
-            // Delete the local status if we are a non responsible node and we are overdue on a full backup
-            var localStatus = BackupUtils.GetLocalBackupStatus(serverStore, context, DatabaseName, PeriodicBackupStatus.TaskId);
-
+            // Delete the local status if we are a non-responsible node, and we are overdue on a full backup
+            var localStatus = serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(context, DatabaseName, PeriodicBackupStatus.TaskId);
             if (localStatus == null)
                 return;
 

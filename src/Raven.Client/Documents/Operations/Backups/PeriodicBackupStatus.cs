@@ -1,6 +1,5 @@
 using System;
 using Raven.Client.ServerWide;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.Backups

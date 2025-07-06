@@ -19,7 +19,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using BackupUtils = Raven.Server.Utils.BackupUtils;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
 {
@@ -631,7 +630,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
 
                 // check local status not null and tombstones not deleted
-                var localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, store.Database, taskId);
+                var localStatus = originalNodeServer.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(store.Database, taskId);
                 Assert.NotNull(localStatus);
                 Assert.NotNull(localStatus.LastFullBackupInternal);
 
@@ -649,7 +648,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // wait for local backup status to be deleted
                 await WaitForValueAsync(() =>
                 {
-                    localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, store.Database, taskId);
+                    localStatus = originalNodeServer.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(store.Database, taskId);
                     return localStatus == null;
                 }, true);
                 Assert.Null(localStatus);
@@ -777,7 +776,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: false);
 
                 // check local status not null and tombstones not deleted
-                var localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, shardName, taskId);
+                var localStatus = originalNodeServer.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(shardName, taskId);
                 Assert.NotNull(localStatus);
                 Assert.NotNull(localStatus.LastFullBackupInternal);
 
@@ -795,7 +794,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // wait for local backup status to be deleted
                 await WaitForValueAsync(() =>
                 {
-                    localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, shardName, taskId);
+                    localStatus = originalNodeServer.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(shardName, taskId);
                     return localStatus == null;
                 }, true);
                 Assert.Null(localStatus);
@@ -913,7 +912,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await dbOther.TombstoneCleaner.ExecuteCleanup();
 
                 // check local status not null and tombstones not deleted
-                var localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, store.Database, taskId);
+                var localStatus = originalNodeServer.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(store.Database, taskId);
                 Assert.NotNull(localStatus);
                 Assert.NotNull(localStatus.LastFullBackupInternal);
 
@@ -943,7 +942,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // wait for local backup status to be deleted
                 await WaitForValueAsync(() =>
                 {
-                    localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, store.Database, taskId);
+                    localStatus = originalNodeServer.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(store.Database, taskId);
                     return localStatus == null;
                 }, true);
                 Assert.Null(localStatus);
@@ -1086,7 +1085,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await dbOther.TombstoneCleaner.ExecuteCleanup();
 
                 // check local status not null and tombstones not deleted
-                var localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, shardName, taskId);
+                var localStatus = originalNodeServer.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(shardName, taskId);
                 Assert.NotNull(localStatus);
                 Assert.NotNull(localStatus.LastFullBackupInternal);
 
@@ -1116,7 +1115,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 // wait for local backup status to be deleted
                 await WaitForValueAsync(() =>
                 {
-                    localStatus = BackupUtils.GetLocalBackupStatus(originalNodeServer.ServerStore, shardName, taskId);
+                    localStatus = originalNodeServer.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(shardName, taskId);
                     return localStatus == null;
                 }, true);
                 Assert.Null(localStatus);

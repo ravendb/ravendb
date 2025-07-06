@@ -21,15 +21,15 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
     public override async ValueTask ExecuteAsync()
     {
         var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-        var type = RequestHandler.GetStringQueryString("type", required: false) ?? StatusType.Cluster.ToString();
+        var type = RequestHandler.GetStringQueryString("type", required: false) ?? nameof(StatusType.Cluster);
 
         if (await RequestHandler.CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
             return;
 
-        var taskId = RequestHandler.GetLongQueryString("taskId", required: true);
+        var taskId = RequestHandler.GetLongQueryString("taskId");
 
-        if (StatusType.TryParse(type, ignoreCase: true, out StatusType statusType) == false)
-            throw new ArgumentException($"provided '{nameof(type)}' has to be `{StatusType.Cluster.ToString()}` or '{StatusType.Local.ToString()}'");
+        if (Enum.TryParse(type, ignoreCase: true, out StatusType statusType) == false)
+            throw new ArgumentException($"provided '{nameof(type)}' has to be `{nameof(StatusType.Cluster)}` or '{nameof(StatusType.Local)}'");
 
         using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
@@ -46,8 +46,8 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
                 {
                     var dbName = ShardHelper.ToShardName(name, shardNumber);
                     var status = statusType == StatusType.Local
-                        ? BackupUtils.GetLocalBackupStatusBlittable(ServerStore, context, dbName, taskId.Value)
-                        : BackupUtils.GetBackupStatusFromClusterBlittable(ServerStore, context, dbName, taskId.Value);
+                        ? ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatusBlittable(context, dbName, taskId)
+                        : BackupUtils.GetBackupStatusFromClusterBlittable(ServerStore, context, dbName, taskId);
                     
                     toDispose.Add(status);
                     statusByShard[shardNumber.ToString()] = status;
@@ -59,8 +59,8 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
             else
             {
                 var status = statusType == StatusType.Local
-                    ? BackupUtils.GetLocalBackupStatusBlittable(ServerStore, context, name, taskId.Value)
-                    : BackupUtils.GetBackupStatusFromClusterBlittable(ServerStore, context, name, taskId.Value);
+                    ? ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatusBlittable(context, name, taskId)
+                    : BackupUtils.GetBackupStatusFromClusterBlittable(ServerStore, context, name, taskId);
                 toDispose.Add(status);
 
                 result[nameof(GetPeriodicBackupStatusOperationResult.IsSharded)] = false;

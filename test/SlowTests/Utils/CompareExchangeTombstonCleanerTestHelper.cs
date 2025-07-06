@@ -1,27 +1,38 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Server;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Utils;
 
-internal static class CompareExchangeTombstoneCleanerTestHelper
+internal abstract class CompareExchangeTombstoneCleanerTestHelper : RavenTestBase
 {
-    public static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> Clean(ClusterContextPool contextPool, string database, RavenServer server, bool ignoreClustrTrx, StringBuilder sb = null)
+    protected CompareExchangeTombstoneCleanerTestHelper(ITestOutputHelper output) : base(output)
     {
+    }
+
+    public static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> Clean(List<RavenServer> nodes, string databaseName, bool ignoreClustrTrx, StringBuilder sb = null)
+    {
+        var server = await WaitForNotNullAsync(() => Task.FromResult(nodes.SingleOrDefault(x => x.ServerStore.CurrentRachisState is RachisState.Leader)),
+            timeout: (int) TimeSpan.FromSeconds(10).TotalMilliseconds,
+            interval: (int) TimeSpan.FromMilliseconds(500).TotalMilliseconds);
+
         sb ??= new StringBuilder();
         CleanCompareExchangeTombstonesCommand cmd;
         var serverStore = server.ServerStore;
 
-        using (contextPool.AllocateOperationContext(out ClusterOperationContext context))
+        using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
-        using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, database))
+        using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
         {
             var current = serverStore.Observer.Maintenance.GetStats();
             var previous = serverStore.Observer.Maintenance.GetStats();
@@ -34,13 +45,13 @@ internal static class CompareExchangeTombstoneCleanerTestHelper
             }
             else
             {
-                AddState(database, rawRecord.Topology);
+                AddState(databaseName, rawRecord.Topology);
             }
 
-            var beforeCleanupCompareExchangeTombstonesNumber = serverStore.Cluster.GetNumberOfCompareExchangeTombstones(context, database);
+            var beforeCleanupCompareExchangeTombstonesNumber = serverStore.Cluster.GetNumberOfCompareExchangeTombstones(context, databaseName);
             sb.AppendLine($"Before cleanup: {beforeCleanupCompareExchangeTombstonesNumber} tombstones.");
 
-            cmd = serverStore.Observer.GetCompareExchangeTombstonesToCleanup(database, mergedState, context, out var cleanupState);
+            cmd = serverStore.Observer.GetCleanCompareExchangeTombstonesCommand(databaseName, mergedState, context, out var cleanupState);
             if (cleanupState != ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones)
             {
                 sb.AppendLine($"Exiting early, cleanupState: {cleanupState}");
@@ -66,15 +77,14 @@ internal static class CompareExchangeTombstoneCleanerTestHelper
         var result = await serverStore.SendToLeaderAsync(cmd);
         await serverStore.Cluster.WaitForIndexNotification(result.Index);
 
-        var hasMore = (bool)result.Result;
-
-        using (contextPool.AllocateOperationContext(out ClusterOperationContext context))
+        using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
         {
-            long afterCleanupCompareExchangeTombstonesNumber = serverStore.Cluster.GetNumberOfCompareExchangeTombstones(context, database);
+            long afterCleanupCompareExchangeTombstonesNumber = serverStore.Cluster.GetNumberOfCompareExchangeTombstones(context, databaseName);
             sb.AppendLine($"After cleanup: {afterCleanupCompareExchangeTombstonesNumber} tombstones.");
         }
 
+        var hasMore = (bool)result.Result;
         return hasMore
             ? ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones
             : ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones;

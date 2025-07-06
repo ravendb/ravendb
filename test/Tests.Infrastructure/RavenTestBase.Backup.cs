@@ -7,12 +7,14 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NCrontab.Advanced;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.Util;
@@ -26,6 +28,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Sparrow.Json;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests
 {
@@ -307,7 +310,7 @@ namespace FastTests
                 Assert.Equal(opStatus, command.Result.Status);
             }
 
-            private static async Task<RavenCommand<OperationState>> ExecuteGetOperationStateCommand(IDocumentStore store, long operationId, string responsibleNode = null)
+            internal async Task<RavenCommand<OperationState>> ExecuteGetOperationStateCommand(IDocumentStore store, long operationId, string responsibleNode = null)
             {
                 using (store.GetRequestExecutor().ContextPool.AllocateOperationContext(out JsonOperationContext context))
                 {
@@ -554,7 +557,7 @@ namespace FastTests
                 return sb.ToString();
             }
 
-            private static async Task CheckBackupOperationStatus(OperationStatus expected, RavenCommand<OperationState> command, IDocumentStore store, long taskId, long opId,
+            internal async Task CheckBackupOperationStatus(OperationStatus expected, RavenCommand<OperationState> command, IDocumentStore store, long taskId, long opId,
                 PeriodicBackupRunner periodicBackupRunner)
             {
                 var backupResult = command.Result?.Result as BackupResult;
@@ -760,22 +763,77 @@ namespace FastTests
                 return taskId.Value;
             }
 
-            public async Task WaitAndAssertForClusterObserverToGetUpdatedBackupStatusAsync(DocumentStore store, long backupTaskId, PeriodicBackupStatus expectedBackupStatus, RavenServer server = null, int timeout = 15_000, int interval = 100)
+            public async Task WaitAndAssertForClusterObserverToGetUpdatedBackupStatusAsync(DocumentStore store, PeriodicBackupStatus expectedBackupStatus, List<RavenServer> clusterNodes, int timeout = 15_000, int interval = 1000)
             {
-                server ??= _parent.Server;
                 await _parent.WaitAndAssertForValueAsync(() =>
                     {
-                        var clusterNodeStatusReports = server.ServerStore.Observer.Maintenance.GetStats();
-                        if (clusterNodeStatusReports.TryGetValue(server.ServerStore.NodeTag, out var clusterNodeStatusReport) == false ||
-                            clusterNodeStatusReport.Report.TryGetValue(store.Database, out var databaseStatusReport) == false ||
-                            databaseStatusReport?.BackupStatuses == null ||
-                            databaseStatusReport.BackupStatuses.TryGetValue(backupTaskId, out var fromReportBackupStatus) == false)
+                        var leader = clusterNodes.FirstOrDefault(x => x.ServerStore.CurrentRachisState == RachisState.Leader);
+                        if (leader == null)
                             return false;
 
-                        return fromReportBackupStatus?.LastRaftIndex?.LastEtag != null && fromReportBackupStatus.LastRaftIndex.LastEtag >= expectedBackupStatus.LastRaftIndex.LastEtag;
+                        var clusterNodeStatusReports = leader.ServerStore.Observer.Maintenance.GetStats();
+
+                        if (clusterNodeStatusReports.TryGetValue(expectedBackupStatus.NodeTag, out var clusterNodeStatusReport) == false ||
+                            clusterNodeStatusReport.Report.TryGetValue(store.Database, out var databaseStatusReport) == false ||
+                            databaseStatusReport?.BackupStatuses == null ||
+                            databaseStatusReport.BackupStatuses.TryGetValue(expectedBackupStatus.TaskId, out var backupStatusReport) == false)
+                            return false;
+
+                        return backupStatusReport?.LastRaftIndexEtag != null && backupStatusReport.LastRaftIndexEtag >= expectedBackupStatus.LastRaftIndex.LastEtag &&
+                               backupStatusReport?.LastFullBackupRaftIndexEtag != null && backupStatusReport.LastFullBackupRaftIndexEtag >= expectedBackupStatus.LastRaftIndex.LastFullBackupEtag;
                     },
                     expectedVal: true,
                     timeout, interval);
+            }
+
+            /// <summary>
+            /// Waits until a safe action window arrives, which is positioned right before the next full backup,
+            /// but after the last preceding incremental backup.
+            /// </summary>
+            /// <param name="backupConfig">The periodic backup configuration containing backup schedules.</param>
+            /// <param name="actionWindow">The duration of the window in which the action should be performed (e.g., 30 seconds).</param>
+            /// <param name="cancellationToken">A cancellation token to cancel the waiting operation.</param>
+            /// <param name="output">Optional output helper for logging.</param>
+            public async Task WaitUntilNextFullBackupActionWindowAsync(PeriodicBackupConfiguration backupConfig, TimeSpan actionWindow, CancellationToken cancellationToken, ITestOutputHelper output = null)
+            {
+                var fullSchedule = CrontabSchedule.Parse(backupConfig.FullBackupFrequency);
+                var incrementalSchedule = string.IsNullOrWhiteSpace(backupConfig.IncrementalBackupFrequency) == false
+                    ? CrontabSchedule.Parse(backupConfig.IncrementalBackupFrequency)
+                    : null;
+
+                var baselineTime = DateTime.UtcNow;
+
+                for (int i = 0; i < 2; i++)
+                {
+                    var nextFullBackupDateTime = fullSchedule.GetNextOccurrence(baselineTime);
+                    var windowStart = BackupUtils.GetLastOccurrence(incrementalSchedule, nextFullBackupDateTime.AddTicks(-1)) ?? nextFullBackupDateTime.AddMinutes(-1);
+                    var windowEnd = windowStart.Add(actionWindow);
+
+                    if (baselineTime < windowStart)
+                    {
+                        var delay = windowStart - baselineTime;
+                        output?.WriteLine($"[{DateTime.UtcNow:O}] Waiting for safe action window... Delay: {delay.TotalSeconds:F2} seconds. Will proceed at {windowStart:O} UTC.");
+                        await Task.Delay(delay, cancellationToken);
+                        return; // We're done.
+                    }
+
+                    if (baselineTime >= windowStart && baselineTime < windowEnd)
+                    {
+                        output?.WriteLine($"[{DateTime.UtcNow:O}] Inside safe action window. Proceeding immediately.");
+                        return; // We're done.
+                    }
+
+                    // If we are here, it means currentTime >= windowEnd (we missed the window).
+                    // Update currentTime to the start of the missed backup and loop again.
+                    output?.WriteLine($"[{DateTime.UtcNow:O}] Missed current window. Recalculating for the next cycle.");
+                    baselineTime = nextFullBackupDateTime;
+                    // The loop will continue, and GetNextOccurrence(currentTime) will find the next slot.
+                }
+
+                Assert.Fail($"Failed to find a safe action window after two iterations. " +
+                                   $"Last checked time: {baselineTime:O}, " +
+                                   $"Next full backup time: {fullSchedule.GetNextOccurrence(baselineTime):O}, " +
+                                   $"Action window: {actionWindow.TotalSeconds} seconds.");
             }
         }
     }
