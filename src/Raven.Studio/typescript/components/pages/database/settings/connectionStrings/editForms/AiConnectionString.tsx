@@ -390,6 +390,7 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 model: null,
                 uri: null,
                 embeddingsMaxConcurrentBatches: null,
+                think: null,
             },
             embeddedSettings: {
                 embeddingsMaxConcurrentBatches: null,

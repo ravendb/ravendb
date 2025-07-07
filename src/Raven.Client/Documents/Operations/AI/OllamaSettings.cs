@@ -36,7 +36,7 @@ public sealed class OllamaSettings : AbstractAiSettings
     /// When null, the parameter is not sent (backwards compatible).
     /// Disable thinking for speed/efficiency in simple tasks, enable for complex tasks requiring reasoning.
     /// </summary>
-    public bool? Think { get; set; } = true;
+    public bool? Think { get; set; } = null;
 
     public override void ValidateFields(List<string> errors)
     {

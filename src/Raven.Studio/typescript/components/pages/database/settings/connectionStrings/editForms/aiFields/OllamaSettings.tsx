@@ -1,5 +1,5 @@
 import { FlexGrow } from "components/common/FlexGrow";
-import { FormInput, FormLabel, FormSelectAutocomplete, FormSwitch } from "components/common/Form";
+import { FormInput, FormLabel, FormSelect, FormSelectAutocomplete } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import {
     ConnectionFormData,
@@ -94,14 +94,13 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             </div>
             {formValues.modelType === "Chat" && (
                 <div className="mb-2">
-                    <FormSwitch control={control} name="ollamaSettings.think">
-                        <FormLabel className="form-check-label">
-                            Enable thinking mode
-                            <PopoverWithHoverWrapper message="Controls whether thinking models engage their reasoning process. When enabled, models perform internal reasoning before responding (uses more tokens, slower, better quality for complex tasks). When disabled, they respond directly (fewer tokens, faster, may reduce quality for complex reasoning). Choose based on task complexity vs speed/cost requirements.">
-                                <Icon icon="info" color="info" id="think" margin="ms-1" />
-                            </PopoverWithHoverWrapper>
-                        </FormLabel>
-                    </FormSwitch>
+                    <FormLabel>
+                        Thinking mode
+                        <PopoverWithHoverWrapper message="Controls whether thinking models engage their reasoning process. When enabled, models perform internal reasoning before responding (uses more tokens, slower, better quality for complex tasks). When disabled, they respond directly (fewer tokens, faster, may reduce quality for complex reasoning). Choose based on task complexity vs speed/cost requirements.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
+                    <FormSelect control={control} name="ollamaSettings.think" options={thinkOptions} />
                 </div>
             )}
             {formValues.modelType === "TextEmbeddings" && <EmbeddingsMaxConcurrentBatches baseName="ollamaSettings" />}
@@ -120,3 +119,9 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
         </>
     );
 }
+
+const thinkOptions: SelectOption<boolean>[] = [
+    { label: "Default", value: null },
+    { label: "Enabled", value: true },
+    { label: "Disabled", value: false },
+];
