@@ -1,7 +1,7 @@
-import { createContext, useContext } from "react";
+import { createContext, RefObject, useContext } from "react";
 import ReactAce from "react-ace";
 
-const AceEditorContext = createContext<{ reactAce: ReactAce }>(null);
+const AceEditorContext = createContext<RefObject<ReactAce>>(null);
 
 export function useAceEditorContext() {
     const context = useContext(AceEditorContext);

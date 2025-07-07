@@ -115,7 +115,7 @@ function AceEditor(props: AceEditorProps) {
         : defaultCommands;
 
     return (
-        <AceEditorContext.Provider value={aceRef ? { reactAce: aceRef.current } : null}>
+        <AceEditorContext.Provider value={aceRef}>
             <div className={classNames("ace-editor", { "has-error": errorMessage })}>
                 <div className="react-ace-wrapper">
                     <ReactAce

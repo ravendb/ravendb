@@ -6,12 +6,12 @@ import "ace-builds/src-noconflict/ext-beautify";
 const beautify = ace.require("ace/ext/beautify").beautify;
 
 export default function AceEditorFormatAction() {
-    const { reactAce } = useAceEditorContext();
+    const reactAce = useAceEditorContext();
 
     return (
         <Button
             variant="link"
-            onClick={() => beautify(reactAce?.editor.session)}
+            onClick={() => beautify(reactAce?.current.editor.session)}
             className="p-0 text-reset"
             size="sm"
             title="Format"
