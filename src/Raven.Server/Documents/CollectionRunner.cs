@@ -106,11 +106,12 @@ namespace Raven.Server.Documents
                     ids.Clear();
 
                     Database.ForTestingPurposes?.CollectionRunnerBeforeOpenReadTransaction?.Invoke();
-
+                    bool hadDocuments = false;
                     using (context.OpenReadTransaction())
                     {
                         foreach (var document in GetDocuments(context, collectionName, startEtag, startAfterId, alreadySeenIdsCount, OperationBatchSize, isAllDocs, DocumentFields.Id, out bool isStartsWithOrIdQuery, token.Token))
                         {
+                            hadDocuments = true;
                             using (document)
                             {
                                 cancellationToken.ThrowIfCancellationRequested();
@@ -149,7 +150,13 @@ namespace Raven.Server.Documents
                     }
 
                     if (ids.Count == 0)
+                    {
+                        // The current batch returned no documents; however, the current etag is still in range, so we have to read more documents.
+                        if (hadDocuments && startEtag <= lastEtag && end == false)
+                            continue;
+                        
                         break;
+                    }
 
                     do
                     {
