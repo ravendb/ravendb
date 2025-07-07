@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using FastTests.Voron;
+using FastTests.Voron.FixedSize;
 using Tests.Infrastructure;
 using Voron.Data.Graphs;
 using Xunit;
@@ -13,13 +14,16 @@ namespace SlowTests.Voron.Graphs;
 
 public class HnswSearch(ITestOutputHelper output) : StorageTest(output)
 {
-    [RavenFact(RavenTestCategory.Vector | RavenTestCategory.Corax)]
-    public void CanReturnAllOfVector()
+    [RavenTheory(RavenTestCategory.Vector | RavenTestCategory.Corax)]
+    [InlineDataWithRandomSeed]
+    [InlineDataWithRandomSeed]
+    [InlineData(1241232)]
+    public void CanReturnAllOfVector(int seed)
     {
         const int vectorSize = 1536;
         const int vectorSizeInBytes = vectorSize * sizeof(float);
         const int numberOfEntries = 1024;
-        var random = new Random(1241232);
+        var random = new Random(seed);
         Dictionary<long, float[]> storage = new();
         for (int i = 1; i <= numberOfEntries; ++i)
             storage.Add(i, Enumerable.Range(0, vectorSize).Select(_ => GetNextDim()).ToArray());
