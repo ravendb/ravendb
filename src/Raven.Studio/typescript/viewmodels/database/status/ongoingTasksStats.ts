@@ -26,6 +26,8 @@ import showDataDialog = require("viewmodels/common/showDataDialog");
 import app = require("durandal/app");
 import typeUtils = require("common/typeUtils");
 
+type GenAiPerformanceOperation = Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats.GenAiPerformanceOperation;
+
 type treeActionType = "toggleTrack" | "trackItem" | "gapItem" | "previewEtlScript" | "previewSinkScript" |
                       "subscriptionErrorItem" | "subscriptionPendingItem" | "subscriptionConnectionItem" | "previewSubscriptionQuery";
 
@@ -499,6 +501,8 @@ class ongoingTasksStats extends shardViewModelBase {
             "Load/Upload" : undefined as string,
             "Load/Upload/Child" : undefined as string,
             "GenAI": undefined as string,
+            "GenAI/LoadToModel": undefined as string,
+            "GenAI/UpdatePhase": undefined as string,
             "Model/Load": undefined as string,
             "ConnectionPending": undefined as string,
             "ConnectionActive": undefined as string,
@@ -1065,6 +1069,9 @@ class ongoingTasksStats extends shardViewModelBase {
                 heightCount = 3;
             }
             if (etlTask.EtlType === "EmbeddingsGeneration") {
+                heightCount = 2;
+            }
+            if (etlTask.EtlType === "GenAi") {
                 heightCount = 2;
             }
 
@@ -2371,6 +2378,13 @@ class ongoingTasksStats extends shardViewModelBase {
                                     tooltipHtml += `<div class="tooltip-li">Last transformed Etag for ${key}: <div class="value">${value} </div></div>`;
                                 }
                             });
+
+                            if (type === "GenAi") {
+                                const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats.GenAiPerformanceOperation;
+                                tooltipHtml += `<div class="tooltip-li">Number of context objects: <div class="value">${elementWithData.NumberOfContextObjects} </div></div>`;
+                                tooltipHtml += `<div class="tooltip-li">Total cached contexts: <div class="value">${elementWithData.TotalCachedContexts} </div></div>`;
+                            }
+
                             break;
                         case "Load": {
                             if (baseElement.SuccessfullyLoaded != null) {
@@ -2382,12 +2396,37 @@ class ongoingTasksStats extends shardViewModelBase {
                             }
 
                             if (type === "GenAi") {
-                                const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats.GenAiPerformanceOperation;
-                                tooltipHtml += `<div class="tooltip-li">Total tokens used: <div class="value">${elementWithData.TotalTokensUsed} </div></div>`;
-                                tooltipHtml += `<div class="tooltip-li">Completion tokens used: <div class="value">${elementWithData.CompletionTokensUsed} </div></div>`;
-                                tooltipHtml += `<div class="tooltip-li">Prompt tokens used: <div class="value">${elementWithData.PromptTokensUsed} </div></div>`;
-                                tooltipHtml += `<div class="tooltip-li">Total cached contexts: <div class="value">${elementWithData.TotalCachedContexts} </div></div>`;
-                                tooltipHtml += `<div class="tooltip-li">Total sent to model: <div class="value">${elementWithData.TotalSentToModel} </div></div>`;
+                                const elementWithData = context.item as GenAiPerformanceOperation;
+                                
+                                const totalSentToModel = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.TotalSentToModel);
+                                tooltipHtml += `<div class="tooltip-li">Total sent to model: <div class="value">${totalSentToModel} </div></div>`;
+
+                                const modelCallFailures = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.ModelCallFailures);
+                                tooltipHtml += `<div class="tooltip-li">Model call failures: <div class="value">${modelCallFailures} </div></div>`;
+
+                                const totalUpdates = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.TotalUpdates);
+                                tooltipHtml += `<div class="tooltip-li">Total updates: <div class="value">${totalUpdates} </div></div>`;
+
+                                const updateFailures = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.UpdateFailures);
+                                tooltipHtml += `<div class="tooltip-li">Update failures: <div class="value">${updateFailures} </div></div>`;
+
+                                const numberOfContextObjects = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.NumberOfContextObjects);
+                                tooltipHtml += `<div class="tooltip-li">Number of context objects: <div class="value">${numberOfContextObjects} </div></div>`;
+
+                                const totalCachedContexts = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.TotalCachedContexts);
+                                tooltipHtml += `<div class="tooltip-li">Total cached contexts: <div class="value">${totalCachedContexts} </div></div>`;
+
+                                const totalTokens = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.Usage?.TotalTokens ?? 0);
+                                tooltipHtml += `<div class="tooltip-li">Total tokens: <div class="value">${totalTokens} </div></div>`;
+
+                                const completionTokens = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.Usage?.CompletionTokens ?? 0);
+                                tooltipHtml += `<div class="tooltip-li">Completion tokens: <div class="value">${completionTokens} </div></div>`;
+
+                                const promptTokens = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.Usage?.PromptTokens ?? 0);
+                                tooltipHtml += `<div class="tooltip-li">Prompt tokens: <div class="value">${promptTokens} </div></div>`;
+
+                                const cachedTokens = typeUtils.sumBy(elementWithData.Operations, (operation: GenAiPerformanceOperation) => operation.Usage?.CachedTokens ?? 0);
+                                tooltipHtml += `<div class="tooltip-li">Cached tokens: <div class="value">${cachedTokens} </div></div>`;
                             }
 
                             break;
@@ -2406,12 +2445,28 @@ class ongoingTasksStats extends shardViewModelBase {
                         }
                         case "Model/Load": {
                             const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats.GenAiPerformanceOperation;
-                            tooltipHtml += `<div class="tooltip-li">Total tokens used: <div class="value">${elementWithData.TotalTokensUsed} </div></div>`;
-                            tooltipHtml += `<div class="tooltip-li">Completion tokens used: <div class="value">${elementWithData.CompletionTokensUsed} </div></div>`;
-                            tooltipHtml += `<div class="tooltip-li">Prompt tokens used: <div class="value">${elementWithData.PromptTokensUsed} </div></div>`;
                             tooltipHtml += `<div class="tooltip-li">Total cached contexts: <div class="value">${elementWithData.TotalCachedContexts} </div></div>`;
                             tooltipHtml += `<div class="tooltip-li">Total sent to model: <div class="value">${elementWithData.TotalSentToModel} </div></div>`;
                             break;
+                        }
+                        case "GenAI/LoadToModel": {
+                            const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats.GenAiPerformanceOperation;
+                            tooltipHtml += `<div class="tooltip-li">Total sent to model: <div class="value">${elementWithData.TotalSentToModel} </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Model call failures: <div class="value">${elementWithData.ModelCallFailures} </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Number of context objects: <div class="value">${elementWithData.NumberOfContextObjects} </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Total cached contexts: <div class="value">${elementWithData.TotalCachedContexts} </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Total tokens used: <div class="value">${elementWithData.Usage?.TotalTokens ?? 0} </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Completion tokens used: <div class="value">${elementWithData.Usage?.CompletionTokens ?? 0} </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Prompt tokens used: <div class="value">${elementWithData.Usage?.PromptTokens ?? 0} </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Cached tokens used: <div class="value">${elementWithData.Usage?.CachedTokens ?? 0} </div></div>`;
+                            break;
+                        }
+                        case "GenAI/UpdatePhase": {
+                            const elementWithData = context.item as Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats.GenAiPerformanceOperation;
+                            tooltipHtml += `<div class="tooltip-li">Total updates: <div class="value">${elementWithData.TotalUpdates} </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Update failures: <div class="value">${elementWithData.UpdateFailures} </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Number of context objects: <div class="value">${elementWithData.NumberOfContextObjects} </div></div>`;
+                            tooltipHtml += `<div class="tooltip-li">Total cached contexts: <div class="value">${elementWithData.TotalCachedContexts} </div></div>`;
                         }
                     }
                     
