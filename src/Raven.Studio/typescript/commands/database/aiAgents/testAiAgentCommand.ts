@@ -6,12 +6,6 @@ type RequestDto = Raven.Client.Documents.Operations.AI.Agents.AiAgentConfigurati
     Prompt: string;
 };
 
-interface ResultDto {
-    ChatId: string;
-    Response: object;
-    Usage: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
-}
-
 class testAiAgentCommand extends commandBase {
     constructor(
         private db: string,
@@ -20,7 +14,7 @@ class testAiAgentCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<ResultDto> {
+    execute(): JQueryPromise<Raven.Client.Documents.Operations.AI.Agents.ChatResult<object>> {
         const url = endpoints.databases.aiAgent.aiAgentTest;
 
         return this.post(url, JSON.stringify(this.dto), this.db).fail((response: JQueryXHR) =>

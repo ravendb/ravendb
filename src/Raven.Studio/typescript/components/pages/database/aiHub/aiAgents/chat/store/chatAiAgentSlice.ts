@@ -3,21 +3,26 @@ import { RootState } from "components/store";
 import { AiAgentMessage } from "../../partials/AiAgentMessages";
 
 interface EditAiAgentState {
-    isTestOpen: boolean;
+    prompt: string;
+    chatId: string;
     messages: AiAgentMessage[];
 }
 
 const initialState: EditAiAgentState = {
-    isTestOpen: false,
+    prompt: "",
+    chatId: "",
     messages: [],
 };
 
-export const editAiAgentSlice = createSlice({
-    name: "editAiAgent",
+export const chatAiAgentSlice = createSlice({
+    name: "chatAiAgent",
     initialState,
     reducers: {
-        isTestOpenSet: (state, action: PayloadAction<boolean>) => {
-            state.isTestOpen = action.payload;
+        promptSet: (state, action: PayloadAction<string>) => {
+            state.prompt = action.payload;
+        },
+        chatIdSet: (state, action: PayloadAction<string>) => {
+            state.chatId = action.payload;
         },
         messagesAdd: (state, action: PayloadAction<AiAgentMessage>) => {
             state.messages.push(action.payload);
@@ -32,9 +37,10 @@ export const editAiAgentSlice = createSlice({
     },
 });
 
-export const editAiAgentActions = editAiAgentSlice.actions;
+export const chatAiAgentActions = chatAiAgentSlice.actions;
 
-export const editAiAgentSelectors = {
-    isTestOpen: (state: RootState) => state.editAiAgent.isTestOpen,
-    messages: (state: RootState) => state.editAiAgent.messages,
+export const chatAiAgentSelectors = {
+    prompt: (state: RootState) => state.chatAiAgent.prompt,
+    messages: (state: RootState) => state.chatAiAgent.messages,
+    chatId: (state: RootState) => state.chatAiAgent.chatId,
 };

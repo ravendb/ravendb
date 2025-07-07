@@ -133,6 +133,7 @@ class appUrl {
         aiAgents: ko.pureComputed(() => appUrl.forAiAgents(appUrl.currentDatabase())),
         editAiAgent: (agentName: string) => ko.pureComputed(() => appUrl.forEditAiAgent(appUrl.currentDatabase(), agentName)),
         editAiAgentUrl: ko.pureComputed(() => appUrl.forEditAiAgent(appUrl.currentDatabase())),
+        chatAiAgent: (agentName: string) => ko.pureComputed(() => appUrl.forChatAiAgent(appUrl.currentDatabase(), agentName)),
         aiTasks: ko.pureComputed(() => appUrl.forAiTasks(appUrl.currentDatabase())),
         aiTasksStats: ko.pureComputed(() => appUrl.forAiTasksStats(appUrl.currentDatabase())),
     };
@@ -782,6 +783,12 @@ class appUrl {
         const databasePart = appUrl.getEncodedDbPart(db);
         const agentNamePart = agentName ? "&agentName=" + encodeURIComponent(agentName) : "";
         return "#databases/ai/agents/edit?" + databasePart + agentNamePart;
+    }
+
+    static forChatAiAgent(db: database | string, agentName: string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const agentNamePart = "&agentName=" + encodeURIComponent(agentName);
+        return "#databases/ai/agents/chat?" + databasePart + agentNamePart;
     }
 
     static forAiTasks(db: database | string): string {

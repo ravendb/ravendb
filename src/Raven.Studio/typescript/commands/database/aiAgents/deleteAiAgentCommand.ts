@@ -9,18 +9,14 @@ class deleteAiAgentCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<Record<string, Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration>> {
+    execute() {
         const args = {
             name: this.name,
         };
 
         const url = endpoints.databases.aiAgent.adminAiAgent;
 
-        return this.del<Record<string, Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration>>(
-            url,
-            args,
-            this.db
-        ).fail((response: JQueryXHR) =>
+        return this.del(url, args, this.db).fail((response: JQueryXHR) =>
             this.reportError("Failed to get AI agent", response.responseText, response.statusText)
         );
     }

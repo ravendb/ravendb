@@ -91,6 +91,8 @@ function AiAgentCard({ name, config }: AiAgentCardProps) {
     const { forCurrentDatabase } = useAppUrls();
     const confirm = useConfirm();
 
+    const { appUrl } = useAppUrls();
+
     const asyncDeleteAiAgent = useAsyncCallback(() => aiAgentService.deleteAiAgent(databaseName, name));
 
     const handleDelete = async () => {
@@ -125,10 +127,10 @@ function AiAgentCard({ name, config }: AiAgentCardProps) {
                 {config.SystemPrompt}
             </div>
             <div className="hstack justify-content-between mt-2">
-                <Button variant="primary">
-                    <Icon icon="rocket" />
-                    Start new chat (TODO)
-                </Button>
+                <a href={appUrl.forChatAiAgent(databaseName, name)} className="btn btn-primary">
+                    <Icon icon="llm" />
+                    Start new chat
+                </a>
                 <Dropdown>
                     <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="secondary">
                         <Icon icon="more" margin="m-0" />

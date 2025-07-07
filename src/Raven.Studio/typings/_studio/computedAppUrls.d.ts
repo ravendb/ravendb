@@ -112,6 +112,7 @@ interface computedAppUrls {
     aiAgents: KnockoutComputed<string>;
     editAiAgent: (agentName: string) => KnockoutComputed<string>;
     editAiAgentUrl: KnockoutComputed<string>;
+    chatAiAgent: (agentName: string) => KnockoutComputed<string>;
     aiTasks: KnockoutComputed<string>;
     aiTasksStats: KnockoutComputed<string>;
 }

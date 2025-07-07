@@ -18,6 +18,7 @@ import { adminLogsSlice } from "components/pages/resources/manageServer/adminLog
 import { certificatesSlice } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { editGenAiTaskSlice } from "./pages/database/tasks/ongoingTasks/editTasks/editGenAiTask/store/editGenAiTaskSlice";
 import { editAiAgentSlice } from "./pages/database/aiHub/aiAgents/edit/store/editAiAgentSlice";
+import { chatAiAgentSlice } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentSlice";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -40,6 +41,7 @@ export function createStoreConfiguration() {
             certificates: certificatesSlice.reducer,
             editGenAiTask: editGenAiTaskSlice.reducer,
             editAiAgent: editAiAgentSlice.reducer,
+            chatAiAgent: chatAiAgentSlice.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({

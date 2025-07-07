@@ -2,7 +2,7 @@ import { Icon } from "components/common/Icon";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "./utils/editAiAgentValidation";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { editAiAgentActions, EditAiAgentMessage, editAiAgentSelectors } from "./store/editAiAgentSlice";
+import { editAiAgentActions, editAiAgentSelectors } from "./store/editAiAgentSlice";
 import { FormInput } from "components/common/Form";
 import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
@@ -10,13 +10,9 @@ import Badge from "react-bootstrap/Badge";
 import genUtils from "common/generalUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import AceEditor from "components/common/ace/AceEditor";
-import moment from "moment";
-import ReactAce from "react-ace";
 import { useRef, useEffect } from "react";
 import _ from "lodash";
-import Spinner from "react-bootstrap/Spinner";
-import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import AiAgentMessages from "../partials/AiAgentMessages";
 
 export default function EditAiAgentTestPanel() {
     const dispatch = useAppDispatch();
@@ -33,10 +29,6 @@ export default function EditAiAgentTestPanel() {
     const { aiAgentService } = useServices();
 
     const asyncHandleTest = useAsyncCallback(async () => {
-        if (!formValues.testPrompt) {
-            return;
-        }
-
         dispatch(
             editAiAgentActions.messagesAdd({
                 id: _.uniqueId(),
@@ -68,7 +60,7 @@ export default function EditAiAgentTestPanel() {
                     usage: result.Usage,
                 })
             );
-        } catch (error) {
+        } catch {
             dispatch(
                 editAiAgentActions.messagesUpdate({
                     id: agentMessageId,
@@ -113,7 +105,7 @@ export default function EditAiAgentTestPanel() {
             {isTestOpen && (
                 <div className="w-100 flex-grow-1 vstack justify-content-center align-items-center overflow-auto">
                     <div className="flex-grow-1 vstack w-100 overflow-auto p-2" ref={messagesPanelRef}>
-                        {messages.length === 0 ? <ParametersField /> : <Messages />}
+                        {messages.length === 0 ? <ParametersField /> : <AiAgentMessages messages={messages} />}
                     </div>
                     <div className="w-100 p-2 panel-bg-2 border-top border-secondary">
                         <FormInput
@@ -130,6 +122,7 @@ export default function EditAiAgentTestPanel() {
                                 variant="primary"
                                 icon="arrow-up"
                                 onClick={asyncHandleTest.execute}
+                                disabled={!formValues.testPrompt}
                                 isSpinning={asyncHandleTest.loading}
                             />
                         </div>
@@ -180,109 +173,6 @@ function ParametersField() {
             ))}
         </div>
     );
-}
-
-function Messages() {
-    const messages = useAppSelector(editAiAgentSelectors.messages);
-
-    return (
-        <div className="w-100 vstack gap-2">
-            {messages.map((x, idx) =>
-                x.author === "user" ? (
-                    <div key={idx} className="hstack justify-content-end">
-                        <div
-                            className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset"
-                            style={{ maxWidth: "75%" }}
-                        >
-                            {x.text}
-                        </div>
-                    </div>
-                ) : (
-                    <AgentMessage key={idx} agentMessage={x} />
-                )
-            )}
-        </div>
-    );
-}
-
-function AgentMessage({ agentMessage }: { agentMessage: EditAiAgentMessage }) {
-    const aceRef = useRef<ReactAce>(null);
-
-    return (
-        <div>
-            <div className="hstack justify-content-between mb-2">
-                <div className="hstack gap-2">
-                    <div className="p-1 rounded-2 border">
-                        <Icon icon="sparkles" margin="m-0" />
-                    </div>
-                    <strong>AI Agent</strong>
-                    <div className="text-muted">{moment(agentMessage.date).format("HH:mm A")}</div>
-                </div>
-                {agentMessage.usage && (
-                    <div className="hstack text-muted">
-                        <PopoverWithHoverWrapper
-                            message={
-                                <div>
-                                    <div className="hstack justify-content-between gap-3">
-                                        <span>Prompt tokens</span>
-                                        <span>{agentMessage.usage.PromptTokens}</span>
-                                    </div>
-                                    <div className="hstack justify-content-between gap-3">
-                                        <span>Completion tokens</span>
-                                        <span>{agentMessage.usage.CompletionTokens}</span>
-                                    </div>
-                                    <div className="hstack justify-content-between gap-3">
-                                        <span>Cached tokens</span>
-                                        <span>{agentMessage.usage.CachedTokens}</span>
-                                    </div>
-                                    <hr className="my-1" />
-                                    <div className="hstack justify-content-between gap-3">
-                                        <span>Tokens usage</span>
-                                        <span>{agentMessage.usage.TotalTokens}</span>
-                                    </div>
-                                </div>
-                            }
-                        >
-                            <Icon icon="info" />
-                        </PopoverWithHoverWrapper>
-                        Tokens usage: {agentMessage.usage.TotalTokens}
-                    </div>
-                )}
-            </div>
-            {agentMessage.state === "loading" && (
-                <div className="hstack">
-                    <Spinner size="sm" className="me-1" />
-                    <span>Thinking...</span>
-                </div>
-            )}
-            {agentMessage.state === "error" && <div className="text-danger">Error</div>}
-            {agentMessage.state === "success" && (
-                <AceEditor
-                    aceRef={aceRef}
-                    value={agentMessage.text}
-                    readOnly
-                    mode="json"
-                    actions={[{ component: <AceEditor.FullScreenAction /> }]}
-                    height={getAgentAceEditorHeight(agentMessage.text)}
-                />
-            )}
-        </div>
-    );
-}
-
-function getAgentAceEditorHeight(text: string): `${number}px` {
-    if (!text) {
-        return "100px";
-    }
-
-    const lineHeight = 26;
-    const lineCount = text.split("\n").length;
-
-    if (lineCount <= 12) {
-        return `${lineCount * lineHeight}px`;
-    }
-
-    return "320px";
 }
 
 function getTestDto(

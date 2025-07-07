@@ -15,6 +15,7 @@ using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -603,6 +604,11 @@ namespace TypingsGenerator
 
             // AI
             scripter.AddType(typeof(AiModelsRequest));
+
+            // AI Agent
+            scripter.AddType(typeof(StartChatBody));
+            scripter.AddType(typeof(ResumeChatBody));
+            scripter.AddType(typeof(ChatResult<object>));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));

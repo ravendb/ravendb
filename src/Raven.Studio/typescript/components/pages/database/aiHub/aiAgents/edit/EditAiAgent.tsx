@@ -8,18 +8,21 @@ import EditAiAgentFooter from "./EditAiAgentFooter";
 import EditAiAgentTestPanel from "./EditAiAgentTestPanel";
 import { tryHandleSubmit } from "components/utils/common";
 import { useServices } from "components/hooks/useServices";
-import { useAppSelector } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import genUtils from "common/generalUtils";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import router from "plugins/router";
 import { useAppUrls } from "components/hooks/useAppUrls";
+import { editAiAgentActions } from "./store/editAiAgentSlice";
+import { useEffect } from "react";
 
 interface QueryParams {
     agentName: string;
 }
 
 export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<QueryParams>) {
+    const dispatch = useAppDispatch();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { aiAgentService } = useServices();
 
@@ -58,6 +61,12 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
             router.navigate(appUrl.forAiAgents(databaseName));
         });
     };
+
+    useEffect(() => {
+        return () => {
+            dispatch(editAiAgentActions.reset());
+        };
+    }, []);
 
     return (
         <FormProvider {...form}>

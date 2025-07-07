@@ -5,6 +5,7 @@ import AiConnectionStrings = require("components/pages/database/aiHub/aiConnecti
 import AiTasks = require("components/pages/database/aiHub/aiTasks/AiTasks");
 import AiAgents = require("components/pages/database/aiHub/aiAgents/AiAgents");
 import EditAiAgent = require("components/pages/database/aiHub/aiAgents/edit/EditAiAgent");
+import ChatAiAgent = require("components/pages/database/aiHub/aiAgents/chat/ChatAiAgent");
 
 export = getAiHubMenuItem;
 
@@ -37,6 +38,17 @@ function getAiHubMenuItem(appUrls: computedAppUrls) {
             search: {
                 overrideTitle: "Add New AI Agent",
                 alternativeTitles: ["Create AI Agent"],
+            }
+        }),
+        new leafMenuItem({
+            route: 'databases/ai/agents/chat',
+            moduleId: reactUtils.bridgeToReact(ChatAiAgent.default, "nonShardedView"),
+            title: 'AI Agent Chat',
+            nav: false,
+            css: "icon-llm",
+            itemRouteToHighlight: 'databases/ai/agents',
+            search: {
+                isExcluded: true
             }
         }),
         new leafMenuItem({

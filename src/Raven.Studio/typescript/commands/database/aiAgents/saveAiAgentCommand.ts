@@ -10,7 +10,7 @@ class saveAiAgentCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<any> {
+    execute() {
         const args = {
             name: this.name,
         };
