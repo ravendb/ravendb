@@ -2,5 +2,7 @@
 
 public sealed class GenAiOperations
 {
-    public const string LoadToModel = "Model/Load";
+    public const string LoadToModel = "GenAI/LoadToModel";
+
+    public const string ApplyUpdateScript = "GenAI/UpdatePhase";
 }

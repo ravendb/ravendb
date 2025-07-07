@@ -156,7 +156,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
         var exceptions = SendToModel(results, context, scope);
 
-        ApplyUpdateScript(context, results);
+        ApplyUpdateScript(context, results, scope);
 
         if (exceptions?.Count > 0)
         {
@@ -242,6 +242,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             var item = items[index];
             if (task.IsCompletedSuccessfully is false)
             {
+                statsScope.ModelCallFailures++;
+
                 var err = HandleItemError(task, item);
                 if (err is null) // can happen for refusal / too many tokens in one item, etc. (already handled) 
                     continue;
@@ -258,9 +260,11 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 Output = context.Sync.ReadForMemory(result, item.DocId)
             };
 
-            statsScope.TotalTokensUsed += usage.TotalTokens;
-            statsScope.PromptTokensUsed += usage.PromptTokens;
-            statsScope.CompletionTokensUsed += usage.CompletionTokens;
+            statsScope.Usage ??= new AiUsage();
+            statsScope.Usage.CachedTokens += usage.CachedTokens;
+            statsScope.Usage.CompletionTokens += usage.CompletionTokens;
+            statsScope.Usage.PromptTokens += usage.PromptTokens;
+            statsScope.Usage.TotalTokens += usage.TotalTokens;
 
             if (Configuration.TestMode)
             {
@@ -303,10 +307,10 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         }
     }
 
-    private void ApplyUpdateScript(DocumentsOperationContext context, List<GenAiResultItem> results)
+    private void ApplyUpdateScript(DocumentsOperationContext context, List<GenAiResultItem> results, GenAiStatsScope scope)
     {
         PatchRequest req = new(Configuration.UpdateScript, PatchRequestType.GenAi);
-        var cmd = new GenAiBatchPatchCommand(context, results, req, Configuration.Identifier, Logger, Statistics);
+        var cmd = new GenAiBatchPatchCommand(context, results, req, Configuration.Identifier, Logger, Statistics, scope);
 
         Database.TxMerger.EnqueueSync(cmd);
     }

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Linq;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats;
 using Raven.Server.Documents.ETL.Providers.OLAP;
@@ -122,11 +123,13 @@ namespace Raven.Server.Documents.ETL.Stats
 
         public int TotalCachedContexts { get; set; }
 
-        public int TotalTokensUsed { get; set; }
+        public int ModelCallFailures { get; set; }
 
-        public int PromptTokensUsed { get; set; }
+        public int TotalUpdates { get; set; }
 
-        public int CompletionTokensUsed { get; set; }
+        public int UpdateFailures { get; set; }
+
+        public AiUsage Usage { get; set; }
 
         protected override GenAiStatsScope OpenNewScope(EtlRunStats stats, bool start)
         {
@@ -146,9 +149,10 @@ namespace Raven.Server.Documents.ETL.Stats
                 NumberOfContextObjects = NumberOfContextObjects,
                 TotalSentToModel = TotalSentToModel,
                 TotalCachedContexts = TotalCachedContexts,
-                PromptTokensUsed = PromptTokensUsed,
-                CompletionTokensUsed = CompletionTokensUsed,
-                TotalTokensUsed = TotalTokensUsed,
+                ModelCallFailures = ModelCallFailures,
+                TotalUpdates = TotalUpdates,
+                UpdateFailures = UpdateFailures,
+                Usage = Usage
             };
 
             if (Scopes != null)

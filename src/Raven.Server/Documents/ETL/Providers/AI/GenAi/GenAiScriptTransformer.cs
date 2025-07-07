@@ -27,7 +27,8 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
     private byte[] _configurationPartialHash;
     private readonly PatchRequest _mainScript;
     private List<GenAiScriptResult> _currentRun;
-    
+    private GenAiStatsScope _stats;
+
     public GenAiScriptTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, GenAiConfiguration configuration) : base(database, context, null, behaviorFunctions)
     {
         _configuration = configuration;
@@ -81,6 +82,7 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
 
     public override void Transform(GenAiItem item, GenAiStatsScope stats, EtlProcessState state)
     {
+        _stats = stats.For(EtlOperations.Transform);
         Current = item;
         _currentRun ??= [];
 
@@ -99,8 +101,13 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
             throw new ArgumentException("Expected 'ctx' to be an object, but was: " + args[0].Type + ", " + args[0]);
 
         var context = JsBlittableBridge.Translate(Context, DocumentScript.ScriptEngine, args[0].AsObject());
+        _stats.NumberOfContextObjects++;
+
         string hash = CalculateHash(context);
         var isCached = ShouldSendContext(hash, _configuration.Identifier, Current.Document) == false;
+
+        if (isCached)
+            _stats.TotalCachedContexts++;
 
         using (context)
         {

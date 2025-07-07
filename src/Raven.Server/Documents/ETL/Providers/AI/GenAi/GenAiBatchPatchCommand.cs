@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Jint;
 using Raven.Client;
+using Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats;
+using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
@@ -21,19 +23,22 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
     private readonly string _taskIdentifier;
     private readonly RavenLogger _logger;
     private readonly EtlProcessStatistics _statistics;
+    private readonly GenAiStatsScope _scope;
     private readonly DocumentDatabase _database;
 
     public GenAiBatchPatchCommand(DocumentsOperationContext context,
         List<GenAiResultItem> items,
         PatchRequest patchRequest,
         string taskIdentifier,
-        RavenLogger logger, 
-        EtlProcessStatistics statistics)
+        RavenLogger logger,
+        EtlProcessStatistics statistics, 
+        GenAiStatsScope scope)
     {
         _items = items ?? throw new ArgumentException(nameof(items));
         _patchRequest = patchRequest ?? throw new ArgumentException(nameof(patchRequest));
         _logger = logger ?? throw new ArgumentException(nameof(logger));
         _statistics = statistics ?? throw new ArgumentException(nameof(statistics));
+        _scope = scope;
 
         if (string.IsNullOrEmpty(taskIdentifier))
             throw new ArgumentException(nameof(taskIdentifier));
@@ -48,63 +53,75 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
     {
         var hashes = new Dictionary<string, (Document Doc, List<string> Hashes)>();
 
-        using (_database.Scripts.GetScriptRunner(_patchRequest, readOnly: false, out var runner))
+        using (var statsScope = _scope.For(GenAiOperations.ApplyUpdateScript))
         {
-            foreach (var item in _items)
+            using (_database.Scripts.GetScriptRunner(_patchRequest, readOnly: false, out var runner))
             {
-                if (item.UpdateHash == false)
-                    continue;
-
-                ref var tuple = ref CollectionsMarshal.GetValueRefOrAddDefault(hashes, item.DocId, out var exists);
-                if (exists is false)
+                foreach (var item in _items)
                 {
-                    Document document = GetCurrentDocument(context, item.DocId);
-                    if (document is null)
-                        continue; // document was probably deleted while we talked to the model, skipping this
+                    statsScope.NumberOfContextObjects++;
 
-                    tuple = (document, []);
-                }
+                    if (item.ContextOutput.IsCached)
+                        statsScope.TotalCachedContexts++;
 
-                tuple.Hashes.Add(item.ContextOutput.AiHash);
-
-                if (item.ModelOutput is null)
-                    continue;
-
-                var args = CreatePatchArgs(context, item);
-                try
-                {
-                    var documentInstance = (BlittableObjectInstance)runner.Translate(context, tuple.Doc).AsObject();
-                    using (var scriptResult = runner.Run(context, context, "execute", item.DocId, [documentInstance, args]))
-                    using (var old = tuple.Doc.Data)
+                    if (item.UpdateHash == false)
+                        continue;
+                    
+                    ref var tuple = ref CollectionsMarshal.GetValueRefOrAddDefault(hashes, item.DocId, out var exists);
+                    if (exists is false)
                     {
-                        tuple.Doc.Data = scriptResult.TranslateToObject(context);
+                        Document document = GetCurrentDocument(context, item.DocId);
+                        if (document is null)
+                            continue; // document was probably deleted while we talked to the model, skipping this
+
+                        tuple = (document, []);
+                    }
+
+                    tuple.Hashes.Add(item.ContextOutput.AiHash);
+
+                    if (item.ModelOutput is null)
+                        continue;
+                    
+                    statsScope.TotalUpdates++;
+
+                    var args = CreatePatchArgs(context, item);
+                    try
+                    {
+                        var documentInstance = (BlittableObjectInstance)runner.Translate(context, tuple.Doc).AsObject();
+                        using (var scriptResult = runner.Run(context, context, "execute", item.DocId, [documentInstance, args]))
+                        using (var old = tuple.Doc.Data)
+                        {
+                            tuple.Doc.Data = scriptResult.TranslateToObject(context);
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        // do not update metadata hash, log error, raise alert
+                        tuple.Hashes.Remove(item.ContextOutput.AiHash);
+                        var msg = $"Failed to apply update script for context in document '{item.DocId}'. " +
+                                  $"Context was: {item.ContextOutput.Context}{Environment.NewLine}" +
+                                  $"Error: {e}";
+
+                        statsScope.UpdateFailures++;
+                        _statistics.RecordPartialLoadError(msg, item.DocId);
+                        _logger.Log(LogLevel.Warn, msg);
                     }
                 }
-                catch (Exception e)
-                {
-                    // do not update metadata hash, log error, raise alert
-                    tuple.Hashes.Remove(item.ContextOutput.AiHash);
-                    var msg = $"Failed to apply update script for context in document '{item.DocId}'. " +
-                              $"Context was: {item.ContextOutput.Context}{Environment.NewLine}" +
-                              $"Error: {e}";
-                    _statistics.RecordPartialLoadError(msg, item.DocId);
-                    _logger.Log(LogLevel.Warn, msg);
-                }
             }
+
+            // update metadata for each doc in same transaction
+            foreach (var (id, (doc, allHashes)) in hashes)
+            {
+                // this indicates that there was an error in the update script
+                // and that we should not update this document
+                if (allHashes.Count is 0)
+                    continue;
+
+                UpdateHashesInMetadata(id, doc.Data, _taskIdentifier, allHashes, context);
+            }
+
+            return statsScope.TotalUpdates;
         }
-
-        // update metadata for each doc in same transaction
-        foreach (var (id, (doc, allHashes)) in hashes)
-        {
-            // this indicates that there was an error in the update script
-            // and that we should not update this document
-            if (allHashes.Count is 0)
-                continue;
-
-            UpdateHashesInMetadata(id, doc.Data, _taskIdentifier, allHashes, context);
-        }
-
-        return _items.Count;
     }
 
     private static BlittableJsonReaderObject CreatePatchArgs(DocumentsOperationContext context, GenAiResultItem item)
@@ -175,7 +192,6 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                 if (needToUpdate == false)
                     return doc; // we already have the hashes for this task, no need to update
             }
-
 
             hashes.Modifications = new DynamicJsonValue(hashes)
             {

@@ -1,4 +1,5 @@
 using System;
+using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Stats;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats;
@@ -11,9 +12,11 @@ public sealed class GenAiPerformanceOperation(TimeSpan duration) : EtlPerformanc
 
     public int TotalCachedContexts { get; set; }
 
-    public int TotalTokensUsed { get; set; }
+    public int ModelCallFailures { get; set; }
 
-    public int PromptTokensUsed { get; set; }
+    public int TotalUpdates { get; set; }
 
-    public int CompletionTokensUsed { get; set; }
+    public int UpdateFailures { get; set; }
+
+    public AiUsage Usage { get; set;  }
 }
