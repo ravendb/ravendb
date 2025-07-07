@@ -23,6 +23,7 @@ export const editGenAiTaskSchema = yup.object({
                 isStartingPoint && startingPointType === "Change Vector",
             then: (schema) => schema.required(),
         }),
+    nextBatchStartingPoint: yup.string().nullable(),
 
     // context step
     collectionName: yup.string().required(),

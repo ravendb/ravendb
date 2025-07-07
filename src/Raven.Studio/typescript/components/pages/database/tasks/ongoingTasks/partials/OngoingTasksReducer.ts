@@ -483,6 +483,7 @@ function mapSharedInfo(task: OngoingTask): OngoingTaskSharedInfo {
                 ...commonProps,
                 identifier: incoming.Configuration.Identifier,
                 connectionStringName: incoming.Configuration.ConnectionStringName,
+                nextBatchStartingPoint: incoming.ChangeVector,
             };
 
             return result;

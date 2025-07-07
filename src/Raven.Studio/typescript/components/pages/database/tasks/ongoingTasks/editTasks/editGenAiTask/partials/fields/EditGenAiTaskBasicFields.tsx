@@ -203,6 +203,21 @@ export default function EditGenAiTaskBasicFields() {
                     />
                 </FormGroup>
             )}
+            {formValues.nextBatchStartingPoint && (
+                <FormGroup>
+                    <FormLabel>
+                        Next Batch Starting Point <small className="text-muted fw-light">(read-only)</small>
+                    </FormLabel>
+                    <FormInput
+                        as="textarea"
+                        type="textarea"
+                        rows={3}
+                        control={control}
+                        name="nextBatchStartingPoint"
+                        disabled
+                    />
+                </FormGroup>
+            )}
         </>
     );
 }

@@ -29,6 +29,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import copyToClipboard from "common/copyToClipboard";
 import { Icon } from "components/common/Icon";
 import { OngoingEtlTaskDistribution } from "../partials/OngoingEtlTaskDistribution";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 type GenAiPanelProps = BaseOngoingTaskPanelProps<OngoingTaskGenAiInfo>;
 
@@ -39,6 +40,7 @@ function Details(props: GenAiPanelProps & { canEdit: boolean }) {
     const connectionStringsUrl = appUrl.forConnectionStrings(databaseName, "Ai", data.shared.connectionStringName);
 
     const identifier = data.shared.identifier;
+    const nextBatchStartingPoint = data.shared.nextBatchStartingPoint;
 
     return (
         <RichPanelDetails>
@@ -53,6 +55,20 @@ function Details(props: GenAiPanelProps & { canEdit: boolean }) {
                         >
                             <Icon icon="copy-to-clipboard" />
                         </Button>
+                    </RichPanelDetailItem>
+                </RichPanelDetails>
+            )}
+            {nextBatchStartingPoint && (
+                <RichPanelDetails className="p-0">
+                    <RichPanelDetailItem label="Next Batch Starting Point">
+                        <PopoverWithHoverWrapper
+                            message={nextBatchStartingPoint
+                                .split(",")
+                                .map((item) => item.trim())
+                                .join(", ")}
+                        >
+                            <Icon icon="info" color="info" margin="m-0" />
+                        </PopoverWithHoverWrapper>
                     </RichPanelDetailItem>
                 </RichPanelDetails>
             )}

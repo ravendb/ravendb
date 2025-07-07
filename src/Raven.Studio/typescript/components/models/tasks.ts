@@ -152,6 +152,7 @@ export interface OngoingTaskEmbeddingsGenerationSharedInfo extends OngoingTaskSh
 export interface OngoingTaskGenAiSharedInfo extends OngoingTaskSharedInfo {
     connectionStringName: string;
     identifier: string;
+    nextBatchStartingPoint: string;
 }
 
 export type OngoingTaskKafkaEtlSharedInfo = OngoingTaskQueueEtlSharedInfo;
