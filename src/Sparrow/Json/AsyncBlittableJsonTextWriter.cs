@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -15,6 +15,12 @@ namespace Sparrow.Json
         {
             _outputStream = stream ?? throw new ArgumentNullException(nameof(stream));
             _cancellationToken = cancellationToken;
+        }
+
+
+        public static AsyncBlittableJsonTextWriter Create(JsonOperationContext context, Stream stream, CancellationToken cancellationToken = default)
+        {
+            return new AsyncBlittableJsonTextWriter(context, stream, cancellationToken);
         }
 
         public async ValueTask WriteStreamAsync(Stream stream, CancellationToken token = default)

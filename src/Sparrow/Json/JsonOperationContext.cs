@@ -972,7 +972,7 @@ namespace Sparrow.Json
         public async ValueTask WriteAsync(Stream stream, BlittableJsonReaderObject json, CancellationToken token = default)
         {
             EnsureNotDisposed();
-            await using (var writer = new AsyncBlittableJsonTextWriter(this, stream))
+            await using (var writer = AsyncBlittableJsonTextWriter.Create(this, stream))
             {
                 writer.WriteObject(json);
                 await writer.FlushAsync(token).ConfigureAwait(false);

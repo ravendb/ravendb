@@ -103,7 +103,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
                     RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                    await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
+                    await using (var writer = AsyncBlittableJsonTextWriter.Create(context, RequestHandler.ResponseBodyStream(), token.Token))
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
@@ -135,7 +135,7 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
+                await using (var writer = AsyncBlittableJsonTextWriter.Create(context, RequestHandler.ResponseBodyStream(), token.Token))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {
