@@ -153,7 +153,13 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         if (results.Count is 0)
             return 0;
 
-        var exceptions = SendToModel(results, context, scope);
+        List<Exception> exceptions;
+        
+        // Prevent database unloading during long-running AI operations
+        using (Database.PreventFromUnloadingByIdleOperations())
+        {
+            exceptions = SendToModel(results, context, scope);
+        }
 
         ApplyUpdateScript(context, results, scope);
 

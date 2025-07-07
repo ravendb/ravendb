@@ -137,31 +137,35 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
 
         var taskId = new EmbeddingsGenerationTaskIdentifier(Configuration.Identifier);
 
-        var batch = Database.EmbeddingsGeneratorEtl.BatchFor(taskId);
-        using (var storageScope = scope.For(EmbeddingsGenerationOperations.GenerateInAiService))
+        // Prevent database unloading during long-running AI operations
+        using (Database.PreventFromUnloadingByIdleOperations())
         {
-            foreach (var embeddingItem in embeddingsScriptRun.Additions)
+            var batch = Database.EmbeddingsGeneratorEtl.BatchFor(taskId);
+            using (var storageScope = scope.For(EmbeddingsGenerationOperations.GenerateInAiService))
             {
-                batch.StartGenerateEmbeddingFor(context, embeddingItem.DocumentId, embeddingItem.DocumentCollectionName,
-                    embeddingItem.Fields);
+                foreach (var embeddingItem in embeddingsScriptRun.Additions)
+                {
+                    batch.StartGenerateEmbeddingFor(context, embeddingItem.DocumentId, embeddingItem.DocumentCollectionName,
+                        embeddingItem.Fields);
+                }
+                // We only wait for embeddings generation here, documents creation (and update) is done in the background
+                // https://issues.hibernatingrhinos.com/issue/RavenDB-24062
+                batch.WaitForGenerationAsync().GetAwaiter().GetResult();
+                storageScope.NumberOfEmbeddingsInCache = batch.CachedEmbeddings;
+                storageScope.NumberOfGeneratedEmbeddings = embeddingsScriptRun.Additions.Count;
             }
-            // We only wait for embeddings generation here, documents creation (and update) is done in the background
-            // https://issues.hibernatingrhinos.com/issue/RavenDB-24062
-            batch.WaitForGenerationAsync().GetAwaiter().GetResult();
-            storageScope.NumberOfEmbeddingsInCache = batch.CachedEmbeddings;
-            storageScope.NumberOfGeneratedEmbeddings = embeddingsScriptRun.Additions.Count;
-        }
 
-        foreach (var embeddingItem in embeddingsScriptRun.Removals)
-        {
-            batch.Delete(embeddingItem.DocumentId);
-        }
-        using (var storageScope = scope.For(EmbeddingsGenerationOperations.Storage))
-        {
-            batch.StoreResults().GetAwaiter().GetResult();
-            
-            storageScope.NumberOfPutEmbeddingDocuments = embeddingsScriptRun.Additions.Count;
-            storageScope.NumberOfDeletedEmbeddingDocuments = embeddingsScriptRun.Removals.Count;
+            foreach (var embeddingItem in embeddingsScriptRun.Removals)
+            {
+                batch.Delete(embeddingItem.DocumentId);
+            }
+            using (var storageScope = scope.For(EmbeddingsGenerationOperations.Storage))
+            {
+                batch.StoreResults().GetAwaiter().GetResult();
+                
+                storageScope.NumberOfPutEmbeddingDocuments = embeddingsScriptRun.Additions.Count;
+                storageScope.NumberOfDeletedEmbeddingDocuments = embeddingsScriptRun.Removals.Count;
+            }
         }
         
         _fallbackCounter = 0;
