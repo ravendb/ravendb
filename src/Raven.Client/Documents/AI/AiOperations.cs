@@ -46,77 +46,75 @@ public class AiOperations
     /// Asynchronously creates or updates an AI agent configuration (with the given schema) on the database.
     /// </summary>
     /// <typeparam name="TSchema">The schema type the AI agent should use.</typeparam>
-    /// <param name="agentName">The unique name of the AI agent for create an agent, or name of an existed agent for update an agent.</param>
     /// <param name="configuration">The configuration to assign to the agent.</param>
     /// <returns>The result of the creation or update operation.</returns>
-    public async Task<AiAgentConfigurationResult> CreateAgentAsync<TSchema>(string agentName, AiAgentConfiguration configuration, CancellationToken token = default) where TSchema : new()
+    public async Task<AiAgentConfigurationResult> CreateAgentAsync<TSchema>(AiAgentConfiguration configuration, CancellationToken token = default) where TSchema : new()
     {
-        return await _executor.SendAsync(new AddOrUpdateAiAgentOperation<TSchema>(agentName, configuration), token).ConfigureAwait(false);
+        return await _executor.SendAsync(new AddOrUpdateAiAgentOperation<TSchema>(configuration), token).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Creates or updates an AI agent configuration (with the given schema) on the database.
     /// </summary>
     /// <typeparam name="TSchema">The schema type the AI agent should use.</typeparam>
-    /// <param name="agentName">The unique name of the AI agent for create an agent, or name of an existed agent for update an agent.</param>
     /// <param name="configuration">The configuration to assign to the agent.</param>
     /// <returns>The result of the creation or update operation.</returns>
-    public AiAgentConfigurationResult CreateAgent<TSchema>(string agentName, AiAgentConfiguration configuration) where TSchema : new()
+    public AiAgentConfigurationResult CreateAgent<TSchema>(AiAgentConfiguration configuration) where TSchema : new()
     {
-        return AsyncHelpers.RunSync(() => CreateAgentAsync<TSchema>(agentName, configuration));
+        return AsyncHelpers.RunSync(() => CreateAgentAsync<TSchema>(configuration));
     }
 
     /// <summary>
     /// Asynchronously starts a new chat with an AI agent using a fluent parameter builder.
     /// </summary>
     /// <typeparam name="TSchema">The schema type for the chat.</typeparam>
-    /// <param name="agentName">The name of the AI agent to chat with.</param>
+    /// <param name="identifier">The identifier of the AI agent to chat with.</param>
     /// <param name="prompt">The initial user prompt.</param>
     /// <param name="builder">A builder function to define RAG parameters.</param>
     /// <returns>The result of the chat.</returns>
-    public Task<ChatResult<TSchema>> StartChatAsync<TSchema>(string agentName, string prompt, Func<AiAgentParametersBuilder, AiAgentParametersBuilder> builder, CancellationToken token = default) where TSchema : new()
+    public Task<ChatResult<TSchema>> StartChatAsync<TSchema>(string identifier, string prompt, Func<AiAgentParametersBuilder, AiAgentParametersBuilder> builder, CancellationToken token = default) where TSchema : new()
     {
         var parameters = builder.Invoke(new AiAgentParametersBuilder()).GetParameters();
-        return StartChatAsync<TSchema>(agentName, prompt, parameters, token);
+        return StartChatAsync<TSchema>(identifier, prompt, parameters, token);
     }
 
     /// <summary>
     /// Starts a new chat with an AI agent using a fluent parameter builder.
     /// </summary>
     /// <typeparam name="TSchema">The schema type for the chat.</typeparam>
-    /// <param name="agentName">The name of the AI agent to chat with.</param>
+    /// <param name="identifier">The identifier of the AI agent to chat with.</param>
     /// <param name="prompt">The initial user prompt.</param>
     /// <param name="builder">A builder function to define RAG parameters.</param>
     /// <returns>The result of the chat.</returns>
-    public ChatResult<TSchema> StartChat<TSchema>(string agentName, string prompt, Func<AiAgentParametersBuilder, AiAgentParametersBuilder> builder) where TSchema : new()
+    public ChatResult<TSchema> StartChat<TSchema>(string identifier, string prompt, Func<AiAgentParametersBuilder, AiAgentParametersBuilder> builder) where TSchema : new()
     {
-        return AsyncHelpers.RunSync(() => StartChatAsync<TSchema>(agentName, prompt, builder));
+        return AsyncHelpers.RunSync(() => StartChatAsync<TSchema>(identifier, prompt, builder));
     }
 
     /// <summary>
     /// Asynchronously starts a new chat with an AI agent using a dictionary of parameters.
     /// </summary>
     /// <typeparam name="TSchema">The schema type for the chat.</typeparam>
-    /// <param name="agentName">The name of the AI agent to chat with.</param>
+    /// <param name="identifier">The identifier of the AI agent to chat with.</param>
     /// <param name="prompt">The initial user prompt.</param>
     /// <param name="parameters">Optional dictionary of chat parameters.</param>
     /// <returns>The result of the chat.</returns>
-    public async Task<ChatResult<TSchema>> StartChatAsync<TSchema>(string agentName, string prompt, Dictionary<string, object> parameters = null, CancellationToken token = default) where TSchema : new()
+    public async Task<ChatResult<TSchema>> StartChatAsync<TSchema>(string identifier, string prompt, Dictionary<string, object> parameters = null, CancellationToken token = default) where TSchema : new()
     {
-        return await _executor.SendAsync(new StartChatOperation<TSchema>(agentName, prompt, parameters), token).ConfigureAwait(false);
+        return await _executor.SendAsync(new StartChatOperation<TSchema>(identifier, prompt, parameters), token).ConfigureAwait(false);
     }
 
     /// <summary>
     /// Synchronously starts a new chat with an AI agent using a dictionary of parameters.
     /// </summary>
     /// <typeparam name="TSchema">The schema type for the chat.</typeparam>
-    /// <param name="agentName">The name of the AI agent to chat with.</param>
+    /// <param name="identifier">The identifier of the AI agent to chat with.</param>
     /// <param name="prompt">The initial user prompt.</param>
     /// <param name="parameters">Optional dictionary of chat parameters.</param>
     /// <returns>The result of the chat.</returns>
-    public ChatResult<TSchema> StartChat<TSchema>(string agentName, string prompt, Dictionary<string, object> parameters = null) where TSchema : new()
+    public ChatResult<TSchema> StartChat<TSchema>(string identifier, string prompt, Dictionary<string, object> parameters = null) where TSchema : new()
     {
-        return AsyncHelpers.RunSync(() => StartChatAsync<TSchema>(agentName, prompt, parameters));
+        return AsyncHelpers.RunSync(() => StartChatAsync<TSchema>(identifier, prompt, parameters));
     }
 
     /// <summary>

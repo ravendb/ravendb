@@ -6,24 +6,24 @@ namespace Raven.Server.ServerWide.Commands.AI;
 
 public class DeleteAiAgentCommand : UpdateDatabaseCommand
 {
-    public string AgentName;
+    public string Identifier;
 
     public DeleteAiAgentCommand()
     {
         // for deserialization    
     }
 
-    public DeleteAiAgentCommand(string database, string agentName, string uniqueRequestId) : base(database, uniqueRequestId)
+    public DeleteAiAgentCommand(string database, string agentIdentifier, string uniqueRequestId) : base(database, uniqueRequestId)
     {
-        AgentName = agentName ?? throw new ArgumentNullException(nameof(agentName));
+        Identifier = agentIdentifier ?? throw new ArgumentNullException(nameof(agentIdentifier));
     }
     public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
     {
-        record.AiAgents.Remove(AgentName);
+        record.AiAgents.RemoveAll(c => c.Identifier == Identifier);
     }
 
     public override void FillJson(DynamicJsonValue json)
     {
-        json[nameof(AgentName)] = AgentName;
+        json[nameof(Identifier)] = Identifier;
     }
 }

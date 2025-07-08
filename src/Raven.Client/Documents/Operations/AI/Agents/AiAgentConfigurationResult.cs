@@ -2,6 +2,7 @@
 {
     public sealed class AiAgentConfigurationResult
     {
+        public string Identifier { get; set; }
         public long RaftCommandIndex { get; set; }
     }
 }

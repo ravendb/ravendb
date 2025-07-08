@@ -561,28 +561,21 @@ namespace Raven.Server.Smuggler.Documents
                     }
                 }
 
-                if (reader.TryGet(nameof(databaseRecord.AiAgents), out BlittableJsonReaderObject aiAgents) && aiAgents != null)
+                if (reader.TryGet(nameof(databaseRecord.AiAgents), out BlittableJsonReaderArray aiAgents) && aiAgents != null)
                 {
-                    try
+                    databaseRecord.AiAgents = new();
+                    foreach (BlittableJsonReaderObject configBjro in aiAgents)
                     {
-                        foreach (var agentName in aiAgents.GetPropertyNames())
+                        try
                         {
-                            if (aiAgents.TryGet(agentName, out BlittableJsonReaderObject agentConfig) == false)
-                            {
-                                if (_log.IsInfoEnabled)
-                                    _log.Info($"Wasn't able to import the AI agent {agentName} from smuggler file. Skipping.");
-
-                                continue;
-                            }
-
-                            databaseRecord.AiAgents[agentName] = JsonDeserializationCluster.AiAgentConfiguration(agentConfig);
+                            var config = JsonDeserializationCluster.AiAgentConfiguration(configBjro);
+                            databaseRecord.AiAgents.Add(config);
                         }
-                    }
-                    catch (Exception e)
-                    {
-                        databaseRecord.AiAgents.Clear();
-                        if (_log.IsInfoEnabled)
-                            _log.Info("Wasn't able to import the AI agents from smuggler file. Skipping.", e);
+                        catch (Exception e)
+                        {
+                            if (_log.IsInfoEnabled)
+                                _log.Info("Wasn't able to import the AgentAi configuration from smuggler file. Skipping.", e);
+                        }
                     }
                 }
 

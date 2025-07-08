@@ -128,7 +128,7 @@ namespace Raven.Client.ServerWide
         
         public Dictionary<string, AiConnectionString> AiConnectionStrings = new();
 
-        public Dictionary<string, AiAgentConfiguration> AiAgents = new();
+        public List<AiAgentConfiguration> AiAgents = new();
 
         public List<RavenEtlConfiguration> RavenEtls = [];
 
@@ -494,6 +494,8 @@ namespace Raven.Client.ServerWide
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already an Embeddings Generation task with that name");
             if (GenAis.Any(x => x.Name.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
                 throw new InvalidOperationException($"Can't use task name '{taskName}', there is already a Gen AI task with that name");
+            if (AiAgents.Any(x => x.Identifier.Equals(taskName, StringComparison.OrdinalIgnoreCase)))
+                throw new InvalidOperationException($"Can't use name '{taskName}', there is already an AI Agent config with that name as identifier");
         }
 
         internal string EnsureUniqueTaskName(string defaultTaskName)

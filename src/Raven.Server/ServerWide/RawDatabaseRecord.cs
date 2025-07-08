@@ -961,9 +961,9 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        private Dictionary<string, AiAgentConfiguration> _aiAgents;
+        private List<AiAgentConfiguration> _aiAgents;
 
-        public Dictionary<string, AiAgentConfiguration> AiAgents
+        public List<AiAgentConfiguration> AiAgents
         {
             get
             {
@@ -972,20 +972,11 @@ namespace Raven.Server.ServerWide
 
                 if (_aiAgents == null)
                 {
-                    _aiAgents = [];
-                    if (_record.TryGet(nameof(DatabaseRecord.AiAgents), out BlittableJsonReaderObject agents) && agents != null)
+                    _aiAgents = new ();
+                    if (_record.TryGet(nameof(DatabaseRecord.AiAgents), out BlittableJsonReaderArray bjra) && bjra != null)
                     {
-                        var propertyDetails = new BlittableJsonReaderObject.PropertyDetails();
-                        for (var i = 0; i < agents.Count; i++)
-                        {
-                            agents.GetPropertyByIndex(i, ref propertyDetails);
-
-                            if (propertyDetails.Value == null)
-                                continue;
-
-                            if (propertyDetails.Value is BlittableJsonReaderObject agent)
-                                _aiAgents[propertyDetails.Name] = JsonDeserializationCluster.AiAgentConfiguration(agent);
-                        }
+                        foreach (BlittableJsonReaderObject element in bjra)
+                            _aiAgents.Add(JsonDeserializationCluster.AiAgentConfiguration(element));
                     }
                 }
 
@@ -993,22 +984,26 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public bool TryGetAiAgent(string name, out AiAgentConfiguration config)
+        public bool TryGetAiAgent(string identifier, out AiAgentConfiguration config)
         {
+            const string identifierName = nameof(AiAgentConfiguration.Identifier);
+
             config = null;
             if (_materializedRecord != null)
             {
-                config = _materializedRecord.AiAgents[name];
-                return true;
+                config = _materializedRecord.AiAgents.FirstOrDefault(c => c.Identifier == identifier);
+                return config != null;
             }
 
-            if (_record.TryGet(nameof(DatabaseRecord.AiAgents), out BlittableJsonReaderObject obj) && obj != null)
+            if (_record.TryGet(nameof(DatabaseRecord.AiAgents), out BlittableJsonReaderArray bjra) && bjra != null)
             {
-
-                if (obj.TryGet(name, out BlittableJsonReaderObject configBlittable))
+                foreach (BlittableJsonReaderObject element in bjra)
                 {
-                    config = JsonDeserializationCluster.AiAgentConfiguration(configBlittable);
-                    return true;
+                    if (element.TryGet(identifierName, out string elementIdentifier) && elementIdentifier == identifier)
+                    {
+                        config = JsonDeserializationCluster.AiAgentConfiguration(element);
+                        return true;
+                    }
                 }
             }
 

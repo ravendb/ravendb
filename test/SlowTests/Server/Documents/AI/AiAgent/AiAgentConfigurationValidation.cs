@@ -27,10 +27,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             using var session = store.OpenAsyncSession();
 
-            var agent = new AiAgentConfiguration(config.ConnectionStringName,
+            var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-            agent.Persistence = new AiAgentConfiguration.PersistenceConfiguration
+            agent.Persistence = new AiAgentPersistenceConfiguration
             {
                 Collection = "Chats",
                 Expires = TimeSpan.FromDays(30)
@@ -38,7 +38,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             agent.Queries =
             [
-                new AiAgentConfiguration.ToolQuery
+                new AiAgentToolQuery
                 {
                     Name = "ProductSearch", 
                     Description =  "semantic search the store product catalog",
@@ -46,7 +46,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
-                new AiAgentConfiguration.ToolQuery
+                new AiAgentToolQuery
                 {
                     Name = "RecentOrder",
                     Description = "Get the recent orders of the current user",
@@ -55,7 +55,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            var e = await Assert.ThrowsAsync<RavenException>( () => store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>("shopping assistant", agent)));
+            var e = await Assert.ThrowsAsync<RavenException>( () => store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agent)));
             Assert.Contains("Tool query 'RecentOrder' contains parameters that are not defined in the agent configuration: 'company'", e.Message);
         }
 
@@ -69,10 +69,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             using var session = store.OpenAsyncSession();
 
-            var agent = new AiAgentConfiguration(config.ConnectionStringName,
+            var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-            agent.Persistence = new AiAgentConfiguration.PersistenceConfiguration
+            agent.Persistence = new AiAgentPersistenceConfiguration
             {
                 Collection = "Chats",
                 Expires = TimeSpan.FromDays(30)
@@ -81,7 +81,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             agent.Parameters.Add("company");
             agent.Queries =
             [
-                new AiAgentConfiguration.ToolQuery
+                new AiAgentToolQuery
                 {
                     Name = "ProductSearch", 
                     Description =  "semantic search the store product catalog",
@@ -89,7 +89,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     ParametersSampleObject = "{\"company\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
-                new AiAgentConfiguration.ToolQuery
+                new AiAgentToolQuery
                 {
                     Name = "RecentOrder",
                     Description = "Get the recent orders of the current user",
@@ -98,7 +98,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            var e = await Assert.ThrowsAsync<RavenException>( () => store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>("shopping assistant", agent)));
+            var e = await Assert.ThrowsAsync<RavenException>( () => store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agent)));
             Assert.Contains("Parameter company is defined on both the agent level and the query level for ProductSearch", e.Message);
         }
 
@@ -112,10 +112,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             using var session = store.OpenAsyncSession();
 
-            var agent = new AiAgentConfiguration(config.ConnectionStringName,
+            var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-            agent.Persistence = new AiAgentConfiguration.PersistenceConfiguration
+            agent.Persistence = new AiAgentPersistenceConfiguration
             {
                 Collection = "Chats",
                 Expires = TimeSpan.FromDays(30)
@@ -124,7 +124,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             agent.Parameters.Add("company");
             agent.Queries =
             [
-                new AiAgentConfiguration.ToolQuery
+                new AiAgentToolQuery
                 {
                     Name = "ProductSearch", 
                     Description =  "semantic search the store product catalog",
@@ -132,7 +132,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
-                new AiAgentConfiguration.ToolQuery
+                new AiAgentToolQuery
                 {
                     Name = "RecentOrder",
                     Description = "Get the recent orders of the current user",
@@ -141,8 +141,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>("shopping assistant", agent));
-            var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new StartChatOperation<AiAgentBasics.OutputSchema>("shopping assistant", "what goes well with my cheese for recent orders?")));
+            var identifier = (await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agent))).Identifier;
+            var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new StartChatOperation<AiAgentBasics.OutputSchema>(identifier, "what goes well with my cheese for recent orders?")));
             Assert.Contains($"Parameter 'company' is missing", e.Message);
         }
     }

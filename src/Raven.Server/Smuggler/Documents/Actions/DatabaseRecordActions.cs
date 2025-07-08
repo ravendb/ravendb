@@ -647,9 +647,9 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring AI Agents from smuggler");
 
-            foreach (var (agentName, config) in databaseRecord.AiAgents)
+            foreach (var config in databaseRecord.AiAgents)
             {
-                tasks.Add(_server.SendToLeaderAsync(new AddOrUpdateAiAgentCommand(_name, agentName, config, RaftIdGenerator.DontCareId)));
+                tasks.Add(_server.SendToLeaderAsync(new AddOrUpdateAiAgentCommand(_name, config, RaftIdGenerator.DontCareId)));
             }
 
             result.DatabaseRecord.AiAgentsUpdated = true;

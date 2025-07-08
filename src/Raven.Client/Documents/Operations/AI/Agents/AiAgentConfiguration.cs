@@ -16,19 +16,26 @@ public class AiAgentConfiguration : IDynamicJson
         // for serialization purposes
     }
 
-    /// <summary>
-    /// Initializes a new instance of <see cref="AiAgentConfiguration"/> with the specified connection string and system prompt.
-    /// </summary>
-    /// <param name="connectionStringName">The name of the connection string to use for the AI Agent.</param>
-    /// <param name="systemPrompt">The system prompt that defines the agent’s role and behavior.</param>
-    public AiAgentConfiguration(string connectionStringName, string systemPrompt)
+    public AiAgentConfiguration(string name, string connectionStringName, string systemPrompt)
     {
+        ValidationMethods.AssertNotNullOrEmpty(name, nameof(Name));
         ValidationMethods.AssertNotNullOrEmpty(connectionStringName, nameof(connectionStringName));
         ValidationMethods.AssertNotNullOrEmpty(systemPrompt, nameof(systemPrompt));
-        
+
+        Name = name;
         ConnectionStringName = connectionStringName;
         SystemPrompt = systemPrompt;
     }
+
+    /// <summary>
+    /// The identifier of the AI agent configuration.
+    /// </summary>
+    public string Identifier { get; set; }
+
+    /// <summary>
+    /// The name of the AI agent configuration.
+    /// </summary>
+    public string Name { get; set; }
 
     /// <summary>
     /// The name of the connection string used to connect to the AI provider.
@@ -67,82 +74,29 @@ public class AiAgentConfiguration : IDynamicJson
     /// The agent decides when to call them based on user input and context.
     /// When the agent calls them, it gets an actual data from the database based on these queries.
     /// </summary>
-    public List<ToolQuery> Queries { get; set; }= [];
+    public List<AiAgentToolQuery> Queries { get; set; }= [];
 
     /// <summary>
     /// Model-side tools: callable actions where the AI agent fills parameters and invokes the tool as part of reasoning.
     /// The agent decides when to call them based on user input and context.
     /// When the agent calls them, it expects the user to provide "answers" for them.
     /// </summary>
-    public List<ToolAction> Actions { get; set; } = [];
+    public List<AiAgentToolAction> Actions { get; set; } = [];
 
     /// <summary>
     /// Controls persistence behavior of chats - whether the chat history will be persistent or not
     /// </summary>
-    public PersistenceConfiguration Persistence { get; set; }
+    public AiAgentPersistenceConfiguration Persistence { get; set; }
 
     /// <summary>
     /// Names of the required parameters that are used in the agent's queries and actions.
     /// Which has to be provided by the user each time we start a new chat.
     /// </summary>
-    public HashSet<string> Parameters { get; set; } = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
-    public class PersistenceConfiguration : IDynamicJson
-    {
-        public string Collection { get; set; }
-        public TimeSpan? Expires { get; set; }
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Collection)] = Collection,
-                [nameof(Expires)] = Expires?.TotalMilliseconds
-            };
-        }
-    }
+    public HashSet<string> Parameters { get; set; } = new (StringComparer.OrdinalIgnoreCase);
     
-    public class ToolAction : IDynamicJson
+    internal AiAgentToolQuery FindQuery(string name)
     {
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public string ParametersSampleObject { get; set; }
-        public string ParametersSchema { get; set; }
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Name)] = Name,
-                [nameof(Description)] = Description,
-                [nameof(ParametersSampleObject)] = ParametersSampleObject,
-                [nameof(ParametersSchema)] = ParametersSchema
-            };
-        }
-    }
-
-    public class ToolQuery : IDynamicJson
-    {
-        public string Name { get; set; }
-        public string Description { get; set; }
-        public string Query { get; set; }
-        public string ParametersSampleObject { get; set; }
-        public string ParametersSchema { get; set; }
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Name)] = Name,
-                [nameof(Description)] = Description,
-                [nameof(Query)] = Query,
-                [nameof(ParametersSampleObject)] = ParametersSampleObject,
-                [nameof(ParametersSchema)] = ParametersSchema
-            };
-        }
-    }
-
-    internal ToolQuery FindQuery(string name)
-    {
-        foreach (ToolQuery query in Queries ?? [])
+        foreach (AiAgentToolQuery query in Queries ?? [])
         {
             if(query.Name == name)
                 return query;
@@ -150,9 +104,10 @@ public class AiAgentConfiguration : IDynamicJson
 
         return null;
     }
-    internal ToolAction FindAction(string name)
+    
+    internal AiAgentToolAction FindAction(string name)
     {
-        foreach (ToolAction action in Actions ?? [])
+        foreach (AiAgentToolAction action in Actions ?? [])
         {
             if(action.Name == name)
                 return action;
@@ -165,6 +120,8 @@ public class AiAgentConfiguration : IDynamicJson
     {
         return new DynamicJsonValue
         {
+            [nameof(Identifier)] = Identifier,
+            [nameof(Name)] = Name,
             [nameof(ConnectionStringName)] = ConnectionStringName,
             [nameof(SystemPrompt)] = SystemPrompt,
             [nameof(OutputSchema)] = OutputSchema,

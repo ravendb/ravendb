@@ -13,35 +13,35 @@ using Sparrow.Json.Parsing;
 namespace Raven.Client.Documents.Operations.AI.Agents;
 public class StartChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSchema>> where TSchema : new()
 {
-    private readonly string _name;
+    private readonly string _identifier;
     private readonly string _prompt;
     private readonly Dictionary<string, object> _parameters;
 
-    public StartChatOperation(string agentName, string prompt, Dictionary<string, object> parameters = null)
+    public StartChatOperation(string identifier, string prompt, Dictionary<string, object> parameters = null)
     {
-        ValidationMethods.AssertNotNullOrEmpty(agentName, nameof(agentName));
+        ValidationMethods.AssertNotNullOrEmpty(identifier, nameof(identifier));
         ValidationMethods.AssertNotNullOrEmpty(prompt, nameof(prompt));
 
-        _name = agentName;
+        _identifier = identifier;
         _prompt = prompt;
         _parameters = parameters;
     }
 
     public RavenCommand<ChatResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
-        return new StartChatOperationCommand(_name, _prompt, _parameters, conventions);
+        return new StartChatOperationCommand(_identifier, _prompt, _parameters, conventions);
     }
 
     internal sealed class StartChatOperationCommand : RavenCommand<ChatResult<TSchema>>
     {
-        private readonly string _name;
+        private readonly string _identifier;
         private readonly string _prompt;
         private readonly Dictionary<string, object> _parameters;
         private readonly DocumentConventions _conventions;
 
-        public StartChatOperationCommand(string agentName, string prompt, Dictionary<string, object> parameters, DocumentConventions conventions)
+        public StartChatOperationCommand(string identifier, string prompt, Dictionary<string, object> parameters, DocumentConventions conventions)
         {
-            _name = agentName;
+            _identifier = identifier;
             _prompt = prompt;
             _parameters = parameters;
             _conventions = conventions;
@@ -49,7 +49,7 @@ public class StartChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSch
         public override bool IsReadRequest => false;
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/ai/agent/start?name={Uri.EscapeDataString(_name)}";
+            url = $"{node.Url}/databases/{node.Database}/ai/agent/start?identifier={Uri.EscapeDataString(_identifier)}";
             var body = new StartChatBody { Prompt = _prompt, Parameters = _parameters };
 
 

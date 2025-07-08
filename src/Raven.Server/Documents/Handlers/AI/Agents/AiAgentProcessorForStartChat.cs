@@ -13,14 +13,14 @@ internal class AiAgentProcessorForStartChat : AbstractAiAgentProcessor
     public override async ValueTask ExecuteAsync()
     {
         using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
-        var name = RequestHandler.GetStringQueryString("name", required: true);
+        var identifier = RequestHandler.GetStringQueryString("identifier", required: true);
 
-        var configuration = GetAiAgentConfiguration(name);
+        var configuration = GetAiAgentConfiguration(identifier);
 
         using var _ = ContextPool.AllocateOperationContext(out JsonOperationContext context);
         var options = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token.Token);
         var body = GetStartChatOptions(options);
-        var chat = new ChatDocument(name, body.Parameter);
+        var chat = new ChatDocument(identifier, body.Parameter);
 
         chat.Initialize(context, configuration, body.UserPrompt);
         var r = await TalkAsync(context, configuration, chat, token);

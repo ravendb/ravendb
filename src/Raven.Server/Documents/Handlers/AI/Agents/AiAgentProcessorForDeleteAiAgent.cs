@@ -19,10 +19,10 @@ internal class AiAgentProcessorForDeleteAiAgent<TRequestHandler, TOperationConte
     public override async ValueTask ExecuteAsync()
     {
         using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
-        var name = RequestHandler.GetStringQueryString("name", required: true);
-        var r = await ServerStore.SendToLeaderAsync(new DeleteAiAgentCommand(RequestHandler.DatabaseName, name, RequestHandler.GetRaftRequestIdFromQuery()), token.Token);
+        var identifier = RequestHandler.GetStringQueryString("id", required: true);
+        var r = await ServerStore.SendToLeaderAsync(new DeleteAiAgentCommand(RequestHandler.DatabaseName, identifier, RequestHandler.GetRaftRequestIdFromQuery()), token.Token);
 
-        RequestHandler.LogTaskToAudit($"Delete AI Agent '{name}'", r.Index, configuration: null);
+        RequestHandler.LogTaskToAudit($"Delete AI Agent '{identifier}'", r.Index, configuration: null);
 
         await RequestHandler.WaitForIndexNotificationAsync(r.Index);
 

@@ -42,10 +42,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             using var session = store.OpenAsyncSession();
 
-            var agent = new AiAgentConfiguration(config.ConnectionStringName,
+            var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
-
-            agent.Persistence = new AiAgentConfiguration.PersistenceConfiguration
+            agent.Identifier = "shopping-assistant";
+            agent.Persistence = new AiAgentPersistenceConfiguration
             {
                 Collection = "Chats",
                 Expires = TimeSpan.FromDays(30)
@@ -53,7 +53,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             agent.Parameters.Add("company");
             agent.Queries =
             [
-                new AiAgentConfiguration.ToolQuery
+                new AiAgentToolQuery
                 {
                     Name = "ProductSearch", 
                     Description =  "semantic search the store product catalog",
@@ -61,7 +61,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
-                new AiAgentConfiguration.ToolQuery
+                new AiAgentToolQuery
                 {
                     Name = "RecentOrder",
                     Description = "Get the recent orders of the current user",
@@ -70,8 +70,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>("shopping assistant", agent));
-            var r = await store.Maintenance.SendAsync(new StartChatOperation<OutputSchema>("shopping assistant", "what goes well with my cheese?",
+            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
+            var r = await store.Maintenance.SendAsync(new StartChatOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese?",
                 new Dictionary<string, object> { ["company"] = "companies/90-A" }));
 
             Assert.NotNull(r.Response.Answer);
@@ -93,10 +93,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             using var session = store.OpenAsyncSession();
 
-            var agent = new AiAgentConfiguration(config.ConnectionStringName,
+            var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
-
-            agent.Persistence = new AiAgentConfiguration.PersistenceConfiguration
+            agent.Identifier = "shopping-assistant";
+            agent.Persistence = new AiAgentPersistenceConfiguration
             {
                 Collection = "Chats",
                 Expires = TimeSpan.FromDays(30)
@@ -104,7 +104,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             agent.Parameters.Add("company");
             agent.Queries =
             [
-                new AiAgentConfiguration.ToolQuery
+                new AiAgentToolQuery
                 {
                     Name = "ProductSearch", 
                     Description =  "semantic search the store product catalog",
@@ -112,7 +112,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
-                new AiAgentConfiguration.ToolQuery
+                new AiAgentToolQuery
                 {
                     Name = "RecentOrder",
                     Description = "Get the recent orders of the current user",
@@ -121,8 +121,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>("shopping assistant", agent));
-            var r = await store.Maintenance.SendAsync(new StartChatOperation<OutputSchema>("shopping assistant", "what goes well with my cheese for recent orders?",
+            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
+            var r = await store.Maintenance.SendAsync(new StartChatOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese for recent orders?",
                 new Dictionary<string, object> { ["company"] = "companies/90-A" }));
 
             Assert.NotNull(r.Response.Answer);
@@ -148,10 +148,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             using var session = store.OpenAsyncSession();
 
-            var agent = new AiAgentConfiguration(config.ConnectionStringName,
+            var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
-
-            agent.Persistence = new AiAgentConfiguration.PersistenceConfiguration
+            agent.Identifier = "shopping-assistant";
+            agent.Persistence = new AiAgentPersistenceConfiguration
             {
                 Collection = "Chats",
                 Expires = TimeSpan.FromDays(30)
@@ -159,14 +159,14 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             agent.Actions =
             [
-                new AiAgentConfiguration.ToolAction
+                new AiAgentToolAction
                 {
                     Name = "ProductSearch", 
                     Description =  "semantic search the store product catalog",
                     ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
-                new AiAgentConfiguration.ToolAction
+                new AiAgentToolAction
                 {
                     Name = "RecentOrder",
                     Description = "Get the recent orders of the current user",
@@ -174,8 +174,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>("shopping assistant", agent));
-            var r = await store.Maintenance.SendAsync(new StartChatOperation<OutputSchema>("shopping assistant", "what goes well with my cheese for recent orders?"));
+            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
+            var r = await store.Maintenance.SendAsync(new StartChatOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese for recent orders?"));
 
             Assert.True(r.ToolRequests.Count > 0);
             Assert.NotNull(r.Usage);

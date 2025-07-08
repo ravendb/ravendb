@@ -41,10 +41,10 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         using var session = store.OpenAsyncSession();
 
-        var agent = new AiAgentConfiguration(config.ConnectionStringName,
+        var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
             "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-        agent.Persistence = new AiAgentConfiguration.PersistenceConfiguration
+        agent.Persistence = new AiAgentPersistenceConfiguration
         {
             Collection = "Chats",
             Expires = TimeSpan.FromDays(30)
@@ -53,7 +53,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         agent.Parameters.Add("company");
         agent.Queries =
         [
-            new AiAgentConfiguration.ToolQuery
+            new AiAgentToolQuery
             {
                 Name = "ProductSearch", 
                 Description =  "semantic search the store product catalog",
@@ -61,7 +61,7 @@ public class AiAgentClientApiBasics : RavenTestBase
                 ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
             }
             ,
-            new AiAgentConfiguration.ToolQuery
+            new AiAgentToolQuery
             {
                 Name = "RecentOrder",
                 Description = "Get the recent orders of the current user",
@@ -79,9 +79,9 @@ public class AiAgentClientApiBasics : RavenTestBase
             agent.Queries[1].ParametersSampleObject = null;
         }
 
-        await store.AI.CreateAgentAsync<OutputSchema>("shopping assistant", agent);
+        var identifier = (await store.AI.CreateAgentAsync<OutputSchema>(agent)).Identifier;
 
-        var r = await store.AI.StartChatAsync<OutputSchema>("shopping assistant", "what goes well with my cheese?",
+        var r = await store.AI.StartChatAsync<OutputSchema>(identifier, "what goes well with my cheese?",
             p => p.AddParameter("company", "companies/90-A"));
 
         Assert.NotNull(r.Response.Answer);
@@ -111,22 +111,22 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         using var session = store.OpenAsyncSession();
 
-        var agent = new AiAgentConfiguration(config.ConnectionStringName,
+        var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
             "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-        agent.Persistence = new AiAgentConfiguration.PersistenceConfiguration
+        agent.Persistence = new AiAgentPersistenceConfiguration
         {
             Collection = "Chats",
             Expires = TimeSpan.FromDays(30)
         };
 
-        var tool1 = new AiAgentConfiguration.ToolAction
+        var tool1 = new AiAgentToolAction
         {
             Name = "ProductSearch",
             Description = "semantic search the store product catalog",
         };
         var tool1sampleObj = "{\"query\": [\"term or phrase to search in the catalog\"]}";
-        var tool2 = new AiAgentConfiguration.ToolAction
+        var tool2 = new AiAgentToolAction
         {
             Name = "RecentOrder", 
             Description = "Get the recent orders of the current user"
@@ -145,9 +145,9 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         agent.Actions = [ tool1, tool2 ];
 
-        await store.AI.CreateAgentAsync<OutputSchema>("shopping assistant", agent);
+        var identifier = (await store.AI.CreateAgentAsync<OutputSchema>(agent)).Identifier;
 
-        var r = await store.AI.StartChatAsync<OutputSchema>("shopping assistant", "what goes well with my cheese for recent orders?");
+        var r = await store.AI.StartChatAsync<OutputSchema>(identifier, "what goes well with my cheese for recent orders?");
 
         Assert.True(r.ToolRequests.Count > 0);
         Assert.NotNull(r.Usage);

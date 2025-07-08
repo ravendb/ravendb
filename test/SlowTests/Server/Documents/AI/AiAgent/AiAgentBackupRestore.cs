@@ -37,9 +37,9 @@ public class AiAgentBackupRestore : ReplicationTestBase
             await source.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(aiConfig.Connection));
 
             var agents = GetAgents(aiConfig);
-            foreach (var (agentName, agentConfig) in agents)
+            foreach (var agentConfig in agents)
             {
-                await source.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agentName, agentConfig));
+                await source.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agentConfig));
             }
 
             var backupOperation = await source.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
@@ -60,23 +60,20 @@ public class AiAgentBackupRestore : ReplicationTestBase
                 });
             {
                 var destRecord = await destination.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(destination.Database));
-                var destAgents = destRecord.AiAgents;
-                Assert.NotNull(destAgents);
-                Assert.Equal(2, destAgents.Count);
-                var names = destAgents.Keys.ToArray();
-                var destConfigs = destAgents.Values.ToArray();
-                Assert.Equal("shopping assistant", names[0]);
-                Assert.Equal("warehouse manager", names[1]);
+                var destConfigs = destRecord.AiAgents;
+                Assert.NotNull(destConfigs);
+                Assert.Equal(2, destConfigs.Count);
                 Assert.NotNull(destConfigs[0]);
                 Assert.NotNull(destConfigs[1]);
-                var configs = agents.Values.ToList();
+                Assert.Equal("shopping-assistant", destConfigs[0].Identifier);
+                Assert.Equal("warehouse-manager", destConfigs[1].Identifier);
                 using (var context = JsonOperationContext.ShortTermSingleUse())
                 {
                     var converter = DocumentConventions.Default.Serialization.DefaultConverter;
-                    var c0 = converter.ToBlittable(configs[0], context);
+                    var c0 = converter.ToBlittable(agents[0], context);
                     var d0 = converter.ToBlittable(destConfigs[0], context);
                     Assert.True(c0.Equals(d0));
-                    var c1 = converter.ToBlittable(configs[1], context);
+                    var c1 = converter.ToBlittable(agents[1], context);
                     var d1 = converter.ToBlittable(destConfigs[1], context);
                     Assert.True(c1.Equals(d1));
                 }
@@ -84,23 +81,24 @@ public class AiAgentBackupRestore : ReplicationTestBase
         }
     }
 
-    private static Dictionary<string, AiAgentConfiguration> GetAgents(GenAiConfiguration aiConfig)
+    private static List<AiAgentConfiguration> GetAgents(GenAiConfiguration aiConfig)
     {
-        var agent0 = new AiAgentConfiguration(aiConfig.ConnectionStringName,
+        var agent0 = new AiAgentConfiguration("shopping assistant", aiConfig.ConnectionStringName,
             "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
+        agent0.Identifier = "shopping-assistant";
+        agent0.Persistence = new AiAgentPersistenceConfiguration { Collection = "Chats", Expires = TimeSpan.FromDays(30) };
 
-        agent0.Persistence = new AiAgentConfiguration.PersistenceConfiguration { Collection = "Chats", Expires = TimeSpan.FromDays(30) };
         agent0.Parameters.Add("company");
         agent0.Queries =
         [
-            new AiAgentConfiguration.ToolQuery
+            new AiAgentToolQuery
             {
                 Name = "ProductSearch",
                 Description = "semantic search the store product catalog",
                 Query = "from Products where vector.search(embedding.text(Name), $query)",
                 ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
             },
-            new AiAgentConfiguration.ToolQuery
+            new AiAgentToolQuery
             {
                 Name = "RecentOrder",
                 Description = "Get the recent orders of the current user",
@@ -110,22 +108,25 @@ public class AiAgentBackupRestore : ReplicationTestBase
         ];
 
 
-        var agent1 = new AiAgentConfiguration(aiConfig.ConnectionStringName,
-            "You are an AI agent managing a warehouse.");
-
-        agent1.Persistence = new AiAgentConfiguration.PersistenceConfiguration { Collection = "Chats", Expires = TimeSpan.FromDays(30) };
-
+        var agent1 = new AiAgentConfiguration("warehouse manager", aiConfig.ConnectionStringName, "You are an AI agent managing a warehouse.");
+        agent1.Identifier = "warehouse-manager";
+        agent1.Persistence = new AiAgentPersistenceConfiguration { Collection = "Chats", Expires = TimeSpan.FromDays(30) };
         agent1.Actions =
         [
-            new AiAgentConfiguration.ToolAction
+            new AiAgentToolAction
             {
                 Name = "ProductSearch",
                 Description = "semantic search the store product catalog",
                 ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
             },
-            new AiAgentConfiguration.ToolAction { Name = "RecentOrder", Description = "Get the recent orders of the current user", ParametersSampleObject = "{}" }
+            new AiAgentToolAction
+            {
+                Name = "RecentOrder", 
+                Description = "Get the recent orders of the current user", 
+                ParametersSampleObject = "{}"
+            }
         ];
 
-        return new Dictionary<string, AiAgentConfiguration>() { { "shopping assistant", agent0 }, { "warehouse manager", agent1 } };
+        return new List<AiAgentConfiguration>() { agent0, agent1 };
     }
 }

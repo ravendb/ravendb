@@ -945,23 +945,21 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndObject();
             }
             
-            private void WriteAiAgents(Dictionary<string, AiAgentConfiguration> agents)
+            private void WriteAiAgents(List<AiAgentConfiguration> agents)
             {
-                _writer.WriteStartObject();
+                _writer.WriteStartArray();
 
                 var first = true;
-                foreach (var (name, config) in agents)
+                foreach (var config in agents)
                 {
                     if (first == false)
                         _writer.WriteComma();
                     first = false;
 
-                    _writer.WritePropertyName(name);
-
                     _context.Write(_writer, config.ToJson());
                 }
 
-                _writer.WriteEndObject();
+                _writer.WriteEndArray();
             }
 
             private void WriteGenAiTasks(List<GenAiConfiguration> genAiConfigurations)

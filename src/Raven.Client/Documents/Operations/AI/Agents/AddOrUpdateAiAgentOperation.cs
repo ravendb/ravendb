@@ -11,7 +11,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents
 {
     public class AddOrUpdateAiAgentOperation : AddOrUpdateAiAgentOperation<object>
     {
-        public AddOrUpdateAiAgentOperation(string name, AiAgentConfiguration configuration) : base(name, configuration)
+        public AddOrUpdateAiAgentOperation(AiAgentConfiguration configuration) : base(configuration)
         {
             if (string.IsNullOrWhiteSpace(configuration.OutputSchema) && string.IsNullOrWhiteSpace(configuration.SampleObject))
                 throw new ArgumentException($"Please provide a non-empty value for either {configuration.OutputSchema} or {nameof(configuration.SampleObject)} is required.");
@@ -20,40 +20,35 @@ namespace Raven.Client.Documents.Operations.AI.Agents
 
     public class AddOrUpdateAiAgentOperation<TSchema> : IMaintenanceOperation<AiAgentConfigurationResult> where TSchema : new()
     {
-        private readonly string _name;
         private readonly AiAgentConfiguration _configuration;
         private static readonly TSchema Instance = new();
 
-        public AddOrUpdateAiAgentOperation(string name, AiAgentConfiguration configuration)
+        public AddOrUpdateAiAgentOperation(AiAgentConfiguration configuration)
         {
             ValidationMethods.AssertNotNullOrEmpty(configuration, nameof(configuration));
-            ValidationMethods.AssertNotNullOrEmpty(name, nameof(name));
 
-            _name = name;
             _configuration = configuration;
         }
 
         public RavenCommand<AiAgentConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
-            return new AddOrUpdateAiAgentOperationCommand(_name, _configuration, conventions);
+            return new AddOrUpdateAiAgentOperationCommand(_configuration, conventions);
         }
 
         private sealed class AddOrUpdateAiAgentOperationCommand : RavenCommand<AiAgentConfigurationResult>, IRaftCommand
         {
-            private readonly string _name;
             private readonly AiAgentConfiguration _configuration;
             private readonly DocumentConventions _conventions;
 
-            public AddOrUpdateAiAgentOperationCommand(string name, AiAgentConfiguration configuration, DocumentConventions conventions)
+            public AddOrUpdateAiAgentOperationCommand(AiAgentConfiguration configuration, DocumentConventions conventions)
             {
-                _name = name;
                 _configuration = configuration;
                 _conventions = conventions;
             }
             public override bool IsReadRequest => false;
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/admin/ai/agent?name={Uri.EscapeDataString(_name)}";
+                url = $"{node.Url}/databases/{node.Database}/admin/ai/agent";
 
                 var request = new HttpRequestMessage
                 {

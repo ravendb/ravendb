@@ -138,14 +138,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             return args;
         }
 
-        public AiAgentConfiguration GetAiAgentConfiguration(string name)
+        public AiAgentConfiguration GetAiAgentConfiguration(string identifier)
         {
             using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
             using (ctx.OpenReadTransaction())
             using (var record = ServerStore.Cluster.ReadRawDatabaseRecord(ctx, RequestHandler.DatabaseName))
             {
-                if (record.TryGetAiAgent(name, out var configuration) == false)
-                    throw new ArgumentException($"AI Agent '{name}' doesn't exists");
+                if (record.TryGetAiAgent(identifier, out var configuration) == false)
+                    throw new ArgumentException($"AI Agent '{identifier}' doesn't exists");
 
                 return configuration;
             }

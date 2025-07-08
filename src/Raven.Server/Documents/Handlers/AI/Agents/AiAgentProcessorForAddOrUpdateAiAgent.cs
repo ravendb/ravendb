@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
@@ -29,14 +30,19 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
         using var _ = ContextPool.AllocateOperationContext(out JsonOperationContext context);
         var options = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai/agent", token.Token);
         
-        var name = RequestHandler.GetStringQueryString("name", required: true);
-        var configuration = JsonDeserializationClient.AiAgentConfiguration(options);
+        var cfg = JsonDeserializationClient.AiAgentConfiguration(options);
+        if (string.IsNullOrEmpty(cfg.Name))
+            throw new ArgumentException("Ai Agent Name cannot be empty", nameof(cfg.Name));
 
-        ValidateConfiguration(context, configuration);
-
-        var r = await ServerStore.SendToLeaderAsync(new AddOrUpdateAiAgentCommand(RequestHandler.DatabaseName, name, configuration, RequestHandler.GetRaftRequestIdFromQuery()), token.Token);
+        if (string.IsNullOrEmpty(cfg.Identifier))
+            cfg.Identifier = EmbeddingsGenerationConfiguration.GenerateIdentifier(cfg.Name);
         
-        RequestHandler.LogTaskToAudit($"Add/Update AI Agent '{name}'", r.Index, options);
+        ValidateConfiguration(context, cfg);
+        
+        var r = await ServerStore.SendToLeaderAsync(new AddOrUpdateAiAgentCommand(RequestHandler.DatabaseName, cfg, RequestHandler.GetRaftRequestIdFromQuery()),
+            token.Token);
+
+        RequestHandler.LogTaskToAudit($"Add/Update AI Agent '{cfg.Identifier}'", r.Index, options);
 
         await RequestHandler.WaitForIndexNotificationAsync(r.Index);
 
@@ -44,6 +50,7 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
         {
             var json = new DynamicJsonValue
             {
+                [nameof(AiAgentConfigurationResult.Identifier)] = cfg.Identifier,
                 [nameof(AiAgentConfigurationResult.RaftCommandIndex)] = r.Index
             };
 
