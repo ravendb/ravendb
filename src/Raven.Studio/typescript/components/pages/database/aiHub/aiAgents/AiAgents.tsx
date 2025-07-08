@@ -88,7 +88,6 @@ interface AiAgentCardProps {
 function AiAgentCard({ name, config }: AiAgentCardProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { aiAgentService } = useServices();
-    const { forCurrentDatabase } = useAppUrls();
     const confirm = useConfirm();
 
     const { appUrl } = useAppUrls();
@@ -136,11 +135,11 @@ function AiAgentCard({ name, config }: AiAgentCardProps) {
                         <Icon icon="more" margin="m-0" />
                     </Dropdown.Toggle>
                     <Dropdown.Menu>
-                        <Dropdown.Item href={forCurrentDatabase.editAiAgent(name)()}>
+                        <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, name)}>
                             <Icon icon="edit" /> Edit agent
                         </Dropdown.Item>
-                        <Dropdown.Item>
-                            <Icon icon="copy" /> Clone agent (TODO)
+                        <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, name, true)}>
+                            <Icon icon="copy" /> Clone agent
                         </Dropdown.Item>
                         <Dropdown.Item
                             className="text-danger"

@@ -779,10 +779,11 @@ class appUrl {
         return "#databases/ai/agents?" + databasePart;
     }
 
-    static forEditAiAgent(db: database | string, agentName?: string): string {
+    static forEditAiAgent(db: database | string, agentName?: string, isClone?: boolean): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const agentNamePart = agentName ? "&agentName=" + encodeURIComponent(agentName) : "";
-        return "#databases/ai/agents/edit?" + databasePart + agentNamePart;
+        const isClonePart = isClone ? "&isClone=true" : "";
+        return "#databases/ai/agents/edit?" + databasePart + agentNamePart + isClonePart;
     }
 
     static forChatAiAgent(db: database | string, agentName: string): string {

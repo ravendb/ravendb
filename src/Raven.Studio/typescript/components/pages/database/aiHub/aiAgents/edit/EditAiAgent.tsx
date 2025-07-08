@@ -19,6 +19,7 @@ import { useEffect } from "react";
 
 interface QueryParams {
     agentName: string;
+    isClone?: boolean;
 }
 
 export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<QueryParams>) {
@@ -34,7 +35,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
             const agent = await aiAgentService.getAiAgents(databaseName, queryParams.agentName);
 
-            return mapFromDto(queryParams.agentName, agent);
+            return mapFromDto(queryParams.agentName, agent, queryParams.isClone);
         },
         resolver: editAiAgentYupResolver,
     });
@@ -118,7 +119,8 @@ function ColumnResize({ handleMouseDown }: { handleMouseDown: (e: React.MouseEve
 
 function mapFromDto(
     name: string,
-    dto?: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration
+    dto?: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration,
+    isClone?: boolean
 ): EditAiAgentFormData {
     if (!name) {
         return {
@@ -136,7 +138,7 @@ function mapFromDto(
     }
 
     return {
-        name,
+        name: isClone ? "" : name,
         connectionStringName: dto.ConnectionStringName,
         systemPrompt: dto.SystemPrompt,
         outputSchema: dto.OutputSchema,
