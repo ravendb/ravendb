@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.ServerWide
 {
-    public sealed class ConflictSolver
+    public sealed class ConflictSolver : IDynamicJson
     {
         public Dictionary<string, ScriptResolver> ResolveByCollection;
         public bool ResolveToLatest;

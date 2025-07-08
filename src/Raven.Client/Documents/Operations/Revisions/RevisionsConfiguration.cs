@@ -17,7 +17,7 @@ namespace Raven.Client.Documents.Operations.Revisions
     /// Revisions allow tracking and preserving historical versions of documents.
     /// This configuration includes default revision settings and collection-specific configurations.
     /// </summary>
-    public sealed class RevisionsConfiguration : IFillFromBlittableJson
+    public sealed class RevisionsConfiguration : IFillFromBlittableJson, IDynamicJson
     {
         /// <summary>
         /// The default revisions configuration to be applied when no collection-specific configuration exists.

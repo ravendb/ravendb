@@ -3607,16 +3607,6 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public Raven.Client.Documents.Attachments.RetiredAttachmentsConfiguration ReadRetireAttachmentsConfiguration(string name)
-        {
-            using (_parent.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            using (var raw = ReadRawDatabaseRecord(context, name))
-            {
-                return raw.RetiredAttachmentsConfiguration;
-            }
-        }
-
         public DatabaseRecord ReadDatabase<TTransaction>(TransactionOperationContext<TTransaction> context, string name)
             where TTransaction : RavenTransaction
         {

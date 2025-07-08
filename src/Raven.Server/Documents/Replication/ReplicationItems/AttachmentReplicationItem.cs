@@ -2,7 +2,6 @@
 using System.Globalization;
 using System.IO;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
@@ -44,9 +43,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                                      + sizeof(int)
                                      + (RetireAtUtc == null ? 0 : sizeof(long))
                                      + sizeof(int)
-                                     + Collection.Size
-                              ;
-      
+                                     + Collection.Size;
 
         public long StreamSize => sizeof(byte) + // type
 

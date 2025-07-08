@@ -1781,7 +1781,7 @@ namespace Raven.Server.Smuggler.Documents
 
                             var attachment = await ProcessAttachmentStreamAsync(context, data, actions);
                             attachments.Add(attachment);
-                            hashBySize.TryAdd(attachment.Hash, attachment.Size);
+                            hashBySize.TryAdd(attachment.Base64Hash.ToString(), attachment.Size);
                             continue;
                         }
                     }
@@ -1800,123 +1800,7 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    // hashBySize == null means there were no attachment streams in the dump
-
-                    //TODO: egor change that according to feature version
-                    if (_buildVersionType < BuildVersionType.V7)
-                    {
-                        if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray att) && att.Length > 0)
-                        {
-                            var didWork = false;
-                            var results = new DynamicJsonArray();
-                            for (var i = 0; i < att.Length; i++)
-                            {
-                                var attachmentInMetadata = (BlittableJsonReaderObject)att[i];
-                                if (attachmentInMetadata.TryGet(nameof(AttachmentName.Hash), out string hash) == false)
-                                {
-                                    // this should skip this attachment from the results array
-                                    didWork = true;
-                                    if (_log.IsInfoEnabled)
-                                        _log.Info($"Ignoring an attachment because couldn't parse its hash: {attachmentInMetadata}");
-                                    continue;
-                                }
-
-                                if (attachmentInMetadata.TryGet(nameof(AttachmentName.Size), out long _) == false)
-                                {
-                                    if (hashBySize.ContainsKey(hash) == false)
-                                    {
-                                        if (_log.IsInfoEnabled)
-                                            _log.Info(
-                                                $"Ignoring an attachment with hash '{hash}' for document '{modifier.Id}' because couldn't find its size. Attachment metadata: {attachmentInMetadata}");
-                                        Debug.Assert(false, "imported attachment doesn't have size & stream");
-                                        attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata) { [nameof(AttachmentName.Size)] = 0L };
-                                    }
-                                    else
-                                    {
-                                        attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
-                                        {
-                                            [nameof(AttachmentName.Size)] = hashBySize[hash]
-                                        };
-                                    }
-                                }
-
-                                if (attachmentInMetadata.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false)
-                                {
-                                    flags |= AttachmentFlags.None;
-                                    if (attachmentInMetadata.Modifications == null)
-                                    {
-                                        attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
-                                        {
-                                            [nameof(AttachmentName.Flags)] = flags.ToString()
-                                        };
-                                    }
-                                    else
-                                    {
-                                        attachmentInMetadata.Modifications[nameof(AttachmentName.Flags)] = flags.ToString();
-                                    }
-                                }
-
-                                if (attachmentInMetadata.TryGet(nameof(AttachmentName.RetireAt), out DateTime? _) == false)
-                                {
-                                    if (attachmentInMetadata.Modifications == null)
-                                    {
-                                        attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata) { [nameof(AttachmentName.RetireAt)] = null };
-                                    }
-                                    else
-                                    {
-                                        attachmentInMetadata.Modifications[nameof(AttachmentName.RetireAt)] = null;
-                                    }
-                                }
-
-                                if (attachmentInMetadata.TryGet(nameof(AttachmentName.Collection), out string _) == false)
-                                {
-                                    if (attachmentInMetadata.Modifications == null)
-                                    {
-
-                                        Debug.Assert(collectionName != null);
-                                        attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
-                                        {
-                                            [nameof(AttachmentName.Collection)] = collectionName
-                                        };
-                                    }
-                                    else
-                                    {
-                                        attachmentInMetadata.Modifications[nameof(AttachmentName.Collection)] = collectionName;
-                                    }
-                                }
-
-
-                                if (attachmentInMetadata.Modifications != null)
-                                {
-                                    didWork = true;
-                                }
-
-                                results.Add(attachmentInMetadata);
-                            }
-
-                            if (didWork)
-                            {
-                                metadata.Modifications = new DynamicJsonValue(metadata) { [Constants.Documents.Metadata.Attachments] = results };
-
-                                if (data.Modifications != null)
-                                {
-                                    data.Modifications[Constants.Documents.Metadata.Key] = metadata;
-                                }
-                                else
-                                {
-                                    data.Modifications = new DynamicJsonValue(data) { [Constants.Documents.Metadata.Key] = metadata };
-                                }
-                            }
-                        }
-                    }
-
-                    if (data.Modifications != null)
-                    {
-                        using (var old = data)
-                        {
-                            data = context.ReadObject(data, modifier.Id, Mode);
-                        }
-                    }
+                    data = GetAttachmentMetadata(metadata, hashBySize, modifier, collectionName, data, context);
 
                     _result.LegacyLastDocumentEtag = modifier.LegacyEtag;
 
@@ -1944,6 +1828,130 @@ namespace Raven.Server.Smuggler.Documents
                     modifier?.Dispose();
                 }
             }
+        }
+
+        private BlittableJsonReaderObject GetAttachmentMetadata(BlittableJsonReaderObject metadata, Dictionary<string, long> hashBySize, BlittableMetadataModifier modifier,
+            string collectionName, BlittableJsonReaderObject data, JsonOperationContext context)
+        {
+            // hashBySize == null means there were no attachment streams in the dump
+
+            //TODO: egor change that according to feature version
+            if (_buildVersionType < BuildVersionType.V7)
+            {
+                if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray att) && att.Length > 0)
+                {
+                    var didWork = false;
+                    var results = new DynamicJsonArray();
+                    for (var i = 0; i < att.Length; i++)
+                    {
+                        var attachmentInMetadata = (BlittableJsonReaderObject)att[i];
+                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.Hash), out string hash) == false)
+                        {
+                            // this should skip this attachment from the results array
+                            didWork = true;
+                            if (_log.IsInfoEnabled)
+                                _log.Info($"Ignoring an attachment because couldn't parse its hash: {attachmentInMetadata}");
+                            continue;
+                        }
+
+                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.Size), out long _) == false)
+                        {
+                            if (hashBySize.ContainsKey(hash) == false)
+                            {
+                                if (_log.IsInfoEnabled)
+                                    _log.Info(
+                                        $"Ignoring an attachment with hash '{hash}' for document '{modifier.Id}' because couldn't find its size. Attachment metadata: {attachmentInMetadata}");
+                                Debug.Assert(false, "imported attachment doesn't have size & stream");
+                                attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata) { [nameof(AttachmentName.Size)] = 0L };
+                            }
+                            else
+                            {
+                                attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
+                                {
+                                    [nameof(AttachmentName.Size)] = hashBySize[hash]
+                                };
+                            }
+                        }
+
+                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false)
+                        {
+                            flags |= AttachmentFlags.None;
+                            if (attachmentInMetadata.Modifications == null)
+                            {
+                                attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
+                                {
+                                    [nameof(AttachmentName.Flags)] = flags.ToString()
+                                };
+                            }
+                            else
+                            {
+                                attachmentInMetadata.Modifications[nameof(AttachmentName.Flags)] = flags.ToString();
+                            }
+                        }
+
+                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.RetireAt), out DateTime? _) == false)
+                        {
+                            if (attachmentInMetadata.Modifications == null)
+                            {
+                                attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata) { [nameof(AttachmentName.RetireAt)] = null };
+                            }
+                            else
+                            {
+                                attachmentInMetadata.Modifications[nameof(AttachmentName.RetireAt)] = null;
+                            }
+                        }
+
+                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.Collection), out string _) == false)
+                        {
+                            if (attachmentInMetadata.Modifications == null)
+                            {
+
+                                Debug.Assert(collectionName != null);
+                                attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
+                                {
+                                    [nameof(AttachmentName.Collection)] = collectionName
+                                };
+                            }
+                            else
+                            {
+                                attachmentInMetadata.Modifications[nameof(AttachmentName.Collection)] = collectionName;
+                            }
+                        }
+
+
+                        if (attachmentInMetadata.Modifications != null)
+                        {
+                            didWork = true;
+                        }
+
+                        results.Add(attachmentInMetadata);
+                    }
+
+                    if (didWork)
+                    {
+                        metadata.Modifications = new DynamicJsonValue(metadata) { [Constants.Documents.Metadata.Attachments] = results };
+
+                        if (data.Modifications != null)
+                        {
+                            data.Modifications[Constants.Documents.Metadata.Key] = metadata;
+                        }
+                        else
+                        {
+                            data.Modifications = new DynamicJsonValue(data) { [Constants.Documents.Metadata.Key] = metadata };
+                        }
+                    }
+                }
+            }
+
+            if (data.Modifications != null)
+            {
+                using (var old = data)
+                {
+                    data = context.ReadObject(data, modifier.Id, Mode);
+                }
+            }
+
+            return data;
         }
 
         public Task<Stream> GetTempStreamAsync() => StreamDestination.GetTempStreamAsync(_options);
@@ -2246,7 +2254,6 @@ namespace Raven.Server.Smuggler.Documents
             {
                 Data = data,
                 Size = size,
-                Hash = hash
             };
 
             attachment.Base64HashDispose = Slice.External(_allocator, hash, out attachment.Base64Hash);

@@ -71,6 +71,7 @@ public sealed class UploaderSettings
             ConcurrentThreads = concurrentThreads
         };
     }
+
     public static UploaderSettings GenerateUploaderSettingForBackup(DocumentDatabase database, BackupConfiguration configuration, string taskName, bool isServerWide, bool backupToLocalFolder,
         Action backupException)
     {
