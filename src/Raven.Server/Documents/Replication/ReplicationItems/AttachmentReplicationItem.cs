@@ -23,7 +23,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public long AttachmentSize;
         public AttachmentFlags Flags;
         public DateTime? RetireAtUtc;
-        public LazyStringValue Collection;
 
         public override long Size => base.Size + // common
 
@@ -42,8 +41,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                                      + sizeof(long)
                                      + sizeof(int)
                                      + (RetireAtUtc == null ? 0 : sizeof(long))
-                                     + sizeof(int)
-                                     + Collection.Size;
+                                     + sizeof(int);
 
         public long StreamSize => sizeof(byte) + // type
 
@@ -62,7 +60,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
             djv[nameof(Flags)] = Flags.ToString();
             djv[nameof(RetireAtUtc)] = RetireAtUtc;
-            djv[nameof(Collection)] = Collection.ToString();
             return djv;
         }
 
@@ -81,7 +78,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 AttachmentSize = attachment.Size,
                 Flags = attachment.Flags,
                 RetireAtUtc = attachment.RetireAt,
-                Collection = attachment.Collection
             };
 
             // although the key is LSV but is treated as slice and doesn't respect escaping
@@ -135,14 +131,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 *(AttachmentFlags*)(pTemp + tempBufferPos) = Flags;
                 tempBufferPos += sizeof(AttachmentFlags);
 
-
-                *(int*)(pTemp + tempBufferPos) = Collection.Size;
-                tempBufferPos += sizeof(int);
-                Memory.Copy(pTemp + tempBufferPos, Collection.Buffer, Collection.Size);
-                tempBufferPos += Collection.Size;
-
-
-
                 stream.Write(tempBuffer, 0, tempBufferPos);
                 stats.RecordAttachmentOutput(Size);
             }
@@ -167,7 +155,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                     RetireAtUtc = new DateTime(ticks, DateTimeKind.Utc);
 
                 Flags = *(AttachmentFlags*)Reader.ReadExactly(sizeof(AttachmentFlags)) | AttachmentFlags.None;
-                SetLazyStringValueFromString(context, out Collection);
 
 
                 stats.RecordAttachmentRead(Size);
@@ -199,7 +186,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             item.AttachmentSize = AttachmentSize;
             item.RetireAtUtc = RetireAtUtc;
             item.Flags = Flags;
-            item.Collection = Collection.Clone(context);
             item.ToDispose(new DisposableAction(() =>
             {
                 item.Base64Hash.Release(allocator);
@@ -269,7 +255,6 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             Name?.Dispose();
             ContentType?.Dispose();
             Stream?.Dispose();
-            Collection?.Dispose();
         }
     }
 }

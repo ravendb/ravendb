@@ -650,7 +650,6 @@ namespace SlowTests.Server.Documents.Attachments
             {
                 Name = name,
                 DocumentId = id,
-                Collection = collection,
                 Stream = profileStream,
                 ContentType = "image/png"
             });

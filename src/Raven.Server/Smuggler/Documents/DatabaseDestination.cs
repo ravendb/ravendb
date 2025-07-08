@@ -848,8 +848,7 @@ namespace Raven.Server.Smuggler.Documents
                         attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
                         attachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false ||
                         attachment.TryGet(nameof(AttachmentName.Size), out long size) == false ||
-                        attachment.TryGet(nameof(AttachmentName.RetireAt), out DateTime? retireAt) == false ||
-                        attachment.TryGet(nameof(AttachmentName.Collection), out LazyStringValue collection) == false) 
+                        attachment.TryGet(nameof(AttachmentName.RetireAt), out DateTime? retireAt) == false) 
 
                         throw new ArgumentException($"The attachment info is missing a mandatory value: {attachment}");
 
@@ -857,8 +856,7 @@ namespace Raven.Server.Smuggler.Documents
                     {
                         if (flags == AttachmentFlags.None && attachmentsStorage.AttachmentExists(context, hash) == false)
                             _documentIdsOfMissingAttachments.Add(document.Id);
-                        CollectionName collectionName = _database.DocumentsStorage.ExtractCollectionName(context, document.Data);
-                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, flags, size, retireAt, updateDocument: false, fromSmuggler: true, collection2: collectionName);
+                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, flags, size, retireAt, updateDocument: false, fromSmuggler: true);
                         continue;
                     }
 
@@ -866,12 +864,11 @@ namespace Raven.Server.Smuggler.Documents
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                     using (Slice.External(_context.Allocator, hash, out Slice base64Hash))
-                    using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, collection, out Slice _, out Slice collectionSlice))
                     using (Slice.From(_context.Allocator, document.ChangeVector, out Slice cv))
                     using (AttachmentsStorage.AttachmentKey.GetKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                                base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
                     {
-                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, retireAt, collectionSlice, flags, size, isRevision: true);
+                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, retireAt, flags, size, isRevision: true);
                     }
                 }
             }

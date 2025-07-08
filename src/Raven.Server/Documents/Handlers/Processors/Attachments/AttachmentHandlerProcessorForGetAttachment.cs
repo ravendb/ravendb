@@ -72,7 +72,6 @@ internal class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHa
             HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
             HttpContext.Response.Headers[Constants.Headers.AttachmentRetireAt] = attachment.RetireAt?.GetDefaultRavenFormat();
             HttpContext.Response.Headers[Constants.Headers.AttachmentFlags] = ((int)attachment.Flags).ToString();
-            HttpContext.Response.Headers[Constants.Headers.AttachmentCollection] = attachment.Collection.ToString();
             strategy.DisposeReadTransactionIfNeeded(tx);
 
             await strategy.WriteResponseStream(context, attachment, collection, token);

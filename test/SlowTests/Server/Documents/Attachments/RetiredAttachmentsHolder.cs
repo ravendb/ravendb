@@ -102,7 +102,6 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 {
                     Name = name,
                     DocumentId = id,
-                    Collection = collection,
                     Stream = profileStream,
                     ContentType = "image/png",
                     Hash = a.Details.Hash,
