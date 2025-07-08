@@ -56,12 +56,12 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             ];
 
             var e = await Assert.ThrowsAsync<RavenException>( () => store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>("shopping assistant", agent)));
-            Assert.Contains("Agent configuration missing parameters that is required by the tools", e.Message);
+            Assert.Contains("Tool query 'RecentOrder' contains parameters that are not defined in the agent configuration: 'company'", e.Message);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
-        public async Task ThrowOnMissingToolParameter(Options options, GenAiConfiguration config)
+        public async Task ThrowOnDuplicateToolParameterUsage(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
 
@@ -85,8 +85,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 {
                     Name = "ProductSearch", 
                     Description =  "semantic search the store product catalog",
-                    Query = "from Products where vector.search(embedding.text(Name), $foo)",
-                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+                    Query = "from Products where vector.search(embedding.text(Name), $company)",
+                    ParametersSampleObject = "{\"company\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
                 new AiAgentConfiguration.ToolQuery
@@ -99,53 +99,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             ];
 
             var e = await Assert.ThrowsAsync<RavenException>( () => store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>("shopping assistant", agent)));
-            Assert.Contains("Queries contain parameters that are not defined in the tool schema", e.Message);
+            Assert.Contains("Parameter company is defined on both the agent level and the query level for ProductSearch", e.Message);
         }
-
-        [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
-        public async Task ThrowOnMissingParameter(Options options, GenAiConfiguration config)
-        {
-            using var store = GetDocumentStore(options);
-
-            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
-
-            using var session = store.OpenAsyncSession();
-
-            var agent = new AiAgentConfiguration(config.ConnectionStringName,
-                "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
-
-            agent.Persistence = new AiAgentConfiguration.PersistenceConfiguration
-            {
-                Collection = "Chats",
-                Expires = TimeSpan.FromDays(30)
-            };
-
-            agent.Parameters.Add("company");
-            agent.Parameters.Add("order");
-            agent.Queries =
-            [
-                new AiAgentConfiguration.ToolQuery
-                {
-                    Name = "ProductSearch", 
-                    Description =  "semantic search the store product catalog",
-                    Query = "from Products where vector.search(embedding.text(Name), $query)",
-                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
-                }
-                ,
-                new AiAgentConfiguration.ToolQuery
-                {
-                    Name = "RecentOrder",
-                    Description = "Get the recent orders of the current user",
-                    Query = "from Orders where Company = $company order by OrderedAt desc limit 10",
-                    ParametersSampleObject = "{}"
-                }
-            ];
-
-            var e = await Assert.ThrowsAsync<RavenException>( () => store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>("shopping assistant", agent)));
-            Assert.Contains("Agent configuration has unused parameters", e.Message);
-        }
-
 
         [RavenTheory(RavenTestCategory.Ai)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]

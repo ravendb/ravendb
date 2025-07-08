@@ -10,7 +10,6 @@ using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Commands.AI;
-using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
@@ -55,17 +54,11 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
     private static void ValidateConfiguration(JsonOperationContext context, AiAgentConfiguration configuration)
     {
         var scopeParams = configuration.Parameters;
-        var toolParams = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        var llmParams = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-
         foreach (var tool in configuration.Queries)
         {
             var q = QueryMetadata.ParseQuery(tool.Query, QueryType.Select);
-
-            foreach (var p in q.Parameters)
-            {
-                toolParams.Add(p.Value);
-            }
+            var queryParams = new HashSet<string>(q.Parameters.Select(x => x.Value));
+            queryParams.ExceptWith(scopeParams);
 
             string paramsSchema = ChatCompletionClient.GetSchemaForTool(tool.ParametersSchema, tool.ParametersSampleObject);
             var schema = context.Sync.ReadForMemory(paramsSchema, "tool-schema");
@@ -73,23 +66,17 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
             {
                 foreach (var arg in required)
                 {
-                    llmParams.Add(arg.ToString());
+                    string queryArg = arg.ToString();
+                    if (scopeParams.Contains(queryArg))
+                        throw new InvalidOperationException($"Parameter {queryArg} is defined on both the agent level and the query level for {tool.Name}");
+
+                    queryParams.Remove(queryArg);
                 }
             }
+
+            if (queryParams.Count > 0)
+                throw new InvalidOperationException(
+                    $"Tool query '{tool.Name}' contains parameters that are not defined in the agent configuration: '{string.Join(", ", queryParams)}'");
         }
-
-        var missingToolSchema = llmParams.Except(toolParams).ToList();
-        if (missingToolSchema.Count > 0)
-            throw new InvalidOperationException($"Queries contain parameters that are not defined in the tool schema: '{string.Join(", ", missingToolSchema)}'");
-
-        var requiredScope = toolParams.Except(llmParams).ToList();
-        
-        var missingScopeParams = requiredScope.Except(scopeParams).ToList();
-        if (missingScopeParams.Count > 0)
-            throw new InvalidOperationException($"Agent configuration missing parameters that is required by the tools: '{string.Join(", ", missingScopeParams)}'");
-
-        var unusedParams = scopeParams.Except(requiredScope).ToList();
-        if (unusedParams.Count > 0)
-            throw new InvalidOperationException($"Agent configuration has unused parameters: '{string.Join(", ", unusedParams)}'");
     }
 }
