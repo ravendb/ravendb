@@ -39,5 +39,8 @@ public class RavenDB_24375(ITestOutputHelper output) : RavenTestBase(output)
         }
     }
 
+#pragma warning disable CS9113 // Parameter is unread.
+    // ReSharper disable once InconsistentNaming
     private struct Dto(long Idx, string Id = null);
+#pragma warning restore CS9113 // Parameter is unread.
 }
