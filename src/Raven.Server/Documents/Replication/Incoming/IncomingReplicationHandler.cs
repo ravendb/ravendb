@@ -424,8 +424,6 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Name, out _, out Slice attachmentName));
                                 toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.ContentType, out _, out Slice contentType));
-                                toDispose.Add(DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, attachment.Collection, out _, out Slice collectionSlice));
-
 
                                 var local = context.GetChangeVector(result.ChangeVector);
                                 var newChangeVector = ChangeVectorUtils.GetConflictStatus(incomingChangeVector, local) switch
@@ -440,7 +438,7 @@ namespace Raven.Server.Documents.Replication.Incoming
                                 if (newChangeVector != null)
                                 {
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, attachment.RetireAtUtc, collectionSlice, attachment.Flags, attachment.AttachmentSize, isRevision, newChangeVector);
+                                        contentType, attachment.Base64Hash, attachment.RetireAtUtc, attachment.Flags, attachment.AttachmentSize, isRevision, newChangeVector);
                                 }
 
                                 break;

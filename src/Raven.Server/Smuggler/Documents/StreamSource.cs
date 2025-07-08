@@ -1682,7 +1682,6 @@ namespace Raven.Server.Smuggler.Documents
                 ["Size"] = details.Size,
                 [nameof(AttachmentName.Flags)] = AttachmentFlags.None,
                 [nameof(AttachmentName.RetireAt)] = null,
-                [nameof(AttachmentName.Collection)] = collectionName
             };
             var attachments = new DynamicJsonArray();
             attachments.Add(attachment);
@@ -1900,24 +1899,6 @@ namespace Raven.Server.Smuggler.Documents
                                 attachmentInMetadata.Modifications[nameof(AttachmentName.RetireAt)] = null;
                             }
                         }
-
-                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.Collection), out string _) == false)
-                        {
-                            if (attachmentInMetadata.Modifications == null)
-                            {
-
-                                Debug.Assert(collectionName != null);
-                                attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
-                                {
-                                    [nameof(AttachmentName.Collection)] = collectionName
-                                };
-                            }
-                            else
-                            {
-                                attachmentInMetadata.Modifications[nameof(AttachmentName.Collection)] = collectionName;
-                            }
-                        }
-
 
                         if (attachmentInMetadata.Modifications != null)
                         {
