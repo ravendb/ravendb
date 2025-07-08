@@ -276,7 +276,7 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.ConflictSolverConfig));
-                    WriteConflictSolver(databaseRecord.ConflictSolverConfig);
+                    WriteTaskConfiguration(databaseRecord.ConflictSolverConfig);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Settings))
@@ -290,35 +290,35 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Revisions));
-                    WriteRevisions(databaseRecord.Revisions);
+                    WriteTaskConfiguration(databaseRecord.Revisions);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.TimeSeries))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.TimeSeries));
-                    WriteTimeSeries(databaseRecord.TimeSeries);
+                    WriteTaskConfiguration(databaseRecord.TimeSeries);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.DocumentsCompression))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.DocumentsCompression));
-                    WriteDocumentsCompression(databaseRecord.DocumentsCompression);
+                    WriteTaskConfiguration(databaseRecord.DocumentsCompression);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Expiration))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Expiration));
-                    WriteExpiration(databaseRecord.Expiration);
+                    WriteTaskConfiguration(databaseRecord.Expiration);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.DataArchival))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.DataArchival));
-                    WriteDataArchival(databaseRecord.DataArchival);
+                    WriteTaskConfiguration(databaseRecord.DataArchival);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.RetireAttachments))
@@ -332,14 +332,14 @@ namespace Raven.Server.Smuggler.Documents
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Refresh));
-                    WriteRefresh(databaseRecord.Refresh);
+                    WriteTaskConfiguration(databaseRecord.Refresh);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Client))
                 {
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Client));
-                    WriteClientConfiguration(databaseRecord.Client);
+                    WriteTaskConfiguration(databaseRecord.Client);
                 }
 
                 if (databaseRecordItemType.Contain(DatabaseRecordItemType.Sorters))
@@ -1007,48 +1007,6 @@ namespace Raven.Server.Smuggler.Documents
                 _writer.WriteEndArray();
             }
 
-            private void WriteConflictSolver(ConflictSolver conflictSolver)
-            {
-                if (conflictSolver == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, conflictSolver.ToJson());
-            }
-
-            private void WriteClientConfiguration(ClientConfiguration clientConfiguration)
-            {
-                if (clientConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, clientConfiguration.ToJson());
-            }
-
-            private void WriteExpiration(ExpirationConfiguration expiration)
-            {
-                if (expiration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _context.Write(_writer, expiration.ToJson());
-            }
-
-            private void WriteDataArchival(DataArchivalConfiguration dataArchival)
-            {
-                if (dataArchival == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _context.Write(_writer, dataArchival.ToJson());
-            }
-
             private void WriteTaskConfiguration(IDynamicJson config)
             {
                 if (config == null)
@@ -1058,46 +1016,6 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _context.Write(_writer, config.ToJson());
-            }
-            private void WriteRefresh(RefreshConfiguration refresh)
-            {
-                if (refresh == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-
-                _context.Write(_writer, refresh.ToJson());
-            }
-
-            private void WriteRevisions(RevisionsConfiguration revisions)
-            {
-                if (revisions == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, revisions.ToJson());
-            }
-
-            private void WriteTimeSeries(TimeSeriesConfiguration timeSeries)
-            {
-                if (timeSeries == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, timeSeries.ToJson());
-            }
-
-            private void WriteDocumentsCompression(DocumentsCompressionConfiguration compressionConfiguration)
-            {
-                if (compressionConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, compressionConfiguration.ToJson());
             }
 
             private void WriteRavenConnectionStrings(Dictionary<string, RavenConnectionString> connections)

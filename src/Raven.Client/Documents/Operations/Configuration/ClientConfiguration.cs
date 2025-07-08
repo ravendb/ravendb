@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Operations.Configuration
     /// <para>Represents the client configuration settings that control how the client communicates with the server.</para>
     /// <para>This class includes options such as request limits, load balancing behaviors, and identity parts separator.</para>
     /// </summary>
-    public sealed class ClientConfiguration
+    public sealed class ClientConfiguration : IDynamicJson
     {
         private char? _identityPartsSeparator;
 
