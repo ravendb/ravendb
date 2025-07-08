@@ -57,7 +57,7 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
         foreach (var tool in configuration.Queries)
         {
             var q = QueryMetadata.ParseQuery(tool.Query, QueryType.Select);
-            var queryParams = new HashSet<string>(q.Parameters.Select(x => x.Value));
+            var queryParams = new HashSet<string>(q.Parameters.Select(x => x.Value), StringComparer.OrdinalIgnoreCase);
             queryParams.ExceptWith(scopeParams);
 
             string paramsSchema = ChatCompletionClient.GetSchemaForTool(tool.ParametersSchema, tool.ParametersSampleObject);
