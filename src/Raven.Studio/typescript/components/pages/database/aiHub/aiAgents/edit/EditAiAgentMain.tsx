@@ -357,19 +357,15 @@ function ParametersField() {
     );
 }
 
-function QueryField({
-    index,
-    remove,
-    save,
-    edit,
-    cancelEdit,
-}: {
+interface QueryFieldProps {
     index: number;
     remove: () => void;
     save: () => void;
     edit: () => void;
     cancelEdit: () => void;
-}) {
+}
+
+function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) {
     const { control } = useFormContext<EditAiAgentFormData>();
 
     const queryAceRef = useRef<ReactAce>(null);
@@ -465,19 +461,15 @@ function QueryField({
     );
 }
 
-function ActionField({
-    index,
-    remove,
-    save,
-    edit,
-    cancelEdit,
-}: {
+interface ActionFieldProps {
     index: number;
     remove: () => void;
     save: () => void;
     edit: () => void;
     cancelEdit: () => void;
-}) {
+}
+
+function ActionField({ index, remove, save, edit, cancelEdit }: ActionFieldProps) {
     const { control } = useFormContext<EditAiAgentFormData>();
 
     const parametersSchemaAceRef = useRef<ReactAce>(null);
@@ -560,11 +552,14 @@ function ActionField({
 
 function useRqlLanguageService(): rqlLanguageService {
     const db = useAppSelector(databaseSelectors.activeDatabase);
+
     const { databasesService } = useServices();
+
     const asyncGetIndexNames = useAsync(async () => {
         const dto = await databasesService.getEssentialStats(db.name);
         return dto?.Indexes?.map((x) => x.Name);
     }, []);
+
     const languageService = useMemo(
         () => new rqlLanguageService(db, () => asyncGetIndexNames.result ?? [], "Select"),
         [asyncGetIndexNames.result, db]

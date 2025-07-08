@@ -53,7 +53,7 @@ export const chatAiAgentSlice = createSlice({
             state.chatId = docId;
 
             const messagesFromDoc: DocMessage[] =
-                state.historyDocuments.data.find((d) => d["@metadata"]["@id"] === docId)?.Messages ?? [];
+                state.historyDocuments.data.find((x) => x["@metadata"]["@id"] === docId)?.Messages ?? [];
 
             const getRole = (docMessage: DocMessage): AiAgentMessage["author"] => {
                 if (docMessage.role === "user") {

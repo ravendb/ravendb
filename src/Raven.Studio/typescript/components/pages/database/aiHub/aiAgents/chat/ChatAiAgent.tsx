@@ -14,6 +14,8 @@ import { AboutViewHeading } from "components/common/AboutView";
 import ChatAiAgentInfoHub from "./ChatAiAgentInfoHub";
 import Button from "react-bootstrap/Button";
 
+type ChatResult = Raven.Client.Documents.Operations.AI.Agents.ChatResult<object>;
+
 interface QueryParams {
     agentName: string;
 }
@@ -31,7 +33,9 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const chatId = useAppSelector(chatAiAgentSelectors.chatId);
     const historyDocuments = useAppSelector(chatAiAgentSelectors.historyDocuments);
 
-    const asyncStartChat = useAsyncCallback(async () => {
+    const messagesPanelRef = useRef<HTMLDivElement>(null);
+
+    const asyncChat = useAsyncCallback(async (chatAction: () => Promise<ChatResult>) => {
         dispatch(
             chatAiAgentActions.messagesAdd({
                 id: _.uniqueId(),
@@ -42,7 +46,6 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         );
 
         const agentMessageId = _.uniqueId();
-
         dispatch(
             chatAiAgentActions.messagesAdd({
                 id: agentMessageId,
@@ -53,11 +56,12 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         );
 
         try {
-            const result = await aiAgentService.startAiAgent(databaseName, agentName, {
-                Parameters: {}, // TODO
-                Prompt: prompt,
-            });
-            dispatch(chatAiAgentActions.chatIdSet(result.ChatId));
+            const result = await chatAction();
+
+            if (result.ChatId) {
+                dispatch(chatAiAgentActions.chatIdSet(result.ChatId));
+            }
+
             dispatch(chatAiAgentActions.promptSet(""));
             dispatch(
                 chatAiAgentActions.messagesUpdate({
@@ -78,60 +82,29 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         }
     });
 
-    const asyncResumeChat = useAsyncCallback(async () => {
-        dispatch(
-            chatAiAgentActions.messagesAdd({
-                id: _.uniqueId(),
-                text: prompt,
-                author: "user",
-                state: "success",
-            })
-        );
+    const startChatAction = (): Promise<ChatResult> => {
+        return aiAgentService.startAiAgent(databaseName, agentName, {
+            Parameters: {}, // TODO
+            Prompt: prompt,
+        });
+    };
 
-        const agentMessageId = _.uniqueId();
-
-        dispatch(
-            chatAiAgentActions.messagesAdd({
-                id: agentMessageId,
-                author: "agent",
-                date: new Date(),
-                state: "loading",
-            })
-        );
-
-        try {
-            const result = await aiAgentService.resumeAiAgent(databaseName, agentName, chatId, {
-                ToolResponse: null, // TODO
-                UserPrompt: prompt,
-            });
-            dispatch(chatAiAgentActions.promptSet(""));
-            dispatch(
-                chatAiAgentActions.messagesUpdate({
-                    id: agentMessageId,
-                    text: JSON.stringify(result.Response, null, 2),
-                    state: "success",
-                    usage: result.Usage,
-                })
-            );
-            dispatch(chatAiAgentActions.getHistoryDocuments({ databaseName, agentName }));
-        } catch {
-            dispatch(
-                chatAiAgentActions.messagesUpdate({
-                    id: agentMessageId,
-                    state: "error",
-                })
-            );
-        }
-    });
+    const resumeChatAction = (): Promise<ChatResult> => {
+        return aiAgentService.resumeAiAgent(databaseName, agentName, chatId, {
+            ToolResponse: null, // TODO
+            UserPrompt: prompt,
+        });
+    };
 
     const handleSend = () => {
         if (!chatId) {
-            asyncStartChat.execute();
+            asyncChat.execute(startChatAction);
         } else {
-            asyncResumeChat.execute();
+            asyncChat.execute(resumeChatAction);
         }
     };
 
+    // Get data on load
     useEffect(() => {
         dispatch(chatAiAgentActions.getConfig({ databaseName, agentName }));
         dispatch(chatAiAgentActions.getHistoryDocuments({ databaseName, agentName }));
@@ -140,8 +113,6 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
             dispatch(chatAiAgentActions.reset());
         };
     }, []);
-
-    const messagesPanelRef = useRef<HTMLDivElement>(null);
 
     // Scroll to the bottom of the test panel when new messages are added
     useEffect(() => {
@@ -228,7 +199,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                             <ButtonWithSpinner
                                 variant="primary"
                                 icon="arrow-up"
-                                isSpinning={asyncStartChat.loading || asyncResumeChat.loading}
+                                isSpinning={asyncChat.loading}
                                 disabled={!prompt}
                                 onClick={handleSend}
                                 className="position-absolute"
