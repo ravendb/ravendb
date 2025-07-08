@@ -294,7 +294,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
         return output;
     }
         
-    private getTaskType(input: string): StudioTaskType {
+    private getTaskType(input: keyof Raven.Server.Dashboard.DatabaseOngoingTasksInfoItem): StudioTaskType {
         switch (input) {
             case "ExternalReplicationCount":
                 return "Replication";
@@ -328,7 +328,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 return "Subscription";
             case "SnowflakeEtlCount":
                 return "SnowflakeEtl";
-            case "EmbeddingGenerationCount":
+            case "EmbeddingsGenerationCount":
                 return "EmbeddingsGeneration";
             default:
                 throw new Error("Unknown task type count received:" + input);
@@ -352,7 +352,7 @@ class ongoingTasksWidget extends websocketBasedWidget<Raven.Server.Dashboard.Clu
                 const value = (x as any)[key];
                 
                 if (key !== "Database" && value > 0) {
-                    const taskType = this.getTaskType(key);
+                    const taskType = this.getTaskType(key as keyof Raven.Server.Dashboard.DatabaseOngoingTasksInfoItem);
                     
                     tempRawData.push({
                         type: taskType,
