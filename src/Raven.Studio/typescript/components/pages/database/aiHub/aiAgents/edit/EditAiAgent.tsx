@@ -16,6 +16,7 @@ import router from "plugins/router";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { editAiAgentActions } from "./store/editAiAgentSlice";
 import { useEffect } from "react";
+import EditAiAgentInfoHub from "./EditAiAgentInfoHub";
 
 interface QueryParams {
     agentName: string;
@@ -74,8 +75,9 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
             <form onSubmit={handleSubmit(saveAgent)} className="h-100">
                 <div className="hstack h-100">
                     <div className="vstack h-100">
-                        <div className="p-3">
+                        <div className="hstack justify-content-between align-items-start p-3">
                             <AboutViewHeading title="Create AI Agent" icon="ai-agents" marginBottom={0} />
+                            <EditAiAgentInfoHub />
                         </div>
                         <div className="p-3 flex-grow-1 overflow-scroll h-100">
                             <EditAiAgentMain />

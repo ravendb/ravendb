@@ -9,6 +9,10 @@ import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
 import { useEffect, useRef } from "react";
 import AiAgentMessages from "../partials/AiAgentMessages";
+import { Icon } from "components/common/Icon";
+import { AboutViewHeading } from "components/common/AboutView";
+import ChatAiAgentInfoHub from "./ChatAiAgentInfoHub";
+import Button from "react-bootstrap/Button";
 
 interface QueryParams {
     agentName: string;
@@ -25,6 +29,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const prompt = useAppSelector(chatAiAgentSelectors.prompt);
     const messages = useAppSelector(chatAiAgentSelectors.messages);
     const chatId = useAppSelector(chatAiAgentSelectors.chatId);
+    const historyDocuments = useAppSelector(chatAiAgentSelectors.historyDocuments);
 
     const asyncStartChat = useAsyncCallback(async () => {
         dispatch(
@@ -62,6 +67,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                     usage: result.Usage,
                 })
             );
+            dispatch(chatAiAgentActions.getHistoryDocuments({ databaseName, agentName }));
         } catch {
             dispatch(
                 chatAiAgentActions.messagesUpdate({
@@ -95,7 +101,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
         try {
             const result = await aiAgentService.resumeAiAgent(databaseName, agentName, chatId, {
-                ToolResponse: null, // TODO ask aviv
+                ToolResponse: null, // TODO
                 UserPrompt: prompt,
             });
             dispatch(chatAiAgentActions.promptSet(""));
@@ -107,6 +113,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                     usage: result.Usage,
                 })
             );
+            dispatch(chatAiAgentActions.getHistoryDocuments({ databaseName, agentName }));
         } catch {
             dispatch(
                 chatAiAgentActions.messagesUpdate({
@@ -126,6 +133,9 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     };
 
     useEffect(() => {
+        dispatch(chatAiAgentActions.getConfig({ databaseName, agentName }));
+        dispatch(chatAiAgentActions.getHistoryDocuments({ databaseName, agentName }));
+
         return () => {
             dispatch(chatAiAgentActions.reset());
         };
@@ -141,7 +151,12 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                 behavior: "smooth",
             });
         }
-    }, [messages.length]);
+    }, [messages?.length]);
+
+    const handleAddChat = () => {
+        dispatch(chatAiAgentActions.messagesSet([]));
+        dispatch(chatAiAgentActions.chatIdSet(null));
+    };
 
     if (!agentName) {
         router.navigate(appUrl.forAiAgents(databaseName));
@@ -150,24 +165,77 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     return (
         <div className="content-padding h-100 vstack">
-            <h1 className="m-0">{agentName}</h1>
-            <div ref={messagesPanelRef} className="flex-grow-1 overflow-auto">
-                {messages.length > 0 && <AiAgentMessages messages={messages} />}
+            <div className="hstack justify-content-between align-items-start">
+                <AboutViewHeading title={agentName} icon="ai-agents" marginBottom={3} className="text-truncate" />
+                <ChatAiAgentInfoHub />
             </div>
-            <div className="mt-3">
-                <Form.Control
-                    value={prompt}
-                    onChange={(e) => dispatch(chatAiAgentActions.promptSet(e.target.value))}
-                    placeholder="Message an agent"
-                />
-                <div className="hstack justify-content-end mt-2">
-                    <ButtonWithSpinner
-                        variant="primary"
-                        icon="arrow-up"
-                        isSpinning={asyncStartChat.loading || asyncResumeChat.loading}
-                        disabled={!prompt}
-                        onClick={handleSend}
-                    />
+            <div className="hstack gap-2 mb-2">
+                <a className="btn btn-secondary rounded-pill" href={appUrl.forAiAgents(databaseName)}>
+                    <Icon icon="cancel" /> Cancel
+                </a>
+                <Button variant="primary" className="rounded-pill" onClick={handleAddChat}>
+                    <Icon icon="plus" /> Add chat
+                </Button>
+            </div>
+
+            <div className="flex-grow-1 hstack rounded-2 border border-secondary">
+                <div
+                    style={{ width: "250px" }}
+                    className="p-3 border-end border-secondary panel-bg-2 h-100 rounded-start-2"
+                >
+                    <h4>
+                        <Icon icon="clock" />
+                        Chat history
+                    </h4>
+                    <hr className="my-1" />
+                    {historyDocuments.status === "success" && (
+                        <div className="vstack gap-1">
+                            {historyDocuments.data.map((doc) => (
+                                <div
+                                    key={doc["@metadata"]["@id"]}
+                                    onClick={() =>
+                                        dispatch(
+                                            chatAiAgentActions.historyChatSelected({ docId: doc["@metadata"]["@id"] })
+                                        )
+                                    }
+                                    className="hover-filter cursor-pointer"
+                                >
+                                    <div className="text-truncate">
+                                        {doc.Messages.find((m: { role: string }) => m.role === "user")?.content}
+                                    </div>
+                                    <div className="text-muted">TODO date</div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+                <div className="flex-grow-1 vstack panel-bg-1 rounded-end-2">
+                    <div ref={messagesPanelRef} className="flex-grow-1 overflow-auto p-2">
+                        {messages?.length > 0 && <AiAgentMessages messages={messages} />}
+                    </div>
+                    <div className="mt-3 p-2 border-top border-secondary">
+                        <div className="position-relative">
+                            <Form.Control
+                                id="prompt"
+                                as="textarea"
+                                value={prompt}
+                                style={{ resize: "none" }}
+                                onChange={(e) => dispatch(chatAiAgentActions.promptSet(e.target.value))}
+                                placeholder="Message an agent"
+                                rows={3}
+                                className="rounded-2"
+                            />
+                            <ButtonWithSpinner
+                                variant="primary"
+                                icon="arrow-up"
+                                isSpinning={asyncStartChat.loading || asyncResumeChat.loading}
+                                disabled={!prompt}
+                                onClick={handleSend}
+                                className="position-absolute"
+                                style={{ right: "10px", bottom: "10px" }}
+                            />
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

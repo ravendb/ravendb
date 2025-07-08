@@ -1,0 +1,16 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.ai-agent-messages {
+    .agent-icon-wrapper {
+        padding: 4px;
+        border: 1.5px solid rgba(56, 142, 233);
+        border-radius: sizes.$gutter-xxxs;
+        background: linear-gradient(135.89deg, rgba(56, 142, 233, 0.2) 0%, rgba(123, 81, 255, 0.2) 85.4%);
+
+        i {
+            color: rgba(56, 142, 233);
+        }
+    }
+}

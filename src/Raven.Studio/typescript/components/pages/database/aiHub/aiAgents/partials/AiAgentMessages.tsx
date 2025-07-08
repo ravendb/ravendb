@@ -1,3 +1,4 @@
+import "./AiAgentMessages.scss";
 import AceEditor from "components/common/ace/AceEditor";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
@@ -21,21 +22,34 @@ interface AiAgentMessagesProps {
 
 export default function AiAgentMessages({ messages }: AiAgentMessagesProps) {
     return (
-        <div className="w-100 vstack gap-2">
-            {messages.map((x, idx) =>
-                x.author === "user" ? (
-                    <div key={idx} className="hstack justify-content-end">
-                        <div
-                            className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset"
-                            style={{ maxWidth: "75%" }}
-                        >
-                            {x.text}
-                        </div>
-                    </div>
+        <div className="w-100 vstack gap-2 ai-agent-messages">
+            {messages.map((message, idx) =>
+                message.author === "user" ? (
+                    <UserMessage key={idx} message={message} idx={idx} />
                 ) : (
-                    <AgentMessage key={idx} agentMessage={x} />
+                    <AgentMessage key={idx} agentMessage={message} />
                 )
             )}
+        </div>
+    );
+}
+
+function UserMessage({ message, idx }: { message: AiAgentMessage; idx: number }) {
+    return (
+        <div>
+            {idx === 0 && (
+                <div className="text-muted text-center">
+                    {message.date ? moment(message.date).format("MM/DD/YYYY HH:mm A") : "TODO date"}
+                </div>
+            )}
+            <div className="hstack justify-content-end">
+                <div
+                    className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset"
+                    style={{ maxWidth: "75%" }}
+                >
+                    {message.text}
+                </div>
+            </div>
         </div>
     );
 }
@@ -47,11 +61,13 @@ function AgentMessage({ agentMessage }: { agentMessage: AiAgentMessage }) {
         <div>
             <div className="hstack justify-content-between mb-2">
                 <div className="hstack gap-2">
-                    <div className="p-1 rounded-2 border">
+                    <div className="agent-icon-wrapper">
                         <Icon icon="sparkles" margin="m-0" />
                     </div>
                     <strong>AI Agent</strong>
-                    <div className="text-muted">{moment(agentMessage.date).format("HH:mm A")}</div>
+                    <div className="text-muted">
+                        {agentMessage.date ? moment(agentMessage.date).format("HH:mm A") : "TODO date"}
+                    </div>
                 </div>
                 {agentMessage.usage && (
                     <div className="hstack text-muted">

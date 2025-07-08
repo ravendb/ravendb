@@ -82,6 +82,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
@@ -609,6 +610,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(StartChatBody));
             scripter.AddType(typeof(ResumeChatBody));
             scripter.AddType(typeof(ChatResult<object>));
+            scripter.AddType(typeof(ChatDocument));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));
