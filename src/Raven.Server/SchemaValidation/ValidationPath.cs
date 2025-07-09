@@ -7,7 +7,7 @@ using Sparrow.Server;
 namespace Raven.Server.SchemaValidation;
 
 
-public class ValidationPath
+public class ValidationPath :IDisposable
 {
     private readonly AbstractBuffer<int> _sizes;
     private readonly AbstractBuffer<char> _path;
@@ -63,4 +63,10 @@ public class ValidationPath
 
     public ReadOnlySpan<char> AsSpan() => _path.AsSpan();
     public override string ToString() => _toString ??= _path.ToString();
+
+    public void Dispose()
+    {
+        _sizes.Dispose();
+        _path.Dispose();
+    }
 }
