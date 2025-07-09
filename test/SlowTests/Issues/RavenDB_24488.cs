@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         [AmazonS3RetryFact]
         public async Task ShouldThrowWhenTryingToReceiveRetiredAttachmentAsStringOrAsStream()
         {
-            string remoteFolderName = "RavenDB_24488";
+            string remoteFolderName = "RavenDB_24488" + Guid.NewGuid();
             var s3Settings = Etl.GetS3Settings(remoteFolderName);
             try
             {

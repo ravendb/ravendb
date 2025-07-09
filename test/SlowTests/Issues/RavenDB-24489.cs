@@ -25,7 +25,7 @@ namespace SlowTests.Issues
         [AmazonS3RetryFact]
         public async Task Index_ShouldInclude_RetiredFlag_And_RetiredAt_ForRetiredAttachments()
         {
-            string remoteFolderName = "RavenDB_24489";
+            string remoteFolderName = "RavenDB_24489" + Guid.NewGuid();
             var s3Settings = Etl.GetS3Settings(remoteFolderName);
 
             try
@@ -120,7 +120,7 @@ namespace SlowTests.Issues
         [AmazonS3RetryFact]
         public async Task Index_ShouldInclude_RetiredFlag_And_RetiredAt_ForRetiredAttachments_LoadAttachments()
         {
-            string remoteFolderName = "RavenDB_24489";
+            string remoteFolderName = "RavenDB_24489" + Guid.NewGuid();
             var s3Settings = Etl.GetS3Settings(remoteFolderName);
 
             try

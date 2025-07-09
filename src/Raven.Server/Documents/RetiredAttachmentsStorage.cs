@@ -54,20 +54,11 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
     protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
     {
-        var collection = id; // for retire attachments, the id is the collection name
-        if (string.IsNullOrEmpty(collection))
-            throw new InvalidOperationException($"Couldn't retire the attachment. Document collection is null. Lower id is '{lowerId}'.");
-        
-        ProcessDocumentForPutRetire(context, lowerId, collection, currentTime);
-    }
-
-    private void ProcessDocumentForPutRetire(DocumentsOperationContext context, Slice lowerId, string collection, DateTime currentTime)
-    {
         using (var lowerDocId = _documentInfoHelper.GetDocumentId(lowerId))
         {
             if (lowerDocId == null)
             {
-                throw new InvalidOperationException($"Couldn't retire the attachment. Document Lower id is '{lowerId}', Document collection is '{collection}'.");
+                throw new InvalidOperationException($"Couldn't retire the attachment. Document Lower id is '{lowerId}'.");
             }
 
             using (var doc = Database.DocumentsStorage.Get(context, lowerDocId, DocumentFields.Data | DocumentFields.Id, throwOnConflict: true))
@@ -106,19 +97,26 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         }
     }
 
-    protected override DocumentExpirationInfo GetDocumentAndIdOrCollection(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
+    protected override DocumentExpirationInfo GetDocumentAndId(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
     {
-        return DocumentAndIdOrCollectionForPutRetire(options, clonedId, ticksSlice);
+        var info = DocumentAndIdOrCollectionInternal(options, clonedId, ticksSlice, out var document, out var collectionStr);
+        if (info != null)
+            return info;
+
+        if (document == null)
+            return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+
+        return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionStr);
     }
 
-    private DocumentExpirationInfo DocumentAndIdOrCollectionInternal(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice, out Document document, out string id, out string collectionStr)
+    private DocumentExpirationInfo DocumentAndIdOrCollectionInternal(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice, out Document document, out string collectionStr)
     {
         document = null;
         collectionStr = null;
 
         using (var idLsv = _documentInfoHelper.GetDocumentId(clonedId))
         {
-            id = idLsv;
+            var id = idLsv;
             if (id == null)
             {
                 return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
@@ -142,18 +140,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         }
 
         return null;
-    }
-
-    private DocumentExpirationInfo DocumentAndIdOrCollectionForPutRetire(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
-    {
-        var info = DocumentAndIdOrCollectionInternal(options, clonedId, ticksSlice, out var document, out var id, out var collectionStr);
-        if (info != null)
-            return info;
-
-        if (document == null)
-            return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
-
-        return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionStr);
     }
 
     [StorageIndexEntryKeyGenerator]
