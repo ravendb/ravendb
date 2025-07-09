@@ -56,7 +56,7 @@ namespace Raven.Server.Documents
     public unsafe partial class AttachmentsStorage
     {
         public RetiredAttachmentsStorage RetiredAttachmentsStorage;
-        internal static short AttachmentHashSize = 44;
+        internal static ushort AttachmentHashSize = 44;
 
         internal readonly TableSchema AttachmentsSchema;
 
@@ -74,7 +74,7 @@ namespace Raven.Server.Documents
             AttachmentsSchema = schema ?? throw new ArgumentNullException(nameof(schema));
 
             tx.CreateTree(AttachmentsSlice);
-            AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, 44);
+            AttachmentsSchema.Create(tx, AttachmentsMetadataSlice, AttachmentHashSize);
             _documentDatabase.DocumentsStorage.TombstonesSchema.Create(tx, AttachmentsTombstonesSlice, 16);
 
             RetiredAttachmentsStorage = new RetiredAttachmentsStorage(tx, database);
