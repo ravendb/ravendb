@@ -857,8 +857,16 @@ namespace Voron.Recovery
             writer.WriteString(contentType);
             writer.WriteComma();
             //size
-            writer.WritePropertyName("size");
+            writer.WritePropertyName("Size");
             writer.WriteInteger(size);
+
+            // retired attachment
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(AttachmentName.Flags));
+            writer.WriteInteger(0);
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(AttachmentName.RetireAt));
+            writer.WriteNull();
         }
 
         private void ReportOrphanAttachmentsAndMissingAttachments(TextWriter writer, BlittableJsonTextWriter documentsWriter, CancellationToken ct)
