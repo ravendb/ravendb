@@ -1,6 +1,6 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
-import { AiAgentMessage } from "../../partials/AiAgentMessages";
+import { AiAgentMessage, AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { services } from "components/hooks/useServices";
 import { loadableData } from "components/models/common";
 import { createSuccessState, createIdleState, createFailureState } from "components/utils/common";
@@ -25,6 +25,7 @@ interface EditAiAgentState {
     currentDocument: loadableData<documentDto>;
     chatId: string;
     messages: AiAgentMessage[];
+    toolParameters: AiAgentToolCall[];
 }
 
 const initialState: EditAiAgentState = {
@@ -33,6 +34,7 @@ const initialState: EditAiAgentState = {
     currentDocument: createIdleState(),
     chatId: "",
     messages: [],
+    toolParameters: [],
 };
 
 export const chatAiAgentSlice = createSlice({
@@ -56,6 +58,9 @@ export const chatAiAgentSlice = createSlice({
         },
         messagesSet: (state, action: PayloadAction<AiAgentMessage[]>) => {
             state.messages = action.payload;
+        },
+        toolParametersSet: (state, action: PayloadAction<AiAgentToolCall[]>) => {
+            state.toolParameters = action.payload;
         },
         historyChatSelected: (state, action: PayloadAction<{ docId: string }>) => {
             const docId = action.payload.docId;
@@ -165,4 +170,5 @@ export const chatAiAgentSelectors = {
     chatId: (state: RootState) => state.chatAiAgent.chatId,
     historyDocuments: (state: RootState) => state.chatAiAgent.historyDocuments,
     config: (state: RootState) => state.chatAiAgent.config,
+    toolParameters: (state: RootState) => state.chatAiAgent.toolParameters,
 };

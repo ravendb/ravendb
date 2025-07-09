@@ -37,6 +37,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const chatId = useAppSelector(chatAiAgentSelectors.chatId);
     const historyDocuments = useAppSelector(chatAiAgentSelectors.historyDocuments);
     const config = useAppSelector(chatAiAgentSelectors.config);
+    const toolParameters = useAppSelector(chatAiAgentSelectors.toolParameters);
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);
 
@@ -79,6 +80,8 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
             if (result.ChatId) {
                 dispatch(chatAiAgentActions.chatIdSet(result.ChatId));
             }
+
+            dispatch(chatAiAgentActions.toolParametersSet([]));
             setValue("prompt", "");
             dispatch(
                 chatAiAgentActions.messagesUpdate({
@@ -113,7 +116,11 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const resumeChatAction = (): Promise<ChatResult> => {
         return aiAgentService.resumeAiAgent(databaseName, agentName, chatId, {
-            ToolResponse: null, // TODO
+            ToolResponse:
+                toolParameters?.map((x) => ({
+                    ToolId: x.id,
+                    Content: x.arguments,
+                })) ?? [],
             UserPrompt: formValues.prompt,
         });
     };
@@ -214,6 +221,9 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                 messages={messages}
                                 toolQueries={config.data?.Queries}
                                 toolActions={config.data?.Actions}
+                                handleSaveParameters={(parameters) =>
+                                    dispatch(chatAiAgentActions.toolParametersSet(parameters))
+                                }
                             />
                         )}
                     </div>

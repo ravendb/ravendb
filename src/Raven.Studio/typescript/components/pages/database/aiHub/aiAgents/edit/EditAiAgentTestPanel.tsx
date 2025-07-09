@@ -15,6 +15,7 @@ import AiAgentMessages from "../partials/AiAgentMessages";
 import AiAgentParametersField from "../partials/AiAgentParametersField";
 import moment from "moment";
 import { editAiAgentUtils } from "./utils/editAiAgentUtils";
+import RichAlert from "components/common/RichAlert";
 
 export default function EditAiAgentTestPanel() {
     const dispatch = useAppDispatch();
@@ -67,6 +68,11 @@ export default function EditAiAgentTestPanel() {
                     content: JSON.stringify(result.Response, null, 2),
                     state: "success",
                     usage: result.Usage,
+                    toolCalls: Object.entries(result.ToolRequests).map(([_, toolCall]) => ({
+                        id: toolCall.ToolId,
+                        name: toolCall.Name,
+                        arguments: toolCall.Arguments,
+                    })),
                 })
             );
         } catch {
@@ -78,8 +84,6 @@ export default function EditAiAgentTestPanel() {
             );
         }
     });
-
-    const promptNewLinesCount = formValues.testPrompt?.split("\n").length ?? 1;
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);
 
@@ -102,6 +106,11 @@ export default function EditAiAgentTestPanel() {
                     <Icon icon="test" color="primary" />
                     Test results
                 </h3>
+                <RichAlert variant="danger">
+                    TODO
+                    <br />
+                    For now test can only start chat. Resume will be added later.
+                </RichAlert>
             </div>
             {!isTestOpen && (
                 <div className="p-3 flex-grow-1 vstack justify-content-center align-items-center">
@@ -123,7 +132,14 @@ export default function EditAiAgentTestPanel() {
                                 value={formValues.testParameters}
                             />
                         ) : (
-                            <AiAgentMessages messages={messages} toolQueries={Queries} toolActions={Actions} />
+                            <AiAgentMessages
+                                messages={messages}
+                                toolQueries={Queries}
+                                toolActions={Actions}
+                                handleSaveParameters={(parameters) =>
+                                    dispatch(editAiAgentActions.toolParametersSet(parameters))
+                                }
+                            />
                         )}
                     </div>
                     <div className="w-100 p-2 panel-bg-2 border-top border-secondary">

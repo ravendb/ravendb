@@ -2,39 +2,33 @@ import "./AiAgentMessages.scss";
 import AceEditor from "components/common/ace/AceEditor";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
-import { Fragment, useRef } from "react";
+import { Fragment, useEffect, useRef } from "react";
 import ReactAce from "react-ace";
 import Spinner from "react-bootstrap/Spinner";
 import useUniqueId from "components/hooks/useUniqueId";
 import Accordion from "react-bootstrap/Accordion";
 import IconName from "typings/server/icons";
+import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
+import { FormAceEditor, FormGroup, FormLabel } from "components/common/Form";
+import Button from "react-bootstrap/Button";
+import { AiAgentMessage, AiAgentToolCall } from "../utils/aiAgentsTypes";
 
 type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration.ToolQuery;
 type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration.ToolAction;
-
-interface ToolCall {
-    id: string;
-    name: string;
-    arguments: string;
-}
-
-export interface AiAgentMessage {
-    id: string;
-    role: "system" | "user" | "assistant" | "tool";
-    content?: string;
-    date?: string;
-    state?: "loading" | "success" | "error";
-    usage?: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
-    toolCalls?: ToolCall[];
-}
 
 interface AiAgentMessagesProps {
     messages: AiAgentMessage[];
     toolQueries?: ToolQuery[];
     toolActions?: ToolAction[];
+    handleSaveParameters?: (parameters: AiAgentToolCall[]) => void;
 }
 
-export default function AiAgentMessages({ messages, toolQueries, toolActions }: AiAgentMessagesProps) {
+export default function AiAgentMessages({
+    messages,
+    toolQueries,
+    toolActions,
+    handleSaveParameters,
+}: AiAgentMessagesProps) {
     return (
         <div className="w-100 vstack gap-2 ai-agent-messages">
             {messages.map((message, idx) => (
@@ -46,6 +40,7 @@ export default function AiAgentMessages({ messages, toolQueries, toolActions }: 
                             allMessages={messages}
                             toolQueries={toolQueries}
                             toolActions={toolActions}
+                            handleSaveParameters={handleSaveParameters}
                         />
                     )}
                 </Fragment>
@@ -75,13 +70,55 @@ interface AgentMessageProps {
     allMessages: AiAgentMessage[];
     toolQueries?: ToolQuery[];
     toolActions?: ToolAction[];
+    handleSaveParameters?: (parameters: AiAgentToolCall[]) => void;
 }
 
-function AgentMessage({ agentMessage, allMessages, toolQueries, toolActions }: AgentMessageProps) {
+function AgentMessage({
+    agentMessage,
+    allMessages,
+    toolQueries,
+    toolActions,
+    handleSaveParameters,
+}: AgentMessageProps) {
     const aceRef = useRef<ReactAce>(null);
+
+    const { control, handleSubmit, reset, formState } = useForm<{ parameters: AiAgentToolCall[] }>({
+        defaultValues: {
+            parameters:
+                agentMessage.toolCalls?.map((x) => ({
+                    id: x.id,
+                    name: x.name,
+                    arguments: x.arguments,
+                })) ?? [],
+        },
+    });
+
+    const parametersFieldsArray = useFieldArray({
+        control,
+        name: "parameters",
+    });
+
+    // TODO: this is a workaround to reset the form when the tool calls change
+    useEffect(() => {
+        reset({
+            parameters:
+                agentMessage.toolCalls?.map((x) => ({
+                    id: x.id,
+                    name: x.name,
+                    arguments: x.arguments,
+                })) ?? [],
+        });
+    }, [agentMessage.toolCalls?.length]);
+
+    const handleSave: SubmitHandler<{ parameters: AiAgentToolCall[] }> = (formData) => {
+        handleSaveParameters?.(formData.parameters);
+    };
 
     const agentMessageIndex = allMessages.findIndex((x) => x.id === agentMessage.id);
     const transcript = allMessages.slice(0, agentMessageIndex + 1);
+
+    const isLastItem = agentMessageIndex === allMessages.length - 1;
+    const isRequireParameters = isLastItem && agentMessage.toolCalls?.length > 0 && !formState.isSubmitted;
 
     return (
         <div>
@@ -146,6 +183,32 @@ function AgentMessage({ agentMessage, allMessages, toolQueries, toolActions }: A
                             />
                         </div>
                     )}
+                </div>
+            )}
+            {isRequireParameters && (
+                <div className="hstack justify-content-end mt-2">
+                    <div
+                        className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset"
+                        style={{ maxWidth: "75%" }}
+                    >
+                        {parametersFieldsArray.fields.map((field, idx) => (
+                            <FormGroup key={field.id}>
+                                <FormLabel>
+                                    Define parameters for <strong>{field.name}</strong> tool call
+                                </FormLabel>
+                                <FormAceEditor
+                                    control={control}
+                                    name={`parameters.${idx}.arguments`}
+                                    mode="json"
+                                    height="100px"
+                                />
+                            </FormGroup>
+                        ))}
+                        <Button variant="primary" className="rounded-pill" onClick={handleSubmit(handleSave)}>
+                            <Icon icon="check" />
+                            Submit
+                        </Button>
+                    </div>
                 </div>
             )}
         </div>
@@ -214,7 +277,7 @@ function Transcript({ transcript, toolQueries, toolActions }: TranscriptProps) {
 }
 
 interface TranscriptToolProps {
-    toolCall: ToolCall;
+    toolCall: AiAgentToolCall;
     toolQueries?: ToolQuery[];
     toolActions?: ToolAction[];
 }
@@ -248,7 +311,7 @@ function TranscriptTool({ toolCall, toolQueries, toolActions }: TranscriptToolPr
 
 interface TranscriptToolBodyProps {
     tool: ToolQuery | ToolAction;
-    toolCall: ToolCall;
+    toolCall: AiAgentToolCall;
 }
 
 function TranscriptToolBody({ tool, toolCall }: TranscriptToolBodyProps) {
