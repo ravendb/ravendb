@@ -19,16 +19,16 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Stats;
+using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
-using Raven.Server.SchemaValidation;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using SchemaValidator = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidator;
-using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
+using SVC = Raven.Server.Documents.SchemaValidation.SchemaValidatorConstants;
 
 namespace SlowTests.SchemaValidation;
 

@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Server.SchemaValidation;
+using Raven.Server.Documents.SchemaValidation;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
+using SVC = Raven.Server.Documents.SchemaValidation.SchemaValidatorConstants;
 
 namespace FastTests.SchemaValidation;
 
