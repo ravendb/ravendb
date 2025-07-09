@@ -2,32 +2,53 @@ import "./AiAgentMessages.scss";
 import AceEditor from "components/common/ace/AceEditor";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
-import moment from "moment";
-import { useRef } from "react";
+import { Fragment, useRef } from "react";
 import ReactAce from "react-ace";
 import Spinner from "react-bootstrap/Spinner";
+import useUniqueId from "components/hooks/useUniqueId";
+import Accordion from "react-bootstrap/Accordion";
+import IconName from "typings/server/icons";
+
+type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration.ToolQuery;
+type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration.ToolAction;
+
+interface ToolCall {
+    id: string;
+    name: string;
+    arguments: string;
+}
 
 export interface AiAgentMessage {
     id: string;
-    role: "system" | "user" | "assistant";
+    role: "system" | "user" | "assistant" | "tool";
     content?: string;
     date?: string;
     state?: "loading" | "success" | "error";
     usage?: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
+    toolCalls?: ToolCall[];
 }
 
 interface AiAgentMessagesProps {
     messages: AiAgentMessage[];
+    toolQueries?: ToolQuery[];
+    toolActions?: ToolAction[];
 }
 
-export default function AiAgentMessages({ messages }: AiAgentMessagesProps) {
+export default function AiAgentMessages({ messages, toolQueries, toolActions }: AiAgentMessagesProps) {
     return (
         <div className="w-100 vstack gap-2 ai-agent-messages">
             {messages.map((message, idx) => (
-                <>
-                    {message.role === "user" && <UserMessage key={idx} message={message} idx={idx} />}
-                    {message.role === "assistant" && <AgentMessage key={idx} agentMessage={message} />}
-                </>
+                <Fragment key={message.id}>
+                    {message.role === "user" && <UserMessage message={message} idx={idx} />}
+                    {message.role === "assistant" && (
+                        <AgentMessage
+                            agentMessage={message}
+                            allMessages={messages}
+                            toolQueries={toolQueries}
+                            toolActions={toolActions}
+                        />
+                    )}
+                </Fragment>
             ))}
         </div>
     );
@@ -36,11 +57,7 @@ export default function AiAgentMessages({ messages }: AiAgentMessagesProps) {
 function UserMessage({ message, idx }: { message: AiAgentMessage; idx: number }) {
     return (
         <div>
-            {idx === 0 && (
-                <div className="text-muted text-center">
-                    {message.date ? moment(message.date).format("MM/DD/YYYY HH:mm A") : "TODO date"}
-                </div>
-            )}
+            {idx === 0 && <div className="text-muted text-center">{message.date}</div>}
             <div className="hstack justify-content-end">
                 <div
                     className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset"
@@ -53,8 +70,18 @@ function UserMessage({ message, idx }: { message: AiAgentMessage; idx: number })
     );
 }
 
-function AgentMessage({ agentMessage }: { agentMessage: AiAgentMessage }) {
+interface AgentMessageProps {
+    agentMessage: AiAgentMessage;
+    allMessages: AiAgentMessage[];
+    toolQueries?: ToolQuery[];
+    toolActions?: ToolAction[];
+}
+
+function AgentMessage({ agentMessage, allMessages, toolQueries, toolActions }: AgentMessageProps) {
     const aceRef = useRef<ReactAce>(null);
+
+    const agentMessageIndex = allMessages.findIndex((x) => x.id === agentMessage.id);
+    const transcript = allMessages.slice(0, agentMessageIndex + 1);
 
     return (
         <div>
@@ -64,9 +91,7 @@ function AgentMessage({ agentMessage }: { agentMessage: AiAgentMessage }) {
                         <Icon icon="sparkles" margin="m-0" />
                     </div>
                     <strong>AI Agent</strong>
-                    <div className="text-muted">
-                        {agentMessage.date ? moment(agentMessage.date).format("HH:mm A") : "TODO date"}
-                    </div>
+                    <div className="text-muted">{agentMessage.date}</div>
                 </div>
                 {agentMessage.usage && (
                     <div className="hstack text-muted">
@@ -107,14 +132,154 @@ function AgentMessage({ agentMessage }: { agentMessage: AiAgentMessage }) {
             )}
             {agentMessage.state === "error" && <div className="text-danger">Error</div>}
             {agentMessage.state === "success" && (
-                <AceEditor
-                    aceRef={aceRef}
-                    value={agentMessage.content}
-                    readOnly
-                    mode="json"
-                    actions={[{ component: <AceEditor.FullScreenAction /> }]}
-                    height={getAgentAceEditorHeight(agentMessage.content)}
-                />
+                <div>
+                    <Transcript transcript={transcript} toolQueries={toolQueries} toolActions={toolActions} />
+                    {agentMessage.content && (
+                        <div className="mt-2">
+                            <AceEditor
+                                aceRef={aceRef}
+                                value={agentMessage.content}
+                                readOnly
+                                mode="json"
+                                actions={[{ component: <AceEditor.FullScreenAction /> }]}
+                                height={getAgentAceEditorHeight(agentMessage.content)}
+                            />
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
+}
+
+interface TranscriptProps {
+    transcript: AiAgentMessage[];
+    toolQueries?: ToolQuery[];
+    toolActions?: ToolAction[];
+}
+
+function Transcript({ transcript, toolQueries, toolActions }: TranscriptProps) {
+    const id = useUniqueId("transcript");
+
+    const getTitle = (message: AiAgentMessage) => {
+        if (message.role === "system") {
+            return "System Role was set.";
+        }
+        if (message.role === "user") {
+            return "User Role input.";
+        }
+        if (message.role === "assistant") {
+            return "Assistant Role response.";
+        }
+        if (message.role === "tool") {
+            return "Tool Role response.";
+        }
+
+        return message.role;
+    };
+
+    return (
+        <Accordion className="transcript border border-secondary rounded-2 panel-bg-2">
+            <Accordion.Item eventKey={id} className="panel-bg-2">
+                <Accordion.Header>Transcript</Accordion.Header>
+                <Accordion.Body className="panel-bg-2 rounded-2">
+                    <div className="vstack gap-2">
+                        {transcript.map((message) => (
+                            <div key={message.id}>
+                                <div>{getTitle(message)}</div>
+                                {message.content && (
+                                    <div className="border border-secondary rounded-2 p-2 well mt-1">
+                                        {message.content}
+                                    </div>
+                                )}
+                                {message.toolCalls?.length > 0 && (
+                                    <div className="vstack gap-2">
+                                        {message.toolCalls.map((toolCall) => (
+                                            <TranscriptTool
+                                                key={toolCall.id}
+                                                toolCall={toolCall}
+                                                toolQueries={toolQueries}
+                                                toolActions={toolActions}
+                                            />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </Accordion.Body>
+            </Accordion.Item>
+        </Accordion>
+    );
+}
+
+interface TranscriptToolProps {
+    toolCall: ToolCall;
+    toolQueries?: ToolQuery[];
+    toolActions?: ToolAction[];
+}
+
+function TranscriptTool({ toolCall, toolQueries, toolActions }: TranscriptToolProps) {
+    const id = useUniqueId("tool-call");
+
+    const toolQuery = toolQueries?.find((x) => x.Name === toolCall.name);
+    const toolAction = toolActions?.find((x) => x.Name === toolCall.name);
+
+    const icon: IconName = toolQuery ? "query" : "force";
+
+    return (
+        <Accordion className="transcript-tool border border-secondary rounded-2 panel-bg-3">
+            <Accordion.Item eventKey={id} className="panel-bg-3">
+                <Accordion.Header>
+                    <div className="hstack gap-2">
+                        <div className="p-1 rounded-2 bg-faded-primary border border-primary">
+                            <Icon icon={icon} color="primary" margin="m-0" />
+                        </div>
+                        <div className="text-truncate">Tool call: {toolCall.name}</div>
+                    </div>
+                </Accordion.Header>
+                <Accordion.Body className="panel-bg-3 rounded-2">
+                    <TranscriptToolBody tool={toolQuery ?? toolAction} toolCall={toolCall} />
+                </Accordion.Body>
+            </Accordion.Item>
+        </Accordion>
+    );
+}
+
+interface TranscriptToolBodyProps {
+    tool: ToolQuery | ToolAction;
+    toolCall: ToolCall;
+}
+
+function TranscriptToolBody({ tool, toolCall }: TranscriptToolBodyProps) {
+    return (
+        <div>
+            <small className="text-muted">Description</small>
+            <div>{tool.Description}</div>
+            <hr className="my-1" />
+            {tool.ParametersSampleObject && (
+                <div>
+                    <small className="text-muted">Parameters</small>
+                    <AceEditor value={tool.ParametersSampleObject} readOnly mode="json" height="100px" />
+                </div>
+            )}
+            {tool.ParametersSchema && (
+                <div>
+                    <small className="text-muted">Parameters schema</small>
+                    <AceEditor value={tool.ParametersSchema} readOnly mode="json" height="100px" />
+                </div>
+            )}
+            {"Query" in tool && tool.Query && (
+                <div>
+                    <small className="text-muted">Query</small>
+                    <AceEditor value={tool.Query} readOnly mode="text" height="100px" />
+                </div>
+            )}
+            {toolCall.arguments && (
+                <div>
+                    <small className="text-muted">Arguments</small>
+                    <AceEditor value={toolCall.arguments} readOnly mode="text" height="100px" />
+                </div>
             )}
         </div>
     );

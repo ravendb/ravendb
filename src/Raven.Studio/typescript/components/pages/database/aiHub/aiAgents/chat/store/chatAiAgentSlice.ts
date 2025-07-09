@@ -7,8 +7,16 @@ import { createSuccessState, createIdleState, createFailureState } from "compone
 import document from "models/database/documents/document";
 
 interface DocMessage {
-    role: string;
+    role: "user" | "assistant" | "system" | "tool";
     content: string;
+    tool_calls: {
+        id: string;
+        type: string;
+        function: {
+            name: string;
+            arguments: string;
+        };
+    }[];
 }
 
 interface EditAiAgentState {
@@ -37,7 +45,10 @@ export const chatAiAgentSlice = createSlice({
         messagesAdd: (state, action: PayloadAction<AiAgentMessage>) => {
             state.messages.push(action.payload);
         },
-        messagesUpdate: (state, action: PayloadAction<Pick<AiAgentMessage, "id" | "state" | "content" | "usage">>) => {
+        messagesUpdate: (
+            state,
+            action: PayloadAction<Pick<AiAgentMessage, "id" | "state" | "content" | "usage" | "toolCalls">>
+        ) => {
             const message = state.messages.find((m) => m.id === action.payload.id);
             if (message) {
                 Object.assign(message, action.payload);
@@ -53,35 +64,30 @@ export const chatAiAgentSlice = createSlice({
             const messagesFromDoc: DocMessage[] =
                 state.historyDocuments.data.find((x) => x["@metadata"]["@id"] === docId)?.Messages ?? [];
 
-            const getRole = (docMessage: DocMessage): AiAgentMessage["role"] => {
-                if (docMessage.role === "user") {
-                    return "user";
-                }
-                if (docMessage.role === "assistant") {
-                    return "assistant";
-                }
-
-                return "assistant";
-            };
-
             const getContent = (docMessage: DocMessage): string => {
-                if (docMessage.role === "user") {
-                    return docMessage.content;
+                if (docMessage.content && (docMessage.role === "assistant" || docMessage.role === "tool")) {
+                    return JSON.stringify(JSON.parse(docMessage.content), null, 2);
                 }
-                return JSON.stringify(JSON.parse(docMessage.content), null, 2);
+                return docMessage.content;
             };
 
-            const messages = messagesFromDoc
-                .filter((x) => x.role === "assistant" || x.role === "user")
-                .map(
-                    (x) =>
-                        ({
-                            id: _.uniqueId(),
-                            role: getRole(x),
-                            content: getContent(x),
-                            state: "success",
-                        }) satisfies AiAgentMessage
-                );
+            const messages = messagesFromDoc.map(
+                (x) =>
+                    ({
+                        id: _.uniqueId(),
+                        role: x.role,
+                        content: getContent(x),
+                        state: "success",
+                        date: "TODO date",
+                        toolCalls: x.tool_calls
+                            ? x.tool_calls.map((x) => ({
+                                  id: x.id,
+                                  name: x.function.name,
+                                  arguments: x.function.arguments,
+                              }))
+                            : [],
+                    }) satisfies AiAgentMessage
+            );
 
             state.messages = messages;
         },
@@ -158,4 +164,5 @@ export const chatAiAgentSelectors = {
     messages: (state: RootState) => state.chatAiAgent.messages,
     chatId: (state: RootState) => state.chatAiAgent.chatId,
     historyDocuments: (state: RootState) => state.chatAiAgent.historyDocuments,
+    config: (state: RootState) => state.chatAiAgent.config,
 };

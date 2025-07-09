@@ -10,7 +10,25 @@
         background: linear-gradient(135.89deg, rgba(56, 142, 233, 0.2) 0%, rgba(123, 81, 255, 0.2) 85.4%);
 
         i {
-            color: rgba(56, 142, 233);
+            color: rgba(123, 81, 255);
+        }
+    }
+
+    .accordion-button {
+        border-radius: sizes.$gutter-sm !important;
+        font-size: sizes.$font-size-sm !important;
+        padding: sizes.$gutter-xxs !important;
+    }
+
+    .transcript {
+        .accordion-button {
+            background-color: colors.$panel-bg-2 !important;
+        }
+
+        .transcript-tool {
+            .accordion-button {
+                background-color: colors.$panel-bg-3 !important;
+            }
         }
     }
 }

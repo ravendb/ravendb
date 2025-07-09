@@ -10,13 +10,13 @@ import { tryHandleSubmit } from "components/utils/common";
 import { useServices } from "components/hooks/useServices";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import genUtils from "common/generalUtils";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import router from "plugins/router";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { editAiAgentActions } from "./store/editAiAgentSlice";
 import { useEffect } from "react";
 import EditAiAgentInfoHub from "./EditAiAgentInfoHub";
+import { editAiAgentUtils } from "./utils/editAiAgentUtils";
 
 interface QueryParams {
     agentName: string;
@@ -31,12 +31,12 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const form = useForm<EditAiAgentFormData>({
         defaultValues: async () => {
             if (!queryParams?.agentName) {
-                return mapFromDto(null);
+                return editAiAgentUtils.mapFromDto(null);
             }
 
             const agent = await aiAgentService.getAiAgents(databaseName, queryParams.agentName);
 
-            return mapFromDto(queryParams.agentName, agent, queryParams.isClone);
+            return editAiAgentUtils.mapFromDto(queryParams.agentName, agent, queryParams.isClone);
         },
         resolver: editAiAgentYupResolver,
     });
@@ -56,7 +56,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const saveAgent: SubmitHandler<EditAiAgentFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
-            await aiAgentService.saveAiAgent(databaseName, formData.name, mapToDto(formData));
+            await aiAgentService.saveAiAgent(databaseName, formData.name, editAiAgentUtils.mapToDto(formData));
 
             reset(formData);
             setIsDirty(false);
@@ -117,78 +117,4 @@ function ColumnResize({ handleMouseDown }: { handleMouseDown: (e: React.MouseEve
             onMouseDown={handleMouseDown}
         />
     );
-}
-
-function mapFromDto(
-    name: string,
-    dto?: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration,
-    isClone?: boolean
-): EditAiAgentFormData {
-    if (!name) {
-        return {
-            name: "",
-            connectionStringName: "",
-            systemPrompt: "",
-            outputSchema: "",
-            persistenceCollectionName: "",
-            persistenceExpiresInSeconds: 2592000, // 30 days
-            parameters: [],
-            queries: [],
-            actions: [],
-            testPrompt: "",
-        };
-    }
-
-    return {
-        name: isClone ? "" : name,
-        connectionStringName: dto.ConnectionStringName,
-        systemPrompt: dto.SystemPrompt,
-        outputSchema: dto.OutputSchema,
-        persistenceCollectionName: dto.Persistence.Collection,
-        persistenceExpiresInSeconds: genUtils.timeSpanToSeconds(dto.Persistence.Expires),
-        parameters: [], // TODO: map parameters
-        queries: dto.Queries.map((x) => ({
-            name: x.Name,
-            description: x.Description,
-            query: x.Query,
-            parametersSchema: x.ParametersSchema,
-            isSaved: true,
-            isEditing: false,
-        })),
-        actions: dto.Actions.map((x) => ({
-            name: x.Name,
-            description: x.Description,
-            parametersSchema: x.ParametersSchema,
-            isSaved: true,
-            isEditing: false,
-        })),
-        testPrompt: "",
-    };
-}
-
-function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration {
-    return {
-        ConnectionStringName: formData.connectionStringName,
-        SystemPrompt: formData.systemPrompt,
-        OutputSchema: formData.outputSchema,
-        SampleObject: formData.sampleObject,
-        Persistence: {
-            Collection: formData.persistenceCollectionName,
-            Expires: genUtils.formatAsTimeSpan(formData.persistenceExpiresInSeconds * 1000),
-        },
-        Queries: formData.queries.map((x) => ({
-            Name: x.name,
-            Description: x.description,
-            Query: x.query,
-            ParametersSampleObject: x.parametersSampleObject,
-            ParametersSchema: x.parametersSchema,
-        })),
-        Actions: formData.actions.map((x) => ({
-            Name: x.name,
-            Description: x.description,
-            ParametersSampleObject: x.parametersSampleObject,
-            ParametersSchema: x.parametersSchema,
-        })),
-        Parameters: formData.parameters.map((x) => x.name),
-    };
 }

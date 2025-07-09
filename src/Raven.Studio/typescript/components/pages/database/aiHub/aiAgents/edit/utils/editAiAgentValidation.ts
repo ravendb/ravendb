@@ -71,8 +71,8 @@ const schema = yup.object({
     testPrompt: yup.string(),
     testParameters: yup.array().of(
         yup.object({
-            name: yup.string().required(),
-            value: yup.string().required(),
+            name: yup.string().nullable(),
+            value: yup.string().nullable(),
         })
     ),
 });

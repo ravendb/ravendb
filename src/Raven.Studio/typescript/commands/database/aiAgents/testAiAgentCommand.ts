@@ -4,7 +4,7 @@ import endpoints = require("endpoints");
 class testAiAgentCommand extends commandBase {
     constructor(
         private db: string,
-        private config: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration,
+        private configuration: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration,
         private prompt: string,
         private parameters: Record<string, string>
     ) {
@@ -15,7 +15,7 @@ class testAiAgentCommand extends commandBase {
         const url = endpoints.databases.aiAgent.aiAgentTest;
 
         const dto = {
-            Config: this.config,
+            Configuration: this.configuration,
             Prompt: this.prompt,
             Parameters: this.parameters,
         };

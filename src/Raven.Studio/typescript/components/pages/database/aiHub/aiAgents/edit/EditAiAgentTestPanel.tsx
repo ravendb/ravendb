@@ -14,6 +14,7 @@ import _ from "lodash";
 import AiAgentMessages from "../partials/AiAgentMessages";
 import AiAgentParametersField from "../partials/AiAgentParametersField";
 import moment from "moment";
+import { editAiAgentUtils } from "./utils/editAiAgentUtils";
 
 export default function EditAiAgentTestPanel() {
     const dispatch = useAppDispatch();
@@ -92,6 +93,8 @@ export default function EditAiAgentTestPanel() {
         }
     }, [messages.length]);
 
+    const { Actions, Queries } = editAiAgentUtils.mapToDto(formValues);
+
     return (
         <>
             <div className="panel-bg-2 p-3 border-bottom border-secondary">
@@ -120,27 +123,32 @@ export default function EditAiAgentTestPanel() {
                                 value={formValues.testParameters}
                             />
                         ) : (
-                            <AiAgentMessages messages={messages} />
+                            <AiAgentMessages messages={messages} toolQueries={Queries} toolActions={Actions} />
                         )}
                     </div>
                     <div className="w-100 p-2 panel-bg-2 border-top border-secondary">
-                        <FormInput
-                            type="textarea"
-                            as="textarea"
-                            control={control}
-                            name="testPrompt"
-                            placeholder="Message an agent"
-                            rows={promptNewLinesCount}
-                            disabled={asyncHandleTest.loading}
-                        />
-                        <div className="hstack justify-content-end mt-2">
-                            <ButtonWithSpinner
-                                variant="primary"
-                                icon="arrow-up"
-                                onClick={asyncHandleTest.execute}
-                                disabled={!formValues.testPrompt}
-                                isSpinning={asyncHandleTest.loading}
+                        <div className="position-relative">
+                            <FormInput
+                                type="textarea"
+                                as="textarea"
+                                control={control}
+                                name="testPrompt"
+                                placeholder="Message an agent"
+                                rows={3}
+                                className="rounded-2"
+                                style={{ resize: "none" }}
+                                disabled={asyncHandleTest.loading}
                             />
+                            {formValues.testPrompt && (
+                                <ButtonWithSpinner
+                                    variant="secondary"
+                                    icon="arrow-up"
+                                    onClick={asyncHandleTest.execute}
+                                    isSpinning={asyncHandleTest.loading}
+                                    className="position-absolute rounded-pill"
+                                    style={{ right: "10px", bottom: "10px", zIndex: 5 }}
+                                />
+                            )}
                         </div>
                     </div>
                 </div>

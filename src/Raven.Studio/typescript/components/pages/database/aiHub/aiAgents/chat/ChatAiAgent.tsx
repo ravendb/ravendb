@@ -36,6 +36,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const messages = useAppSelector(chatAiAgentSelectors.messages);
     const chatId = useAppSelector(chatAiAgentSelectors.chatId);
     const historyDocuments = useAppSelector(chatAiAgentSelectors.historyDocuments);
+    const config = useAppSelector(chatAiAgentSelectors.config);
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);
 
@@ -82,9 +83,14 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
             dispatch(
                 chatAiAgentActions.messagesUpdate({
                     id: agentMessageId,
-                    content: JSON.stringify(result.Response, null, 2),
+                    content: result.Response ? JSON.stringify(result.Response, null, 2) : null,
                     state: "success",
                     usage: result.Usage,
+                    toolCalls: Object.entries(result.ToolRequests).map(([_, toolCall]) => ({
+                        id: toolCall.ToolId,
+                        name: toolCall.Name,
+                        arguments: toolCall.Arguments,
+                    })),
                 })
             );
             dispatch(chatAiAgentActions.getHistoryDocuments({ databaseName, agentName }));
@@ -204,7 +210,11 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                 />
                             </div>
                         ) : (
-                            <AiAgentMessages messages={messages} />
+                            <AiAgentMessages
+                                messages={messages}
+                                toolQueries={config.data?.Queries}
+                                toolActions={config.data?.Actions}
+                            />
                         )}
                     </div>
                     <div className="mt-3 px-2">
