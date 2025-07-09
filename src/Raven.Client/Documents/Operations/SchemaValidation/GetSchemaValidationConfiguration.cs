@@ -6,14 +6,14 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.SchemaValidation;
 
-public sealed class GetSchemaValidationConfiguration : IMaintenanceOperation<GetSchemaValidationConfiguration.Result>
+public sealed class GetSchemaValidationConfiguration : IMaintenanceOperation<GetSchemaValidationConfigurationResult>
 {
-    public RavenCommand<Result> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+    public RavenCommand<GetSchemaValidationConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
         return new GetSchemaValidationCommand();
     }
 
-    internal sealed class GetSchemaValidationCommand : RavenCommand<Result>
+    internal sealed class GetSchemaValidationCommand : RavenCommand<GetSchemaValidationConfigurationResult>
     {
         public override bool IsReadRequest => true;
 
@@ -36,10 +36,5 @@ public sealed class GetSchemaValidationConfiguration : IMaintenanceOperation<Get
 
             Result = JsonDeserializationClient.GetSchemaValidationConfiguration(response);
         }
-    }
-
-    public sealed class Result
-    {
-        public SchemaValidationConfiguration Configuration { get; set; }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
+using Raven.Server.Exceptions.SchemaValidation;
 using Raven.Server.SchemaValidation;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;

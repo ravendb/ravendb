@@ -46,7 +46,7 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
                 AssertError("The value at 'stringProp' must be '\"somevalue\"', but it is '\"someothervalue\"'.", errors);
             });
     }
-    
+
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenValidateIntConstant()
     {
@@ -67,6 +67,12 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
         await AssertMultipleParallel(() =>
             {
                 using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["intProp"] = 21 }, out var obj);
+
+                Assert.True(schemaValidator.Validate(obj, out var errors), errors);
+            },
+            () =>
+            {
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["intProp"] = 21.0 }, out var obj);
 
                 Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },

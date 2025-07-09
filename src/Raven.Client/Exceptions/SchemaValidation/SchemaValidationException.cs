@@ -1,4 +1,4 @@
-namespace Raven.Client.Exceptions;
+namespace Raven.Client.Exceptions.SchemaValidation;
 
 public class SchemaValidationException : RavenException
 {

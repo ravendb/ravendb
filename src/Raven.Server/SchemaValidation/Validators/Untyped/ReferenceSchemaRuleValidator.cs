@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics.CodeAnalysis;
+using Raven.Server.Exceptions.SchemaValidation;
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Sparrow.Json;
 

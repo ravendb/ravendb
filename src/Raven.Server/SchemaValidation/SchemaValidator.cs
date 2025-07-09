@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Raven.Server.SchemaValidation.Validators;
 using Sparrow.Json;
@@ -6,6 +7,7 @@ using Sparrow.Threading;
 
 namespace Raven.Server.SchemaValidation;
 
+[DebuggerDisplay("{SchemaDefinition}")]
 public class SchemaValidator
 {
     public readonly bool Disabled;

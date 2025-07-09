@@ -270,9 +270,9 @@ namespace SlowTests.Smuggler
                         var configuration = new SchemaValidationConfiguration
                         {
                             Disabled = false,
-                            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+                            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
                             {
-                                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
                             }
                         };
                         await store1.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -360,8 +360,8 @@ namespace SlowTests.Smuggler
                     
                     Assert.NotNull(record.SchemaValidation);
                     Assert.False(record.SchemaValidation.Disabled);
-                    Assert.True(record.SchemaValidation.ValidatorsByCollection.ContainsKey("TestObjs"));
-                    Assert.NotNull(record.SchemaValidation.ValidatorsByCollection["TestObjs"].SchemaDefinition);                    
+                    Assert.True(record.SchemaValidation.ValidatorsPerCollection.ContainsKey("TestObjs"));
+                    Assert.NotNull(record.SchemaValidation.ValidatorsPerCollection["TestObjs"].SchemaDefinition);                    
                 }
             }
             finally
@@ -1356,9 +1356,9 @@ namespace SlowTests.Smuggler
                     var configuration = new SchemaValidationConfiguration
                     {
                         Disabled = false,
-                        ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+                        ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
                         {
-                            { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                            { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
                         }
                     };
                     await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -1488,8 +1488,8 @@ namespace SlowTests.Smuggler
                     
                     Assert.NotNull(record.SchemaValidation);
                     Assert.False(record.SchemaValidation.Disabled);
-                    Assert.True(record.SchemaValidation.ValidatorsByCollection.ContainsKey("TestObjs"));
-                    Assert.NotNull(record.SchemaValidation.ValidatorsByCollection["TestObjs"].SchemaDefinition);
+                    Assert.True(record.SchemaValidation.ValidatorsPerCollection.ContainsKey("TestObjs"));
+                    Assert.NotNull(record.SchemaValidation.ValidatorsPerCollection["TestObjs"].SchemaDefinition);
                 }
             }
         }

@@ -23,15 +23,15 @@ public class DependentRequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFa
         {
             dependentRequiredSchema.GetPropertyByIndex(i, ref prop);
             var requiredSchema = SchemaValidationHelper.CheckTypeAndThrow<BlittableJsonReaderArray>(prop.Value, schemaPath);
-            
-            if(requiredSchema.Length == 0)
+            var requiredProperties = SchemaValidationHelper.CheckBlittableArrayElementTypesAndThrow<LazyStringValue>(requiredSchema, schemaPath);
+            if(requiredProperties == null)
                 continue;
                     
             var propertySchemaPath = schemaPath + prop.Name; 
             var ifRequiredValidator = new RequiredSchemaRuleValidator(prop.Name);
             var ifValidator = new ElementSchemaRuleValidator(null, [ifRequiredValidator], propertySchemaPath);
             
-            var thenRequiredValidator = new RequiredSchemaRuleValidator(requiredSchema);
+            var thenRequiredValidator = new RequiredSchemaRuleValidator(requiredProperties);
             var thenValidator = new ElementSchemaRuleValidator(null, [thenRequiredValidator], propertySchemaPath);
 
             (dependentRequires ??= []).Add(new IfThenElseSchemaRuleValidator(ifValidator, thenValidator));

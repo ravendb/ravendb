@@ -1,6 +1,8 @@
 ﻿using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
-using Raven.Client.Exceptions;
+using Raven.Client.Documents.Operations.SchemaValidation;
+using Raven.Client.Exceptions.SchemaValidation;
 using Raven.Server.Documents;
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Raven.Server.ServerWide.Context;
@@ -13,9 +15,11 @@ namespace Raven.Server.SchemaValidation;
 
 public class SchemaValidatorCache : IDisposable
 {
+    private static readonly FrozenDictionary<string, SchemaValidator> EmptyCache = Array.Empty<KeyValuePair<string, SchemaValidator>>().ToFrozenDictionary();
+    
     private readonly RavenLogger _logger;
     private readonly (IDisposable Return, JsonOperationContext Value) _context;
-    private Dictionary<string, SchemaValidator> _schemaValidatorsPerCollection;
+    private FrozenDictionary<string, SchemaValidator> _schemaValidatorsPerCollection = EmptyCache;
     private bool _disabled;
 
     public SchemaValidatorCache(DocumentsContextPool contextPool, RavenLogger logger)
@@ -24,50 +28,33 @@ public class SchemaValidatorCache : IDisposable
         _logger = logger;
     }
 
-    public void Update(Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration configuration)
+    public void Update(SchemaValidationConfiguration configuration)
     {
         if (configuration == null)
             return;
 
         _disabled = configuration.Disabled;
 
-        if (configuration.ValidatorsByCollection == null || configuration.ValidatorsByCollection.Count == 0)
+        if (configuration.ValidatorsPerCollection == null || configuration.ValidatorsPerCollection.Count == 0)
         {
-            _schemaValidatorsPerCollection?.Clear();
+            _schemaValidatorsPerCollection = EmptyCache;
             return;
         }
 
-        List<(string Collection, SchemaValidator SchemaValidator)> schemaValidatorsToAdd = null;
-        _schemaValidatorsPerCollection ??= new Dictionary<string, SchemaValidator>();
-
-        foreach ((string collection, Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration.Validator validator) in configuration.ValidatorsByCollection)
+        Dictionary<string, SchemaValidator> newSchemaValidators = null;
+        
+        foreach ((string collection, Client.Documents.Operations.SchemaValidation.SchemaValidator validator) in configuration.ValidatorsPerCollection)
         {
-            if (_schemaValidatorsPerCollection.TryGetValue(collection, out var existingValidator))
-            {
-                if (validator.SchemaDefinition.Equals(existingValidator.SchemaDefinition))
-                    continue;
-            }
+            if (_schemaValidatorsPerCollection.TryGetValue(collection, out var existingValidator)
+                && validator.SchemaDefinition.Equals(existingValidator.SchemaDefinition))
+                continue;
 
-            var schemaValidator = new SchemaValidator(validator.Disabled)
-            {
-                SchemaDefinition = validator.SchemaDefinition
-            };
+            var schemaValidator = new SchemaValidator(validator.Disabled) { SchemaDefinition = validator.SchemaDefinition };
 
             try
             {
                 var blittable = _context.Value.Sync.ReadForMemory(validator.SchemaDefinition, "schema-validation");
-                if (blittable.TryGet(SchemaValidatorConstants.AdditionalProperties, out object additionalProperties) && additionalProperties is false &&
-                    blittable.TryGet(SchemaValidatorConstants.Properties, out BlittableJsonReaderObject properties) &&
-                    properties.Contains(Client.Constants.Documents.Metadata.Key) == false)
-                {
-                    properties.Modifications = new DynamicJsonValue(properties) { [Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue() };
-
-                    blittable.Modifications = new DynamicJsonValue(blittable) { [SchemaValidatorConstants.Properties] = properties };
-
-                    using (_ = blittable)
-                        blittable = _context.Value.ReadObject(blittable, "modified-schema-validation");
-                }
-
+                EnsureMetadataIsValid(ref blittable);
                 schemaValidator.Init(blittable);
             }
             catch (Exception e)
@@ -78,34 +65,51 @@ public class SchemaValidatorCache : IDisposable
                 continue;
             }
 
-            schemaValidatorsToAdd ??= new List<(string, SchemaValidator)>();
-            schemaValidatorsToAdd.Add((collection, schemaValidator));
+            newSchemaValidators ??= new Dictionary<string, SchemaValidator>(_schemaValidatorsPerCollection);
+            newSchemaValidators[collection] = schemaValidator;
         }
-
-        Dictionary<string, SchemaValidator> newSchemaValidators = null;
 
         foreach (var existing in _schemaValidatorsPerCollection)
         {
-            if (configuration.ValidatorsByCollection.ContainsKey(existing.Key) == false)
+            if (configuration.ValidatorsPerCollection.ContainsKey(existing.Key) == false)
             {
                 newSchemaValidators ??= new Dictionary<string, SchemaValidator>(_schemaValidatorsPerCollection);
                 newSchemaValidators.Remove(existing.Key);
             }
         }
 
-        if (schemaValidatorsToAdd != null)
-        {
-            newSchemaValidators ??= new Dictionary<string, SchemaValidator>(_schemaValidatorsPerCollection);
-
-            foreach (var keyValue in schemaValidatorsToAdd)
-            {
-                newSchemaValidators[keyValue.Collection] = keyValue.SchemaValidator;
-            }
-
-        }
-
         if (newSchemaValidators != null)
-            _schemaValidatorsPerCollection = newSchemaValidators;
+            _schemaValidatorsPerCollection = newSchemaValidators.ToFrozenDictionary();
+    }
+
+    private void EnsureMetadataIsValid(ref BlittableJsonReaderObject blittable)
+    {
+        if (blittable.TryGet(SchemaValidatorConstants.AdditionalProperties, out object additionalProperties) == false 
+            || additionalProperties is true)
+            //If additional properties are allowed, no problematic restriction on metadata is can be.
+            return;
+
+        if (blittable.TryGet(SchemaValidatorConstants.Properties, out BlittableJsonReaderObject properties)
+            && properties.Contains(Client.Constants.Documents.Metadata.Key))
+            //If explicit restriction on metadata is configured we don't verify it in this point.
+            return;
+        
+        
+        object newProperties;
+        if (properties == null)
+        {
+            newProperties = new DynamicJsonValue { [Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue() };
+        }
+        else
+        {
+            properties.Modifications = new DynamicJsonValue(properties) { [Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue() };
+            newProperties = properties;
+        }
+        
+        blittable.Modifications = new DynamicJsonValue(blittable) { [SchemaValidatorConstants.Properties] = newProperties };
+
+        using (_ = blittable)
+            blittable = _context.Value.ReadObject(blittable, "modified-schema-validation");
     }
 
     public void Validate(string collection, BlittableJsonReaderObject document, NonPersistentDocumentFlags nonPersistentFlags, DocumentsOperationContext context)

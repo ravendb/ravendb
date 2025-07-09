@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Server.Exceptions.SchemaValidation;
 using Raven.Server.SchemaValidation.ErrorMessage;
 using Sparrow.Json;
 
@@ -107,7 +108,7 @@ public static class ElementSchemaRuleValidatorFactory
     private static Type[] ConvertToTypes(object type, SchemaPath schemaPath)
     {
         var stringType = GetLazyString(type, schemaPath);
-        if(SchemaValidationHelper.TryGetTokensForType(stringType, out Type[] tokens) == false)
+        if(SchemaValidationHelper.TryGetTypesForPublicType(stringType, out Type[] tokens) == false)
         {
             throw new InvalidSchemaValidationDefinitionException(
                 $"The '{SchemaValidatorConstants.Type}' restriction must be one of the allowed types ('{string.Join("', '", SchemaValidationHelper.PublicTypes)}'), but found '{type}'. " +
