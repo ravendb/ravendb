@@ -1,4 +1,5 @@
 ﻿using System;
+using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents
@@ -28,6 +29,8 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// </param>
         public AiAgentPersistenceConfiguration(string collection, TimeSpan? expires = null)
         {
+            ValidationMethods.AssertNotNullOrEmpty(collection, nameof(collection));
+
             Collection = collection;
             Expires = expires;
         }

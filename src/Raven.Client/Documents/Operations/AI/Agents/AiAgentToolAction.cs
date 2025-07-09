@@ -1,4 +1,5 @@
-﻿using Sparrow.Json.Parsing;
+﻿using Raven.Client.Util;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents
 {
@@ -21,6 +22,9 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// <param name="description">A brief description of what the tool action does. This is used by the AI model to understand when to invoke it.</param>
         public AiAgentToolAction(string name, string description)
         {
+            ValidationMethods.AssertNotNullOrEmpty(name, nameof(name));
+            ValidationMethods.AssertNotNullOrEmpty(description, nameof(description));
+
             Name = name;
             Description = description;
         }

@@ -13,7 +13,7 @@ internal class AiAgentProcessorForStartChat : AbstractAiAgentProcessor
     public override async ValueTask ExecuteAsync()
     {
         using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
-        var identifier = RequestHandler.GetStringQueryString("identifier", required: true);
+        var identifier = RequestHandler.GetStringQueryString("id", required: true);
 
         var configuration = GetAiAgentConfiguration(identifier);
 

@@ -10,32 +10,32 @@ namespace Raven.Client.Documents.Operations.AI.Agents;
 
 public class DeleteAiAgentOperation : IMaintenanceOperation<AiAgentConfigurationResult>
 {
-    private readonly string _id;
-    public DeleteAiAgentOperation(string id)
+    private readonly string _identifier;
+    public DeleteAiAgentOperation(string identifier)
     {
-        ValidationMethods.AssertNotNullOrEmpty(id, nameof(id));
-        _id = id;
+        ValidationMethods.AssertNotNullOrEmpty(identifier, nameof(identifier));
+        _identifier = identifier;
     }
 
     public RavenCommand<AiAgentConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
-        return new DeleteAiAgentOperationCommand(_id);
+        return new DeleteAiAgentOperationCommand(_identifier);
     }
 
     private sealed class DeleteAiAgentOperationCommand : RavenCommand<AiAgentConfigurationResult>, IRaftCommand
     {
-        private readonly string _id;
+        private readonly string _identifier;
 
-        public DeleteAiAgentOperationCommand(string id)
+        public DeleteAiAgentOperationCommand(string identifier)
         {
-            _id = id;
+            _identifier = identifier;
         }
 
         public override bool IsReadRequest => false;
 
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/admin/ai/agent?id={Uri.EscapeDataString(_id)}";
+            url = $"{node.Url}/databases/{node.Database}/admin/ai/agent?id={Uri.EscapeDataString(_identifier)}";
 
             var request = new HttpRequestMessage
             {

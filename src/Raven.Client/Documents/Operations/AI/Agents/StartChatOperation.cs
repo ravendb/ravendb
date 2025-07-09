@@ -49,7 +49,7 @@ public class StartChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSch
         public override bool IsReadRequest => false;
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/ai/agent/start?identifier={Uri.EscapeDataString(_identifier)}";
+            url = $"{node.Url}/databases/{node.Database}/ai/agent/start?id={Uri.EscapeDataString(_identifier)}";
             var body = new StartChatBody { Prompt = _prompt, Parameters = _parameters };
 
 
