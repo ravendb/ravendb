@@ -68,9 +68,10 @@ namespace Corax.Querying.Matches
             }
         }
 
-        private static class StaticFunctionCache<TInner, TOuter>
+        private static class StaticFunctionCache<TInner, TOuter, TBinaryOperationMarker>
             where TInner : IQueryMatch
             where TOuter : IQueryMatch
+            where TBinaryOperationMarker : IBinaryMatchMarker
         {
             public static readonly FunctionTable FunctionTable;
 
@@ -78,13 +79,13 @@ namespace Corax.Querying.Matches
             {
                 static long CountFunc(ref BinaryMatch match)
                 {
-                    return ((BinaryMatch<TInner, TOuter>)match._inner).Count;
+                    return ((BinaryMatch<TInner, TOuter, TBinaryOperationMarker>)match._inner).Count;
                 }
 
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 static int FillFunc(ref BinaryMatch match, Span<long> matches)
                 {
-                    if (match._inner is BinaryMatch<TInner, TOuter> inner)
+                    if (match._inner is BinaryMatch<TInner, TOuter, TBinaryOperationMarker> inner)
                     {
                         var result = inner.Fill(matches);
                         match._inner = inner;
@@ -96,7 +97,7 @@ namespace Corax.Querying.Matches
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 static int AndWithFunc(ref BinaryMatch match, Span<long> buffer, int matches)
                 {
-                    if (match._inner is BinaryMatch<TInner, TOuter> inner)
+                    if (match._inner is BinaryMatch<TInner, TOuter, TBinaryOperationMarker> inner)
                     {
                         var result = inner.AndWith(buffer, matches);
                         match._inner = inner;
@@ -108,7 +109,7 @@ namespace Corax.Querying.Matches
                 [MethodImpl(MethodImplOptions.AggressiveInlining)]
                 static void ScoreFunc(ref BinaryMatch match, Span<long> matches, Span<float> scores, float boostFactor)
                 {
-                    if (match._inner is BinaryMatch<TInner, TOuter> inner)
+                    if (match._inner is BinaryMatch<TInner, TOuter, TBinaryOperationMarker> inner)
                     {
                         inner.Score(matches, scores, boostFactor);
                         match._inner = inner;
@@ -120,13 +121,17 @@ namespace Corax.Querying.Matches
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static BinaryMatch Create<TInner, TOuter>(in BinaryMatch<TInner, TOuter> query)
+        public static BinaryMatch Create<TInner, TOuter, TBinaryOperationMarker>(in BinaryMatch<TInner, TOuter, TBinaryOperationMarker> query)
             where TInner : IQueryMatch
             where TOuter : IQueryMatch
+            where TBinaryOperationMarker : IBinaryMatchMarker
         {
-            return new BinaryMatch(query, StaticFunctionCache<TInner, TOuter>.FunctionTable);
+            return new BinaryMatch(query, StaticFunctionCache<TInner, TOuter, TBinaryOperationMarker>.FunctionTable);
         }
 
         string DebugView => Inspect().ToString();
+        
+        public struct And : IBinaryMatchMarker;
+        public struct Or : IBinaryMatchMarker;
     }
 }

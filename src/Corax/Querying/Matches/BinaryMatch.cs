@@ -8,13 +8,14 @@ using Sparrow.Server;
 namespace Corax.Querying.Matches
 {
     [DebuggerDisplay("{DebugView,nq}")]
-    public unsafe partial struct BinaryMatch<TInner, TOuter> : IQueryMatch
+    public unsafe partial struct BinaryMatch<TInner, TOuter, TBinaryOperationMarker> : IQueryMatch
         where TInner : IQueryMatch
         where TOuter : IQueryMatch
+        where TBinaryOperationMarker : IBinaryMatchMarker
     {
-        private readonly delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> _fillFunc;
-        private readonly delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int, int> _andWithFunc;
-        private readonly delegate*<ref BinaryMatch<TInner, TOuter>, QueryInspectionNode> _inspectFunc;
+        private readonly delegate*<ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker>, Span<long>, int> _fillFunc;
+        private readonly delegate*<ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker>, Span<long>, int, int> _andWithFunc;
+        private readonly delegate*<ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker>, QueryInspectionNode> _inspectFunc;
 
         private TInner _inner;
         private TOuter _outer;
@@ -39,9 +40,9 @@ namespace Corax.Querying.Matches
         private BinaryMatch(
             Querying.IndexSearcher indexSearcher,
             in TInner inner, in TOuter outer,
-            delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int> fillFunc,
-            delegate*<ref BinaryMatch<TInner, TOuter>, Span<long>, int, int> andWithFunc,
-            delegate*<ref BinaryMatch<TInner, TOuter>, QueryInspectionNode> inspectionFunc,
+            delegate*<ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker>, Span<long>, int> fillFunc,
+            delegate*<ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker>, Span<long>, int, int> andWithFunc,
+            delegate*<ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker>, QueryInspectionNode> inspectionFunc,
             long totalResults,
             QueryCountConfidence confidence,
             SkipSortingResult skipSortingResult,

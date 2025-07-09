@@ -9,13 +9,13 @@ using Sparrow.Server.Utils;
 
 namespace Corax.Querying.Matches
 {
-    unsafe partial struct BinaryMatch<TInner, TOuter>
+    unsafe partial struct BinaryMatch<TInner, TOuter, TBinaryOperationMarker>
     {
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static BinaryMatch<TInner, TOuter> YieldAnd(Querying.IndexSearcher searcher, in TInner inner, in TOuter outer, in CancellationToken token)
+        public static BinaryMatch<TInner, TOuter, TBinaryOperationMarker> YieldAnd(Querying.IndexSearcher searcher, in TInner inner, in TOuter outer, in CancellationToken token)
         {
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int FillFunc(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
+            static int FillFunc(ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker> match, Span<long> matches)
             {
                 match._token.ThrowIfCancellationRequested();
                 ref var inner = ref match._inner;
@@ -85,7 +85,7 @@ namespace Corax.Querying.Matches
             }
 
             [MethodImpl(MethodImplOptions.AggressiveInlining)]
-            static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> buffer, int matches)
+            static int AndWith(ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker> match, Span<long> buffer, int matches)
             {
                 ref var inner = ref match._inner;
                 match._token.ThrowIfCancellationRequested();
@@ -98,7 +98,7 @@ namespace Corax.Querying.Matches
                 return outer.AndWith(buffer, results);
             }
 
-            static QueryInspectionNode InspectFunc(ref BinaryMatch<TInner, TOuter> match)
+            static QueryInspectionNode InspectFunc(ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker> match)
             {
                 return new QueryInspectionNode($"{nameof(BinaryMatch)} [And]",
                     children: new List<QueryInspectionNode> { match._inner.Inspect(), match._outer.Inspect() },
@@ -119,15 +119,15 @@ namespace Corax.Querying.Matches
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter>(searcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence, SkipSortingResult.ResultsNativelySorted, token);
+            return new BinaryMatch<TInner, TOuter, TBinaryOperationMarker>(searcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, Math.Min(inner.Count, outer.Count), confidence, SkipSortingResult.ResultsNativelySorted, token);
         }
 
-        public static BinaryMatch<TInner, TOuter> YieldOr(Querying.IndexSearcher indexSearcher, in TInner inner, in TOuter outer, in CancellationToken token)
+        public static BinaryMatch<TInner, TOuter, TBinaryOperationMarker> YieldOr(Querying.IndexSearcher indexSearcher, in TInner inner, in TOuter outer, in CancellationToken token)
         {
 #if !DEBUG
             [SkipLocalsInit]
 #endif
-            static int AndWith(ref BinaryMatch<TInner, TOuter> match, Span<long> buffer, int matches)
+            static int AndWith(ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker> match, Span<long> buffer, int matches)
             {
                 match._token.ThrowIfCancellationRequested();
                 ref var inner = ref match._inner;
@@ -160,7 +160,7 @@ namespace Corax.Querying.Matches
 #if !DEBUG
             [SkipLocalsInit]
 #endif
-            static int FillFunc(ref BinaryMatch<TInner, TOuter> match, Span<long> matches)
+            static int FillFunc(ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker> match, Span<long> matches)
             {
                 match._token.ThrowIfCancellationRequested();
                 ref var inner = ref match._inner;
@@ -298,7 +298,7 @@ namespace Corax.Querying.Matches
                 return totalLength;
             }      
 
-            static QueryInspectionNode InspectFunc(ref BinaryMatch<TInner, TOuter> match)
+            static QueryInspectionNode InspectFunc(ref BinaryMatch<TInner, TOuter, TBinaryOperationMarker> match)
             {
                 return new QueryInspectionNode($"{nameof(BinaryMatch)} [Or]",
                     children: new List<QueryInspectionNode> { match._inner.Inspect(), match._outer.Inspect() },
@@ -319,7 +319,7 @@ namespace Corax.Querying.Matches
             else
                 confidence = inner.Confidence.Min(outer.Confidence);
 
-            return new BinaryMatch<TInner, TOuter>(indexSearcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, inner.Count + outer.Count, confidence,
+            return new BinaryMatch<TInner, TOuter, TBinaryOperationMarker>(indexSearcher, in inner, in outer, &FillFunc, &AndWith, &InspectFunc, inner.Count + outer.Count, confidence,
                 // For OR, assume (Name = 'Mario' or endsWith(Name, 'o') 
                 // We get Mario from the left, and get Arlo, Enzo and Nico from the right in one Fill()
                 // and in the next, we get nothing from the left and Mario from the right. 
