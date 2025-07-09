@@ -1,15 +1,12 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-type RequestDto = Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration & {
-    Parameters: Record<string, string>;
-    Prompt: string;
-};
-
 class testAiAgentCommand extends commandBase {
     constructor(
         private db: string,
-        private dto: RequestDto
+        private config: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration,
+        private prompt: string,
+        private parameters: Record<string, string>
     ) {
         super();
     }
@@ -17,7 +14,13 @@ class testAiAgentCommand extends commandBase {
     execute(): JQueryPromise<Raven.Client.Documents.Operations.AI.Agents.ChatResult<object>> {
         const url = endpoints.databases.aiAgent.aiAgentTest;
 
-        return this.post(url, JSON.stringify(this.dto), this.db).fail((response: JQueryXHR) =>
+        const dto = {
+            Config: this.config,
+            Prompt: this.prompt,
+            Parameters: this.parameters,
+        };
+
+        return this.post(url, JSON.stringify(dto), this.db).fail((response: JQueryXHR) =>
             this.reportError("Failed to test AI agent", response.responseText, response.statusText)
         );
     }

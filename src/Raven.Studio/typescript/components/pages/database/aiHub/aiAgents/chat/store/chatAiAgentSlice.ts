@@ -4,6 +4,7 @@ import { AiAgentMessage } from "../../partials/AiAgentMessages";
 import { services } from "components/hooks/useServices";
 import { loadableData } from "components/models/common";
 import { createSuccessState, createIdleState, createFailureState } from "components/utils/common";
+import document from "models/database/documents/document";
 
 interface DocMessage {
     role: string;
@@ -13,7 +14,7 @@ interface DocMessage {
 interface EditAiAgentState {
     config: loadableData<Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration>;
     historyDocuments: loadableData<documentDto[]>;
-    prompt: string;
+    currentDocument: loadableData<documentDto>;
     chatId: string;
     messages: AiAgentMessage[];
 }
@@ -21,7 +22,7 @@ interface EditAiAgentState {
 const initialState: EditAiAgentState = {
     config: createIdleState(),
     historyDocuments: createIdleState([]),
-    prompt: "",
+    currentDocument: createIdleState(),
     chatId: "",
     messages: [],
 };
@@ -30,16 +31,13 @@ export const chatAiAgentSlice = createSlice({
     name: "chatAiAgent",
     initialState,
     reducers: {
-        promptSet: (state, action: PayloadAction<string>) => {
-            state.prompt = action.payload;
-        },
         chatIdSet: (state, action: PayloadAction<string>) => {
             state.chatId = action.payload;
         },
         messagesAdd: (state, action: PayloadAction<AiAgentMessage>) => {
             state.messages.push(action.payload);
         },
-        messagesUpdate: (state, action: PayloadAction<Pick<AiAgentMessage, "id" | "state" | "text" | "usage">>) => {
+        messagesUpdate: (state, action: PayloadAction<Pick<AiAgentMessage, "id" | "state" | "content" | "usage">>) => {
             const message = state.messages.find((m) => m.id === action.payload.id);
             if (message) {
                 Object.assign(message, action.payload);
@@ -55,18 +53,18 @@ export const chatAiAgentSlice = createSlice({
             const messagesFromDoc: DocMessage[] =
                 state.historyDocuments.data.find((x) => x["@metadata"]["@id"] === docId)?.Messages ?? [];
 
-            const getRole = (docMessage: DocMessage): AiAgentMessage["author"] => {
+            const getRole = (docMessage: DocMessage): AiAgentMessage["role"] => {
                 if (docMessage.role === "user") {
                     return "user";
                 }
                 if (docMessage.role === "assistant") {
-                    return "agent";
+                    return "assistant";
                 }
 
-                return "agent";
+                return "assistant";
             };
 
-            const getText = (docMessage: DocMessage): string => {
+            const getContent = (docMessage: DocMessage): string => {
                 if (docMessage.role === "user") {
                     return docMessage.content;
                 }
@@ -79,8 +77,8 @@ export const chatAiAgentSlice = createSlice({
                     (x) =>
                         ({
                             id: _.uniqueId(),
-                            author: getRole(x),
-                            text: getText(x),
+                            role: getRole(x),
+                            content: getContent(x),
                             state: "success",
                         }) satisfies AiAgentMessage
                 );
@@ -108,6 +106,15 @@ export const chatAiAgentSlice = createSlice({
             })
             .addCase(getHistoryDocuments.fulfilled, (state, action) => {
                 state.historyDocuments = createSuccessState(action.payload);
+            })
+            .addCase(getCurrentDocument.pending, (state) => {
+                state.currentDocument.status = "loading";
+            })
+            .addCase(getCurrentDocument.rejected, (state, action) => {
+                state.currentDocument = createFailureState(action.error.message);
+            })
+            .addCase(getCurrentDocument.fulfilled, (state, action) => {
+                state.currentDocument = createSuccessState(action.payload);
             });
     },
 });
@@ -129,6 +136,18 @@ const getHistoryDocuments = createAsyncThunk(
     }
 );
 
+const getCurrentDocument = createAsyncThunk(
+    chatAiAgentSlice.name + "/getCurrentDocument",
+    async (payload: { databaseName: string; chatId: string }): Promise<documentDto> => {
+        const result = await services.databasesService.getDocumentWithMetadata(payload.chatId, payload.databaseName);
+
+        if (result instanceof document) {
+            return result.toDto();
+        }
+        return result;
+    }
+);
+
 export const chatAiAgentActions = {
     ...chatAiAgentSlice.actions,
     getConfig,
@@ -136,7 +155,6 @@ export const chatAiAgentActions = {
 };
 
 export const chatAiAgentSelectors = {
-    prompt: (state: RootState) => state.chatAiAgent.prompt,
     messages: (state: RootState) => state.chatAiAgent.messages,
     chatId: (state: RootState) => state.chatAiAgent.chatId,
     historyDocuments: (state: RootState) => state.chatAiAgent.historyDocuments,

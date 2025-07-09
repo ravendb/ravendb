@@ -9,9 +9,9 @@ import Spinner from "react-bootstrap/Spinner";
 
 export interface AiAgentMessage {
     id: string;
-    author: "user" | "agent";
-    text?: string;
-    date?: Date;
+    role: "system" | "user" | "assistant";
+    content?: string;
+    date?: string;
     state?: "loading" | "success" | "error";
     usage?: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
 }
@@ -23,13 +23,12 @@ interface AiAgentMessagesProps {
 export default function AiAgentMessages({ messages }: AiAgentMessagesProps) {
     return (
         <div className="w-100 vstack gap-2 ai-agent-messages">
-            {messages.map((message, idx) =>
-                message.author === "user" ? (
-                    <UserMessage key={idx} message={message} idx={idx} />
-                ) : (
-                    <AgentMessage key={idx} agentMessage={message} />
-                )
-            )}
+            {messages.map((message, idx) => (
+                <>
+                    {message.role === "user" && <UserMessage key={idx} message={message} idx={idx} />}
+                    {message.role === "assistant" && <AgentMessage key={idx} agentMessage={message} />}
+                </>
+            ))}
         </div>
     );
 }
@@ -47,7 +46,7 @@ function UserMessage({ message, idx }: { message: AiAgentMessage; idx: number })
                     className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset"
                     style={{ maxWidth: "75%" }}
                 >
-                    {message.text}
+                    {message.content}
                 </div>
             </div>
         </div>
@@ -110,24 +109,24 @@ function AgentMessage({ agentMessage }: { agentMessage: AiAgentMessage }) {
             {agentMessage.state === "success" && (
                 <AceEditor
                     aceRef={aceRef}
-                    value={agentMessage.text}
+                    value={agentMessage.content}
                     readOnly
                     mode="json"
                     actions={[{ component: <AceEditor.FullScreenAction /> }]}
-                    height={getAgentAceEditorHeight(agentMessage.text)}
+                    height={getAgentAceEditorHeight(agentMessage.content)}
                 />
             )}
         </div>
     );
 }
 
-function getAgentAceEditorHeight(text: string): `${number}px` {
-    if (!text) {
+function getAgentAceEditorHeight(content: string): `${number}px` {
+    if (!content) {
         return "100px";
     }
 
     const lineHeight = 26;
-    const lineCount = text.split("\n").length;
+    const lineCount = content.split("\n").length;
 
     if (lineCount <= 12) {
         return `${lineCount * lineHeight}px`;

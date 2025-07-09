@@ -6,13 +6,14 @@ import { editAiAgentActions, editAiAgentSelectors } from "./store/editAiAgentSli
 import { FormInput } from "components/common/Form";
 import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
-import Badge from "react-bootstrap/Badge";
 import genUtils from "common/generalUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useRef, useEffect } from "react";
 import _ from "lodash";
 import AiAgentMessages from "../partials/AiAgentMessages";
+import AiAgentParametersField from "../partials/AiAgentParametersField";
+import moment from "moment";
 
 export default function EditAiAgentTestPanel() {
     const dispatch = useAppDispatch();
@@ -32,9 +33,10 @@ export default function EditAiAgentTestPanel() {
         dispatch(
             editAiAgentActions.messagesAdd({
                 id: _.uniqueId(),
-                text: formValues.testPrompt,
-                author: "user",
+                content: formValues.testPrompt,
+                role: "user",
                 state: "success",
+                date: moment().format("HH:mm A"),
             })
         );
 
@@ -43,19 +45,25 @@ export default function EditAiAgentTestPanel() {
         dispatch(
             editAiAgentActions.messagesAdd({
                 id: agentMessageId,
-                author: "agent",
-                date: new Date(),
+                role: "assistant",
+                date: moment().format("HH:mm A"),
                 state: "loading",
             })
         );
 
         try {
-            const result = await aiAgentService.testAiAgent(databaseName, getTestDto(formValues));
+            const result = await aiAgentService.testAiAgent(
+                databaseName,
+                getConfigDto(formValues),
+                formValues.testPrompt,
+                Object.fromEntries(formValues.testParameters.map((item) => [item.name, item.value]))
+            );
+
             setValue("testPrompt", "");
             dispatch(
                 editAiAgentActions.messagesUpdate({
                     id: agentMessageId,
-                    text: JSON.stringify(result.Response, null, 2),
+                    content: JSON.stringify(result.Response, null, 2),
                     state: "success",
                     usage: result.Usage,
                 })
@@ -105,7 +113,15 @@ export default function EditAiAgentTestPanel() {
             {isTestOpen && (
                 <div className="w-100 flex-grow-1 vstack justify-content-center align-items-center overflow-auto">
                     <div className="flex-grow-1 vstack w-100 overflow-auto p-2" ref={messagesPanelRef}>
-                        {messages.length === 0 ? <ParametersField /> : <AiAgentMessages messages={messages} />}
+                        {messages.length === 0 ? (
+                            <AiAgentParametersField
+                                control={control}
+                                name="testParameters"
+                                value={formValues.testParameters}
+                            />
+                        ) : (
+                            <AiAgentMessages messages={messages} />
+                        )}
                     </div>
                     <div className="w-100 p-2 panel-bg-2 border-top border-secondary">
                         <FormInput
@@ -133,54 +149,9 @@ export default function EditAiAgentTestPanel() {
     );
 }
 
-function ParametersField() {
-    const { control } = useFormContext<EditAiAgentFormData>();
-
-    const formValues = useWatch({
-        control,
-    });
-
-    if (formValues.testParameters.length === 0) {
-        return null;
-    }
-
-    return (
-        <div className="flex-grow-1 text-center w-100">
-            <Icon icon="metrics" color="primary" size="lg" className="mt-3" />
-            <h4>To ask your agent a question select a chosen parameters.</h4>
-
-            {formValues.testParameters.map((x, idx) => (
-                <div className="w-100 p-2">
-                    <div key={x.name} className="hstack">
-                        <Badge
-                            bg="primary"
-                            className="text-truncate me-2 fs-5"
-                            title={x.name}
-                            style={{ width: "150px" }}
-                            pill
-                        >
-                            {x.name}
-                        </Badge>
-                        <FormInput
-                            type="text"
-                            control={control}
-                            name={`testParameters.${idx}.value`}
-                            placeholder="e.g. companies/90-A"
-                        />
-                    </div>
-                    {idx !== formValues.testParameters.length - 1 && <hr className="my-1" />}
-                </div>
-            ))}
-        </div>
-    );
-}
-
-function getTestDto(
+function getConfigDto(
     formValues: EditAiAgentFormData
-): Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration & {
-    Parameters: Record<string, string>;
-    Prompt: string;
-} {
+): Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration {
     return {
         ConnectionStringName: formValues.connectionStringName,
         SystemPrompt: formValues.systemPrompt,
@@ -203,7 +174,6 @@ function getTestDto(
             ParametersSampleObject: x.parametersSampleObject,
             ParametersSchema: x.parametersSchema,
         })),
-        Prompt: formValues.testPrompt,
-        Parameters: Object.fromEntries(formValues.testParameters.map((item) => [item.name, item.value])),
+        Parameters: formValues.parameters.map((x) => x.name),
     };
 }

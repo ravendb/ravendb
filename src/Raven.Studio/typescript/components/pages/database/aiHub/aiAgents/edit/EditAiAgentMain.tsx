@@ -363,13 +363,21 @@ interface QueryFieldProps {
 }
 
 function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) {
-    const { control, setValue } = useFormContext<EditAiAgentFormData>();
+    const { control, setValue, trigger } = useFormContext<EditAiAgentFormData>();
 
     const queryAceRef = useRef<ReactAce>(null);
 
     const formValues = useWatch({
         control,
     });
+
+    const handleSave = async () => {
+        const isValid = await trigger([`queries.${index}.query`]);
+        if (!isValid) {
+            return;
+        }
+        save();
+    };
 
     const rqlLanguageService = useRqlLanguageService();
 
@@ -406,7 +414,7 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
                         <Icon icon="test" />
                         Test (TODO)
                     </Button>
-                    <Button variant="success" onClick={save}>
+                    <Button variant="success" onClick={handleSave}>
                         <Icon icon="save" />
                         Save
                     </Button>
@@ -465,11 +473,19 @@ interface ActionFieldProps {
 }
 
 function ActionField({ index, remove, save, edit, cancelEdit }: ActionFieldProps) {
-    const { control, setValue } = useFormContext<EditAiAgentFormData>();
+    const { control, setValue, trigger } = useFormContext<EditAiAgentFormData>();
 
     const formValues = useWatch({
         control,
     });
+
+    const handleSave = async () => {
+        const isValid = await trigger([`actions.${index}.parametersSchema`]);
+        if (!isValid) {
+            return;
+        }
+        save();
+    };
 
     const actionItem = formValues.actions[index];
 
@@ -504,7 +520,7 @@ function ActionField({ index, remove, save, edit, cancelEdit }: ActionFieldProps
                         <Icon icon="test" />
                         Test
                     </Button>
-                    <Button variant="success" onClick={save}>
+                    <Button variant="success" onClick={handleSave}>
                         <Icon icon="save" />
                         Save
                     </Button>

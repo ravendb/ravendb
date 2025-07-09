@@ -189,5 +189,6 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
             ParametersSampleObject: x.parametersSampleObject,
             ParametersSchema: x.parametersSchema,
         })),
+        Parameters: formData.parameters.map((x) => x.name),
     };
 }
