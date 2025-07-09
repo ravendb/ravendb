@@ -398,53 +398,52 @@ namespace FastTests
 
         private static void CheckForMissingAttachmentsAndThrowIfNeeded(DocumentStore store, Context context, string name, RavenServer serverToUse, string caller)
         {
-            //TODO: egor - uncomment this code whenRavenDB-24543 is fixed
-            //if (IsRavenTestCategoryTest(context, RavenTestCategory.Attachments | RavenTestCategory.Replication) == false)
-            //    return;
+            if (IsRavenTestCategoryTest(context, RavenTestCategory.Attachments | RavenTestCategory.Replication) == false)
+                return;
 
-            //if (TestsToSkipForMissingAttachments.Contains(caller))
-            //{
-            //    return;
-            //}
+            if (TestsToSkipForMissingAttachments.Contains(caller))
+            {
+                return;
+            }
 
-            //try
-            //{
-            //    var missingAttachments = store.Operations.Send(new GetMissingAttachmentsOperation(Constants.Documents.Collections.AllDocumentsCollection));
+            try
+            {
+                var missingAttachments = store.Operations.Send(new GetMissingAttachmentsOperation(Constants.Documents.Collections.AllDocumentsCollection));
 
-            //    if (missingAttachments.Documents.Count != 0 || missingAttachments.Revisions.Count != 0)
-            //    {
-            //        var sb = new StringBuilder();
-            //        string missingAttachmentsInfo = missingAttachments.Documents.Count != 0 && missingAttachments.Revisions.Count != 0 ? "Documents and Revisions"
-            //            : missingAttachments.Documents.Count != 0 ? "Documents" : "Revisions";
-            //        sb.AppendLine($"There are missing attachments for {missingAttachmentsInfo} in database '{name}' on server '{serverToUse.ServerStore.NodeTag}'.");
-            //        foreach (var kvp in missingAttachments.Documents)
-            //        {
-            //            sb.AppendLine($"Collection: {kvp.Key}");
-            //            foreach (AttachmentHandler.MissingAttachmentInfo attachment in kvp.Value)
-            //            {
-            //                sb.AppendLine($"Name: {attachment.Name}, Hash: {attachment.Hash}, MissingType: {attachment.MissingSource}, AttachmentType: {attachment.AttachmentType}");
-            //            }
-            //        }
-            //        foreach (var kvp in missingAttachments.Revisions)
-            //        {
-            //            sb.AppendLine($"Collection: {kvp.Key}");
-            //            foreach (AttachmentHandler.MissingAttachmentInfo attachment in kvp.Value)
-            //            {
-            //                sb.AppendLine($"Name: {attachment.Name}, Hash: {attachment.Hash}, MissingType: {attachment.MissingSource}, AttachmentType: {attachment.AttachmentType}");
-            //            }
-            //        }
-            //        throw new MissingAttachmentException(sb.ToString());
-            //    }
-            //}
-            //catch (Exception e)
-            //{
-            //    if (e is MissingAttachmentException)
-            //    {
-            //        throw;
-            //    }
+                if (missingAttachments.Documents.Count != 0 || missingAttachments.Revisions.Count != 0)
+                {
+                    var sb = new StringBuilder();
+                    string missingAttachmentsInfo = missingAttachments.Documents.Count != 0 && missingAttachments.Revisions.Count != 0 ? "Documents and Revisions"
+                        : missingAttachments.Documents.Count != 0 ? "Documents" : "Revisions";
+                    sb.AppendLine($"There are missing attachments for {missingAttachmentsInfo} in database '{name}' on server '{serverToUse.ServerStore.NodeTag}'.");
+                    foreach (var kvp in missingAttachments.Documents)
+                    {
+                        sb.AppendLine($"Collection: {kvp.Key}");
+                        foreach (AttachmentHandler.MissingAttachmentInfo attachment in kvp.Value)
+                        {
+                            sb.AppendLine($"Name: {attachment.Name}, Hash: {attachment.Hash}, MissingType: {attachment.MissingSource}, AttachmentType: {attachment.AttachmentType}");
+                        }
+                    }
+                    foreach (var kvp in missingAttachments.Revisions)
+                    {
+                        sb.AppendLine($"Collection: {kvp.Key}");
+                        foreach (AttachmentHandler.MissingAttachmentInfo attachment in kvp.Value)
+                        {
+                            sb.AppendLine($"Name: {attachment.Name}, Hash: {attachment.Hash}, MissingType: {attachment.MissingSource}, AttachmentType: {attachment.AttachmentType}");
+                        }
+                    }
+                    throw new MissingAttachmentException(sb.ToString());
+                }
+            }
+            catch (Exception e)
+            {
+                if (e is MissingAttachmentException)
+                {
+                    throw;
+                }
 
-            //    // expected
-            //}
+                // expected
+            }
         }
 
         private static void CheckIfDatabaseExists(RavenServer server, string name)
