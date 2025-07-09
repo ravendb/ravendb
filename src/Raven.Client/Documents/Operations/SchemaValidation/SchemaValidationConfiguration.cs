@@ -8,43 +8,28 @@ public sealed class SchemaValidationConfiguration
 {
     public bool Disabled { get; set; }
 
-    public Dictionary<string, Validator> ValidatorsByCollection { get; set; }
+    public Dictionary<string, SchemaValidator> ValidatorsPerCollection
+    {
+        get;
+        set => field = new Dictionary<string, SchemaValidator>(value, StringComparer.OrdinalIgnoreCase);
+    }
 
     public DynamicJsonValue ToJson()
     {
-        DynamicJsonValue validatorsByCollection = null;
-        if (ValidatorsByCollection != null)
+        DynamicJsonValue validatorsPerCollection = null;
+        if (ValidatorsPerCollection != null)
         {
-            validatorsByCollection = new DynamicJsonValue();
-            foreach (var validator in ValidatorsByCollection)
+            validatorsPerCollection = new DynamicJsonValue();
+            foreach (var validator in ValidatorsPerCollection)
             {
-                validatorsByCollection[validator.Key] = validator.Value.ToJson();
+                validatorsPerCollection[validator.Key] = validator.Value.ToJson();
             }
         }
 
         return new DynamicJsonValue
         {
             [nameof(Disabled)] = Disabled,
-            [nameof(ValidatorsByCollection)] = validatorsByCollection
+            [nameof(ValidatorsPerCollection)] = validatorsPerCollection
         };
-    }
-
-    public class Validator
-    {
-        public bool Disabled { get; set; }
-
-        public string SchemaDefinition { get; set; }
-
-        public DateTime LastModifiedTime { get; private set; } = DateTime.UtcNow;
-
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
-            {
-                [nameof(Disabled)] = Disabled,
-                [nameof(SchemaDefinition)] = SchemaDefinition,
-                [nameof(LastModifiedTime)] = LastModifiedTime
-            };
-        }
     }
 }

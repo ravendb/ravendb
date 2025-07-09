@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Reflection;
+using System.Text;
 using System.Threading.Tasks;
 using FastTests.Utils;
 using Raven.Client;
@@ -18,11 +21,13 @@ using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.SchemaValidation;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using SchemaValidator = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidator;
 using SVC = Raven.Server.SchemaValidation.SchemaValidatorConstants;
 
 namespace SlowTests.SchemaValidation;
@@ -40,6 +45,108 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         public string Prop2 { get; set; }
     }
 
+    public static IEnumerable<object[]> AdditionalPropertiesTestCases
+    {
+        get
+        {
+            var additionalPropertiesDefinition = new (object, string)[]
+            {
+                (false, "The property 'Prop2' at '' is not defined and additional properties are not allowed."),
+                (new DynamicJsonValue { [SVC.Type] = SchemaValidationHelper.Integer }, "'Prop2' should be of type 'integer' but actual type is 'string'.")
+            };
+            foreach (var additionalProperties in additionalPropertiesDefinition)
+            {
+                foreach (var propertiesDefined in new object[]{true, false})
+                {
+                    yield return [additionalProperties.Item1, propertiesDefined, additionalProperties.Item2];
+                }
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.JavaScript)]
+    public async Task SchemaValidation_WhenDefineCollectionTwice_ShouldThrow()
+    {
+        using var context = JsonOperationContext.ShortTermSingleUse();
+        Assert.ThrowsAny<ArgumentException>(() => _ = new SchemaValidationConfiguration
+        {
+            Disabled = false,
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            {
+                { "TestObjs", new SchemaValidator() },
+                { "testobjs", new SchemaValidator() },
+            }
+        });
+
+        using var store = GetDocumentStore();
+        var requestExecutor = store.GetRequestExecutor();
+        var client = requestExecutor.HttpClient;
+        
+        var data = new StringContent("{\"ValidatorsPerCollection\": {\"TestObjs\": {}, \"testobjs\": {}}}", Encoding.UTF8, "application/json");
+        var response = await client.PostAsync($"{store.Urls.First()}/databases/{store.Database}/admin/schema-validation/config", data);
+        var r = await response.Content.ReadAsStringAsync();
+        Assert.Contains("An item with the same key has already been added", r);
+    }
+
+    [RavenTheory(RavenTestCategory.JavaScript)]
+    [MemberData(nameof(AdditionalPropertiesTestCases))]
+    public async Task SchemaValidation_WhenAdditionalPropertiesAreRestricted_ShouldAcceptMetadata(object additionalProperties, bool propertiesDefined, string error)
+    {
+        var schemaDefinitionObj = new DynamicJsonValue
+        {
+            [SVC.AdditionalProperties] = additionalProperties,
+        };
+
+        if (propertiesDefined)
+            schemaDefinitionObj[SVC.Properties] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { [SVC.Const] = "123" } };
+        
+        using var context = JsonOperationContext.ShortTermSingleUse();
+        using var schemaDefinition = context.ReadObject(schemaDefinitionObj, "test object");
+        using var store = GetDocumentStore(new Options
+        {
+            ModifyDocumentStore = s =>
+            {
+                s.OnAfterConversionToDocument += (sender, args) =>
+                {
+                    var properties = args.Entity.GetType().GetProperties(BindingFlags.Public | BindingFlags.Instance);
+
+                    foreach (var property in properties)
+                    {
+                        if (property.Name != "Id" && property.GetValue(args.Entity) == null)
+                            (args.Document.Modifications ??= new DynamicJsonValue(args.Document)).Remove(property.Name);
+                    }
+                    if(args.Document.Modifications != null)
+                        args.Document = args.Session.Context.ReadObject(args.Document, args.Id);
+                };
+            }
+        });
+        var configuration = new SchemaValidationConfiguration
+        {
+            Disabled = false,
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            {
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+            }
+        };
+        await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var testObj = new TestObj();
+            if(propertiesDefined)
+                testObj.Prop = "123";
+            await session.StoreAsync(testObj);
+            await session.SaveChangesAsync();
+        }
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new TestObj{ Prop2 = "something" });
+            var e = await Assert.ThrowsAnyAsync<RavenException>(async () => await session.SaveChangesAsync());
+            AssertError(error, e.Message);
+        }
+    }
+
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task SchemaValidation_WhenStoreDocument_ShouldValidateAndFailInNeeded()
     {
@@ -51,9 +158,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
             {
-                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -68,7 +175,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         {
             await session.StoreAsync(new TestObj { Prop = "1234" });
             var e = await Assert.ThrowsAnyAsync<RavenException>(async () => await session.SaveChangesAsync());
-            Assert.StartsWith("Raven.Client.Exceptions.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
+            Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
         }
     }
 
@@ -85,9 +192,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
             {
-                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -110,7 +217,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             var loaded = await session.LoadAsync<TestObj>(id);
             session.Advanced.Patch(loaded, x => x.Prop, "1234");
             var e = await Assert.ThrowsAnyAsync<RavenException>(async () => await session.SaveChangesAsync());
-            Assert.StartsWith("Raven.Client.Exceptions.SchemaValidationException: The length of the value '1234' at 'Prop' should not exceed 3, but its actual length is 4.", e.Message);
+            Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The length of the value '1234' at 'Prop' should not exceed 3, but its actual length is 4.", e.Message);
         }
     }
     
@@ -127,9 +234,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
             {
-                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -148,7 +255,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             var op = await store.Operations.SendAsync(new PatchByQueryOperation("from TestObjs update {this.Prop = '1234'}"));
             await op.WaitForCompletionAsync();
         });
-        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidationException: The length of the value '1234' at 'Prop' should not exceed 3, but its actual length is 4.", e.Message);
+        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The length of the value '1234' at 'Prop' should not exceed 3, but its actual length is 4.", e.Message);
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -164,9 +271,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
             {
-                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -210,9 +317,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
             {
-                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
             }
         };
         await source.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -222,7 +329,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             var operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), destination.Smuggler);
             await operation.WaitForCompletionAsync();
         });
-        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
+        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -245,9 +352,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
             {
-                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
             }
         };
         await destination.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -257,7 +364,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             var operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), destination.Smuggler);
             await operation.WaitForCompletionAsync();
         });
-        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
+        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -279,9 +386,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
             {
-                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
             }
         };
         await source.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -302,7 +409,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             loaded.Prop2 = "something";
             await session.SaveChangesAsync();
         });
-        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
+        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
     }
 
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -325,9 +432,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
             {
-                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
             }
         };
         await destination.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -368,7 +475,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             if(errorInfo.TryGet(nameof(EtlErrorInfo.Error), out string error) == false || string.IsNullOrEmpty(error))
                 return false;
             
-            return error.StartsWith("Raven.Client.Exceptions.SchemaValidationException: Raven.Client.Exceptions.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"");
+            return error.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"");
         }
     }
 
@@ -392,9 +499,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
             {
-                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
             }
         };
         await destination.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -404,7 +511,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             var operation = await source.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), destination.Smuggler);
             await operation.WaitForCompletionAsync();
         });
-        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
+        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
 
         using (var session = source.OpenAsyncSession())
         {
@@ -442,9 +549,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
             {
-                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -472,7 +579,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             load.Prop2 = "something";
             await session.SaveChangesAsync();
         });
-        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
+        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -495,9 +602,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
             {
-                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
             }
         };
         await destination.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -518,7 +625,7 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             load.Prop2 = "something";
             await session.SaveChangesAsync();
         });
-        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
+        Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
     }
     
     [RavenFact(RavenTestCategory.JavaScript)]
@@ -542,9 +649,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
             {
-                { "TestObjs", new SchemaValidationConfiguration.Validator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -563,7 +670,13 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
             var changeVector = revisions[1].GetString(Constants.Documents.Metadata.ChangeVector);
             
             var e = await Assert.ThrowsAnyAsync<RavenException>(async () => await store.Operations.SendAsync(new RevertRevisionsByIdOperation(id, changeVector)));
-            Assert.StartsWith("Raven.Client.Exceptions.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
+            Assert.StartsWith("Raven.Client.Exceptions.SchemaValidation.SchemaValidationException: The value at 'Prop' must be '\"123\"', but it is '\"1234\"'.", e.Message);
         }
+    }
+    
+    private static void AssertError(string expected, string actual)
+    {
+        if(actual.Contains(expected) == false)
+            Assert.Fail($"expected: {expected}, actual: {actual}");
     }
 }

@@ -3,7 +3,7 @@ using System.ComponentModel.DataAnnotations;
 using System.Threading.Tasks;
 using NJsonSchema;
 using Raven.Client.Documents.Operations.SchemaValidation;
-using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.SchemaValidation;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -24,9 +24,9 @@ public class SchemaValidationBasicTests : RavenTestBase
         {
             await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
             {
-                ValidatorsByCollection = new Dictionary<string, SchemaValidationConfiguration.Validator>()
+                ValidatorsPerCollection = new Dictionary<string, SchemaValidator>()
                 {
-                    {"Users", new SchemaValidationConfiguration.Validator
+                    {"Users", new SchemaValidator
                     {
                         SchemaDefinition = schemaData
                     }}

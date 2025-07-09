@@ -137,7 +137,7 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
             return (true, null);
         }
         schemaPath += rule;
-        
+
         switch (additionalProperties)
         {
             case bool isAdditionalPropertiesAllowed:
@@ -148,8 +148,8 @@ public class ObjectSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Objec
                 return (true, validator);
             }
             default:
-                Type[] expectedTypes = [typeof(bool), typeof(BlittableJsonReaderObject)];
-                SchemaValidationHelper.ThrowRuleTypeError(additionalProperties, expectedTypes, schemaPath);
+                var expectedTypes = new HashSet<Type> { typeof(bool), typeof(BlittableJsonReaderObject) };
+                SchemaValidationHelper.ThrowRuleTypeError(additionalProperties, expectedTypes.ToHashSet(), schemaPath);
                 return (false, null);
         }
     }

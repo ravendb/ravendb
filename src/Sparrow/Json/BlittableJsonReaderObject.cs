@@ -1501,7 +1501,6 @@ namespace Sparrow.Json
             return true;
         }
 
-        //TODO Maybe use LazyStringValue
         public bool Contains(string propertyName)
         {
             var lazyName = _context.GetLazyStringForFieldWithCaching(propertyName);

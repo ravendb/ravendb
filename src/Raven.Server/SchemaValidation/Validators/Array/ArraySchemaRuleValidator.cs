@@ -109,7 +109,7 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
         schemaPath += rule;
         if (schemaDefinition.TryGet(rule, out object prefixItemsSchema) == false)
             return (true, null);
-        
+
         switch (prefixItemsSchema)
         {
             case bool isAdditionalPropertiesAllowed:
@@ -118,7 +118,7 @@ public class ArraySchemaRuleValidatorFactory : SchemaRuleValidatorFactory<ArrayS
                 var validator = ElementSchemaRuleValidatorFactory.CreateElementSchemaRuleValidator(additionalPropertiesSchema, schemaPath + rule, refSchemas);
                 return (true, validator);
             default:
-                Type[] expectedTypes = [typeof(bool), typeof(BlittableJsonReaderObject)];
+                var expectedTypes = new HashSet<Type> { typeof(bool), typeof(BlittableJsonReaderObject) };
                 SchemaValidationHelper.ThrowRuleTypeError(prefixItemsSchema, expectedTypes, schemaPath);
                 return (false, null);
         }

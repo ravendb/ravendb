@@ -458,7 +458,8 @@ namespace Sparrow.Json
         {
             return (string)this; // invoke the implicit string conversion
         }
-
+        
+#if NET8_0_OR_GREATER
         public string ToString(string format, IFormatProvider formatProvider) => ToString();
 
         public bool TryFormat(Span<char> destination, out int charsWritten, ReadOnlySpan<char> format, IFormatProvider provider)
@@ -499,7 +500,8 @@ namespace Sparrow.Json
         {
             return TryFormat(destination, out _, default, null);
         }
-
+#endif
+        
         public int CompareTo(object obj)
         {
             if (IsDisposed)

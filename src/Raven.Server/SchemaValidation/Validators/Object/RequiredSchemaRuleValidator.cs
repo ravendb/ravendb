@@ -1,28 +1,26 @@
-﻿using System.Collections.Generic;
-using System.Linq;
-using Raven.Server.SchemaValidation.ErrorMessage;
+﻿using Raven.Server.SchemaValidation.ErrorMessage;
 using Sparrow.Json;
 
 namespace Raven.Server.SchemaValidation.Validators.Object;
 
 public class RequiredSchemaRuleValidator : SchemaRuleValidator<BlittableJsonReaderObject>
 {
-    private readonly HashSet<string> _requiredHashSet;
+    private readonly LazyStringValue[] _requiredProperties;
 
-    public RequiredSchemaRuleValidator(BlittableJsonReaderArray required)
+    public RequiredSchemaRuleValidator(LazyStringValue[] required)
     {
-        _requiredHashSet = required.Select(x => x.ToString()).ToHashSet();
+        _requiredProperties = required;
     }
     
-    public RequiredSchemaRuleValidator(string required)
+    public RequiredSchemaRuleValidator(LazyStringValue required)
     {
-        _requiredHashSet = [required];
+        _requiredProperties = [required];
     }
     
     public override bool Validate(BlittableJsonReaderObject value, ErrorBuilder errorBuilder)
     {
         var isValid = true;
-        foreach (var required in _requiredHashSet)
+        foreach (var required in _requiredProperties)
         {
             if(value.Contains(required))
                 continue;
@@ -39,7 +37,11 @@ public class RequiredSchemaRuleValidatorFactory : SchemaRuleValidatorFactory<Req
 {
     public override RequiredSchemaRuleValidator Create(BlittableJsonReaderObject schemaDefinition, SchemaPath schemaPath, RefSchemas refSchemas)
     {
-        return SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath + Rule, out var required)
+        if (SchemaValidationHelper.TryGetArray(schemaDefinition, Rule, schemaPath + Rule, out var blittableRequired) == false)
+            return null;
+
+        var required = SchemaValidationHelper.CheckBlittableArrayElementTypesAndThrow<LazyStringValue>(blittableRequired, schemaPath);
+        return required != null
             ? new RequiredSchemaRuleValidator(required)
             : null;
     }

@@ -91,18 +91,18 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
             result.DatabaseRecord.ConflictSolverConfigUpdated = true;
         }
 
-        if (databaseRecord.SchemaValidation != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SchemaValidationConfig))
+        if (databaseRecord.SchemaValidation != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.SchemaValidation))
         {
             if (_log.IsInfoEnabled)
                 _log.Info("Configuring schema validation configuration from smuggler");
 
             if (_currentDatabaseRecord?.SchemaValidation != null)
             {
-                foreach (var collection in _currentDatabaseRecord.SchemaValidation.ValidatorsByCollection)
+                foreach (var collection in _currentDatabaseRecord.SchemaValidation.ValidatorsPerCollection)
                 {
-                    if (databaseRecord.SchemaValidation.ValidatorsByCollection.TryGetValue(collection.Key, out var collectionConfiguration) == false)
+                    if (databaseRecord.SchemaValidation.ValidatorsPerCollection.TryGetValue(collection.Key, out var collectionConfiguration) == false)
                     {
-                        databaseRecord.SchemaValidation.ValidatorsByCollection.Add(collection.Key, collection.Value);
+                        databaseRecord.SchemaValidation.ValidatorsPerCollection.Add(collection.Key, collection.Value);
                     }
                     else
                     {

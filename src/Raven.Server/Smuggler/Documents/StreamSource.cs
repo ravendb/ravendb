@@ -920,7 +920,7 @@ namespace Raven.Server.Smuggler.Documents
                     catch (Exception e)
                     {
                         if (_log.IsInfoEnabled)
-                            _log.Info("Wasn't able to import the Supported Features from smuggler file. Skipping.", e);
+                            _log.Info("Wasn't able to import the schema validation configuration from the smuggler file. Skipping.", e);
                     }
                 }
             });
