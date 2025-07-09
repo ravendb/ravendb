@@ -6,7 +6,9 @@ using Jint.Native;
 using Jint.Runtime;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
+using Raven.Server.Exceptions;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript
 {
@@ -25,6 +27,9 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         private JsValue GetContentAsString(JsValue self, JsValue[] args)
         {
+            if (_attachment.Flags == AttachmentFlags.Retired)
+                throw new RetiredAttachmentIndexingException($"Attempted to '{nameof(GetContentAsString)}' on retired attachment named '{_attachment.Name}' which is no longer available locally.");
+
             var encoding = Encoding.UTF8;
             if (args.Length > 0)
             {
@@ -83,9 +88,9 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                 else if (property == nameof(IAttachmentObject.Size))
                     value = new PropertyDescriptor(_attachment.Size, writable: false, enumerable: false, configurable: false);
                 else if (property == nameof(IAttachmentObject.Flags))
-                    value = new PropertyDescriptor((int)_attachment.Flags, writable: false, enumerable: false, configurable: false);
+                    value = new PropertyDescriptor(new JsString(_attachment.Flags.ToString()), writable: false, enumerable: false, configurable: false);
                 else if (property == nameof(IAttachmentObject.RetireAt))
-                    value = _attachment.RetireAt.HasValue ? new PropertyDescriptor(new JsDate(_engine, _attachment.RetireAt.Value), writable: false, enumerable: false, configurable: false) : null;
+                    value = _attachment.RetireAt is DateTime dt ? new PropertyDescriptor(new JsDate(_engine, dt), writable: false, enumerable: false, configurable: false) : null;
                 else if (property == GetContentAsStringMethodName)
                     value = new PropertyDescriptor(new ClrFunction(Engine, GetContentAsStringMethodName, GetContentAsString), writable: false, enumerable: false, configurable: false);
                 if (value != null)
