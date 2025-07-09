@@ -132,9 +132,9 @@ namespace Raven.Server.ServerWide
 
         private RequestExecutor _leaderRequestExecutor;
         internal long _lastClusterTopologyIndex = -1;
+        private readonly RavenServer _server;
 
         public readonly RavenConfiguration Configuration;
-        private readonly RavenServer _server;
         public readonly DatabasesLandlord DatabasesLandlord;
         public readonly ServerNotificationCenter NotificationCenter;
         public readonly ThreadsInfoNotifications ThreadsInfoNotifications;

@@ -119,9 +119,11 @@ namespace Raven.Server.Commercial
             _licenseHelper = new LicenseHelper(serverStore);
             _skipLeasingErrorsLogging = serverStore.Configuration.Licensing.SkipLeasingErrorsLogging;
         }
-
+        
         public bool IsEulaAccepted => _eulaAcceptedButHasPendingRestart || _serverStore.Configuration.Licensing.EulaAccepted;
 
+        public bool TryGetLicense(out License license) => _licenseHelper.TryGetLicense(out license);
+        
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
         {
             try
