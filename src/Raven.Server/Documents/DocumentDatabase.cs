@@ -70,11 +70,8 @@ using Constants = Raven.Client.Constants;
 using MountPointUsage = Raven.Client.ServerWide.Operations.MountPointUsage;
 using Size = Raven.Client.Util.Size;
 using System.Diagnostics.CodeAnalysis;
-using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.Embeddings;
-using Raven.Server.Logging;
-using Raven.Server.Rachis;
-using Raven.Server.SchemaValidation;
+using Raven.Server.Documents.SchemaValidation;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 

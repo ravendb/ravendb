@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Threading.Tasks;
-using Raven.Server.Exceptions.SchemaValidation;
-using Raven.Server.SchemaValidation;
+using Raven.Server.Documents.SchemaValidation;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
