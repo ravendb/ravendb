@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers
 {
     public sealed class RetiredAttachmentHandler : DatabaseRequestHandler
     {
-        [RavenAction("/databases/*/attachments/retire/config", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        [RavenAction("/databases/*/attachments/retire/config", "GET", AuthorizationStatus.DatabaseAdmin)]
         public async Task GetRetireConfig()
         {
             using (var processor = new RetiredAttachmentHandlerProcessorForGetRetireConfig(this))
