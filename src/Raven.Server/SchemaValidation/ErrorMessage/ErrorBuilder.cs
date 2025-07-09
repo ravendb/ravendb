@@ -173,7 +173,11 @@ public class ErrorBuilder : IDisposable
         public void AppendFormatted(object value) => _errorBuilder.Append(value);
     }
 
-    public void Dispose() => _errorBuffer?.Dispose();
+    public void Dispose()
+    {
+        _errorBuffer?.Dispose();
+        Path.Dispose();
+    }
 }
 
 public static class ErrorBuilderHelper

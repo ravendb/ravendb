@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 
 namespace Raven.Server.SchemaValidation.ErrorMessage;
 
-public abstract class AbstractBuffer<T>
+public abstract class AbstractBuffer<T> : IDisposable
 {
     public int Length { get; set; }
 
