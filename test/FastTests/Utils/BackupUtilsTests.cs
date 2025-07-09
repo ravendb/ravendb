@@ -65,7 +65,7 @@ namespace FastTests.Utils
 
             // Act & Assert
             var ex = Assert.Throws<ArgumentOutOfRangeException>(() => BackupUtils.GetLastOccurrence(schedule, invalidBaseTime));
-            Assert.Contains("Dates before 2010-01-01 are not supported", ex.Message);
+            Assert.Contains("Dates before 2015-01-01 are not supported", ex.Message);
         }
 
         [Fact]
@@ -74,8 +74,8 @@ namespace FastTests.Utils
             var schedule = CrontabSchedule.Parse("0 0 1 * *");
 
             // Act: Base time is just after the first possible occurrence within the supported range.
-            var baseTime = new DateTime(2010, 1, 15, 12, 0, 0);
-            var expected = new DateTime(2010, 1, 1, 0, 0, 0);
+            var baseTime = new DateTime(2015, 1, 15, 12, 0, 0);
+            var expected = new DateTime(2015, 1, 1, 0, 0, 0);
             var actual = BackupUtils.GetLastOccurrence(schedule, baseTime);
 
             // Assert

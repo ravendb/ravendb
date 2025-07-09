@@ -677,6 +677,14 @@ namespace Raven.Server.ServerWide.Maintenance
             var periodicBackups = mergedState.RawDatabase.PeriodicBackups;
             if (periodicBackups is { Count: > 0 })
             {
+                if (periodicBackups.Any(backupConfiguration => backupConfiguration.Disabled))
+                {
+                    // ReSharper disable once UseNullPropagation
+                    if (onDiagnosticLog != null) onDiagnosticLog("Found a disabled periodic backup task. It's a blocking condition for tombstone cleanup.");
+
+                    return CompareExchangeTombstonesCleanupState.NoMoreTombstones;
+                }
+
                 foreach (var backupConfig in periodicBackups)
                 {
                     if (string.IsNullOrWhiteSpace(backupConfig.FullBackupFrequency))
@@ -695,7 +703,8 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             if (databaseState.GetCurrentDatabaseReport(nodeTag)?.BackupStatuses.TryGetValue(backupConfig.TaskId, out var statusReport) == true &&
                                 statusReport.LastFullBackupInternal.HasValue &&
-                                statusReport.LastFullBackupRaftIndexEtag.HasValue)
+                                statusReport.LastFullBackupRaftIndexEtag.HasValue &&
+                                statusReport.IsErrored == false)
                             {
                                 allHistoricalFullBackups.Add((statusReport.LastFullBackupInternal.Value, statusReport.LastFullBackupRaftIndexEtag.Value));
                             }
@@ -705,10 +714,9 @@ namespace Raven.Server.ServerWide.Maintenance
                     if (allHistoricalFullBackups.Count == 0)
                     {
                         // ReSharper disable once UseNullPropagation
-                        if (onDiagnosticLog != null) onDiagnosticLog($"[Task {backupConfig.TaskId}] CRITICAL: No full backup has ever been recorded for this task. Cleanup is blocked.");
+                        if (onDiagnosticLog != null) onDiagnosticLog($"[Task {backupConfig.TaskId}] No historical full backups found for this task. Tombstone cleanup is not constrained by current backup task.");
 
-                        // If no full backup has EVER been made, we cannot clean anything.
-                        return CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus;
+                        allHistoricalFullBackups.Add((Time: utcNow, Etag: long.MaxValue));
                     }
 
                     var latestFullBackup = allHistoricalFullBackups.OrderByDescending(b => b.Time).First();
@@ -971,7 +979,6 @@ namespace Raven.Server.ServerWide.Maintenance
                     foreach (var nodeTag in databaseObservationState.DatabaseTopology.AllNodes)
                     {
                         var hasClusterNodeStatusReport = databaseObservationState.Current.TryGetValue(nodeTag, out var clusterNodeStatusReport);
-                        Debug.Assert(hasClusterNodeStatusReport, $"[Node {nodeTag}] Missing cluster node status report for database '{databaseObservationState.Name}'.");
                         if (hasClusterNodeStatusReport == false)
                         {
                             // ReSharper disable once UseNullPropagation
@@ -981,7 +988,6 @@ namespace Raven.Server.ServerWide.Maintenance
                         }
 
                         var hasDatabaseStatusReport = clusterNodeStatusReport.Report.TryGetValue(databaseObservationState.Name, out var databaseStatusReport);
-                        Debug.Assert(hasDatabaseStatusReport || clusterNodeStatusReport.Error != null, $"[Node {nodeTag}] Missing database status report for database '{databaseObservationState.Name}'.");
                         if (hasDatabaseStatusReport == false)
                         {
                             // ReSharper disable once UseNullPropagation
@@ -1007,7 +1013,6 @@ namespace Raven.Server.ServerWide.Maintenance
                                 return false;
 
                             var backupConfiguration = RawDatabase.GetPeriodicBackupConfiguration(taskId);
-                            Debug.Assert(backupConfiguration != null, $"[Node {nodeTag}] Should not happen, if {nameof(RawDatabase.PeriodicBackupsTaskIds)} contains taskId '{taskId}', it should have a configuration.");
                             if (backupConfiguration == null)
                             {
                                 // ReSharper disable once UseNullPropagation

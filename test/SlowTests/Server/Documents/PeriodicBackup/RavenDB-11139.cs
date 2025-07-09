@@ -1183,131 +1183,152 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]
-        public async Task TombstoneCleanerShouldNotClearIfAnyBackupIsErroredOnFirstRun()
+        public async Task CompareExchangeTombstoneCleaner_ShouldCleanUp_WithoutBackupTasks()
         {
-            var backupPath1 = NewDataPath(suffix: "BackupFolder1");
-            var backupPath2 = NewDataPath(suffix: "BackupFolder2");
-            using (var server = GetNewServer())
-            using (var store = GetDocumentStore(new Options { Server = server }))
-            {
-                Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
-                var indexesList = new Dictionary<string, long>();
-                // create 3 unique values
-                for (int i = 0; i < 3; i++)
-                {
-                    var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>($"{i}", i, 0));
-                    indexesList.Add($"{i}", res.Index);
-                }
+            var diagnosticLogBuilder = new StringBuilder();
 
-                // delete 1 unique value
-                var del = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<int>("2", indexesList["2"]));
-                Assert.NotNull(del.Value);
-                indexesList.Remove("2");
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
 
-                // full backup without incremental
-                var config = Backup.CreateBackupConfiguration(backupPath1);
+            server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}] {logLine}");
 
-                if (Directory.Exists(backupPath1))
-                    Directory.Delete(backupPath1, recursive: true);
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
+            await CreateCompareExchangeTombstone(store, "cx/3");
 
-                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                Assert.NotNull(documentDatabase);
-                try
-                {
-                    documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
-                    await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.Faulted); // FULL Faulted BACKUP
-                    documentDatabase.PeriodicBackupRunner._forTestingPurposes = null;
-                    config.LocalSettings.FolderPath = backupPath2;
-                    config.Name = "backupPath2";
-                    await Backup.UpdateConfigAndRunBackupAsync(server, config, store); // FULL BACKUP
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "Before compare exchange tombstone cleanup", diagnosticLogBuilder);
+            await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store.Database, ignoreClustrTrx: true);
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup", diagnosticLogBuilder);
+        }
 
-                    using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
-                        Assert.Equal(1, numOfCompareExchangeTombstones);
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task CompareExchangeTombstoneCleaner_ShouldCleanUp_WithBackupTask_TombstonesCreatedBeforeBackupTaskCreation()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var diagnosticLogBuilder = new StringBuilder();
 
-                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store.Database, ignoreClustrTrx: true);
-                        Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.InvalidPeriodicBackupStatus, cleanupState);
-                    }
-                    using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
-                        var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
-                        Assert.Equal(1, numOfCompareExchangeTombstones);
-                        Assert.Equal(2, numOfCompareExchanges);
-                    }
-                }
-                finally
-                {
-                    documentDatabase.PeriodicBackupRunner._forTestingPurposes = null;
-                }
-            }
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
+
+            server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}] {logLine}");
+
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
+            await CreateCompareExchangeTombstone(store, "cx/3");
+
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "Before compare exchange tombstone cleanup", diagnosticLogBuilder);
+
+            var backupConfiguration = Backup.CreateBackupConfiguration(backupPath, name: "FirstBackupConfiguration");
+            _ = await Backup.UpdateConfigAsync(server, backupConfiguration, store);
+
+            await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store.Database, ignoreClustrTrx: true);
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup", diagnosticLogBuilder);
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]
-        public async Task TombstoneCleanerShouldClearUpToLastRaftIndexIfLastBackupIsErrored()
+        public async Task CompareExchangeTombstoneCleaner_ShouldCleanUp_WithBackupTask_TombstonesCreatedAfterBackupTaskCreation()
         {
-            var backupPath1 = NewDataPath(suffix: "BackupFolder1");
-            using (var server = GetNewServer())
-            using (var store = GetDocumentStore(new Options { Server = server }))
-            {
-                Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
-                var indexesList = new Dictionary<string, long>();
-                // create 3 unique values
-                for (int i = 0; i < 3; i++)
-                {
-                    var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>($"{i}", i, 0));
-                    indexesList.Add($"{i}", res.Index);
-                }
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var diagnosticLogBuilder = new StringBuilder();
 
-                // delete 1 unique value
-                var del = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<int>("2", indexesList["2"]));
-                Assert.NotNull(del.Value);
-                indexesList.Remove("2");
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
 
-                // full backup without incremental
-                var config = Backup.CreateBackupConfiguration(backupPath1);
-                if (Directory.Exists(backupPath1))
-                    Directory.Delete(backupPath1, recursive: true);
+            server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}] {logLine}");
 
-                var documentDatabase = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-                Assert.NotNull(documentDatabase);
+            var backupConfiguration = Backup.CreateBackupConfiguration(backupPath, name: "FirstBackupConfiguration");
+            _ = await Backup.UpdateConfigAsync(server, backupConfiguration, store);
 
-                try
-                {
-                    var backupTaskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store);                    // FULL BACKUP
-                    documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
-                    await Backup.RunBackupAsync(server, backupTaskId, store, opStatus: OperationStatus.Faulted); // FULL Faulted BACKUP
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
+            await CreateCompareExchangeTombstone(store, "cx/3");
 
-                    using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
-                        Assert.Equal(1, numOfCompareExchangeTombstones);
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "Before compare exchange tombstone cleanup", diagnosticLogBuilder);
+            await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store.Database, ignoreClustrTrx: true);
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup", diagnosticLogBuilder);
+        }
 
-                        // clean tombstones
-                        var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store.Database, ignoreClustrTrx: true);
-                        Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
-                    }
-                    using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                    using (context.OpenReadTransaction())
-                    {
-                        var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
-                        var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
-                        Assert.Equal(0, numOfCompareExchangeTombstones);
-                        Assert.Equal(2, numOfCompareExchanges);
-                    }
-                }
-                finally
-                {
-                    documentDatabase.PeriodicBackupRunner._forTestingPurposes = null;
-                }
-            }
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task CompareExchangeTombstoneCleaner_ShouldNotCleanUp_WithBackupTask_TaskDisabled()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var diagnosticLogBuilder = new StringBuilder();
+
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
+
+            server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}] {logLine}");
+
+            var backupConfiguration = Backup.CreateBackupConfiguration(backupPath, name: "FirstBackupConfiguration", disabled: true);
+            _ = await Backup.UpdateConfigAsync(server, backupConfiguration, store);
+
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
+            await CreateCompareExchangeTombstone(store, "cx/3");
+
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "Before compare exchange tombstone cleanup", diagnosticLogBuilder);
+            await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store.Database, ignoreClustrTrx: true);
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup", diagnosticLogBuilder);
         }
 
         [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task CompareExchangeTombstoneCleaner_ShouldCleanUp_FirstBackup_IsFaulted()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var diagnosticLogBuilder = new StringBuilder();
+
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
+
+            server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}] {logLine}");
+
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
+            await CreateCompareExchangeTombstone(store, "cx/3");
+
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "Before compare exchange tombstone cleanup", diagnosticLogBuilder);
+
+            var backupConfiguration = Backup.CreateBackupConfiguration(backupPath, name: "FirstBackupConfiguration");
+            var taskId = await Backup.UpdateConfigAsync(server, backupConfiguration, store);
+
+            await Backup.RunFaultedBackupAsync(store, taskId, server, isFullBackup: true);
+
+            await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store.Database, ignoreClustrTrx: true);
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup after failed full backup", diagnosticLogBuilder);
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
+        public async Task CompareExchangeTombstoneCleaner_ShouldNotCleanUp_FirstBackup_IsSuccessful_ThenSecondBackup_IsFaulted()
+        {
+            var backupPath = NewDataPath(suffix: "BackupFolder");
+            var diagnosticLogBuilder = new StringBuilder();
+
+            using var server = GetNewServer();
+            using var store = GetDocumentStore(new Options { Server = server });
+
+            server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}] {logLine}");
+
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
+            await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
+            await CreateCompareExchangeTombstone(store, "cx/3");
+
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "After the first compare exchange tombstone creation", diagnosticLogBuilder);
+
+            var backupConfiguration = Backup.CreateBackupConfiguration(backupPath, name: "FirstBackupConfiguration");
+            var taskId = await Backup.UpdateConfigAsync(server, backupConfiguration, store);
+
+            await Backup.RunBackupAsync(server, taskId, store, isFullBackup: true);
+
+            await CreateCompareExchangeTombstone(store, "cx/4");
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 2, expectedCompareExchangeNumber: 2, "Before compare exchange tombstone cleanup after successful full backup", diagnosticLogBuilder);
+
+            await Backup.RunFaultedBackupAsync(store, taskId, server, isFullBackup: true);
+
+            await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store.Database, ignoreClustrTrx: true);
+            AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup after failed full backup", diagnosticLogBuilder);
+        }
+
+        [Fact, Trait("Category", "Smuggler")]
         public async Task IncrementalBackupWithCompareExchangeTombstones()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1370,76 +1391,22 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [RavenFact(RavenTestCategory.BackupExportImport)]
-        public async Task ShouldClearAllCompareExchangeTombstonesIfThereIsABackupThatNeverOccur()
-        {
-            using (var server = GetNewServer())
-            using (var store = GetDocumentStore(new Options { Server = server }))
-            {
-                Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
-                var indexesList = new Dictionary<string, long>();
-                // create 3 unique values
-                for (int i = 0; i < 3; i++)
-                {
-                    var res = await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>($"{i}", i, 0));
-                    indexesList.Add($"{i}", res.Index);
-                }
-
-                // delete 1 unique value
-                var del = await store.Operations.SendAsync(new DeleteCompareExchangeValueOperation<int>("2", indexesList["2"]));
-                Assert.NotNull(del.Value);
-                indexesList.Remove("2");
-
-                // full backup without incremental
-                var config = Backup.CreateBackupConfiguration("backupPath1");
-
-                var result1 = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-                config.Name = "backupPath2";
-                config.IncrementalBackupFrequency = "0 0 1 1 *";
-                var result2 = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
-
-                var diagnosticLogBuilder = new StringBuilder();
-                server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine(logLine);
-                using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
-                    Assert.Equal(1, numOfCompareExchangeTombstones);
-
-                    // clean tombstones
-                    var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store.Database, server, ignoreClustrTrx:true, diagnosticLogBuilder);
-                    Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
-                }
-                using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                using (context.OpenReadTransaction())
-                {
-                    var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store.Database);
-                    var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store.Database);
-                    Assert.True(numOfCompareExchangeTombstones.Equals(0), $"Expected 0, but got {numOfCompareExchangeTombstones}{Environment.NewLine}{diagnosticLogBuilder}");
-                    Assert.True(numOfCompareExchanges.Equals(2), $"Expected 2, but got {numOfCompareExchanges}{Environment.NewLine}{diagnosticLogBuilder}");
-                }
-            }
-        }
-
         [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        public async Task TombstoneCleaningLogic_Cluster(Options options)
+        public async Task CompareExchangeTombstoneCleaner_ShouldWorkProperly_WithCluster_WithMentorNodeChanges(Options options)
         {
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var databaseName = GetDatabaseName();
 
-            (List < RavenServer > clusterNodes, RavenServer leaderNode) = await CreateRaftCluster(clusterSize);
+            (List <RavenServer> clusterNodes, RavenServer leaderNode) = await CreateRaftCluster(clusterSize);
             var diagnosticLogBuilder = new StringBuilder();
             foreach (var node in clusterNodes.Where(node => node.ServerStore.Observer is not null))
                 node.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}][Node {node.ServerStore.NodeTag}] {logLine}");
 
             await CreateDatabaseInCluster(databaseName, clusterSize, leaderNode.WebUrl);
             var secondNode = clusterNodes.First(x => x != leaderNode);
-
-            _output.WriteLine($"[{DateTime.Now:O}] Leader server: {leaderNode.ServerStore.NodeTag}, WebUrl: {leaderNode.WebUrl}");
-            _output.WriteLine($"[{DateTime.Now:O}] Not leader server: {secondNode.ServerStore.NodeTag}, WebUrl: {secondNode.WebUrl}");
 
             options.Server = leaderNode;
             options.ModifyDocumentStore = s => s.Conventions = new DocumentConventions { DisableTopologyUpdates = true };
@@ -1455,7 +1422,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             // Since the removal of CompareExchangeTombstones is tied to the backup schedule, it is critical that we start the test when a full backup has been
             // completed on schedule. If a full backup runs every three minutes and the test starts, for example, at 10:01, we will wait until 10:02 and then
             // proceed to create a periodic backup task. This way Full backup will start at 10:03
-            await Backup.WaitUntilNextFullBackupActionWindowAsync(backupConfiguration, actionWindow: TimeSpan.FromSeconds(50), leaderNode.ServerStore.ServerShutdown, _output);
+            await Backup.WaitUntilNextFullBackupActionWindowAsync(backupConfiguration, actionWindow: TimeSpan.FromSeconds(30), leaderNode.ServerStore.ServerShutdown, diagnosticLogBuilder);
 
             await CreateCompareExchangeTombstone(firstStore, "cx/1");
 
@@ -1474,7 +1441,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 .WithBackupTaskId(backupTaskId)
                 .WithClusterNodes(clusterNodes)
                 .WithClusterObserverConfirmation()
-                .WithOutput(_output);
+                .WithDiagnosticLog(diagnosticLogBuilder);
 
             // Schedule     | First Node  | Second Node |
             // -------------|-------------|-------------|
@@ -1568,7 +1535,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             private long _backupTaskId;
             private bool _shouldWaitClusterObserverConfirmation = false;
             private BackupKind? _expectedBackupKind;
-            private ITestOutputHelper _output;
+            private StringBuilder _diagnosticLogBuilder;
             private readonly ClusterTestBase _parent;
 
             public NextBackupWaiter(ClusterTestBase clusterTestBase)
@@ -1619,9 +1586,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 return this;
             }
 
-            public NextBackupWaiter WithOutput(ITestOutputHelper output)
+            public NextBackupWaiter WithDiagnosticLog(StringBuilder diagnosticLogBuilder)
             {
-                _output = output;
+                _diagnosticLogBuilder = diagnosticLogBuilder;
                 return this;
             }
 
@@ -1642,7 +1609,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var status = await GetPeriodicBackupStatusAsync();
                 await WaitClusterObservationConfirmation(_clusterNodes, status, _store);
-                _output?.WriteLine($"[{DateTime.Now:O}] Cluster observer confirmed the backup task with ID `{_backupTaskId}` on database `{_databaseName}` on node `{_runningOnServer.ServerStore.NodeTag}`.");
+                _diagnosticLogBuilder?.AppendLine($"[{DateTime.Now:O}] Cluster observer confirmed the backup task with ID `{_backupTaskId}` on database `{_databaseName}` on node `{_runningOnServer.ServerStore.NodeTag}`.");
             }
 
             private async Task ChangeMentorNodeIfNeededAsync()
@@ -1657,7 +1624,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 periodicBackupConfiguration.MentorNode = _runningOnServer.ServerStore.NodeTag;
                 await _parent.Backup.UpdateConfigAsync(_runningOnServer, periodicBackupConfiguration, _store);
 
-                _output?.WriteLine($"[{DateTime.Now:O}] Setting mentor node for backup task with ID `{_backupTaskId}` to `{_runningOnServer.ServerStore.NodeTag}`.");
+                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}] Setting mentor node for backup task with ID `{_backupTaskId}` to `{_runningOnServer.ServerStore.NodeTag}`.");
 
                 await WaitAndAssertForValueAsync(() =>
                     {
@@ -1672,7 +1639,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds,
                     timeout: (int)TimeSpan.FromSeconds(30).TotalMilliseconds);
 
-                _output?.WriteLine($"[{DateTime.Now:O}] Updated backup task with ID `{_backupTaskId}` to have mentor node `{_runningOnServer.ServerStore.NodeTag}`.");
+                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}] Updated backup task with ID `{_backupTaskId}` to have mentor node `{_runningOnServer.ServerStore.NodeTag}`.");
             }
 
             private async Task<long> WaitForNextBackupOccurrenceAsync()
@@ -1685,7 +1652,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 Assert.NotNull(onGoingTaskInfo);
                 Assert.Null(onGoingTaskInfo.OnGoingBackup); // No backup is in progress when we start waiting for the next execution
 
-                _output?.WriteLine($"[{DateTime.Now:O}] Starting to wait for the next backup occurrence for task with ID `{_backupTaskId}` on database `{_databaseName}`.");
+                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}] Starting to wait for the next backup occurrence for task with ID `{_backupTaskId}` on database `{_databaseName}`.");
 
                 await _parent.Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
@@ -1698,14 +1665,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         timeout: (int)TimeSpan.FromSeconds(60).TotalMilliseconds);
 
                     var nextOperationId = database.Operations.GetNextOperationId() - 1;
-                    Assert.True(nextOperationId == onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId, $"Expected a new backup task to be started, but the last ongoing task ID is still `{onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId}`.");
+                    Assert.True(nextOperationId == onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId, $"Expected a new backup task to be started, but the last ongoing task ID is still `{onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId}`." +
+                                                                                                      $"{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
 
                     operationId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
 
-                    _output?.WriteLine($"[{DateTime.Now:O}] Backup task with ID `{operationId}` started for task with ID `{_backupTaskId}` on database `{_databaseName}` on node `{_runningOnServer.ServerStore.NodeTag}`.");
+                    _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}] Backup task with ID `{operationId}` started for task with ID `{_backupTaskId}` on database `{_databaseName}` on node `{_runningOnServer.ServerStore.NodeTag}`.");
 
                     var ongoingBackupKind = onGoingTaskInfo.OnGoingBackup.IsFull ? BackupKind.Full : BackupKind.Incremental;
-                    Assert.True(ongoingBackupKind == _expectedBackupKind, $"Expected the ongoing backup task to be a {_expectedBackupKind}, but it is {ongoingBackupKind}.");
+                    Assert.True(ongoingBackupKind == _expectedBackupKind, $"Expected the ongoing backup task to be a {_expectedBackupKind}, but it is {ongoingBackupKind}.{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
                 }, tcs: new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
 
                 return operationId;
@@ -1725,8 +1693,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     interval: interval);
 
                 await _parent.Backup.CheckBackupOperationStatus(OperationStatus.Completed, command, _store, _backupTaskId, operationId, periodicBackupRunner: null);
-                Assert.Equal(OperationStatus.Completed, command.Result.Status);
-                _output?.WriteLine($"[{DateTime.Now:O}] Backup operation with ID `{operationId}` for task with ID `{_backupTaskId}` on database `{_databaseName}` {command.Result.Status} on the node `{_runningOnServer.ServerStore.NodeTag}`.");
+                Assert.True(OperationStatus.Completed == command.Result.Status, $"Expected the backup operation with ID `{operationId}` for task with ID `{_backupTaskId}` on database `{_databaseName}` to be completed, but it is {command.Result.Status}.{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
+                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}] Backup operation with ID `{operationId}` for task with ID `{_backupTaskId}` on database `{_databaseName}` {command.Result.Status} on the node `{_runningOnServer.ServerStore.NodeTag}`.");
             }
 
             private async Task<PeriodicBackupStatus> GetPeriodicBackupStatusAsync()
@@ -1735,7 +1703,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 await WaitAndAssertForValueAsync(() =>
                     {
                         status = _runningOnServer.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(_databaseName, _backupTaskId);
-                        Console.WriteLine($"[{DateTime.Now:O}] Backup task with ID `{_backupTaskId}` status is not null: {status != null}");
+                        Console.WriteLine($"[{DateTime.UtcNow:O}] Backup task with ID `{_backupTaskId}` status is not null: {status != null}");
                         return Task.FromResult(status != null);
                     }, expectedVal: true,
                     interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds,
@@ -1772,9 +1740,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         using (context.OpenReadTransaction())
                             value = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, databaseName);
 
-                        if (value != expectedTombstonesNumber)
-                            Console.WriteLine($"[{DateTime.Now:O}] ISSUE!!!!");
-
                         return value;
                     },
                     expectedVal: expectedTombstonesNumber,
@@ -1786,9 +1751,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         long value;
                         using (context.OpenReadTransaction())
                             value = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, databaseName);
-
-                        if (value != expectedCompareExchangeNumber)
-                            Console.WriteLine($"[{DateTime.Now:O}] ISSUE!!!!");
 
                         return value;
                     },

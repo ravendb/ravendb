@@ -217,9 +217,9 @@ namespace FastTests
             return tmp;
         }
 
-        public async Task<DocumentDatabase> GetDatabase(string databaseName)
+        public async Task<DocumentDatabase> GetDatabase(string databaseName, RavenServer server = null)
         {
-            return await GetDatabase(Server, databaseName);
+            return await GetDatabase(server ?? Server, databaseName);
         }
 
         protected static async Task<DocumentDatabase> GetDatabase(RavenServer ravenServer, string databaseName)
