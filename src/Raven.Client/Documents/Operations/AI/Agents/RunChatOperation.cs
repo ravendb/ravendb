@@ -11,47 +11,76 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
-public class StartChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSchema>> where TSchema : new()
+public class RunChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSchema>> where TSchema : new()
 {
     private readonly string _identifier;
-    private readonly string _prompt;
+    private readonly string _userPrompt;
     private readonly Dictionary<string, object> _parameters;
 
-    public StartChatOperation(string identifier, string prompt, Dictionary<string, object> parameters = null)
+    private readonly string _chatId;
+    private readonly List<ToolResponse> _toolResponses;
+    public RunChatOperation(string identifier, string userPrompt, Dictionary<string, object> parameters)
     {
         ValidationMethods.AssertNotNullOrEmpty(identifier, nameof(identifier));
-        ValidationMethods.AssertNotNullOrEmpty(prompt, nameof(prompt));
+        ValidationMethods.AssertNotNullOrEmpty(userPrompt, nameof(userPrompt));
 
         _identifier = identifier;
-        _prompt = prompt;
+        _userPrompt = userPrompt;
         _parameters = parameters;
+    }
+
+    public RunChatOperation(string chatId, string userPrompt = null, List<ToolResponse> toolResponses = null)
+    {
+        ValidationMethods.AssertNotNullOrEmpty(chatId, nameof(chatId));
+     
+        _chatId = chatId;
+        _userPrompt = userPrompt;
+        _toolResponses = toolResponses;
     }
 
     public RavenCommand<ChatResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
-        return new StartChatOperationCommand(_identifier, _prompt, _parameters, conventions);
+        return new RunChatOperationCommand(_chatId, _identifier, _userPrompt, _parameters, _toolResponses, conventions);
     }
 
-    internal sealed class StartChatOperationCommand : RavenCommand<ChatResult<TSchema>>
+    internal sealed class RunChatOperationCommand : RavenCommand<ChatResult<TSchema>>
     {
+        private readonly string _chatId;
         private readonly string _identifier;
         private readonly string _prompt;
         private readonly Dictionary<string, object> _parameters;
+        private readonly List<ToolResponse> _toolResponses;
         private readonly DocumentConventions _conventions;
 
-        public StartChatOperationCommand(string identifier, string prompt, Dictionary<string, object> parameters, DocumentConventions conventions)
+        public RunChatOperationCommand(string chatId, string identifier, string prompt, Dictionary<string, object> parameters, List<ToolResponse> toolResponses, DocumentConventions conventions)
         {
+            _chatId = chatId;
             _identifier = identifier;
             _prompt = prompt;
             _parameters = parameters;
+            _toolResponses = toolResponses;
             _conventions = conventions;
         }
         public override bool IsReadRequest => false;
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/ai/agent/start?id={Uri.EscapeDataString(_identifier)}";
-            var body = new StartChatBody { Prompt = _prompt, Parameters = _parameters };
+            url = $"{node.Url}/databases/{node.Database}/ai/agent";
+            if (string.IsNullOrEmpty(_identifier) == false)
+            {
+                url += $"?id={Uri.EscapeDataString(_identifier)}";
 
+            }
+            if (string.IsNullOrEmpty(_chatId) == false)
+            {
+                url += $"?chatId={Uri.EscapeDataString(_chatId)}";
+            }
+
+            var body = new ChatRequestBody
+            {
+                Parameters = _parameters ?? new Dictionary<string, object>(),
+                ToolResponses = _toolResponses,
+                UserPrompt = _prompt
+            };
 
             var request = new HttpRequestMessage
             {
@@ -75,29 +104,17 @@ public class StartChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSch
     }
 }
 
-internal class StartChatBody : IDynamicJson
+internal class ChatRequestBody : IDynamicJson
 {
     public Dictionary<string, object> Parameters { get; set; }
-    public string Prompt { get; set; }
-    public DynamicJsonValue ToJson()
-    {
-        return new DynamicJsonValue
-        {
-            [nameof(Parameters)] = DynamicJsonValue.Convert(Parameters),
-            [nameof(Prompt)] = Prompt
-        };
-    }
-}
-
-internal class ResumeChatBody : IDynamicJson
-{
-    public List<ToolResponse> ToolResponse { get; set; }
+    public List<ToolResponse> ToolResponses { get; set; }
     public string UserPrompt { get; set; }
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
         {
-            [nameof(ToolResponse)] = ToolResponse == null ? null : new DynamicJsonArray(ToolResponse.Select(r => r.ToJson())), 
+            [nameof(Parameters)] = DynamicJsonValue.Convert(Parameters),
+            [nameof(ToolResponses)] = ToolResponses == null ? null : new DynamicJsonArray(ToolResponses.Select(r => r.ToJson())), 
             [nameof(UserPrompt)] = UserPrompt,
         };
     }

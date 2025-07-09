@@ -33,23 +33,15 @@ public class AiAgentHandler : DatabaseRequestHandler
         }
     }
 
-    [RavenAction("/databases/*/ai/agent/start", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
-    public async Task StartChat()
+    [RavenAction("/databases/*/ai/agent", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
+    public async Task RunAiAgent()
     {
-        using (var processor = new AiAgentProcessorForStartChat(this))
+        using (var processor = new AiAgentProcessor(this))
         {
             await processor.ExecuteAsync();
         }
     }
 
-    [RavenAction("/databases/*/ai/agent/resume", "POST", AuthorizationStatus.ValidUser, EndpointType.Write)]
-    public async Task ResumeChat()
-    {
-        using (var processor = new AiAgentProcessorForResumeChat(this))
-        {
-            await processor.ExecuteAsync();
-        }
-    }
 
     [RavenAction("/databases/*/ai/agent/test", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
     public async Task AiAgentTest()

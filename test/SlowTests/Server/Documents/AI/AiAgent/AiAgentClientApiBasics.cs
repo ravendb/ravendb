@@ -1,10 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Exceptions;
 using Raven.Server.Documents.AI;
 using Tests.Infrastructure;
 using Xunit;
@@ -81,23 +84,29 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         var identifier = (await store.AI.CreateAgentAsync<OutputSchema>(agent)).Identifier;
 
-        var r = await store.AI.StartChatAsync<OutputSchema>(identifier, "what goes well with my cheese?",
+        var chat = store.AI.CreateChat<OutputSchema>(identifier,
             p => p.AddParameter("company", "companies/90-A"));
 
-        Assert.NotNull(r.Response.Answer);
-        Assert.NotNull(r.Usage);
-        Assert.NotNull(r.ChatId);
+        chat.SetPrompt("what goes well with my cheese?");
+        var r = await chat.RunAsync(CancellationToken.None);
+        Assert.False(r);
+        
+        Assert.NotNull(chat.Answer);
+        Assert.NotNull(chat.TotalUsage);
+        Assert.NotNull(chat.Id);
 
-        var chat = await session.LoadAsync<dynamic>(r.ChatId);
-        Assert.NotNull(chat);
+        var messages = await chat.ReadMessagesAsync(CancellationToken.None);
+        Assert.True(messages.Any());
 
-        var r1 = await store.AI.ContinueChatAsync<OutputSchema>(r.ChatId, "what goes well with my cheese?");
+        chat.SetPrompt("what goes well with my cheese?");
+        r = await chat.RunAsync(CancellationToken.None);
+        Assert.False(r);
 
-        Assert.False(string.IsNullOrEmpty(r1.Response.Answer));
+        Assert.NotNull(chat.Answer);
 
-        var r2 = await store.AI.ContinueChatAsync<OutputSchema>(r.ChatId, "what cheese goes well with italian food?");
-
-        Assert.False(string.IsNullOrEmpty(r2.Response.Answer));
+        chat.SetPrompt("what cheese goes well with italian food?");
+        r = await chat.RunAsync(CancellationToken.None);
+        Assert.False(r);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -144,30 +153,113 @@ public class AiAgentClientApiBasics : RavenTestBase
         }
 
         agent.Actions = [ tool1, tool2 ];
+        var agentResult = await store.AI.CreateAgentAsync<OutputSchema>(agent);
+
+        var chat = store.AI.CreateChat<OutputSchema>(agentResult.Identifier);
+
+        chat.SetPrompt("what goes well with my cheese for recent orders?");
+
+        var r = await chat.RunAsync(CancellationToken.None);
+
+        Assert.True(r);
+        Assert.NotNull(chat.TotalUsage);
+        Assert.NotNull(chat.Id);
+
+        foreach (var request in chat.OpenTools())
+        {
+            chat.AddToolResponse(request.ToolId, "{}");
+        }
+       
+        r = await chat.RunAsync(CancellationToken.None);
+
+        Assert.False(r);
+        Assert.True(chat.Answer != null);
+        Assert.NotNull(chat.TotalUsage);
+        Assert.NotNull(chat.Id);
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    public async Task AiAgentClientApi(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        using var session = store.OpenAsyncSession();
+
+        var agent = new AiAgentConfiguration("shopping assistant",config.ConnectionStringName,
+            "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
+
+        agent.Persistence = new AiAgentPersistenceConfiguration
+        {
+            Collection = "Chats",
+            Expires = TimeSpan.FromDays(30)
+        };
+        
+        agent.Parameters.Add("company");
+        agent.Queries =
+        [
+            new AiAgentToolQuery
+            {
+                Name = "ProductSearch", 
+                Description =  "semantic search the store product catalog",
+                Query = "from Products where vector.search(embedding.text(Name), $query)",
+                ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+            }
+            ,
+            new AiAgentToolQuery
+            {
+                Name = "RecentOrder",
+                Description = "Get the recent orders of the current user",
+                Query = "from Orders where Company = $company order by OrderedAt desc limit 10",
+                ParametersSampleObject = "{}"
+            }
+        ];
 
         var identifier = (await store.AI.CreateAgentAsync<OutputSchema>(agent)).Identifier;
 
-        var r = await store.AI.StartChatAsync<OutputSchema>(identifier, "what goes well with my cheese for recent orders?");
 
-        Assert.True(r.ToolRequests.Count > 0);
-        Assert.NotNull(r.Usage);
-        Assert.NotNull(r.ChatId);
+        var chat = store.AI.CreateChat<OutputSchema>(identifier,
+            p => p.AddParameter("company", "companies/90-A"));
 
-        var toolResponses = new List<ToolResponse>();
-        for (int i = 0; i < r.ToolRequests.Count; i++)
-        {
-            var request = r.ToolRequests[i];
-            toolResponses.Add(new ToolResponse
-            {
-                ToolId = request.ToolId,
-                Content = "{}"
-            });
-        }
+        Assert.Throws<InvalidOperationException>(() => chat.Id);
+        Assert.Throws<InvalidOperationException>(() => chat.Answer);
+        Assert.Throws<InvalidOperationException>(() => chat.TotalUsage);
+        Assert.Throws<InvalidOperationException>(chat.OpenTools);
 
-        var r2 = await store.AI.ContinueChatAsync<OutputSchema>(r.ChatId, toolResponses);
+        // Allowed, as we can add tool responses to an existing chat running it
+        // Assert.Throws<InvalidOperationException>(() => chat.AddToolResponse("foo", "bar"));
 
-        Assert.True(r2.Response?.Answer != null || r2.ToolRequests != null);
-        Assert.NotNull(r2.Usage);
-        Assert.NotNull(r2.ChatId);
+        await Assert.ThrowsAsync<InvalidOperationException>(() => chat.ReadMessagesAsync(CancellationToken.None));
+        await Assert.ThrowsAsync<ArgumentNullException>(() => chat.RunAsync(CancellationToken.None));
+
+        chat.SetPrompt("what goes well with my cheese?");
+        var r = await chat.RunAsync(CancellationToken.None);
+        Assert.False(r);
+        
+        Assert.NotNull(chat.Answer);
+        Assert.NotNull(chat.TotalUsage);
+        Assert.NotNull(chat.Id);
+
+        var messages = await chat.ReadMessagesAsync(CancellationToken.None);
+        Assert.True(messages.Any());
+
+        r = await chat.RunAsync(CancellationToken.None);
+        Assert.False(r);
+        Assert.Equal(0, chat.OpenTools().ToList().Count);
+
+        chat.AddToolResponse("foo","bar");
+        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
+        Assert.Contains("an unknown tool ID", e.Message);
+
+        chat.SetPrompt("what goes well with my cheese?");
+        chat.AddToolResponse("foo","bar");
+        e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
+        Assert.Contains("Cannot have a chat with open tool calls and user prompt", e.Message);
+
+        chat.SetPrompt("what cheese goes well with italian food?");
+        r = await chat.RunAsync(CancellationToken.None);
+        Assert.False(r);
     }
 }

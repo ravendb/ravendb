@@ -71,7 +71,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             ];
 
             await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
-            var r = await store.Maintenance.SendAsync(new StartChatOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese?",
+            var r = await store.Maintenance.SendAsync(new RunChatOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese?",
                 new Dictionary<string, object> { ["company"] = "companies/90-A" }));
 
             Assert.NotNull(r.Response.Answer);
@@ -122,7 +122,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             ];
 
             await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
-            var r = await store.Maintenance.SendAsync(new StartChatOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese for recent orders?",
+            var r = await store.Maintenance.SendAsync(new RunChatOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese for recent orders?",
                 new Dictionary<string, object> { ["company"] = "companies/90-A" }));
 
             Assert.NotNull(r.Response.Answer);
@@ -130,7 +130,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.NotNull(r.ChatId);
 
 
-            var r2 = await store.Maintenance.SendAsync(new ResumeChatOperation<OutputSchema>(r.ChatId,
+            var r2 = await store.Maintenance.SendAsync(new RunChatOperation<OutputSchema>(r.ChatId,
                 userPrompt: "can you give me a cheaper alternative?"));
 
             Assert.NotNull(r2.Response.Answer);
@@ -174,8 +174,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
-            var r = await store.Maintenance.SendAsync(new StartChatOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese for recent orders?"));
+            var agentResult = await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
+            var r = await store.Maintenance.SendAsync(new RunChatOperation<OutputSchema>(agentResult.Identifier, "what goes well with my cheese for recent orders?",
+                parameters: null));
 
             Assert.True(r.ToolRequests.Count > 0);
             Assert.NotNull(r.Usage);
@@ -192,7 +193,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 });
             }
 
-            var r2 = await store.Maintenance.SendAsync(new ResumeChatOperation<OutputSchema>(r.ChatId, toolResponses: toolResponse));
+            var r2 = await store.Maintenance.SendAsync(new RunChatOperation<OutputSchema>(r.ChatId, toolResponses: toolResponse));
 
             Assert.True(r2.Response?.Answer != null || r2.ToolRequests != null);
             Assert.NotNull(r2.Usage);
@@ -212,7 +213,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 ""{nameof(AiAgentProcessorForTestChat.AiAgentTestRequest.Parameters)}"": {{
         ""company"": ""companies/90-A""
     }},
-""{nameof(AiAgentProcessorForTestChat.AiAgentTestRequest.Prompt)}"": ""Help to find something more to my recent order"",
+""{nameof(AiAgentProcessorForTestChat.AiAgentTestRequest.UserPrompt)}"": ""Help to find something more to my recent order"",
 ""{nameof(AiAgentProcessorForTestChat.AiAgentTestRequest.Configuration)}"":{{
     ""ConnectionStringName"": ""{config.ConnectionStringName}"",
     ""SystemPrompt"": ""You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well."",

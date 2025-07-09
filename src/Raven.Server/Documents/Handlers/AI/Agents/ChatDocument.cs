@@ -17,7 +17,8 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
     
     public BlittableJsonReaderObject Parameters = parameters ;
     public List<BlittableJsonReaderObject> Messages = [];
-    public AiUsage TotalUsage;
+    public Dictionary<string, ToolRequest> OpenToolCalls = [];
+    public AiUsage TotalUsage = new AiUsage();
     public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration, string userPrompt)
     {
         if (Messages.Count > 0)
@@ -34,12 +35,6 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
             ["role"] = "system",
             ["content"] = configuration.SystemPrompt
         }, "system/msg"));
-
-        AddMessage(context, context.ReadObject(new DynamicJsonValue
-        {
-            ["role"] = "user",
-            ["content"] = userPrompt
-        }, "user/msg"));
     }
 
     public void EnsureInitialized()
@@ -59,16 +54,22 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
             metadata["@expires"] = DateTime.UtcNow.Add(expire);
         }
 
-        var conversation = new DynamicJsonValue
+        var conversation = ToJson();
+        conversation["@metadata"] = metadata;
+            
+        return context.ReadObject(conversation, "create-conversion");
+    }
+
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
         {
             [nameof(Agent)] = Agent,
             [nameof(Parameters)] = Parameters,
             [nameof(Messages)] = Messages,
             [nameof(TotalUsage)] = TotalUsage.ToJson(),
-            ["@metadata"] = metadata,
+            [nameof(OpenToolCalls)] = DynamicJsonValue.Convert(OpenToolCalls),
         };
-            
-        return context.ReadObject(conversation, "create-conversion");
     }
 
     public void AddMessage(JsonOperationContext context, BlittableJsonReaderObject msg)
@@ -131,14 +132,23 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
             throw new ArgumentException($"Missing Messages in '{id}' chat document");
         if (document.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject usage) == false)
             throw new ArgumentException($"AI Usage in '{id}' chat document");
+        if (document.TryGet(nameof(OpenToolCalls), out BlittableJsonReaderObject openToolCalls) == false)
+            throw new ArgumentException($"Missing Open Tool Calls in '{id}' chat document");
 
+        var openTools = new Dictionary<string, ToolRequest>();
+        foreach (var callId in openToolCalls.GetPropertyNames())
+        {
+            var call = JsonDeserializationClient.ToolRequest(openToolCalls[callId] as BlittableJsonReaderObject);
+            openTools.Add(callId, call);
+        }
 
         DevelopmentHelper.ToDo(DevelopmentHelper.Feature.AI, DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "make messages IEnumerable?");
 
-        return new ChatDocument(agent, parameters)
+        return new ChatDocument(agent, parameters?.CloneOnTheSameContext())
         {
-            Messages = messages.Items.Select(m=>(BlittableJsonReaderObject)m).ToList(),
-            TotalUsage = JsonDeserializationClient.AiUsage(usage)
+            Messages = messages.Items.Select(m=>((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
+            TotalUsage = JsonDeserializationClient.AiUsage(usage),
+            OpenToolCalls = openTools
         };
     }
 

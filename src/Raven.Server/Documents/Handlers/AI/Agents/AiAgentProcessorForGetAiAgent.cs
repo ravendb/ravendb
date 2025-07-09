@@ -22,7 +22,7 @@ internal class AiAgentProcessorForGetAiAgent<TRequestHandler, TOperationContext>
     public override async ValueTask ExecuteAsync()
     {
         using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
-        var identifier = RequestHandler.GetStringQueryString("id");
+        var identifier = RequestHandler.GetStringQueryString("id", required: false);
 
         List<AiAgentConfiguration> agents;
 

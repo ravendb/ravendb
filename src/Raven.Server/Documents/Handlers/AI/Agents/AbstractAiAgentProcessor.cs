@@ -9,13 +9,14 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.AiGen;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using System.Net;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Documents;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.Handlers.Processors.MultiGet;
 using Sparrow;
 
@@ -23,33 +24,148 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 {
     internal abstract class AbstractAiAgentProcessor : AbstractDatabaseHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
     {
-
-        public AbstractAiAgentProcessor([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+        protected AbstractAiAgentProcessor([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
-        public (BlittableJsonReaderObject Parameter, string UserPrompt) GetStartChatOptions(BlittableJsonReaderObject obj)
+        public async Task HandleRequest(
+            JsonOperationContext context, 
+            AiAgentConfiguration configuration, 
+            string chatId, 
+            ChatDocument chatDocument, 
+            RequestBody body,
+            CancellationToken token)
         {
-            if (obj.TryGet(nameof(StartChatBody.Parameters), out BlittableJsonReaderObject parameters) == false)
-                throw new ArgumentException(nameof(StartChatBody.Parameters));
-            if (obj.TryGet(nameof(StartChatBody.Prompt), out string userPrompt) == false)
-                throw new ArgumentException("User prompt is missing");
+            var hasActionResponse = body.ActionResponses is { Length: > 0 };
+            var hasUserPrompt = string.IsNullOrEmpty(body.UserPrompt) == false;
 
-            return (parameters, userPrompt);
+            if (hasActionResponse && hasUserPrompt)
+                throw new InvalidOperationException("Cannot have a chat with open tool calls and user prompt.");
+
+            if (body.ActionResponses != null)
+            {
+                foreach (BlittableJsonReaderObject tool in body.ActionResponses)
+                {
+                    var t = JsonDeserializationClient.ToolResponse(tool);
+                    if (chatDocument.OpenToolCalls.Remove(t.ToolId) == false)
+                        throw new InvalidOperationException($"{t.ToolId} is an unknown tool ID");
+
+                    chatDocument.Messages.Add(context.ReadObject(new DynamicJsonValue { ["tool_call_id"] = t.ToolId, ["role"] = "tool", ["content"] = t.Content },
+                        "user/tool"));
+                }
+            }
+
+            if (chatDocument.OpenToolCalls.Count > 0)
+            {
+                await TryPersistAsync(context, configuration, chatId, chatDocument);
+                await WriteResponseAsync(context, chatId, (Response: null, chatDocument));
+                return;
+            }
+
+            if (hasActionResponse == false && hasUserPrompt == false)
+                throw new InvalidOperationException("Cannot have a chat without open tool calls or user prompt.");
+
+            if (string.IsNullOrEmpty(body.UserPrompt) == false)
+            {
+                chatDocument.AddMessage(context, context.ReadObject(new DynamicJsonValue { ["role"] = "user", ["content"] = body.UserPrompt }, "user/msg"));
+            }
+
+            var r = await TalkAsync(context, configuration, chatDocument, token: token);
+
+            chatId = await TryPersistAsync(context, configuration, chatId, r.Document);
+            await WriteResponseAsync(context, chatId, r);
         }
 
-        public async Task<(BlittableJsonReaderArray ActionResponse, string UserPrompt)> ReadResumeChatBodyAsync(JsonOperationContext context, CancellationToken token)
+        public override async ValueTask ExecuteAsync()
+        {
+            using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
+            var chatId = RequestHandler.GetStringQueryString("chatId", required: false);
+            var agent = RequestHandler.GetStringQueryString("id", required: false);
+
+            if (string.IsNullOrEmpty(chatId) && string.IsNullOrEmpty(agent))
+                throw new ArgumentException("Chat ID or agent name must be provided.");
+
+            if (string.IsNullOrEmpty(chatId) == false && string.IsNullOrEmpty(agent) == false)
+                throw new ArgumentException("Chat ID and agent name can't be provided together.");
+
+            using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
+            var body = await ReadRequestBodyAsync(context, token.Token);
+
+            ChatDocument chatDocument = null;
+            AiAgentConfiguration configuration = null;
+
+            if (string.IsNullOrEmpty(chatId) == false)
+            {
+                using var __ = context.OpenReadTransaction();
+                var chat = RequestHandler.Database.DocumentsStorage.Get(context, chatId);
+                if (chat == null)
+                    throw new DocumentDoesNotExistException(chatId);
+
+                chatDocument = ChatDocument.ToDocument(chatId, chat.Data);
+                configuration = GetAiAgentConfiguration(chatDocument.Agent);
+            }
+
+            if (string.IsNullOrEmpty(agent) == false)
+            {
+                configuration = GetAiAgentConfiguration(agent);
+                chatDocument = new ChatDocument(agent, body.Parameters);
+                chatDocument.Initialize(context, configuration, body.UserPrompt);
+                chatId = BuildChatId(configuration);
+            }
+
+            await HandleRequest(context, configuration, chatId, chatDocument, body, token.Token);
+        }
+
+        private string BuildChatId(AiAgentConfiguration configuration)
+        {
+            var agentPrefix = $"{configuration.Identifier}{RequestHandler.IdentityPartsSeparator}";
+            var collection = configuration.Persistence?.Collection ?? "Chats";
+
+            return $"{agentPrefix}{collection}{RequestHandler.IdentityPartsSeparator}";
+        }
+
+        public async Task<RequestBody> ReadRequestBodyAsync(JsonOperationContext context, CancellationToken token)
         {
             var body = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token);
-            if (body.TryGet(nameof(ResumeChatBody.ToolResponse), out BlittableJsonReaderArray actionResponse) == false)
-                throw new ArgumentException(nameof(ResumeChatBody.ToolResponse));
-            if (body.TryGet(nameof(ResumeChatBody.UserPrompt), out string userPrompt) == false)
-                throw new ArgumentException($"User prompt is missing");
+            body.TryGet(nameof(ChatRequestBody.ToolResponses), out BlittableJsonReaderArray actionResponses);
+            body.TryGet(nameof(ChatRequestBody.UserPrompt), out string userPrompt);
+            body.TryGet(nameof(ChatRequestBody.Parameters), out BlittableJsonReaderObject parameters);
 
-            return (actionResponse, userPrompt);
+            return new RequestBody
+            {
+                ActionResponses = actionResponses, 
+                UserPrompt = userPrompt, 
+                Parameters = parameters
+            };
         }
 
-        public async Task<(AiUsage Usage, List<ToolRequest> userToolRequests, BlittableJsonReaderObject Response, BlittableJsonReaderObject Document)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration, ChatDocument document, OperationCancelToken token)
+        public class RequestBody
+        {
+            public BlittableJsonReaderObject Parameters { get; set; }
+            public string UserPrompt { get; set; }
+            public BlittableJsonReaderArray ActionResponses { get; set; }
+
+            public void ValidateForStart()
+            {
+                if (string.IsNullOrEmpty(UserPrompt))
+                    throw new ArgumentException("User prompt is missing.");
+
+                if (Parameters == null)
+                    throw new ArgumentException(nameof(Parameters));
+            }
+
+            public void ValidateForResume()
+            {
+                if (string.IsNullOrEmpty(UserPrompt))
+                    throw new ArgumentException("User prompt is missing.");
+
+                if (ActionResponses == null)
+                    throw new ArgumentException(nameof(ActionResponses));
+            }
+        }
+
+        public async Task<(BlittableJsonReaderObject Response, ChatDocument Document)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration,
+            ChatDocument document, CancellationToken token)
         {
             document.EnsureInitialized();
 
@@ -61,9 +177,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             var tools = document.GenerateTools(context, configuration);
 
-            AiUsage usage = new();
             AiResponse aiResponse;
-            List<ToolRequest> userToolRequests = null;
 
             while (true)
             {
@@ -71,49 +185,43 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     context,
                     document.Messages,
                     tools,
-                    usage,
-                    token.Token
+                    document.TotalUsage,
+                    token
                 );
                 if (aiResponse.Type is AiResponseType.Result)
                     break;
 
                 await HandleQueryToolCallsAsync(context, configuration, document, aiResponse);
 
-                if (TryGetUserTools(configuration, aiResponse, out userToolRequests))
+                if (TryGetUserTools(context, document, configuration, aiResponse))
                     break; // we need to return the user tool requests to the client, so we can continue the conversation
             }
 
-            document.UpdateUsage(usage);
-            return (usage, userToolRequests, aiResponse.Result, document.ToBlittable(context, configuration));
+            return (aiResponse.Result, document);
         }
 
-        private bool TryGetUserTools(AiAgentConfiguration configuration, AiResponse result, out List<ToolRequest> userTools)
+        private bool TryGetUserTools(JsonOperationContext context, ChatDocument document, AiAgentConfiguration configuration, AiResponse result)
         {
-            userTools = [];
             foreach (var call in result.ToolCalls)
             {
                 if (configuration.FindAction(call.Name) == null)
                     continue;
 
-                userTools ??= [];
-                userTools.Add(new ToolRequest
-                {
-                    ToolId = call.Id,
-                    Name = call.Name,
-                    Arguments = call.Arguments
-                });
+                document.OpenToolCalls.Add(call.Id,
+                    new ToolRequest { ToolId = call.Id, Name = call.Name, Arguments = CreateParameters(context, call, document.Parameters).ToString() });
             }
-            return userTools.Count > 0;
+
+            return document.OpenToolCalls.Count > 0;
         }
 
-        public async Task WriteResponseAsync(JsonOperationContext context, string conversationId, (AiUsage Usage, List<ToolRequest> UserToolRequests, BlittableJsonReaderObject Response, BlittableJsonReaderObject Dcoument) r)
+        public virtual async Task WriteResponseAsync(JsonOperationContext context, string conversationId, (BlittableJsonReaderObject Response, ChatDocument Document) r)
         {
             var output = new DynamicJsonValue
             {
                 [nameof(ChatResult<object>.ChatId)] = conversationId,
                 [nameof(ChatResult<object>.Response)] = r.Response,
-                [nameof(ChatResult<object>.ToolRequests)] = r.UserToolRequests == null ? null : new DynamicJsonArray(r.UserToolRequests.Select(t => t.ToJson())),
-                [nameof(ChatResult<object>.Usage)] = r.Usage.ToJson()
+                [nameof(ChatResult<object>.ToolRequests)] = new DynamicJsonArray(r.Document.OpenToolCalls.Select(t => t.Value.ToJson())),
+                [nameof(ChatResult<object>.Usage)] = r.Document.TotalUsage.ToJson()
             };
 
             await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
@@ -135,6 +243,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 parameters.GetPropertyByIndex(i, ref prop);
                 args.Modifications[prop.Name] = prop.Value;
             }
+
             return args;
         }
 
@@ -196,7 +305,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 memoryStream.Position = 0;
                 // TODO: have to verify that we got a successful result here!
                 using var resp = context.Sync.ReadForMemory(memoryStream, "query/response");
-                if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false)// TODO: shouldn't happen, but add error handling
+                if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false) // TODO: shouldn't happen, but add error handling
                     throw new InvalidOperationException("Missing Results from multi-get reply");
 
                 for (int i = 0; i < results.Length; i++)
@@ -213,25 +322,21 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     if (queryResponseResult.TryGet("Results", out BlittableJsonReaderArray queryResult) is false)
                         throw new InvalidOperationException("Missing Results from query output"); // TODO: shouldn't happen, but add error handling
 
-                    document.Messages.Add(context.ReadObject(new DynamicJsonValue
-                    {
-                        ["tool_call_id"] = toolCallsIds[i],
-                        ["role"] = "tool",
-                        ["content"] = queryResult.ToString()
-                    }, "tool-call/response"));
+                    document.Messages.Add(context.ReadObject(
+                        new DynamicJsonValue { ["tool_call_id"] = toolCallsIds[i], ["role"] = "tool", ["content"] = queryResult.ToString() }, "tool-call/response"));
                 }
             }
         }
-
-        public async Task<string> TryPersistAsync(AiAgentConfiguration configuration, string chatId, BlittableJsonReaderObject docBjro)
+        public async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string chatId, ChatDocument chat)
         {
             if (configuration.Persistence is not null)
             {
                 // we don't pass change vector here, so last write wins
-                MergedPutCommand putCmd = new(docBjro, chatId, changeVector: null, RequestHandler.Database);
+                MergedPutCommand putCmd = new(chat.ToBlittable(context, configuration), chatId, changeVector: null, RequestHandler.Database);
                 await RequestHandler.Database.TxMerger.Enqueue(putCmd);
                 return putCmd.PutResult.Id;
             }
+
             return null;
         }
     }
