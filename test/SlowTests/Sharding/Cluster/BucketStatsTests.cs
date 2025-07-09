@@ -323,7 +323,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Advanced.Attachments.Store(id, "my_file", fileStream);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 1030;
+                    expectedSize = 999;
                 }
 
                 AssertStats(db, bucket, expectedSize);
@@ -344,7 +344,7 @@ namespace SlowTests.Sharding.Cluster
                     user.Name = "b";
                     await session.SaveChangesAsync();
 
-                    expectedSize = 2728;
+                    expectedSize = 2635;
                 }
 
                 AssertStats(db, bucket, expectedSize);
@@ -364,7 +364,7 @@ namespace SlowTests.Sharding.Cluster
                     }, id3);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 3794;
+                    expectedSize = 3701;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
@@ -381,7 +381,7 @@ namespace SlowTests.Sharding.Cluster
 
                     await session.SaveChangesAsync();
 
-                    expectedSize = 5080;
+                    expectedSize = 4987;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
@@ -393,7 +393,7 @@ namespace SlowTests.Sharding.Cluster
 
                     await session.SaveChangesAsync();
 
-                    expectedSize = 5191;
+                    expectedSize = 5098;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
@@ -403,7 +403,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id3);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 5175;
+                    expectedSize = 5082;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 2);
@@ -413,7 +413,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id2);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 4368;
+                    expectedSize = 4275;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 1);
@@ -423,7 +423,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 3804;
+                    expectedSize = 3742;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 0);
@@ -447,53 +447,84 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
+
         [RavenFact(RavenTestCategory.Sharding)]
         public async Task BucketStatsShouldAccountAttachmentStreamSizePerBucket()
         {
             // different buckets, same shard
             const string id = "users/1";
+            const string id2 = "users/5";
             var attachment = new byte[10];
 
             using (var store = Sharding.GetDocumentStore())
             {
                 var config = await Sharding.GetShardingConfigurationAsync(store);
                 var bucket1 = Sharding.GetBucket(config, id);
-                var shard = ShardHelper.GetShardNumberFor(config, bucket1);
-                var diff = config.Shards.First(x => x.Key != shard).Key;
+                var bucket2 = Sharding.GetBucket(config, id2);
 
+                var shard = ShardHelper.GetShardNumberFor(config, bucket1);
                 var shardDatabase = await Sharding.GetAnyShardDocumentDatabaseInstanceFor(ShardHelper.ToShardName(store.Database, shard));
 
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new User { Name = "a" }, id);
+                    await session.StoreAsync(new User { Name = "b" }, id2);
                     await using (var fileStream = new MemoryStream(attachment))
+                    await using (var fileStream2 = new MemoryStream(attachment))
                     {
                         session.Advanced.Attachments.Store(id, "attachment", fileStream);
+                        session.Advanced.Attachments.Store(id2, "attachment", fileStream2);
                         await session.SaveChangesAsync();
                     }
                 }
-                //using (var session = store.OpenAsyncSession())
-                //{
-                //    await using (var fileStream = new MemoryStream(attachment))
-                //    {
-                //        session.Advanced.Attachments.Store(id, "ATTACHment", fileStream);
-                //        await session.SaveChangesAsync();
-                //    }
-                //}
+                AssertCorrectStats(1, 10);
 
-                await Sharding.Resharding.MoveShardForId(store, id);
                 using (var session = store.OpenAsyncSession())
                 {
+                    await session.StoreAsync(new User { Name = "a" }, $"foo${id}");
                     await using (var fileStream = new MemoryStream(attachment))
                     {
-                        session.Advanced.Attachments.Store(id, "ATTACHment", fileStream);
+                        session.Advanced.Attachments.Store($"foo${id}", "attachment", fileStream);
                         await session.SaveChangesAsync();
                     }
                 }
+                AssertCorrectStats(1, 10);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete(id);
+                    await session.SaveChangesAsync();
+                }
+                AssertCorrectStats(1, 10);
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    session.Delete($"foo${id}");
+                    await session.SaveChangesAsync();
+                }
+                AssertCorrectStats(0, 0);
+
                 using (shardDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 using (var tx = ctx.OpenReadTransaction())
                 {
-                    var stats = shardDatabase.ShardedDocumentsStorage.AttachmentsStorage.GetStreamInfoForBucket(tx.InnerTransaction, bucket1);
+                    var res = shardDatabase.DocumentsStorage.AttachmentsStorage.GetNumberOfAttachments(ctx);
+                    Assert.Equal(1, res.AttachmentCount);
+                    Assert.Equal(1, res.StreamsCount);
+
+                    var stats = shardDatabase.ShardedDocumentsStorage.AttachmentsStorage.GetStreamInfoForBucket(tx.InnerTransaction, bucket2);
+                    Assert.Equal(1, stats.UniqueAttachmets);
+                    Assert.Equal(10, stats.TotalSize);
+                }
+
+                void AssertCorrectStats(int count, long size)
+                {
+                    using (shardDatabase.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (var tx = ctx.OpenReadTransaction())
+                    {
+                        var stats = shardDatabase.ShardedDocumentsStorage.AttachmentsStorage.GetStreamInfoForBucket(tx.InnerTransaction, bucket1);
+                        Assert.Equal(count, stats.UniqueAttachmets);
+                        Assert.Equal(size, stats.TotalSize);
+                    }
                 }
             }
         }
@@ -540,7 +571,7 @@ namespace SlowTests.Sharding.Cluster
                 using (ctx.OpenReadTransaction())
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
-                    Assert.Equal(104858225, stats.Size);
+                    Assert.Equal(104858194, stats.Size);
                     Assert.Equal(1, stats.NumberOfDocuments);
 
                     var attachmentMetadata = db.DocumentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocumentWithCounts(ctx, id).FirstOrDefault();
@@ -574,7 +605,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(3, count.RegularHashes); // document attachment + 2 revision attachments
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
-                    Assert.Equal(104859589, stats.Size);
+                    Assert.Equal(104859496, stats.Size);
                     Assert.Equal(1, stats.NumberOfDocuments);
                 }
 
@@ -592,7 +623,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(2, count.RegularHashes); // 2 revision attachments
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
-                    Assert.Equal(104859318, stats.Size);
+                    Assert.Equal(104859256, stats.Size);
                     Assert.Equal(0, stats.NumberOfDocuments);
                 }
 

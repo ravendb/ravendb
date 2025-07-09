@@ -186,9 +186,9 @@ namespace Raven.Server.Documents
                         Hash = attachment.Base64Hash.ToString(),
                         ContentType = attachment.ContentType,
                         Size = attachment.Size,
-                        Count = counts.RegularHashes,
+                        RegularHashes = counts.RegularHashes,
                         RetiredCount = counts.RetiredHashes,
-                        TotalCount = counts.TotalHashes,
+                        Count = counts.TotalHashes
                     };
                 }
             }

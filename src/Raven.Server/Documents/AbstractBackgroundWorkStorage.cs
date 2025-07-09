@@ -112,7 +112,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
         try
         {
-            var item = GetDocumentAndIdOrCollection(options, clonedId, ticksAsSlice);
+            var item = GetDocumentAndId(options, clonedId, ticksAsSlice);
             if (item.Document == null)
             {
                 toProcess.Enqueue(item);
@@ -166,7 +166,7 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         }
     }
 
-    protected virtual DocumentExpirationInfo GetDocumentAndIdOrCollection(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
+    protected virtual DocumentExpirationInfo GetDocumentAndId(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
     {
         var document = Database.DocumentsStorage.Get(options.Context, clonedId, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
         if (document == null ||
