@@ -171,6 +171,7 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
         ConnectionStringName: formData.connectionStringName,
         SystemPrompt: formData.systemPrompt,
         OutputSchema: formData.outputSchema,
+        SampleObject: formData.sampleObject,
         Persistence: {
             Collection: formData.persistenceCollectionName,
             Expires: genUtils.formatAsTimeSpan(formData.persistenceExpiresInSeconds * 1000),
@@ -179,11 +180,13 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
             Name: x.name,
             Description: x.description,
             Query: x.query,
+            ParametersSampleObject: x.parametersSampleObject,
             ParametersSchema: x.parametersSchema,
         })),
         Actions: formData.actions.map((x) => ({
             Name: x.name,
             Description: x.description,
+            ParametersSampleObject: x.parametersSampleObject,
             ParametersSchema: x.parametersSchema,
         })),
     };

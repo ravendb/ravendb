@@ -5,7 +5,16 @@ const schema = yup.object({
     name: yup.string().required(),
     connectionStringName: yup.string().required(),
     systemPrompt: yup.string().required(),
-    outputSchema: yup.string().required(),
+    sampleObject: yup.string(),
+    outputSchema: yup
+        .string()
+        .test(
+            "sampleObjectOrJsonSchema",
+            "Either 'Sample response object' or 'JSON schema' must be provided",
+            function (_, { parent }) {
+                return !!parent.sampleObject || !!parent.outputSchema;
+            }
+        ),
     persistenceCollectionName: yup.string().required(),
     persistenceExpiresInSeconds: yup.number(),
     parameterInput: yup.string().test("unique-parameter", "Parameter name must be unique", function (value) {
@@ -25,7 +34,16 @@ const schema = yup.object({
             name: yup.string().required(),
             description: yup.string().required(),
             query: yup.string().required(),
-            parametersSchema: yup.string(),
+            parametersSampleObject: yup.string(),
+            parametersSchema: yup
+                .string()
+                .test(
+                    "sampleObjectOrJsonSchema",
+                    "Either 'Sample response object' or 'JSON schema' must be provided",
+                    function (_, { parent }) {
+                        return !!parent.parametersSampleObject || !!parent.parametersSchema;
+                    }
+                ),
             isSaved: yup.boolean(),
             isEditing: yup.boolean(),
         })
@@ -34,7 +52,16 @@ const schema = yup.object({
         yup.object({
             name: yup.string().required(),
             description: yup.string().required(),
-            parametersSchema: yup.string(),
+            parametersSampleObject: yup.string(),
+            parametersSchema: yup
+                .string()
+                .test(
+                    "sampleObjectOrJsonSchema",
+                    "Either 'Sample response object' or 'JSON schema' must be provided",
+                    function (_, { parent }) {
+                        return !!parent.parametersSampleObject || !!parent.parametersSchema;
+                    }
+                ),
             isSaved: yup.boolean(),
             isEditing: yup.boolean(),
         })

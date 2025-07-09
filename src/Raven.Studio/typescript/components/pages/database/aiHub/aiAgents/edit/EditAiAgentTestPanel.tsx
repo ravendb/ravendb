@@ -185,6 +185,7 @@ function getTestDto(
         ConnectionStringName: formValues.connectionStringName,
         SystemPrompt: formValues.systemPrompt,
         OutputSchema: formValues.outputSchema,
+        SampleObject: formValues.sampleObject,
         Persistence: {
             Collection: formValues.persistenceCollectionName,
             Expires: genUtils.formatAsTimeSpan(formValues.persistenceExpiresInSeconds * 1000),
@@ -193,11 +194,13 @@ function getTestDto(
             Name: x.name,
             Description: x.description,
             Query: x.query,
+            ParametersSampleObject: x.parametersSampleObject,
             ParametersSchema: x.parametersSchema,
         })),
         Actions: formValues.actions.map((x) => ({
             Name: x.name,
             Description: x.description,
+            ParametersSampleObject: x.parametersSampleObject,
             ParametersSchema: x.parametersSchema,
         })),
         Prompt: formValues.testPrompt,

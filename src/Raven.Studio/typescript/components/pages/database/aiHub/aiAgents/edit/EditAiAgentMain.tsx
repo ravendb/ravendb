@@ -29,6 +29,7 @@ import { LoadingView } from "components/common/LoadingView";
 import rqlLanguageService from "common/rqlLanguageService";
 import Badge from "react-bootstrap/Badge";
 import { EmptySet } from "components/common/EmptySet";
+import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 
 export default function EditAiAgentMain() {
     const { control, setValue, formState } = useFormContext<EditAiAgentFormData>();
@@ -48,7 +49,6 @@ export default function EditAiAgentMain() {
     });
 
     const systemPromptRef = useRef<ReactAce>(null);
-    const outputSchemaRef = useRef<ReactAce>(null);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
@@ -140,19 +140,16 @@ export default function EditAiAgentMain() {
                         }}
                     />
                 </FormGroup>
-                <FormGroup>
-                    <FormLabel>Output schema</FormLabel>
-                    <FormAceEditor
-                        aceRef={outputSchemaRef}
-                        control={control}
-                        name="outputSchema"
-                        mode="json"
-                        actions={[
-                            { component: <AceEditor.FullScreenAction /> },
-                            { component: <AceEditor.FormatAction /> },
-                        ]}
-                    />
-                </FormGroup>
+                <SampleObjectAndSchemaFields
+                    control={control}
+                    setValue={setValue}
+                    sampleObjectName="sampleObject"
+                    sampleObject={formValues.sampleObject}
+                    sampleObjectSyntaxHelp={<div>TODO</div>}
+                    jsonSchemaName="outputSchema"
+                    jsonSchema={formValues.outputSchema}
+                    jsonSchemaSyntaxHelp={<div>TODO</div>}
+                />
             </div>
             <h3 className="m-0 mt-3">Set chat persistence</h3>
             <div className="mb-1">TODO</div>
@@ -366,10 +363,9 @@ interface QueryFieldProps {
 }
 
 function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) {
-    const { control } = useFormContext<EditAiAgentFormData>();
+    const { control, setValue } = useFormContext<EditAiAgentFormData>();
 
     const queryAceRef = useRef<ReactAce>(null);
-    const parametersSchemaAceRef = useRef<ReactAce>(null);
 
     const formValues = useWatch({
         control,
@@ -446,17 +442,16 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
                     actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
                 />
             </FormGroup>
-
-            <FormGroup>
-                <FormLabel>Parameters schema</FormLabel>
-                <FormAceEditor
-                    aceRef={parametersSchemaAceRef}
-                    control={control}
-                    name={`queries.${index}.parametersSchema`}
-                    mode="json"
-                    actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
-                />
-            </FormGroup>
+            <SampleObjectAndSchemaFields
+                control={control}
+                setValue={setValue}
+                sampleObjectName={`queries.${index}.parametersSampleObject`}
+                sampleObject={queryItem.parametersSampleObject}
+                sampleObjectSyntaxHelp={<div>TODO</div>}
+                jsonSchemaName={`queries.${index}.parametersSchema`}
+                jsonSchema={queryItem.parametersSchema}
+                jsonSchemaSyntaxHelp={<div>TODO</div>}
+            />
         </div>
     );
 }
@@ -470,9 +465,7 @@ interface ActionFieldProps {
 }
 
 function ActionField({ index, remove, save, edit, cancelEdit }: ActionFieldProps) {
-    const { control } = useFormContext<EditAiAgentFormData>();
-
-    const parametersSchemaAceRef = useRef<ReactAce>(null);
+    const { control, setValue } = useFormContext<EditAiAgentFormData>();
 
     const formValues = useWatch({
         control,
@@ -536,16 +529,16 @@ function ActionField({ index, remove, save, edit, cancelEdit }: ActionFieldProps
                     placeholder="e.g. Get details about a customer by ID"
                 />
             </FormGroup>
-            <FormGroup>
-                <FormLabel>Parameters schema</FormLabel>
-                <FormAceEditor
-                    aceRef={parametersSchemaAceRef}
-                    control={control}
-                    name={`actions.${index}.parametersSchema`}
-                    mode="json"
-                    actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
-                />
-            </FormGroup>
+            <SampleObjectAndSchemaFields
+                control={control}
+                setValue={setValue}
+                sampleObjectName={`actions.${index}.parametersSampleObject`}
+                sampleObject={actionItem.parametersSampleObject}
+                sampleObjectSyntaxHelp={<div>TODO</div>}
+                jsonSchemaName={`actions.${index}.parametersSchema`}
+                jsonSchema={actionItem.parametersSchema}
+                jsonSchemaSyntaxHelp={<div>TODO</div>}
+            />
         </div>
     );
 }
