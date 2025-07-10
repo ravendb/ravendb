@@ -6,12 +6,14 @@ namespace Raven.Client.Documents.Operations.SchemaValidation;
 
 public sealed class SchemaValidationConfiguration
 {
+    private Dictionary<string, SchemaValidator> _validatorsPerCollection;
+    
     public bool Disabled { get; set; }
 
     public Dictionary<string, SchemaValidator> ValidatorsPerCollection
     {
-        get;
-        set => field = new Dictionary<string, SchemaValidator>(value, StringComparer.OrdinalIgnoreCase);
+        get => _validatorsPerCollection;
+        set => _validatorsPerCollection = new Dictionary<string, SchemaValidator>(value, StringComparer.OrdinalIgnoreCase);
     }
 
     public DynamicJsonValue ToJson()
