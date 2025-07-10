@@ -17,6 +17,7 @@ import { editAiAgentActions } from "./store/editAiAgentSlice";
 import { useEffect } from "react";
 import EditAiAgentInfoHub from "./EditAiAgentInfoHub";
 import { editAiAgentUtils } from "./utils/editAiAgentUtils";
+import SizeGetter from "components/common/SizeGetter";
 
 interface QueryParams {
     agentName: string;
@@ -64,6 +65,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
         });
     };
 
+    // Reset slice on unmount
     useEffect(() => {
         return () => {
             dispatch(editAiAgentActions.reset());
@@ -73,31 +75,35 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
     return (
         <FormProvider {...form}>
             <form onSubmit={handleSubmit(saveAgent)} className="h-100">
-                <div className="hstack h-100">
-                    <div className="vstack h-100">
-                        <div className="hstack justify-content-between align-items-start p-3">
-                            <AboutViewHeading title="Create AI Agent" icon="ai-agents" marginBottom={0} />
-                            <EditAiAgentInfoHub />
+                <SizeGetter
+                    render={({ width }) => (
+                        <div className="hstack h-100">
+                            <div className="vstack h-100" style={{ width: `${width - testAreaResizable.width}px` }}>
+                                <div className="hstack justify-content-between align-items-start p-3">
+                                    <AboutViewHeading title="Create AI Agent" icon="ai-agents" marginBottom={0} />
+                                    <EditAiAgentInfoHub />
+                                </div>
+                                <div className="p-3 flex-grow-1 overflow-scroll h-100">
+                                    <EditAiAgentMain />
+                                </div>
+                                <div className="p-3 border-top border-secondary">
+                                    <EditAiAgentFooter />
+                                </div>
+                            </div>
+                            <div
+                                style={{
+                                    width: `${testAreaResizable.width}px`,
+                                    position: "relative",
+                                    borderLeft: `1px solid ${testAreaResizable.isDragging ? "#ccc" : "#4c4c63"}`,
+                                }}
+                                className="panel-bg-1 h-100 vstack"
+                            >
+                                <ColumnResize handleMouseDown={testAreaResizable.handleMouseDown} />
+                                <EditAiAgentTestPanel />
+                            </div>
                         </div>
-                        <div className="p-3 flex-grow-1 overflow-scroll h-100">
-                            <EditAiAgentMain />
-                        </div>
-                        <div className="p-3 border-top border-secondary">
-                            <EditAiAgentFooter />
-                        </div>
-                    </div>
-                    <div
-                        style={{
-                            width: `${testAreaResizable.width}px`,
-                            position: "relative",
-                            borderLeft: `1px solid ${testAreaResizable.isDragging ? "#ccc" : "#4c4c63"}`,
-                        }}
-                        className="panel-bg-1 h-100 vstack"
-                    >
-                        <ColumnResize handleMouseDown={testAreaResizable.handleMouseDown} />
-                        <EditAiAgentTestPanel />
-                    </div>
-                </div>
+                    )}
+                />
             </form>
         </FormProvider>
     );
