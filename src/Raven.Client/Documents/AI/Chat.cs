@@ -2,16 +2,18 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
+using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Util;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.AI;
 internal class Chat<T> : IChatOperations<T> where T : new()
 {
     private readonly AiOperations _aiOperations;
-    private readonly string _agent;
-    private readonly Dictionary<string, object> _scope;
+    private readonly string _agentId;
+    private readonly Dictionary<string, object> _parameters;
 
     private string _chatId;
     private AiUsage _totalUsage;
@@ -20,50 +22,74 @@ internal class Chat<T> : IChatOperations<T> where T : new()
     private string _userPrompt;
 
     private bool _firstRun = true;
-    public Chat(AiOperations aiOperations, string agent, Dictionary<string, object> scope)
+
+    public Chat(AiOperations aiOperations, string agentId, Dictionary<string, object> parameters)
     {
+        ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
+
         _aiOperations = aiOperations;
-        _agent = agent;
-        _scope = scope;
+        _agentId = agentId;
+        _parameters = parameters;
     }
+
     public Chat(AiOperations aiOperations, string chatId)
     {
+        ValidationMethods.AssertNotNullOrEmpty(chatId, nameof(chatId));
+
         _aiOperations = aiOperations;
         _chatId = chatId;
     }
 
-    public IEnumerable<ToolRequest> OpenTools() => _toolsRequests ?? throw new InvalidOperationException("You have to call RunAsync first");
+    public IEnumerable<ToolRequest> OpenTools() => _toolsRequests ?? throw new InvalidOperationException($"You have to call {nameof(Run)}/{nameof(RunAsync)} first");
 
-    public void AddToolResponse(string id, string content)
+    public void AddToolResponse(string toolId, string toolResponse)
     {
         _toolsResponses.Add(new ToolResponse
         {
-            ToolId = id,
-            Content = content
+            ToolId = toolId,
+            Content = toolResponse
         });
     }
 
-    public bool Run() => AsyncHelpers.RunSync(() => RunAsync(CancellationToken.None));
-
-    public void SetPrompt(string userPrompt)
+    public void AddToolResponse(string toolId, object toolResponse)
     {
+        if (toolResponse is string str)
+        {
+            AddToolResponse(toolId, str);
+            return;
+        }
+
+        using (var context = JsonOperationContext.ShortTermSingleUse())
+        {
+            var jsonSerializer = DocumentConventions.Default.Serialization.DefaultConverter;
+            var json = jsonSerializer.ToBlittable(toolResponse, context);
+            AddToolResponse(toolId, json.ToString());
+        }
+    }
+
+    public void SetUserPrompt(string userPrompt)
+    {
+        ValidationMethods.AssertNotNullOrEmpty(userPrompt, nameof(userPrompt));
+
         _userPrompt = userPrompt;
     }
 
     private T _answer;
-    public T Answer => _answer ?? throw new InvalidOperationException("You have to call RunAsync first");
-    public string Id => _chatId ?? throw new InvalidOperationException("This is a new chat, the ID wasn't set yet, you have to call RunAsync");
-    public AiUsage TotalUsage => _totalUsage ?? throw new InvalidOperationException("You have to call RunAsync first");
+    public T Answer => _answer ?? throw new InvalidOperationException($"You have to call {nameof(Run)}/{nameof(RunAsync)} first");
+    public string Id => _chatId ?? throw new InvalidOperationException($"This is a new chat, the ID wasn't set yet, you have to call {nameof(Run)}/{nameof(RunAsync)}");
+    public AiUsage TotalUsage => _totalUsage ?? throw new InvalidOperationException($"You have to call {nameof(Run)}/{nameof(RunAsync)} first");
 
     public async Task<IEnumerable<ChatMessage>> ReadMessagesAsync(CancellationToken token)
     {
-        var id = _chatId ?? throw new InvalidOperationException("This is a new chat, the ID wasn't set yet, you have to call RunAsync.");
+        var id = _chatId ?? throw new InvalidOperationException($"This is a new chat, the ID wasn't set yet, you have to call {nameof(Run)}/{nameof(RunAsync)}.");
         using var session = _aiOperations._store.OpenAsyncSession();
         var d = await session.LoadAsync<ChatDocument>(id, token).ConfigureAwait(false);
         return d.Messages;
     }
 
-    public async Task<bool> RunAsync(CancellationToken token)
+    public bool Run() => AsyncHelpers.RunSync(() => RunAsync());
+
+    public async Task<bool> RunAsync(CancellationToken token = default)
     {
         // clear to avoid reusing old chat answer
         _answer = default;
@@ -71,7 +97,7 @@ internal class Chat<T> : IChatOperations<T> where T : new()
         IMaintenanceOperation<ChatResult<T>> op;
         if (string.IsNullOrWhiteSpace(_chatId))
         {
-            op = new RunChatOperation<T>(_agent, _userPrompt, _scope);
+            op = new RunChatOperation<T>(_agentId, _userPrompt, _parameters);
         }
         else
         {

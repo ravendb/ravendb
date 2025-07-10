@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Raven.Client;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
@@ -47,15 +48,15 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
     {
         var metadata = new DynamicJsonValue
         {
-            ["@collection"] = configuration.Persistence.Collection,
+            [Constants.Documents.Metadata.Collection] = configuration.Persistence.Collection,
         };
         if (configuration.Persistence.Expires is { } expire)
         {
-            metadata["@expires"] = DateTime.UtcNow.Add(expire);
+            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expire);
         }
 
         var conversation = ToJson();
-        conversation["@metadata"] = metadata;
+        conversation[Constants.Documents.Metadata.Key] = metadata;
             
         return context.ReadObject(conversation, "create-conversion");
     }

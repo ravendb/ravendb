@@ -63,36 +63,27 @@ public class AiOperations
     {
         return AsyncHelpers.RunSync(() => CreateAgentAsync<TSchema>(configuration));
     }
-
-    public class AiAgentParametersBuilder
-    {
-        private readonly Dictionary<string, object> _parameters = new();
-
-        public AiAgentParametersBuilder AddParameter(string key, string value)
-        {
-            _parameters[key] = value;
-            return this;
-        }
-
-        public Dictionary<string, object> GetParameters() => _parameters.Count == 0 ? null : _parameters;
-    }
     
     /// <summary>
     /// Create starts a new chat with an AI agent using a dictionary of parameters.
     /// </summary>
     /// <typeparam name="TSchema">The schema type for the chat response.</typeparam>
-    /// <param name="agentName">The name of the AI agent to chat with.</param>
+    /// <param name="agentId">The ID of the AI agent to chat with.</param>
     /// <param name="parameters">Required chat parameters.</param>
-    public IChatOperations<TSchema> CreateChat<TSchema>(string agent, Dictionary<string, object> parameters = null) where TSchema : new() => new Chat<TSchema>(this, agent, parameters);
+    public IChatOperations<TSchema> CreateChat<TSchema>(string agentId, Dictionary<string, object> parameters = null) where TSchema : new() => new Chat<TSchema>(this, agentId, parameters);
     
     /// <summary>
     /// Create a new chat with an AI agent using a dictionary of parameters.
     /// </summary>
     /// <typeparam name="TSchema">The schema type for the chat response.</typeparam>
-    /// <param name="agentName">The name of the AI agent to chat with.</param>
-    /// <param name="builder">A builder function to define the required chat parameters.</param>
-    public IChatOperations<TSchema> CreateChat<TSchema>(string agent, Func<AiAgentParametersBuilder, AiAgentParametersBuilder> builder) where TSchema : new() => 
-        CreateChat<TSchema>(agent, builder.Invoke(new AiAgentParametersBuilder()).GetParameters());
+    /// <param name="agentId">The ID of the AI agent to chat with.</param>
+    /// <param name="builder">A builder to define the required chat parameters.</param>
+    public IChatOperations<TSchema> CreateChat<TSchema>(string agentId, Action<IAiAgentParametersBuilder> builder) where TSchema : new()
+    {
+        var aiAgentParameters = new AiAgentParametersBuilder();
+        builder?.Invoke(aiAgentParameters);
+        return CreateChat<TSchema>(agentId, aiAgentParameters.GetParameters());
+    }
 
     /// <summary>
     /// Continues a chat using a fluent parameter builder.

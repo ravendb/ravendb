@@ -11,9 +11,10 @@ public interface IChatOperations<out T> where T : new()
     T Answer { get; }
     AiUsage TotalUsage { get; }
     IEnumerable<ToolRequest> OpenTools();
-    void AddToolResponse(string id, string content);
+    void AddToolResponse(string id, string toolResponse);
+    void AddToolResponse(string id, object toolResponse);
     Task<IEnumerable<ChatMessage>> ReadMessagesAsync(CancellationToken token);
-    Task<bool> RunAsync(CancellationToken token);
+    Task<bool> RunAsync(CancellationToken token = default);
     bool Run();
-    void SetPrompt(string userPrompt);
+    void SetUserPrompt(string userPrompt);
 }

@@ -14,6 +14,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using System.Net;
+using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Serialization;
@@ -40,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var hasUserPrompt = string.IsNullOrEmpty(body.UserPrompt) == false;
 
             if (hasActionResponse && hasUserPrompt)
-                throw new InvalidOperationException("Cannot have a chat with open tool calls and user prompt.");
+                throw new InvalidOperationException($"Cannot have a chat '{chatId}' with open tool calls and user prompt.");
 
             if (body.ActionResponses != null)
             {
@@ -48,7 +49,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 {
                     var t = JsonDeserializationClient.ToolResponse(tool);
                     if (chatDocument.OpenToolCalls.Remove(t.ToolId) == false)
-                        throw new InvalidOperationException($"{t.ToolId} is an unknown tool ID");
+                        throw new InvalidOperationException($"{t.ToolId} is an unknown tool ID for chat '{chatId}'");
 
                     chatDocument.Messages.Add(context.ReadObject(new DynamicJsonValue { ["tool_call_id"] = t.ToolId, ["role"] = "tool", ["content"] = t.Content },
                         "user/tool"));
@@ -63,7 +64,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
 
             if (hasActionResponse == false && hasUserPrompt == false)
-                throw new InvalidOperationException("Cannot have a chat without open tool calls or user prompt.");
+                throw new InvalidOperationException($"Cannot have a chat '{chatId}' without open tool calls or user prompt.");
 
             if (string.IsNullOrEmpty(body.UserPrompt) == false)
             {
@@ -86,7 +87,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 throw new ArgumentException("Chat ID or agent name must be provided.");
 
             if (string.IsNullOrEmpty(chatId) == false && string.IsNullOrEmpty(agent) == false)
-                throw new ArgumentException("Chat ID and agent name can't be provided together.");
+                throw new ArgumentException($"Chat '{chatId}' and agent '{agent}' can't be provided together.");
 
             using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
             var body = await ReadRequestBodyAsync(context, token.Token);
@@ -119,7 +120,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         private string BuildChatId(AiAgentConfiguration configuration)
         {
             var agentPrefix = $"{configuration.Identifier}{RequestHandler.IdentityPartsSeparator}";
-            var collection = configuration.Persistence?.Collection ?? "Chats";
+            var collection = configuration.Persistence?.Collection ?? Constants.Documents.Collections.AiAgentChatCollection;
 
             return $"{agentPrefix}{collection}{RequestHandler.IdentityPartsSeparator}";
         }
