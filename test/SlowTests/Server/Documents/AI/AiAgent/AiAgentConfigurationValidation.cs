@@ -142,7 +142,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             ];
 
             var identifier = (await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agent))).Identifier;
-            var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new RunChatOperation<AiAgentBasics.OutputSchema>(identifier, "what goes well with my cheese for recent orders?", parameters: null)));
+            var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new RunConversationOperation<AiAgentBasics.OutputSchema>(identifier, "what goes well with my cheese for recent orders?", parameters: null)));
             Assert.Contains($"Parameter 'company' is missing", e.Message);
         }
     }

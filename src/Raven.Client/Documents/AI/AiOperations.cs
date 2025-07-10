@@ -5,11 +5,12 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Util;
+using Sparrow.Json;
 
 namespace Raven.Client.Documents.AI;
 
 /// <summary>
-/// Manages AI agents and chat interactions in a specific RavenDB database.
+/// Manages AI agents and conversation interactions in a specific RavenDB database.
 /// </summary>
 public class AiOperations
 {
@@ -28,6 +29,8 @@ public class AiOperations
         _store = store;
         _executor = _store.Maintenance.ForDatabase(_databaseName);
     }
+
+    internal IDisposable AllocateOperationContext(out JsonOperationContext context) => _store.GetRequestExecutor().ContextPool.AllocateOperationContext(out context);
 
     /// <summary>
     /// Returns a <see cref="AiOperations"/> for a different database.
@@ -65,31 +68,31 @@ public class AiOperations
     }
     
     /// <summary>
-    /// Create starts a new chat with an AI agent using a dictionary of parameters.
+    /// Create starts a new conversation with an AI agent using a dictionary of parameters.
     /// </summary>
-    /// <typeparam name="TSchema">The schema type for the chat response.</typeparam>
-    /// <param name="agentId">The ID of the AI agent to chat with.</param>
-    /// <param name="parameters">Required chat parameters.</param>
-    public IChatOperations<TSchema> CreateChat<TSchema>(string agentId, Dictionary<string, object> parameters = null) where TSchema : new() => new Chat<TSchema>(this, agentId, parameters);
+    /// <typeparam name="TSchema">The schema type for the conversation response.</typeparam>
+    /// <param name="agentId">The ID of the AI agent to conversation with.</param>
+    /// <param name="parameters">Required conversation parameters.</param>
+    public IConversationOperations<TSchema> StartConversation<TSchema>(string agentId, Dictionary<string, object> parameters) where TSchema : new() => new Conversation<TSchema>(this, agentId, parameters);
     
     /// <summary>
-    /// Create a new chat with an AI agent using a dictionary of parameters.
+    /// Create a new conversation with an AI agent using a dictionary of parameters.
     /// </summary>
-    /// <typeparam name="TSchema">The schema type for the chat response.</typeparam>
-    /// <param name="agentId">The ID of the AI agent to chat with.</param>
-    /// <param name="builder">A builder to define the required chat parameters.</param>
-    public IChatOperations<TSchema> CreateChat<TSchema>(string agentId, Action<IAiAgentParametersBuilder> builder) where TSchema : new()
+    /// <typeparam name="TSchema">The schema type for the conversation response.</typeparam>
+    /// <param name="agentId">The ID of the AI agent to conversation with.</param>
+    /// <param name="builder">A builder to define the required conversation parameters.</param>
+    public IConversationOperations<TSchema> StartConversation<TSchema>(string agentId, Action<IAiAgentParametersBuilder> builder) where TSchema : new()
     {
         var aiAgentParameters = new AiAgentParametersBuilder();
         builder?.Invoke(aiAgentParameters);
-        return CreateChat<TSchema>(agentId, aiAgentParameters.GetParameters());
+        return StartConversation<TSchema>(agentId, aiAgentParameters.GetParameters());
     }
 
     /// <summary>
-    /// Continues a chat using a fluent parameter builder.
-    /// Allow to update the chat with the new prompt or tool responses.
+    /// Continues a conversation using a fluent parameter builder.
+    /// Allow to update the conversation with the new prompt or tool responses.
     /// </summary>
-    /// <typeparam name="TSchema">The schema type for the chat response.</typeparam>
-    /// <param name="chatId">The ID of the existing chat.</param>
-    public IChatOperations<TSchema> ResumeChat<TSchema>(string chatId) where TSchema : new() => new Chat<TSchema>(this, chatId);
+    /// <typeparam name="TSchema">The schema type for the conversation response.</typeparam>
+    /// <param name="conversationId">The ID of the existing conversation.</param>
+    public IConversationOperations<TSchema> ResumeConversation<TSchema>(string conversationId) where TSchema : new() => new Conversation<TSchema>(this, conversationId);
 }

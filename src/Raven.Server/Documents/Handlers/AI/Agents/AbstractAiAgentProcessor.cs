@@ -32,8 +32,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         public async Task HandleRequest(
             JsonOperationContext context, 
             AiAgentConfiguration configuration, 
-            string chatId, 
-            ChatDocument chatDocument, 
+            string conversationId, 
+            ConversationDocument document, 
             RequestBody body,
             CancellationToken token)
         {
@@ -41,86 +41,86 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var hasUserPrompt = string.IsNullOrEmpty(body.UserPrompt) == false;
 
             if (hasActionResponse && hasUserPrompt)
-                throw new InvalidOperationException($"Cannot have a chat '{chatId}' with open tool calls and user prompt.");
+                throw new InvalidOperationException($"Cannot have a conversation '{conversationId}' with open action calls and user prompt.");
 
             if (body.ActionResponses != null)
             {
                 foreach (BlittableJsonReaderObject tool in body.ActionResponses)
                 {
                     var t = JsonDeserializationClient.ToolResponse(tool);
-                    if (chatDocument.OpenToolCalls.Remove(t.ToolId) == false)
-                        throw new InvalidOperationException($"{t.ToolId} is an unknown tool ID for chat '{chatId}'");
+                    if (document.OpenActionCalls.Remove(t.ToolId) == false)
+                        throw new InvalidOperationException($"{t.ToolId} is an unknown action ID for conversation '{conversationId}'");
 
-                    chatDocument.Messages.Add(context.ReadObject(new DynamicJsonValue { ["tool_call_id"] = t.ToolId, ["role"] = "tool", ["content"] = t.Content },
+                    document.Messages.Add(context.ReadObject(new DynamicJsonValue { ["tool_call_id"] = t.ToolId, ["role"] = "tool", ["content"] = t.Content },
                         "user/tool"));
                 }
             }
 
-            if (chatDocument.OpenToolCalls.Count > 0)
+            if (document.OpenActionCalls.Count > 0)
             {
-                await TryPersistAsync(context, configuration, chatId, chatDocument);
-                await WriteResponseAsync(context, chatId, (Response: null, chatDocument));
+                await TryPersistAsync(context, configuration, conversationId, document);
+                await WriteResponseAsync(context, conversationId, (Response: null, document));
                 return;
             }
 
             if (hasActionResponse == false && hasUserPrompt == false)
-                throw new InvalidOperationException($"Cannot have a chat '{chatId}' without open tool calls or user prompt.");
+                throw new InvalidOperationException($"Cannot have a conversation '{conversationId}' without open action calls or user prompt.");
 
             if (string.IsNullOrEmpty(body.UserPrompt) == false)
             {
-                chatDocument.AddMessage(context, context.ReadObject(new DynamicJsonValue { ["role"] = "user", ["content"] = body.UserPrompt }, "user/msg"));
+                document.AddMessage(context, context.ReadObject(new DynamicJsonValue { ["role"] = "user", ["content"] = body.UserPrompt }, "user/msg"));
             }
 
-            var r = await TalkAsync(context, configuration, chatDocument, token: token);
+            var r = await TalkAsync(context, configuration, document, token: token);
 
-            chatId = await TryPersistAsync(context, configuration, chatId, r.Document);
-            await WriteResponseAsync(context, chatId, r);
+            conversationId = await TryPersistAsync(context, configuration, conversationId, r.Document);
+            await WriteResponseAsync(context, conversationId, r);
         }
 
         public override async ValueTask ExecuteAsync()
         {
             using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
-            var chatId = RequestHandler.GetStringQueryString("chatId", required: false);
-            var agent = RequestHandler.GetStringQueryString("id", required: false);
+            var conversationId = RequestHandler.GetStringQueryString("conversationId", required: false);
+            var agentId = RequestHandler.GetStringQueryString("agentId", required: false);
 
-            if (string.IsNullOrEmpty(chatId) && string.IsNullOrEmpty(agent))
-                throw new ArgumentException("Chat ID or agent name must be provided.");
+            if (string.IsNullOrEmpty(conversationId) && string.IsNullOrEmpty(agentId))
+                throw new ArgumentException("conversation ID or agent name must be provided.");
 
-            if (string.IsNullOrEmpty(chatId) == false && string.IsNullOrEmpty(agent) == false)
-                throw new ArgumentException($"Chat '{chatId}' and agent '{agent}' can't be provided together.");
+            if (string.IsNullOrEmpty(conversationId) == false && string.IsNullOrEmpty(agentId) == false)
+                throw new ArgumentException($"conversation '{conversationId}' and agent '{agentId}' can't be provided together.");
 
             using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
             var body = await ReadRequestBodyAsync(context, token.Token);
 
-            ChatDocument chatDocument = null;
+            ConversationDocument conversationDocument = null;
             AiAgentConfiguration configuration = null;
 
-            if (string.IsNullOrEmpty(chatId) == false)
+            if (string.IsNullOrEmpty(conversationId) == false)
             {
                 using var __ = context.OpenReadTransaction();
-                var chat = RequestHandler.Database.DocumentsStorage.Get(context, chatId);
-                if (chat == null)
-                    throw new DocumentDoesNotExistException(chatId);
+                var conversation = RequestHandler.Database.DocumentsStorage.Get(context, conversationId);
+                if (conversation == null)
+                    throw new DocumentDoesNotExistException(conversationId);
 
-                chatDocument = ChatDocument.ToDocument(chatId, chat.Data);
-                configuration = GetAiAgentConfiguration(chatDocument.Agent);
+                conversationDocument = ConversationDocument.ToDocument(conversationId, conversation.Data);
+                configuration = GetAiAgentConfiguration(conversationDocument.Agent);
             }
 
-            if (string.IsNullOrEmpty(agent) == false)
+            if (string.IsNullOrEmpty(agentId) == false)
             {
-                configuration = GetAiAgentConfiguration(agent);
-                chatDocument = new ChatDocument(agent, body.Parameters);
-                chatDocument.Initialize(context, configuration, body.UserPrompt);
-                chatId = BuildChatId(configuration);
+                configuration = GetAiAgentConfiguration(agentId);
+                conversationDocument = new ConversationDocument(agentId, body.Parameters);
+                conversationDocument.Initialize(context, configuration, body.UserPrompt);
+                conversationId = BuildId(configuration);
             }
 
-            await HandleRequest(context, configuration, chatId, chatDocument, body, token.Token);
+            await HandleRequest(context, configuration, conversationId, conversationDocument, body, token.Token);
         }
 
-        private string BuildChatId(AiAgentConfiguration configuration)
+        private string BuildId(AiAgentConfiguration configuration)
         {
             var agentPrefix = $"{configuration.Identifier}{RequestHandler.IdentityPartsSeparator}";
-            var collection = configuration.Persistence?.Collection ?? Constants.Documents.Collections.AiAgentChatCollection;
+            var collection = configuration.Persistence?.Collection ?? Constants.Documents.Collections.AiAgentConversationCollection;
 
             return $"{agentPrefix}{collection}{RequestHandler.IdentityPartsSeparator}";
         }
@@ -128,9 +128,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         public async Task<RequestBody> ReadRequestBodyAsync(JsonOperationContext context, CancellationToken token)
         {
             var body = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token);
-            body.TryGet(nameof(ChatRequestBody.ToolResponses), out BlittableJsonReaderArray actionResponses);
-            body.TryGet(nameof(ChatRequestBody.UserPrompt), out string userPrompt);
-            body.TryGet(nameof(ChatRequestBody.Parameters), out BlittableJsonReaderObject parameters);
+            body.TryGet(nameof(ConversionRequestBody.ActionResponses), out BlittableJsonReaderArray actionResponses);
+            body.TryGet(nameof(ConversionRequestBody.UserPrompt), out string userPrompt);
+            body.TryGet(nameof(ConversionRequestBody.Parameters), out BlittableJsonReaderObject parameters);
 
             return new RequestBody
             {
@@ -165,8 +165,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
         }
 
-        public async Task<(BlittableJsonReaderObject Response, ChatDocument Document)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration,
-            ChatDocument document, CancellationToken token)
+        public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration,
+            ConversationDocument document, CancellationToken token)
         {
             document.EnsureInitialized();
 
@@ -201,28 +201,28 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             return (aiResponse.Result, document);
         }
 
-        private bool TryGetUserTools(JsonOperationContext context, ChatDocument document, AiAgentConfiguration configuration, AiResponse result)
+        private bool TryGetUserTools(JsonOperationContext context, ConversationDocument document, AiAgentConfiguration configuration, AiResponse result)
         {
             foreach (var call in result.ToolCalls)
             {
                 if (configuration.FindAction(call.Name) == null)
                     continue;
 
-                document.OpenToolCalls.Add(call.Id,
-                    new ToolRequest { ToolId = call.Id, Name = call.Name, Arguments = CreateParameters(context, call, document.Parameters).ToString() });
+                document.OpenActionCalls.Add(call.Id,
+                    new AiAgentActionRequest { ToolId = call.Id, Name = call.Name, Arguments = CreateParameters(context, call, document.Parameters).ToString() });
             }
 
-            return document.OpenToolCalls.Count > 0;
+            return document.OpenActionCalls.Count > 0;
         }
 
-        public virtual async Task WriteResponseAsync(JsonOperationContext context, string conversationId, (BlittableJsonReaderObject Response, ChatDocument Document) r)
+        public virtual async Task WriteResponseAsync(JsonOperationContext context, string conversationId, (BlittableJsonReaderObject Response, ConversationDocument Document) r)
         {
             var output = new DynamicJsonValue
             {
-                [nameof(ChatResult<object>.ChatId)] = conversationId,
-                [nameof(ChatResult<object>.Response)] = r.Response,
-                [nameof(ChatResult<object>.ToolRequests)] = new DynamicJsonArray(r.Document.OpenToolCalls.Select(t => t.Value.ToJson())),
-                [nameof(ChatResult<object>.Usage)] = r.Document.TotalUsage.ToJson()
+                [nameof(ConversationResult<object>.ConversationId)] = conversationId,
+                [nameof(ConversationResult<object>.Response)] = r.Response,
+                [nameof(ConversationResult<object>.ToolRequests)] = new DynamicJsonArray(r.Document.OpenActionCalls.Select(t => t.Value.ToJson())),
+                [nameof(ConversationResult<object>.Usage)] = r.Document.TotalUsage.ToJson()
             };
 
             await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
@@ -271,7 +271,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
         }
 
-        public async Task HandleQueryToolCallsAsync(JsonOperationContext context, AiAgentConfiguration cfg, ChatDocument document, AiResponse result)
+        public async Task HandleQueryToolCallsAsync(JsonOperationContext context, AiAgentConfiguration cfg, ConversationDocument document, AiResponse result)
         {
             // TODO: handle a response that does both query & action
             DynamicJsonArray reqs = [];
@@ -328,12 +328,12 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 }
             }
         }
-        public async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string chatId, ChatDocument chat)
+        public async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation)
         {
             if (configuration.Persistence is not null)
             {
                 // we don't pass change vector here, so last write wins
-                MergedPutCommand putCmd = new(chat.ToBlittable(context, configuration), chatId, changeVector: null, RequestHandler.Database);
+                MergedPutCommand putCmd = new(conversation.ToBlittable(context, configuration), conversationId, changeVector: null, RequestHandler.Database);
                 await RequestHandler.Database.TxMerger.Enqueue(putCmd);
                 return putCmd.PutResult.Id;
             }

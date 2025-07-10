@@ -92,7 +92,7 @@ public class AiAgentConfiguration : IDynamicJson
     /// Names of the required parameters that are used in the agent's queries and actions.
     /// Which has to be provided by the user each time we start a new chat.
     /// </summary>
-    public HashSet<string> Parameters { get; set; } = new (StringComparer.OrdinalIgnoreCase);
+    public HashSet<string> Parameters { get; set; } = new ();
     
     internal AiAgentToolQuery FindQuery(string name)
     {

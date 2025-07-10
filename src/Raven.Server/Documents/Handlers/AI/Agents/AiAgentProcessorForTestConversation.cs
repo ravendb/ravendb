@@ -3,17 +3,15 @@ using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Client.Json.Serialization;
 using Raven.Server.Json;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-internal class AiAgentProcessorForTestChat : AbstractAiAgentProcessor
+internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
 {
-    public AiAgentProcessorForTestChat([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+    public AiAgentProcessorForTestConversation([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
@@ -26,32 +24,32 @@ internal class AiAgentProcessorForTestChat : AbstractAiAgentProcessor
         var body = JsonDeserializationServer.AiAgentTestRequest(options);
         body.Validate();
 
-        ChatDocument chatDocument = null;
+        ConversationDocument conversation = null;
         if (options.TryGet("Document", out BlittableJsonReaderObject doc))
         {
-            chatDocument = ChatDocument.ToDocument("test", doc);
+            conversation = ConversationDocument.ToDocument("test", doc);
         }
 
-        if (chatDocument == null)
+        if (conversation == null)
         {
-            chatDocument = new ChatDocument("test", body.Parameters);
-            chatDocument.Initialize(context, body.Configuration, body.UserPrompt);
+            conversation = new ConversationDocument("test", body.Parameters);
+            conversation.Initialize(context, body.Configuration, body.UserPrompt);
         }
 
         // ensure we don't persist the chat in test mode
         body.Configuration.Persistence = null;
 
-        await HandleRequest(context, body.Configuration, "test", chatDocument, body.RequestBody, token.Token);
+        await HandleRequest(context, body.Configuration, "test", conversation, body.RequestBody, token.Token);
     }
 
-    public override async Task WriteResponseAsync(JsonOperationContext context, string conversationId, (BlittableJsonReaderObject Response, ChatDocument Document) r)
+    public override async Task WriteResponseAsync(JsonOperationContext context, string conversationId, (BlittableJsonReaderObject Response, ConversationDocument Document) r)
     {
         var output = new DynamicJsonValue
         {
             ["Document"] = r.Document.ToJson(),
-            [nameof(ChatResult<object>.Response)] = r.Response,
-            [nameof(ChatResult<object>.ToolRequests)] = new DynamicJsonArray(r.Document.OpenToolCalls.Select(t => t.Value.ToJson())),
-            [nameof(ChatResult<object>.Usage)] = r.Document.TotalUsage.ToJson()
+            [nameof(ConversationResult<object>.Response)] = r.Response,
+            [nameof(ConversationResult<object>.ToolRequests)] = new DynamicJsonArray(r.Document.OpenActionCalls.Select(t => t.Value.ToJson())),
+            [nameof(ConversationResult<object>.Usage)] = r.Document.TotalUsage.ToJson()
         };
 
         await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());

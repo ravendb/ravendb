@@ -78,7 +78,7 @@ public class AiAgentErrors : RavenTestBase
         // Query: from 'Customers' where Name == $name
         // Parameters: {"name":["Shahar"]}
         var e = await Assert.ThrowsAsync<InvalidQueryException>(() => store.Maintenance.SendAsync(
-            new RunChatOperation<CustomerOutputSchema>(identifier, "How many customers do we have with the name \"Shahar\"?",
+            new RunConversationOperation<CustomerOutputSchema>(identifier, "How many customers do we have with the name \"Shahar\"?",
                 parameters: null)));
 
         Assert.Contains("Parameter value '[\"Shahar\"]' of type Sparrow.Json.BlittableJsonReaderArray is not supported", e.Message);
@@ -173,7 +173,7 @@ public class AiAgentErrors : RavenTestBase
         // Raven.Client.Exceptions.RavenException: System.ArgumentException: The field 'Name1' is not indexed in 'Customers/ByName',
 
         var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
-           new RunChatOperation<CustomerOutputSchema>(identifier, "How many customers do we have with the name \"Shahar\"?",
+           new RunConversationOperation<CustomerOutputSchema>(identifier, "How many customers do we have with the name \"Shahar\"?",
                parameters: null)));
 
         Assert.Contains("The field 'Name1' is not indexed in 'Customers/ByName'", e.Message);
@@ -231,7 +231,7 @@ public class AiAgentErrors : RavenTestBase
         var identifier = (await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<CustomerOutputSchema>(agent))).Identifier;
 
         var r = await store.Maintenance.SendAsync(
-            new RunChatOperation<CustomerOutputSchema>(
+            new RunConversationOperation<CustomerOutputSchema>(
                 identifier,
                 "How many customers do we have with the name \"Shahar\"?",
                 parameters: null
@@ -240,14 +240,14 @@ public class AiAgentErrors : RavenTestBase
 
         Assert.NotNull(r.Response.Answer);
         Assert.NotNull(r.Usage);
-        Assert.NotNull(r.ChatId);
+        Assert.NotNull(r.ConversationId);
 
         //Raven.Client.Exceptions.Documents.DocumentDoesNotExistException: Document 'Raven.Client.Exceptions.Documents.DocumentDoesNotExistException:
         //Document 'Chats/0000000000000000007-ABAD_CHAT_ID' does not exist.
-        var badChatId = r.ChatId + "BAD_CHAT_ID";
+        var badChatId = r.ConversationId + "BAD_CHAT_ID";
 
         var e = await Assert.ThrowsAsync<DocumentDoesNotExistException>(() =>
-            store.Maintenance.SendAsync(new RunChatOperation<CustomerOutputSchema>(badChatId,
+            store.Maintenance.SendAsync(new RunConversationOperation<CustomerOutputSchema>(badChatId,
                 userPrompt: "How many of them have more then 1 orders?"))
         );
 
@@ -294,7 +294,7 @@ public class AiAgentErrors : RavenTestBase
 
         // Raven.Client.Exceptions.RavenException: Raven.Server.Documents.AI.UnsuccessfulRequestException: Incorrect API key provided
         var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
-            new RunChatOperation<CustomerOutputSchema>(
+            new RunConversationOperation<CustomerOutputSchema>(
                 identifier,
                 "How many customers do we have with the name \"Shahar\"?",
                 parameters: null
@@ -343,7 +343,7 @@ public class AiAgentErrors : RavenTestBase
 
         // Raven.Client.Exceptions.RavenException: Raven.Server.Documents.AI.UnsuccessfulRequestException: The model `gpt-4oxyz` does not exist or you do not have access to it
         var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
-            new RunChatOperation<CustomerOutputSchema>(
+            new RunConversationOperation<CustomerOutputSchema>(
                 identifier,
                 "How many customers do we have with the name \"Shahar\"?",
                 parameters: null
@@ -394,7 +394,7 @@ public class AiAgentErrors : RavenTestBase
 
         // Raven.Client.Exceptions.RavenException: System.IO.InvalidDataException:  Cannot have a '<' in this position at  (1,2) ...
         var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(
-            new RunChatOperation<CustomerOutputSchema>(
+            new RunConversationOperation<CustomerOutputSchema>(
                 identifier,
                 "How many customers do we have with the name \"Shahar\"?",
                 parameters: null
@@ -473,7 +473,7 @@ public class AiAgentErrors : RavenTestBase
         var identifier = (await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<QuestionOutputSchema>(agent))).Identifier;
 
         var aviv = await store.Maintenance.SendAsync(
-            new RunChatOperation<QuestionOutputSchema>(
+            new RunConversationOperation<QuestionOutputSchema>(
                 identifier,
                 "Can you answer Aviv questions?",
                 parameters: null
@@ -483,12 +483,12 @@ public class AiAgentErrors : RavenTestBase
         Assert.NotNull(aviv.Response.Answer);
         Assert.False(aviv.Response.RefusedToAnswer);
         Assert.NotNull(aviv.Usage);
-        Assert.NotNull(aviv.ChatId);
+        Assert.NotNull(aviv.ConversationId);
 
-        var chatId = aviv.ChatId;
+        var chatId = aviv.ConversationId;
 
         var karmel = await store.Maintenance.SendAsync(
-            new RunChatOperation<QuestionOutputSchema>(
+            new RunConversationOperation<QuestionOutputSchema>(
                 chatId,
                 "Can you answer Karmel questions?"
             )
@@ -497,10 +497,10 @@ public class AiAgentErrors : RavenTestBase
         Assert.NotNull(karmel.Response.Answer);
         Assert.False(karmel.Response.RefusedToAnswer);
         Assert.NotNull(karmel.Usage);
-        Assert.NotNull(karmel.ChatId);
+        Assert.NotNull(karmel.ConversationId);
 
         var shahar = await store.Maintenance.SendAsync(
-            new RunChatOperation<QuestionOutputSchema>(
+            new RunConversationOperation<QuestionOutputSchema>(
                 chatId,
                 "Can you answer Shahar questions?"
             )
@@ -508,7 +508,7 @@ public class AiAgentErrors : RavenTestBase
 
         Assert.True(shahar.Response.RefusedToAnswer);
         Assert.NotNull(shahar.Usage);
-        Assert.NotNull(shahar.ChatId);
+        Assert.NotNull(shahar.ConversationId);
     }
 
 

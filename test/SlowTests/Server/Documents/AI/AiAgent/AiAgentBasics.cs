@@ -71,14 +71,14 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             ];
 
             await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
-            var r = await store.Maintenance.SendAsync(new RunChatOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese?",
+            var r = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese?",
                 new Dictionary<string, object> { ["company"] = "companies/90-A" }));
 
             Assert.NotNull(r.Response.Answer);
             Assert.NotNull(r.Usage);
-            Assert.NotNull(r.ChatId);
+            Assert.NotNull(r.ConversationId);
 
-            var chat = await session.LoadAsync<dynamic>(r.ChatId);
+            var chat = await session.LoadAsync<dynamic>(r.ConversationId);
             Assert.NotNull(chat);
         }
 
@@ -122,20 +122,20 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             ];
 
             await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
-            var r = await store.Maintenance.SendAsync(new RunChatOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese for recent orders?",
+            var r = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese for recent orders?",
                 new Dictionary<string, object> { ["company"] = "companies/90-A" }));
 
             Assert.NotNull(r.Response.Answer);
             Assert.NotNull(r.Usage);
-            Assert.NotNull(r.ChatId);
+            Assert.NotNull(r.ConversationId);
 
 
-            var r2 = await store.Maintenance.SendAsync(new RunChatOperation<OutputSchema>(r.ChatId,
+            var r2 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>(r.ConversationId,
                 userPrompt: "can you give me a cheaper alternative?"));
 
             Assert.NotNull(r2.Response.Answer);
             Assert.NotNull(r2.Usage);
-            Assert.NotNull(r2.ChatId);
+            Assert.NotNull(r2.ConversationId);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -175,29 +175,29 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             ];
 
             var agentResult = await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
-            var r = await store.Maintenance.SendAsync(new RunChatOperation<OutputSchema>(agentResult.Identifier, "what goes well with my cheese for recent orders?",
+            var r = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>(agentResult.Identifier, "what goes well with my cheese for recent orders?",
                 parameters: null));
 
             Assert.True(r.ToolRequests.Count > 0);
             Assert.NotNull(r.Usage);
-            Assert.NotNull(r.ChatId);
+            Assert.NotNull(r.ConversationId);
 
-            var toolResponse = new List<ToolResponse>();
+            var toolResponse = new List<AiAgentActionResponse>();
             for (int i = 0; i < r.ToolRequests.Count; i++)
             {
                 var request = r.ToolRequests[i];
-                toolResponse.Add(new ToolResponse
+                toolResponse.Add(new AiAgentActionResponse
                 {
                     ToolId = request.ToolId,
                     Content = "{}"
                 });
             }
 
-            var r2 = await store.Maintenance.SendAsync(new RunChatOperation<OutputSchema>(r.ChatId, toolResponses: toolResponse));
+            var r2 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>(r.ConversationId, toolResponses: toolResponse));
 
             Assert.True(r2.Response?.Answer != null || r2.ToolRequests != null);
             Assert.NotNull(r2.Usage);
-            Assert.NotNull(r2.ChatId);
+            Assert.NotNull(r2.ConversationId);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -210,11 +210,11 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
 
             var body = @$"{{    
-""{nameof(AiAgentProcessorForTestChat.AiAgentTestRequest.Parameters)}"": {{
+""{nameof(AiAgentProcessorForTestConversation.AiAgentTestRequest.Parameters)}"": {{
         ""company"": ""companies/90-A""
     }},
-""{nameof(AiAgentProcessorForTestChat.AiAgentTestRequest.UserPrompt)}"": ""Help to find something more to my recent order"",
-""{nameof(AiAgentProcessorForTestChat.AiAgentTestRequest.Configuration)}"":{{
+""{nameof(AiAgentProcessorForTestConversation.AiAgentTestRequest.UserPrompt)}"": ""Help to find something more to my recent order"",
+""{nameof(AiAgentProcessorForTestConversation.AiAgentTestRequest.Configuration)}"":{{
     ""ConnectionStringName"": ""{config.ConnectionStringName}"",
     ""SystemPrompt"": ""You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well."",
     ""SampleObject"": ""{{\""Answer\"": \""Answer to the user question\"", \""Relevant\"": true, \""RelevantOrdersId\"":[\""The order ids relevant to the query or response\""], \""MatchingProductsId\"":[\""All the product ids referenced either by the user or the system\""] }}"",

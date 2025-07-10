@@ -84,7 +84,7 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         var identifier = (await store.AI.CreateAgentAsync<OutputSchema>(agent)).Identifier;
 
-        var chat = store.AI.CreateChat<OutputSchema>(identifier,
+        var chat = store.AI.StartConversation<OutputSchema>(identifier,
             p => p.AddParameter("company", "companies/90-A"));
 
         chat.SetUserPrompt("what goes well with my cheese?");
@@ -92,11 +92,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         Assert.False(r);
         
         Assert.NotNull(chat.Answer);
-        Assert.NotNull(chat.TotalUsage);
         Assert.NotNull(chat.Id);
-
-        var messages = await chat.ReadMessagesAsync(CancellationToken.None);
-        Assert.True(messages.Any());
 
         chat.SetUserPrompt("what goes well with my cheese?");
         r = await chat.RunAsync(CancellationToken.None);
@@ -155,26 +151,24 @@ public class AiAgentClientApiBasics : RavenTestBase
         agent.Actions = [ tool1, tool2 ];
         var agentResult = await store.AI.CreateAgentAsync<OutputSchema>(agent);
 
-        var chat = store.AI.CreateChat<OutputSchema>(agentResult.Identifier);
+        var chat = store.AI.StartConversation<OutputSchema>(agentResult.Identifier, builder: null);
 
         chat.SetUserPrompt("what goes well with my cheese for recent orders?");
 
         var r = await chat.RunAsync(CancellationToken.None);
 
         Assert.True(r);
-        Assert.NotNull(chat.TotalUsage);
         Assert.NotNull(chat.Id);
 
-        foreach (var request in chat.OpenTools())
+        foreach (var request in chat.RequiredActions())
         {
-            chat.AddToolResponse(request.ToolId, "{}");
+            chat.AddActionResponse(request.ToolId, "{}");
         }
        
         r = await chat.RunAsync(CancellationToken.None);
 
         Assert.False(r);
         Assert.True(chat.Answer != null);
-        Assert.NotNull(chat.TotalUsage);
         Assert.NotNull(chat.Id);
     }
 
@@ -220,18 +214,16 @@ public class AiAgentClientApiBasics : RavenTestBase
         var identifier = (await store.AI.CreateAgentAsync<OutputSchema>(agent)).Identifier;
 
 
-        var chat = store.AI.CreateChat<OutputSchema>(identifier,
+        var chat = store.AI.StartConversation<OutputSchema>(identifier,
             p => p.AddParameter("company", "companies/90-A"));
 
         Assert.Throws<InvalidOperationException>(() => chat.Id);
         Assert.Throws<InvalidOperationException>(() => chat.Answer);
-        Assert.Throws<InvalidOperationException>(() => chat.TotalUsage);
-        Assert.Throws<InvalidOperationException>(chat.OpenTools);
+        Assert.Throws<InvalidOperationException>(chat.RequiredActions);
 
         // Allowed, as we can add tool responses to an existing chat running it
         // Assert.Throws<InvalidOperationException>(() => chat.AddToolResponse("foo", "bar"));
 
-        await Assert.ThrowsAsync<InvalidOperationException>(() => chat.ReadMessagesAsync(CancellationToken.None));
         await Assert.ThrowsAsync<ArgumentNullException>(() => chat.RunAsync(CancellationToken.None));
 
         chat.SetUserPrompt("what goes well with my cheese?");
@@ -239,24 +231,20 @@ public class AiAgentClientApiBasics : RavenTestBase
         Assert.False(r);
         
         Assert.NotNull(chat.Answer);
-        Assert.NotNull(chat.TotalUsage);
         Assert.NotNull(chat.Id);
-
-        var messages = await chat.ReadMessagesAsync(CancellationToken.None);
-        Assert.True(messages.Any());
 
         r = await chat.RunAsync(CancellationToken.None);
         Assert.False(r);
-        Assert.Equal(0, chat.OpenTools().ToList().Count);
+        Assert.Equal(0, chat.RequiredActions().ToList().Count);
 
-        chat.AddToolResponse("foo","bar");
+        chat.AddActionResponse("foo","bar");
         var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
-        Assert.Contains("an unknown tool ID", e.Message);
+        Assert.Contains("foo is an unknown action ID", e.Message);
 
         chat.SetUserPrompt("what goes well with my cheese?");
-        chat.AddToolResponse("foo","bar");
+        chat.AddActionResponse("foo","bar");
         e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
-        Assert.Contains($"Cannot have a chat '{chat.Id}' with open tool calls and user prompt", e.Message);
+        Assert.Contains($"Cannot have a conversation '{chat.Id}' with open action calls and user prompt", e.Message);
 
         chat.SetUserPrompt("what cheese goes well with italian food?");
         r = await chat.RunAsync(CancellationToken.None);

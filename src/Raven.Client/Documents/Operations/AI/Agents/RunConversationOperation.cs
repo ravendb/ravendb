@@ -11,51 +11,51 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
-public class RunChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSchema>> where TSchema : new()
+public class RunConversationOperation<TSchema> : IMaintenanceOperation<ConversationResult<TSchema>> where TSchema : new()
 {
-    private readonly string _identifier;
+    private readonly string _agentId;
     private readonly string _userPrompt;
     private readonly Dictionary<string, object> _parameters;
 
-    private readonly string _chatId;
-    private readonly List<ToolResponse> _toolResponses;
-    public RunChatOperation(string identifier, string userPrompt, Dictionary<string, object> parameters)
+    private readonly string _conversationId;
+    private readonly List<AiAgentActionResponse> _toolResponses;
+    public RunConversationOperation(string agentId, string userPrompt, Dictionary<string, object> parameters)
     {
-        ValidationMethods.AssertNotNullOrEmpty(identifier, nameof(identifier));
+        ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
         ValidationMethods.AssertNotNullOrEmpty(userPrompt, nameof(userPrompt));
 
-        _identifier = identifier;
+        _agentId = agentId;
         _userPrompt = userPrompt;
         _parameters = parameters;
     }
 
-    public RunChatOperation(string chatId, string userPrompt = null, List<ToolResponse> toolResponses = null)
+    public RunConversationOperation(string conversationId, string userPrompt = null, List<AiAgentActionResponse> toolResponses = null)
     {
-        ValidationMethods.AssertNotNullOrEmpty(chatId, nameof(chatId));
+        ValidationMethods.AssertNotNullOrEmpty(conversationId, nameof(conversationId));
      
-        _chatId = chatId;
+        _conversationId = conversationId;
         _userPrompt = userPrompt;
         _toolResponses = toolResponses;
     }
 
-    public RavenCommand<ChatResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+    public RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
-        return new RunChatOperationCommand(_chatId, _identifier, _userPrompt, _parameters, _toolResponses, conventions);
+        return new RunConversationOperationCommand(_conversationId, _agentId, _userPrompt, _parameters, _toolResponses, conventions);
     }
 
-    internal sealed class RunChatOperationCommand : RavenCommand<ChatResult<TSchema>>
+    internal sealed class RunConversationOperationCommand : RavenCommand<ConversationResult<TSchema>>
     {
-        private readonly string _chatId;
-        private readonly string _identifier;
+        private readonly string _conversationId;
+        private readonly string _agentId;
         private readonly string _prompt;
         private readonly Dictionary<string, object> _parameters;
-        private readonly List<ToolResponse> _toolResponses;
+        private readonly List<AiAgentActionResponse> _toolResponses;
         private readonly DocumentConventions _conventions;
 
-        public RunChatOperationCommand(string chatId, string identifier, string prompt, Dictionary<string, object> parameters, List<ToolResponse> toolResponses, DocumentConventions conventions)
+        public RunConversationOperationCommand(string conversationId, string agentId, string prompt, Dictionary<string, object> parameters, List<AiAgentActionResponse> toolResponses, DocumentConventions conventions)
         {
-            _chatId = chatId;
-            _identifier = identifier;
+            _conversationId = conversationId;
+            _agentId = agentId;
             _prompt = prompt;
             _parameters = parameters;
             _toolResponses = toolResponses;
@@ -65,20 +65,20 @@ public class RunChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSchem
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/ai/agent";
-            if (string.IsNullOrEmpty(_identifier) == false)
+            if (string.IsNullOrEmpty(_agentId) == false)
             {
-                url += $"?id={Uri.EscapeDataString(_identifier)}";
+                url += $"?agentId={Uri.EscapeDataString(_agentId)}";
 
             }
-            if (string.IsNullOrEmpty(_chatId) == false)
+            if (string.IsNullOrEmpty(_conversationId) == false)
             {
-                url += $"?chatId={Uri.EscapeDataString(_chatId)}";
+                url += $"?conversationId={Uri.EscapeDataString(_conversationId)}";
             }
 
-            var body = new ChatRequestBody
+            var body = new ConversionRequestBody
             {
                 Parameters = _parameters ?? new Dictionary<string, object>(),
-                ToolResponses = _toolResponses,
+                ActionResponses = _toolResponses,
                 UserPrompt = _prompt
             };
 
@@ -87,7 +87,7 @@ public class RunChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSchem
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(async stream =>
                 {
-                    await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(),"chat-params")).ConfigureAwait(false);
+                    await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(),"conversation-params")).ConfigureAwait(false);
                 }, _conventions)
             };
 
@@ -99,41 +99,41 @@ public class RunChatOperation<TSchema> : IMaintenanceOperation<ChatResult<TSchem
             if (response == null)
                 ThrowInvalidResponse();
 
-            Result = ChatResult<TSchema>.Convert(response, _conventions);
+            Result = ConversationResult<TSchema>.Convert(response, _conventions);
         }
     }
 }
 
-internal class ChatRequestBody : IDynamicJson
+internal class ConversionRequestBody : IDynamicJson
 {
     public Dictionary<string, object> Parameters { get; set; }
-    public List<ToolResponse> ToolResponses { get; set; }
+    public List<AiAgentActionResponse> ActionResponses { get; set; }
     public string UserPrompt { get; set; }
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
         {
             [nameof(Parameters)] = DynamicJsonValue.Convert(Parameters),
-            [nameof(ToolResponses)] = ToolResponses == null ? null : new DynamicJsonArray(ToolResponses.Select(r => r.ToJson())), 
+            [nameof(ActionResponses)] = ActionResponses == null ? null : new DynamicJsonArray(ActionResponses.Select(r => r.ToJson())), 
             [nameof(UserPrompt)] = UserPrompt,
         };
     }
 }
 
-public class ChatResult<TSchema>
+public class ConversationResult<TSchema>
 {
-    public string ChatId { get; set; }
+    public string ConversationId { get; set; }
     public TSchema Response { get; set; }
     public AiUsage Usage { get; set; }
-    public List<ToolRequest> ToolRequests { get; set; }
+    public List<AiAgentActionRequest> ToolRequests { get; set; }
 
-    internal static ChatResult<TSchema> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
+    internal static ConversationResult<TSchema> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
     {
         response.TryGet(nameof(Usage), out BlittableJsonReaderObject usage);
         response.TryGet(nameof(Response), out BlittableJsonReaderObject result);
-        response.TryGet(nameof(ChatId), out string chatId);
+        response.TryGet(nameof(ConversationId), out string conversationId);
 
-        List<ToolRequest> requests = null;
+        List<AiAgentActionRequest> requests = null;
         if (response.TryGet(nameof(ToolRequests), out BlittableJsonReaderArray toolRequests) && toolRequests != null)
         {
             requests = [];
@@ -144,17 +144,17 @@ public class ChatResult<TSchema>
             }
         }
 
-        return new ChatResult<TSchema>
+        return new ConversationResult<TSchema>
         {
-            ChatId = chatId,
+            ConversationId = conversationId,
             ToolRequests = requests,
             Usage = JsonDeserializationClient.AiUsage(usage),
-            Response = result == null ? default : conventions.Serialization.DefaultConverter.FromBlittable<TSchema>(result, chatId)
+            Response = result == null ? default : conventions.Serialization.DefaultConverter.FromBlittable<TSchema>(result, conversationId)
         };
     }
 }
 
-public class ToolRequest : IDynamicJson
+public class AiAgentActionRequest : IDynamicJson
 {
     public string Name;
     public string ToolId;
@@ -170,7 +170,7 @@ public class ToolRequest : IDynamicJson
     }
 }
 
-public class ToolResponse : IDynamicJson
+public class AiAgentActionResponse : IDynamicJson
 {
     public string ToolId;
     public string Content;

@@ -331,7 +331,7 @@ namespace Raven.Client
 
                 public const string EmbeddingsCacheCollection = "@embeddings-cache";
 
-                public const string AiAgentChatCollection = "@chats";
+                public const string AiAgentConversationCollection = "@conversations";
             }
 
             public sealed class Indexing

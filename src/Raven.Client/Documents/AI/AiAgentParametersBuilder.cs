@@ -12,7 +12,7 @@ public interface IAiAgentParametersBuilder
 
 internal class AiAgentParametersBuilder : IAiAgentParametersBuilder
 {
-    private readonly Dictionary<string, object> _parameters = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, object> _parameters = new();
 
     public IAiAgentParametersBuilder AddParameter(string key, string value)
     {

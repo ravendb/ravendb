@@ -12,18 +12,18 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
+public class ConversationDocument(string agent, BlittableJsonReaderObject parameters)
 {
     public string Agent = agent ?? throw new ArgumentNullException(nameof(agent));
     
     public BlittableJsonReaderObject Parameters = parameters ;
     public List<BlittableJsonReaderObject> Messages = [];
-    public Dictionary<string, ToolRequest> OpenToolCalls = [];
+    public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
     public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration, string userPrompt)
     {
         if (Messages.Count > 0)
-            throw new InvalidOperationException("Chat document is already initialized. Cannot re-initialize.");
+            throw new InvalidOperationException("conversation document is already initialized. Cannot re-initialize.");
 
         foreach (var parameter in configuration.Parameters)
         {
@@ -41,7 +41,7 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
     public void EnsureInitialized()
     {
         if (Messages.Count == 0)
-            throw new InvalidOperationException("Chat document is not initialized. Call Initialize() first.");
+            throw new InvalidOperationException("conversation document is not initialized. Call Initialize() first.");
     }
 
     public BlittableJsonReaderObject ToBlittable(JsonOperationContext context, AiAgentConfiguration configuration)
@@ -69,7 +69,7 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
             [nameof(Parameters)] = Parameters,
             [nameof(Messages)] = Messages,
             [nameof(TotalUsage)] = TotalUsage.ToJson(),
-            [nameof(OpenToolCalls)] = DynamicJsonValue.Convert(OpenToolCalls),
+            [nameof(OpenActionCalls)] = DynamicJsonValue.Convert(OpenActionCalls),
         };
     }
 
@@ -123,20 +123,20 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
         Messages.Add(msg);
     }
 
-    public static ChatDocument ToDocument(string id, BlittableJsonReaderObject document)
+    public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document)
     {
         if (document.TryGet(nameof(Agent), out string agent) == false)
-            throw new ArgumentException($"Missing Agent in '{id}' chat document");
+            throw new ArgumentException($"Missing Agent in '{id}' conversation document");
         if (document.TryGet(nameof(Parameters), out BlittableJsonReaderObject parameters) == false)
-            throw new ArgumentException($"Missing Parameters in '{id}' chat document");
+            throw new ArgumentException($"Missing Parameters in '{id}' conversation document");
         if (document.TryGet(nameof(Messages), out BlittableJsonReaderArray messages) == false)
-            throw new ArgumentException($"Missing Messages in '{id}' chat document");
+            throw new ArgumentException($"Missing Messages in '{id}' conversation document");
         if (document.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject usage) == false)
-            throw new ArgumentException($"AI Usage in '{id}' chat document");
-        if (document.TryGet(nameof(OpenToolCalls), out BlittableJsonReaderObject openToolCalls) == false)
-            throw new ArgumentException($"Missing Open Tool Calls in '{id}' chat document");
+            throw new ArgumentException($"AI Usage in '{id}' conversation document");
+        if (document.TryGet(nameof(OpenActionCalls), out BlittableJsonReaderObject openToolCalls) == false)
+            throw new ArgumentException($"Missing Open Tool Calls in '{id}' conversation document");
 
-        var openTools = new Dictionary<string, ToolRequest>();
+        var openTools = new Dictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
         {
             var call = JsonDeserializationClient.ToolRequest(openToolCalls[callId] as BlittableJsonReaderObject);
@@ -145,11 +145,11 @@ public class ChatDocument(string agent, BlittableJsonReaderObject parameters)
 
         DevelopmentHelper.ToDo(DevelopmentHelper.Feature.AI, DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "make messages IEnumerable?");
 
-        return new ChatDocument(agent, parameters?.CloneOnTheSameContext())
+        return new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
             Messages = messages.Items.Select(m=>((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
             TotalUsage = JsonDeserializationClient.AiUsage(usage),
-            OpenToolCalls = openTools
+            OpenActionCalls = openTools
         };
     }
 

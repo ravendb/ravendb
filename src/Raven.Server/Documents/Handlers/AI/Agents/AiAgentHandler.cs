@@ -46,7 +46,7 @@ public class AiAgentHandler : DatabaseRequestHandler
     [RavenAction("/databases/*/ai/agent/test", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
     public async Task AiAgentTest()
     {
-        using (var processor = new AiAgentProcessorForTestChat(this))
+        using (var processor = new AiAgentProcessorForTestConversation(this))
         {
             await processor.ExecuteAsync();
         }
