@@ -15,20 +15,36 @@ import { useState } from "react";
 import { CustomDropdownToggle } from "components/common/Dropdown";
 import Dropdown from "react-bootstrap/Dropdown";
 import useConfirm from "components/common/ConfirmDialog";
+import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 
 export default function AiAgents() {
-    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const db = useAppSelector(databaseSelectors.activeDatabase);
 
     const { appUrl } = useAppUrls();
 
     const { aiAgentService } = useServices();
 
     const asyncGetAiAgents = useAsync(async () => {
-        const result = await aiAgentService.getAiAgents(databaseName);
+        if (!db || db.isSharded || !db.name) {
+            return [];
+        }
+
+        const result = await aiAgentService.getAiAgents(db.name);
         return result;
-    }, [databaseName]);
+    }, [db.name]);
 
     const [nameFilter, setNameFilter] = useState("");
+
+    if (db.isSharded) {
+        return (
+            <FeatureNotAvailable>
+                <span>
+                    AI Agents are not available for <Icon icon="sharding" color="shard" margin="m-0" /> sharded
+                    databases
+                </span>
+            </FeatureNotAvailable>
+        );
+    }
 
     return (
         <div className="content-padding">
@@ -36,7 +52,7 @@ export default function AiAgents() {
                 <AboutViewHeading title="AI Agents" icon="ai-agents" marginBottom={4} />
                 <AiAgentsInfoHub />
             </div>
-            <a href={appUrl.forEditAiAgent(databaseName)} className="btn btn-primary rounded-pill">
+            <a href={appUrl.forEditAiAgent(db.name)} className="btn btn-primary rounded-pill">
                 <Icon icon="plus" />
                 Add new
             </a>
