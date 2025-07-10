@@ -139,7 +139,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
         var openTools = new Dictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
         {
-            var call = JsonDeserializationClient.ToolRequest(openToolCalls[callId] as BlittableJsonReaderObject);
+            var call = JsonDeserializationClient.ActionRequest(openToolCalls[callId] as BlittableJsonReaderObject);
             openTools.Add(callId, call);
         }
 

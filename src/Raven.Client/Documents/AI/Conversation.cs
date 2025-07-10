@@ -91,7 +91,7 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
         {
             var r = await _aiOperations._executor.SendAsync(op, token).ConfigureAwait(false);
             _conversationId = r.ConversationId;
-            _actionRequests = r.ToolRequests ?? new List<AiAgentActionRequest>();
+            _actionRequests = r.ActionRequests ?? new List<AiAgentActionRequest>();
             _answer = r.Response;
         }
         finally

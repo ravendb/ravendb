@@ -47,7 +47,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             {
                 foreach (BlittableJsonReaderObject tool in body.ActionResponses)
                 {
-                    var t = JsonDeserializationClient.ToolResponse(tool);
+                    var t = JsonDeserializationClient.ActionResponse(tool);
                     if (document.OpenActionCalls.Remove(t.ToolId) == false)
                         throw new InvalidOperationException($"{t.ToolId} is an unknown action ID for conversation '{conversationId}'");
 
@@ -221,7 +221,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             {
                 [nameof(ConversationResult<object>.ConversationId)] = conversationId,
                 [nameof(ConversationResult<object>.Response)] = r.Response,
-                [nameof(ConversationResult<object>.ToolRequests)] = new DynamicJsonArray(r.Document.OpenActionCalls.Select(t => t.Value.ToJson())),
+                [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(r.Document.OpenActionCalls.Select(t => t.Value.ToJson())),
                 [nameof(ConversationResult<object>.Usage)] = r.Document.TotalUsage.ToJson()
             };
 

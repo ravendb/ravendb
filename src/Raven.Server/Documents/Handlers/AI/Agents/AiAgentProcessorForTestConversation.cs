@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
@@ -22,12 +23,11 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         var options = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token.Token);
         
         var body = JsonDeserializationServer.AiAgentTestRequest(options);
-        body.Validate();
 
         ConversationDocument conversation = null;
-        if (options.TryGet("Document", out BlittableJsonReaderObject doc))
+        if (body.Document != null)
         {
-            conversation = ConversationDocument.ToDocument("test", doc);
+            conversation = ConversationDocument.ToDocument("test", body.Document);
         }
 
         if (conversation == null)
@@ -46,14 +46,22 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
     {
         var output = new DynamicJsonValue
         {
-            ["Document"] = r.Document.ToJson(),
-            [nameof(ConversationResult<object>.Response)] = r.Response,
-            [nameof(ConversationResult<object>.ToolRequests)] = new DynamicJsonArray(r.Document.OpenActionCalls.Select(t => t.Value.ToJson())),
-            [nameof(ConversationResult<object>.Usage)] = r.Document.TotalUsage.ToJson()
+            [nameof(AiAgentTestResult.Document)] = r.Document.ToJson(),
+            [nameof(AiAgentTestResult.Response)] = r.Response,
+            [nameof(AiAgentTestResult.ActionRequests)] = new DynamicJsonArray(r.Document.OpenActionCalls.Select(t => t.Value.ToJson())),
+            [nameof(AiAgentTestResult.Usage)] = r.Document.TotalUsage.ToJson()
         };
 
         await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
         context.Write(writer, output);
+    }
+
+    public class AiAgentTestResult
+    {
+        public BlittableJsonReaderObject Document;
+        public BlittableJsonReaderObject Response;
+        public BlittableJsonReaderArray ActionRequests;
+        public AiUsage Usage;
     }
 
     public class AiAgentTestRequest
@@ -62,22 +70,13 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         public BlittableJsonReaderObject Parameters;
         public AiAgentConfiguration Configuration;
         public BlittableJsonReaderArray ActionResponses;
-
+        public BlittableJsonReaderObject Document;
+        
         public RequestBody RequestBody => new RequestBody
         {
             UserPrompt = UserPrompt,
             Parameters = Parameters,
             ActionResponses = ActionResponses
         };
-
-        public void Validate()
-        {
-            if (string.IsNullOrEmpty(UserPrompt))
-                throw new ArgumentException("Prompt is required for AI Agent test.");
-            if (Configuration == null)
-                throw new ArgumentException("Configuration is required for AI Agent test.");
-            if (Parameters == null)
-                throw new ArgumentException("Parameters are required for AI Agent test.");
-        }
     }
 }

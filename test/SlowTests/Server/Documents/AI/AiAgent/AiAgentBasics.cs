@@ -1,13 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Exceptions;
-using Raven.Server.Documents.Handlers.AI.Agents;
+using Raven.Client.Http;
+using Raven.Client.Json;
+using Raven.Client.Json.Serialization;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -45,22 +52,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
-            agent.Persistence = new AiAgentPersistenceConfiguration
-            {
-                Collection = "Chats",
-                Expires = TimeSpan.FromDays(30)
-            };
+            agent.Persistence = new AiAgentPersistenceConfiguration { Collection = "Chats", Expires = TimeSpan.FromDays(30) };
             agent.Parameters.Add("company");
             agent.Queries =
             [
                 new AiAgentToolQuery
                 {
-                    Name = "ProductSearch", 
-                    Description =  "semantic search the store product catalog",
+                    Name = "ProductSearch",
+                    Description = "semantic search the store product catalog",
                     Query = "from Products where vector.search(embedding.text(Name), $query)",
                     ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
-                }
-                ,
+                },
                 new AiAgentToolQuery
                 {
                     Name = "RecentOrder",
@@ -96,22 +98,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
-            agent.Persistence = new AiAgentPersistenceConfiguration
-            {
-                Collection = "Chats",
-                Expires = TimeSpan.FromDays(30)
-            };
+            agent.Persistence = new AiAgentPersistenceConfiguration { Collection = "Chats", Expires = TimeSpan.FromDays(30) };
             agent.Parameters.Add("company");
             agent.Queries =
             [
                 new AiAgentToolQuery
                 {
-                    Name = "ProductSearch", 
-                    Description =  "semantic search the store product catalog",
+                    Name = "ProductSearch",
+                    Description = "semantic search the store product catalog",
                     Query = "from Products where vector.search(embedding.text(Name), $query)",
                     ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
-                }
-                ,
+                },
                 new AiAgentToolQuery
                 {
                     Name = "RecentOrder",
@@ -151,51 +148,38 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
-            agent.Persistence = new AiAgentPersistenceConfiguration
-            {
-                Collection = "Chats",
-                Expires = TimeSpan.FromDays(30)
-            };
+            agent.Persistence = new AiAgentPersistenceConfiguration { Collection = "Chats", Expires = TimeSpan.FromDays(30) };
 
             agent.Actions =
             [
                 new AiAgentToolAction
                 {
-                    Name = "ProductSearch", 
-                    Description =  "semantic search the store product catalog",
+                    Name = "ProductSearch",
+                    Description = "semantic search the store product catalog",
                     ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
-                }
-                ,
-                new AiAgentToolAction
-                {
-                    Name = "RecentOrder",
-                    Description = "Get the recent orders of the current user",
-                    ParametersSampleObject = "{}"
-                }
+                },
+                new AiAgentToolAction { Name = "RecentOrder", Description = "Get the recent orders of the current user", ParametersSampleObject = "{}" }
             ];
 
             var agentResult = await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
-            var r = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>(agentResult.Identifier, "what goes well with my cheese for recent orders?",
+            var r = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>(agentResult.Identifier,
+                "what goes well with my cheese for recent orders?",
                 parameters: null));
 
-            Assert.True(r.ToolRequests.Count > 0);
+            Assert.True(r.ActionRequests.Count > 0);
             Assert.NotNull(r.Usage);
             Assert.NotNull(r.ConversationId);
 
             var toolResponse = new List<AiAgentActionResponse>();
-            for (int i = 0; i < r.ToolRequests.Count; i++)
+            for (int i = 0; i < r.ActionRequests.Count; i++)
             {
-                var request = r.ToolRequests[i];
-                toolResponse.Add(new AiAgentActionResponse
-                {
-                    ToolId = request.ToolId,
-                    Content = "{}"
-                });
+                var request = r.ActionRequests[i];
+                toolResponse.Add(new AiAgentActionResponse { ToolId = request.ToolId, Content = "{}" });
             }
 
-            var r2 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>(r.ConversationId, toolResponses: toolResponse));
+            var r2 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>(r.ConversationId, actionResponses: toolResponse));
 
-            Assert.True(r2.Response?.Answer != null || r2.ToolRequests != null);
+            Assert.True(r2.Response?.Answer != null || r2.ActionRequests != null);
             Assert.NotNull(r2.Usage);
             Assert.NotNull(r2.ConversationId);
         }
@@ -208,44 +192,183 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
+            var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
+                "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
+            agent.Identifier = "shopping-assistant";
+            agent.Persistence = new AiAgentPersistenceConfiguration { Collection = "Chats", Expires = TimeSpan.FromDays(30) };
 
-            var body = @$"{{    
-""{nameof(AiAgentProcessorForTestConversation.AiAgentTestRequest.Parameters)}"": {{
-        ""company"": ""companies/90-A""
-    }},
-""{nameof(AiAgentProcessorForTestConversation.AiAgentTestRequest.UserPrompt)}"": ""Help to find something more to my recent order"",
-""{nameof(AiAgentProcessorForTestConversation.AiAgentTestRequest.Configuration)}"":{{
-    ""ConnectionStringName"": ""{config.ConnectionStringName}"",
-    ""SystemPrompt"": ""You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well."",
-    ""SampleObject"": ""{{\""Answer\"": \""Answer to the user question\"", \""Relevant\"": true, \""RelevantOrdersId\"":[\""The order ids relevant to the query or response\""], \""MatchingProductsId\"":[\""All the product ids referenced either by the user or the system\""] }}"",
-    ""Persistence"": {{
-        ""Collection"": ""Chats"",
-        ""Expires"": ""3.00:00:00""
-    }},
-    ""Parameters"": [""company""],
-    ""Queries"": [
-        {{
-            ""Name"": ""ProductSearch"",
-            ""Description"": ""semantic search the store product catalog"",
-            ""Query"": ""from Products where vector.search(embedding.text(Name), $query)"",
-            ""ParametersSampleObject"": ""{{\""query\"": [\""term or phrase to search in the catalog\""]}}""
-        }},
-        {{
-            ""Name"": ""RecentOrder"",
-            ""Description"": ""Get the recent orders of the current user"",
-            ""Query"": ""from Orders where Company = $company order by OrderedAt desc limit 10"",
-            ""ParametersSampleObject"": ""{{}}""
-        }}
-    ]
-}}}}";
-            using var test = new HttpRequestMessage
+            agent.Actions =
+            [
+                new AiAgentToolAction
+                {
+                    Name = "ProductSearch",
+                    Description = "semantic search the store product catalog",
+                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+                },
+                new AiAgentToolAction { Name = "RecentOrder", Description = "Get the recent orders of the current user", ParametersSampleObject = "{}" }
+            ];
+
+            var r = await store.Maintenance.SendAsync(new RunTestConversationOperation<OutputSchema>(
+                agent,
+                document: null,
+                "what goes well with my cheese for recent orders?",
+                new Dictionary<string, object> { ["company"] = "companies/90-A" },
+                actionResponses: null));
+
+            var responses = new List<AiAgentActionResponse>();
+            foreach (var request in r.ActionRequests)
             {
-                RequestUri = new Uri($"{store.Urls[0]}/databases/{store.Database}/ai/agent/test", UriKind.Absolute),
-                Method = HttpMethod.Post, 
-                Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json")
-            };
-            using var r = await store.GetRequestExecutor().HttpClient.SendAsync(test);
-            Assert.True(r.IsSuccessStatusCode, "status code: " + r.StatusCode);
+                responses.Add(new AiAgentActionResponse
+                {
+                    ToolId = request.ToolId,
+                    Content = "{}" // Simulating an empty response for the action tool
+                });
+            }
+            r = await store.Maintenance.SendAsync(new RunTestConversationOperation<OutputSchema>(
+                agent,
+                document: r.Document,
+                userPrompt: null, // "what goes well with my cheese for recent orders?",
+                parameters: null,
+                actionResponses: responses));
+        }
+
+
+        private class RunTestConversationOperation<TSchema> : IMaintenanceOperation<TestResult<TSchema>> where TSchema : new()
+        {
+            private readonly AiAgentConfiguration _agent;
+            private readonly string _document;
+            private readonly string _userPrompt;
+            private readonly Dictionary<string, object> _parameters;
+            private readonly List<AiAgentActionResponse> _actionResponses;
+            public RunTestConversationOperation(AiAgentConfiguration agent, string document, string userPrompt, Dictionary<string, object> parameters, List<AiAgentActionResponse> actionResponses)
+            {
+                _agent = agent;
+                _document = document;
+                _userPrompt = userPrompt;
+                _parameters = parameters;
+                _actionResponses = actionResponses;
+            }
+            public RavenCommand<TestResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+            {
+                return new RunConversationOperationCommand(_agent, _document, _userPrompt, _parameters, _actionResponses, conventions);
+            }
+
+            private sealed class RunConversationOperationCommand : RavenCommand<TestResult<TSchema>>
+            {
+                private readonly AiAgentConfiguration _agent;
+                private readonly string _document;
+                private readonly string _prompt;
+                private readonly Dictionary<string, object> _parameters;
+                private readonly List<AiAgentActionResponse> _toolResponses;
+                private readonly DocumentConventions _conventions;
+
+                public RunConversationOperationCommand(AiAgentConfiguration agent, string document, string prompt, Dictionary<string, object> parameters,
+                    List<AiAgentActionResponse> toolResponses, DocumentConventions conventions)
+                {
+                    _agent = agent;
+                    _document = document;
+                    _prompt = prompt;
+                    _parameters = parameters;
+                    _toolResponses = toolResponses;
+                    _conventions = conventions;
+                }
+
+                public override bool IsReadRequest => false;
+
+                public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+                {
+                    url = $"{node.Url}/databases/{node.Database}/ai/agent/test";
+                   
+                    var body = new TestRequestBody
+                    {
+                        Configuration = _agent,
+                        Parameters = _parameters ?? new Dictionary<string, object>(), 
+                        ActionResponses = _toolResponses ?? [], 
+                        UserPrompt = _prompt,
+                    };
+
+                    var request = new HttpRequestMessage
+                    {
+                        Method = HttpMethod.Post,
+                        Content = new BlittableJsonContent(async stream =>
+                        {
+                            if (_document != null)
+                                body.Document = ctx.Sync.ReadForMemory(_document, "test");
+
+                            body.Configuration.SampleObject ??= DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(new TSchema(), ctx).ToString();
+                            await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(), "conversation-params")).ConfigureAwait(false);
+                        }, _conventions)
+                    };
+
+                    return request;
+                }
+
+                public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+                {
+                    if (response == null)
+                        ThrowInvalidResponse();
+
+                    Result = TestResult<TSchema>.Convert(response, _conventions);
+                }
+            }
+            public class TestRequestBody : IDynamicJson
+            {
+                public string UserPrompt { get; set; }
+                public Dictionary<string, object> Parameters { get; set; }
+                public AiAgentConfiguration Configuration { get; set; }
+                public List<AiAgentActionResponse> ActionResponses { get; set; }
+
+                public BlittableJsonReaderObject Document;
+                public DynamicJsonValue ToJson()
+                {
+                    var json = new DynamicJsonValue
+                    {
+                        [nameof(UserPrompt)] = UserPrompt,
+                        [nameof(Parameters)] = DynamicJsonValue.Convert(Parameters),
+                        [nameof(Configuration)] = Configuration.ToJson(),
+                        [nameof(ActionResponses)] = new DynamicJsonArray(ActionResponses.Select(x => x.ToJson()))
+                    };
+
+                    if (Document != null)
+                        json[nameof(Document)] = Document;
+
+                    return json;
+                }
+            }
+        }
+
+        public class TestResult<TSchema> where TSchema : new()
+        {
+            public string Document;
+            public TSchema Response;
+            public List<AiAgentActionRequest> ActionRequests;
+            public AiUsage Usage;
+
+            internal static TestResult<TSchema> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
+            {
+                response.TryGet(nameof(Usage), out BlittableJsonReaderObject usage);
+                response.TryGet(nameof(Response), out BlittableJsonReaderObject result);
+                response.TryGet(nameof(Document), out BlittableJsonReaderObject document);
+
+                List<AiAgentActionRequest> requests = null;
+                if (response.TryGet(nameof(ActionRequests), out BlittableJsonReaderArray actionRequests) && actionRequests != null)
+                {
+                    requests = [];
+                    foreach (BlittableJsonReaderObject actionRequest in actionRequests)
+                    {
+                        var r = JsonDeserializationClient.ActionRequest(actionRequest);
+                        requests.Add(r);
+                    }
+                }
+
+                return new TestResult<TSchema>
+                {
+                    ActionRequests = requests,
+                    Usage = JsonDeserializationClient.AiUsage(usage),
+                    Document = document.ToString(),
+                    Response = result == null ? default : conventions.Serialization.DefaultConverter.FromBlittable<TSchema>(result, "test")
+                };
+            }
         }
     }
 }
