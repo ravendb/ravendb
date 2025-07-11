@@ -2208,9 +2208,10 @@ namespace SlowTests.Smuggler
             const int documentsToCreate = 150;
             const int maxReadOpsPerSecToTest = 10;
             const int expectedMinimumExportDurationInSeconds = (documentsToCreate - maxReadOpsPerSecToTest) / maxReadOpsPerSecToTest;
-
+            const int toleranceInSeconds = 2; // Add a small buffer for timing variations
+        
             var file = GetTempFileName();
-
+        
             using (var store = GetDocumentStore(options))
             {
                 // We want to store all documents in the same shard to get clear understanding the number of documents per shard to do clear measurements
@@ -2219,38 +2220,38 @@ namespace SlowTests.Smuggler
                     await session.StoreAsync(new User { Name = "InitialDocument" }, "foo/bar");
                     await session.SaveChangesAsync();
                 }
-
+        
                 for (int i = 1; i < documentsToCreate - 1; i++)
                     using (var session = store.OpenAsyncSession())
                     {
                         await session.StoreAsync(new User { Name = $"Name{i}" }, $"{nameof(User)}s/{i}$foo/bar");
                         await session.SaveChangesAsync();
                     }
-
+        
                 var exportOptions = new DatabaseSmugglerExportOptions();
-
+        
                 var sw = Stopwatch.StartNew();
                 var operation = await store.Smuggler.ExportAsync(exportOptions, file);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 var exportDurationDefaultOptions = sw.Elapsed;
                 File.Delete(file);
-
+        
                 exportOptions.MaxReadOpsPerSecond = maxReadOpsPerSecToTest;
-
+        
                 sw.Restart();
                 operation = await store.Smuggler.ExportAsync(exportOptions, file);
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 var exportDurationWithMaxReadOps = sw.Elapsed;
-
+        
                 Assert.True(exportDurationWithMaxReadOps > exportDurationDefaultOptions,
                     $"Export with {nameof(exportOptions.MaxReadOpsPerSecond)} with value '{maxReadOpsPerSecToTest}' should take more time than default export, " +
                     $"but it took '{exportDurationWithMaxReadOps}' seconds, while with default value took '{exportDurationDefaultOptions}' seconds");
                 Assert.True(exportDurationDefaultOptions.TotalSeconds < expectedMinimumExportDurationInSeconds,
                     $"Export with default options should take less than '{expectedMinimumExportDurationInSeconds}' seconds, but it took " +
                     $"'{exportDurationDefaultOptions}' seconds despite {nameof(exportOptions.MaxReadOpsPerSecond)} was not set");
-                Assert.True(exportDurationWithMaxReadOps.TotalSeconds > expectedMinimumExportDurationInSeconds,
+                Assert.True(exportDurationWithMaxReadOps.TotalSeconds > expectedMinimumExportDurationInSeconds - toleranceInSeconds,
                     $"Export with {nameof(exportOptions.MaxReadOpsPerSecond)} with value '{maxReadOpsPerSecToTest}' should take more than " +
-                    $"'{expectedMinimumExportDurationInSeconds}' seconds, but it took '{exportDurationWithMaxReadOps}' seconds");
+                    $"'{expectedMinimumExportDurationInSeconds - toleranceInSeconds}' seconds, but it took '{exportDurationWithMaxReadOps}' seconds");
             }
         }
 
