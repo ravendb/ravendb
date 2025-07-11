@@ -26,13 +26,15 @@ export default function EditAiAgentTestPanel() {
     });
 
     const isTestOpen = useAppSelector(editAiAgentSelectors.isTestOpen);
-    const messages = useAppSelector(editAiAgentSelectors.messages);
+    const messages = useAppSelector(editAiAgentSelectors.testMessages);
+    const toolParameters = useAppSelector(editAiAgentSelectors.testToolParameters);
+    const testDocument = useAppSelector(editAiAgentSelectors.testDocument);
 
     const { aiAgentService } = useServices();
 
     const asyncHandleTest = useAsyncCallback(async () => {
         dispatch(
-            editAiAgentActions.messagesAdd({
+            editAiAgentActions.testMessagesAdd({
                 id: _.uniqueId(),
                 content: formValues.testPrompt,
                 role: "user",
@@ -44,7 +46,7 @@ export default function EditAiAgentTestPanel() {
         const agentMessageId = _.uniqueId();
 
         dispatch(
-            editAiAgentActions.messagesAdd({
+            editAiAgentActions.testMessagesAdd({
                 id: agentMessageId,
                 role: "assistant",
                 date: moment().format("HH:mm A"),
@@ -57,9 +59,17 @@ export default function EditAiAgentTestPanel() {
                 Configuration: editAiAgentUtils.mapToDto(formValues),
                 UserPrompt: formValues.testPrompt,
                 Parameters: Object.fromEntries(formValues.testParameters.map((item) => [item.name, item.value])),
-                ActionResponses: [],
+                ActionResponses: toolParameters?.map((x) => ({
+                    ToolId: x.id,
+                    Content: x.arguments,
+                })),
+                Document: testDocument,
                 RequestBody: undefined,
             });
+
+            if (result.Document) {
+                dispatch(editAiAgentActions.testDocumentSet(result.Document));
+            }
 
             setValue("testPrompt", "");
             dispatch(
@@ -137,7 +147,7 @@ export default function EditAiAgentTestPanel() {
                                 toolQueries={Queries}
                                 toolActions={Actions}
                                 handleSaveParameters={(parameters) =>
-                                    dispatch(editAiAgentActions.toolParametersSet(parameters))
+                                    dispatch(editAiAgentActions.testToolParametersSet(parameters))
                                 }
                             />
                         )}

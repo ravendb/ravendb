@@ -78,11 +78,10 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                 {
                     UserPrompt: formValues.prompt,
                     Parameters: Object.fromEntries(formValues.parameters.map((x) => [x.name, x.value])),
-                    ActionResponses:
-                        toolParameters?.map((x) => ({
-                            ToolId: x.id,
-                            Content: x.arguments,
-                        })) ?? [],
+                    ActionResponses: toolParameters?.map((x) => ({
+                        ToolId: x.id,
+                        Content: x.arguments,
+                    })),
                 },
                 config.data.Identifier,
                 conversationId
