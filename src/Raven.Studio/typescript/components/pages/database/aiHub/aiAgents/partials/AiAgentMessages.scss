@@ -20,6 +20,12 @@
         padding: sizes.$gutter-xxs !important;
     }
 
+    .user-message {
+        .accordion-button {
+            background-color: colors.$panel-bg-3 !important;
+        }
+    }
+
     .transcript {
         .accordion-button {
             background-color: colors.$panel-bg-2 !important;

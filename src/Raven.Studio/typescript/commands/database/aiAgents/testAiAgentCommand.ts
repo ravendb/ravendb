@@ -1,21 +1,6 @@
 import commandBase = require("commands/commandBase");
+import aiAgentsTypes = require("components/pages/database/aiHub/aiAgents/utils/aiAgentsTypes");
 import endpoints = require("endpoints");
-
-interface Document {
-    Agent: string;
-    Parameters: TODO;
-    Messages: TODO[];
-    TotalUsage: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
-    OpenActionCalls: TODO;
-}
-
-
-interface TestAiAgentResult {
-    Document: Document;
-    Response: TODO;
-    ToolRequests: Raven.Client.Documents.Operations.AI.Agents.AiAgentActionRequest[];
-    Usage: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
-}
 
 class testAiAgentCommand extends commandBase {
     constructor(
@@ -25,7 +10,7 @@ class testAiAgentCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<TestAiAgentResult> {
+    execute(): JQueryPromise<aiAgentsTypes.AiAgentRunResult> {
         const url = endpoints.databases.aiAgent.aiAgentTest;
 
         return this.post(url, JSON.stringify(this.dto), this.db).fail((response: JQueryXHR) =>

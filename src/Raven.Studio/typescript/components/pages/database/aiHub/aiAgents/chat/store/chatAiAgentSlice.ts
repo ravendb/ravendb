@@ -1,23 +1,11 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
-import { AiAgentMessage, AiAgentToolCall } from "../../utils/aiAgentsTypes";
+import { AiAgentDocMessage, AiAgentMessage, AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { services } from "components/hooks/useServices";
 import { loadableData } from "components/models/common";
 import { createSuccessState, createIdleState, createFailureState } from "components/utils/common";
 import document from "models/database/documents/document";
-
-interface DocMessage {
-    role: "user" | "assistant" | "system" | "tool";
-    content: string;
-    tool_calls: {
-        id: string;
-        type: string;
-        function: {
-            name: string;
-            arguments: string;
-        };
-    }[];
-}
+import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
 
 interface EditAiAgentState {
     config: loadableData<Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration>;
@@ -47,10 +35,7 @@ export const chatAiAgentSlice = createSlice({
         messagesAdd: (state, action: PayloadAction<AiAgentMessage>) => {
             state.messages.push(action.payload);
         },
-        messagesUpdate: (
-            state,
-            action: PayloadAction<Pick<AiAgentMessage, "id" | "state" | "content" | "usage" | "toolCalls">>
-        ) => {
+        messagesUpdate: (state, action: PayloadAction<Partial<AiAgentMessage>>) => {
             const message = state.messages.find((m) => m.id === action.payload.id);
             if (message) {
                 Object.assign(message, action.payload);
@@ -66,33 +51,17 @@ export const chatAiAgentSlice = createSlice({
             const docId = action.payload.docId;
             state.conversationId = docId;
 
-            const messagesFromDoc: DocMessage[] =
+            const messagesFromDoc: AiAgentDocMessage[] =
                 state.historyDocuments.data.find((x) => x["@metadata"]["@id"] === docId)?.Messages ?? [];
 
-            const getContent = (docMessage: DocMessage): string => {
-                if (docMessage.content && (docMessage.role === "assistant" || docMessage.role === "tool")) {
-                    return JSON.stringify(JSON.parse(docMessage.content), null, 2);
-                }
-                return docMessage.content;
-            };
+            const messages: AiAgentMessage[] = messagesFromDoc.map((message, idx) => {
+                const transcript = messagesFromDoc.slice(0, idx + 1);
 
-            const messages = messagesFromDoc.map(
-                (x) =>
-                    ({
-                        id: _.uniqueId(),
-                        role: x.role,
-                        content: getContent(x),
-                        state: "success",
-                        date: "TODO date",
-                        toolCalls: x.tool_calls
-                            ? x.tool_calls.map((x) => ({
-                                  id: x.id,
-                                  name: x.function.name,
-                                  arguments: x.function.arguments,
-                              }))
-                            : [],
-                    }) satisfies AiAgentMessage
-            );
+                return {
+                    ...aiAgentsUtils.mapMessageFromDoc(message),
+                    transcript: transcript.map((x) => aiAgentsUtils.mapMessageFromDoc(x)),
+                };
+            });
 
             state.messages = messages;
         },

@@ -1,12 +1,6 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
-
-interface RunAiAgentResult {
-    ConversationId: string;
-    Response: TODO;
-    ToolRequests: Raven.Client.Documents.Operations.AI.Agents.AiAgentActionRequest[];
-    Usage: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
-}
+import aiAgentsTypes = require("components/pages/database/aiHub/aiAgents/utils/aiAgentsTypes");
 
 class runAiAgentCommand extends commandBase {
     constructor(
@@ -18,7 +12,7 @@ class runAiAgentCommand extends commandBase {
         super();
     }
 
-    execute(): JQueryPromise<RunAiAgentResult> {
+    execute(): JQueryPromise<aiAgentsTypes.AiAgentRunResult> {
         const args = {
             agentId: this.agentId,
             conversationId: this.conversationId,

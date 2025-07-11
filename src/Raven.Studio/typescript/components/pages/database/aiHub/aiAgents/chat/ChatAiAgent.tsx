@@ -18,6 +18,8 @@ import AiAgentParametersField from "../partials/AiAgentParametersField";
 import { FormInput } from "components/common/Form";
 import { tryHandleSubmit } from "components/utils/common";
 import moment from "moment";
+import { aiAgentsUtils } from "../utils/aiAgentsUtils";
+import { AiAgentToolCall } from "../utils/aiAgentsTypes";
 
 interface QueryParams {
     id: string;
@@ -28,14 +30,13 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const dispatch = useAppDispatch();
     const { appUrl } = useAppUrls();
-    const { aiAgentService } = useServices();
+    const { aiAgentService, databasesService } = useServices();
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const messages = useAppSelector(chatAiAgentSelectors.messages);
     const conversationId = useAppSelector(chatAiAgentSelectors.conversationId);
     const historyDocuments = useAppSelector(chatAiAgentSelectors.historyDocuments);
     const config = useAppSelector(chatAiAgentSelectors.config);
-    const toolParameters = useAppSelector(chatAiAgentSelectors.toolParameters);
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);
 
@@ -51,7 +52,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         control,
     });
 
-    const asyncChat = useAsyncCallback(async () => {
+    const asyncChat = useAsyncCallback(async (toolParameters?: AiAgentToolCall[]) => {
         dispatch(
             chatAiAgentActions.messagesAdd({
                 id: _.uniqueId(),
@@ -59,6 +60,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                 role: "user",
                 state: "success",
                 date: moment().format("HH:mm A"),
+                toolCalls: toolParameters,
             })
         );
 
@@ -76,35 +78,26 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
             const result = await aiAgentService.runAiAgent(
                 databaseName,
                 {
-                    UserPrompt: formValues.prompt,
-                    Parameters: Object.fromEntries(formValues.parameters.map((x) => [x.name, x.value])),
+                    UserPrompt: toolParameters?.length > 0 ? null : formValues.prompt,
+                    Parameters: !conversationId
+                        ? Object.fromEntries(formValues.parameters.map((x) => [x.name, x.value]))
+                        : null,
                     ActionResponses: toolParameters?.map((x) => ({
                         ToolId: x.id,
                         Content: x.arguments,
                     })),
                 },
-                config.data.Identifier,
+                !conversationId ? config.data.Identifier : undefined,
                 conversationId
             );
 
-            if (result.ConversationId) {
-                dispatch(chatAiAgentActions.conversationIdSet(result.ConversationId));
-            }
+            const doc = await databasesService.getDocumentWithMetadata(result.ConversationId, databaseName);
 
+            dispatch(chatAiAgentActions.conversationIdSet(result.ConversationId));
             dispatch(chatAiAgentActions.toolParametersSet([]));
             setValue("prompt", "");
             dispatch(
-                chatAiAgentActions.messagesUpdate({
-                    id: agentMessageId,
-                    content: result.Response ? JSON.stringify(result.Response, null, 2) : null,
-                    state: "success",
-                    usage: result.Usage,
-                    toolCalls: result.ToolRequests.map((toolCall) => ({
-                        id: toolCall.ToolId,
-                        name: toolCall.Name,
-                        arguments: toolCall.Arguments,
-                    })),
-                })
+                chatAiAgentActions.messagesUpdate(aiAgentsUtils.mapMessageFromResponse(result, agentMessageId, doc))
             );
             dispatch(chatAiAgentActions.getHistoryDocuments({ databaseName, id }));
         } catch {
@@ -214,9 +207,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                 messages={messages}
                                 toolQueries={config.data?.Queries}
                                 toolActions={config.data?.Actions}
-                                handleSaveParameters={(parameters) =>
-                                    dispatch(chatAiAgentActions.toolParametersSet(parameters))
-                                }
+                                handleSaveParameters={(parameters) => asyncChat.execute(parameters)}
                             />
                         )}
                     </div>

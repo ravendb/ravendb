@@ -18,9 +18,9 @@ type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
 
 interface AiAgentMessagesProps {
     messages: AiAgentMessage[];
-    toolQueries?: ToolQuery[];
-    toolActions?: ToolAction[];
-    handleSaveParameters?: (parameters: AiAgentToolCall[]) => void;
+    toolQueries: ToolQuery[];
+    toolActions: ToolAction[];
+    handleSaveParameters: (parameters: AiAgentToolCall[]) => void;
 }
 
 export default function AiAgentMessages({
@@ -33,7 +33,9 @@ export default function AiAgentMessages({
         <div className="w-100 vstack gap-2 ai-agent-messages">
             {messages.map((message, idx) => (
                 <Fragment key={message.id}>
-                    {message.role === "user" && <UserMessage message={message} idx={idx} />}
+                    {message.role === "user" && (
+                        <UserMessage message={message} idx={idx} toolQueries={toolQueries} toolActions={toolActions} />
+                    )}
                     {message.role === "assistant" && (
                         <AgentMessage
                             agentMessage={message}
@@ -49,16 +51,35 @@ export default function AiAgentMessages({
     );
 }
 
-function UserMessage({ message, idx }: { message: AiAgentMessage; idx: number }) {
+interface UserMessageProps {
+    message: AiAgentMessage;
+    idx: number;
+    toolQueries: ToolQuery[];
+    toolActions: ToolAction[];
+}
+
+function UserMessage({ message, idx, toolQueries, toolActions }: UserMessageProps) {
     return (
         <div>
             {idx === 0 && <div className="text-muted text-center">{message.date}</div>}
-            <div className="hstack justify-content-end">
+            <div className="hstack justify-content-end user-message">
                 <div
                     className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset"
                     style={{ maxWidth: "75%" }}
                 >
-                    {message.content}
+                    <div>{message.content}</div>
+                    {message.toolCalls?.length > 0 && (
+                        <div className="vstack gap-2">
+                            {message.toolCalls.map((toolCall) => (
+                                <TranscriptTool
+                                    key={toolCall.id}
+                                    toolCall={toolCall}
+                                    toolQueries={toolQueries}
+                                    toolActions={toolActions}
+                                />
+                            ))}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>
@@ -68,8 +89,8 @@ function UserMessage({ message, idx }: { message: AiAgentMessage; idx: number })
 interface AgentMessageProps {
     agentMessage: AiAgentMessage;
     allMessages: AiAgentMessage[];
-    toolQueries?: ToolQuery[];
-    toolActions?: ToolAction[];
+    toolQueries: ToolQuery[];
+    toolActions: ToolAction[];
     handleSaveParameters?: (parameters: AiAgentToolCall[]) => void;
 }
 
@@ -115,7 +136,7 @@ function AgentMessage({
     };
 
     const agentMessageIndex = allMessages.findIndex((x) => x.id === agentMessage.id);
-    const transcript = allMessages.slice(0, agentMessageIndex + 1);
+    const transcript = agentMessage.transcript ?? [];
 
     const isLastItem = agentMessageIndex === allMessages.length - 1;
     const isRequireParameters = isLastItem && agentMessage.toolCalls?.length > 0 && !formState.isSubmitted;
@@ -217,8 +238,8 @@ function AgentMessage({
 
 interface TranscriptProps {
     transcript: AiAgentMessage[];
-    toolQueries?: ToolQuery[];
-    toolActions?: ToolAction[];
+    toolQueries: ToolQuery[];
+    toolActions: ToolAction[];
 }
 
 function Transcript({ transcript, toolQueries, toolActions }: TranscriptProps) {
@@ -278,8 +299,8 @@ function Transcript({ transcript, toolQueries, toolActions }: TranscriptProps) {
 
 interface TranscriptToolProps {
     toolCall: AiAgentToolCall;
-    toolQueries?: ToolQuery[];
-    toolActions?: ToolAction[];
+    toolQueries: ToolQuery[];
+    toolActions: ToolAction[];
 }
 
 function TranscriptTool({ toolCall, toolQueries, toolActions }: TranscriptToolProps) {

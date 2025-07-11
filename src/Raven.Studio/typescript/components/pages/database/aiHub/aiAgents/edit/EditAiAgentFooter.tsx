@@ -10,7 +10,7 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 export default function EditAiAgentFooter() {
     const dispatch = useAppDispatch();
 
-    const { control, setValue, formState } = useFormContext<EditAiAgentFormData>();
+    const { control, setValue, formState, trigger } = useFormContext<EditAiAgentFormData>();
 
     const formValues = useWatch({
         control,
@@ -18,7 +18,12 @@ export default function EditAiAgentFooter() {
 
     const { forCurrentDatabase } = useAppUrls();
 
-    const handleOpenTest = () => {
+    const handleOpenTest = async () => {
+        const isValid = await trigger();
+        if (!isValid) {
+            return;
+        }
+
         setValue(
             "testParameters",
             formValues.parameters.map((x) => ({ name: x.name, value: "" }))

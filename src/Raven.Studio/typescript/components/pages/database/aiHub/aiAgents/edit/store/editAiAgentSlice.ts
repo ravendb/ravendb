@@ -26,10 +26,7 @@ export const editAiAgentSlice = createSlice({
         testMessagesAdd: (state, action: PayloadAction<AiAgentMessage>) => {
             state.testMessages.push(action.payload);
         },
-        messagesUpdate: (
-            state,
-            action: PayloadAction<Pick<AiAgentMessage, "id" | "state" | "content" | "usage" | "toolCalls">>
-        ) => {
+        messagesUpdate: (state, action: PayloadAction<Partial<AiAgentMessage>>) => {
             const message = state.testMessages.find((m) => m.id === action.payload.id);
             if (message) {
                 Object.assign(message, action.payload);

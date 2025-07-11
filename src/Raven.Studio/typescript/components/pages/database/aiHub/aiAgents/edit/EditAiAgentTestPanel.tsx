@@ -14,7 +14,8 @@ import AiAgentMessages from "../partials/AiAgentMessages";
 import AiAgentParametersField from "../partials/AiAgentParametersField";
 import moment from "moment";
 import { editAiAgentUtils } from "./utils/editAiAgentUtils";
-import RichAlert from "components/common/RichAlert";
+import { aiAgentsUtils } from "../utils/aiAgentsUtils";
+import { AiAgentToolCall } from "../utils/aiAgentsTypes";
 
 export default function EditAiAgentTestPanel() {
     const dispatch = useAppDispatch();
@@ -27,12 +28,11 @@ export default function EditAiAgentTestPanel() {
 
     const isTestOpen = useAppSelector(editAiAgentSelectors.isTestOpen);
     const messages = useAppSelector(editAiAgentSelectors.testMessages);
-    const toolParameters = useAppSelector(editAiAgentSelectors.testToolParameters);
     const testDocument = useAppSelector(editAiAgentSelectors.testDocument);
 
     const { aiAgentService } = useServices();
 
-    const asyncHandleTest = useAsyncCallback(async () => {
+    const asyncHandleTest = useAsyncCallback(async (toolParameters?: AiAgentToolCall[]) => {
         dispatch(
             editAiAgentActions.testMessagesAdd({
                 id: _.uniqueId(),
@@ -40,6 +40,7 @@ export default function EditAiAgentTestPanel() {
                 role: "user",
                 state: "success",
                 date: moment().format("HH:mm A"),
+                toolCalls: toolParameters,
             })
         );
 
@@ -57,7 +58,7 @@ export default function EditAiAgentTestPanel() {
         try {
             const result = await aiAgentService.testAiAgent(databaseName, {
                 Configuration: editAiAgentUtils.mapToDto(formValues),
-                UserPrompt: formValues.testPrompt,
+                UserPrompt: toolParameters?.length > 0 ? null : formValues.testPrompt,
                 Parameters: Object.fromEntries(formValues.testParameters.map((item) => [item.name, item.value])),
                 ActionResponses: toolParameters?.map((x) => ({
                     ToolId: x.id,
@@ -67,25 +68,15 @@ export default function EditAiAgentTestPanel() {
                 RequestBody: undefined,
             });
 
-            if (result.Document) {
-                dispatch(editAiAgentActions.testDocumentSet(result.Document));
-            }
-
+            dispatch(editAiAgentActions.testDocumentSet(result.Document));
             setValue("testPrompt", "");
             dispatch(
-                editAiAgentActions.messagesUpdate({
-                    id: agentMessageId,
-                    content: JSON.stringify(result.Response, null, 2),
-                    state: "success",
-                    usage: result.Usage,
-                    toolCalls: result.ToolRequests.map((toolCall) => ({
-                        id: toolCall.ToolId,
-                        name: toolCall.Name,
-                        arguments: toolCall.Arguments,
-                    })),
-                })
+                editAiAgentActions.messagesUpdate(
+                    aiAgentsUtils.mapMessageFromResponse(result, agentMessageId, result.Document)
+                )
             );
-        } catch {
+        } catch (e) {
+            console.error(e);
             dispatch(
                 editAiAgentActions.messagesUpdate({
                     id: agentMessageId,
@@ -116,11 +107,6 @@ export default function EditAiAgentTestPanel() {
                     <Icon icon="test" color="primary" />
                     Test results
                 </h3>
-                <RichAlert variant="danger">
-                    TODO
-                    <br />
-                    For now test can only start chat. Resume will be added later.
-                </RichAlert>
             </div>
             {!isTestOpen && (
                 <div className="p-3 flex-grow-1 vstack justify-content-center align-items-center">
@@ -146,9 +132,7 @@ export default function EditAiAgentTestPanel() {
                                 messages={messages}
                                 toolQueries={Queries}
                                 toolActions={Actions}
-                                handleSaveParameters={(parameters) =>
-                                    dispatch(editAiAgentActions.testToolParametersSet(parameters))
-                                }
+                                handleSaveParameters={(parameters) => asyncHandleTest.execute(parameters)}
                             />
                         )}
                     </div>
@@ -169,7 +153,7 @@ export default function EditAiAgentTestPanel() {
                                 <ButtonWithSpinner
                                     variant="secondary"
                                     icon="arrow-up"
-                                    onClick={asyncHandleTest.execute}
+                                    onClick={() => asyncHandleTest.execute()}
                                     isSpinning={asyncHandleTest.loading}
                                     className="position-absolute rounded-pill"
                                     style={{ right: "10px", bottom: "10px", zIndex: 5 }}
