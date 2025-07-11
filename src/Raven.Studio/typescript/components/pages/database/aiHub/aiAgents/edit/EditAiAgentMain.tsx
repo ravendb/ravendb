@@ -87,9 +87,9 @@ export default function EditAiAgentMain() {
         setValue("identifier", TaskUtils.getGeneratedIdentifier(formValues.name));
     };
 
-    // if (formState.isLoading) {
-    //     return <LoadingView />;
-    // }
+    if (formState.isLoading) {
+        return <LoadingView />;
+    }
 
     return (
         <>

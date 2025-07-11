@@ -31,7 +31,7 @@ function mapFromDto(
         sampleObject: dto.SampleObject,
         outputSchema: dto.OutputSchema,
         persistenceCollectionName: dto.Persistence.Collection,
-        persistenceExpiresInSeconds: genUtils.timeSpanToSeconds(dto.Persistence.Expires),
+        persistenceExpiresInSeconds: dto.Persistence.Expires ? Number(dto.Persistence.Expires) / 1000 : null, // Expires is in milliseconds
         parameters:
             dto.Parameters?.map((x) => ({
                 name: x,

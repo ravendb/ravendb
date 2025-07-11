@@ -30,15 +30,12 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const { aiAgentService } = useServices();
 
     const form = useForm<EditAiAgentFormData>({
-        defaultValues: async () => {
-            console.log("kalczur queryParams", queryParams);
-            if (!queryParams?.id) {
-                return editAiAgentUtils.mapFromDto(null);
-            }
-
-            const agents = await aiAgentService.getAiAgents(databaseName, queryParams.id);
-            return editAiAgentUtils.mapFromDto(agents[0], queryParams.isClone);
-        },
+        defaultValues: queryParams?.id
+            ? async () => {
+                  const agents = await aiAgentService.getAiAgents(databaseName, queryParams.id);
+                  return editAiAgentUtils.mapFromDto(agents[0], queryParams.isClone);
+              }
+            : editAiAgentUtils.mapFromDto(null),
         resolver: editAiAgentYupResolver,
     });
 

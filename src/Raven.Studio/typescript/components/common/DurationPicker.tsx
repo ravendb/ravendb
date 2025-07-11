@@ -58,7 +58,7 @@ export default function DurationPicker(props: DurationPickerProps) {
                     <Form.Control
                         type="number"
                         min={0}
-                        value={days}
+                        value={days ?? ""}
                         placeholder={placeholder?.days}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setDays(getInputValue(e))}
                         disabled={disabled}
@@ -70,7 +70,7 @@ export default function DurationPicker(props: DurationPickerProps) {
                 <Form.Control
                     type="number"
                     min={0}
-                    value={hours}
+                    value={hours ?? ""}
                     placeholder={placeholder?.hours}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setHours(getInputValue(e))}
                     disabled={disabled}
@@ -81,7 +81,7 @@ export default function DurationPicker(props: DurationPickerProps) {
                 <Form.Control
                     type="number"
                     min={0}
-                    value={minutes}
+                    value={minutes ?? ""}
                     placeholder={placeholder?.minutes}
                     onChange={(e: ChangeEvent<HTMLInputElement>) => setMinutes(getInputValue(e))}
                     disabled={disabled}
@@ -93,7 +93,7 @@ export default function DurationPicker(props: DurationPickerProps) {
                     <Form.Control
                         type="number"
                         min={0}
-                        value={seconds}
+                        value={seconds ?? ""}
                         placeholder={placeholder?.seconds}
                         onChange={(e: ChangeEvent<HTMLInputElement>) => setSeconds(getInputValue(e))}
                         disabled={disabled}
