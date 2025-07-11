@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
             public string Username { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Raven_Should_Throw_Concurrency_Exception_When_Using_Loaded_Entity_And_Specific_Change_Vector()
         {
             using (var store = GetDocumentStore())
@@ -80,7 +81,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Raven_Should_Throw_Concurrency_Exception_When_Using_Loaded_Entity_From_Different_Session_And_Specific_Change_Vector()
         {
             using (var store = GetDocumentStore())

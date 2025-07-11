@@ -17,7 +17,7 @@ public class RavenDB_20634 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
     public void IdOfEmbeddedObjectIsNotWrappedIntoJavaScriptIdFunction()
     {
         using (var store = GetDocumentStore(options: new Options

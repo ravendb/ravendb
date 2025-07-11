@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void passing_duplicate_document_ids_to_Advanced_Lazily_Load_should_not_result_in_documents_failing_to_load()
         {
             using (var documentStore = GetDocumentStore())
@@ -73,7 +74,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void passing_duplicate_document_ids_to_Load_with_Include_should_not_throw()
         {
             using (var documentStore = GetDocumentStore())

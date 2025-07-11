@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -21,7 +22,7 @@ namespace SlowTests.Voron
             options.ManualSyncing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MustNotThrowObjectDisposedExceptionWhenFreeingPagesOnTxRollback()
         {
             RequireFileBasedPager();

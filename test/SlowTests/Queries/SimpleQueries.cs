@@ -1,7 +1,8 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -94,7 +95,7 @@ namespace SlowTests.Queries
                 }
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void QueriesUsingArrowFunc()
         {
             var actual = Query(@"
@@ -109,7 +110,7 @@ select {
             Assert.Equal(new[] { "PALE", "DOG", "BIG" }, actual[1].Notes);
 
         }
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("from Companies select Address.City as City")]
         [InlineData("from Companies c select c.Address.City as City")]
         [InlineData("from Companies as c select c.Address.City as City")]
@@ -127,7 +128,7 @@ select {
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("from Categories select 1 as V", "1")]
         [InlineData("from Categories select 1.2 as V", "1.2")]
         [InlineData("from Categories select $t as V", "1234")]
@@ -148,7 +149,7 @@ select {
 
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("from Employees where FirstName = 'Phoebe' include ReportsTo")]
         [InlineData("from Employees as e where e.FirstName = 'Phoebe' include e.ReportsTo")]
         [InlineData("from Employees where FirstName = 'Oscar' include ReportsTo")]
@@ -157,7 +158,7 @@ declare function project(e){
     include(e.ReportsTo)
     return e;
 }
-from Employees as e 
+from Employees as e
 where e.FirstName = 'Oscar'
 select project(e)")]
         public void Includes(string q)
@@ -184,7 +185,7 @@ select project(e)")]
 
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("from Companies where Address.City = 'Hadera'")]
         [InlineData("from Companies c where c.Address.City = 'Hadera'")]
         [InlineData("from Companies c where c.Address.City != 'Toruń' and c.Address.City != 'Buenos Aires'")]
@@ -199,45 +200,45 @@ select project(e)")]
             Assert.Equal("Hadera", actual[0].Address.City);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData(@"
-from Employees e 
-where e.FirstName = 'Phoebe' 
-load e.ReportsTo r 
+from Employees e
+where e.FirstName = 'Phoebe'
+load e.ReportsTo r
 select e.FirstName as A, r.FirstName as B", "Phoebe", "Oscar")]
         [InlineData(@"
-from Employees e 
-where e.FirstName = 'Oscar' 
-load e.ReportsTo r 
+from Employees e
+where e.FirstName = 'Oscar'
+load e.ReportsTo r
 select e.FirstName as A, r.FirstName as B", "Oscar", null)]
         [InlineData(@"
-from Employees e 
-where e.FirstName = 'Oscar' 
-load e.ReportsTo r 
-select {     
-    A: e.FirstName +' '+e.LastName, 
-    B: r.FirstName +' ' + r.LastName 
+from Employees e
+where e.FirstName = 'Oscar'
+load e.ReportsTo r
+select {
+    A: e.FirstName +' '+e.LastName,
+    B: r.FirstName +' ' + r.LastName
 } ", "Oscar Aharon-Eini", "null null")]
         [InlineData(@"
 declare function name(e) {
     if( e == null)
         return null;
-    return e.FirstName +' ' + e.LastName; 
+    return e.FirstName +' ' + e.LastName;
 }
-from Employees e 
-where e.FirstName = 'Oscar' 
-load e.ReportsTo r 
-select { 
-    A: name(e), 
+from Employees e
+where e.FirstName = 'Oscar'
+load e.ReportsTo r
+select {
+    A: name(e),
     B: name(r)
 } ", "Oscar Aharon-Eini", null)]
         [InlineData(@"
-from Employees e 
-where e.FirstName = 'Phoebe' 
-load e.ReportsTo r 
-select { 
-    A: e.FirstName +' '+e.LastName, 
-    B: r.FirstName +' ' + r.LastName 
+from Employees e
+where e.FirstName = 'Phoebe'
+load e.ReportsTo r
+select {
+    A: e.FirstName +' '+e.LastName,
+    B: r.FirstName +' ' + r.LastName
 } ", "Phoebe Eini", "Oscar Aharon-Eini")]
         public void ProjectingRelated(string q, string nameA, string nameB)
         {

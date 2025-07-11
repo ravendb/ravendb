@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,13 +22,13 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void ShouldLoadUserWithIncludesFromSessionTwiceInShardingDocumentStore()
         {
             //TestWithShardedStore(AssertLoadUsersWithIncludes);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldLoadUserWithIncludesFromSessionTwiceInEmbdeddedDocumentStore()
         {
             using (var store = GetDocumentStore())
@@ -36,13 +37,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void ShouldLoadUserFromSessionTwiceInShardingDocumentStore()
         {
             //TestWithShardedStore(AssertLoadUsers);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldLoadUserFromSessionTwiceInEmbdeddedDocumentStore()
         {
             using (var store = GetDocumentStore())
@@ -51,13 +52,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void ShouldLazyLoadUserFromSessionTwiceInShardingDocumentStore()
         {
             //TestWithShardedStore(AssertLazyLoadUsers);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldLazyLoadUserFromSessionTwiceInEmbdeddedDocumentStore()
         {
             using (var store = GetDocumentStore())
@@ -66,13 +67,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void ShouldMultiLoadUserFromSessionTwiceInShardingDocumentStore()
         {
             //TestWithShardedStore(AssertMultiLoadUsers);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldMultiLoadUserFromSessionTwiceInEmbdeddedDocumentStore()
         {
             using (var store = GetDocumentStore())

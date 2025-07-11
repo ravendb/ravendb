@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
         public async Task ShouldntThrowConcurrencyException()
         {
             using var store = GetDocumentStore();
@@ -50,7 +50,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
         public async Task PutDatabaseClientConfigurationCommandTest()
         {
             var (_, leader) = await CreateRaftCluster(2);
@@ -77,7 +77,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
         public async Task PutDatabaseSettingsCommandTest()
         {
             var (_, leader) = await CreateRaftCluster(2);
@@ -102,7 +102,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Studio | RavenTestCategory.Cluster)]
         public async Task PutDatabaseStudioConfigurationCommandTest()
         {
             var (_, leader) = await CreateRaftCluster(2);

@@ -788,7 +788,7 @@ namespace SlowTests.Client.TimeSeries.BulkInsert
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.BulkInsert)]
         [InlineData(128)]
         [InlineData(1024)]
         [InlineData(10*1024)]

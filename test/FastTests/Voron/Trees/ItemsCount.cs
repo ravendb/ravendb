@@ -1,4 +1,5 @@
-﻿using System.IO;
+using System.IO;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,7 +11,7 @@ namespace FastTests.Voron.Trees
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ItemCountIsConsistentWithAdditionsAndRemovals()
         {
             using (var tx = Env.WriteTransaction())
@@ -51,7 +52,7 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ItemCountIsConsistentWithUpdates()
         {
             using (var tx = Env.WriteTransaction())

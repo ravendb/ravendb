@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ public class RavenDB_19440 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void QueryWillThrowWhenPerformingSelectAfterProjectInto()
     {
         using var store = GetDocumentStore();
@@ -37,7 +38,7 @@ public class RavenDB_19440 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void QueryWillThrowWhenTwoProjectionsAreIncludedInQuery()
     {
         using var store = GetDocumentStore();

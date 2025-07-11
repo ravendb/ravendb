@@ -22,7 +22,7 @@ namespace SlowTests.Tests.Spatial
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Spatial)]
         public void PureLucene()
         {
             using (var dir = new RAMDirectory())

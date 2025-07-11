@@ -1,9 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="Mvcc.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
+using Tests.Infrastructure;
 using System.IO;
 using Xunit;
 using Voron;
@@ -25,7 +20,7 @@ namespace FastTests.Voron.Journal
             options.MaxLogFileSize = 3 * Constants.Storage.PageSize;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldNotFlushUntilThereAreActiveOlderTransactions()
         {
             var ones = new byte[3000];

@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -227,7 +227,7 @@ namespace SlowTests.Sharding
             Assert.Contains("cannot have multiple replicas reside on the same node", error.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task Promote_immediately_should_work()
         {
             var databaseName = GetDatabaseName();

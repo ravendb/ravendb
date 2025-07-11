@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
         public async Task Can_setup_write_load_balancing_on_client()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -43,7 +43,7 @@ namespace SlowTests.Issues
             Can_setup_write_load_balancing(store, ref context);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration | RavenTestCategory.Cluster)]
         public async Task Can_setup_write_load_balancing_on_server()
         {
             var (_, leader) = await CreateRaftCluster(3);

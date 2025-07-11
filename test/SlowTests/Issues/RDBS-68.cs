@@ -12,6 +12,7 @@ using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ExpirationRefresh)]
         public async Task CanDeleteAllExpiredDocsAfterRunningTheExpirationBundle()
         {
             using (var store = GetDocumentStore())

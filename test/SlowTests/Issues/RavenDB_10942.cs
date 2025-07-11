@@ -1,10 +1,11 @@
-﻿using System.IO;
+using System.IO;
 using System.Text;
 using FastTests;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldWork()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())

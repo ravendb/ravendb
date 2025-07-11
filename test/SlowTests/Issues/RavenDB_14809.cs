@@ -1,9 +1,10 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -46,7 +47,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldWork()
         {
             using (var store = GetDocumentStore())

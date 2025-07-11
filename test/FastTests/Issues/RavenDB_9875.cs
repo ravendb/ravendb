@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Http;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -34,7 +35,7 @@ namespace FastTests.Issues
                 typeof(ConditionalGetDocumentsCommand)
             };
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Commands_should_be_careful_about_blittable_usage()
         {
             var commandTypes = typeof(RavenCommand<>).Assembly.GetTypes().Where(t =>
@@ -93,3 +94,4 @@ namespace FastTests.Issues
         }
     }
 }
+

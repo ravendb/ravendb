@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CollectionQueryStartsWithOnIdsShouldNotYieldResultsFromAnotherCollection()
         {
             using (var store = GetDocumentStore())
@@ -28,7 +29,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CollectionQueryOnIdsShouldNotYieldResultsFromAnotherCollection()
         {
             using (var store = GetDocumentStore())

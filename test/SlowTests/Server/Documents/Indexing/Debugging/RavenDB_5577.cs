@@ -23,7 +23,7 @@ namespace SlowTests.Server.Documents.Indexing.Debugging
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Getting_identifiers_of_source_docs()
         {
             using (var database = CreateDocumentDatabase())
@@ -216,7 +216,7 @@ select new
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(1000)]
         [InlineData(10)] // nested section
         public void Getting_trees_for_multiple_docs(int numberOfDocs)

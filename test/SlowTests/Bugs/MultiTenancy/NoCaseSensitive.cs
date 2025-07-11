@@ -1,6 +1,7 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Bugs.MultiTenancy
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanAccessDbUsingDifferentNames()
         {
             DoNotReuseServer();            

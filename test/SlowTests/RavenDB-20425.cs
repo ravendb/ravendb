@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -76,7 +76,7 @@ namespace SlowTests
         //---------------------------------------------------------------------------------------------------------------------------------------
 
         // Right Behavior
-        [Theory]
+        [RavenTheory(RavenTestCategory.Revisions)]
         [InlineData(ChangingType.EnforceConfiguration)] // Works
         [InlineData(ChangingType.UpdateDocument)] // Fails
         public async Task RemoveDefaultConfig_ThenChangingDoc_ShouldDeleteRevisions(ChangingType type)
@@ -126,7 +126,7 @@ namespace SlowTests
         }
 
         // Right Behavior
-        [Theory]
+        [RavenTheory(RavenTestCategory.Revisions)]
         [InlineData(ChangingType.EnforceConfiguration)] // Fails
         [InlineData(ChangingType.UpdateDocument)] // Fails
         public async Task DisableCollectionAutoCreationConfig_ThenChangingDoc_ShouldObeyCollectionConfig(ChangingType type)
@@ -198,7 +198,7 @@ namespace SlowTests
 
         //---------------------------------------------------------------------------------------------------------------------------------------
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task ConfigurationWithMin10_DeleteDocWith10_changeConfigToMin3AndUponUpdate2_DeletedDocShouldRemainWith3Revisions()
         {
             using var store = GetDocumentStore();
@@ -257,7 +257,7 @@ namespace SlowTests
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task DeleteDocWithRevisions_ThenAddPurgeOnDeleteConfig_EnforceConfig_ShouldDeleteTheRevisionsOfTheDeletedDoc()
         {
             using var store = GetDocumentStore();
@@ -318,7 +318,7 @@ namespace SlowTests
         //---------------------------------------------------------------------------------------------------------------------------------------
 
         // (RavenDB-19641)
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
         public async Task OnlyConflictConfig_EnforceConfig_ShouldntDeletesAllRevisions()
         {
             using var src = GetDocumentStore();
@@ -362,7 +362,7 @@ namespace SlowTests
         //---------------------------------------------------------------------------------------------------------------------------------------
 
         // regular\manual (non-conflicted) revisions shouldnt obey the conflicted-config!
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
         public async Task ForceCreatedRevisions_ShouldntObeyToConflictedRevisions()
         {
             using var src = GetDocumentStore();
@@ -410,7 +410,7 @@ namespace SlowTests
 
         //---------------------------------------------------------------------------------------------------------------------------------------
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication)]
         public async Task NotDeletingOutOfDateRevisionsBecauseTheyOrderedByEtag()
         {
             using var src = GetDocumentStore();
@@ -542,7 +542,7 @@ return oldestDoc;"
 
         //---------------------------------------------------------------------------------------------------------------------------------------
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Revisions)]
         [InlineData(true)]
         [InlineData(false)]
         public async Task Exclude_ForceCreated_Revisions_On_EnforceConfig_InCaseOf_NoConfiguration(bool deleteAlsoForceCreated)
@@ -606,7 +606,7 @@ return oldestDoc;"
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Revisions)]
         [InlineData(true)]
         [InlineData(false)]
         public async Task Exclude_ForceCreated_Revisions_On_EnforceConfig_InCaseOf_NoConfiguration2(bool deleteAlsoForceCreated)
@@ -673,7 +673,7 @@ return oldestDoc;"
 
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Revisions)]
         [InlineData(true)]
         [InlineData(false)]
         public async Task Include_ForceCreated_AlwaysOn_EnforceConfig_InCaseOf_PurgeOnDelete(bool deleteAlsoForceCreated)
@@ -748,7 +748,7 @@ return oldestDoc;"
         //---------------------------------------------------------------------------------------------------------------------------------------
 
         // (RavenDB-19640)
-        [Fact (Skip = "Not sure the logic here is correct")]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Replication, Skip = "Not sure the logic here is correct")]
         public async Task ConfigureRevisionsForConflictsOperation_PurgeOnDelete_Doesnt_Work_As_Expected_On_Document_Delete()
         {
             using (var source = GetDocumentStore())
@@ -797,7 +797,7 @@ return oldestDoc;"
         }
 
         // (RavenDB-20040)
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task EnforceRevisions_Shouldnt_Deletes_ConflictRevisions_When_Having_ConflictConfig()
         {
             using var src = GetDocumentStore();
@@ -841,7 +841,7 @@ return oldestDoc;"
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Revisions)]
         [InlineData(false, false)]
         [InlineData(false, true)]
         [InlineData(true, false)]
@@ -945,7 +945,7 @@ return oldestDoc;"
 
         //-----------------------------------------------------------------------------------------------------------------------------------------
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Revisions)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task DocWithRevisionsAndNoConfig_ShouldCreateDeleteRevisionInDelete(bool disableConfiguration)
@@ -1026,7 +1026,7 @@ return oldestDoc;"
              */
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task DocWithForceCreatedRevisionsAndNoConfig_ShouldCreateDeleteRevisionInDelete()
         {
             using var store = GetDocumentStore();
@@ -1066,7 +1066,7 @@ return oldestDoc;"
 
         //-----------------------------------------------------------------------------------------------------------------------------------------
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task RevivedDocumentShouldHaveTheRevisionsOfTheDeletedDoc()
         {
             using var store = GetDocumentStore();
@@ -1153,3 +1153,4 @@ return oldestDoc;"
 
     }
 }
+

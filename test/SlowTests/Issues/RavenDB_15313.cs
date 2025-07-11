@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.Counters;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public void GetCountersOperationShouldFilterDuplicateNames()
         {
             using (var store = GetDocumentStore())
@@ -54,7 +55,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public void GetCountersOperationShouldFilterDuplicateNames_PostGet()
         {
             using (var store = GetDocumentStore())

@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task IfIndexEncountersCorruptionItShouldBeMarkedAsErrored()
         {
             UseNewLocalServer();

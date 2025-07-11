@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -14,7 +14,7 @@ namespace SlowTests.Bugs.MultiMap
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMultimapAsASimpleJoin(Options options)
         {

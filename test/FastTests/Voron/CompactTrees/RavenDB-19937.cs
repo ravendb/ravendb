@@ -1,4 +1,4 @@
-﻿using Tests.Infrastructure;
+using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
 using Voron.Data.Lookups;
 using Xunit;

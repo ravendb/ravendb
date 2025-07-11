@@ -1,10 +1,11 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Includes.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using FastTests;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 using Xunit;
@@ -20,7 +21,7 @@ namespace SlowTests.Core.Session
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void BasicInclude()
         {
             using (var store = GetDocumentStore())

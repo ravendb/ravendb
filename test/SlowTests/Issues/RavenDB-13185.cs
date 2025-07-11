@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Certificates)]
         public async Task CanHandleCorsHeaders()
         {
             var clusterSize = 3;

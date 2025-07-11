@@ -69,12 +69,10 @@ namespace Raven.Server.NotificationCenter
             catch (Exception e)
             {
                 //precaution - should never arrive here
-                if (_logger.IsInfoEnabled)
-                    _logger.Info(
-                        $"Failed to write request time in response headers. This is not supposed to happen and is probably a bug. The request path was: {_context.Request.Path}",
+                if (_logger.IsErrorEnabled)
+                    _logger.Error(
+                        $"Failed to write request time in response headers. This is not supposed to happen and is probably a bug. The request path was: {_context.Request.Path}, query: {Query}",
                         e);
-
-                throw;
             }
         }
     }

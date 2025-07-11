@@ -1,13 +1,8 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="QueryingOn_A_Prefix.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -37,7 +32,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanIndexAndQuery()
         {
             using (var store = GetDocumentStore())

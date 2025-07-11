@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,7 +36,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [InlineData(TransactionMode.ClusterWide)]
         [InlineData(TransactionMode.SingleNode)]
         public async Task Waiting_For_Index_Doesnt_Work_For_ClusterWideTransaction(TransactionMode transactionMode)
@@ -58,7 +59,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [InlineData(TransactionMode.ClusterWide)]
         [InlineData(TransactionMode.SingleNode)]
         public async Task Waiting_For_Index_Doesnt_Work_For_ClusterWideTransaction_Delete(TransactionMode transactionMode)

@@ -33,7 +33,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Cluster)]
         public async Task DoesReadBalancerAndMaxNumberOfRequestsClietnConfigurationTakeEffectOnCurrentRequestExecutor()
         {
             var nodesCount = 3;

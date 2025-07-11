@@ -9,6 +9,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Debugging;
 using Raven.Server.Json;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanGetMapReduceIndexDebugTrees()
         {
             using (var store = GetDocumentStore())

@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanSaveAndLoadSameTimeLocalTurnsIntoUnspecified()
         {
             using (var store = GetDocumentStore())
@@ -38,7 +39,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanSaveAndLoadSameTimeUnspecified()
         {
             using (var store = GetDocumentStore())
@@ -64,7 +65,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanSaveAndLoadSameTimeUtc()
         {
             using (var store = GetDocumentStore())

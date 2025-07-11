@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Util;
 using Raven.Server.Monitoring.Snmp;
 using Raven.Server.Monitoring.Snmp.Objects.Database;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,7 +36,7 @@ namespace SlowTests.Monitoring
             return _backupDates[databaseName];
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void GivenNeverBackedUpDb_ReturnsTimespanMax()
         {
             var backupTimes = new DateTime?[]
@@ -54,7 +55,7 @@ namespace SlowTests.Monitoring
             Assert.Equal(SnmpValuesHelper.TimeTicksMax, SnmpValuesHelper.TimeSpanToTimeTicks(result));
         } 
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void GivenDbJustBackedUp_ReturnsZero()
         {
             var backupTimes = new DateTime?[]
@@ -72,7 +73,7 @@ namespace SlowTests.Monitoring
             Assert.Equal(SnmpValuesHelper.TimeTicksZero, SnmpValuesHelper.TimeSpanToTimeTicks(result));
         } 
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Given_NoDbs_ReturnsZero()
         {
             var backupTimes = new DateTime?[] {};
@@ -85,7 +86,7 @@ namespace SlowTests.Monitoring
             Assert.Equal(SnmpValuesHelper.TimeTicksZero, SnmpValuesHelper.TimeSpanToTimeTicks(result));
         } 
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void GivenAFewDatabases_ShouldProvideDurationSinceTheOldestDatabaseBackup()
         {
             var backupTimes = new DateTime?[]
@@ -103,7 +104,7 @@ namespace SlowTests.Monitoring
             Assert.Equal(_time.GetUtcNow() - backupTimes[1], result);
         } 
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void GivenDatabaseBackedUp_MoreThanMaxTimeTicksAgo_ReturnsTimespanMax()
         {
             var maxTimeTicksTimespan = SnmpValuesHelper.TimeTicksMax.ToTimeSpan();

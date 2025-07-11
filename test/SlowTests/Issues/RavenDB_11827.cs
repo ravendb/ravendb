@@ -1,7 +1,8 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
             public string Value { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public async Task CanIncrementOnNull()
         {
             var id = "data";

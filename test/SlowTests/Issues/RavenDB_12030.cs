@@ -33,7 +33,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void SimpleFuzzy(Options options)
         {
@@ -85,7 +85,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void SimpleProximity(Options options)
         {

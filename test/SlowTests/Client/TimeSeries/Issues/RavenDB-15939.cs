@@ -1,4 +1,4 @@
-﻿using FastTests;
+﻿﻿using FastTests;
 using Raven.Client.Documents.Queries.TimeSeries;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
@@ -14,7 +14,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         public void ShouldThrowBetterErrorOnAttemptToGroupByTagOnly()
         {
             const string id = "employees/1";

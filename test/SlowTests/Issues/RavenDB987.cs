@@ -92,7 +92,7 @@ namespace SlowTests.Issues
             public string CityName { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldGetAppropriateResults()
         {
             using (var store = GetDocumentStore())

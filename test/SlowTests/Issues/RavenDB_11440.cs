@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.ServerWide.Operations.Logs;
 using Sparrow;
 using Sparrow.Logging;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public async Task CanGetLogsConfigurationAndChangeLogMode()
         {
             UseNewLocalServer();

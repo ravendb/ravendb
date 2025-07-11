@@ -25,7 +25,7 @@ namespace SlowTests.Authentication
         {
         }
 
-        [LinuxFact]
+        [LinuxFact(RavenTestCategory.Security)]
         public async Task WriteMeminfoAsTextFileInDebugPackage_RavenDB_17427()
         {
             DoNotReuseServer();
@@ -53,7 +53,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public async Task DatabaseDebugInfoPackage_WhenHasOperatorPermissions_ShouldContainSettingsJson()
         {
             var shouldContain = new[]
@@ -72,7 +72,7 @@ namespace SlowTests.Authentication
             await AssertDatabaseDebugInfoEntries(dbName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator, shouldContain);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public async Task DatabaseDebugInfoPackage_WhenHasClusterAdminPermissions_ShouldContainSettingsJson()
         {
             var shouldContain = new[]
@@ -91,7 +91,7 @@ namespace SlowTests.Authentication
             await AssertDatabaseDebugInfoEntries(dbName, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, shouldContain);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public async Task DatabaseDebugInfoPackage_WhenDatabaseAdminPermissions_ShouldContainSettingsJson()
         {
             var shouldContain = new[]
@@ -111,7 +111,7 @@ namespace SlowTests.Authentication
             await AssertDatabaseDebugInfoEntries(dbName, databaseAccesses, SecurityClearance.ValidUser, shouldContain);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public async Task DatabaseDebugInfoPackage_WhenValidUserWithOnlyReadWritePermissions_ShouldNotContainSettingsJson()
         {
             var shouldContain = new[]
@@ -213,7 +213,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public async Task GetNonAdminDebugInfoFromDatabaseDebugPackageHandler()
         {
             DoNotReuseServer();
@@ -246,7 +246,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Security)]
         public async Task GetAllDebugInfoFromDatabaseDebugPackageHandlerWhenAdminDBAccess()
         {
             DoNotReuseServer();
@@ -315,3 +315,4 @@ namespace SlowTests.Authentication
         }
     }
 }
+

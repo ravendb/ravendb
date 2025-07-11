@@ -1,8 +1,9 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
 
+using Tests.Infrastructure;
 namespace SlowTests.Issues
 {
     public class RavenDB_13034 : RavenTestBase
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
             public int Age;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ExploringConcurrencyBehavior()
         {
             using (var store = GetDocumentStore())

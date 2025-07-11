@@ -1,10 +1,11 @@
-﻿using System.IO;
+using System.IO;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,7 +33,7 @@ namespace SlowTests.Blittable.BlittableJsonWriterTests
             return sb.ToString();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]
@@ -55,7 +56,7 @@ namespace SlowTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]

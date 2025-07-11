@@ -3,6 +3,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Test()
         {
             using (var store = GetDocumentStore())

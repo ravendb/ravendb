@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -39,7 +40,7 @@ namespace SlowTests.Server.Documents.Indexing
                 Stores.Add(x => x.Count, FieldStorage.Yes);
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ReduceIndexProjectionWithoutStoredFields()
         {
             using (var store = GetDocumentStore())
@@ -66,7 +67,7 @@ Count: user.Count
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ReduceIndexProjectionWithStoredFields()
         {
             using (var store = GetDocumentStore())

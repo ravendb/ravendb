@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -20,7 +20,7 @@ namespace SlowTests.Cluster
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClientApi)]
         public async Task Move_To_Rehab_Grace_Time_Keeps_The_Priority_Order()
         {
             const int clusterSize = 3;

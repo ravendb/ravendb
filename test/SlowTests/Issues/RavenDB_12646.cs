@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         public async Task Backup_And_Restore_Revisions()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.Bugs
 {
@@ -13,7 +14,7 @@ namespace FastTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanBeSafelyModifiedOnEither()
         {
             using (var tx = Env.WriteTransaction())

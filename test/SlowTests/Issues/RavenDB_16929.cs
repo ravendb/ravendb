@@ -1,5 +1,6 @@
 ﻿using Xunit;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
@@ -10,7 +11,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void DocumentWithStringWithNullCharacterAtEndShouldNotHaveChangeOnLoad()
         {
             using (var store = GetDocumentStore())
@@ -32,7 +33,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void DocumentWithEmptyCharShouldNotHaveChangeOnLoad()
         {
             using (var store = GetDocumentStore())

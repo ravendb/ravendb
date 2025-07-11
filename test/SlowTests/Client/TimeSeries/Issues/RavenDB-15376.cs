@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -7,6 +7,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Patching | RavenTestCategory.Counters)]
         public async Task CanAddNewTimeSeriesAndNewCounterViaPatch()
         {
             const string timeseries = "HeartRate";
@@ -76,7 +77,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         public async Task CanAddNewTimeSeriesOnLoadedDocumentViaPatch()
         {
             const string documentId = "companies/1";
@@ -145,7 +146,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Patching)]
         public async Task CanDeleteTimeSeriesOnLoadedDocumentViaPatch()
         {
             const string documentId = "companies/1";

@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         public void IdShouldBeIncludedWithBothProjections()
         {
             using (var store = GetDocumentStore())

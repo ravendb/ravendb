@@ -1,4 +1,4 @@
-﻿using System.Collections.Concurrent;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using FastTests;
 using Raven.Client;
@@ -7,6 +7,7 @@ using Raven.Client.Json;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -23,7 +24,7 @@ namespace SlowTests.Issues
             public IEnumerable<string> Tags { get; set; } = new string[0];
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldWork()
         {
             using (var store = GetDocumentStore())

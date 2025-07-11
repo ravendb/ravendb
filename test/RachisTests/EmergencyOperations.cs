@@ -19,7 +19,7 @@ namespace RachisTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task LeaderCanCecedeFromClusterAndNewLeaderWillBeElected()
         {
             var (nodes, leader) = await CreateRaftCluster(3);
@@ -38,7 +38,7 @@ namespace RachisTests
             Assert.True(await Task.WhenAny(leaderSelectedTasks).WaitWithoutExceptionAsync(TimeSpan.FromSeconds(10)), "New leader was not elected after old leader left the cluster.");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task FollowerCanCecedeFromCluster()
         {
             var clusterSize = 3;
@@ -52,7 +52,7 @@ namespace RachisTests
             Assert.NotEqual(old.TopologyId, @new.TopologyId);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterRecreationShouldKeepClusterTransactionAndDatabaseTopologyIds()
         {
             var databaseName = GetDatabaseName();

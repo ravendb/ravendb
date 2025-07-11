@@ -12,7 +12,7 @@ class deleteDocuments extends dialogViewModelBase {
     private deletionStarted = false;
     deletionTask = $.Deferred<void>();
 
-    constructor(documentIds: Array<string>, private db: database, private transactionMode: Raven.Client.Documents.Session.TransactionMode = "SingleNode") {
+    constructor(documentIds: Array<string>, private db: database | string, private transactionMode: Raven.Client.Documents.Session.TransactionMode = "SingleNode") {
         super(null);
 
         if (documentIds.length === 0) {

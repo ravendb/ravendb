@@ -44,7 +44,7 @@ select new {Name = g.Key, CreatedTime = createdTime}
             public string Name { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUseMax()
         {
             using (var store = GetDocumentStore())

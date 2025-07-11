@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task ArtificalDocumentsMatchIndexEntries()
         {
             using (var store = GetDocumentStore())

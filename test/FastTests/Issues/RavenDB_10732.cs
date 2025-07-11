@@ -1,5 +1,6 @@
-﻿using Sparrow.LowMemory;
+using Sparrow.LowMemory;
 using Sparrow.Server.LowMemory;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Can_check_memory_status()
         {
             using (var monitor = new LowMemoryMonitor())

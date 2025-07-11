@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using FastTests;
 using FastTests.Utils;
 using Raven.Client;
@@ -16,7 +16,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanIndexWithNoErrors_DatetimeOffset()
         {
             using (var store = GetDocumentStore())
@@ -80,7 +80,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanIndexWithNoErrors_Datetime()
         {
             using (var store = GetDocumentStore())

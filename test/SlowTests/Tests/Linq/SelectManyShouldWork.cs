@@ -67,13 +67,13 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void SelectMany1_Works()
         {
             AssertAgainstIndex<Creatives_ClickActions_1>();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void SelectMany2_ShouldWork()
         {
             AssertAgainstIndex<Creatives_ClickActions_2>();

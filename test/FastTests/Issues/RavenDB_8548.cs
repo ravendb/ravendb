@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Server.Config;
 using Sparrow.Logging;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldWork()
         {
             Validate("RAVEN_Logs_MinLevel");
@@ -38,3 +39,4 @@ namespace FastTests.Issues
         }
     }
 }
+

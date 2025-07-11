@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_delete_property_in_patch()
         {
             using (var store = GetDocumentStore())

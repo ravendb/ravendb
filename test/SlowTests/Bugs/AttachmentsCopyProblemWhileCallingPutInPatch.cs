@@ -1,9 +1,10 @@
-﻿using System.IO;
+using System.IO;
 using FastTests;
 using Orders;
 using Raven.Client;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void PatchPut_WhileContainAttachments_TheNewDocumentShouldNotContainThem()
         {
             var expectedAttachmentStream = new MemoryStream(new byte[] { 1, 2, 3, 4, 5, 6 });
@@ -65,7 +66,7 @@ namespace SlowTests.Bugs
             Assert.False(doesHaveAttachments, "The new employee should have no attachment properties in metadata");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void PatchPut_WhileContainCounters_TheNewDocumentShouldNotContainThem()
         {
             var employee = new Employee { FirstName = "Avi" };

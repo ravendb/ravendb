@@ -9,6 +9,7 @@ using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -40,7 +41,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Monitoring)]
         public async Task Should_create_performance_hint_notification_when_exceeding_max_index_outputs()
         {
             var index = new UsersAndFriendsIndex();

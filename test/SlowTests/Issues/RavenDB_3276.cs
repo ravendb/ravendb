@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Dictionary_with_empty_string_as_key_should_fail_storing_in_db()
         {
             using (var store = GetDocumentStore())
@@ -43,7 +44,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BulkInsert)]
         public void Dictionary_with_empty_string_as_key_should_fail_bulk_insert()
         {
             using (var store = GetDocumentStore())

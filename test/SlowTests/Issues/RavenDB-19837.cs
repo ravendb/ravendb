@@ -1,5 +1,6 @@
 using Raven.Client.Documents.Linq;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Newtonsoft.Json.Serialization;
@@ -12,7 +13,7 @@ namespace SlowTests.Issues;
 
 public class RavenDB_19837 : RavenTestBase
 {
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     public void AnonymousProjectionWithCamelCaseSerialization()
     {
         using var store = GetDocumentStore(new Options

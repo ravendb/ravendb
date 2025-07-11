@@ -1,4 +1,5 @@
-﻿using FastTests.Voron;
+using FastTests.Voron;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,7 +11,7 @@ namespace SlowTests.Voron.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldProperlyReportNumberOfModifiedPagesInTransaction()
         {
             using (var tx = Env.WriteTransaction())

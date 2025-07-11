@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanExportRavenDbWithoutAttachments()
         {
             var folder = NewDataPath(forceCreateDir: true);
@@ -81,7 +82,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanImportRavenDbWithoutAttachments()
         {
             var folder = NewDataPath(forceCreateDir: true);

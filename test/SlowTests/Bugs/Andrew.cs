@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Andrew.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -36,7 +36,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task FunkyIndex(Options options)
         {

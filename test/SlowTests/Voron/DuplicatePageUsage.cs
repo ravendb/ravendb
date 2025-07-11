@@ -1,5 +1,6 @@
-﻿using System.IO;
+using System.IO;
 using FastTests;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
@@ -21,7 +22,7 @@ namespace SlowTests.Voron
                Count = 1
            });
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void ShouldNotHappen()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()))

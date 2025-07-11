@@ -1,8 +1,9 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Server.Utils.Metrics;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanSerializeAndDeserializeMeterValue()
         {
             var meter = new MeterValue("name", 1, 2.0, 3.0, 4.0, 15.0);

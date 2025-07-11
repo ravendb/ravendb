@@ -1331,7 +1331,7 @@ select timeseries(from doc.HeartRate between $start and $end
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [InlineData("months")]
         [InlineData("month")]
         [InlineData("mon")]
@@ -6150,7 +6150,7 @@ select out()");
             }
         }
 
-        [Fact(Skip = "RavenDB-14988")]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Querying, Skip = "RavenDB-14988")]
         public void CanQueryTimeSeriesRaw_UsingLast_Milliseconds()
         {
             using (var store = GetDocumentStore())
@@ -6674,7 +6674,7 @@ select out(p)
             }
         }
 
-        [Fact(Skip = "RavenDB-14988")]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Querying, Skip = "RavenDB-14988")]
         public void CanQueryTimeSeriesRaw_UsingFirst_Milliseconds()
         {
             using (var store = GetDocumentStore())

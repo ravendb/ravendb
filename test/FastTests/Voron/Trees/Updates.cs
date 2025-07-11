@@ -1,18 +1,15 @@
-﻿using System;
+using System;
 using System.IO;
-using Xunit;
+using Tests.Infrastructure;
 using Voron.Global;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.Trees
 {
-    public class Updates : StorageTest
+    public class Updates(ITestOutputHelper output) : StorageTest(output)
     {
-        public Updates(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanUpdateVeryLargeValueAndThenDeleteIt()
         {
             var random = new Random();
@@ -54,13 +51,13 @@ namespace FastTests.Voron.Trees
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddAndUpdate()
         {
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                
+
                 tree.Add("test", StreamFor("1"));
                 tree.Add("test", StreamFor("2"));
 
@@ -70,13 +67,13 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddAndUpdate2()
         {
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                
+
                 tree.Add("test/1", StreamFor("1"));
                 tree.Add("test/2", StreamFor("2"));
                 tree.Add("test/1", StreamFor("3"));
@@ -92,13 +89,13 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddAndUpdate1()
         {
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                
+
                 tree.Add("test/1", StreamFor("1"));
                 tree.Add("test/2", StreamFor("2"));
                 tree.Add("test/2", StreamFor("3"));
@@ -115,13 +112,13 @@ namespace FastTests.Voron.Trees
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDelete()
         {
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                
+
                 tree.Add("test", StreamFor("1"));
                 Assert.NotNull(ReadKey(tx, tree, "test"));
 
@@ -130,13 +127,13 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDelete2()
         {
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                
+
                 tree.Add("test/1", StreamFor("1"));
                 tree.Add("test/2", StreamFor("1"));
                 Assert.NotNull(ReadKey(tx, tree, "test/2"));
@@ -147,13 +144,13 @@ namespace FastTests.Voron.Trees
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDelete1()
         {
             using (var tx = Env.WriteTransaction())
             {
                 var tree = tx.CreateTree("foo");
-                
+
                 tree.Add("test/1", StreamFor("1"));
                 tree.Add("test/2", StreamFor("1"));
                 Assert.NotNull(ReadKey(tx, tree, "test/1"));

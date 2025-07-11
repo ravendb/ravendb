@@ -1,6 +1,7 @@
-﻿using FastTests;
+using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
             public byte[] Hash { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanHandleWhenSettingByteArrayToNull()
         {
             using (var store = GetDocumentStore())

@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using Raven.Server.Documents.Indexes.Static;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ public class RavenDB_18157 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void Can_Use_Indexer_In_DynamicArray()
     {
         var dynamicArray = new DynamicArray(Enumerable.Range(0, 5));
@@ -27,3 +28,4 @@ public class RavenDB_18157 : RavenTestBase
         Assert.Equal(1, element);
     }
 }
+

@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task AvoidContextDisposalForRaftBlittableResult()
         {
             var cluster = await CreateRaftCluster(3, watcherCluster: true);

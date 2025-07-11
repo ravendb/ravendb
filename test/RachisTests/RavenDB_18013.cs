@@ -18,7 +18,7 @@ public class RavenDB_18013 : ClusterTestBase
     {
     }
     private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromMinutes(15) : TimeSpan.FromSeconds(40);
-    [Fact]
+    [RavenFact(RavenTestCategory.ClusterTransactions)]
     public async Task ShouldHandleDatabaseDeleteWhileItsBeingDeleted()
     {
         var cluster = await CreateRaftCluster(3, shouldRunInMemory: false);

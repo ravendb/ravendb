@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -23,7 +23,7 @@ namespace FastTests.Voron.Backups
         public BackupToOneZipFile(ITestOutputHelper output) : base(output)
         {
         }
-        [RavenFact(RavenTestCategory.Subscriptions | RavenTestCategory.BackupExportImport, Skip = "Should add database record to backup and restore")]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.BackupExportImport, Skip = "Should add database record to backup and restore")]
         public async Task FullBackupToOneZipFile()
         {
             var tempFileName = NewDataPath(forceCreateDir: true);

@@ -10,6 +10,7 @@ using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ namespace SlowTests.Server.Documents.Patching
 
         private static readonly TimeSpan CancelAfter = TimeSpan.FromMinutes(10);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Indexes)]
         public async Task PatchByIndex_WhenFinish_ShouldFreeInternalUsageMemory()
         {
             using (var store = GetDocumentStore())

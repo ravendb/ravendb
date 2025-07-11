@@ -115,9 +115,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             var properties = RequestHandler.GetStringValuesQueryString("field", false);
 
             // ReSharper disable once ArgumentsStyleLiteral
-            using (var tracker = GetTimeTracker())
             using (var token = RequestHandler.CreateHttpRequestBoundTimeLimitedOperationTokenForQuery())
             using (AllocateContext(out TOperationContext context))
+            using (var tracker = GetTimeTracker())
             {
                 IndexQueryServerSide query;
                 string overrideQuery = null;

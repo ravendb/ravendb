@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Should_handle_map_reduce_index_tombstones_update_delete()
         {
             using (var store = GetDocumentStore())
@@ -66,7 +67,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Should_handle_map_index_tombstones_update_delete()
         {
             using (var store = GetDocumentStore())
@@ -114,7 +115,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Should_handle_map_index_tombstones_delete_and_put()
         {
             using (var store = GetDocumentStore())

@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void TopologyCacheLocationIsSetToAppContextBaseDirectoryByDefault()
         {
             Assert.Equal(AppContext.BaseDirectory, DocumentConventions.Default.TopologyCacheLocation);
@@ -24,7 +25,7 @@ namespace SlowTests.Issues
             Assert.Equal(AppContext.BaseDirectory, conventions.TopologyCacheLocation);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanChangeTopologyCacheLocation()
         {
             var cacheLocation = NewDataPath(forceCreateDir: true);

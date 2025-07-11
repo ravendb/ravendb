@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
             public string OrganizationId { get; set; }
             public string AgentDutyCode { get; set; }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public unsafe void PropertySortOrderSustained()
         {
             using (var store = GetDocumentStore())

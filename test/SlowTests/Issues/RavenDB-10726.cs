@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Operations_CanBeFetchedForGivenDatabase_WithoutDefaultDatabaseSet()
         {
             using (var store = GetDocumentStore(new Options
@@ -29,7 +29,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void MaintenanceOperations_CanBeFetchedForGivenDatabase_WithoutDefaultDatabaseSet()
         {
             using (var store = GetDocumentStore(new Options
@@ -45,7 +45,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldThrow_WhenTryingToChangeDefaultDbName_AfterInitialization()
         {
             using (var store = GetDocumentStore())
@@ -55,7 +55,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldThrow_IfTryingToUseOperationsDirectly_WithoutDefaultDatabaseSet()
         {
             using (var store = GetDocumentStore(new Options
@@ -76,7 +76,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldThrow_IfTryingToUse_AggressiveCaching_OrSetRequestTimeout_WithoutDefaultDatabaseSet_AndNoDatabaseParameter()
         {
             using (var store = GetDocumentStore(new Options

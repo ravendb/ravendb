@@ -146,7 +146,7 @@ namespace StressTests.Client.TimeSeries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task ManyTimeSeriesRetention()
         {
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Tombstones.CleanupInterval)] = 1.ToString();

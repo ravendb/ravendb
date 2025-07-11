@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -23,7 +23,7 @@ namespace SlowTests.Issues
             public List<Document> SubDocuments { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ConcurrentProjectionsWithLazy()
         {
             using (var store = GetDocumentStore())

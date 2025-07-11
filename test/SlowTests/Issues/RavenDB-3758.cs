@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities.Faceted;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -62,7 +63,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_Overwrite_Side_By_Side_Index()
         {
             using (var store = GetDocumentStore())
@@ -99,7 +100,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Can_Overwrite_Side_By_Side_Index_Async()
         {
             using (var store = GetDocumentStore())

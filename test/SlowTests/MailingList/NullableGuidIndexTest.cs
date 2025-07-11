@@ -31,7 +31,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_query_against_nullable_guid()
         {
             using (var store = GetDocumentStore())

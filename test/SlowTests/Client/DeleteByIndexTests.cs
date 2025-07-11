@@ -61,7 +61,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task Delete_By_Index_Async()
         {
             using (var store = GetDocumentStore())

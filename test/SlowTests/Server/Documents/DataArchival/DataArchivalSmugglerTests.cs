@@ -13,6 +13,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -31,7 +32,7 @@ public class DataArchivalSmugglerTests : RavenTestBase
         await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Smuggler)]
     public async Task CanFilterOutArchivedDataFromExportAndImport()
     {
         using (var store = GetDocumentStore())
@@ -110,7 +111,7 @@ public class DataArchivalSmugglerTests : RavenTestBase
 
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task Backup_And_Restore_ArchivedDocuments()
     {
         var backupPath = NewDataPath(suffix: "BackupFolder");

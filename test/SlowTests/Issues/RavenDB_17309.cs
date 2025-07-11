@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void QueryWithSelectAfterSelectNew()
         {
             using (var store = GetDocumentStore())
@@ -78,7 +78,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void QueryWithSelectAfterSelectNew_WithNestedLoad()
         {
             using (var store = GetDocumentStore())

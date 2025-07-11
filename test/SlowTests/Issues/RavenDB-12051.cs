@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CompareBlittableShouldNotFailWhenOldPropIsArrayAndNewPropIsObjectWithTypeAndCollection()
         {
             using (var store = GetDocumentStore())

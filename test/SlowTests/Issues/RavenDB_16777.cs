@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CanPutEmptyStringInRemoteFolderProperty()
         {
             using var server = GetNewServer();

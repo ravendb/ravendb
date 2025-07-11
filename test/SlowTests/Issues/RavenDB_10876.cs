@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Commands;
 using Raven.Client.Exceptions;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,11 +16,11 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]        
-        [InlineData(32)]
-        [InlineData(100)]
-        [InlineData(308)]              
-        public void ShouldSupportRawNumbersIntegers(int stringLength)
+        [RavenTheory(RavenTestCategory.Core)]
+        [RavenData(32, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(100, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(308, DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldSupportRawNumbersIntegers(Options options, int stringLength)
         {
             string GetNumber(int length)
             {
@@ -32,7 +33,7 @@ namespace SlowTests.Issues
             }
             string bigNumString = string.Join(string.Empty, GetNumber(stringLength));
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var requestExecuter = store.GetRequestExecutor();
                 using (requestExecuter.ContextPool.AllocateOperationContext(out var context))
@@ -56,13 +57,13 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
-        [InlineData(2)]
-        [InlineData(16)]
-        [InlineData(32)]
-        [InlineData(100)]
-        [InlineData(308)]
-        public void ShouldSupportRawNumbersFloatingPoint(int stringLength)
+        [RavenTheory(RavenTestCategory.Core)]
+        [RavenData(2, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(16, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(32, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(100, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(308, DatabaseMode = RavenDatabaseMode.All)]
+        public void ShouldSupportRawNumbersFloatingPoint(Options options, int stringLength)
         {
             string GetNumber(int length)
             {
@@ -75,7 +76,7 @@ namespace SlowTests.Issues
             }
             string bigNumString = string.Join(string.Empty, GetNumber(stringLength));
 
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 var requestExecuter = store.GetRequestExecutor();
                 using (requestExecuter.ContextPool.AllocateOperationContext(out var context))
@@ -99,7 +100,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldNotSupportRawNumbersBiggerThenDoubleMaxVal()
         {            
             string bigNumString = string.Join(string.Empty, "17976931348623158" + string.Join("", Enumerable.Repeat(0,293)));

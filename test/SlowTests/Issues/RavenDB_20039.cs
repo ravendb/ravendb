@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
@@ -10,6 +10,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ public class RavenDB_20039 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public async Task Slow_IO_hints_are_stored_for_all_IO_types()
     {
         var now = DateTime.UtcNow;

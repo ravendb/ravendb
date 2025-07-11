@@ -12,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseEscapedFields()
         {
             using (var store = GetDocumentStore())

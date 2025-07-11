@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="CanProjectIdFromDocumentInQueries.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -60,7 +60,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void SelectIdFromDocumentWithDynamicQuery()
         {
             using (var store = GetDocumentStore())

@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="PhilJones.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents;
 using Tests.Infrastructure;
 using Xunit;
@@ -23,7 +17,7 @@ namespace SlowTests.MailingList
             public string FirstName { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanChangeParsingOfSearchQueries()
         {
             using (var store = GetDocumentStore())

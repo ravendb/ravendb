@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Server.Storage.Schema.Updates.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Counters)]
         public void CanMigrateCountersFrom42017()
         {
             From42017.NumberOfCounterGroupsToMigrateInSingleTransaction = 10;
@@ -72,7 +73,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Counters)]
         public void CanMigrateCountersFrom42017_SingleDocManyCounters()
         {
             var backupPath = NewDataPath(forceCreateDir: true);

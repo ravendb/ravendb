@@ -23,7 +23,7 @@ namespace SlowTests.Client.Attachments
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public async Task PutAttachments()
         {
             using (var store = GetDocumentStore())
@@ -130,7 +130,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void ThrowIfStreamIsDisposed()
         {
             using (var store = GetDocumentStore())
@@ -160,7 +160,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void ThrowIfStreamIsUseTwice()
         {
             using (var store = GetDocumentStore())
@@ -180,7 +180,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void ThrowWhenTwoAttachmentsWithTheSameNameInSession()
         {
             using (var store = GetDocumentStore())
@@ -200,7 +200,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void PutDocumentAndAttachmentAndDeleteShouldThrow()
         {
             using (var store = GetDocumentStore())
@@ -221,7 +221,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void PutAttachmentAndDeleteShouldThrow()
         {
             using (var store = GetDocumentStore())
@@ -246,7 +246,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public async Task DeleteAttachments()
         {
             using (var store = GetDocumentStore())
@@ -342,7 +342,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void DeleteDocumentAndThanItsAttachments_ThisIsNoOpButShouldBeSupported()
         {
             using (var store = GetDocumentStore())
@@ -375,7 +375,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void DeleteDocumentByCommandAndThanItsAttachments_ThisIsNoOpButShouldBeSupported()
         {
             using (var store = GetDocumentStore())
@@ -405,7 +405,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void GetAttachmentNames()
         {
             using (var store = GetDocumentStore())
@@ -470,7 +470,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         [InlineData(100)]
         public void PutLotOfAttachments(int count)
         {
@@ -521,7 +521,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public async Task AttachmentsStore_TransactionMergerRerunBecauseFailureOfAnotherCommand_ShouldStoreTheAttahments()
         {
             const int attachmentsCount = 10;

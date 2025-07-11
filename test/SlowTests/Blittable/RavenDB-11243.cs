@@ -1,5 +1,6 @@
-﻿
+
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Blittable
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanSerializeStringPropertyOfExactly327666Chars()
         {
             using (var store = GetDocumentStore())

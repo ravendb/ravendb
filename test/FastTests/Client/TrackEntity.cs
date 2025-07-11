@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure.Entities;
 using Xunit;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace FastTests.Client
@@ -15,7 +16,7 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Deleting_Entity_That_Is_Not_Tracked_Should_Throw()
         {
             using (var store = GetDocumentStore())
@@ -28,7 +29,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Loading_Deleted_Document_Should_Return_Null()
         {
             using (var store = GetDocumentStore())
@@ -55,7 +56,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Storing_Document_With_The_Same_Id_In_The_Same_Session_Should_Throw()
         {
             using (var store = GetDocumentStore())
@@ -75,7 +76,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Get_Tracked_Entities()
         {
             using (var store = GetDocumentStore())
@@ -176,3 +177,4 @@ namespace FastTests.Client
         }
     }
 }
+

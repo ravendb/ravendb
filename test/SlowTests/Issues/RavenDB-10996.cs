@@ -41,7 +41,7 @@ namespace SlowTests.Issues
   }
 }";
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanGetCorrectOutputWhenUsingDuplicateArray(Options options)
         {

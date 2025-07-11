@@ -1088,3 +1088,9 @@ type CertificatesResponseDto = {
     WellKnownAdminCerts: string[],
     WellKnownIssuers: string[]
 }
+
+interface TrafficWatchPostgresChange extends Raven.Client.Documents.Changes.TrafficWatchChangeBase {
+    Username: string;
+    Source: string;
+    Query: string;
+}

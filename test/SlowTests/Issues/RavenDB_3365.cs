@@ -12,6 +12,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.Indexes;
 using SlowTests.Core.Utils.Entities;
 using SlowTests.Core.Utils.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task shouldnt_reset_index_when_non_meaningful_change()
         {
             using (var store = GetDocumentStore())

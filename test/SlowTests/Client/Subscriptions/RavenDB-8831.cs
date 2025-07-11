@@ -22,7 +22,7 @@ namespace SlowTests.Client.Subscriptions
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ReadDocWithCompressedStringFromOneContextAndWriteToAnother()
         {
             DoNotReuseServer();

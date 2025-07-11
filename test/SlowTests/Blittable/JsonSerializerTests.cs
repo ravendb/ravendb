@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -9,6 +9,7 @@ using Raven.Server.Json.Converters;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using BlittableJsonConverter = Raven.Server.Json.Converters.BlittableJsonConverter;
@@ -38,7 +39,7 @@ namespace SlowTests.Blittable
             public int GetId() => _id;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void JsonDeserialize_WhenBlittableArrayBlittableObjectAndLazyStringAreNull_ShouldResultInCopy()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext readContext))
@@ -74,7 +75,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void JsonDeserialize_WhenHasBlittableJsonReaderArrayProperty_ShouldResultInCopy()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext readContext))
@@ -113,7 +114,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task JsonDeserialize_WhenHasBlittableObjectPropertyAndWriteAndReadFromStream_ShouldResultInCommandWithTheProperty()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -179,7 +180,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void JsonDeserialize_WhenHasLazyStringProperty_ShouldResultInCopy()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext readContext))
@@ -214,7 +215,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void JsonDeserialize_WhenHasBlittableObjectProperty_ShouldResultInCopy()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext readContext))
@@ -249,7 +250,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void JsonSerialize_WhenLazyStringValueIsProperty_ShouldSerialize()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -275,7 +276,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void JsonSerialize_WhenBlittableObjectIsProperty_ShouldResultInCopy()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -301,7 +302,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact(Skip = "To consider if should support direct serialize of LazyStringValue")]
+        [RavenFact(RavenTestCategory.Core, Skip = "To consider if should support direct serialize of LazyStringValue")]
         //Todo To consider if should support direct serialize of LazyStringValue
         public void JsonSerialize_WhenLazyStringValueIsTheRoot_ShouldSerialize()
         {
@@ -326,7 +327,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void JsonSerialize_WhenNestedBlittableObjectIsProperty_ShouldSerialize()
         {
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -355,7 +356,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact(Skip = "To consider if should support direct serialize of BlittableObject")]
+        [RavenFact(RavenTestCategory.Core, Skip = "To consider if should support direct serialize of BlittableObject")]
         //Todo To consider if should support direct serialize of BlittableObject
         public void JsonSerialize_WhenBlittableIsTheRoot_ShouldResultInCopy()
         {

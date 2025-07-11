@@ -25,7 +25,7 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
     public SetupUnsecuredClusterUsingRvn(ITestOutputHelper output) : base(output)
     {
     }
-    [Fact]
+    [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Setup)]
     public async Task Should_Create_Unsecured_Cluster_And_Setup_Zip_File_From_Rvn_One_Node()
     {
         DoNotReuseServer();
@@ -104,7 +104,7 @@ public class SetupUnsecuredClusterUsingRvn : ClusterTestBase
         }
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Setup)]
     public async Task Should_Create_Unsecured_Cluster_And_Setup_Zip_File_From_Rvn_Three_Nodes()
     {
         DoNotReuseServer();

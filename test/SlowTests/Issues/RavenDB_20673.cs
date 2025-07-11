@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +29,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CustomizeDisplayNameWithSpaces()
         {
             using (var store = GetDocumentStore())
@@ -52,7 +53,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CustomizeDisplayNameWithOutSpaces()
         {
             using (var store = GetDocumentStore())

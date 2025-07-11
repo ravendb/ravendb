@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanStreamQueryResults()
         {
             using (var store = GetDocumentStore())

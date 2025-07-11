@@ -4,6 +4,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -58,7 +59,7 @@ public class RavenDB_15629 : RavenTestBase
         public override bool IsReadRequest => true;
      }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Studio | RavenTestCategory.JavaScript)]
     public void CheckIfCorrectIndexFieldsAreReturnedForJsIndex()
     {
         using (var store = GetDocumentStore())

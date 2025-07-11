@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands;
@@ -26,7 +26,7 @@ namespace SlowTests.Client
             public string Name; 
         }
       
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void store_should_throw_exception_if_doc_exists_and_optimistic_concurrency_is_enabled()
         {
             using (var store = GetDocumentStore())
@@ -53,7 +53,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData("")]
         [InlineData("A:1-dummyDbId")]
         public void store_should_throw_exception_if_doc_exists_and_optimistic_concurrency_is_enabled_with_invalid_change_vector(string changeVector)
@@ -82,7 +82,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void delete_should_throw_exception_if_doc_exists_and_optimistic_concurrency_is_enabled()
         {
             using (var store = GetDocumentStore())
@@ -108,7 +108,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task delete_should_throw_exception_if_doc_exists_and_optimistic_concurrency_is_enabled_async()
         {
             using (var store = GetDocumentStore())
@@ -142,7 +142,7 @@ namespace SlowTests.Client
             public string Prop { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MergedBatchCommandPut_WhenDocumentAlreadyDeletedAndFailOnConcurrency_ShouldNotDeleteTombstone()
         {
             var store = GetDocumentStore(new Options
@@ -170,7 +170,7 @@ namespace SlowTests.Client
             Assert.NotEqual(0, GetTombstones(store).Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Patching)]
         public async Task MergedBatchCommandPatch_WhenDocumentAlreadyDeletedAndFailOnConcurrency_ShouldNotDeleteTombstone()
         {
             var store = GetDocumentStore(new Options
@@ -198,7 +198,7 @@ namespace SlowTests.Client
             Assert.NotEqual(0, GetTombstones(store).Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task MergedPutCommand_WhenDocumentAlreadyDeletedAndFailOnConcurrency_ShouldNotDeleteTombstone()
         {
             var store = GetDocumentStore(new Options
@@ -239,7 +239,7 @@ namespace SlowTests.Client
             Assert.NotEqual(0, GetTombstones(store).Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public async Task MergedPutAttachmentCommand_WhenAttachmentAlreadyDeletedAndFailOnConcurrency_ShouldNotDeleteTombstone()
         {
             var store = GetDocumentStore(new Options
@@ -268,7 +268,7 @@ namespace SlowTests.Client
             Assert.NotEqual(0, GetTombstones(store).Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public async Task MergedDeleteAttachmentCommand_WhenAttachmentAlreadyDeletedAndFailOnConcurrency_ShouldNotDeleteTombstone()
         {
             var store = GetDocumentStore(new Options
@@ -297,7 +297,7 @@ namespace SlowTests.Client
             Assert.NotEqual(0, GetTombstones(store).Count);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(TransactionMode.ClusterWide)]
         [InlineData(TransactionMode.SingleNode)]
         public async Task TrxMerger_WhenMergeTrxOfSuccessPutFollowingByAnyFailingCommand_ShouldReturnTheRightChangeVectorForPut(TransactionMode transactionMode)

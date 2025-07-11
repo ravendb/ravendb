@@ -58,7 +58,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void CreateDatabaseOn00000Node()
         {
             using (var server = GetNewServer(new ServerCreationOptions
@@ -81,7 +81,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task DontPurgeTombstonesWhenNodeIsDown()
         {
             var clusterSize = 3;
@@ -128,7 +128,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task KeepReplicationFactorOnRecordUpdate()
         {
             var clusterSize = 3;
@@ -149,7 +149,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task MoveToRehabOnServerDown()
         {
             var clusterSize = 3;
@@ -176,7 +176,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task MoveToRehabOnLargeGap()
         {
             var clusterSize = 3;
@@ -274,7 +274,7 @@ namespace RachisTests.DatabaseCluster
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task OnlyOneNodeShouldUpdateRehab()
         {
             var clusterSize = 3;
@@ -552,7 +552,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task DontMoveToRehabOnNoChangeAfterTimeout()
         {
             var clusterSize = 3;
@@ -588,7 +588,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanFixTopology()
         {
             var clusterSize = 3;
@@ -642,7 +642,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ReshuffleAfterPromotion()
         {
             var numberOfDatabases = 25;
@@ -713,7 +713,7 @@ namespace RachisTests.DatabaseCluster
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task PromoteOnCatchingUp()
         {
             var clusterSize = 3;
@@ -761,7 +761,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task SuccessfulMaintenanceOnLeaderChange()
         {
             var clusterSize = 3;
@@ -841,7 +841,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task MoveToPassiveWhenRefusedConnectionFromAllNodes()
         {
             //DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -916,7 +916,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RedistributeDatabaseIfNodeFails()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -962,7 +962,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RedistributeDatabaseOnMultiFailure()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -1010,7 +1010,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RemoveNodeFromClusterWhileDeletion()
         {
             var databaseName = GetDatabaseName();
@@ -1054,7 +1054,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task DontRemoveNodeWhileItHasNotReplicatedDocs()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -1210,7 +1210,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task Promote_immedtialty_should_work()
         {
             var (_, leader) = await CreateRaftCluster(3, watcherCluster: true);
@@ -1283,7 +1283,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ChangeUrlOfSingleNodeCluster()
         {
             var databaseName = GetDatabaseName();
@@ -1401,7 +1401,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ChangeUrlOfMultiNodeCluster()
         {
             var fromSeconds = TimeSpan.FromSeconds(8);
@@ -1484,7 +1484,7 @@ namespace RachisTests.DatabaseCluster
             Assert.True(dbGroupNodes.Select(s => s.WebUrl).Contains(newUrl));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RavenDB_12744()
         {
             var databaseName = GetDatabaseName();
@@ -1517,7 +1517,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task OutOfCpuCreditShouldMoveToRehab()
         {
             var cluster = await CreateRaftCluster(3);
@@ -1538,7 +1538,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ReduceChangeVectorWhenRemovingNode()
         {
             var cluster = await CreateRaftCluster(3);
@@ -1595,7 +1595,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanRemoveChangeVector()
         {
             using (var store = GetDocumentStore())
@@ -1631,7 +1631,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task HandleConflictShouldTakeUnusedDatabasesIntoAccount()
         {
             var database = GetDatabaseName();
@@ -1710,7 +1710,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task HandleConflictShouldTakeUnusedDatabasesIntoAccount2()
         {
             var database = GetDatabaseName();
@@ -1811,7 +1811,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task HandleConflictShouldTakeUnusedDatabasesIntoAccount3()
         {
             var database = GetDatabaseName();
@@ -1900,7 +1900,7 @@ namespace RachisTests.DatabaseCluster
             await EnsureNoReplicationLoop(nonDeletedNodes[1], database);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task HandleConflictShouldTakeUnusedDatabasesIntoAccount4()
         {
             var database = GetDatabaseName();
@@ -2013,7 +2013,7 @@ namespace RachisTests.DatabaseCluster
             await EnsureNoReplicationLoop(nonDeletedNodes[1], database);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task KeepDatabaseIdOnSoftDelete()
         {
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
@@ -2035,7 +2035,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task WaitBreakdownTimeBeforeReplacing()
         {
             var clusterSize = 3;
@@ -2103,7 +2103,7 @@ namespace RachisTests.DatabaseCluster
             return (topology, count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task WaitMoveToRehabGraceTime()
         {
             var clusterSize = 3;

@@ -8,6 +8,7 @@ using System.Linq;
 using System.Reflection;
 using FastTests;
 using Raven.Client.Util;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -49,7 +50,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void GetPropertiesAndFieldsForShouldOmittBackingFields()
         {
             var properties = ReflectionUtil

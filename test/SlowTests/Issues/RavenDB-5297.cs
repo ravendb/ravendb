@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,7 +36,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void QueryLuceneMinusOperator()
         {
             using (var store = GetDocumentStore())
@@ -75,7 +76,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void QueryLuceneNotOperator()
         {
             using (var store = GetDocumentStore())

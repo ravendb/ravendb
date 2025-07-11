@@ -6,6 +6,7 @@ using Sparrow.Binary;
 using Sparrow.Server.Compression;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Sparrow
 {
@@ -167,7 +168,7 @@ namespace FastTests.Sparrow
             public bool IsNull(int i) => throw new IndexOutOfRangeException();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void EmptyDictionaryTrain()
         {
             State state = new(64000);
@@ -189,7 +190,7 @@ namespace FastTests.Sparrow
             Assert.True(encoder.GetMaxEncodingBytes(encodingValue[0].Length) >= encodedBitLength / 8);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SingleKeyEncoding()
         {
             State state = new(64000);
@@ -218,7 +219,7 @@ namespace FastTests.Sparrow
             Assert.Equal(0, encodingValue[0].SequenceCompareTo(decoded.Slice(0, decodedBytes)));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void SmallValueTrain()
         {
             State state = new(64000);
@@ -255,7 +256,7 @@ namespace FastTests.Sparrow
             get { yield return new object[] { new Random().Next(100000) }; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [MemberData("RandomSeed")]
         public void VerifyOrderPreservation(int randomSeed = 3117)
         {
@@ -312,7 +313,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [MemberData("RandomSeed")]
         public void VerifyOrderPreservationAtRandomStreams(int randomSeed = 3117)
         {
@@ -367,7 +368,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [MemberData("RandomSeed")]
         public void VerifyOrderPreservationDifferentSizes(int randomSeed = 3117)
         {
@@ -422,7 +423,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [MemberData("RandomSeed")]
         public void VerifyOrderPreservationDifferentSizesWithNulls(int randomSeed = 3117)
         {
@@ -438,7 +439,7 @@ namespace FastTests.Sparrow
             byte[][] outputBuffers = new byte[size][];
             for (int i = 0; i < keysAsStrings.Length; i++)
             {
-                int id = rgn.Next(100000000); 
+                int id = rgn.Next(100000000);
                 keysAsStrings[i] = $"list\u0000/{id}\u0000";
                 outputBuffers[i] = new byte[128];
             }
@@ -477,7 +478,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [MemberData("RandomSeed")]
         public void VerifyCorrectDecoding(int randomSeed)
         {
@@ -518,7 +519,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [MemberData("RandomSeed")]
         public void EnsureEscapedSequencesWithNullsWork(int randomSeed)
         {
@@ -579,7 +580,7 @@ namespace FastTests.Sparrow
             Assert.Equal(0, escape.AsSpan().SequenceCompareTo(decoded.Slice(0, decodedBytes)));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Corax)]
         [MemberData("RandomSeed")]
         [InlineData(7157)]
         [InlineData(50407)]
@@ -630,7 +631,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void EncodingNullValues()
         {
             // We train an encoder with some random stuff.
@@ -675,7 +676,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void NullsAtTheEndWithDifferentSizes()
         {
             State state = new(64000);

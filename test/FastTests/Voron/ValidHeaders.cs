@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using FastTests.Voron.FixedSize;
+using Tests.Infrastructure;
 using Voron.Data;
 using Voron.Data.BTrees;
 using Voron.Global;
@@ -13,13 +14,9 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron
 {
-    public unsafe class ValidHeaders : NoDisposalNeeded
+    public unsafe class ValidHeaders(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public ValidHeaders(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ValidateNoOverlap()
         {
             var t = typeof(FileHeader);
@@ -44,7 +41,7 @@ namespace FastTests.Voron
             return (int)sizeOf.MakeGenericMethod(type).Invoke(null, null);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void FileHeader()
         {
             var seed = 4;
@@ -110,7 +107,7 @@ namespace FastTests.Voron
 
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed]
         public void TransactionHeader(int seed)
         {

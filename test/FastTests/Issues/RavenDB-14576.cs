@@ -1,7 +1,8 @@
-﻿using Raven.Server.Documents.Indexes.Static;
+﻿﻿using Raven.Server.Documents.Indexes.Static;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void TypeConverterShouldFlattenArrayOfArrays()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -43,3 +44,4 @@ namespace FastTests.Issues
         }
     }
 }
+

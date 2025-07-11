@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void VerifyNegateQueryOptimization()
         {
             using (var store = GetDocumentStore())

@@ -9,6 +9,7 @@ using Voron;
 using Voron.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Voron.Storage
 {
@@ -23,7 +24,7 @@ namespace SlowTests.Voron.Storage
             options.MaxStorageSize = 1024 * 1024 * 1; // 1MB
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldThrowQuotaException()
         {
             var quotaEx = Assert.Throws<QuotaException>(() =>

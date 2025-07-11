@@ -8,6 +8,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace RachisTests
         }
 
         // https://github.com/ravendb/ravendb/pull/9996#discussion_r361162789
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanDisposeAndDeleteWhileInsertingDocuments()
         {
             DoNotReuseServer();

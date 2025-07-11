@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,7 +30,7 @@ namespace SlowTests.Issues
             public string String { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithByteProperty()
         {
             using (var store = GetDocumentStore())
@@ -68,7 +69,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithShortProperty()
         {
             using (var store = GetDocumentStore())
@@ -107,7 +108,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithIntProperty()
         {
             using (var store = GetDocumentStore())
@@ -146,7 +147,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithUIntProperty()
         {
             using (var store = GetDocumentStore())
@@ -184,7 +185,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithLongProperty()
         {
             using (var store = GetDocumentStore())
@@ -223,7 +224,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithULongProperty()
         {
             using (var store = GetDocumentStore())
@@ -262,7 +263,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithGuidProperty()
         {
             byte[] bytes = {0, 1, 2, 3, 4, 5, 6, 7,8, 9, 10, 11, 12, 13, 14, 15};
@@ -308,7 +309,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithDecimalProperty()
         {
             using (var store = GetDocumentStore())
@@ -347,7 +348,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithFloatProperty()
         {
             using (var store = GetDocumentStore())
@@ -386,7 +387,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithDoubleProperty()
         {
             using (var store = GetDocumentStore())
@@ -425,7 +426,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithBoolProperty()
         {
             using (var store = GetDocumentStore())
@@ -464,7 +465,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchWithStringProperty()
         {
             using (var store = GetDocumentStore())

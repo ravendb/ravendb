@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [LicenseRequiredFact]
+        [RavenFact(RavenTestCategory.Licensing, LicenseRequired = true)]
         public async Task Should_Wait_For_License_To_Be_Reloaded_After_Activation()
         {
             DoNotReuseServer();

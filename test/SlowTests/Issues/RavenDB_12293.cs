@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void Should_not_throw_on_large_buffer(Options options)
         {

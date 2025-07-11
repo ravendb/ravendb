@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -12,14 +13,10 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron.Tables
 {
-    public unsafe class RavenDB_17760 : TableStorageTest
+    public unsafe class RavenDB_17760(ITestOutputHelper output) : TableStorageTest(output)
     {
         public static readonly Slice IndexName;
         public static readonly Slice StatsTree;
-
-        public RavenDB_17760(ITestOutputHelper output) : base(output)
-        {
-        }
 
         static RavenDB_17760()
         {
@@ -42,7 +39,7 @@ namespace FastTests.Voron.Tables
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanInsertThenReadByDynamic()
         {
             using (var tx = Env.WriteTransaction())
@@ -84,7 +81,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanInsertThenDeleteByDynamic()
         {
             using (var tx = Env.WriteTransaction())
@@ -121,7 +118,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanInsertThenUpdateByDynamic()
         {
             using (var tx = Env.WriteTransaction())
@@ -168,7 +165,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanUpdateByDynamic_ManyItems()
         {
             using (var tx = Env.WriteTransaction())
@@ -214,7 +211,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanSeekByPrefix()
         {
             using (var tx = Env.WriteTransaction())
@@ -303,7 +300,7 @@ namespace FastTests.Voron.Tables
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDoAdditionalWorkOnEntryChangeByDynamic()
         {
             using (var tx = Env.WriteTransaction())

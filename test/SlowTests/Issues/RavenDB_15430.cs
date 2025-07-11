@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Cluster)]
         public async Task MarkPolicyAfterRollup()
         {
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Tombstones.CleanupInterval)] = 1.ToString();
@@ -196,7 +196,7 @@ namespace SlowTests.Issues
             return message;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Cluster)]
         public async Task RequiredForNextPolicyTest()
         {
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Tombstones.CleanupInterval)] = 1.ToString();
@@ -293,7 +293,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Cluster)]
         public async Task SingleResultTest()
         {
             DefaultClusterSettings[RavenConfiguration.GetKey(x => x.Tombstones.CleanupInterval)] = 1.ToString();

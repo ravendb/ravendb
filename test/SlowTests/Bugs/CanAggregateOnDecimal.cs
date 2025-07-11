@@ -1,4 +1,4 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using System.Linq;
@@ -53,7 +53,7 @@ namespace SlowTests.Bugs
             public decimal Amount { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void MapOnly(Options options)
         {
@@ -91,7 +91,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void Reduce(Options options)
         {

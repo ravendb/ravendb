@@ -48,7 +48,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void WillSupportLast(Options options)
         {
@@ -74,7 +74,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void AssertMapDefinition()
         {
             var indexDefinition = new Students_ByEmailDomain().CreateIndexDefinition();

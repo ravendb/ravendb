@@ -14,7 +14,7 @@ namespace SlowTests.Tests.Linq
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseIndexOf(Options options)
         {

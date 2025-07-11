@@ -15,7 +15,7 @@ namespace SlowTests.Tests.Spatial
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Spatial)]
         public void Rectangle()
         {
             var wkt = new WktSanitizer();
@@ -23,7 +23,7 @@ namespace SlowTests.Tests.Spatial
             Assert.Equal("10.8 34.9 89.0 78.2", wkt.Sanitize("10.8 34.9 89.0 78.2"));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Spatial)]
         public void Points()
         {
             var wkt = new WktSanitizer();
@@ -36,7 +36,7 @@ namespace SlowTests.Tests.Spatial
             Assert.Equal("POINT (0 0)", wkt.Sanitize("POINT ZM (0 0 0 0)"));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Spatial)]
         public void LineStrings()
         {
             var wkt = new WktSanitizer();
@@ -49,7 +49,7 @@ namespace SlowTests.Tests.Spatial
             Assert.Equal("LINESTRING (0 0, 1 1)", wkt.Sanitize("LINESTRING ZM (0 0 0 0, 1 1 1 1)"));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Spatial)]
         public void Polygons()
         {
             var wkt = new WktSanitizer();

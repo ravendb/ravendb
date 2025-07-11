@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,14 +14,14 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCreateTermVectorInIndex()
         {
             var indexDefinition = new SampleData_Index().CreateIndexDefinition();
             Assert.Equal(FieldTermVector.WithPositionsAndOffsets, indexDefinition.Fields.Single().Value.TermVector.Value);
         }
     
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCreateTermVectorInMultimapIndex()
         {
             var indexDefinition = new SampleData_MultiMapIndex { Conventions = new DocumentConventions() }.CreateIndexDefinition();

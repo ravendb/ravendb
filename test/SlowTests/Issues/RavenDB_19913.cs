@@ -1,7 +1,8 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Global;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ public class RavenDB_19913 : RavenLowLevelTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void ContextAllocatedMemoryShouldTakeIntoAccountAllocationsMadeByByteStringContextAllocator()
     {
         using (var database = CreateDocumentDatabase())

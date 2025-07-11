@@ -1,9 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="LargeFixedSizeTreeBugs.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
+using Tests.Infrastructure;
 using Xunit;
 using Voron;
 using Xunit.Abstractions;
@@ -22,7 +17,7 @@ namespace FastTests.Voron.FixedSize
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void DeleteRangeShouldModifyPage()
         {
             Slice treeId;

@@ -53,7 +53,7 @@ namespace SlowTests.MailingList
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Test()
         {
             var activityShot1 = new ActivityShot

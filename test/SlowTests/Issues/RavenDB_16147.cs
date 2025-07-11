@@ -7,6 +7,7 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanOverrideDefaultAnalyzers()
         {
             using (var store = GetDocumentStore(new Options { RunInMemory = false }))
@@ -79,7 +80,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanOverrideDefaultAnalyzers_DatabaseWide()
         {
             using (var store = GetDocumentStore(new Options
@@ -149,7 +150,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanOverrideDefaultAnalyzers_ChangingDatabaseWideOnes_ShouldThrow()
         {
             using (var store = GetDocumentStore(new Options

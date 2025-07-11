@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Newtonsoft.Json.Linq;
 using Sparrow.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CsharpRecordSerialization_ShouldWork()
         {
             using (var store = GetDocumentStore())

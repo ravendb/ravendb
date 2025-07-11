@@ -13,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void Can_Load_Inside_Let_With_Argument_Predefined_in_Let()
         {
             using (var store = GetDocumentStore())

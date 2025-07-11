@@ -1,8 +1,9 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task SupportRandomOrder()
         {
             using (var store = GetDocumentStore())

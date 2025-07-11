@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldThrowOnDocumentIdTooBig()
         {
             using (var store = GetDocumentStore())
@@ -46,7 +47,7 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldThrowOnCounterNameTooBig()
         {
             using (var store = GetDocumentStore())
@@ -78,7 +79,7 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public void ShouldThrowOnAttachmentNameTooBig()
         {
             using (var store = GetDocumentStore())

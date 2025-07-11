@@ -11,7 +11,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void AggregatingOnNonExistentFieldWillReturnZeros()
         {
             using (var store = GetDocumentStore())
@@ -32,7 +32,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void AggregationOnNullValuesWorksWithDoubles()
         {
             using (var store = GetDocumentStore())

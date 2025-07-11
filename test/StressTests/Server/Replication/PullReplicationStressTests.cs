@@ -21,7 +21,7 @@ namespace StressTests.Server.Replication
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task PullExternalReplicationWithCertificateShouldWork()
         {
             var hubSettings = new ConcurrentDictionary<string, string>();

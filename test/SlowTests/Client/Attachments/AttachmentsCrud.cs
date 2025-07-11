@@ -151,7 +151,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void PreserveAttachmentsInMetadataAfterPutDocument()
         {
             using (var store = GetDocumentStore())
@@ -179,7 +179,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void PreserveAttachmentsInMetadataAfterPutDocumentWithoutMetadata()
         {
             using (var store = GetDocumentStore())
@@ -223,7 +223,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         [InlineData("\r\n", null)]
         [InlineData("\\", "\\")]
         [InlineData("/", "/")]
@@ -278,7 +278,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public async Task DeleteAttachments()
         {
             using (var store = GetDocumentStore())
@@ -438,7 +438,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void DeleteDocumentWithAttachmentsThatHaveTheSameStream()
         {
             using (var store = GetDocumentStore())
@@ -469,7 +469,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments | RavenTestCategory.Patching)]
         public async Task CanPatchWithoutConflictsOnAttachments()
         {
             using (var store = GetDocumentStore())
@@ -510,7 +510,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void PutAttachmentAndModifyDocument()
         {
             using (var store = GetDocumentStore())
@@ -535,7 +535,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void PutAttachmentThanEvictAndModifyDocumentInTheSameSession()
         {
             using (var store = GetDocumentStore())
@@ -559,7 +559,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void PutAttachmentAndModifyDocumentInTheSameSession()
         {
             using (var store = GetDocumentStore())
@@ -582,7 +582,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void PutAttachmentAndModifyDocumentInTheSameSession_WithoutAnotherLoad()
         {
             using (var store = GetDocumentStore())
@@ -604,7 +604,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void OverwriteAttachmentWithStreamOnly()
         {
             using (var store = GetDocumentStore())
@@ -642,7 +642,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void PutSameAttachmentTwiceDifferentContentType()
         {
             using (var store = GetDocumentStore())
@@ -680,7 +680,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void PutSameAttachmentTwice_AlsoMakeSureThatTheStreamIsNotDisposedAfterCallingPutAttachment()
         {
             using (var store = GetDocumentStore())
@@ -729,7 +729,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void ThrowNotReadableStream()
         {
             using (var store = GetDocumentStore())
@@ -750,7 +750,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void ThrowIfStreamWithPositionNotZero()
         {
             using (var store = GetDocumentStore())

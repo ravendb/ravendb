@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_project_on_sub_collection_with_Id_property()
         {
             using (var store = GetDocumentStore())

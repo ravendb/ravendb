@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         public RavenDB_14655(ITestOutputHelper output) : base(output)
         {
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task TombstonesCleanUpWithHubDefinition()
         {
             using (var store = GetDocumentStore())
@@ -96,7 +97,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task TombstonesCleanUpWithHubDefinition2()
         {
             using (var store = GetDocumentStore())
@@ -110,7 +111,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task TombstonesCleanUpWithHubDefinition3()
         {
             using (var store = GetDocumentStore())
@@ -152,7 +153,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task TombstonesCleanUpWithHubDefinition4()
         {
             using (var store = GetDocumentStore())
@@ -182,7 +183,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task TombstonesCleanUpWithHubDefinition5()
         {
             using (var store = GetDocumentStore())
@@ -226,7 +227,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task GetTombstoneAtOrBeforeTest()
         {
             using (var store = GetDocumentStore())

@@ -16,6 +16,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -44,7 +45,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldSimplyCreateIndex()
         {
             var path = NewDataPath();
@@ -70,7 +71,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.ChangesApi)]
         public void ReplaceOfNonStaleIndex()
         {
             var path = NewDataPath();
@@ -138,7 +139,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.ChangesApi)]
         public async Task ReplaceOfNonStaleIndexAsync()
         {
             var path = NewDataPath();
@@ -205,7 +206,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void SideBySideExecuteShouldNotCreateReplacementIndexIfIndexToReplaceIsIdentical()
         {
             var path = NewDataPath();

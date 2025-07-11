@@ -8,6 +8,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Issues
             public string Value { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Test_paralel_operations_with_multiple_EmbeddableDocumentStores()
         {
             Action storeAndRead = () =>

@@ -2,6 +2,7 @@
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Query_Using_an_Alias_on_Properties_of_Nested_Object_Array()
         {
             using (var store = GetDocumentStore())

@@ -29,7 +29,7 @@ namespace SlowTests.Client
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanPutUniqueString(Options options)
         {
@@ -40,7 +40,7 @@ namespace SlowTests.Client
             Assert.Equal("Karmel", res.Value);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanPutUniqueObject(Options options)
         {
@@ -54,7 +54,7 @@ namespace SlowTests.Client
             Assert.Equal("Karmel", res.Value.Name);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanPutMultiDifferentValues(Options options)
         {
@@ -75,7 +75,7 @@ namespace SlowTests.Client
             Assert.True(res2.Successful);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange)]
         public async Task CanExportAndImportCmpXchg()
         {
             var file = GetTempFileName();
@@ -145,7 +145,7 @@ namespace SlowTests.Client
             Assert.Equal("Name1", values["users/1"].Value.Name);
             Assert.Equal("Name3", values["users/3"].Value.Name);
         }
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanListCompareExchange(Options options)
         {
@@ -171,7 +171,7 @@ namespace SlowTests.Client
             Assert.Equal("Karmel", values["test2"].Value.Name);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanRemoveUnique(Options options)
         {
@@ -186,7 +186,7 @@ namespace SlowTests.Client
             Assert.True(res.Successful);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task RemoveUniqueFailed(Options options)
         {
@@ -204,7 +204,7 @@ namespace SlowTests.Client
             Assert.Equal("Karmel", result.Value);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task ReturnCurrentValueWhenPuttingConcurrently(Options options)
         {
@@ -232,7 +232,7 @@ namespace SlowTests.Client
             Assert.Equal("Karmel2", res2.Value.Name);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetIndexValue(Options options)
         {
@@ -253,7 +253,7 @@ namespace SlowTests.Client
             Assert.Equal("Karmel2", res2.Value.Name);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanListValues(Options options)
         {
@@ -305,7 +305,7 @@ namespace SlowTests.Client
             Assert.Equal(new HashSet<string> { "test8", "test9" }, result.Keys.ToHashSet());
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task SaveSameValuesToDifferentDatabases(Options options)
         {
@@ -321,7 +321,7 @@ namespace SlowTests.Client
             Assert.True(res2.Successful);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CompareExchangeShouldBeRemovedFromStorageWhenDbGetsDeleted(Options options)
         {
@@ -404,7 +404,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task EnsureCanCompareExchangeWithCorrectCharsEscapeInKey(Options options)
         {
@@ -436,7 +436,7 @@ namespace SlowTests.Client
             Assert.Equal(0, realNumOfCmpXchg);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanAddMetadataToSimpleCompareExchange(Options options)
         {
@@ -467,7 +467,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanAddMetadataToCompareExchangeAndWaitForExpiration(Options options)
         {
@@ -517,7 +517,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanAddMetadataToSimpleCompareExchangeAndWaitForExpiration(Options options)
         {
@@ -565,7 +565,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.CompareExchange)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanAddMetadataToIntCompareExchangeAndWaitForExpiration(Options options)
         {
@@ -613,7 +613,7 @@ namespace SlowTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange)]
         public async Task CanImportCompareExchangeWithoutMetadata()
         {
             var dummyDump = SmugglerTests.CreateDummyDump(1);

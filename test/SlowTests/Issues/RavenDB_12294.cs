@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -34,7 +35,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact] // PASSES
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)] // PASSES
         public void NotContains()
         {
             using (var store = GetDocumentStore())
@@ -58,7 +59,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact] // FAILS
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)] // FAILS
         public void NotContainsWhenEmpty()
         {
             using (var store = GetDocumentStore())

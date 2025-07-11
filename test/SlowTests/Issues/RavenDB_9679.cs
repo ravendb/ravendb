@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Multi_map_index_using_the_same_collection()
         {
             using (var store = GetDocumentStore())

@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CounterStorage_Increment_ShouldCheckForOverflow()
         {
             using (var store = GetDocumentStore())
@@ -51,7 +51,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CountersHandler_GetCounterValue_ShouldCheckForOverflow()
         {
             var (_, leader) = await CreateRaftCluster(3);

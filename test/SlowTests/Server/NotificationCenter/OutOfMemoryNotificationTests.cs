@@ -21,7 +21,7 @@ namespace SlowTests.Server.NotificationCenter
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.Memory)]
         public async Task Add_WhenCalled_ShouldNotPreventFromGarbageCollectorToCollectTheEnvironmentObject()
         {
             using (var database = CreateDocumentDatabase())
@@ -48,7 +48,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.Memory)]
         public async Task Add_WhileAllHaveTheSameKey_ShouldRemindOnlyOne()
         {
             using (var database = CreateDocumentDatabase())
@@ -78,7 +78,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.Memory)]
         public async Task Add_WhileNotificationsAreForDifferentEnvironments_ShouldRemindTwo()
         {
             using (var database = CreateDocumentDatabase())
@@ -115,7 +115,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.Memory)]
         public async Task Add_WhileNotificationsHaveDifferentExceptionTypeInSameEnvironment_ShouldRemindTwo()
         {
             using (var database = CreateDocumentDatabase())
@@ -150,7 +150,7 @@ namespace SlowTests.Server.NotificationCenter
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.Memory)]
         public async Task Add_WhileAllHaveTheSameKeyAndOneOfterUpdateFrequencyTime_ShouldBeTheLater()
         {
             using (var database = CreateDocumentDatabase())

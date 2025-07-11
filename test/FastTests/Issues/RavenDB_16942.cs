@@ -1,5 +1,6 @@
 ﻿using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ByteStringContext_Should_Reuse_When_Large_Allocations_Are_Requested()
         {
             using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
@@ -53,3 +54,4 @@ namespace FastTests.Issues
         }
     }
 }
+

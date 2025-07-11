@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ public class RavenDB_18588 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public void EnumListIsProperlyCreatedInIndex()
     {
         using var store = GetDocumentStore();

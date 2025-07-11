@@ -11,7 +11,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public void GetCountersShouldBeCaseInsensitive()
         {
             using (var store = GetDocumentStore())

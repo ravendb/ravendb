@@ -19,7 +19,7 @@ public class LogDivergenceTests : RachisConsensusTestBase
     private const string LeaderTag = "A";
     private const string FollowerTag = "B";
     
-    [Fact]
+    [RavenFact(RavenTestCategory.ClusterTransactions)]
     public async Task RavenDB_19654()
     {
         var testData = new Dictionary<string, LogInfo>
@@ -54,7 +54,7 @@ public class LogDivergenceTests : RachisConsensusTestBase
         await CanHandleLogDivergence(testData);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClusterTransactions)]
     public async Task RDBS_12738()
     {
         var testData = new Dictionary<string, LogInfo>
@@ -95,7 +95,7 @@ public class LogDivergenceTests : RachisConsensusTestBase
         await CanHandleLogDivergence(testData);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClusterTransactions)]
     public async Task RavenDB_20192()
     {
         var testData = new Dictionary<string, LogInfo>

@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using Sparrow;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,7 +20,7 @@ namespace SlowTests.Voron.Storage
             options.ManualFlushing = true;
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(0)]
         [InlineData(1)]
         [InlineData(2)]
@@ -161,7 +162,7 @@ namespace SlowTests.Voron.Storage
                 Assert.Equal(0, Memory.Compare(b, c, buffer.Length));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanStoreInOneTransactionManySmallValues()
         {
             var buffers = new List<byte[]>();

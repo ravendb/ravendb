@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Attachments | RavenTestCategory.Revisions)]
         public async Task ShouldWork()
         {
             using (var store = GetDocumentStore())

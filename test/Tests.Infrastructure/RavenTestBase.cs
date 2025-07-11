@@ -27,13 +27,17 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Handlers;
+using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
+using XunitLogger;
 
 namespace FastTests
 {
@@ -238,7 +242,7 @@ namespace FastTests
                     options.ModifyDatabaseRecord?.Invoke(doc);
                     var sharded = doc.IsSharded;
 
-                    var isCompressionTest = IsCompressionTest();
+                    var isCompressionTest = IsRavenTestCategoryTest(Context, RavenTestCategory.Compression);
 
                     if (doc.DocumentsCompression != null && isCompressionTest == false)
                     {
@@ -309,6 +313,8 @@ namespace FastTests
 
                     store.BeforeDispose += (sender, args) =>
                     {
+                        CheckForMissingAttachmentsAndThrowIfNeeded(store, Context, name, serverToUse, caller);
+
                         var realException = Context.GetException();
                         try
                         {
@@ -351,36 +357,92 @@ namespace FastTests
                         CreatedStores.Add(adminStore);
 
                     return store;
-
-                    bool IsCompressionTest()
-                    {
-                        try
-                        {
-                            var testMethod = Context?.Test?.TestCase?.TestMethod?.Method as ReflectionMethodInfo;
-                            if (testMethod == null)
-                                return false;
-
-                            var ravenFactAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenFactAttribute>();
-                            if (ravenFactAttribute != null)
-                                return ravenFactAttribute.Category.HasFlag(RavenTestCategory.Compression);
-
-                            var ravenTheoryAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenTheoryAttribute>();
-                            if (ravenTheoryAttribute != null)
-                                return ravenTheoryAttribute.Category.HasFlag(RavenTestCategory.Compression);
-
-                            return false;
-                        }
-                        catch
-                        {
-                            // if we can't determine if it's a compression test, we assume it's not 
-                            return false;
-                        }
-                    }
                 }
             }
             catch (TimeoutException te)
             {
                 throw new TimeoutException($"{te.Message} {Environment.NewLine} {te.StackTrace}{Environment.NewLine}Servers states:{Environment.NewLine}{Cluster.GetLastStatesFromAllServersOrderedByTime()}");
+            }
+        }
+
+        public static bool IsRavenTestCategoryTest(Context context, RavenTestCategory flags)
+        {
+            try
+            {
+                var testMethod = context?.Test?.TestCase?.TestMethod?.Method as ReflectionMethodInfo;
+                if (testMethod == null)
+                    return false;
+
+                var ravenFactAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenFactAttribute>();
+                if (ravenFactAttribute != null)
+                    return (ravenFactAttribute.Category & flags) != 0;
+
+                var ravenTheoryAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenTheoryAttribute>();
+                if (ravenTheoryAttribute != null)
+                    return (ravenTheoryAttribute.Category & flags) != 0;
+
+                return false;
+            }
+            catch
+            {
+                // if we can't determine if it's a compression test, we assume it's not 
+                return false;
+            }
+        }
+
+        private static readonly List<string> TestsToSkipForMissingAttachments =
+        [
+            "Can_Get_Missing_attachments",
+            "Can_push_via_filtered_replication" //TODO: remove when RavenDB-24415 is fixed
+        ];
+
+        private static void CheckForMissingAttachmentsAndThrowIfNeeded(DocumentStore store, Context context, string name, RavenServer serverToUse, string caller)
+        {
+            if (IsRavenTestCategoryTest(context, RavenTestCategory.Attachments | RavenTestCategory.Replication) == false)
+                return;
+
+            if (TestsToSkipForMissingAttachments.Contains(caller))
+            {
+                return;
+            }
+
+            try
+            {
+                var missingAttachments = store.Operations.Send(new GetMissingAttachmentsOperation(Constants.Documents.Collections.AllDocumentsCollection));
+
+                if (missingAttachments.Documents.Count != 0 || missingAttachments.Revisions.Count != 0)
+                {
+                    var sb = new StringBuilder();
+                    string missingAttachmentsInfo = missingAttachments.Documents.Count != 0 && missingAttachments.Revisions.Count != 0 ? "Documents and Revisions"
+                        : missingAttachments.Documents.Count != 0 ? "Documents" : "Revisions";
+                    sb.AppendLine($"There are missing attachments for {missingAttachmentsInfo} in database '{name}' on server '{serverToUse.ServerStore.NodeTag}'.");
+                    foreach (var kvp in missingAttachments.Documents)
+                    {
+                        sb.AppendLine($"Collection: {kvp.Key}");
+                        foreach (AttachmentHandler.MissingAttachmentInfo attachment in kvp.Value)
+                        {
+                            sb.AppendLine($"Name: {attachment.Name}, Hash: {attachment.Hash}, MissingType: {attachment.MissingSource}, AttachmentType: {attachment.AttachmentType}");
+                        }
+                    }
+                    foreach (var kvp in missingAttachments.Revisions)
+                    {
+                        sb.AppendLine($"Collection: {kvp.Key}");
+                        foreach (AttachmentHandler.MissingAttachmentInfo attachment in kvp.Value)
+                        {
+                            sb.AppendLine($"Name: {attachment.Name}, Hash: {attachment.Hash}, MissingType: {attachment.MissingSource}, AttachmentType: {attachment.AttachmentType}");
+                        }
+                    }
+                    throw new MissingAttachmentException(sb.ToString());
+                }
+            }
+            catch (Exception e)
+            {
+                if (e is MissingAttachmentException)
+                {
+                    throw;
+                }
+
+                // expected
             }
         }
 

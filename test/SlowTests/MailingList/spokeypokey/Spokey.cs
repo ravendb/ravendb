@@ -123,7 +123,7 @@ namespace SlowTests.MailingList.spokeypokey
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_project_InternalId_from_transformResults2()
         {
             var taxonomyCode1 = new TaxonomyCode

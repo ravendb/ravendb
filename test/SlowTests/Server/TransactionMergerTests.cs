@@ -11,6 +11,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -70,7 +71,7 @@ namespace SlowTests.Server
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task RerunMergedTransactionCommand_WhenReduceOutputToCollectionResultDidntChange_ShouldKeepOutputCollctionDocuments()
         {
             using var store = GetDocumentStore();
@@ -112,7 +113,7 @@ namespace SlowTests.Server
             await Task.WhenAll(failingTasks);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task RerunMergedTransactionCommand_WhenPatchByQuery_ShouldPatchAllRelevantDocs()
         {
             const int docCount = 10;

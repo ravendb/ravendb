@@ -25,7 +25,7 @@ namespace RachisTests.DatabaseCluster
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ReplicateFromSingleSource()
         {
             var srcDb = "ReplicateFromSingleSourceSrc";
@@ -131,7 +131,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task EtlDestinationFailoverBetweenNodesWithinSameCluster()
         {
             var srcDb = "EtlDestinationFailoverBetweenNodesWithinSameClusterSrc";
@@ -239,7 +239,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task WillWorkAfterResponsibleNodeRestart_RavenDB_13237()
         {
             var srcDb = "ETL-src";

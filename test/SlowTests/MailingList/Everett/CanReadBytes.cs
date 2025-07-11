@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="CanReadBytes.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -152,7 +146,7 @@ namespace SlowTests.MailingList.Everett
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void FromText()
         {
             var json = GetResourceText("DocumentWithBytes.txt");

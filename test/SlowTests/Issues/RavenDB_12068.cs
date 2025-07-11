@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public void TernaryOperatorPrecedence()
         {
             const string documentId = "document-id";

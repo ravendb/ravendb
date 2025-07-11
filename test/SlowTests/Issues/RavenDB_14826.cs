@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         public async Task SmugglerShouldTriggerTimeSeriesNotificationsForIndexing()
         {
             using (var store = GetDocumentStore())

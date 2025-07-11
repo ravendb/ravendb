@@ -95,7 +95,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanServeTimeSeriesFromCache_Typed()
         {
             //RavenDB-16136
@@ -134,7 +134,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void IncludeTimeSeriesAndMergeWithExistingRangesInCache_Typed()
         {
             using (var store = GetDocumentStore())
@@ -392,7 +392,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void IncludeTimeSeriesAndUpdateExistingRangeInCache_Typed()
         {
             using (var store = GetDocumentStore())
@@ -465,7 +465,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public async Task CanServeTimeSeriesFromCache_Rollup()
         {
             using (var store = GetDocumentStore())

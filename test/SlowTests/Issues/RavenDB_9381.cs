@@ -1,8 +1,9 @@
-﻿using FastTests.Voron;
+using FastTests.Voron;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Indexing;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Lucene_directory_must_be_aware_of_created_outputs()
         {
             using (var tx = Env.WriteTransaction())

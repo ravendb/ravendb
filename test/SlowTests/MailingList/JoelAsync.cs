@@ -1,8 +1,9 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -18,7 +19,7 @@ namespace SlowTests.MailingList
             public string Name { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AsyncQuery()
         {
             using (var store = GetDocumentStore())

@@ -6,6 +6,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,7 +37,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void CanWorkWithSelectManyOverload()
         {
             using (var store = GetDocumentStore())

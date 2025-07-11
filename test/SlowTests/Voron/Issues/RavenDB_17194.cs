@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using System.IO;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Impl.Journal;
 using Xunit;
@@ -28,7 +29,7 @@ namespace SlowTests.Voron.Issues
             };
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MustNotReadAndProceedWithRecyclableButEffectivelyEmptyJournalOnRecovery()
         {
             RequireFileBasedPager();
@@ -104,7 +105,7 @@ namespace SlowTests.Voron.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void TheCaseWithTwoEmptyJournalFiles()
         {
             RequireFileBasedPager();
@@ -207,7 +208,7 @@ namespace SlowTests.Voron.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void FirstJournalIsEmptyButContainsDataBecauseWasCreatedFromRecyclable()
         {
             RequireFileBasedPager();

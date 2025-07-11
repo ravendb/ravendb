@@ -1,10 +1,11 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void MustNotPutIndexWithReplacementOfPrefix()
         {
             using (var store = GetDocumentStore())

@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WhatChangedShouldNotThrowOnDerivedProperties()
         {
             using (var store = GetDocumentStore())
@@ -70,7 +71,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldAssignTheTypeOfDerivedProperties()
         {
             var entity5 = new IDocumentWithPropertyTypeOverride5();
@@ -98,7 +99,7 @@ namespace SlowTests.Issues
             Assert.Equal(typeof(RefDerived1), type0);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void ShouldAssignTheTypeOfDerivedPropertiesWithInterface()
         {
             var entity5 = new IDocumentWithPropertyTypeOverride5();

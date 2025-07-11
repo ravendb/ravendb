@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -11,6 +11,7 @@ using Raven.Server.Documents.Indexes.MapReduce.Exceptions;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,7 @@ public class RavenDB_18331 : RavenLowLevelTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public void ErrorShouldIncludeTheActualItemAndReduceKey()
     {
         var numberOfDocs = 100;

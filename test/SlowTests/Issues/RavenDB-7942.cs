@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void DoubleIndexing()
         {
             using (var store = GetDocumentStore())
@@ -48,7 +49,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void FloatIndexing()
         {
             using (var store = GetDocumentStore())
@@ -81,7 +82,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void IndexingAFloatField()
         {
             using (var store = GetDocumentStore())

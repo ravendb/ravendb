@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Tests.Querying
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleEquality()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
@@ -31,7 +32,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal("ayende", query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleEqualityWithVariable()
         {
             var ayende = "ayende" + 1;
@@ -44,7 +45,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal("ayende1", query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleContains()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
@@ -56,7 +57,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(new object[] { "ayende" }, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandParamArrayContains()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
@@ -68,7 +69,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(new object[] { "ryan", "heath" }, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandArrayContains()
         {
             var array = new[] { "ryan", "heath" };
@@ -81,7 +82,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(new object[] { "ryan", "heath" }, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandArrayContainsWithPhrase()
         {
             var array = new[] { "ryan", "heath here" };
@@ -94,7 +95,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(new object[] { "ryan", "heath here" }, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandArrayContainsWithOneElement()
         {
             var array = new[] { "ryan" };
@@ -107,7 +108,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(new object [] {"ryan"}, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandArrayContainsWithZeroElements()
         {
             var array = new string[0];
@@ -120,7 +121,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(new object[0], query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandEnumerableContains()
         {
             IEnumerable<string> list = new[] { "ryan", "heath" };
@@ -133,7 +134,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(new object[] {"ryan", "heath"}, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleContainsWithVariable()
         {
             var ayende = "ayende" + 1;
@@ -146,7 +147,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(new object[] { "ayende1" }, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void NoOpShouldProduceEmptyString()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false));
@@ -154,7 +155,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal("from index 'IndexName'", q.ToString());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandAnd()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
@@ -169,7 +170,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal("ayende@ayende.com", query.QueryParameters["p1"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandOr()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
@@ -184,7 +185,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal("ayende@ayende.com", query.QueryParameters["p1"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandLessThan()
         {
             var dateTime = new DateTime(2010, 05, 15);
@@ -197,7 +198,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandEqualOnDate()
         {
             var dateTime = new DateTime(2010, 05, 15);
@@ -210,7 +211,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandLessThanOrEqual()
         {
             var dateTime = new DateTime(2010, 05, 15);
@@ -223,7 +224,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandGreaterThan()
         {
             var dateTime = new DateTime(2010, 05, 15);
@@ -236,7 +237,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandGreaterThanOrEqual()
         {
             var dateTime = new DateTime(2010, 05, 15);
@@ -249,7 +250,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandProjectionOfSingleField()
         {
             var dateTime = new DateTime(2010, 05, 15);
@@ -263,7 +264,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandProjectionOfMultipleFields()
         {
             var dateTime = new DateTime(2010, 05, 15);
@@ -277,7 +278,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(dateTime, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandSimpleEqualityOnInt()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))
@@ -289,7 +290,7 @@ namespace SlowTests.Tests.Querying
             Assert.Equal(3, query.QueryParameters["p0"]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUnderstandGreaterThanOnInt()
         {
             var q = ((IDocumentQuery<IndexedUser>)new DocumentQuery<IndexedUser>(null, "IndexName", null, false))

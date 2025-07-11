@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -21,7 +21,7 @@ namespace SlowTests.Issues
 
         private readonly string _database = "Client_cant_handle_topology_changes_that_it_wasnt_notified_about" + Guid.NewGuid();
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task Client_cant_handle_topology_changes_that_it_wasnt_notified_about()
         {
             const int clusterSize = 3;

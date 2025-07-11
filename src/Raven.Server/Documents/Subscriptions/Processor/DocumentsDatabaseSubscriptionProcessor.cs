@@ -120,9 +120,8 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             return new DocumentSubscriptionFetcher(Database, SubscriptionConnectionsState, Collection);
         }
 
-        protected override SubscriptionBatchItem ShouldSend(Document item, out string reason)
+        protected override SubscriptionBatchItem ShouldSend(Document item)
         {
-            reason = null;
             string id = item.Id; // we convert the Id to string since item might get disposed
             var result = new SubscriptionBatchItem
             {
@@ -136,14 +135,18 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {
-                    reason = $"{id} is already merged";
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"{id} is already merged");
+
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
 
                 if (SubscriptionConnectionsState.IsDocumentInActiveBatch(ClusterContext, id, Active))
                 {
-                    reason = $"{id} exists in an active batch";
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"{id} exists in an active batch");
+
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
@@ -152,7 +155,7 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             if (Fetcher.FetchingFrom == SubscriptionFetcher.FetchingOrigin.Resend)
             {
                 var current = Database.DocumentsStorage.Get(DocsContext, id, throwOnConflict: false);
-                if (ShouldFetchFromResend(DocsContext, id, current, item.ChangeVector, out reason) == false)
+                if (ShouldFetchFromResend(DocsContext, id, current, item.ChangeVector) == false)
                 {
                     result.Document.ChangeVector = string.Empty;
                     current?.Dispose();
@@ -175,14 +178,18 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
             if (result.Document.Flags.Contain(DocumentFlags.Archived) && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ExcludeArchived)
             {
-                reason = $"{id} is archived, while the archived data processing behavior is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"{id} is archived, while the archived data processing behavior is '{SubscriptionState.ArchivedDataProcessingBehavior}'");
+
                 result.Status = SubscriptionBatchItemStatus.Skip;
                 return result;
             }
             
             if (result.Document.Flags.Contain(DocumentFlags.Archived) == false && SubscriptionState.ArchivedDataProcessingBehavior == ArchivedDataProcessingBehavior.ArchivedOnly)
             {
-                reason = $"{id} is not archived, while the archived data processing behavior is '{SubscriptionState.ArchivedDataProcessingBehavior}'";
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"{id} is not archived, while the archived data processing behavior is '{SubscriptionState.ArchivedDataProcessingBehavior}'");
+
                 result.Status = SubscriptionBatchItemStatus.Skip;
                 return result;
             }
@@ -206,7 +213,9 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                         ItemsToRemoveFromResend.Add(id);
                     }
 
-                    reason = $"{id} filtered out by criteria";
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"{id} filtered out by criteria");
+
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
@@ -216,21 +225,25 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             }
             catch (Exception ex)
             {
-                reason = $"Criteria script threw exception for document id {id}";
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Criteria script threw exception for document id {id}", ex);
+                
                 result.Exception = ex;
                 result.Status = SubscriptionBatchItemStatus.Exception;
                 return result;
             }
         }
 
-        protected virtual bool ShouldFetchFromResend(DocumentsOperationContext context, string id, Document item, string currentChangeVector, out string reason)
+        protected virtual bool ShouldFetchFromResend(DocumentsOperationContext context, string id, Document item, string currentChangeVector)
         {
-            reason = null;
             if (item == null)
             {
                 // the document was delete while it was processed by the client
                 ItemsToRemoveFromResend.Add(id);
-                reason = $"document '{id}' removed and skipped from resend";
+
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"document '{id}' removed and skipped from resend");
+                
                 return false;
             }
 
@@ -244,28 +257,35 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                     {
                         // we can clear it from resend list, and it will processed as regular document
                         ItemsToRemoveFromResend.Add(id);
-                        reason = $"document '{id}' was updated ({item.ChangeVector}), but the subscription went too far and skipped from resend (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})";
+
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug($"document '{id}' was updated ({item.ChangeVector}), but the subscription went too far and skipped from resend (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})");
+
                         return false;
                     }
 
                     // We need to resend it
                     var fetch = resendStatus == ConflictStatus.AlreadyMerged;
-                    if (fetch == false)
-                        reason = $"document '{id}' is in status {resendStatus} (local: {item.ChangeVector}) with the subscription progress (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})";
+                    if (fetch == false && Logger.IsDebugEnabled)
+                        Logger.Debug($"document '{id}' is in status {resendStatus} (local: {item.ChangeVector}) with the subscription progress (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})");
 
                     return fetch;
 
                 case ConflictStatus.AlreadyMerged:
                     if (CheckIfNewerInResendList(context, item.Id, item.ChangeVector, currentChangeVector))
                     {
-                        reason = $"document '{id}' is older in storage (cv: '{item.ChangeVector}') then in resend list (cv: '{currentChangeVector}'), probably there is a active migration. sub progress: {SubscriptionConnectionsState.LastChangeVectorSent}";
+                        if (Logger.IsDebugEnabled)
+                            Logger.Debug($"document '{id}' is older in storage (cv: '{item.ChangeVector}') then in resend list (cv: '{currentChangeVector}'), probably there is a active migration. sub progress: {SubscriptionConnectionsState.LastChangeVectorSent}");
+
                         return false;
                     }
 
                     return true;
 
                 case ConflictStatus.Conflict:
-                    reason = $"document '{id}' is in conflict, CV in storage '{item.ChangeVector}' CV in resend list '{currentChangeVector}' (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})";
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"document '{id}' is in conflict, CV in storage '{item.ChangeVector}' CV in resend list '{currentChangeVector}' (sub progress: {SubscriptionConnectionsState.LastChangeVectorSent})");
+                    
                     return false;
 
                 default:

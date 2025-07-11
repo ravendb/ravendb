@@ -21,6 +21,7 @@ using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using static FastTests.Server.Documents.Indexing.Lucene.LuceneDocumentConverterTests;
@@ -33,7 +34,7 @@ namespace SlowTests.Tests.Indexes
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Convert_select_many_will_keep_doc_id()
         {
             var indexDefinition = new IndexDefinitionBuilder<Order>
@@ -96,7 +97,7 @@ namespace SlowTests.Tests.Indexes
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCompileComplexQuery()
         {
             var indexDefinition = new IndexDefinitionBuilder<Person>()
@@ -116,7 +117,7 @@ namespace SlowTests.Tests.Indexes
             public string[] Roles { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Convert_simple_query()
         {
             IndexDefinition generated = new IndexDefinitionBuilder<User, Named>
@@ -141,7 +142,7 @@ namespace SlowTests.Tests.Indexes
             Assert.True(original.Maps.SetEquals(generated.Maps));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void With_parantesis()
         {
             IndexDefinition generated = new IndexDefinitionBuilder<User, Named>
@@ -166,7 +167,7 @@ namespace SlowTests.Tests.Indexes
             Assert.True(original.Maps.SetEquals(generated.Maps));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Convert_using_id()
         {
             IndexDefinition generated = new IndexDefinitionBuilder<User, Named>
@@ -193,7 +194,7 @@ namespace SlowTests.Tests.Indexes
             Assert.Equal(original, generated);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Convert_simple_query_with_not_operator_and_nested_braces()
         {
             IndexDefinition generated = new IndexDefinitionBuilder<User, Named>
@@ -219,7 +220,7 @@ namespace SlowTests.Tests.Indexes
             Assert.Equal(original, generated);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Convert_simple_query_with_char_literal()
         {
             IndexDefinition generated = new IndexDefinitionBuilder<User>
@@ -236,7 +237,7 @@ namespace SlowTests.Tests.Indexes
             Assert.True(original.Maps.SetEquals(generated.Maps));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Convert_map_reduce_query()
         {
             IndexDefinition generated = new IndexDefinitionBuilder<User, LocationCount>
@@ -289,7 +290,7 @@ namespace SlowTests.Tests.Indexes
             Assert.Equal(original.Reduce, generated.Reduce);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Convert_map_reduce_preserving_parenthesis()
         {
             Convert_map_reduce_query_with_map_(
@@ -301,7 +302,7 @@ users => from user in users
 })".Replace("\r\n", Environment.NewLine));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Convert_map_reduce_query_with_trinary_conditional()
         {
             Convert_map_reduce_query_with_map_(
@@ -313,7 +314,7 @@ users => from user in users
 })".Replace("\r\n", Environment.NewLine));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Convert_map_reduce_query_with_enum_comparison()
         {
             Convert_map_reduce_query_with_map_(
@@ -325,7 +326,7 @@ users => from user in users
 })".Replace("\r\n", Environment.NewLine));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Convert_map_reduce_query_with_type_check()
         {
             Convert_map_reduce_query_with_map_(

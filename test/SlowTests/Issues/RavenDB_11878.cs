@@ -53,7 +53,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void SupportAttachmentsForInIndex()
         {
             using (var store = GetDocumentStore())
@@ -154,7 +154,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void SupportCounterNamesForInIndex(Options options)
         {

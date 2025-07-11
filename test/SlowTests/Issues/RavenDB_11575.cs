@@ -58,7 +58,7 @@ namespace SlowTests.Issues
 
         #endregion
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task ShouldWork(Options options)
         {

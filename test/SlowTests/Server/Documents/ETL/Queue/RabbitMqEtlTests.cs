@@ -369,7 +369,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         Assert.Equal("James Smith", user.Name);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Etl)]
     public void Error_if_script_does_not_contain_any_loadTo_method()
     {
         var config = new QueueEtlConfiguration
@@ -396,7 +396,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         Assert.Equal("No `loadTo<QueueName>()` method call found in 'test' script", errors[0]);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Etl)]
     public void Error_if_script_is_empty()
     {
         var config = new QueueEtlConfiguration
@@ -423,7 +423,7 @@ public class RabbitMqEtlTests : RabbitMqEtlTestBase
         Assert.Equal("Script 'test' must not be empty", errors[0]);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Etl)]
     public async Task CanTestScript()
     {
         using (var store = GetDocumentStore())
@@ -601,7 +601,7 @@ output('test output')"
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Etl)]
     public async Task ShouldImportTask()
     {
         using (var srcStore = GetDocumentStore())

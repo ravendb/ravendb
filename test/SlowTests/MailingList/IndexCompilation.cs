@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="IndexCompilation.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -15,6 +15,7 @@ using Raven.Client.Documents.Indexes;
 using Sparrow.Extensions;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -24,7 +25,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCompileIndex()
         {
             using (var store = GetDocumentStore())
@@ -33,7 +34,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCompileTypedIndexWithMethodExtensions()
         {
             using (var store = GetDocumentStore())
@@ -71,7 +72,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCompileIndexWithMethodExtensions()
         {
             using (var store = GetDocumentStore())
@@ -109,7 +110,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCompileIndexWithToDictionary()
         {
             const int countOfUsers = 20;
@@ -173,7 +174,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCompileIndexWithDistinct()
         {
             const int countOfUsers = 20;
@@ -495,7 +496,7 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void DynamicDictionaryIndexShouldWork()
         {
             const int countOfEmployees = 20;
@@ -603,7 +604,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void DynamicDictionaryIndexShouldWorkWithCount()
         {
             const int countOfEmployees = 20;
@@ -716,7 +717,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void DynamicDictionaryIndexShouldWorkWithExtensionMethods()
         {
             const int countOfEmployees = 20;
@@ -920,7 +921,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void DynamicDictionaryIndexShouldWorkWithMethods()
         {
             const int countOfVisitors = 20;

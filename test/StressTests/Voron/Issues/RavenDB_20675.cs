@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,7 +20,7 @@ namespace StressTests.Voron.Issues
             options.MaxScratchBufferSize = _64KB * 2;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void MustNotReusePagesWhichHaveAlreadyDisposedPager()
         {
             using (var tx = Env.ReadTransaction())
@@ -55,7 +56,7 @@ namespace StressTests.Voron.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void DonotDisposePagerWhenStillInUse()
         {
             using (var tx = Env.WriteTransaction())
@@ -76,7 +77,7 @@ namespace StressTests.Voron.Issues
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CleanupPagerWhenNotInUse()
         {
             using (var tx = Env.ReadTransaction())
@@ -101,7 +102,7 @@ namespace StressTests.Voron.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void UsePagerFromThePool()
         {
             using (var tx = Env.ReadTransaction())

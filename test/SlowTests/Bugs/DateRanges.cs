@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="DateRanges.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -21,7 +21,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryByDate(Options options)
         {
@@ -51,7 +51,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanQueryByDateRange_LowerThan(Options options)
         {
@@ -81,7 +81,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanQueryByDateRange_GreaterThan(Options options)
         {

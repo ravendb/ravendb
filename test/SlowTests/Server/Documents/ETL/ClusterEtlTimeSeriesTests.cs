@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.ETL
         {
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.TimeSeries | RavenTestCategory.Cluster)]
         public async Task RavenEtlWithTimeSeries_WhenEtlNodeTryToProcessTimeSeriesWithoutDocAndTheEtlMovesToAnotherNodeBeforeTheDocProcessed()
         {
             string connectionStringName = Context.MethodName;

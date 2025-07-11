@@ -1,4 +1,5 @@
-﻿using System.IO;
+using System.IO;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,7 +12,7 @@ namespace SlowTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ReadTransactionCanReadJustCommittedValue()
         {
             var options = StorageEnvironmentOptions.CreateMemoryOnlyForTests();
@@ -38,7 +39,7 @@ namespace SlowTests.Voron.Bugs
             options.MaxScratchBufferSize *= 2;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void AllScratchPagesShouldBeReleased()
         {
             var options = StorageEnvironmentOptions.CreateMemoryOnlyForTests();

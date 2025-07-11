@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,7 +17,7 @@ namespace SlowTests.Client
         public UpdateTopologyTests(ITestOutputHelper output) : base(output)
         {
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClientApi)]
         public async Task CanUpdateTopologyDuringNodeDeletion()
         {
             var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);

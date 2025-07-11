@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace FastTests.Client
@@ -13,7 +14,7 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Before_Store_Listener()
         {
             using (IDocumentStore store = GetDocumentStore())
@@ -62,7 +63,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Before_Store_Session_Listener_With_Load_Inside()
         {
             using (var store = GetDocumentStore())
@@ -97,7 +98,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Before_Store_Session_Listener_With_Change_Inside()
         {
             using (var store = GetDocumentStore())
@@ -133,7 +134,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Before_Store_Session_Listener_With_Store_Inside()
         {
             using (var store = GetDocumentStore())
@@ -172,7 +173,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Before_Delete_Session_Listener_With_Delete_Inside()
         {
             using (var store = GetDocumentStore())
@@ -208,7 +209,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Evict_Not_Supported_Inside_OnBeforeStore_And_OnBeforeDelete()
         {
             using (var store = GetDocumentStore())
@@ -248,7 +249,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_Load_Entity_From_Cache()
         {
             using (var store = GetDocumentStore())
@@ -280,3 +281,4 @@ namespace FastTests.Client
         }
     }
 }
+

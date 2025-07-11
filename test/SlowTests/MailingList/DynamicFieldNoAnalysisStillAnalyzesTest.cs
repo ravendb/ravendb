@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 // ReSharper disable MemberCanBePrivate.Local
 // ReSharper disable InconsistentNaming
@@ -19,7 +20,7 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Facets | RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void ToFacets_UsingDynamicFieldsWithoutAnalysis_ReturnsFacetValuesInOriginalCasing()
         {
             using (var _store = GetDocumentStore())

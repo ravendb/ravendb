@@ -18,7 +18,7 @@ namespace StressTests.Core.Expiration
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(1000)]
         [InlineData(10000)]
         public async Task CanAddALotOfEntitiesWithSameExpiry_ThenReadItBeforeItExpires_ButWillNotBeAbleToReadItAfterExpiry(int count)

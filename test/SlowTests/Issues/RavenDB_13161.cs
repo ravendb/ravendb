@@ -9,6 +9,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.ServerWide.Commands;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void DatabaseNameWithDocsValidation()
         {
             Assert.False(ResourceNameValidator.IsValidResourceName(".", null, out _));
@@ -35,7 +36,7 @@ namespace SlowTests.Issues
             Assert.True(ResourceNameValidator.IsValidResourceName("4.a", null, out _));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void IndexNameWithDocsValidation()
         {
             Assert.False(IndexStore.IsValidIndexName(".", true, out _));
@@ -52,7 +53,7 @@ namespace SlowTests.Issues
             Assert.True(IndexStore.IsValidIndexName("4.a", true, out _));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange)]
         public void CompareExchangeKeyValidationWillThrowOnLargeKey()
         {
             DoNotReuseServer();
@@ -63,7 +64,7 @@ namespace SlowTests.Issues
             Assert.Contains($" key cannot exceed {AddOrUpdateCompareExchangeCommand.MaxNumberOfCompareExchangeKeyBytes} bytes", ex.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CannotPutIndexWithNameClash()
         {
             using (var store = GetDocumentStore())

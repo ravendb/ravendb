@@ -1,9 +1,10 @@
-﻿using System.IO;
+using System.IO;
 using FastTests.Voron;
 using Raven.Server.Indexing;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldCleanupTempDirectoryOnStartup()
         {
             RequireFileBasedPager();

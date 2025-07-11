@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -33,7 +34,7 @@ namespace SlowTests.Issues
             public List<BaseClassContainer> List { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchShouldRespectTypeOfSubclass()
         {
             var entity = new Entity
@@ -74,7 +75,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchOnNestedPropertyShouldRespectTypeOfSubclass()
         {
             var entity = new Entity
@@ -118,7 +119,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchOnArrayElementShouldRespectTypeOfSubclass()
         {
             var entity = new Entity

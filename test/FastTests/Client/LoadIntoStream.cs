@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Newtonsoft.Json;
@@ -6,6 +6,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client
 {
@@ -15,7 +16,7 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanLoadByIdsIntoStream()
         {
             using (var store = GetDocumentStore())
@@ -45,7 +46,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanLoadStartingWithIntoStream()
         {
             using (var store = GetDocumentStore())
@@ -93,6 +94,5 @@ namespace FastTests.Client
         }
     }
 }
-
 
 

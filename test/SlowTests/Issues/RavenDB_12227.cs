@@ -4,6 +4,7 @@ using FastTests.Voron.Util;
 using Voron;
 using Voron.Impl.Compaction;
 using Voron.Util.Conversion;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(8)]
         [InlineData(16)]
         [InlineData(128)]
@@ -97,7 +98,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(8)]
         [InlineData(1024 * 256)]
         public void MoveNext_should_not_throw_after_iterating_over_all_items(int count)

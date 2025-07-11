@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.IO;
 using FastTests;
 using Orders;
@@ -16,7 +16,7 @@ public class RavenDB_18648 : RavenTestBase
     {
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.ClientApi)]
     [RavenData(DatabaseMode = RavenDatabaseMode.All)]
     public void Can_Get_Essential_Database_Statistics(Options options)
     {

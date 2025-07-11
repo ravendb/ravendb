@@ -21,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void LongMinShouldBeParsedCorrectly()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())

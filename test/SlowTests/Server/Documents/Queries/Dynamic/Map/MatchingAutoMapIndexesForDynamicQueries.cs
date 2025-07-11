@@ -14,6 +14,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -37,7 +38,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             _sut = new DynamicQueryToIndexMatcher(_documentDatabase.IndexStore);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Failure_if_there_is_no_index()
         {
             Initialize();
@@ -48,7 +49,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Failure_if_there_is_no_index_for_given_collection()
         {
             Initialize();
@@ -70,7 +71,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Complete_match_for_single_matching_index()
         {
             Initialize();
@@ -93,7 +94,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(definition.Name, result.IndexName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Complete_match_for_index_containing_all_fields()
         {
             Initialize();
@@ -131,7 +132,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(usersByNameAndAge.Name, result.IndexName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void PartialMatch_for_index_containing_only_part_of_indexes_fields()
         {
             Initialize();
@@ -154,7 +155,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(usersByName.Name, result.IndexName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Complete_match_for_single_matching_index_with_mapping_nested_fields()
         {
             Initialize();
@@ -187,7 +188,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(definition.Name, result.IndexName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Complete_match_for_single_matching_index_with_default_string_sort_option()
         {
             Initialize();
@@ -210,7 +211,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(definition.Name, result.IndexName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Complete_match_for_single_matching_index_with_numeric_sort_option_for_nested_field()
         {
             Initialize();
@@ -233,7 +234,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(definition.Name, result.IndexName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Partial_match_when_sort_field_is_not_mapped()
         {
             Initialize();
@@ -256,7 +257,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(definition.Name, result.IndexName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Complete_match_query_sort_is_default_and_definition_doesn_not_specify_sorting_at_all()
         {
             Initialize();
@@ -286,7 +287,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(definition.Name, result.IndexName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Failure_if_matching_index_is_disabled_errored_or_has_lot_of_errors()
         {
             Initialize();
@@ -329,7 +330,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task Partial_match_if_analyzer_is_required()
         {
             Initialize();
@@ -351,7 +352,7 @@ where search(Name, 'arek')"), DefaultAutoIndexingEngineType);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task Partial_match_if_exact_is_required()
         {
             Initialize();
@@ -373,7 +374,7 @@ where exact(Name = 'arek')"), DefaultAutoIndexingEngineType);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task Partial_match_when_highlighting_is_required()
         {
             Initialize();
@@ -407,7 +408,7 @@ include highlight(Name, 18, 2)
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Choose_the_most_up_to_date_index()
         {
             Initialize();
@@ -495,7 +496,7 @@ include highlight(Name, 18, 2)
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void AutoIndex_WhenCreateSecondIndexForTwoProperty_ShouldUseOnlyIfItIsMoreUpdatedThenTheFirstIndex()
         {
             Initialize();
@@ -559,7 +560,7 @@ include highlight(Name, 18, 2)
             Assert.Equal(2, _documentDatabase.IndexStore.GetIndexes().Count());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Choose_the_most_up_to_date_index_including_an_idle_one()
         {
             Initialize();

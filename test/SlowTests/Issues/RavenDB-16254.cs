@@ -2,6 +2,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,7 +28,7 @@ public class Helper
 }
 ";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanCompileWithPrivateMethodExposingFloatArray()
         {
             using var store = GetDocumentStore();

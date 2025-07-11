@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Can_patch_expires_in_metadata()
         {
             using (var store = GetDocumentStore())
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Test_patch_should_return_original_doc_if_patch_status_is_not_modified()
         {
             using (var store = GetDocumentStore())

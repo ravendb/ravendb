@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries)]
         [InlineData(false, false)]
         [InlineData(false, true)]
         [InlineData(true, false)]

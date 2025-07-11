@@ -8,6 +8,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Smuggler)]
         public async Task DeleteDocumentWithResolvedFlag()
         {
             using (var store = GetDocumentStore())
@@ -46,7 +47,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Smuggler)]
         public async Task DeleteDocumentWithResolvedFlagAfterEnableRevisions()
         {
             using (var store = GetDocumentStore())
@@ -87,7 +88,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task DeleteDocumentWithoutResolvedFlagAfterEnableRevisions()
         {
             using (var store = GetDocumentStore())

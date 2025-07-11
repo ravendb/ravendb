@@ -1,9 +1,10 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="Iterating.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,7 +17,7 @@ namespace SlowTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void IterationShouldNotFindAnyRecordsAndShouldNotThrowWhenNumberOfEntriesOnPageIs1AndKeyDoesNotMatch()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()))

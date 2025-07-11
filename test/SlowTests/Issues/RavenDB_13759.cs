@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanStoreTimeInformationInIndexStorageAndRecoverThatAfterReloadingDatabase()
         {
             var path = NewDataPath();
@@ -86,7 +87,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanOpenIndexesWithOlderVersion()
         {
             var serverPath = NewDataPath();
@@ -170,7 +171,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void WhenUsingExactOnDateTimeOffsetWeShouldBeAbleToQueryByThisValue()
         {
             using (var store = GetDocumentStore())

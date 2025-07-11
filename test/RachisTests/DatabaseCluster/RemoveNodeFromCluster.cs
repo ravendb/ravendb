@@ -24,14 +24,14 @@ namespace RachisTests.DatabaseCluster
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RemovedNodeChangeReplicationFactor()
         {
             var dbName = GetDatabaseName();
             await RemoveNodeWithDatabase(dbName, 5, 5);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ReconnectRemovedNodeWithDatabases()
         {
             var dbName = GetDatabaseName();
@@ -71,7 +71,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task BootstrapRemovedNode()
         {
             var dbName = GetDatabaseName();
@@ -97,7 +97,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData("A")]
         [InlineData("B")]
         [InlineData("ONE")]
@@ -181,7 +181,7 @@ namespace RachisTests.DatabaseCluster
             return record == null ? -1 : record.Topology.Members.Count + record.Topology.Promotables.Count + record.Topology.Rehabs.Count;
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData("A")]
         [InlineData("B")]
         [InlineData("ONE")]
@@ -252,7 +252,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RetainDatabasesAfterRemovingLastNodeFromCluster()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -300,7 +300,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task DontKickFromClusterOnElectionTimeoutMismatch()
         {
             var cluster = await CreateRaftCluster(2, shouldRunInMemory: false);
@@ -364,7 +364,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ReconnectRemovedNodeWithOneDatabase()
         {
             // BAD IDEA - we lose the database!
@@ -394,7 +394,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task BootstrapRemovedNodeWithOneDatabase()
         {
             var dbName = GetDatabaseName();
@@ -422,7 +422,7 @@ namespace RachisTests.DatabaseCluster
 
         [InlineData(3)]
         [InlineData(5)]
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         public async Task RemovedLeaderCauseReelection(int numberOfNodes)
         {
             var (_, leader) = await CreateRaftCluster(numberOfNodes);

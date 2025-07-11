@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
@@ -70,7 +71,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Memory)]
         public void IndexingOfLoadDocumentWhileChanged()
         {
             using (var store = GetDocumentStore())
@@ -132,7 +133,7 @@ update {
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Memory)]
         public async Task IndexingOfLoadDocument_UnderLowMemory()
         {
             using (var store = GetDocumentStore())
@@ -196,7 +197,7 @@ update {
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Memory)]
         public async Task IndexingOfLoadDocumentWhileChanged_UnderLowMemory()
         {
             using (var store = GetDocumentStore())

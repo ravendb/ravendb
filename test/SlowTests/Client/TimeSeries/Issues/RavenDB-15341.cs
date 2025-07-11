@@ -46,7 +46,7 @@ namespace SlowTests.Client.TimeSeries.Issues
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         public void ShouldNotThrowWhenUsingLastOnNonExistingTimeSeries2()
         {
             using (var store = GetDocumentStore())

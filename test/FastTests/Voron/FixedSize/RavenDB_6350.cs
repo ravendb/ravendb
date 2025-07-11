@@ -1,9 +1,10 @@
-﻿using Voron;
+using Voron;
 using Voron.Data.Fixed;
 using Voron.Data.Tables;
 using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.FixedSize
 {
@@ -13,7 +14,7 @@ namespace FastTests.Voron.FixedSize
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Invalid_usage_of_DirectAdds()
         {
             var numberOfItems = 100;

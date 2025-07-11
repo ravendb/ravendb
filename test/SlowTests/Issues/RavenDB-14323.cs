@@ -5,6 +5,7 @@ using System.Threading;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(1)]
         [InlineData(5)]
         [InlineData(10)]
@@ -76,7 +77,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(5)]
         [InlineData(10)]
         [InlineData(20)]

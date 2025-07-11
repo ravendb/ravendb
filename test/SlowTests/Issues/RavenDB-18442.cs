@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
         public async Task BackupInfoShouldBeInSyncBetweenClusterNodes()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

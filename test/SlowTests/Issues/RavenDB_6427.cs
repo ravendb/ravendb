@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchExactlyOneTime()
         {
             using (var store = GetDocumentStore())

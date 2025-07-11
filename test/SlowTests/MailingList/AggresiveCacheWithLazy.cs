@@ -1,14 +1,15 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
     public class AggressiveCacheWithLazy : RavenTestBase
     {
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AggresiveCacheWithLazyTestAsync()
         {
             using var store = GetDocumentStore();
@@ -39,7 +40,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AggresiveCacheWithLazyTestAsync_MixedMode()
         {
             using var store = GetDocumentStore();
@@ -71,7 +72,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AggresiveCacheWithLazyTestAsync_Partly()
         {
             const string loadedDocId = "doc-1";
@@ -113,7 +114,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void AggresiveCacheWithLazyTest()
         {
             const string docId = "doc-1";

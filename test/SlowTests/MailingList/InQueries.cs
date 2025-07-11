@@ -89,7 +89,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WhenElementContainsCommasInMiddleOfList()
         {
             using (var store = GetDocumentStore())
@@ -115,7 +115,7 @@ namespace SlowTests.MailingList
         /// <summary>
         /// This test requires us to qoute the search string and it test that we escape the comma within qoutes
         /// </summary>
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WhenElementcontainsCommasInMiddleOfListWithWhiteSpaceBeforeTheComma()
         {
             using (var store = GetDocumentStore())

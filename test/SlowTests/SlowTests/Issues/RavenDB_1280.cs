@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
@@ -17,7 +17,7 @@ namespace SlowTests.SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Referenced_Docs_Are_Indexed_During_Heavy_Writing()
         {
             const int iterations = 6000;
@@ -55,7 +55,7 @@ namespace SlowTests.SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanHandleMultipleMissingDocumentsInMultipleIndexes()
         {
             using (var store = GetDocumentStore())

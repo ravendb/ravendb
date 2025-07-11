@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace FastTests.Client
@@ -25,7 +26,7 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Should_throw_error_by_default_on_by_pointer_fields()
         {
             using (var store = GetDocumentStore())
@@ -38,7 +39,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Should_throw_error_by_default_on_by_ref_fields()
         {
             using (var store = GetDocumentStore())
@@ -51,7 +52,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Should_be_able_to_ignore_ref_fields()
         {
             using (var store = GetDocumentStore(new Options
@@ -80,7 +81,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Should_be_able_to_ignore_pointer_fields()
         {
             using (var store = GetDocumentStore(new Options
@@ -110,3 +111,4 @@ namespace FastTests.Client
         }
     }
 }
+

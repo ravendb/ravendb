@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -6,6 +6,7 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -43,7 +44,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void IfOneOfTheMultiMapFunctionsIsFailingWeNeedToResetTheEnumeratorToAvoidApplyingWrongFunctionOnPreviousDocument()
         {
             using (var store = GetDocumentStore())

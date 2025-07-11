@@ -19,7 +19,7 @@ public class RavenDB_17807 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Indexes)]
     public async Task CanUpdateDocumentByIndexWithInClauseInQuery()
     {
         using (var store = GetDocumentStore())
@@ -80,7 +80,7 @@ public class RavenDB_17807 : RavenTestBase
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     public async Task CanIndexQueryWithInClause()
     {
         using (var store = GetDocumentStore())

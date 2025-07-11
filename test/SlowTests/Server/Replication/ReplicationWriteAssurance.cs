@@ -13,7 +13,7 @@ namespace SlowTests.Server.Replication
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task ServerSideWriteAssurance()
         {
             var (_, leader) = await CreateRaftCluster(3);

@@ -4,19 +4,16 @@ using System.Linq;
 using FastTests.Voron.FixedSize;
 using Raven.Client.Extensions.Streams;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Voron.Util;
 using Xunit.Abstractions;
 
 namespace FastTests.Utils
 {
-    public class ChunkedMmapStreamTests : NoDisposalNeeded
+    public class ChunkedMmapStreamTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public ChunkedMmapStreamTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed(13, 3)]
         [InlineDataWithRandomSeed(94, 7)]
         public unsafe void Can_seek_and_read_from_chunked_mmap_file(int totalSize, int chunkSize, int seed)

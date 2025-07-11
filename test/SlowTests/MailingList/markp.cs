@@ -5,6 +5,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -21,7 +22,7 @@ namespace SlowTests.MailingList
             public string Name;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanQueryUsingInWhenUsingCustomSerialization()
         {
             using (var store = GetDocumentStore(new Options

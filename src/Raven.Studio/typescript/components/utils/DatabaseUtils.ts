@@ -81,6 +81,10 @@ export default class DatabaseUtils {
     }
 
     static getLocations(db: DatabaseSharedInfo): databaseLocationSpecifier[] {
+        if (!db) {
+            return [];
+        }
+
         if (db.isSharded) {
             const locations: databaseLocationSpecifier[] = db.shards.flatMap((shard) => {
                 const shardNumber = DatabaseUtils.shardNumber(shard.name);

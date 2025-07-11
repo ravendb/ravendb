@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Util;
 using SlowTests.Core.Utils.Entities;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +29,7 @@ public class DataArchivalRevisionsTests: RavenTestBase
         await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, config);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Revisions)]
     public async Task WillNotCreateRevisionUponDocumentArchival()
     {
         using (var store = GetDocumentStore())

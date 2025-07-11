@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
             public ushort Ushort { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void CanPatchSbyteAndUshort()
         {
             using (var store = GetDocumentStore())

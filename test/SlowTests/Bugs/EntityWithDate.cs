@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="EntityWithDate.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -6,6 +6,7 @@
 
 using System;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanSerializeAndDeserializeEntityWithDates()
         {
             using(var store = GetDocumentStore())

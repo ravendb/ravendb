@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public void restore_azure_cloud_settings_tests()
         {
             using (var store = GetDocumentStore(new Options

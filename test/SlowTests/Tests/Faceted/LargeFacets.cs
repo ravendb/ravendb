@@ -39,7 +39,7 @@ namespace SlowTests.Tests.Faceted
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, DatabaseMode = RavenDatabaseMode.All, Skip = "RavenDB-17966")]
         public void CanGetSameResult(Options options)

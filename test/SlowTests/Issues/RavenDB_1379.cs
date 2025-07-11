@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
             public string Id { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void PagingWithoutFilters()
         {
             using (var documentStore = GetDocumentStore())
@@ -87,7 +88,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void PagingWithoutFiltersWithPagingInformation()
         {
             using (var documentStore = GetDocumentStore())
@@ -158,7 +159,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void PagingWithExcludesWithPagingInformation()
         {
             using (var documentStore = GetDocumentStore())
@@ -226,7 +227,7 @@ namespace SlowTests.Issues
 
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void PagingWithMatchesWithPagingInformation()
         {
             using (var documentStore = GetDocumentStore())

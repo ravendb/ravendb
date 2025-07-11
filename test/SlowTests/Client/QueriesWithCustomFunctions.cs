@@ -2469,7 +2469,7 @@ from 'Users' as u load u.FriendId as _doc_0 select output(u, _doc_0)", query.ToS
             }
         }
 
-        [Fact(Skip = "RavenDB-9850")]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.CompareExchange, Skip = "RavenDB-9850")]
         public async Task QueryCompareExchangeWhereWithProperty()
         {
             using (var store = GetDocumentStore())

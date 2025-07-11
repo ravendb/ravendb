@@ -14,7 +14,7 @@ namespace SlowTests.Server.Documents.ETL
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Should_filter_out_deletions_using_generic_delete_behavior()
         {
             using (var src = GetDocumentStore())

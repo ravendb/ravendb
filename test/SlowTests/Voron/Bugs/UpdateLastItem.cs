@@ -1,4 +1,5 @@
-﻿using Voron.Data.BTrees;
+﻿using Tests.Infrastructure;
+using Voron.Data.BTrees;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,7 +11,7 @@ namespace SlowTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldWork()
         {
             byte* ptr;

@@ -11,6 +11,7 @@ using Corax.Utils;
 using FastTests.Voron;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -29,7 +30,7 @@ namespace StressTests.Corax
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void OrderByNoRepetitions()
         {
             PrepareData();
@@ -72,7 +73,7 @@ namespace StressTests.Corax
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Corax)]
         public void OrderByWithRepetitions()
         {
             PrepareData();

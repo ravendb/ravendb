@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -14,7 +14,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Spatial)]
         public void CanFindSale()
         {
             using (var d = GetDocumentStore())

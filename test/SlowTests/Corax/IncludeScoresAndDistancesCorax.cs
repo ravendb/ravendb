@@ -73,7 +73,7 @@ public class IncludeScoresAndDistancesCorax : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void DefaultBufferSizeForCoraxHasNotChanged()
     {
         // The tests in this file were designed for a pageSize of 4096. In case the default buffer has changed, please update the number of documents above that limit.

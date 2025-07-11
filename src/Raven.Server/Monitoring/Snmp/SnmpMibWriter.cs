@@ -88,6 +88,9 @@ public class SnmpMibWriter : IAsyncDisposable
             case SnmpType.TimeTicks:
                 await _writer.WriteLineAsync("   SYNTAX TimeTicks");
                 break;
+            case SnmpType.Counter64:
+                await _writer.WriteLineAsync("   SYNTAX Counter64");
+                break; 
             default:
                 throw new ArgumentOutOfRangeException(nameof(typeCode), typeCode, null);
         }

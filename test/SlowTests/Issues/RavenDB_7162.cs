@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Net.Http;
 using FastTests;
 using Raven.Client.Documents.Operations.Indexes;
@@ -8,6 +8,7 @@ using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void RequestTimeoutShouldWork()
         {
             using (var store = GetDocumentStore())

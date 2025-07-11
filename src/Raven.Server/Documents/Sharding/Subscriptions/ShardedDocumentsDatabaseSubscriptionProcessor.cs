@@ -94,9 +94,9 @@ public sealed class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDat
         return result;
     }
 
-    protected override SubscriptionBatchItem ShouldSend(Document item, out string reason)
+    protected override SubscriptionBatchItem ShouldSend(Document item)
     {
-        if (IsUnderActiveMigration(item.Id, _sharding, _allocator, _database.ShardNumber, Fetcher.FetchingFrom, out reason, out var isActiveMigration))
+        if (IsUnderActiveMigration(item.Id, _sharding, _allocator, _database.ShardNumber, Fetcher.FetchingFrom, out var isActiveMigration))
         {
             return new SubscriptionBatchItem
             {
@@ -106,23 +106,28 @@ public sealed class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDat
             };
         }
 
-        return base.ShouldSend(item, out reason);
+        return base.ShouldSend(item);
     }
   
-    public static bool IsUnderActiveMigration(string id, ShardingConfiguration sharding, ByteStringContext allocator, int shardNumber, FetchingOrigin fetchingFrom, out string reason, out bool isActiveMigration)
+    public bool IsUnderActiveMigration(string id, ShardingConfiguration sharding, ByteStringContext allocator, int shardNumber, FetchingOrigin fetchingFrom, out bool isActiveMigration)
     {
-        reason = null;
         isActiveMigration = false;
         var bucket = ShardHelper.GetBucketFor(sharding, allocator, id);
         var shard = ShardHelper.GetShardNumberFor(sharding, bucket);
         if (sharding.BucketMigrations.TryGetValue(bucket, out var migration) && migration.IsActive)
         {
-            reason = $"The document '{id}' from bucket '{bucket}' is under active migration and fetched from '{fetchingFrom}'.";
             if (fetchingFrom == FetchingOrigin.Storage || shard == shardNumber)
             {
-                reason += " Will set IsActiveMigration to true.";
                 // we pulled doc with active migration from storage or from resend list (when it belongs to us)
                 isActiveMigration = true;
+            }
+
+            if (Logger.IsDebugEnabled)
+            {
+                var reason = $"The document '{id}' from bucket '{bucket}' is under active migration and fetched from '{fetchingFrom}'.";
+                if (isActiveMigration)
+                    reason += " Will set IsActiveMigration to true.";
+                Logger.Debug(reason);
             }
 
             return true;
@@ -130,11 +135,17 @@ public sealed class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDat
 
         if (shard != shardNumber)
         {
-            reason = $"The owner of '{id}' document is shard '{shard}' (current shard number: '{shardNumber}') and fetched from '{fetchingFrom}'.";
             if (fetchingFrom == FetchingOrigin.Storage)
             {
-                reason += " Will set IsActiveMigration to true.";
                 isActiveMigration = true;
+            }
+
+            if (Logger.IsDebugEnabled)
+            {
+                var reason = $"The owner of '{id}' document is shard '{shard}' (current shard number: '{shardNumber}') and fetched from '{fetchingFrom}'.";
+                if (isActiveMigration)
+                    reason += " Will set IsActiveMigration to true.";
+                Logger.Debug(reason);
             }
 
             // current shard fetched an entry from resend list that belongs to another shard
@@ -162,24 +173,26 @@ public sealed class ShardedDocumentsDatabaseSubscriptionProcessor : DocumentsDat
         return false;
     }
 
-    protected override bool ShouldFetchFromResend(DocumentsOperationContext context, string id, Document item, string currentChangeVector, out string reason)
+    protected override bool ShouldFetchFromResend(DocumentsOperationContext context, string id, Document item, string currentChangeVector)
     {
-        reason = null;
         if (item == null)
         {
             // the document was delete while it was processed by the client
             ItemsToRemoveFromResend.Add(id);
-            reason = $"document '{id}' removed and skipped from resend";
+
+            if (Logger.IsDebugEnabled)
+                Logger.Debug($"document '{id}' removed and skipped from resend");
+            
             return false;
         }
 
         var cv = context.GetChangeVector(item.ChangeVector);
         if (cv.IsSingle)
-            return base.ShouldFetchFromResend(context, id, item, currentChangeVector, out reason);
+            return base.ShouldFetchFromResend(context, id, item, currentChangeVector);
 
         item.ChangeVector = context.GetChangeVector(cv.Version, cv.Order.RemoveId(_sharding.DatabaseId, context));
 
-        return base.ShouldFetchFromResend(context, id, item, currentChangeVector, out reason);
+        return base.ShouldFetchFromResend(context, id, item, currentChangeVector);
     }
 
     public HashSet<string> Skipped;

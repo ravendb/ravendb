@@ -1,9 +1,10 @@
-﻿using Sparrow.Utils;
+using Sparrow.Utils;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Scratch;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.ScratchBuffer
 {
@@ -13,7 +14,7 @@ namespace FastTests.Voron.ScratchBuffer
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void Scratch_file_is_aware_of_potentialy_active_readers()
         {
             var numberOfPages = 20;

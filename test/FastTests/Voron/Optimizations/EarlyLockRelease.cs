@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Text;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Server.Json.Sync;

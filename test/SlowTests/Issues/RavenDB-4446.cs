@@ -7,6 +7,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void can_index_collections_larger_than_32768()
         {
             using (var store = GetDocumentStore())
@@ -41,7 +42,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void can_index_collections_smaller_than_32768()
         {
             using (var store = GetDocumentStore())

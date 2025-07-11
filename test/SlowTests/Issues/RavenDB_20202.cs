@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -21,7 +21,7 @@ public class RavenDB_20202 : ClusterTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Cluster)]
     public async Task ShouldGettingBackToTheNodeAfterExperiencingTimeoutAndTopologyUpdateSimultaneously()
     {
         const string databaseName = "testDb";

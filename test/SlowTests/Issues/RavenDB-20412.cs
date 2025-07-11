@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task Save_Tombstones_On_Disabled_External_Replication()
         {
             using (var store1 = GetDocumentStore())

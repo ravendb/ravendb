@@ -8,6 +8,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Can_talk_to_db_if_it_was_created_after_document_store_initialization()
         {
             using (var store = GetDocumentStore())

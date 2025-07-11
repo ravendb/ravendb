@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.Integrations.PostgreSQL;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ public class RavenDB_16880 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.PostgreSql)]
     public async Task CanExportAndImportPostgreSqlIntegrationConfiguration()
     {
         using (var srcStore = GetDocumentStore())

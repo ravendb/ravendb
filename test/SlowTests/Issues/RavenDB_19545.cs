@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ public class RavenDB_19545 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
     public void RemovingTimeSeriesEntryShouldAffectCache()
     {
         const string docId = "user/1";
@@ -40,7 +41,7 @@ public class RavenDB_19545 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
     public void RemovingTimeSeriesEntryShouldAffectCache2()
     {
         const string docId = "user/1";
@@ -76,7 +77,7 @@ public class RavenDB_19545 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
     public void RemovingTimeSeriesEntryShouldAffectCache3()
     {
         const string docId = "user/1";
@@ -112,7 +113,7 @@ public class RavenDB_19545 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
     public void RemovingTimeSeriesEntryShouldAffectCache4()
     {
         const string docId = "user/1";
@@ -148,7 +149,7 @@ public class RavenDB_19545 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
     public async Task RemovingTimeSeriesEntryShouldAffectCacheAsync()
     {
         const string docId = "user/1";

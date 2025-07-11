@@ -2,18 +2,15 @@
 using Sparrow.Compression;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
-    public unsafe class IntegerEncodingTests : NoDisposalNeeded
+    public unsafe class IntegerEncodingTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public IntegerEncodingTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Compatibility()
         {
             Span<byte> buffer = new byte[16];
@@ -64,7 +61,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ReadWrite()
         {
             Span<byte> buffer = new byte[16];
@@ -79,7 +76,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ReadWriteMany()
         {
             Span<byte> buffer = new byte[VariableSizeEncoding.MaximumSizeOf<long>() * 16];

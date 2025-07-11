@@ -61,7 +61,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanProjectPropertyCalledOffset()
         {
             using (var store = GetDocumentStore())

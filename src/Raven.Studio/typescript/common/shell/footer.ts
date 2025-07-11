@@ -40,6 +40,9 @@ class footer {
 
     licenseClass = license.licenseCssClass;
     supportClass = license.supportCssClass;
+    licenseTypeShortText = license.licenseTypeShortText;
+    licenseBgColorClass = license.licenseBgColorClass;
+    licenseStatusTooltip = license.licenseStatusTooltip;
 
     constructor() {
         this.twoFactorSessionExpiration = ko.pureComputed(() => {

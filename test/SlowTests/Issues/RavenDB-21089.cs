@@ -6,6 +6,7 @@ using FastTests.Utils;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Client.Documents.Smuggler;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,7 +19,7 @@ public class RavenDB_21089 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.Revisions)]
     public async Task ImportedDocumentShouldNotHaveRevisions()
     {
         string file = "SlowTests.Smuggler.Data.Northwind_3.5.35168.ravendbdump";
@@ -58,7 +59,7 @@ public class RavenDB_21089 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Revisions)]
     public async Task MinToKeep0ShouldNotCreateRevisions()
     {
         using var store = GetDocumentStore();

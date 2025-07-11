@@ -1,6 +1,7 @@
-﻿using System;
+using System;
 using FastTests.Voron;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
@@ -29,7 +30,7 @@ namespace SlowTests.Voron
         private static readonly Slice Local;
         private static Slice Etag;
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void ShouldNotError()
         {
             TableSchema schema = new TableSchema();
@@ -121,7 +122,7 @@ namespace SlowTests.Voron
         }
         
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void SameTransaction()
         {
             TableSchema schema = new TableSchema();

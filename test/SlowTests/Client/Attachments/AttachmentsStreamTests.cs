@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Client.Attachments
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(1024)]
         [InlineData(32 * 1024)]
         [InlineData(256 * 1024)]
@@ -61,7 +62,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(1024)]
         [InlineData(32 * 1024)]
         [InlineData(256 * 1024)]
@@ -103,7 +104,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(1)]
         [InlineData(10)]
         [InlineData(100)]
@@ -166,7 +167,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(10, 3)]
         [InlineData(10, 1024)]
         [InlineData(1, 32768)]
@@ -231,7 +232,7 @@ namespace SlowTests.Client.Attachments
                 stream.Dispose();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(10, 3)]
         [InlineData(10, 1024)]
         [InlineData(1, 32768)]
@@ -283,7 +284,7 @@ namespace SlowTests.Client.Attachments
                 stream.Dispose();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(10, 3)]
         [InlineData(10, 1024)]
         [InlineData(1, 32768)]
@@ -334,7 +335,7 @@ namespace SlowTests.Client.Attachments
                 stream.Dispose();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(10, 3)]
         [InlineData(10, 1024)]
         [InlineData(1, 32768)]
@@ -423,7 +424,7 @@ namespace SlowTests.Client.Attachments
                 stream.Dispose();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(10, 3)]
         [InlineData(10, 1024)]
         [InlineData(1, 32768)]
@@ -512,7 +513,7 @@ namespace SlowTests.Client.Attachments
                 stream.Dispose();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(10, 3)]
         [InlineData(10, 1024)]
         [InlineData(1, 32768)]
@@ -565,7 +566,7 @@ namespace SlowTests.Client.Attachments
                 stream.Dispose();
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(1)]
         [InlineData(10)]
         public void CanGetListOfDifferentAttachmentsAndRead(int count)
@@ -634,7 +635,7 @@ namespace SlowTests.Client.Attachments
                 stream.Dispose();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public void CanSendNonExistingListOfAttachments()
         {
             var rnd = new Random();

@@ -3,6 +3,7 @@ using System.Linq;
 using System.Reflection;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 using Xunit;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Commands;
@@ -16,7 +17,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldGetUserResultOnQuery()
         {
             using (var store = GetDocumentStore(new Options()
@@ -78,3 +79,4 @@ namespace FastTests.Issues
         }
     }
 }
+

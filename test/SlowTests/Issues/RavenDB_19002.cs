@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,7 +37,7 @@ public class RavenDB_19002 : NoDisposalNeeded
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public async Task ResourceCacheMustNotAllowToLeakDatabaseInstance()
     {
         var dbsCache = new ResourceCache<MyDb>();
@@ -122,7 +123,7 @@ public class RavenDB_19002 : NoDisposalNeeded
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void ShouldRemoveFaultyDatabaseTask()
     {
         var dbsCache = new ResourceCache<MyDb>();
@@ -150,7 +151,7 @@ public class RavenDB_19002 : NoDisposalNeeded
         Assert.Equal(loadAgainTask, database1); // should add a new open database task
      }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void MustNotRemoveLockTask()
     {
         var dbsCache = new ResourceCache<MyDb>();

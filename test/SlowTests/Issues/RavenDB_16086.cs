@@ -1,9 +1,10 @@
-﻿using FastTests.Voron;
+using FastTests.Voron;
 using Sparrow;
 using Voron;
 using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 namespace SlowTests.Issues
 {
     public class RavenDB_16086 : StorageTest
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
             options.CompressTxAboveSizeInBytes = new Size(512, SizeUnit.Kilobytes).GetValue(SizeUnit.Bytes);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void RecoveryValidationNeedsToTakeIntoAccountFreedPagesThatCouldOverlapAnotherFreedPages()
         {
             RequireFileBasedPager();

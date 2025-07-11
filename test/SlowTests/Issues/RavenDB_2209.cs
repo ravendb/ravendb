@@ -7,6 +7,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LazyLoadResultShouldBeUpToDateEvenIfAggressiveCacheIsEnabled()
         {
             using (var store = GetDocumentStore())

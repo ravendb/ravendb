@@ -7,6 +7,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -39,7 +40,7 @@ public class RavenDB_17341 : RavenTestBase
             : new PutIndexesOperation(second));
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.BackupExportImport)]
     public async Task IndexesAreExportedAndImportedWithIndexHistory()
     {
         const int WaitToCompleteInMin = 1;

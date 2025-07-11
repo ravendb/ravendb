@@ -12,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Load_with_Argument_that_has_String_Interpolation()
         {
             using (var store = GetDocumentStore())
@@ -60,7 +60,7 @@ from 'Users' as u where u.LastName = $p0 select output(u)", query.ToString());
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Load_inside_Select_with_Argument_Predefined_in_Let_that_has_Complex_String_Interpolation()
         {
             using (var store = GetDocumentStore())
@@ -115,7 +115,7 @@ from 'Users' as u select output(u, $p0, $p1)", query.ToString());
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_Load_inside_Let_with_Argument_Predefined_in_Let_that_has_String_Interpolation()
         {
             using (var store = GetDocumentStore())

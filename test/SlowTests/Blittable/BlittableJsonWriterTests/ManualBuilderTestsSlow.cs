@@ -1,7 +1,8 @@
-﻿using System.Globalization;
+using System.Globalization;
 using FastTests;
 using Sparrow.Json;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Blittable.BlittableJsonWriterTests
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(byte.MaxValue)]
         [InlineData(short.MaxValue)]
         [InlineData(short.MaxValue + 1)]

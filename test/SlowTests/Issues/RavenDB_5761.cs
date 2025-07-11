@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -55,7 +56,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void StalenessShouldWorkProperlyWhenReferenceIsChanged()
         {
             using (var store = GetDocumentStore())

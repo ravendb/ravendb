@@ -9,6 +9,7 @@ using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void PatcherCanOutputObjectsCorrectly()
         {
             using (var database = CreateDocumentDatabase())

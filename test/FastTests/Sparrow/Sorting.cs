@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -42,7 +43,7 @@ namespace FastTests.Sparrow
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void Small()
         {
             int[] values = { 9, 7, 6, 5, 4, 3, 2, 1 };
@@ -56,7 +57,7 @@ namespace FastTests.Sparrow
             Assert.Equal(values, result);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void SmallWithDuplicates()
         {
             int[] values = { 9, 9, 9, 9, 2, 2, 2, 1 };
@@ -101,7 +102,7 @@ namespace FastTests.Sparrow
            1024 * 512
         };
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void DifferentSizesWithValues()
         {
             foreach (int size in Size)
@@ -120,7 +121,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void DifferentSizes()
         {
             foreach (int size in Size)
@@ -137,7 +138,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void IncreasingSizes()
         {
             for (int i = 0; i < 512; i++)
@@ -154,7 +155,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void IncreasingSizesWithValues()
         {
             for (int i = 0; i < 512; i++)

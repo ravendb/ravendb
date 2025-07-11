@@ -17,7 +17,7 @@ public class RavenDB_19148 : ClusterTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Certificates | RavenTestCategory.Cluster)]
     public async Task CanAuthUsingWellKnownIssuer()
     {
         var ca = CertificateUtils.CreateCertificateAuthorityCertificate("auth", out var caKey, out var caName);

@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.Indexing
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Sharded)]
         public async Task CanUseExactInAutoIndex(RavenTestParameters config)
         {            
@@ -158,7 +158,7 @@ namespace SlowTests.Server.Documents.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task ShouldExtendMappingOfTheSameField(RavenTestParameters config)
         {
@@ -217,7 +217,7 @@ namespace SlowTests.Server.Documents.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanUseExactAndSearchTogetherInAutoMapReduceIndex(RavenTestParameters config)
         {
@@ -303,7 +303,7 @@ namespace SlowTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void IndexNameFinderShouldPreservePascalCaseFieldNames()
         {
             var name = AutoIndexNameFinder.FindMapIndexName("Users", new[]

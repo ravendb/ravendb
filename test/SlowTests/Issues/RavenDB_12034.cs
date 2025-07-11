@@ -1,7 +1,8 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Stored_object_should_not_get_collection_metadata()
         {
             using (var store = GetDocumentStore())

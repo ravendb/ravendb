@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Xunit;
 using Raven.Client.Documents.Indexes;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Map_reduce_on_complex_object()
         {
             using (var store = GetDocumentStore())

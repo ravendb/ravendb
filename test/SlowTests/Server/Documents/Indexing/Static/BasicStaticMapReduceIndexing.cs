@@ -9,6 +9,7 @@ using Raven.Server.Documents.Queries;
 using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Static_map_reduce_index_with_multiple_outputs_per_document()
         {
             using (var database = CreateDocumentDatabase())

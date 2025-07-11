@@ -1,8 +1,10 @@
+using System;
 using Tests.Infrastructure.ConnectionString;
 using Xunit;
 
 namespace Tests.Infrastructure
 {
+    [Obsolete("Use RavenFact(RavenTestCategory.YourCategory, MongoDBRequired = true) instead - Note: MongoDBRequired parameter may need to be added to RavenFact")]
     public class RequiresMongoDBFactAttribute : FactAttribute
     {
         public RequiresMongoDBFactAttribute()

@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void OnSessionCreated_WaitForIndexesAfterSaveChanges_DisableIndexTest()
         {
             using (var store = GetDocumentStore())
@@ -92,7 +92,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task OnSessionCreated_WaitForReplicationAfterSaveChanges_Test()
         {
             var db = "DatabaseNodes";

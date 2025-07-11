@@ -82,7 +82,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         public void Query_With_Variables()
         {
             using (var store = GetDocumentStore())
@@ -120,7 +120,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         public void Query_With_Variables_IntoClass()
         {
             using (var store = GetDocumentStore())
@@ -174,4 +174,8 @@ namespace FastTests.Client
         }
     }
 }
+
+
+
+
 

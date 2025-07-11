@@ -1,18 +1,15 @@
 ﻿using System;
 using Sparrow.Server.Binary;
 using Sparrow.Server.Collections.Persistent;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Sparrow
 {
-    public class BinaryTreeTests : NoDisposalNeeded
+    public class BinaryTreeTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public BinaryTreeTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void EmptyTree()
         {
             Span<byte> storage = stackalloc byte[32];
@@ -25,7 +22,7 @@ namespace FastTests.Sparrow
             Assert.Equal(6, tree.MaxNodes);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void SingleBitTree()
         {
             Span<byte> storage = stackalloc byte[32];
@@ -44,7 +41,7 @@ namespace FastTests.Sparrow
             Assert.Equal(999, result);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Single2BitTree()
         {
             Span<byte> storage = stackalloc byte[64];
@@ -73,7 +70,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void MultipleBitTree()
         {
             Span<byte> storage = stackalloc byte[256];
@@ -101,7 +98,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CommonPrefixBitTree()
         {
             Span<byte> storage = stackalloc byte[128];

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -29,7 +29,7 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task WillNotProduceAnyErrors(Options options)
         {

@@ -84,7 +84,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void CheckDynamicName()
         {
             using (var store = GetDocumentStore())
@@ -106,7 +106,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void DynamicUserDefinedIndexNameCreateWillNotFail()
         {
             using (var store = GetDocumentStore())
@@ -116,7 +116,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Dynamic_IndexNameCreateWillNotFail()
         {
             using (var store = GetDocumentStore())
@@ -146,7 +146,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void DoubleUnderscoreIndexNameCreateFail()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
             public string CreatedBy { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldWork()
         {
             using (var store = GetDocumentStore())
@@ -42,7 +43,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldWorkAndWorks()
         {
             using (var store = GetDocumentStore())

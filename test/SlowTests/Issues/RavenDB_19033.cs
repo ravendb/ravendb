@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Exceptions.Database;
 using Raven.Server.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,7 +36,7 @@ public class RavenDB_19033 : NoDisposalNeeded
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public async Task UnloadAndLockDatabaseMustNotIgnoreDatabaseDisabledLock()
     {
         List<MyDb> runningDatabases = new List<MyDb>();

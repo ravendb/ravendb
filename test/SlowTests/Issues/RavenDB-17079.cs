@@ -1,6 +1,7 @@
 using System.IO;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public void Should_Return_Appropriate_Number_Of_Attachments_After_Deletion()
         {
             using (var store = GetDocumentStore())

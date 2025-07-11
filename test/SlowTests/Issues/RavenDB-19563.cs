@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
 using Raven.Server.Utils;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
         public async Task Snapshot_should_have_correct_index_entries_after_snapshot_restore()
         {
             var backupPath = NewDataPath();
@@ -80,7 +81,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
         public async Task Snapshot_should_have_correct_index_entries_after_snapshot_and_incremental_restore()
         {
             var backupPath = NewDataPath();
@@ -142,7 +143,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Counters | RavenTestCategory.Indexes)]
         public async Task Snapshot_should_have_correct_index_entries_after_snapshot_and_incremental_restore_counters()
         {
             var backupPath = NewDataPath();
@@ -207,7 +208,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         public async Task Snapshot_should_have_correct_index_entries_after_snapshot_and_incremental_restore_timeseries()
         {
             var backupPath = NewDataPath();

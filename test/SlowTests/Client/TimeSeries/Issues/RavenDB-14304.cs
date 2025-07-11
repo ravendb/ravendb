@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -16,7 +16,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task AppendingItemThatIsTooFarFromBaselineShouldGoToNewSegment()
         {
             using (var store = GetDocumentStore())
@@ -58,7 +58,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task AppendingItemThatIsTooFarFromBaselineShouldGoToNewSegment2()
         {
             using (var store = GetDocumentStore())
@@ -101,7 +101,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task AppendingItemThatIsTooFarFromBaselineShouldGoToNewSegment3()
         {
             using (var store = GetDocumentStore())
@@ -145,7 +145,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task AppendingItemThatIsTooFarFromBaselineShouldGoToNewSegment4()
         {
             using (var store = GetDocumentStore())

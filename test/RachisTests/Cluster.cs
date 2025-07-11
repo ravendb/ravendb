@@ -29,7 +29,7 @@ namespace RachisTests
             return res.Topology.Members.Count;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task PutUniqeValueToDifferentNode()
         {
             var clusterSize = 3;
@@ -61,7 +61,7 @@ namespace RachisTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanCreateAddAndDeleteDatabaseFromNodes()
         {
             var clusterSize = 3;

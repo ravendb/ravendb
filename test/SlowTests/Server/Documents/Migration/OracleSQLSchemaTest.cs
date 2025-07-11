@@ -13,7 +13,7 @@ namespace SlowTests.Server.Documents.Migration
         {
         }
 
-        [RequiresOracleSqlFact]
+        [RavenFact(RavenTestCategory.BackupExportImport, Requires = RavenServiceRequirement.OracleSql)]
         public void CanFetchSchema()
         {
             using (WithSqlDatabase(MigrationProvider.Oracle, out var connectionString, out string schemaName, includeData: false))

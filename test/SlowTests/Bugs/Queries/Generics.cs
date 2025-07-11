@@ -1,4 +1,5 @@
-﻿using FastTests;
+using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -33,13 +34,13 @@ namespace SlowTests.Bugs.Queries
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanSaveWithGenerics()
         {
             Save("myId", false);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void TestWithoutGenerics()
         {
             using (var dataStore = GetDocumentStore())

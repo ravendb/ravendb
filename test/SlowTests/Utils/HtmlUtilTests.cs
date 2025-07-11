@@ -1,7 +1,8 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Server.Web;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Utils
 {
@@ -11,7 +12,7 @@ namespace SlowTests.Utils
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void RenderUnsafePage()
         {
             var html = HtmlUtil.RenderUnsafePage();

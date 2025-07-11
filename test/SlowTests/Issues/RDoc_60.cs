@@ -7,6 +7,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -39,7 +40,7 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void IncludeShouldWorkForStringIdentifiers()
         {
             using (var store = GetDocumentStore())

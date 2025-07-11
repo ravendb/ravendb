@@ -1,4 +1,5 @@
-﻿using FastTests;
+using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Bugs.Identifiers
             public string Id { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_load_entity()
         {
             using (var store = GetDocumentStore())

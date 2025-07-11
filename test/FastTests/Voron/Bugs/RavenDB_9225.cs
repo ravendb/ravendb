@@ -1,8 +1,9 @@
-﻿using Voron;
+using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Fixed;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.Bugs
 {
@@ -12,7 +13,7 @@ namespace FastTests.Voron.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void VariableSizeTree_DeletingFromMiddle()
         {
                         TreePage page;
@@ -58,7 +59,7 @@ namespace FastTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void FixedSizeTree_DeletingFromMiddle()
         {
             ushort valSize = 1008;

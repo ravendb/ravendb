@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ public class RavenDB_19385 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
     public void TimeoutInLazyQueriesTest()
     {
         using (var store = GetDocumentStore())

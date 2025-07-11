@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseRightConverterForIDictionaryWithDateTimeKey()
         {
             using (DocumentStore store = GetDocumentStore())

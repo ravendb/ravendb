@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ public class RavenDB_19361 : StorageTest
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void EnsureProperNumberOfItemsInSetIsAccurate()
     {
         using (var wtx = Env.WriteTransaction())
@@ -35,7 +36,7 @@ public class RavenDB_19361 : StorageTest
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void ProperRemovals()
     {
         var mem = new HashSet<long>();

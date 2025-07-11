@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Cluster)]
         public async Task Bulk_Insert_1NodeRestart_TestCase1()
         {
             using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, });
@@ -56,7 +56,7 @@ namespace SlowTests.Issues
 
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Cluster)]
         public async Task Bulk_Insert_2NodesDown_1NodeRestart()
         {
             (var nodes, var leader) = await CreateRaftCluster(2, shouldRunInMemory: false);
@@ -98,7 +98,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Cluster)]
         public async Task Bulk_Insert_Failover()
         {
             (var nodes, var leader) = await CreateRaftCluster(2, shouldRunInMemory: false);
@@ -137,7 +137,7 @@ namespace SlowTests.Issues
             public string Id { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Should_Create_New_Bulk_Insert_If_Previously_Failed_On_Unavailable_Server_1()
         {
             using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, });
@@ -170,7 +170,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Should_Not_Throw_NodeUnavailable()
         {
             using var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, });
@@ -209,7 +209,7 @@ namespace SlowTests.Issues
             await deleteOperation.WaitForCompletionAsync();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Cluster)]
         public async Task Should_Throw_AllTopologyNodesDownException()
         {
             (var nodes, var leader) = await CreateRaftCluster(2, shouldRunInMemory: false);

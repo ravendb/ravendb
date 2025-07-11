@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCreateIndexWithEnumerableRangeInSelectMany()
         {
             using (var store = GetDocumentStore())

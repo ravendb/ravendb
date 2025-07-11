@@ -1,5 +1,6 @@
 ﻿using System;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using User = SlowTests.Core.Utils.Entities.User;
@@ -12,7 +13,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void TimeSeriesFor_ShouldThrowBetterError_OnNullEntity()
         {
             using (var store = GetDocumentStore())

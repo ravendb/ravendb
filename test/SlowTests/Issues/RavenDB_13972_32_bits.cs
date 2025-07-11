@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using Raven.Server.Config;
 using Raven.Server.Utils.Enumerators;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
         [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2)]
         [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 0, 2)]
         [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2, 2, 2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 3)]
@@ -55,7 +56,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 0, 2)]
         [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10, 3)]
         [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3, 0, 3)]
@@ -83,7 +84,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
         [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
         public async Task CanStreamQueryWithPulsatingReadTransaction(int numberOfUsers)
@@ -109,7 +110,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData(2 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 10)]
         [InlineData(4 * _numberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded + 3)]
         public async Task CanStreamCollectionQueryWithPulsatingReadTransaction(int numberOfUsers)

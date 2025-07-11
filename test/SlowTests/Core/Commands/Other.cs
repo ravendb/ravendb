@@ -24,7 +24,7 @@ namespace SlowTests.Core.Commands
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanGetBuildNumber()
         {
             using (var store = GetDocumentStore())
@@ -35,7 +35,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanGetStatistics(Options options)
         {
@@ -49,7 +49,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanGetDatabaseStatistics(Options options)
         {
@@ -122,7 +122,7 @@ namespace SlowTests.Core.Commands
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanGetAListOfDatabasesAsync()
         {
             using (var store = GetDocumentStore())
@@ -132,7 +132,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanSwitchDatabases()
         {
             using (var store1 = GetDocumentStore(new Options
@@ -180,7 +180,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public async Task CanGetDatabaseIdentities(Options options)
         {
@@ -192,7 +192,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanSeedIdentity(Options options)
         {

@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Should_wait_until_index_processes_tombstone()
         {
             using (var store = GetDocumentStore())

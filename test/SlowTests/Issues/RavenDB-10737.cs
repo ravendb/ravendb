@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client;
 using Sparrow;
 using Sparrow.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
 
         private const string _expires = Constants.Documents.Metadata.Expires;
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Insert_with_Expirations()
         {
             using (var store = GetDocumentStore())
@@ -41,7 +42,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Insert_then_Load_and_Update_with_Expirations()
         {
             using (var store = GetDocumentStore())
@@ -70,7 +71,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Insert_then_Load_and_Update_with_Expirations_DateTimeOffset()
         {
             using (var store = GetDocumentStore())

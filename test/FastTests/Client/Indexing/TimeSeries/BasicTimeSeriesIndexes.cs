@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -22,7 +22,7 @@ namespace FastTests.Client.Indexing.TimeSeries
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicMapIndex(Options options)
         {
@@ -196,7 +196,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task BasicMapIndexWithLoad(Options options)
         {
@@ -368,7 +368,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void BasicMapReduceIndex(Options options)
         {
@@ -574,7 +574,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task BasicMapReduceIndexWithLoad(Options options)
         {
@@ -747,7 +747,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task TimeSeriesForDocumentIdWithEscapePositions(Options options)
         {
@@ -810,7 +810,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void MapIndexWithCaseInsensitiveTimeSeriesNames(Options options)
         {
@@ -865,7 +865,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUpdateMapTimeSeriesIndex(Options options)
         {
@@ -908,7 +908,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUpdateMapTimeSeriesIndexWithoutUpdatingCompiledIndex(Options options)
         {
@@ -952,7 +952,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUpdateMapReduceTimeSeriesIndex(Options options)
         {
@@ -1017,7 +1017,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUpdateMapReduceTimeSeriesIndexWithoutUpdatingCompiledIndex(Options options)
         {
@@ -1083,7 +1083,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllTimeSeriesFromCollection(Options options)
         {
@@ -1259,7 +1259,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanMapAllTimeSeries(Options options)
         {
@@ -1463,7 +1463,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenExplicitData(searchEngine: RavenSearchEngineMode.Lucene)]
         public async Task SupportForEscapedCollectionAndTimeSeriesNames(RavenTestParameters config)
         {
@@ -1643,7 +1643,7 @@ namespace FastTests.Client.Indexing.TimeSeries
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries)]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanPersist(Options options)
         {
@@ -1760,3 +1760,4 @@ namespace FastTests.Client.Indexing.TimeSeries
         }
     }
 }
+

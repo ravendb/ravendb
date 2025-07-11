@@ -17,7 +17,7 @@ public class RavenDB_17903_Stress : ClusterTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public async Task Bulk_Insert_1NodeRestart_TestCase2()
     {
         (var nodes, var leader) = await CreateRaftCluster(2, shouldRunInMemory: false);
@@ -56,7 +56,7 @@ public class RavenDB_17903_Stress : ClusterTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public async Task Should_Create_New_Bulk_Insert_If_Previously_Failed_On_Unavailable_Server_2()
     {
         (var nodes, var leader) = await CreateRaftCluster(2, shouldRunInMemory: false);

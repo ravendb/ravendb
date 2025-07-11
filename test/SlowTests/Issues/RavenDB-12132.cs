@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanPutObjectWithId()
         {
             DoNotReuseServer();
@@ -30,7 +30,7 @@ namespace SlowTests.Issues
             Assert.Equal("users/1", res.Value.Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanCreateClusterTransactionRequest1()
         {
             var (_, leader) = await CreateRaftCluster(3);

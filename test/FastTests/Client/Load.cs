@@ -7,6 +7,7 @@ using Sparrow.Json;
 using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Client
 {
@@ -16,7 +17,7 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Load_Document_By_id()
         {
             using (var store = GetDocumentStore())
@@ -36,7 +37,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Load_Documents_By_ids()
         {
             using (var store = GetDocumentStore())
@@ -56,7 +57,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Load_Null_Should_Return_Null()
         {
             using (var store = GetDocumentStore())
@@ -76,7 +77,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Load_Multi_Ids_With_Null_Should_Return_Dictionary_Without_nulls()
         {
             using (var store = GetDocumentStore())
@@ -107,7 +108,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Load_Document_With_Int_Array_And_Long_Array()
         {
             using (var store = GetDocumentStore())
@@ -133,7 +134,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Should_Load_Many_Ids_As_Post_Request()
         {
             using (var store = GetDocumentStore())
@@ -166,7 +167,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Should_Load_Many_Ids_As_Post_Request_Directly()
         {
             using (var store = GetDocumentStore())
@@ -205,7 +206,7 @@ namespace FastTests.Client
             public IEnumerable<string> Prop { get; set; } = Enumerable.Empty<string>();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LoadDoc_WhenContainEnumerableEmpty_ShouldWork()
         {
             const string id = "someId";

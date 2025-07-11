@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Documents.Queries.Parser;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WrongQueryExpressionWhenDeclaringFunction()
         {
             var parser = new QueryParser();

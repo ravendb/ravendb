@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Certificates | RavenTestCategory.Cluster)]
         public void ShouldStoreLastAuthorizedNonClusterAdminRequestTime()
         {
             string dbName = GetDatabaseName();

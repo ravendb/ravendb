@@ -1,7 +1,8 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -58,7 +59,7 @@ namespace SlowTests.Bugs.MapRedue
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Can_create_index()
         {
             using (var store = GetDocumentStore())

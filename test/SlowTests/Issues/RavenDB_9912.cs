@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.Attachments)]
         public async Task DocsAndAttachmentsDeletionsShouldBeProcessedCorrectly()
         {
             using (var store = GetDocumentStore())

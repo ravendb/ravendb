@@ -7,6 +7,7 @@ using NodaTime;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -101,7 +102,7 @@ namespace SlowTests.Issues
             documentStore.Conventions.RegisterQueryValueConverter<Instant>(InstantQueryValueConverter);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task CanUsePatchWithNodaTime()
         {
             using (var store = GetDocumentStore(new Options

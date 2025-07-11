@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="FragementFail.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -12,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -60,7 +55,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Highlighting | RavenTestCategory.Indexes)]
         public void Fragment_Length_Should_Not_Be_More_Then_128()
         {
             using (var store = GetDocumentStore())

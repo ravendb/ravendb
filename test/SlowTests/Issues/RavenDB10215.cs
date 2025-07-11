@@ -2,6 +2,7 @@
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
             public string Id { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseDocumentStoreBeforeStore()
         {
             using (var store = GetDocumentStore(options:
@@ -51,7 +52,7 @@ namespace SlowTests.Issues
                 }
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanUseDocumentStoreBeforeStoreAsync()
         {
             using (var store = GetDocumentStore(options:

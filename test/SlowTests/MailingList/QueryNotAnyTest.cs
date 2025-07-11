@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Query_NotAny_WithEnumComparison()
         {
             using (var store = GetDocumentStore())

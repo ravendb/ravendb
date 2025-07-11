@@ -1,6 +1,7 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Blittable
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Clone_WhenContainItemsOfStrings_ShouldBeEqualToOrigin()
         {
             //Arrange
@@ -30,7 +31,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Clone_WhenContainItemsOfIntegers_ShouldBeEqualToOrigin()
         {
             //Arrange
@@ -48,7 +49,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Clone_WhenContainItemsOfDouble_ShouldBeEqualToOrigin()
         {
             //Arrange
@@ -67,7 +68,7 @@ namespace SlowTests.Blittable
         }
 
         //Todo Fixing the clone implementation to support this situation or throw clear error
-        [Fact(Skip = "Should fixing the clone implementation to support this situation or throw clear error")]
+        [RavenFact(RavenTestCategory.Core, Skip = "Should fixing the clone implementation to support this situation or throw clear error")]
         public void Clone_WhenContainItemsOfObjects_AndOriginAndCloneOnSameContext_ShouldBeEqualToOrigin()
         {
             //Arrange
@@ -88,7 +89,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Clone_WhenContainItemsOfObjects_AndOriginAndCloneOnDifferentContext_ShouldBeEqualToOrigin()
         {
             //Arrange
@@ -110,7 +111,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Clone_WhenContainMixItemTypes_AndOriginAndCloneOnDifferentContext_ShouldBeEqualToOrigin()
         {
             //Arrange

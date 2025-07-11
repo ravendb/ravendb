@@ -43,7 +43,7 @@ namespace SlowTests.Tests.Track
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void SyncWorks(Options options)
         {
@@ -63,7 +63,7 @@ namespace SlowTests.Tests.Track
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task AsyncShouldWorkToo(Options options)
         {

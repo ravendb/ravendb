@@ -116,7 +116,7 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanExecuteIndexWithoutNRE()
         {
             using (var store = GetDocumentStore())

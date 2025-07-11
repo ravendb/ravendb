@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task RawQueryWithBlittableJsonReturnType_WithGroupByAndSelect()
         {
             using (var store = GetDocumentStore())
@@ -50,7 +50,7 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task RawQueryWithBlittableJsonReturnType_WithGroupBy()
         {
             using (var store = GetDocumentStore())
@@ -84,7 +84,7 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void RawQueryWithBlittableJsonReturnType()
         {
             using (var store = GetDocumentStore())
@@ -104,7 +104,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void RawQueryWithBlittableJsonReturnType_SimpleProjection()
         {
             using (var store = GetDocumentStore())
@@ -130,7 +130,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void RawQueryWithBlittableJsonReturnType_JsProjection()
         {
             using (var store = GetDocumentStore())
@@ -172,7 +172,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void StreamRawQueryWithBlittableJsonReturnType()
         {
             using (var store = GetDocumentStore())

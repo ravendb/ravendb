@@ -1,10 +1,11 @@
-﻿using FastTests;
+using FastTests;
 using Orders;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUpdateDatabaseRecord()
         {
             using (var store = GetDocumentStore())

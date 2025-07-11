@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.Cluster)]
         public async Task CanRemoveAndReAddNodeToDbWhileUpdatingEtlProcessState()
         {
             const string mentor = "A";

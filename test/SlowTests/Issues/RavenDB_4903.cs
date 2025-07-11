@@ -34,7 +34,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanAutomaticallyWaitForIndexes_ForSpecificIndex()
         {
             using (var store = GetDocumentStore())

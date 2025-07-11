@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void TestRefreshOverload()
         {
             using (var store = GetDocumentStore())
@@ -63,7 +64,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void TestRefreshOverloadSameDocs()
         {
             using (var store = GetDocumentStore())
@@ -97,7 +98,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void TestRefreshOverloadWithDocDeletion()
         {
             using (var store = GetDocumentStore())
@@ -140,7 +141,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TestRefreshOverloadAsync()
         {
             using (var store = GetDocumentStore())
@@ -191,7 +192,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TestRefreshOverloadSameDocsAsync()
         {
             using (var store = GetDocumentStore())
@@ -225,7 +226,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task TestRefreshOverloadWithDocDeletionAsync()
         {
             using (var store = GetDocumentStore())

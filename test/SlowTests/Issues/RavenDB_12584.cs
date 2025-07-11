@@ -55,7 +55,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void DynamicArrayIndexOfMethodShouldReturnCorrectValue()
         {
             using (var store = GetDocumentStore())
@@ -120,7 +120,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void DynamicArrayLastIndexOfMethodShouldReturnCorrectValue()
         {
             using (var store = GetDocumentStore())

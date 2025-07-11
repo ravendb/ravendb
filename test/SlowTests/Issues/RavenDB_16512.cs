@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
@@ -9,6 +9,7 @@ using Newtonsoft.Json.Serialization;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_Use_JsonArrayContract_With_ItemConverter()
         {
             using var store = GetDocumentStore(new Options

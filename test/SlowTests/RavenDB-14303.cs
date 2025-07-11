@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -17,7 +17,7 @@ namespace SlowTests
     public class RavenDB_14303 : ClusterTestBase
     {
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task IgnoreIdleIndexOnPromotable()
         {
             var clusterSize = 3;

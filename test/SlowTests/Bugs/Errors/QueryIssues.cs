@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
@@ -14,7 +14,7 @@ namespace SlowTests.Bugs.Errors
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]    
         public void PrestonThinksLoadStartingWithShouldBeCaseInsensitive(Options options)
         {

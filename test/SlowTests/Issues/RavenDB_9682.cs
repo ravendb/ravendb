@@ -11,7 +11,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void IdInInQueriesShouldNotBeCaseSensitive()
         {
             using (var store = GetDocumentStore())

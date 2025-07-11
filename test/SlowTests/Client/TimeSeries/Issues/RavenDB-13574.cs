@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
@@ -17,7 +17,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void ShouldHaveTimeSeriesFlagInMetadata()
         {
             using (var store = GetDocumentStore())
@@ -43,7 +43,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void TimeSeriesFlagShouldBeRemovedFromMetadata()
         {
             using (var store = GetDocumentStore())
@@ -85,7 +85,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void TimeSeriesNameShouldBeRemovedFromMetadata()
         {
             using (var store = GetDocumentStore())
@@ -160,7 +160,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task CanGetSeriesMinMaxAndCount()
         {
             using (var store = GetDocumentStore())
@@ -205,7 +205,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task CanGetSeriesMinMaxAndCount_MultipleValues()
         {
             using (var store = GetDocumentStore())
@@ -253,7 +253,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task CanGetSeriesMinMaxAndCount_DifferentNumberOfValues()
         {
             using (var store = GetDocumentStore())

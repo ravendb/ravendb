@@ -87,7 +87,7 @@ namespace SlowTests.MailingList.spokeypokey
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanReferenceChildDocumentsInIndex()
         {
             using (var store = GetDocumentStore(new Options

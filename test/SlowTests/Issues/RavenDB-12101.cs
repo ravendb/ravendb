@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -37,7 +38,7 @@ namespace SlowTests.Issues
             public IEnumerable<string> Employees { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void IndexQueryWithStringEqualsInsideWhereAnyShouldNotThrow()
         {
             using (var store = GetDocumentStore())

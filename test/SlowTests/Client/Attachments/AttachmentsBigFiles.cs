@@ -1,9 +1,10 @@
-﻿using System;
+﻿﻿using System;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Client.Attachments
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", false)]
         [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", true)]
         public async Task BatchRequestWithLongMultiPartSections(long size, string hash, bool encrypted)
@@ -74,7 +75,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Attachments)]
         [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", false)]
         [InlineData(10, "i1enlqXQfLBMwWFN/CrLP3PtxxLX9DNhnKO75muxX0k=", true)]
         public async Task SupportHugeAttachment(long size, string hash, bool encrypted)

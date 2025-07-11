@@ -36,7 +36,7 @@ namespace RachisTests.DatabaseCluster
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task WaitForCommandToApply()
         {
             var clusterSize = 5;
@@ -69,7 +69,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task EnsureDocumentsReplication(bool useSsl)
@@ -153,7 +153,7 @@ namespace RachisTests.DatabaseCluster
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task FailoverReplicationShouldFindEtagFromChangeVector()
         {
             var clusterSize = 3;
@@ -289,7 +289,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task EnsureReplicationToWatchers(bool useSsl)
@@ -402,7 +402,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task SetMentorToExternalReplication()
         {
             var clusterSize = 5;
@@ -475,7 +475,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task CanAddAndModifySingleWatcher()
         {
             var clusterSize = 3;
@@ -633,7 +633,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task DoNotReplicateBack(bool useSsl)
@@ -706,7 +706,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData(false)]
         [InlineData(true)]
         public async Task AddGlobalChangeVectorToNewDocument(bool useSsl)
@@ -854,7 +854,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ReplicateToWatcherWithAuth()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -890,7 +890,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ReplicateToWatcherWithInvalidAuth()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -1023,7 +1023,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task GetFirstTopologyShouldTimeout()
         {
             var clusterSize = 1;
@@ -1079,7 +1079,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task GetTcpInfoShouldTimeout()
         {
             var clusterSize = 1;
@@ -1140,7 +1140,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RavenDB_14284()
         {
             using (var store1 = GetDocumentStore())
@@ -1185,7 +1185,7 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ReplicateRaftDocuments()
         {
             var cluster = await CreateRaftCluster(2, watcherCluster: true);

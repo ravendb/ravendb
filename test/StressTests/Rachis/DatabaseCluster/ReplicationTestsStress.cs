@@ -21,7 +21,7 @@ namespace StressTests.Rachis.DatabaseCluster
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task WaitForReplicationShouldWaitOnlyForInternalNodes()
         {
             var clusterSize = 5;
@@ -95,7 +95,7 @@ namespace StressTests.Rachis.DatabaseCluster
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task RavenDB_14435()
         {
             using (var src = GetDocumentStore())

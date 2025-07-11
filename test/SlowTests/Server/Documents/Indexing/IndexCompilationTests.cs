@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Server.Documents.Indexing
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Sum_of_elements()
         {
             IndexCompiler.Compile(new IndexDefinition

@@ -22,14 +22,14 @@ public class RavenRetryTheoryAttribute : RetryTheoryAttribute, ITraitAttribute
     public bool S3Required { get; set; }
 
     public bool AzureRequired { get; set; }
-    
-    public bool SnowflakeRequired { get; set; }
+
+    public RavenServiceRequirement Requires { get; set; } = RavenServiceRequirement.None;
 
     public override string Skip
     {
         get
         {
-            return RavenTheoryAttribute.ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, s3Required: S3Required, azureRequired: AzureRequired, snowflakeRequired: SnowflakeRequired);
+            return RavenTheoryAttribute.ShouldSkip(_skip, _category, licenseRequired: LicenseRequired, nightlyBuildRequired: NightlyBuildRequired, serviceRequirement: Requires, s3Required: S3Required, azureRequired: AzureRequired);
         }
 
         set => _skip = value;

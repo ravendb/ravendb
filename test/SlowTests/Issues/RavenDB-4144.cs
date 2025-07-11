@@ -7,6 +7,7 @@
 using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Patching)]
         public void can_save_javascript_array_values()
         {
             using (var store = GetDocumentStore())
@@ -51,7 +52,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Patching)]
         public void can_use_non_existing_function1()
         {
             using (var store = GetDocumentStore())
@@ -81,7 +82,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Patching)]
         public void can_use_non_existing_function2()
         {
             using (var store = GetDocumentStore())
@@ -111,7 +112,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Patching)]
         public void can_use_non_existing_function3()
         {
             using (var store = GetDocumentStore())
@@ -143,7 +144,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Patching)]
         public void can_evaluate_function()
         {
             using (var store = GetDocumentStore())

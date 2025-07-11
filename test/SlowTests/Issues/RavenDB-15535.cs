@@ -28,7 +28,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Cluster)]
         public async Task MissingRevisions()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
@@ -105,7 +105,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Cluster)]
         public async Task MissingRevisions2()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
@@ -165,7 +165,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Cluster)]
         public async Task MissingRevisions3()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
@@ -231,7 +231,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.ClusterTransactions)]
         public async Task MissingRevisions4()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
@@ -284,7 +284,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Cluster)]
         public async Task MissingRevisions5()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
@@ -358,7 +358,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Cluster)]
         public async Task MissingRevisions6()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
@@ -433,7 +433,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions | RavenTestCategory.Cluster | RavenTestCategory.ClusterTransactions)]
         public async Task MissingRevisions7()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);

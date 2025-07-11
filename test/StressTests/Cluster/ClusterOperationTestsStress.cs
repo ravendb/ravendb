@@ -27,7 +27,7 @@ public class ClusterOperationTestsStress : ClusterTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Cluster)]
     public async Task NextIdentityForOperationShouldBroadcastAndFail()
     {
         DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -77,7 +77,7 @@ public class ClusterOperationTestsStress : ClusterTestBase
     }
 
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Cluster)]
     public async Task ChangesApiReorderDatabaseNodes()
     {
         var db = "ReorderDatabaseNodes";

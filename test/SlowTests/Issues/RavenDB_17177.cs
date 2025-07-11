@@ -6,6 +6,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Can_WaitForOperation_When_TypeNameHandling_Is_None()
         {
             using (var store = GetDocumentStore(new Options
@@ -35,3 +36,4 @@ namespace SlowTests.Issues
         }
     }
 }
+

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Queries;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Should_delete_index_entries_on_document_deletion_after_database_restart()
         {
             using (var store = GetDocumentStore(new Options() { Path = NewDataPath() }))

@@ -5,6 +5,7 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.Revisions | RavenTestCategory.TimeSeries)]
         public async Task WrongNumberOfRevisionWithTimeSeriesAfterImport()
         {
             var file = GetTempFileName();

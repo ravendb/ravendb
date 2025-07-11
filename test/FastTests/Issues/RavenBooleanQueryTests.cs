@@ -2,16 +2,17 @@ using Lucene.Net.Search;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Sparrow.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Query = Lucene.Net.Search.Query;
 
 namespace FastTests.Issues;
 
-//Low-level query optimization tests. 
-public class RavenBooleanQueryTests : RavenTestBase
+// Query optimization tests from the low level operators. 
+public class RavenBooleanQueryTests(ITestOutputHelper output) : RavenTestBase(output)
 {
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(OperatorType.And, Occur.MUST)]
     [InlineData(OperatorType.Or, Occur.SHOULD)]
     public void CanMergeTwoRavenBooleanQueryWithoutBoosting(OperatorType operatorType, Occur occur)
@@ -34,7 +35,7 @@ public class RavenBooleanQueryTests : RavenTestBase
         }
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(OperatorType.And, Occur.MUST)]
     [InlineData(OperatorType.Or, Occur.SHOULD)]
     public void ShouldNotMergeTwoDifferentBoosting(OperatorType operatorType, Occur occur)
@@ -56,7 +57,7 @@ public class RavenBooleanQueryTests : RavenTestBase
         Assert.Equal(false, resultOfMerge);
     }
 
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(OperatorType.And, Occur.MUST)]
     [InlineData(OperatorType.Or, Occur.SHOULD)]
     public void TwoBoostedRavenBooleanQueriesShouldNotBeMerged(OperatorType operatorType, Occur occur)
@@ -78,7 +79,7 @@ public class RavenBooleanQueryTests : RavenTestBase
         Assert.Equal(secondTerm, rbqLeft.Clauses[1].Query);
     }
     
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(OperatorType.And, Occur.MUST)]
     [InlineData(OperatorType.Or, Occur.SHOULD)]
     public void CanMergeTwoNotBoostedRbq(OperatorType operatorType, Occur occur)
@@ -104,7 +105,7 @@ public class RavenBooleanQueryTests : RavenTestBase
         Assert.True(fourthTerm.Boost.AlmostEquals(15));
     }
     
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(OperatorType.And, Occur.MUST)]
     [InlineData(OperatorType.Or, Occur.SHOULD)]
     public void LeftBoostedRightNotBoostedWillNotBeMerged(OperatorType operatorType, Occur occur)
@@ -125,7 +126,7 @@ public class RavenBooleanQueryTests : RavenTestBase
         Assert.Equal(secondTerm, rbqLeft.Clauses[1].Query);
     }
     
-    [Theory]
+    [RavenTheory(RavenTestCategory.Querying)]
     [InlineData(OperatorType.And, Occur.MUST)]
     [InlineData(OperatorType.Or, Occur.SHOULD)]
     public void LeftNotBoostedRightBoostedWillBeMerged(OperatorType operatorType, Occur occur)
@@ -148,9 +149,6 @@ public class RavenBooleanQueryTests : RavenTestBase
     }
 
     private static Query GetExampleTerm(string term, float? boost = null) => LuceneQueryHelper.Term("exampleField", term, LuceneTermType.String, boost: boost);
-
-    public RavenBooleanQueryTests(ITestOutputHelper output) : base(output)
-    {
-    }
 }
                                                                                                                                                                                                 
+

@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,7 +28,7 @@ namespace SlowTests.Issues
             public int? Depth2 { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseCount1()
         {
             using (var store = GetDocumentStore())
@@ -65,7 +66,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseCount2()
         {
             using (var store = GetDocumentStore())
@@ -104,7 +105,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseCount3()
         {
             using (var store = GetDocumentStore())

@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="LazyTests.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -137,7 +131,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Passing_when_not_using_lazy()
         {
             using (var store = GetDocumentStore())

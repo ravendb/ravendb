@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using FastTests;
 using Xunit;
 using System.Net.Http;
 using System.Threading.Tasks;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
@@ -14,7 +15,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task WillSucceed()
         {
             using(GetDocumentStore())

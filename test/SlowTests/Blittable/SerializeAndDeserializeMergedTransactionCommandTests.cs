@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -24,6 +24,7 @@ using Raven.Server.ServerWide.Context;
 using Raven.Server.Smuggler.Documents;
 using Raven.Server.Smuggler.Documents.Processors;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,7 +36,7 @@ namespace SlowTests.Blittable
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task SerializeAndDeserialize_PutResolvedConflictsCommand()
         {
             using (var database = CreateDocumentDatabase())
@@ -83,7 +84,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task SerializeAndDeserialize_MergedDeleteAttachmentCommand()
         {
             using (var database = CreateDocumentDatabase())
@@ -127,7 +128,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task SerializeAndDeserialize_MergedPutAttachmentCommand()
         {
             using (var database = CreateDocumentDatabase())
@@ -188,7 +189,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task SerializeAndDeserialize_MergedPutCommandTest()
         {
             using (var database = CreateDocumentDatabase())
@@ -227,7 +228,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task SerializeAndDeserialize_PatchDocumentCommandTest()
         {
             using (var database = CreateDocumentDatabase())
@@ -275,7 +276,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task SerializeAndDeserialize_DeleteDocumentCommandTest()
         {
             using (var database = CreateDocumentDatabase())
@@ -311,7 +312,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task SerializeAndDeserialize_MergedBatchCommandCommandTest()
         {
             using (var database = CreateDocumentDatabase())
@@ -361,7 +362,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task SerializeAndDeserialize_MergedBatchPutCommandTest()
         {
             using (var database = CreateDocumentDatabase())
@@ -413,7 +414,7 @@ namespace SlowTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task SerializeAndDeserialize_MergedInsertBulkCommandTest()
         {
             using (var database = CreateDocumentDatabase())

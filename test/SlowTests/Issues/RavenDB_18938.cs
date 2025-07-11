@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Server.NotificationCenter.Notifications;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Collections;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -55,16 +56,16 @@ public class RavenDB_18938 : RavenTestBase
             Assert.NotEqual($"Index '{index.IndexName}' contains 33 `let` clauses.", performanceHint.Item2["Title"]);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Monitoring)]
     public Task QuerySyntax() => AssertPerformanceHint<QuerySyntaxIndex>();
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Monitoring)]
     public Task QuerySyntaxReduce() => AssertPerformanceHint<QuerySyntaxMapReduceIndex>();
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Monitoring)]
     public Task MethodSyntax() => AssertPerformanceHint<MethodSyntaxIndex>();
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Monitoring)]
     public Task MethodSyntaxReduce() => AssertPerformanceHint<MethodSyntaxMapReduceIndex>();
 
     private class ExampleDocument

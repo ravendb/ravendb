@@ -1,4 +1,4 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents.Operations.Indexes;
 using Tests.Infrastructure;
 using Xunit;
@@ -12,7 +12,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanBeUsed()
         {
             using (var store = GetDocumentStore())

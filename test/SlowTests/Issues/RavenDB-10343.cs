@@ -79,7 +79,7 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryWithLoadFromSelectAndProject(Options options)
         {
@@ -185,7 +185,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryWithLoadFromSelectAndProjectWhere(Options options)
         {
@@ -307,7 +307,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryWithLoadFromSelectAndProjectWhere_UsingSeassionLoad(Options options)
         {
@@ -551,7 +551,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryFromStaticIndexWithLoadFromSelectAndProject(Options options)
         {
@@ -676,7 +676,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryWithLoadFromSelectWithMemberAccessProjection(Options options)
         {
@@ -755,7 +755,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryWithLoadFromSelectWithMemberAccessProjection_UsingSessionLoad(Options options)
         {
@@ -834,7 +834,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryWithLoadFromSelectWithoutProjection(Options options)
         {
@@ -903,7 +903,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryWithLoadFromSelectWithoutProjectionWhere(Options options)
         {
@@ -1054,7 +1054,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryWithLoadWithWrappedConstantParameterFromSelectWithoutProjection(Options options)
         {
@@ -1134,7 +1134,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryFromStaticIndexWithLoadFromSelectWithoutProjection(Options options)
         {
@@ -1223,7 +1223,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanQueryFromStaticIndexWithLoadFromSelectWithoutProjection_UsingSessionLoad(Options options)
         {
@@ -1312,7 +1312,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanQueryFromStaticIndexWithLoadFromSelectWithoutProjectionAsync(Options options)
         {
@@ -1401,7 +1401,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanSelectMemberAccessOfLoadedDocument(Options options)
         {
@@ -1467,7 +1467,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanSelectNestedMemberOfLoadedDocument(Options options)
         {
@@ -1547,7 +1547,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanSelectMemberAccessOfLoadedDocumentWhere(Options options)
         {
@@ -1623,7 +1623,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes | RavenTestCategory.ClientApi)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanSelectMemberAccessOfLoadedDocumentWhereAsync(Options options)
         {

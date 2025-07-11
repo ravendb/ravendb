@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Raven.Client.Documents.Indexes;
 using Xunit.Abstractions;
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void CanCreateIndex()
         {
             using var store = GetDocumentStore();

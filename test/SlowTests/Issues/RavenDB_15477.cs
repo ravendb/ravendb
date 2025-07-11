@@ -9,6 +9,7 @@ using Raven.Server.Json;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanDeserializeDatabaseInfoForDisabledDb()
         {
             using (var store = GetDocumentStore())

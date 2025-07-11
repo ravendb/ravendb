@@ -1,6 +1,7 @@
-﻿using System.Dynamic;
+using System.Dynamic;
 using System.Linq;
 using Newtonsoft.Json.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void SkipAddingIdFieldToDynamicObjectShouldWork()
         {
             using (var store = GetDocumentStore(new Options()
@@ -46,7 +47,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void DynamicObjectIdShouldBeStrippedFromDocument()
         {
             const string expandoObjectId = "ExpandoObjects/1-A";
@@ -95,3 +96,4 @@ namespace FastTests.Issues
         }
     }
 }
+

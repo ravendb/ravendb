@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Patch_by_id_must_not_cause_endless_operation()
         {
             using (var store = GetDocumentStore())
@@ -50,7 +51,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Patch_by_starts_with_and_id_must_not_cause_endless_operation()
         {
             using (var store = GetDocumentStore())

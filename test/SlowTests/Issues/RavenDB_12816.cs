@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Queries.Facets;
 using SlowTests.Core.Utils.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Camera = SlowTests.Core.Utils.Entities.Camera;
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Facets)]
         public void CanSendFacetedRawQuery()
         {
             using (var store = GetDocumentStore())
@@ -202,7 +203,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Facets)]
         public async Task CanSendFacetedRawQueryAsync()
         {
             using (var store = GetDocumentStore())
@@ -389,7 +390,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Facets)]
         public async Task UsingToListOnRawFacetQueryShouldThrow()
         {
             using (var store = GetDocumentStore())

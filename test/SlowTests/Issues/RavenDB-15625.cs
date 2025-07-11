@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task NotInRehabWithDisabledIndexes1()
         {
             var (node, leader) = await CreateRaftCluster(3, watcherCluster: true);
@@ -69,7 +69,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task NotInRehabWithDisabledIndexes2()
         {
             var (node, leader) = await CreateRaftCluster(3, watcherCluster: true);
@@ -103,7 +103,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task NotInRehabWithDisabledIndexes3()
         {
             var (node, leader) = await CreateRaftCluster(3, watcherCluster: true);

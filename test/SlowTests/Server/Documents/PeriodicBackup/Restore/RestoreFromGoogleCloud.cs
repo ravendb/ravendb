@@ -27,7 +27,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
         private readonly string _cloudPathPrefix = $"{nameof(RestoreFromGoogleCloud)}-{Guid.NewGuid()}";
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void restore_google_cloud_settings_tests()
         {
             using (var store = GetDocumentStore(new Options

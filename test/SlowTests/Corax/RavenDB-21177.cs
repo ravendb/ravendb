@@ -1,4 +1,4 @@
-﻿using System.Linq;
+﻿﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Session;
 using Tests.Infrastructure;
@@ -13,7 +13,7 @@ public class RavenDB_21177 : RavenTestBase
     {
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     public void CoraxSortingPostingLists()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));

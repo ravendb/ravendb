@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Should_throw_correct_exception_when_database_disposed_during_cluster_transaction()
         {
             using (var store = GetDocumentStore())

@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task CanConnectToRemoteNodeFromClusterDashboardWhenUsingSelfSignedCertificate()
         {
             var clusterSize = 2;
@@ -39,3 +39,4 @@ namespace SlowTests.Issues
         }
     }
 }
+

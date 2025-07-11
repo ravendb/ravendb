@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Cached_Properties_Should_Renew_Correctly()
         {
             using (var store = GetDocumentStore())
@@ -50,7 +51,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Cached_Properties_Should_Renew_Correctly_Big_Stream()
         {
             using (var store = GetDocumentStore())

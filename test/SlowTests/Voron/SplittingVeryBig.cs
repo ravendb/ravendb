@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Xunit;
@@ -20,7 +21,7 @@ namespace SlowTests.Voron
             options.MaxLogFileSize = 10 * Constants.Storage.PageSize;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldBeAbleToWriteValuesGreaterThanLogAndReadThem()
         {
             var random = new Random(1234);
@@ -51,7 +52,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldBeAbleToWriteValuesGreaterThanLogAndRecoverThem()
         {
             var random = new Random(1234);

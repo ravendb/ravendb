@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Orders;
@@ -7,6 +7,7 @@ using Raven.Client.Exceptions;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.JavaScript)]
         public void ShouldThrowBetterErrorOnInvalidJavaScriptDate()
         {
             using (var store = GetDocumentStore())

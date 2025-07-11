@@ -130,7 +130,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUseCustomAnalyzer_Restart()
         {
             var serverPath = NewDataPath();
@@ -206,7 +206,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUseCustomAnalyzer_Restart_Faulty()
         {
             var serverPath = NewDataPath();
@@ -335,7 +335,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUseCustomAnalyzerWithConfiguration()
         {
             var analyzerName = GetDatabaseName();
@@ -365,7 +365,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanUseCustomAnalyzerWithConfiguration_NoAnalyzer()
         {
             var analyzerName = GetDatabaseName();

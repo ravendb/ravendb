@@ -5,6 +5,7 @@
 // -----------------------------------------------------------------------
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanChangeConventionJustForOneType_Async()
         {
             using (var store = GetDocumentStore(new Options

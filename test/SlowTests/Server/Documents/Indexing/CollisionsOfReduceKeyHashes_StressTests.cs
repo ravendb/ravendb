@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.Indexing
             new[] { new CollisionsOfReduceKeyHashes.TestData() {NumberOfUsers = 50000, Locations = new[] {"Canada", "France"}, SearchEngineType = SearchEngineType.Corax}}
         };
         
-        [Theory] 
+        [RavenTheory(RavenTestCategory.Indexes)] 
         [MemberData(nameof(Data))]// reduce key tree with depth 3
         public async Task Auto_index_should_produce_multiple_outputs(CollisionsOfReduceKeyHashes.TestData data)
         {
@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.Indexing
                 await test.Auto_index_should_produce_multiple_outputs(data);
             }
         }
-        [Theory] 
+        [RavenTheory(RavenTestCategory.Indexes)] 
         [MemberData(nameof(Data))]// reduce key tree with depth 3
         public async Task Static_index_should_produce_multiple_outputs(CollisionsOfReduceKeyHashes.TestData data)
         {

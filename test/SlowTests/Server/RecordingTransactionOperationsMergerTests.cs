@@ -55,7 +55,7 @@ namespace SlowTests.Server
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void AllDerivedCommandsOfMergedTransactionCommand_MustBeRecordable_ExceptForExceptions()
         {
             var exceptions = new[]
@@ -89,7 +89,7 @@ namespace SlowTests.Server
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void Replay_WhenCancelInTheMiddle_ShouldKeepAcceptWriteOperation()
         {
             var filePath = NewDataPath();
@@ -157,7 +157,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void RecordingClusterTransactionMergedCommand()
         {
 
@@ -206,7 +206,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void RecordingExecuteCounterBatchCommand()
         {
             var recordFilePath = NewDataPath();
@@ -327,7 +327,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ReplayOutputReduceToCollectionCommand()
         {
             var recordFilePath = NewDataPath();
@@ -437,7 +437,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ReplayDeleteTombstonesCommand()
         {
             var recordFilePath = NewDataPath();
@@ -494,7 +494,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingDeleteRevisionsBeforeCommand()
         {
             var recordFilePath = NewDataPath();
@@ -545,7 +545,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingDeleteRevisionsCommand()
         {
             var recordFilePath = NewDataPath();
@@ -591,7 +591,7 @@ namespace SlowTests.Server
                 }
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingUpdateSiblingCurrentEtag()
         {
             var recordFilePath = NewDataPath();
@@ -642,7 +642,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingMergedUpdateDatabaseChangeVectorCommand()
         {
             var recordFilePath = NewDataPath();
@@ -686,7 +686,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingDeleteExpiredDocumentsCommand()
         {
             var recordFilePath = NewDataPath();
@@ -734,7 +734,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task WaitForReplayTransactionsRecordingOperation()
         {
             var recordFilePath = NewDataPath();
@@ -777,7 +777,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingMergedDocumentReplicationCommand_WithAttachment()
         {
             var recordFilePath = NewDataPath();
@@ -857,7 +857,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingMergedDocumentReplicationCommand()
         {
             var recordFilePath = NewDataPath();
@@ -909,7 +909,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingMergedHiLoReturnCommand()
         {
             var filePath = NewDataPath();
@@ -951,7 +951,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingMergedNextHiLoCommand()
         {
             var filePath = NewDataPath();
@@ -989,7 +989,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingPutResolvedConflictsCommand()
         {
             var recordFilePath = NewDataPath();
@@ -1075,7 +1075,7 @@ namespace SlowTests.Server
             throw new InvalidOperationException($"Waited '{sw.Elapsed}' for conflict to be resolved on '{id}' but it did not happen.");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingDeleteAttachmentCommand()
         {
             //Arrange
@@ -1122,7 +1122,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingPutAttachmentCommand()
         {
             //Arrange
@@ -1168,7 +1168,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void StartRecordingWithoutStop_ShouldResultInLegalJson()
         {
             var filePath = NewDataPath();
@@ -1188,7 +1188,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void ReplayUnsetToZeroStream_ShouldThrowException()
         {
             using (var store = GetDocumentStore())
@@ -1205,7 +1205,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void RecordingDeleteCommand()
         {
             var filePath = NewDataPath();
@@ -1251,7 +1251,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData("Avi")]
         [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
         public void RecordingPatchWithParametersByQuery(params string[] names)
@@ -1303,7 +1303,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void RecordingCountersCommandsAsBatch()
         {
             var recordFilePath = NewDataPath();
@@ -1361,7 +1361,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task RecordingRevertDocumentsCommand()
         {
             var filePath = NewDataPath();
@@ -1422,7 +1422,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void RecordingPatchAsBatch()
         {
             var filePath = NewDataPath();
@@ -1463,7 +1463,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData("Avi")]
         [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
         public void RecordingStoreAsBatch(params string[] expected)
@@ -1504,7 +1504,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void RecordingAddAttachmentAsBatch()
         {
             var filePath = NewDataPath();
@@ -1552,7 +1552,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void RecordingDeleteAttachmentAsBatch()
         {
             var filePath = NewDataPath();
@@ -1603,7 +1603,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public void RecordingDeleteAsBatch()
         {
             var filePath = NewDataPath();
@@ -1650,7 +1650,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Smuggler)]
         [InlineData("Avi")]
         [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
         public async Task RecordingSmuggler(params string[] expectedNames)
@@ -1707,7 +1707,7 @@ namespace SlowTests.Server
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData("Avi")]
         [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
         public async Task RecordingPut(params string[] names)
@@ -1751,7 +1751,7 @@ namespace SlowTests.Server
 
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
         [InlineData("Avi")]
         [InlineData("Avi", "Baruch", "Charlotte", "Dylan", "Eli", "Fabia", "George", "Harper")]
         public void RecordingInsertBulk(params string[] names)

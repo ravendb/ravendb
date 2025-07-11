@@ -13,7 +13,7 @@ namespace SlowTests.Server.Documents.Migration
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
         [RequiresMySqlInlineData]
         public void CanFetchSchema(MigrationProvider provider)
         {

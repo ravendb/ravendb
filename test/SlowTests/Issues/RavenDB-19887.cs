@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
         public async Task ClusterWideTransactions2Test()
         {
             var (nodes, leader) = await CreateRaftCluster(3);

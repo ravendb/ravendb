@@ -1,15 +1,10 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="Samina2.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -40,7 +35,7 @@ namespace SlowTests.MailingList
             public DateTime EndDay { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Querying_a_sub_collection_in_an_index()
         {
             DateTime startDate = DateTime.Now;

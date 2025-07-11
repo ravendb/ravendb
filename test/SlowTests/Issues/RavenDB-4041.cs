@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void streaming_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -54,7 +54,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task streaming_returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -171,7 +171,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -204,7 +204,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -238,7 +238,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void load_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -271,7 +271,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task load_returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -304,7 +304,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void load_with_big_key_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -347,7 +347,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task load_with_big_key_returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -390,7 +390,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void multi_load_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -428,7 +428,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void load_lazily_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -462,7 +462,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task load_lazily_returns_metadata_async()
         {
             using (var store = GetDocumentStore())
@@ -496,7 +496,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void get_returns_metadata()
         {
             using (var store = GetDocumentStore())
@@ -538,7 +538,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task get_returns_metadata_async()
         {
             using (var store = GetDocumentStore())

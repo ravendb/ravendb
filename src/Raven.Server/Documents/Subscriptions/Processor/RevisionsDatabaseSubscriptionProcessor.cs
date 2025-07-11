@@ -110,9 +110,8 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             return new RevisionSubscriptionFetcher(Database, SubscriptionConnectionsState, Collection);
         }
 
-        protected override SubscriptionBatchItem ShouldSend((Document Previous, Document Current) item, out string reason)
+        protected override SubscriptionBatchItem ShouldSend((Document Previous, Document Current) item)
         {
-            reason = null;
             var result = new SubscriptionBatchItem
             {
                 Document = item.Current.CloneWith(DocsContext, newData: null),
@@ -125,14 +124,18 @@ namespace Raven.Server.Documents.Subscriptions.Processor
 
                 if (conflictStatus == ConflictStatus.AlreadyMerged)
                 {
-                    reason = $"{item.Current.Id} is already merged";
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"{item.Current.Id} is already merged");
+
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
 
                 if (SubscriptionConnectionsState.IsRevisionInActiveBatch(ClusterContext, item.Current, Active))
                 {
-                    reason = $"{item.Current.Id} is in active batch";
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"{item.Current.Id} is in active batch");
+
                     result.Status = SubscriptionBatchItemStatus.Skip;
                     return result;
                 }
@@ -164,7 +167,9 @@ namespace Raven.Server.Documents.Subscriptions.Processor
                 var match = Patch.MatchCriteria(Run, DocsContext, transformResult, ProjectionMetadataModifier.Instance, ref result.Document.Data);
                 if (match == false)
                 {
-                    reason = $"{item.Current.Id} filtered by criteria";
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"{item.Current.Id} filtered by criteria");
+
                     transformResult.Dispose();
                     result.Document.Data?.Dispose();
                     result.Document.Data = null;
@@ -183,7 +188,9 @@ namespace Raven.Server.Documents.Subscriptions.Processor
             }
             catch (Exception ex)
             {
-                reason = $"Criteria script threw exception for revision id {item.Current.Id} with change vector current: {item.Current.ChangeVector}, previous: {item.Previous?.ChangeVector}";
+                if (Logger.IsDebugEnabled)
+                    Logger.Debug($"Criteria script threw exception for revision id {item.Current.Id} with change vector current: {item.Current.ChangeVector}, previous: {item.Previous?.ChangeVector}", ex);
+
                 result.Exception = ex;
                 result.Status = SubscriptionBatchItemStatus.Exception;
                 return result;

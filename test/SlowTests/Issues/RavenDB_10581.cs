@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Smuggler;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task ShouldWork()
         {
             using (var store1 = GetDocumentStore())

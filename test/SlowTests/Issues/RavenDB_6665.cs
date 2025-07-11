@@ -2,6 +2,7 @@
 using System.Threading;
 using FastTests;
 using Raven.Server.ServerWide;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WillThrowIfTimeoutIsInvalid()
         {
             Assert.Throws<ArgumentOutOfRangeException>(() =>
@@ -31,7 +32,7 @@ namespace SlowTests.Issues
             });
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WillNotThrowITimeoutIsValid()
         {
             using (new OperationCancelToken(TimeSpan.FromSeconds(10), CancellationToken.None, CancellationToken.None))
@@ -43,7 +44,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WillTimeout()
         {
             using (var token = new OperationCancelToken(TimeSpan.FromSeconds(1), CancellationToken.None, CancellationToken.None))
@@ -56,7 +57,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WillThrowWhenDelayingInfiniteTimeout()
         {
             using (var token = new OperationCancelToken(CancellationToken.None, CancellationToken.None))

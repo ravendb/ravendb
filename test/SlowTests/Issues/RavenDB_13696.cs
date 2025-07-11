@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void PatchShouldPreserverOrderOfProperties()
         {
             using (var store = GetDocumentStore())

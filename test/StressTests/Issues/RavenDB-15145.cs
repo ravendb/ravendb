@@ -17,7 +17,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task PullReplicationWithoutPrivateKey()
         {
             var hubSettings = new ConcurrentDictionary<string, string>();

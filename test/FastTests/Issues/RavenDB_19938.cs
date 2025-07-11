@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ public class RavenDB_19938 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public async Task Can_Create_Database_Via_Builder()
     {
         using (var store = GetDocumentStore(new Options
@@ -38,7 +39,7 @@ public class RavenDB_19938 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void Regular()
     {
         var record = CreateDatabaseRecord(builder => builder.Regular("DB1"));
@@ -165,7 +166,7 @@ public class RavenDB_19938 : RavenTestBase
         Assert.Equal(1, record.PeriodicBackups.Count);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void Sharded()
     {
         var record = CreateDatabaseRecord(builder => builder.Sharded("DB1", topology =>
@@ -202,7 +203,7 @@ public class RavenDB_19938 : RavenTestBase
         Assert.Equal(new[] { "B", "C" }, record.Sharding.Orchestrator.Topology.Members);
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void Common()
     {
         var record = CreateDatabaseRecord(builder => builder
@@ -252,3 +253,4 @@ public class RavenDB_19938 : RavenTestBase
         return instance.ToDatabaseRecord();
     }
 }
+

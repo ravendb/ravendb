@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Issues
             public List<Item> Items;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanHandleAverage()
         {
             using (var store = GetDocumentStore())

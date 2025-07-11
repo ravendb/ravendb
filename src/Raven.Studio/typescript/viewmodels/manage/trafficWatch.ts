@@ -328,6 +328,10 @@ class trafficWatch extends viewModelBase {
     private static isTcpItem(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase): item is Raven.Client.Documents.Changes.TrafficWatchTcpChange {
         return item.TrafficWatchType === "Tcp";
     }
+    
+    private static isPostgresItem(item: Raven.Client.Documents.Changes.TrafficWatchChangeBase): item is TrafficWatchPostgresChange {
+        return item.TrafficWatchType === "Postgres";
+    }
 
     private updateStats(): void {
         this.sourceIps = [];
@@ -569,6 +573,12 @@ class trafficWatch extends viewModelBase {
                         sortable: "string"
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
+                    x => trafficWatch.isPostgresItem(x) ? x.Username : "n/a",
+                    "Username", "6%", {
+                        extraClass: rowHighlightRules,
+                        sortable: "string",
+                    }),
+                new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => x.CustomInfo,
                     "Custom Info", "8%", {
                         extraClass: rowHighlightRules,
@@ -576,7 +586,7 @@ class trafficWatch extends viewModelBase {
                 }),
                 new textColumn<Raven.Client.Documents.Changes.TrafficWatchChangeBase>(grid,
                     x => trafficWatch.formatDetails(x),
-                    "Details", "20%", {
+                    "Details", "14%", {
                         extraClass: rowHighlightRules,
                         sortable: "string"
                     }),
@@ -605,6 +615,8 @@ class trafficWatch extends viewModelBase {
                     onValue(generalUtils.escapeHtml(item.CustomInfo), item.CustomInfo);
                 } else if (column.header === "Source") {
                     onValue(this.formatSource(item, true), this.formatSource(item, false), false);
+                } else if (column.header === "Username") {
+                    onValue(trafficWatch.isPostgresItem(item) ? item.Username : "n/a");
                 }
             }, {
                 additionalFeatures: [runQuery]

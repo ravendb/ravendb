@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanSearchWithProximityZero()
         {
             using (var store = GetDocumentStore())
@@ -91,7 +91,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CannotSearchWithNegativeProximity()
         {
             using (var store = GetDocumentStore())
@@ -110,7 +110,7 @@ namespace SlowTests.Issues
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CannotUseProximityAfterWhereClause()
         {
             using (var store = GetDocumentStore())
@@ -129,7 +129,7 @@ namespace SlowTests.Issues
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CannotUseProximityWithSingleTerm()
         {
             using (var store = GetDocumentStore())
@@ -148,7 +148,7 @@ namespace SlowTests.Issues
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CannotUseProximityWithWildcards()
         {
             using (var store = GetDocumentStore())

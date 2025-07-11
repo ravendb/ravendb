@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -524,7 +524,7 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task CompareExchangeTombstonesWillBeCleanedWhenSomeShardsNeverBackedUp()
         {
             var database = GetDatabaseName();
@@ -671,7 +671,7 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task CompareExchangeTombstoneWillBeCleanedOnlyWhenAllShardsHaveBackedUpPreviousOnes()
         {
             var database = GetDatabaseName();

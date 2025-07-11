@@ -7,6 +7,7 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Counters_export_should_respect_collection_selection_1()
         {
             var file = GetTempFileName();
@@ -76,7 +77,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Counters_export_should_respect_collection_selection_2()
         {
             var file = GetTempFileName();
@@ -153,7 +154,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Should_report_errors_on_attempt_to_import_counter_of_non_existing_document()
         {
             var file = GetTempFileName();

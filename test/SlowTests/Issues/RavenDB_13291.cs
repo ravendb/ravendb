@@ -1,4 +1,4 @@
-﻿using System.IO;
+using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations;
@@ -8,6 +8,7 @@ using Voron.Data;
 using Xunit;
 using Xunit.Abstractions;
 
+using Tests.Infrastructure;
 namespace SlowTests.Issues
 {
     public class RavenDB_13291 : RavenTestBase
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Counters)]
         public async Task CanMigrateTablesWithCounterWord()
         {
             var backupPath = NewDataPath(forceCreateDir: true);

@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Sparrow.Server;
 using Sparrow.Server.Meters;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring | RavenTestCategory.Core)]
         public async Task Slow_IO_hints_are_stored_and_can_be_read()
         {
             var now = DateTime.UtcNow;

@@ -13,6 +13,7 @@ using FastTests.Utils;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -36,7 +37,7 @@ namespace SlowTests.Issues
                 };
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void IfTempPathCannotBeAccessedThenServerShouldThrowDuringStartup()
         {
             var e = Assert.Throws<InvalidOperationException>(() => UseNewLocalServer(_invalidCustomSettings, runInMemory: false));
@@ -45,7 +46,7 @@ namespace SlowTests.Issues
             Assert.Contains(expectedSubstring, e.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public async Task TenantDatabasesShouldInheritTempPathIfNoneSpecified()
         {
             var tempPath = NewDataPath();
@@ -63,7 +64,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public async Task TenantDatabasesCanHaveDifferentTempPathSpecified()
         {
             var tempPath1 = NewDataPath();

@@ -15,6 +15,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Util;
 using Raven.Server.Utils;
 using Sparrow.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -31,7 +32,7 @@ namespace SlowTests.Issues
             public string Id { get; set; }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task SmugglerWithoutExcludeExpiredDocumentsShouldWork()
         {
             var path = GetTempFileName();
@@ -69,7 +70,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task SmugglerWithExcludeExpiredDocumentsShouldWork1()
         {
             var path = GetTempFileName();
@@ -107,7 +108,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task SmugglerWithExcludeExpiredDocumentsShouldWork2()
         {
             var path = GetTempFileName();

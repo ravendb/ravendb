@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CreateIndexWithTheSameLowercasedNameShouldThrow()
         {
             using (var store = GetDocumentStore())

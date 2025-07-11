@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetFacetsOnFieldsWithNamesThatAreReserevedKeywords(Options options)
         {

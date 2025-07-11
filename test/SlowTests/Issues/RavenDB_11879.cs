@@ -64,7 +64,7 @@ namespace SlowTests.Issues
             public string Id { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void SortOnlyQueriesShouldWorkForMultiMapIndexes(Options options)
         {
@@ -134,7 +134,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void SortOnlyQueriesShouldWorkForAutoIndexes(Options options)
         {

@@ -12,8 +12,9 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.ServerWide.Context;
-using Xunit;
+using Tests.Infrastructure;
 using Voron;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Tests.NestedIndexing
@@ -47,7 +48,7 @@ select new
             }));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CrossReferencing()
         {
             using (var store = GetDocumentStore())
@@ -79,7 +80,7 @@ select new
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task UpdatingDocument()
         {
             using (var store = GetDocumentStore())
@@ -125,7 +126,7 @@ select new
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task UpdatingReferenceToAnotherDoc()
         {
             using (var store = GetDocumentStore())
@@ -189,7 +190,7 @@ select new
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task UpdatingReferenceToMissing()
         {
             using (var store = GetDocumentStore())
@@ -217,7 +218,7 @@ select new
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task UpdatingReferenceToNull()
         {
             using (var store = GetDocumentStore())
@@ -244,7 +245,7 @@ select new
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task AddingReferenceToSamedoc()
         {
             using (var store = GetDocumentStore())
@@ -271,7 +272,7 @@ select new
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task DeletingRootDoc()
         {
             using (var store = GetDocumentStore())

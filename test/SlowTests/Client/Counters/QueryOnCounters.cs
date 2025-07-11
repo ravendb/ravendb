@@ -578,7 +578,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void RawQueryGetCounterValueFromMetadata()
         {
             using (var store = GetDocumentStore())
@@ -612,7 +612,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void RawQueryGetAllCountersValuesFromMetadata()
         {
             using (var store = GetDocumentStore())
@@ -673,7 +673,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectSingleCounter_UsingRavenQueryCounter()
         {
             using (var store = GetDocumentStore())
@@ -709,7 +709,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectSingleCounterWithDocAlias_UsingRavenQueryCounter()
         {
             using (var store = GetDocumentStore())
@@ -744,7 +744,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectCounterAndProjectToNewAnonymousType_UsingRavenQueryCounter()
         {
             using (var store = GetDocumentStore())
@@ -782,7 +782,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectCounterAndProjectToMemberInit_UsingRavenQueryCounter()
         {
             using (var store = GetDocumentStore())
@@ -820,7 +820,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectCounterFromLoadedDoc_UsingRavenQueryCounter()
         {
             using (var store = GetDocumentStore())
@@ -859,7 +859,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectMultipuleCounters_UsingRavenQueryCounter()
         {
             using (var store = GetDocumentStore())
@@ -910,7 +910,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectSingleCounterWithDocAlias_UsingSessionCountersFor()
         {
             using (var store = GetDocumentStore())
@@ -945,7 +945,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectCounterAndProjectToNewAnonymousType_UsingSessionGetCounter()
         {
             using (var store = GetDocumentStore())
@@ -983,7 +983,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectCounterAndProjectToMemberInit_UsingSessionCountersFor()
         {
             using (var store = GetDocumentStore())
@@ -1021,7 +1021,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectCounterFromLoadedDoc_UsingSessionCountersFor()
         {
             using (var store = GetDocumentStore())
@@ -1060,7 +1060,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectMultipuleCounters_UsingSessionCountersFor()
         {
             using (var store = GetDocumentStore())
@@ -1112,7 +1112,7 @@ namespace SlowTests.Client.Counters
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         public void SessionQuerySelectSingleCounterJsProjection_UsingRavenQueryCounter()
         {
             using (var store = GetDocumentStore())
@@ -1158,7 +1158,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         public void SessionQuerySelectSingleCounterJsProjection_UsingSessionCountersFor()
         {
             using (var store = GetDocumentStore())
@@ -1204,7 +1204,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectMultipleCounters_UsingBothSessionCountersForAndRavenQueryCounter()
         {
             using (var store = GetDocumentStore())
@@ -1251,7 +1251,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectCounterViaLet()
         {
             using (var store = GetDocumentStore())
@@ -1302,7 +1302,7 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public void SessionQuerySelectCounterViaLet_UsingSessionCountersFor()
         {
             using (var store = GetDocumentStore())
@@ -1353,7 +1353,7 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         public void SessionQuerySelectCounterFromLoadedDocJsProjection()
         {
             using (var store = GetDocumentStore())
@@ -2618,7 +2618,7 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public async Task AsyncSessionQueryIncludeCountersOfDocumentAndOfRelatedDocument()
         {
             using (var store = GetDocumentStore())
@@ -2892,7 +2892,7 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public async Task AsyncSessionQueryIncludeCountersWithSelect()
         {
             using (var store = GetDocumentStore())
@@ -3096,7 +3096,7 @@ from 'Users' as user select output(user)", query.ToString());
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public async Task AsyncSessionQueryIncludeCountersUsingFromAliasWithSelectAndWhere()
         {
             using (var store = GetDocumentStore())

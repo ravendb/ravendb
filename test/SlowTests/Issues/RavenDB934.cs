@@ -1,4 +1,5 @@
 ﻿using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void LowLevelExportsByDoc()
         {
             using (var store = GetDocumentStore())
@@ -43,7 +44,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void LowLevelExportsByDocPrefixRemote()
         {
             using (var store = GetDocumentStore())
@@ -72,7 +73,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void HighLevelExportsByDocPrefixRemote()
         {
             using (var store = GetDocumentStore())

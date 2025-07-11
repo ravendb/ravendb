@@ -1,9 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="Foo.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
+using Tests.Infrastructure;
 using System.IO;
 using Xunit;
 using Voron.Debugging;
@@ -17,7 +12,7 @@ namespace FastTests.Voron.Optimizations
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void SinglePageModificationDoNotCauseCopyingAllIntermediatePages()
         {
             var keySize = 1024;

@@ -1,8 +1,9 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using Voron.Util;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.Util
 {
@@ -12,7 +13,7 @@ namespace FastTests.Voron.Util
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanAddAndRemove()
         {
             var list = ImmutableAppendOnlyList<long>.Empty

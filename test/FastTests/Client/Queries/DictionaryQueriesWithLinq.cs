@@ -1,4 +1,4 @@
-﻿#nullable enable
+﻿﻿#nullable enable
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -15,7 +15,7 @@ public class DictionaryQueriesWithLinq : RavenTestBase
     {
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
     public void QueryNestedDictionaryWithWhereClause2()
     {
         using (var store = GetDocumentStore())
@@ -35,7 +35,7 @@ public class DictionaryQueriesWithLinq : RavenTestBase
         }
     }
 
-    [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Sharding)]
+    [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
     [RavenData(DatabaseMode = RavenDatabaseMode.Sharded, SearchEngineMode = RavenSearchEngineMode.All)]
     public void QueryCustomDictionaryWithOrderEqualityClause(Options options)
     {
@@ -61,7 +61,7 @@ public class DictionaryQueriesWithLinq : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
     public void QueryCustomDictionaryWithWhereEqualityClause()
     {
         using (var store = GetDocumentStore())
@@ -190,3 +190,8 @@ public class DictionaryQueriesWithLinq : RavenTestBase
         public string? ShortName { get; set; }
     }
 }
+
+
+
+
+

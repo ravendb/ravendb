@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -7,6 +7,7 @@ using FastTests.Voron.FixedSize;
 using FastTests.Voron.Util;
 using Raven.Server.Utils;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Impl.Compaction;
@@ -26,7 +27,7 @@ namespace SlowTests.Voron.Compaction
             IOExtensions.DeleteDirectory(compactedData);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed()]
         public void ShouldOccupyLessSpace(int seed)
         {
@@ -76,7 +77,7 @@ namespace SlowTests.Voron.Compaction
             Assert.True(newSize < oldSize, string.Format("Old size: {0:#,#;;0} MB, new size {1:#,#;;0} MB", oldSize / 1024 / 1024, newSize / 1024 / 1024));
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed()]
         public void CompactionMustNotLooseAnyData(int seed)
         {
@@ -198,7 +199,7 @@ namespace SlowTests.Voron.Compaction
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed(123, 99)]
         [InlineDataWithRandomSeed(1024 * 1024 * 5, 1)]
         public void Streams_RavenDB_6510(int fooSize, int barSize, int seed)
@@ -247,7 +248,7 @@ namespace SlowTests.Voron.Compaction
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed(398, 345)]
         [InlineDataWithRandomSeed(217, 701)]
         public void Compressed_tree_RavenDB_6510(int iterationCount, int size, int seed)

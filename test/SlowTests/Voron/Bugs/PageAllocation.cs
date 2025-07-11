@@ -1,10 +1,11 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="SomeIssue.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using System.IO;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -20,7 +21,7 @@ namespace SlowTests.Voron.Bugs
         /// <summary>
         /// https://issues.hibernatingrhinos.com/issue/RavenDB-1707
         /// </summary>
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void MultipleTxPagesCanPointToOnePageNumberWhichShouldNotBeCausingIssuesDuringFlushing()
         {
             var options = StorageEnvironmentOptions.CreateMemoryOnlyForTests();

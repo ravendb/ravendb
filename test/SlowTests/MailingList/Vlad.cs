@@ -107,7 +107,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void WillOnlyGetPost2Once(Options options)
         {

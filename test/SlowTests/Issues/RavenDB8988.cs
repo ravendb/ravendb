@@ -1,6 +1,7 @@
-﻿using FastTests;
+using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -10,7 +11,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void BetweenQuery()
         {
             using (var store = GetDocumentStore())

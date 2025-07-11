@@ -3,6 +3,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Should_throw_on_attempt_to_put_index_with_name_that_exceeds_limit()
         {
             using (var store = GetDocumentStore())
@@ -49,7 +50,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Should_throw_on_attempt_to_clone_index_with_new_name_that_exceeds_limit()
         {
             using (var store = GetDocumentStore())

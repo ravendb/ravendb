@@ -96,7 +96,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public async Task CanGetTimeSeriesWithIncludeTagDocuments_Async()
         {
             using (var store = GetDocumentStore())
@@ -175,7 +175,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanGetTimeSeriesWithIncludeTagsAndParentDocument()
         {
             using (var store = GetDocumentStore())
@@ -266,7 +266,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanGetTimeSeriesWithInclude_CacheNotEmpty()
         {
             using (var store = GetDocumentStore())
@@ -371,7 +371,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanGetTimeSeriesWithInclude_CacheNotEmpty2()
         {
             using (var store = GetDocumentStore())
@@ -483,7 +483,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanGetMultipleRangesWithIncludes()
         {
             using (var store = GetDocumentStore())
@@ -605,7 +605,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanGetTimeSeriesWithIncludeTags_WhenNotAllEntriesHaveTags()
         {
             using (var store = GetDocumentStore())
@@ -689,7 +689,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void IncludesShouldAffectTimeSeriesGetCommandEtag()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,4 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
@@ -13,7 +13,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task TimeSeriesNamesInMetadataShouldKeepOriginalCasing()
         {
             using (var store = GetDocumentStore())
@@ -61,7 +61,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task TimeSeriesNamesInMetadataShouldKeepOriginalCasing2()
         {
             using (var store = GetDocumentStore())

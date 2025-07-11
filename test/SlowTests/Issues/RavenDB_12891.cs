@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldDeleteAllArtificialDocuments()
         {
             using (var store = GetDocumentStore())

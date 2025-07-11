@@ -162,6 +162,30 @@ namespace Raven.Server.Documents.Handlers
             }
         }
 
+        [RavenAction("/databases/*/debug/attachments/missing", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true, IsDebugInformationEndpoint = false)]
+        public async Task GetMissingAttachments()
+        {
+            using (var processor = new AttachmentHandlerProcessorForGetMissingAttachment(this))
+            {
+                await processor.ExecuteAsync();
+            }
+        }
+
+        public class MissingAttachmentInfo
+        {
+            public string Name { get; set; }
+            public string Hash { get; set; }
+            public MissingSource MissingSource { get; set; }
+            public AttachmentType AttachmentType { get; set; }
+        }
+
+        public enum MissingSource
+        {
+            None,
+            Table,
+            Hash
+        }
+
         public sealed class MergedPutAttachmentCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
         {
             public string DocumentId;

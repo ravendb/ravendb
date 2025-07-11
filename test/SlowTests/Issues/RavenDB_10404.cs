@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using FastTests;
@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
         public void CanMigrateDatabaseFromFirstStable()
         {
             var backupPath = NewDataPath(forceCreateDir: true);

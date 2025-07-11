@@ -2,18 +2,15 @@
 using System.Collections.Generic;
 using Sparrow;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
-    public unsafe class UnmanagedStreamTests : NoDisposalNeeded
+    public unsafe class UnmanagedStreamTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public UnmanagedStreamTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void EnsureSingleChunk()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -45,7 +42,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void BulkWriteAscendingSizeTest()
         {
             //using (var unmanagedByteArrayPool = new UnmanagedBuffersPool(string.Empty))
@@ -86,7 +83,7 @@ namespace FastTests.Blittable
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void BigAlloc()
         {
             var size = 3917701;
@@ -98,7 +95,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void BulkWriteDescendingSizeTest()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -134,7 +131,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void SingleByteWritesTest()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())

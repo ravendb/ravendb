@@ -1,4 +1,4 @@
-﻿using System.IO;
+﻿﻿using System.IO;
 using FastTests.Voron;
 using Raven.Server.Config.Settings;
 using Tests.Infrastructure;
@@ -15,7 +15,7 @@ namespace SlowTests.Voron
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Voron_schema_update_will_update_headers_file_and_bump_version_there()
         {
             var dataDir = RavenTestHelper.NewDataPath(nameof(Voron_schema_update_will_update_headers_file_and_bump_version_there), 0, forceCreateDir: true);

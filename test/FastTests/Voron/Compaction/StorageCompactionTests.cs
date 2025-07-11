@@ -1,9 +1,3 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="StorageCompactionTests.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -12,10 +6,11 @@ using FastTests.Voron.FixedSize;
 using Raven.Server.Utils;
 using Sparrow.Server;
 using Sparrow.Threading;
-using Xunit;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl.Compaction;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.Compaction
@@ -30,7 +25,7 @@ namespace FastTests.Voron.Compaction
             IOExtensions.DeleteDirectory(compactedData);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed(250)]
         [InlineDataWithRandomSeed(500)]
         [InlineDataWithRandomSeed(1000)]
@@ -151,7 +146,7 @@ namespace FastTests.Voron.Compaction
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CannotCompactStorageIfIncrementalBackupEnabled()
         {
             var envOptions = StorageEnvironmentOptions.ForPathForTests(DataDir);
@@ -178,7 +173,7 @@ namespace FastTests.Voron.Compaction
             Assert.Equal(StorageCompaction.CannotCompactBecauseOfIncrementalBackup, invalidOperationException.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldDeleteCurrentJournalEvenThoughItHasAvailableSpace()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
@@ -217,7 +212,7 @@ namespace FastTests.Voron.Compaction
             }
         }
 
-        [Fact(Skip = "RavenDB-8715, change when report format is finalized")]
+        [RavenFact(RavenTestCategory.Voron, Skip = "RavenDB-8715, change when report format is finalized")]
         public void ShouldReportProgress()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))

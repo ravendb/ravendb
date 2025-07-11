@@ -12,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Facets | RavenTestCategory.Rql)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void FacetRqlShouldSupportAliasNotation(Options options)
         {

@@ -1,17 +1,14 @@
-﻿using FastTests.Voron.FixedSize;
+﻿﻿using FastTests.Voron.FixedSize;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Utils;
 
-public class OperationIdEncoderTests : NoDisposalNeeded
+public class OperationIdEncoderTests(ITestOutputHelper output) : NoDisposalNeeded(output)
 {
-    public OperationIdEncoderTests(ITestOutputHelper output) : base(output)
-    {
-    }
-
-    [Theory]
+    [RavenTheory(RavenTestCategory.Core)]
     [InlineData("?", 1)]
     [InlineData("?", 8_589_934_591)]
     [InlineDataWithRandomSeed("?")]

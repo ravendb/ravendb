@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;
@@ -12,7 +12,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void ShouldThrowOnAttemptToCreateSeriesWithNameThatContainsRollupSeparatorChar()
         {
             using (var store = GetDocumentStore())

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseFirstSyncNonSharded()
         {
             using (var store = SetupNonShardedStore())
@@ -34,7 +35,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void CanUseFirstSyncSharded()
         {
             //using (var documentStore = SetupShardedStore())
@@ -43,7 +44,7 @@ namespace SlowTests.Issues
             //}
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task CanUseFirstAsyncNonSharded()
         {
             using (var store = SetupNonShardedStore())
@@ -52,7 +53,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void CanUseFirstAsyncSharded()
         {
             //using (var documentStore = SetupShardedStore())
@@ -61,7 +62,7 @@ namespace SlowTests.Issues
             //}
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseSingleSyncNonSharded()
         {
             using (var store = SetupNonShardedStore())
@@ -70,7 +71,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void CanUseSingleSyncSharded()
         {
             //using (var documentStore = SetupShardedStore())
@@ -79,7 +80,7 @@ namespace SlowTests.Issues
             //}
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task CanUseSigleAsyncNonSharded()
         {
             using (var store = SetupNonShardedStore())
@@ -88,7 +89,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void CanUseSingleAsyncSharded()
         {
             //using (var documentStore = SetupShardedStore())
@@ -97,7 +98,7 @@ namespace SlowTests.Issues
             //}
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseCountSyncNonSharded()
         {
             using (var store = SetupNonShardedStore())
@@ -106,7 +107,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void CanUseCountSyncSharded()
         {
             //using (var documentStore = SetupShardedStore())
@@ -115,7 +116,7 @@ namespace SlowTests.Issues
             //}
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task CanUseCountAsyncNonSharded()
         {
             using (var store = SetupNonShardedStore())
@@ -125,7 +126,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void CanUseCountAsyncSharded()
         {
             //using (var documentStore = SetupShardedStore())
@@ -135,7 +136,7 @@ namespace SlowTests.Issues
             //}
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseLazilySyncNonSharded()
         {
             using (var documentStore = SetupNonShardedStore())
@@ -144,7 +145,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void CanUseLazilySyncShaded()
         {
             //using (var documentStore = SetupShardedStore())
@@ -153,7 +154,7 @@ namespace SlowTests.Issues
             //}
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task CanUseLazilyAsyncNonSharded()
         {
             using (var documentStore = SetupNonShardedStore())
@@ -162,7 +163,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Sharding, Skip = "RavenDB-6283")]
         public void UseLazilyAsyncShardedIsNotSupported()
         {
             //using (var documentStore = SetupShardedStore())

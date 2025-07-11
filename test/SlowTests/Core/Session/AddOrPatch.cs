@@ -1,7 +1,8 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Core.Session
         {
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanAddOrPatch()
         {
             using (var store = GetDocumentStore())
@@ -73,7 +74,7 @@ namespace SlowTests.Core.Session
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanAddOrPatchAddItemToAnExistingArray()
         {
             
@@ -153,7 +154,7 @@ namespace SlowTests.Core.Session
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanAddOrPatchIncrement()
         {
             using (var store = GetDocumentStore())

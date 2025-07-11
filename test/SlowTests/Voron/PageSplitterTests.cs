@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +29,7 @@ namespace SlowTests.Voron
         }
 
         //Voron must support this in order to support MultiAdd() with values > 2000 characters
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void TreeAdds_WithVeryLargeKey()
         {
             using (var tx = Env.WriteTransaction())
@@ -56,7 +57,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldNotThrowPageFullExceptionDuringPageSplit()
         {
             using (var tx = Env.WriteTransaction())
@@ -115,7 +116,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void ShouldNotThrowPageFullExceptionDuringPageSplit2()
         {
             using (var tx = Env.WriteTransaction())

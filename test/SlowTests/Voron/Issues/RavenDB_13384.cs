@@ -5,6 +5,7 @@ using Voron;
 using Voron.Impl.Journal;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Voron.Issues
 {
@@ -21,7 +22,7 @@ namespace SlowTests.Voron.Issues
             options.MaxLogFileSize = 4096;
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Voron)]
         [InlineData(true)]
         [InlineData(false)]
         public void Recovery_should_handle_empty_journal_file_and_correctly_set_last_flushed_journal(bool runInMemory)

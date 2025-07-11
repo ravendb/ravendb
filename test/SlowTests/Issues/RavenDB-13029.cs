@@ -5,6 +5,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task ReadTransactionShouldNotSeeCollectionsThatWereGeneratedAfterItsCreation()
         {
             AsyncManualResetEvent readEvent = new AsyncManualResetEvent();

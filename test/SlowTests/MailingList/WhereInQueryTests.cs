@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -43,7 +44,7 @@ namespace SlowTests.MailingList
             new TestIndex().Execute(store);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Query_should_return_2_results()
         {
             using (var store = GetDocumentStore())
@@ -66,7 +67,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Query_using_WhereIn_should_return_2_results()
         {
             using (var store = GetDocumentStore())

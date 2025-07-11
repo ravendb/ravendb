@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
@@ -6,6 +6,7 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -23,7 +24,7 @@ namespace SlowTests.Bugs
             public double Cost { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void WillGenerateDecimalCast()
         {
             Expression<Func<IEnumerable<Coin>, IEnumerable<object>>> query = x => from y in x
@@ -44,7 +45,7 @@ namespace SlowTests.Bugs
 })"), code);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void WillProperlyCompileWhenUsingToString()
         {
             Expression<Func<IEnumerable<Coin>, IEnumerable<object>>> query = x => from y in x

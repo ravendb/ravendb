@@ -83,7 +83,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6572")]
+        [RavenFact(RavenTestCategory.Indexes, Skip = "RavenDB-6572")]
         public void CanCreateTestMapIndexes()
         {
             using (var store = GetDocumentStore())
@@ -113,7 +113,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6572")]
+        [RavenFact(RavenTestCategory.Indexes, Skip = "RavenDB-6572")]
         public void CanCreateTestMapReduceIndexes()
         {
             using (var store = GetDocumentStore())

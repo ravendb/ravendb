@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Dynamic;
 using System.Linq;
 using System.Net.Http;
@@ -7,6 +7,7 @@ using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Extensions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task IndexWithGroupByOnDoubleShouldReturnDifferentHash()
         {
             using (var store = GetDocumentStore())

@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ChangesApi | RavenTestCategory.Cluster)]
         public async Task ChangesApiShouldReconnectToServerWhenServerReturn()
         {
             var server = GetNewServer(new ServerCreationOptions { RunInMemory = false, RegisterForDisposal = false });

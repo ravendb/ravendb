@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using FastTests;
 using Lucene.Net.Analysis;
 using Raven.Client.Documents.Indexes;
@@ -24,7 +24,7 @@ namespace SlowTests.Bugs.Indexing
             public int f_totaldownload { get; set; }
         }
 
-        [Fact(Skip = "Missing features ")]
+        [RavenFact(RavenTestCategory.Indexes, Skip = "Missing features ")]
         public void Isolated()
         {
             //var ramDirectory = new RAMDirectory();

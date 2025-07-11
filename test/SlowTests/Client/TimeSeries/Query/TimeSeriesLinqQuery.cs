@@ -2924,7 +2924,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact(Skip = "RavenDB-14988")]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Querying, Skip = "RavenDB-14988")]
         public void CanQueryTimeSeriesRaw_UsingLast_Milliseconds()
         {
             using (var store = GetDocumentStore())
@@ -3361,7 +3361,7 @@ namespace SlowTests.Client.TimeSeries.Query
             }
         }
 
-        [Fact(Skip = "RavenDB-14988")]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Querying, Skip = "RavenDB-14988")]
         public void CanQueryTimeSeriesRaw_UsingFirst_Milliseconds()
         {
             using (var store = GetDocumentStore())

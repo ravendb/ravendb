@@ -1,9 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="UncommittedTransactions.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
+using Tests.Infrastructure;
 using Xunit;
 using Voron;
 using Voron.Global;
@@ -24,7 +19,7 @@ namespace FastTests.Voron.Journal
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void UncommittedTransactionMustNotModifyPageTranslationTableOfLogFile()
         {
             long pageAllocatedInUncommittedTransaction;

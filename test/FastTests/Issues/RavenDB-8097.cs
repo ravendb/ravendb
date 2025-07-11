@@ -1,5 +1,6 @@
 ﻿using System;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void TcpServerUrlShouldOnlyAllowTcpScheme()
         {
             GetConfiguration(tcpServerUrl: "tcp://test.info:123");
@@ -24,13 +25,13 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void PortNumberIsAValidTcpServerUrl()
         {
             GetConfiguration(tcpServerUrl: "38888");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ServerUrlShouldOnlyAllowHttpOrHttps()
         {
             GetConfiguration("http://test.com");
@@ -52,7 +53,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ServerUrlShouldBeValidUri()
         {
             try
@@ -80,3 +81,4 @@ namespace FastTests.Issues
         }
     }
 }
+

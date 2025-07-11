@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -23,7 +23,7 @@ namespace SlowTests.Cluster
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task NotifyAfterServerRestart()
         {
             using (var store = GetDocumentStore(new Options { RunInMemory = false }))
@@ -50,7 +50,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task ShouldWaitForIndexOfClusterSideEffects()
         {
             using (var store = GetDocumentStore(new Options { DeleteDatabaseOnDispose = true, Path = NewDataPath() }))
@@ -104,7 +104,7 @@ namespace SlowTests.Cluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task RavenDB_14086()
         {
             using (var store = GetDocumentStore())

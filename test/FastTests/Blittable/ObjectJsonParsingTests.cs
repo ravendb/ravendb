@@ -5,18 +5,15 @@ using Raven.Client;
 using Raven.Server.Json;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
-    public class ObjectJsonParsingTests : NoDisposalNeeded
+    public class ObjectJsonParsingTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public ObjectJsonParsingTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Zzz()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -40,7 +37,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanCompressSmallStrings()
         {
             using (var ctx = JsonOperationContext.ShortTermSingleUse())
@@ -70,7 +67,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public Task Dup()
         {
             return AssertEqualAfterRoundTripAsync(new DynamicJsonValue
@@ -81,7 +78,7 @@ namespace FastTests.Blittable
                 "{\"Name\":\"Ayende Rahien\"}");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanUseNestedObject()
         {
             await AssertEqualAfterRoundTripAsync(new DynamicJsonValue
@@ -106,7 +103,7 @@ namespace FastTests.Blittable
                 "{\"Name\":\"Oren Eini\",\"Dogs\":[\"Arava\",\"Oscar\"]}");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public Task CanGenerateJsonProperly_WithEscapePositions()
         {
             return AssertEqualAfterRoundTripAsync(new DynamicJsonValue
@@ -116,7 +113,7 @@ namespace FastTests.Blittable
                 "{\"Name\":\"Oren\\r\\nEini\"}");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanGenerateJsonProperly()
         {
             await AssertEqualAfterRoundTripAsync(new DynamicJsonValue

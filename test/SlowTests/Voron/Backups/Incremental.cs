@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="IncrementalBackup.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using FastTests.Voron.Backups;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Backup;
@@ -32,7 +33,7 @@ namespace SlowTests.Voron.Backups
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void CanBackupAndRestoreOnEmptyStorage()
         {
             RequireFileBasedPager();
@@ -80,7 +81,7 @@ namespace SlowTests.Voron.Backups
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void CanDoMultipleIncrementalBackupsAndRestoreOneByOne()
         {
             RequireFileBasedPager();
@@ -157,7 +158,7 @@ namespace SlowTests.Voron.Backups
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void IncrementalBackupShouldCopyJustNewPagesSinceLastBackup()
         {
             RequireFileBasedPager();
@@ -227,7 +228,7 @@ namespace SlowTests.Voron.Backups
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void IncrementalBackupShouldAcceptEmptyIncrementalBackups()
         {
             RequireFileBasedPager();
@@ -293,7 +294,7 @@ namespace SlowTests.Voron.Backups
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_RavenDB_2806()
         {
             RequireFileBasedPager();
@@ -355,7 +356,7 @@ namespace SlowTests.Voron.Backups
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_2_RavenDB_2806()
         {
             RequireFileBasedPager();
@@ -421,7 +422,7 @@ namespace SlowTests.Voron.Backups
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void IncorrectWriteOfOverflowPagesFromJournalsInBackupToDataFile_RavenDB_2891()
         {
             RequireFileBasedPager();
@@ -486,7 +487,7 @@ namespace SlowTests.Voron.Backups
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void IncrementalBackupShouldCreateConsecutiveJournalFiles()
         {
             IOExtensions.DeleteDirectory(DataDir);

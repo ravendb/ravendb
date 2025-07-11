@@ -4,6 +4,7 @@ using FastTests.Utils;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Exceptions.Documents.Patching;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanHandleRevisionOperationBeingRolledBack()
         {
             using (var store = GetDocumentStore())

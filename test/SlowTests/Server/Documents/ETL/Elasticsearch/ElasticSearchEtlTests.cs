@@ -149,7 +149,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task Simple_script_error_expected()
         {
             using (var store = GetDocumentStore())
@@ -603,7 +603,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Error_if_script_does_not_contain_any_loadTo_method()
         {
             var config = new ElasticSearchEtlConfiguration
@@ -623,7 +623,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             Assert.Equal("No `loadTo<IndexName>()` method call found in 'test' script", errors[0]);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Error_if_script_is_empty()
         {
             var config = new ElasticSearchEtlConfiguration
@@ -729,7 +729,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public void Can_check_elastic_connection_string_against_secured_channel()
         {
             var c = new ElasticSearchEtlConfiguration();
@@ -743,7 +743,7 @@ namespace SlowTests.Server.Documents.ETL.ElasticSearch
             Assert.True(c.UsingEncryptedCommunicationChannel());
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task CanTestScript()
         {
             using (var store = GetDocumentStore())
@@ -843,7 +843,7 @@ output('test output')"
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task CanTestDeletion()
         {
             using (var store = GetDocumentStore())
@@ -919,7 +919,7 @@ output('test output')"
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Etl)]
         public async Task ShouldImportTask()
         {
             using (var srcStore = GetDocumentStore())

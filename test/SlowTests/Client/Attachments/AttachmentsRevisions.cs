@@ -27,7 +27,7 @@ namespace SlowTests.Client.Attachments
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments | RavenTestCategory.Revisions)]
         public async Task ReplaceAttachmentsStreamAfterRevisionsEnabled()
         {
             using (var store = GetDocumentStore())
@@ -92,7 +92,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments | RavenTestCategory.Revisions)]
         public async Task ReplaceAttachmentsStreamAndDocumentAfterRevisionsEnabled()
         {
             using (var store = GetDocumentStore())
@@ -159,7 +159,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments | RavenTestCategory.Revisions)]
         public async Task ModifyAttachmentsDetailsAfterRevisionsEnabled()
         {
             using (var store = GetDocumentStore())
@@ -221,7 +221,7 @@ namespace SlowTests.Client.Attachments
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments | RavenTestCategory.Revisions)]
         public async Task ModifyAttachmentsDetailsAndDocumentAfterRevisionsEnabled()
         {
             using (var store = GetDocumentStore())

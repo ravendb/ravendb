@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+﻿﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Threading;
@@ -19,7 +19,7 @@ namespace SlowTests.Cluster
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClientApi)]
         public async Task CanRedistributeDatabaseWhenNodeGoesDown()
         {
             var databaseName = "NodeRedistribution";

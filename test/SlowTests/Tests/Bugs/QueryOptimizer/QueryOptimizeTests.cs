@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             public int Age { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WillNotError()
         {
             using (var store = GetDocumentStore())
@@ -46,7 +47,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanUseExistingDynamicIndex()
         {
             using (var store = GetDocumentStore())
@@ -70,7 +71,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WillCreateWiderIndex()
         {
             using (var store = GetDocumentStore())
@@ -104,7 +105,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WillCreateWiderIndex_UsingEnityName()
         {
             using (var store = GetDocumentStore())
@@ -137,7 +138,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                 }
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WillCreateWiderIndex_UsingDifferentEntityNames()
         {
             using (var store = GetDocumentStore())
@@ -171,7 +172,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             }
         }
      
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WillAlwaysUseSpecifiedIndex()
         {
             using (var store = GetDocumentStore())

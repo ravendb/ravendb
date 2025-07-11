@@ -23,7 +23,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(2)]
         public async Task ServerWideBackupShouldBackupIdleDatabaseStress(int rounds)
         {
@@ -41,7 +41,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
             await stress.ServerWideBackupShouldBackupIdleDatabase(rounds);
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task CanStoreAndEditServerWideBackupForIdleDatabase()
         {
             using var server = GetNewServer(new TestBase.ServerCreationOptions

@@ -245,7 +245,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         public void CanStreamStartWith()
         {
             using (var store = GetDocumentStore())

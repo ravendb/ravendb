@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Verifications
         /// The only thing i could not recreate here is the fact that the revisions is active.
         /// So im not sure if the @last-modified meta-field will ever be filled in this case
         /// </summary>
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CreateDataAndQuery()
         {
             using (var store = GetDocumentStore())

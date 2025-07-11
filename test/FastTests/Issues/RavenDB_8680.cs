@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using Raven.Server.Documents.Queries.Parser;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace FastTests.Issues
             yield return new object[] {"from Categories where id() in ('categories/8')", $"FROM Categories WHERE id() IN ('categories/8'){Environment.NewLine}"};
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [MemberData(nameof(GetTestData))]
         public void CanPrintParsedQuery(string queryText, string expected)
         {
@@ -32,3 +33,4 @@ namespace FastTests.Issues
         }
     }
 }
+

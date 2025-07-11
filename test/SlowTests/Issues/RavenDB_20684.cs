@@ -5,6 +5,7 @@ using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents.Operations.Attachments;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments | RavenTestCategory.Revisions)]
         public async Task AttachmentStreamShouldExistInRevisionAfterDeleteAttachment()
         {
             using (var store = GetDocumentStore())

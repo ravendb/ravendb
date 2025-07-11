@@ -42,7 +42,7 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Patching)]
         [InlineData(100)]
         [InlineData(1300)]
         public void CanPatchCollection(int count)

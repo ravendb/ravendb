@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="FlushingToDataFile.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -9,6 +9,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Sparrow;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Voron.Impl;
@@ -29,7 +30,7 @@ namespace SlowTests.Voron.Bugs
             options.MaxLogFileSize = 2 * Constants.Storage.PageSize;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void ReadTransactionShouldNotReadFromJournalSnapshotIfJournalWasFlushedInTheMeanwhile()
         {
             var value1 = new byte[4000];
@@ -82,7 +83,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void FlushingOperationShouldHaveOwnScratchPagerStateReference()
         {
             var value1 = new byte[4000];
@@ -148,7 +149,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void OldestActiveTransactionShouldBeCalculatedProperly()
         {
             using (var options = StorageEnvironmentOptions.CreateMemoryOnlyForTests())

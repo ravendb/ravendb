@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Orders;
@@ -9,6 +9,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Exceptions;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 namespace SlowTests.Issues
 {
     public class RavenDB_14661 : RavenTestBase
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Indexes)]
         public void PatchShouldThrowIfAllowStaleIsSetToFalseAndTimeoutHasPassed()
         {
             using (var store = GetDocumentStore())

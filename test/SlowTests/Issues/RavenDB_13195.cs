@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FastTests.Voron;
 using Sparrow.Server;
 using Voron;
@@ -8,6 +8,7 @@ using Voron.Impl;
 using Xunit;
 using Xunit.Abstractions;
 
+using Tests.Infrastructure;
 namespace SlowTests.Issues
 {
     public class RavenDB_13195 : StorageTest
@@ -28,7 +29,7 @@ namespace SlowTests.Issues
         private static readonly Slice Local;
         private static Slice Etag;
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void CanDeleteTableWithLargeValues()
         {
             TableSchema schema = new TableSchema();

@@ -1,8 +1,9 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -37,7 +38,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldThrow()
         {
             using (var store = GetDocumentStore())

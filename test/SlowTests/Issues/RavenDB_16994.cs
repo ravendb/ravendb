@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
@@ -12,6 +12,7 @@ using Raven.Server.Utils;
 using Voron.Global;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ErrorIndexStartupBehavior_ResetAndRestart_Should_Apply_To_Faulty_Indexes_As_Well()
         {
             var path = NewDataPath();

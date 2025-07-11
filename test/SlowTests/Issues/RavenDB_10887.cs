@@ -5,6 +5,7 @@ using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
 using Voron;
 using Voron.Global;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public async Task CanSetMaxScratchBufferFileSize()
         {
             using (var store = GetDocumentStore(options: new Options()
@@ -40,7 +41,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void SettingMaxScratchBufferSizeMustNotExceed32BitsLimit()
         {
             using (var options = StorageEnvironmentOptions.ForPathForTests(NewDataPath()))
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void SettingMaxScratchBufferSizeCanBeLimitedOn32Bits()
         {
             using (var options = StorageEnvironmentOptions.ForPathForTests(NewDataPath()))

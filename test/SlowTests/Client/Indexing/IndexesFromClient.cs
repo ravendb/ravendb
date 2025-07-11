@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -8,6 +8,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Client.Indexing
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task DeleteByQuery()
         {
             using (var store = GetDocumentStore())
@@ -92,7 +93,7 @@ namespace SlowTests.Client.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task UpdateByQuery()
         {
             using (var store = GetDocumentStore())

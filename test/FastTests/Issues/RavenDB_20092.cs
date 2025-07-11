@@ -6,6 +6,7 @@ using Raven.Server.Config.Attributes;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Sparrow;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -69,7 +70,7 @@ public class RavenDB_20092 : NoDisposalNeeded
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void TimeSetting_Conventions_For_Configuration()
     {
         var categories = typeof(ConfigurationCategory).Assembly
@@ -119,7 +120,7 @@ public class RavenDB_20092 : NoDisposalNeeded
         Assert.True(settingsChecked > 0, $"{settingsChecked} > 0");
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void Size_Conventions_For_Configuration()
     {
         var categories = typeof(ConfigurationCategory).Assembly
@@ -169,3 +170,4 @@ public class RavenDB_20092 : NoDisposalNeeded
         Assert.True(settingsChecked > 0, $"{settingsChecked} > 0");
     }
 }
+

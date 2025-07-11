@@ -14,6 +14,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Facets;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -25,7 +26,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Sync_document_query_can_not_have_async_methods()
         {
             var documentQueryType = typeof(DocumentQuery<JObject>);
@@ -37,7 +38,7 @@ namespace SlowTests.Issues
             Assert.True(asyncMethods.Count == 0, "Async methods detected in sync interface: " + string.Join(", ", asyncMethods.Select(x => x.ReturnType + " " + x.Name)));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Async_document_query_can_not_have_sync_materialization_methods()
         {
             var asyncDocumentQueryType = typeof(AsyncDocumentQuery<Employee>);
@@ -68,7 +69,7 @@ namespace SlowTests.Issues
             Assert.True(suspectedMethods.Count == 0, "Detected sync methods in async interface: " + string.Join(", ", suspectedMethods.Select(x => x.ReturnType + " " + x.Name)));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Sync_and_async_interfaces_should_contain_same_methods()
         {
             var asyncDocumentQueryType = typeof(AsyncDocumentQuery<Employee>);

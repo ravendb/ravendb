@@ -27,7 +27,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ReduceResultsBackAsDocuments()
         {
             using (var store = GetDocumentStore())
@@ -50,7 +50,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ForbidOutputReduceDocumentsOnTheDocumentsWeMap()
         {
             using (var store = GetDocumentStore())
@@ -62,7 +62,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ForbidOutputReduceDocumentsOnTheDocumentsWeLoadInMap()
         {
             using (var store = GetDocumentStore())
@@ -74,7 +74,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ForbidOutputReduceDocumentsInAInfiniteLoop()
         {
             using (var store = GetDocumentStore())
@@ -88,7 +88,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ForbidOutputReduceDocumentsInAInfiniteLoopCausedByLoadDocument()
         {
             using (var store = GetDocumentStore())
@@ -106,7 +106,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ForbidOutputReduceDocumentsToExistingCollectionWhichHaveDocuments()
         {
             using (var store = GetDocumentStore())
@@ -123,7 +123,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task LetTheUserModifyTheIndex()
         {
             using (var store = GetDocumentStore())
@@ -150,7 +150,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanResetIndex()
         {
             using (var store = GetDocumentStore())
@@ -173,7 +173,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanUpdateIndexAsSideBySide()
         {
             using (var store = GetDocumentStore())
@@ -212,7 +212,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanUpdateIndexAsSideBySideAndChangingReduceOutputCollection()
         {
             using (var store = GetDocumentStore())
@@ -278,7 +278,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanEditExistingSideBySideIndex()
         {
             using (var store = GetDocumentStore())
@@ -336,7 +336,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanChangeOutputReduceToCollection()
         {
             using (var store = GetDocumentStore())
@@ -378,7 +378,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void MustNotAllowToDoSideBySideIfUsingLegacyIndexDefinitionWithoutReduceOutputIndex()
         {
             var backupPath = NewDataPath(forceCreateDir: true);
@@ -400,7 +400,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task WillProduceOutputResultsDocsAfterIndexImport()
         {
             using (var store = GetDocumentStore())
@@ -430,7 +430,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task WhenDeletingSideBySideIndexTheOriginalOneWillDeleteItsDocuments()
         {
             using (var store = GetDocumentStore())
@@ -488,7 +488,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task UnchangedResultDoesntWriteDocuments()
         {
             using (var store = GetDocumentStore())

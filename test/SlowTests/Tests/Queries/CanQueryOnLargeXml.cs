@@ -3,6 +3,7 @@ using System.Linq;
 using Xunit.Abstractions;
 
 using FastTests;
+using Tests.Infrastructure;
 
 using Xunit;
 
@@ -22,7 +23,7 @@ namespace SlowTests.Tests.Queries
 #pragma warning restore 649
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Remote()
         {
             using (var store = GetDocumentStore())

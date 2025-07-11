@@ -1,6 +1,7 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task EnsureDatabasesCacheNotLeaking()
         {
             UseNewLocalServer();
@@ -33,7 +34,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanDeleteDisabledDatabase()
         {
             using (var store = GetDocumentStore(new Options

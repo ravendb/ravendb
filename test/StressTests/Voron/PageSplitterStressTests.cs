@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -14,7 +15,7 @@ namespace StressTests.Voron
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void PageSplitterShouldCalculateSeparatorKeyCorrectly()
         {
             var ids = ReadIds("data.txt");
@@ -49,7 +50,7 @@ namespace StressTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void PageSplitterShouldCalculateSeparatorKeyCorrectly2()
         {
             var ids = ReadIds("data2.txt");

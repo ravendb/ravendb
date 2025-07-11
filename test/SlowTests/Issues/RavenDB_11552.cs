@@ -4,6 +4,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
         public void PatchWillUpdateTrackedDocumentAfterSaveChanges()
         {
             using (var store = GetDocumentStore())
@@ -61,7 +62,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void DeleteWillWork()
         {
             using (var store = GetDocumentStore())
@@ -100,7 +101,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
         public void PatchWillWork()
         {
             using (var store = GetDocumentStore())
@@ -144,7 +145,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void AttachmentPutAndDeleteWillWork()
         {
             using (var store = GetDocumentStore())
@@ -193,7 +194,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Attachments)]
         public void AttachmentCopyAndMoveWillWork()
         {
             using (var store = GetDocumentStore())

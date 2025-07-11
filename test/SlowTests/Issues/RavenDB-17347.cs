@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.CompareExchange)]
         public async Task Database_Group_Node_State_Doesnt_Take_Into_Account_Replication_Of_ACompareExchanges()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;

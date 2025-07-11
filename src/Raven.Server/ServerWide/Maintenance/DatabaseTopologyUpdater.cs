@@ -607,6 +607,12 @@ namespace Raven.Server.ServerWide.Maintenance
                 _logger.Log($"Can't find previous mentor {mentorNode} stats for node {promotable}", state.ObserverIteration, database: dbName);
                 return (false, null);
             }
+            
+            if (mentorPrevDbStats.Status != DatabaseStatus.Loaded)
+            {
+                _logger.Log($"Can't promote node {promotable}: the database is not loaded on mentor {mentorNode} in previous stats. Current status: {mentorPrevDbStats.Status}", state.ObserverIteration, database: dbName);
+                return (false, null);
+            }
 
             if (previous.TryGetValue(promotable, out var promotablePrevClusterStats) == false ||
                 promotablePrevClusterStats.Report.TryGetValue(dbName, out var promotablePrevDbStats) == false)

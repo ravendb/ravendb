@@ -23,7 +23,7 @@ namespace SlowTests.Server.Replication
         {
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions)]
         public async Task ReplicateRevision_WhenSourceDataFromExportAndDocDeleted_ShouldNotRecreateTheDoc()
         {
             var exportFile = GetTempFileName();
@@ -113,7 +113,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Revisions), Trait("Category", "Smuggler")]
         public async Task ReplicateRevision_WhenSourceDataFromIncrementalBackupAndDocDeleted_ShouldNotRecreateTheDoc()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder", forceCreateDir: true);

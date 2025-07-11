@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
@@ -41,7 +41,7 @@ namespace SlowTests.Rolling
             Assert.True(res);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task DeployStaticRollingIndex()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -73,7 +73,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task DeployRollingIndexWhileDocumentsModified()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -138,7 +138,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task EditRollingIndexWhileDocumentsModified()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -213,7 +213,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task EditRollingIndexMultipleTimesWhileDocumentsModified()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -319,7 +319,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task RollingIndexSetAsDoneWhenNotDone_RDBS_8983()
         {
             var mre = new ManualResetEventSlim();
@@ -413,7 +413,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task AddNewNodeWhileRollingIndexDeployed()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -489,7 +489,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task EditRollingIndexDeployedWhileOldDeploymentInProgress()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -529,7 +529,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task RollingIndexDeployedWhileNodeIsDown()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -558,7 +558,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task ForceIndexDeployed()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -595,7 +595,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task RemoveNodeFromClusterWhileRollingDeployment()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -648,7 +648,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task RemoveNodeFromDatabaseGroupWhileRollingDeployment()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -693,7 +693,7 @@ namespace SlowTests.Rolling
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task RollingIndexReplacementRetryWithUnauthorizedAccessException()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -747,7 +747,7 @@ namespace SlowTests.Rolling
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task RollingIndexReplacementRetryWithIOException()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -800,7 +800,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task RollingIndexDeployedWithError()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -848,7 +848,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task RollingIndexDeployedSwapNow()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -903,7 +903,7 @@ namespace SlowTests.Rolling
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Indexes)]
         public async Task RollingIndexDisableEnable()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -1117,3 +1117,4 @@ namespace SlowTests.Rolling
         }
     }
 }
+

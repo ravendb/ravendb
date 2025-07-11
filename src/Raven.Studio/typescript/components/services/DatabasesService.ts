@@ -67,6 +67,8 @@ import getIdentitiesCommand from "commands/database/identities/getIdentitiesComm
 import seedIdentityCommand from "commands/database/identities/seedIdentityCommand";
 import getRevisionsBinCleanerConfigurationCommand from "commands/database/settings/getRevisionsBinCleanerConfigurationCommand";
 import saveRevisionsBinCleanerConfigurationCommand from "commands/database/settings/saveRevisionsBinCleanerConfigurationCommand";
+import deleteDocumentsCommand from "commands/database/documents/deleteDocumentsCommand";
+import deleteCollectionCommand from "commands/database/documents/deleteCollectionCommand";
 import getRevisionsPreviewCommand from "commands/database/documents/getRevisionsPreviewCommand";
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
 import getRevisionsIdsCommand from "commands/database/documents/getRevisionsIdsCommand";
@@ -323,8 +325,16 @@ export default class DatabasesService {
         return new seedIdentityCommand(...args).execute();
     }
 
+    async deleteDocuments(...args: ConstructorParameters<typeof deleteDocumentsCommand>) {
+        return new deleteDocumentsCommand(...args).execute();
+    }
+
     async getRevisionsPreview(...args: ConstructorParameters<typeof getRevisionsPreviewCommand>) {
         return new getRevisionsPreviewCommand(...args).execute();
+    }
+
+    async deleteCollection(...args: ConstructorParameters<typeof deleteCollectionCommand>) {
+        return new deleteCollectionCommand(...args).execute();
     }
 
     async deleteRevisionsForDocuments(...args: ConstructorParameters<typeof deleteRevisionsForDocumentsCommand>) {

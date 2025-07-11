@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Raven.Server.Documents.Queries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Should_cache_metadata_of_queries_without_parameters()
         {
             var cache = new QueryMetadataCache();

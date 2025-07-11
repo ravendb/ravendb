@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="AsyncSetBasedOps.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -12,6 +12,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -32,7 +33,7 @@ namespace SlowTests.SlowTests.Bugs
 #pragma warning restore 414,649
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task AwaitAsyncPatchByIndexShouldWork()
         {
             using (var store = GetDocumentStore(new Options

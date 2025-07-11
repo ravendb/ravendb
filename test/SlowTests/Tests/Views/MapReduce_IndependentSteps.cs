@@ -15,6 +15,7 @@ using Raven.Client.Documents.Queries;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -56,7 +57,7 @@ select new {
             }}));
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void CanGetReducedValues()
         {
             var values = new[]

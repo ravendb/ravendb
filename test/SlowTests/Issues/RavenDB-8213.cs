@@ -3,6 +3,7 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Querying)]
         public void SyntaxErrorInDeclareFunctionShouldReportLineAndColumnNumber()
         {
             using (var store = GetDocumentStore())
@@ -36,7 +37,7 @@ from Orders as o select f(o)");
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Querying)]
         public void SyntaxErrorInSelectFunctionBodyShouldReportLineAndColumnNumber()
         {
             using (var store = GetDocumentStore())
@@ -55,7 +56,7 @@ from Orders as o select f(o)");
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Patching)]
         public async Task SyntaxErrorInPatchScriptShouldReportLineAndColumnNumber()
         {
             using (var store = GetDocumentStore())
@@ -78,7 +79,7 @@ update
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.JavaScript | RavenTestCategory.Querying)]
         public void ErrorInInvocationShouldReportLineAndColumnNumber()
         {
             using (var store = GetDocumentStore())

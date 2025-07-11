@@ -20,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldGenerateSimpleLuceneBooleanQueriesWithoutManyBrackets()
         {
             using (var store = GetDocumentStore())

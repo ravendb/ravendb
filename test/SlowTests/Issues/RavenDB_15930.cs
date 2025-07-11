@@ -2,6 +2,7 @@
 using System.IO;
 using System.Threading;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using xRetry;
 using Xunit;
@@ -25,7 +26,7 @@ namespace SlowTests.Issues
             return options;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void OnDatabaseRecoverShouldMarkLastJournalAsRecyclableIfItExceedMaxLogFileSize()
         {
             CreateAndPopulateTree(startWithBigTx: false);
@@ -43,7 +44,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [RetryFact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldNotReuseRecycledJournalIfItExceedMaxLogFileSizeOnSmallTxSize()
         {
             CreateAndPopulateTree(startWithBigTx: true);
@@ -82,7 +83,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldNotReuseRecycledJournalIfItExceedMaxLogFileSizeOnBigTxSize()
         {
             CreateAndPopulateTree(startWithBigTx: true);

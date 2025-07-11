@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
 using Orders;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CanGetRevisionsByDate()
         {
             using (var store = GetDocumentStore())

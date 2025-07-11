@@ -2,6 +2,7 @@
 using System.Text;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Voron.Storage
 {
@@ -13,7 +14,7 @@ namespace SlowTests.Voron.Storage
 
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void SingleItemBatchTestLowLevel()
         {
             using (var tx = Env.WriteTransaction())

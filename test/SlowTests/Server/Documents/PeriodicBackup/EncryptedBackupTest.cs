@@ -25,7 +25,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -75,7 +75,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -128,7 +128,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup_use_new_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -182,7 +182,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -233,7 +233,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_db_key_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -287,7 +287,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_encrypted_backup_use_new_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -340,7 +340,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_not_encrypted_DB_with_unencrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -388,7 +388,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_encrypted_db_and_restore_to_encrypted_DB_with_unencrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -437,7 +437,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -486,7 +486,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_encrypted_db_and_restore_to_encrypted_DB_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -538,7 +538,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_encrypted_db__with_incremental_and_restore_to_encrypted_DB()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -608,7 +608,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_encrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -654,7 +654,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -694,7 +694,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_not_encrypted_db_and_restore_to_not_encrypted_DB_with_not_encrypted_backup()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -740,7 +740,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task backup_unencrypted_db_and_encrypted_backup_fail_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -770,7 +770,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task can_backup_and_restore_encrypted()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -845,7 +845,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task can_backup_and_restore_sample_data_encrypted()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -926,7 +926,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public unsafe void failed_to_restore_backup_wrong_key()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -975,7 +975,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public void encryption_settings_validation()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1042,7 +1042,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_encrypted_db_with_new_key_fail()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1084,7 +1084,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_unencrypted_db_and_encrypted_backup_fail_1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1117,7 +1117,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_unencrypted_db_and_encrypted_backup_fail_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1149,7 +1149,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task snapshot_and_restore_unencrypted_db_and_unencrypted_backup_2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1189,7 +1189,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Theory, Trait("Category", "Smuggler")]
+        [RavenTheory(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         [InlineData(BackupType.Backup, Constants.Documents.PeriodicBackup.EncryptedFullBackupExtension)]
         [InlineData(BackupType.Snapshot, Constants.Documents.PeriodicBackup.EncryptedSnapshotExtension)]
         public async Task backup_encrypted_db_without_backup_encryption_configuration(BackupType backupType, string expectedExtension)

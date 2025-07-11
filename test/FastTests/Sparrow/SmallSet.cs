@@ -1,5 +1,6 @@
 ﻿using System.Numerics;
 using Sparrow.Server.Collections;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace FastTests.Sparrow
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WeakSetSingleItem()
         {
             var ilSet = new WeakSmallSet<int, long>(128);
@@ -26,7 +27,7 @@ namespace FastTests.Sparrow
             Assert.Equal(10, lv);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WeakSetSingleLane()
         {
             var Ni = Vector<int>.Count;
@@ -53,7 +54,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WeakSetSingleSmallerThanVector()
         {
             var N = Vector<long>.Count;
@@ -64,7 +65,7 @@ namespace FastTests.Sparrow
             Assert.Equal(10, v);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WeakSetDuplicateItems()
         {
             var N = Vector<int>.Count;
@@ -89,7 +90,7 @@ namespace FastTests.Sparrow
             Assert.Equal(-1, iv);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WeakSetEviction()
         {
             var N = Vector<int>.Count;
@@ -114,7 +115,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WeakMultipleChunks()
         {
             var N = 2 * Vector<int>.Count;
@@ -133,7 +134,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void SetSingleItem()
         {
             var N = 2 * Vector<int>.Count;
@@ -150,7 +151,7 @@ namespace FastTests.Sparrow
             Assert.Equal(10, lv);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void SetSingleLane()
         {
             var Ni = Vector<int>.Count;
@@ -178,7 +179,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void SetSingleLaneWithOverflow()
         {
             var Ni = Vector<int>.Count;
@@ -204,7 +205,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void SetDuplicateItems()
         {
             var N = Vector<int>.Count;

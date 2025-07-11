@@ -28,7 +28,7 @@ namespace SlowTests.Client.Counters
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task ConflictsInMetadata()
         {
             using (var storeA = GetDocumentStore())
@@ -128,7 +128,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task CounterConflictBetweenNewAndDeleted()
         {
             using (var storeA = GetDocumentStore())
@@ -173,7 +173,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task MergeCountersOnDocumentConflict()
         {
             using (var storeA = GetDocumentStore())
@@ -217,7 +217,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task MergeCountersOnCounterConflict()
         {
             using (var storeA = GetDocumentStore())
@@ -259,7 +259,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task IncrementOnConflictedDocument()
         {
             using (var storeA = GetDocumentStore())
@@ -303,7 +303,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task PutNewCounterOnConflictedDocument()
         {
             using (var storeA = GetDocumentStore())
@@ -369,7 +369,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task DeleteCounterOnConflictedDocument()
         {
             using (var storeA = GetDocumentStore())
@@ -432,7 +432,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters)]
         public async Task CanSplitCounterWithUnicode()
         {
             using (var store = GetDocumentStore())
@@ -450,7 +450,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task CanHandleIncomingCounterReplicationWhenCounterGroupDocumentsAreSplitDifferently()
         {
             using (var storeA = GetDocumentStore())
@@ -543,7 +543,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
         public async Task RestoreAndConnectTwoNodesShouldHaveSameCounterValue()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -596,7 +596,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.BackupExportImport | RavenTestCategory.Replication)]
         public async Task RestoreAndReplicateCounters()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -672,7 +672,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task RespectTxBoundaries()
         {
             using (var storeA = GetDocumentStore())
@@ -703,7 +703,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task CountersTotalValueCanOverflow()
         {
             using (var storeA = GetDocumentStore())
@@ -757,7 +757,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Counters | RavenTestCategory.Replication)]
         public async Task CountersTotalValueCanOverflow2()
         {
             using (var storeA = GetDocumentStore())

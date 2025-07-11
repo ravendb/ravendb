@@ -14,7 +14,7 @@
         };
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
        public async Task ValidateSubscriptionAuthorizationRejectOnCreationAsync()
         {
             DoNotReuseServer();
@@ -38,7 +38,7 @@
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ValidateSubscriptionAuthorizationAcceptOnCreation()
         {
             DoNotReuseServer();
@@ -76,7 +76,7 @@
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ValidateSubscriptionAuthorizationRejectOnOpening()
         {
             DoNotReuseServer();
@@ -106,7 +106,7 @@
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Subscriptions)]
         public async Task ValidateSubscriptionAuthorizationAcceptOnOpening()
         {
             DoNotReuseServer();

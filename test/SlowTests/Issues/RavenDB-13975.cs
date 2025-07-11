@@ -6,6 +6,7 @@
 
 using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,7 @@ namespace SlowTests.Issues
             public string Chars { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanGetDocumentsWithEscapeCharacters()
         {
             using (var store = GetDocumentStore())

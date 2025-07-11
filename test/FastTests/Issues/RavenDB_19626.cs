@@ -2,6 +2,7 @@
 using Sparrow.Server;
 using Sparrow.Threading;
 using Voron;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ public class RavenDB_19626 : NoDisposalNeeded
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Core)]
     public void Should_Be_Able_To_Clone_Slice_Properly()
     {
         using (var allocator = new ByteStringContext(new SharedMultipleUseFlag()))
@@ -27,3 +28,4 @@ public class RavenDB_19626 : NoDisposalNeeded
         }
     }
 }
+

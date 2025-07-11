@@ -53,7 +53,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         public void CanQueryTimeSeriesWithSpacesInName2()
         {
             const string documentId = "users/ayende";

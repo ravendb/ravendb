@@ -6,6 +6,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Should_mark_index_as_errored_and_throw_on_querying_it_even_its_small()
         {
             using (var store = GetDocumentStore())
@@ -74,7 +75,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Should_mark_index_as_errored_and_throw_on_querying_it_even_its_very_small_and_everything_fails()
         {
             using (var store = GetDocumentStore())
@@ -129,7 +130,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Should_not_mark_index_as_errored_when_there_is_low_number_of_docs_to_index_but_not_everything_fails()
         {
             using (var store = GetDocumentStore())

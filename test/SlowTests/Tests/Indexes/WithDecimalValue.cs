@@ -29,7 +29,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCreate(Options options)
         {
@@ -39,7 +39,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void IgnoresLocale(Options options)
         {

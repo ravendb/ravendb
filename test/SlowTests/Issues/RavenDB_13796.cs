@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task TopologyUpdateDuringFailoverShouldntFaileCommand()
         {
             const int nodesAmount = 5;

@@ -1,4 +1,4 @@
-// -----------------------------------------------------------------------
+﻿// -----------------------------------------------------------------------
 //  <copyright file="RavenDB_16590.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using Raven.Server.Config;
 using Raven.Server.Config.Attributes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void StudioListsOfIndexScopedSettings()
         {
             var perIndexSettings =
@@ -114,3 +115,4 @@ namespace FastTests.Issues
         }
     }
 }
+

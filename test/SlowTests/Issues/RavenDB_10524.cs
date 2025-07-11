@@ -1,5 +1,6 @@
 ﻿using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void LazyLoadReallyShouldNotLoadTheEntireDatabaseIfWeFindDocumentFromSession()
         {
             using (var store = GetDocumentStore())
@@ -50,7 +51,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AsyncLazyLoadReallyShouldNotLoadTheEntireDatabaseIfWeFindDocumentFromSession()
         {
             using (var store = GetDocumentStore())

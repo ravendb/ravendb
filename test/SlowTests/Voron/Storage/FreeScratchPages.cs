@@ -1,4 +1,4 @@
-﻿// -----------------------------------------------------------------------
+﻿﻿// -----------------------------------------------------------------------
 //  <copyright file="FreeScratchPages.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
@@ -7,6 +7,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Tests.Infrastructure;
 using Voron.Impl.Scratch;
 using Xunit;
 using Xunit.Abstractions;
@@ -19,7 +20,7 @@ namespace SlowTests.Voron.Storage
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void UncommittedTransactionShouldFreeScratchPagesThatWillBeReusedByNextTransaction()
         {
             var random = new Random();

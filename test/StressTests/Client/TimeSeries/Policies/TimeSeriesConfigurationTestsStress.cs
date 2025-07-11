@@ -20,7 +20,7 @@ namespace StressTests.Client.TimeSeries.Policies
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task RapidRetentionAndRollupInACluster()
         {
             var cluster = await CreateRaftCluster(3, watcherCluster: true);
@@ -112,7 +112,7 @@ namespace StressTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task RapidRetentionAndRollup()
         {
             using (var store = GetDocumentStore())
@@ -170,7 +170,7 @@ namespace StressTests.Client.TimeSeries.Policies
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public async Task RavenDB_15840()
         {
             var dbA = GetDatabaseName();

@@ -33,7 +33,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task DisableAndEnableLocallyEndPoint()
         {
             using (var store = GetDocumentStore())
@@ -58,7 +58,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task DisableAndEnableClusterWideEndPoint()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -104,7 +104,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task ChangeStaticIndexStateToDisable()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -155,7 +155,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task ChangeStaticIndexStateToError()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -211,7 +211,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task ChangeAutoIndexStateToDisable()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -266,7 +266,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task ChangeAutoIndexStateToError()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -320,7 +320,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task ChangeAutoIndexStateToIdle()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -374,7 +374,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task ChangeStaticIndexState()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -489,7 +489,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task LastSetStateDetermineTheState()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -570,7 +570,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task LocalStateDisabledCanBeChangedClusterWide()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -625,7 +625,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task IndexDefinitionCompareState_RavenDB_16982()
         {
             var indexName = "SimpleIndex";
@@ -642,7 +642,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task UpdateDefinitionWithoutState()
         {
             var (_, leader) = await CreateRaftCluster(3, watcherCluster: true);
@@ -709,7 +709,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task UpdateDefinitionWithoutState2()
         {
             var (_, leader) = await CreateRaftCluster(3);
@@ -779,7 +779,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
         public async Task ClusterWideEnableAfterPause()
         {
             var (_, leader) = await CreateRaftCluster(3);

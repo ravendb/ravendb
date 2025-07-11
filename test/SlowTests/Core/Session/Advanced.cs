@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
@@ -7,6 +7,7 @@ using Raven.Client.Exceptions;
 using Raven.Server.Documents.Replication;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Company = SlowTests.Core.Utils.Entities.Company;
@@ -20,7 +21,7 @@ namespace SlowTests.Core.Session
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanGetChangesInformation()
         {
             using (var store = GetDocumentStore())
@@ -62,7 +63,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseEvict()
         {
             using (var store = GetDocumentStore())
@@ -96,7 +97,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseClear()
         {
             using (var store = GetDocumentStore())
@@ -130,7 +131,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseIsLoaded()
         {
             using (var store = GetDocumentStore())
@@ -159,7 +160,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseRefresh()
         {
             using (var store = GetDocumentStore())
@@ -206,7 +207,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseOptmisticConcurrency()
         {
             const string entityId = "users/1";
@@ -238,7 +239,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanGetDocumentMetadata()
         {
             const string companyId = "companies/1";
@@ -262,7 +263,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanSaveMetadata()
         {
             using (var store = GetDocumentStore())
@@ -323,7 +324,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseNumberOfRequests()
         {
             using (var store = GetDocumentStore())
@@ -348,7 +349,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseMaxNumberOfRequestsPerSession()
         {
             using (var store = GetDocumentStore())
@@ -381,7 +382,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanGetEtagFor()
         {
             using (var store = GetDocumentStore())
@@ -399,7 +400,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanLazilyLoadEntity()
         {
             const string COMPANY1_ID = "companies/1";
@@ -430,7 +431,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanExecuteAllPendingLazyOperations()
         {
             const string COMPANY1_ID = "companies/1";
@@ -463,7 +464,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseDefer()
         {
             using (var store = GetDocumentStore())
@@ -487,7 +488,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanAggressivelyCacheFor()
         {
             using (var store = GetDocumentStore())
@@ -525,7 +526,7 @@ namespace SlowTests.Core.Session
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanAggressivelyCacheAfterModification()
         {
             using (var store = GetDocumentStore())

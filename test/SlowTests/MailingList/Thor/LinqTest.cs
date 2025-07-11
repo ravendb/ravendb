@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -65,7 +66,7 @@ namespace SlowTests.MailingList.Thor
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void SingleTransportWithoutChildren_Raven()
         {
             using (var store = GetDocumentStore())
@@ -94,7 +95,7 @@ namespace SlowTests.MailingList.Thor
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void SingleChildAndNoTransport_Raven()
         {
             using (var store = GetDocumentStore())
@@ -119,7 +120,7 @@ namespace SlowTests.MailingList.Thor
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void MultipleChildrenWithMultipleTransports_Raven()
         {
             using (var store = GetDocumentStore())

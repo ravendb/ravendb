@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Projections_should_return_null_values_on_missing_properties()
         {
             using (var store = GetDocumentStore())

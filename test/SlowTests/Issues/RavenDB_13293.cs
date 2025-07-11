@@ -31,7 +31,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task CanPassNodeTagToChangesApi()
         {
             var myNodesList = new List<string>();
@@ -89,7 +89,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster), Trait("Category", "Smuggler")]
         public async Task CanPassNodeTagToRestoreBackupOperation()
         {
             var myBackupsList = new List<MyBackup>();
@@ -175,7 +175,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Cluster)]
         public async Task CanPassNodeTagToRestorePatchOperation()
         {
             var clusterSize = 3;

@@ -61,7 +61,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanBoostFullDocument(Options options)
         {
@@ -101,7 +101,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "Field boosting is not supported")]
         public void CanGetBoostedValues(Options options)

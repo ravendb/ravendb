@@ -6,18 +6,13 @@ using Raven.Server.ServerWide;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Tests.Infrastructure;
-using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable
 {
-    public unsafe class MemoryPoolTests : NoDisposalNeeded
+    public class MemoryPoolTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public MemoryPoolTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void SerialAllocationAndRelease()
         {
             using (var pool = new UnmanagedBuffersPoolWithLowMemoryHandling(RavenLogManager.Instance.CreateNullLogger(), string.Empty))
@@ -34,7 +29,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void ParallelAllocationAndReleaseSeperately()
         {
             using (var pool = new UnmanagedBuffersPoolWithLowMemoryHandling(RavenLogManager.Instance.CreateNullLogger(), string.Empty))
@@ -55,7 +50,7 @@ namespace FastTests.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void ParallelSerialAllocationAndRelease()
         {
             using (var pool = new UnmanagedBuffersPoolWithLowMemoryHandling(RavenLogManager.Instance.CreateNullLogger(), string.Empty))

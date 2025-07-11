@@ -33,7 +33,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchange()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -106,7 +106,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeAndRestoreOnlyIncremental()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -171,7 +171,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeAndRestoreOnlyIncrementalBackups()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -285,7 +285,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeAndDeleteBetween()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -357,7 +357,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangeAndDeleteBetweenBackups()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -440,7 +440,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangesAndDeleteBetween()
         {
             var list = new List<string>(new[] {"🐃", "🐂", "🐄", "🐎", "🐖",
@@ -544,7 +544,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithCompareExchangesAndDeletePlusAddBetween()
         {
             var list = new List<string>(new[] { "🐃", "🐂", "🐄", "🐎", "🐖",
@@ -660,7 +660,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithIdentity()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -741,7 +741,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateFullAndIncrementalBackupWithIdentityAndRestoreOnlyIncremental()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -828,7 +828,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void AllCompareExchangeAndIdentitiesPreserveAfterSchemaUpgrade()
         {
             var folder = NewDataPath(forceCreateDir: true);
@@ -866,7 +866,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateSnapshotBackupWithCompareExchangeAndIdentity()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -937,7 +937,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateSnapshotAndIncrementalBackupWithCompareExchangeAndIdentity()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1030,7 +1030,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CreateSnapshotAndIncrementalBackupsWithCompareExchangeAndIdentityAndDeleteBetween()
         {
             var list = new List<string>(new[] {"🐃", "🐂", "🐄", "🐎", "🐖",
@@ -1583,7 +1583,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task TombstoneCleanerShouldNotClearIfAnyBackupIsErroredOnFirstRun()
         {
             var backupPath1 = NewDataPath(suffix: "BackupFolder1");
@@ -1647,7 +1647,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task TombstoneCleanerShouldClearUpToLastRaftIndexIfLastBackupIsErrored()
         {
             var backupPath1 = NewDataPath(suffix: "BackupFolder1");
@@ -1708,7 +1708,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task IncrementalBackupWithCompareExchangeTombstones()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1771,7 +1771,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldClearAllCompareExchangeTombstonesIfThereIsABackupThatNeverOccur()
         {
             using (var server = GetNewServer())

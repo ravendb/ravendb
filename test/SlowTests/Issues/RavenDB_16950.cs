@@ -11,7 +11,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CheckIfDecimalValueNotChangesAfterComputation()
         {
             int changesCounter;

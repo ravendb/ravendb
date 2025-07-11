@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Runtime.Serialization;
 using FastTests;
 using Newtonsoft.Json;
@@ -22,7 +22,7 @@ namespace SlowTests.Bugs
             public string Version { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void EntitiesSerializeCorrectlyWithAttributes()
         {
             using (var store = GetDocumentStore())

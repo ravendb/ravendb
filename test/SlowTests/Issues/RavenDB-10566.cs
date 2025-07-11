@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,7 +27,7 @@ namespace SlowTests.Issues
             public Dictionary<string, string> Items = new Dictionary<string, string>();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanUseObjectsInMetadata()
         {
             using (var store = GetDocumentStore())
@@ -52,7 +53,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task CanPatchWithFilter()
         {
             using (var store = GetDocumentStore())
@@ -98,7 +99,7 @@ Object.keys(this.Trie).filter(function(key) {
                 }
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.ClientApi)]
         public async Task CanPatchDictionaryUsingArgs()
         {
             using (var store = GetDocumentStore())
@@ -137,7 +138,7 @@ Object.keys(this.Trie).filter(function(key) {
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ShouldBeAvailable()
         {
             using (IDocumentStore store = GetDocumentStore())

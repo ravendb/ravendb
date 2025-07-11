@@ -6,6 +6,7 @@ using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.MapReduce;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldUpdateReduceOutputReferenceDocumentInsteadOfOverwritingIt()
         {
             using (var store = GetDocumentStore())
@@ -224,7 +225,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldEnsureThatIdsAreUniqueAfterIndexReset()
         {
             using (var store = GetDocumentStore())

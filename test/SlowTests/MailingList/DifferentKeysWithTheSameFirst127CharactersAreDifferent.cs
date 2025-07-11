@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.MailingList
 {
@@ -16,7 +17,7 @@ namespace SlowTests.MailingList
             public string Name { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void DifferentKeysWithTheSameFirst127CharactersAreDifferent()
         {
             var identicalPrefix = new string('x', 127);

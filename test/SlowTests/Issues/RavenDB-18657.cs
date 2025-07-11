@@ -55,7 +55,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public async Task DocumentQuery_RQL_Expression_Should_Not_Include_Private_Members()
         {
             using var store = GetDocumentStore();

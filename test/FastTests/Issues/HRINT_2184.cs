@@ -1,10 +1,11 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Tests.Infrastructure.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Validate_ExpressionHelper_ClearList()
         {
             var item = new Item();
@@ -45,7 +46,7 @@ namespace FastTests.Issues
             Assert.Equal(0, list.Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void Clear_BlittableJsonReader_Stack_On_Init_To_Avoid_MaxDepth_Exception()
         {
             using (var store = GetDocumentStore())
@@ -122,3 +123,4 @@ namespace FastTests.Issues
         }
     }
 }
+

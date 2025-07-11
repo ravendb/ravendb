@@ -73,7 +73,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void Can_group_by_constant_in_dynamic_query()
         {
             using (var store = GetDocumentStore())

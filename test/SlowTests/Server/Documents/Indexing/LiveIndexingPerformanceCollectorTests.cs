@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -37,7 +38,7 @@ namespace SlowTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanObtainRecentIndexingPerformance()
         {
             using (var store = GetDocumentStore())
@@ -79,7 +80,7 @@ namespace SlowTests.Server.Documents.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanObtainLiveIndexingPerformanceStats()
         {
             using (var store = GetDocumentStore())

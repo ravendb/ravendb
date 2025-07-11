@@ -42,7 +42,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task PullReplicationShouldWork()
         {
             var name = $"pull-replication {GetDatabaseName()}";
@@ -63,7 +63,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task PullReplicationShouldThrowForSharding()
         {
             var name = $"pull-replication {GetDatabaseName()}";
@@ -79,7 +79,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task CollectPullReplicationOngoingTaskInfo()
         {
             var name = $"pull-replication {GetDatabaseName()}";
@@ -113,7 +113,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task DeletePullReplicationFromHub()
         {
             var name = $"pull-replication {GetDatabaseName()}";
@@ -142,7 +142,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task EnsureCantUseFilteredReplicationOnUnsecuredHub()
         {
             var name = $"pull-replication {GetDatabaseName()}";
@@ -160,7 +160,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task EnsureCantUseSinkToHubReplicationOnUnsecuredHub()
         {
             var name = $"pull-replication {GetDatabaseName()}";
@@ -178,7 +178,7 @@ namespace SlowTests.Server.Replication
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task DeletePullReplicationFromSink()
         {
             var name = $"pull-replication {GetDatabaseName()}";
@@ -207,7 +207,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task UpdatePullReplicationOnSink()
         {
             var definitionName1 = $"pull-replication {GetDatabaseName()}";
@@ -252,7 +252,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task UpdatePullReplicationOnHub()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -302,7 +302,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task DisablePullReplicationOnSink()
         {
             var definitionName = $"pull-replication {GetDatabaseName()}";
@@ -349,7 +349,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task DisablePullReplicationOnHub()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -396,7 +396,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task MultiplePullExternalReplicationShouldWork()
         {
             var name = $"pull-replication {GetDatabaseName()}";
@@ -420,7 +420,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task FailoverOnHubNodeFail()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -519,7 +519,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task RavenDB_15855()
         {
             DebuggerAttachedTimeout.DisableLongTimespan = true;
@@ -606,7 +606,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task RavenDB_17124()
         {
             var name = $"pull-replication {GetDatabaseName()}";
@@ -639,7 +639,7 @@ namespace SlowTests.Server.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task FailoverOnSinkNodeFail()
         {
             var clusterSize = 3;

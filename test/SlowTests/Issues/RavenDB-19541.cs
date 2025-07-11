@@ -7,6 +7,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ public class RavenDB_19541 : RavenTestBase
         Assert.True(exception.Message.Contains("Projection is already done. You should not project your result twice."));
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void CanProjectOnlyOneFieldAfterProjectInto() // Hits: ExpressionType.MemberAccess
     {
         using var store = GetDocumentStoreWithDocuments();
@@ -35,7 +36,7 @@ public class RavenDB_19541 : RavenTestBase
         AssertResult(() => selectSingle.ToString());
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void CanProjectIntoAnonymousAfterProjectInfo() // Hits:  ExpressionType.New
     {
         using var store = GetDocumentStoreWithDocuments();
@@ -51,7 +52,7 @@ public class RavenDB_19541 : RavenTestBase
         public string FavoriteFood { get; set; }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void CanProjectIntoKnownMemberAfterProjectInfo() // Hits:  ExpressionType.MemberInit
     {
         using var store = GetDocumentStoreWithDocuments();
@@ -61,7 +62,7 @@ public class RavenDB_19541 : RavenTestBase
         AssertResult(() => memberInitQuery.ToString());
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void CanProjectIntoCallAfterProjectInfo() // Hits:  ExpressionType.Call
     {
         using var store = GetDocumentStoreWithDocuments();
@@ -71,7 +72,7 @@ public class RavenDB_19541 : RavenTestBase
         AssertResult(() => selectAnonymous.ToString());
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void DocumentQueryProjectionWithMultipleSelects()
     {
         using var store = GetDocumentStoreWithDocuments();
@@ -84,7 +85,7 @@ public class RavenDB_19541 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void AsyncDocumentQueryProjectionWithMultipleSelects()
     {
         using var store = GetDocumentStoreWithDocuments();
@@ -97,7 +98,7 @@ public class RavenDB_19541 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying)]
     public void CanMaterializeTwiceTheSameQueryButCannotChangeSelectAfterFirstMaterialization()
     {
         using var store = GetDocumentStoreWithDocuments();

@@ -18,7 +18,7 @@ namespace SlowTests.Issues
 
         private const int USER_COUNT = 500;
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public async Task Index_Queries_Should_Not_Return_Deleted_Documents(Options options)
         {

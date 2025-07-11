@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -48,7 +49,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldInheritLockMode()
         {
             using (var documentStore = GetDocumentStore())
@@ -79,7 +80,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldInheritPriority()
         {
             using (var documentStore = GetDocumentStore())
@@ -109,7 +110,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ShouldNotRecreateReplacementIndexIfItIsTheSame()
         {
             using (var documentStore = GetDocumentStore())
@@ -133,7 +134,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldBeAbleToForceReplacement()
         {
             using (var documentStore = GetDocumentStore())
@@ -157,7 +158,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ChangingLockModeOrPriorityOnlyShouldNotResetIndex()
         {
             using (var store = GetDocumentStore())

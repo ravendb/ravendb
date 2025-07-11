@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldWork()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())

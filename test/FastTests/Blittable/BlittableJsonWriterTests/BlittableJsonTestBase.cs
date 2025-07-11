@@ -6,17 +6,14 @@ using Newtonsoft.Json.Converters;
 using Raven.Server.Documents.Indexes.Static;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
-    public abstract class BlittableJsonTestBase : NoDisposalNeeded
+    public abstract class BlittableJsonTestBase(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        protected BlittableJsonTestBase(ITestOutputHelper output) : base(output)
-        {
-        }
-
         public string GenerateSimpleEntityForFunctionalityTest()
         {
             object employee = new

@@ -24,7 +24,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task WillRunBackupAfterGettingMissingResponsibleNode()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -85,7 +85,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
             }
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.Smuggler)]
         public async Task ShouldRearrangeTheTimeIfBackupAfterTimerCallbackGotActiveByOtherNode()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -200,7 +200,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
         }
 
         // Performing backup Delay to the time:
-        [RavenTheory(RavenTestCategory.BackupExportImport), Trait("Category", "Smuggler")]
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
         [InlineData(1)] // until the next scheduled backup time.
         [InlineData(5)] // after the next scheduled backup.
         public async Task ShouldProperlyPlaceOriginalBackupTimePropertyWithDelay(int delayDurationInMinutes)

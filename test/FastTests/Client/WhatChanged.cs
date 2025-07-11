@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Session;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace FastTests.Client
@@ -14,7 +15,7 @@ namespace FastTests.Client
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void What_Changed_New_Field()
         {
             using (var store = GetDocumentStore())
@@ -42,7 +43,7 @@ namespace FastTests.Client
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void What_Changed_Removed_Field()
         {
             using (var store = GetDocumentStore(new Options
@@ -77,7 +78,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void What_Changed_Change_Field()
         {
             using (var store = GetDocumentStore(new Options
@@ -112,7 +113,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void What_Changed_Array_Value_Changed()
         {
             using (var store = GetDocumentStore())
@@ -152,7 +153,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void What_Changed_Array_Value_Added()
         {
             using (var store = GetDocumentStore())
@@ -186,7 +187,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void What_Changed_Array_Value_Removed()
         {
             using (var store = GetDocumentStore())
@@ -220,7 +221,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void RavenDB_8169()
         {
             //Test that when old and new values are of different type
@@ -261,7 +262,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WhatChanged_should_be_idempotent_operation()
         {
             //RavenDB-9150
@@ -290,7 +291,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void WhatChanged_Delete_After_Change_Value()
         {
             //RavenDB-13501
@@ -325,7 +326,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void RemovingAndAddingSameAmountOfFieldsToObjectShouldWork()
         {
             using (var store = GetDocumentStore())
@@ -407,7 +408,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanSeeChangesWhenAddingGuidsToArray()
         {
             using (var store = GetDocumentStore())
@@ -479,3 +480,4 @@ namespace FastTests.Client
         public dynamic[] Array { set; get; }
     }
 }
+

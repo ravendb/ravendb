@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AddUserTest()
         {
             var user = new User("foo", new List<string>(), "foo@bar.com", new byte[] { 1, 2, 3 }, false);

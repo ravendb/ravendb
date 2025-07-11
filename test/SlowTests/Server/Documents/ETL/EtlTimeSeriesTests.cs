@@ -253,7 +253,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }
         }
 
-        [Fact(Skip = "RavenDB-17540")]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.TimeSeries, Skip = "RavenDB-17540")]
         public async Task IncrementalEtlShouldWork()
         {
             string[] collections = { "Users" };
@@ -297,7 +297,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             Assert.Equal(value, timeSeries.Value);
         }
 
-        [Fact(Skip = "RavenDB-17540")]
+        [RavenFact(RavenTestCategory.Etl | RavenTestCategory.TimeSeries, Skip = "RavenDB-17540")]
         public async Task RavenEtlWithIncrementalTimeSeries()
         {
             const string docId = "users/1";
@@ -708,7 +708,7 @@ function loadTimeSeriesOfUsersBehavior(docId, timeSeries)
             await AssertWaitForValueAsync(() => Task.FromResult(countOfTsChanged), 1, interval: _waitInterval);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries | RavenTestCategory.Counters)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentTimeSeriesAndCounters_ShouldSrcBeAsDest(
             string justForXUint,
@@ -963,7 +963,7 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
             }, 1);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenAppendMoreTimeSeriesInAnotherSession_ShouldSrcBeAsDest(
             string justForXUint,
@@ -1011,7 +1011,7 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
             Assert.Equal(value, secondTimeSeries.Value);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenAppendWhileDocNotExistInDestination_ShouldNotFail(
             string justForXUint,
@@ -1063,7 +1063,7 @@ person.addTimeSeries(loadTimeSeries('Heartrate'));
             await AssertWaitForTimeSeriesEntry(dest, users[1].Id, timeSeriesName, time);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenCommitProcessByMultipleEtlBatch_ShouldSrcBeAsDest(
             string justForXUint,
@@ -1323,7 +1323,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             await AssertWaitAllHasAmountOfTimeSeries(dest, timeSeriesName, users.Length, 2);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenTimeSeriesEtagLowerThanItsDocAndDidntEtlTheDocYet(
             string justForXUint,
@@ -1397,7 +1397,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             });
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenTimeSeriesHasLowerEtagThanTheCurrentLastProcessedDocumentEtagInTheBatch(
             string justForXUint,
@@ -1452,7 +1452,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             await AssertWaitForTimeSeriesEntry(dest, users[batchSize].Id, timeSeriesName, times[1]);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenTimeSeriesHasLowerEtagThanItsDocAndLastProcessedEtag(
             string justForXUint,
@@ -1530,7 +1530,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             public EtlTaskProgress[] Results { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenInAnotherSessionChangDocAndAppendMoreTimeSeries_ShouldSrcBeAsDest(
             string justForXUint,
@@ -1579,7 +1579,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             Assert.Equal(value, secondTimeSeries.Value);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenStoreDocumentAndTimeSeriesAndRemoveTimeSeriesInAnotherSession_ShouldRemoveFromDestination(
             string justForXUint,
@@ -1636,7 +1636,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }, interval: _waitInterval);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenChangeDocAndRemoveTimeSeriesInAnotherSession_ShouldRemoveFromDestination(
             string justForXUint,
@@ -1825,7 +1825,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         [ClassData(typeof(TestDataForDocChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenCreatTimeSeriesBeforeItsDoc1(
@@ -1883,7 +1883,7 @@ function loadTimeSeriesOfUsersBehavior(doc, ts)
             await AssertWaitForTimeSeriesEntry(dest, documentId, timeSeriesName, time);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.TimeSeries)]
         [ClassData(typeof(TestDataForDocAndTimeSeriesChangeTracking<TestDataType>))]
         [ClassData(typeof(TestDataForDocChangeTracking<TestDataType>))]
         public async Task RavenEtlWithTimeSeries_WhenCreatTimeSeriesBeforeItsDoc2(

@@ -1,10 +1,11 @@
-﻿using System.Threading.Tasks;
+using System.Threading.Tasks;
 using Xunit;
 using Xunit.Abstractions;
 using System;
 using System.Threading;
 using FastTests;
 using Raven.Client.Http;
+using Tests.Infrastructure;
 
 
 namespace SlowTests.Issues
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task UpdateTopologyTimeoutBehaviourShouldBeAccordingToConfiguration()
         {
             var generalTimeout = TimeSpan.FromSeconds(3);

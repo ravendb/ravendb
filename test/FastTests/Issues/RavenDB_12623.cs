@@ -5,6 +5,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Voron;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ContextPoolsShouldNotLeakThreadIdData()
         {            
             var p1 = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()));
@@ -58,3 +59,4 @@ namespace FastTests.Issues
         }
     }
 }
+

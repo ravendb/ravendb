@@ -1,7 +1,8 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_Use_OnSessionDisposing_Event()
         {
             using (IDocumentStore store = GetDocumentStore())

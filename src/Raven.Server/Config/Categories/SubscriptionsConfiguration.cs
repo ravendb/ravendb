@@ -9,12 +9,12 @@ namespace Raven.Server.Config.Categories
     {
         [DefaultValue(1000)]
         [ConfigurationEntry("Subscriptions.MaxNumberOfConcurrentConnections", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        [Description("Amount of concurrent subscription connections per database")]
+        [Description("The maximum number of concurrent subscription connections allowed per database.")]
         public int MaxNumberOfConcurrentConnections { get; set; }
         
         [DefaultValue(ArchivedDataProcessingBehavior.ExcludeArchived)]
         [ConfigurationEntry("Subscriptions.ArchivedDataProcessingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabase)]
-        [Description("The default subscriptions archived data processing behavior per database")]
+        [Description("The default processing behavior for archived documents in a subscription query.")]
         public ArchivedDataProcessingBehavior ArchivedDataProcessingBehavior { get; set; }
     }
 }

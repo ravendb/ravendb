@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using FastTests.Voron;
 using Sparrow.Platform;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Exceptions;
 using Voron.Global;
@@ -37,7 +38,7 @@ namespace SlowTests.Voron
             options.Encryption.MasterKey = _masterKey.ToArray();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CorruptedSingleTransactionPage_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet()
         {
             RequireFileBasedPager();
@@ -119,7 +120,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void CorruptedSingleByteInTransactionPageOfFirstTransaction_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet()
         {
             RequireFileBasedPager();
@@ -201,7 +202,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void CorruptionAcrossMultipleTransactions_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet()
         {
             RequireFileBasedPager();
@@ -283,7 +284,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CorruptionOfTransactionHeaderLastPageNumber_WontStopTheRecoveryIfIgnoreErrorsOfSyncedTransactionIsSet()
         {
             RequireFileBasedPager();
@@ -365,7 +366,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void ShouldFailBecauseFirstValidTransactionIsTheOneWhichIsNotSynced()
         {
             RequireFileBasedPager();

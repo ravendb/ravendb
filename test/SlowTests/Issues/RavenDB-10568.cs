@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using static Raven.Client.Documents.Session.DocumentsChanges;
 using Xunit.Abstractions;
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
             public string Id { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void MetadataChangesAreAvailableForWhatChanged()
         {
 
@@ -54,7 +55,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void MetadataIsAvailableOnBeforeStoreEvent()
         {
             using (var store = GetDocumentStore())
@@ -83,7 +84,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void MetadataOnNewDocumentIsAvailableOnBeforeStoreTest()
         {
             using (var documentStore = GetDocumentStore())
@@ -116,7 +117,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Configuration)]
         public void QueryIdStartsWithAndQueryOptimizerGeneratedIndexesDisabled_ShouldBeAbleToQuery()
         {
             Options options = new Options

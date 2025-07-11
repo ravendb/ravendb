@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Sparrow.Platform;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -669,7 +670,7 @@ namespace StressTests.Sparrow
             action(scheduler);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void SingleAttemptSingleThreadNoError()
         {
             int counter = 0;
@@ -683,7 +684,7 @@ namespace StressTests.Sparrow
             Assert.Equal(counter, 1);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void SingleAttemptSingleThreadException()
         {
             int counter = 0;
@@ -708,7 +709,7 @@ namespace StressTests.Sparrow
             Assert.Equal(counter, 1);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WithRetrySingleThreadNoError()
         {
             int counter = 0;
@@ -722,7 +723,7 @@ namespace StressTests.Sparrow
             Assert.Equal(counter, 1);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(0)]
         [InlineData(1)]
         [InlineData(2)]
@@ -756,7 +757,7 @@ namespace StressTests.Sparrow
             Assert.Equal(counter, numRetries);
         }
 
-        [Theory(Skip = "RavenDB-9904")]
+        [RavenTheory(RavenTestCategory.Core, Skip = "RavenDB-9904")]
         [InlineData(2, 1000)]
         [InlineData(4, 10000)]
         [InlineData(8, 100000)]
@@ -792,7 +793,7 @@ namespace StressTests.Sparrow
             });
         }
 
-        [Theory(Skip = "RavenDB-9904")]
+        [RavenTheory(RavenTestCategory.Core, Skip = "RavenDB-9904")]
         [InlineData(2, 1000)]
         [InlineData(4, 10000)]
         [InlineData(8, 100000)]
@@ -835,7 +836,7 @@ namespace StressTests.Sparrow
             });
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(2, 1000)]
         [InlineData(4, 10000)]
         [InlineData(8, 100000)]
@@ -878,7 +879,7 @@ namespace StressTests.Sparrow
             });
         }
 
-        [Theory(Skip = "For this test to work, we need a multithreaded preemptive scheduler for the tasks.")]
+        [RavenTheory(RavenTestCategory.Core, Skip = "For this test to work, we need a multithreaded preemptive scheduler for the tasks.")]
         [InlineData(4, 10, 40, 5000)]
         [InlineData(8, 10, 80, 5000)]
         [InlineData(16, 10, 160, 5000)]

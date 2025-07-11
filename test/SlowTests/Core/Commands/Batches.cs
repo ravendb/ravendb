@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using Xunit.Abstractions;
 
@@ -6,6 +6,7 @@ using FastTests;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 
 using User = SlowTests.Core.Utils.Entities.User;
@@ -18,7 +19,7 @@ namespace SlowTests.Core.Commands
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanDoBatchOperations()
         {
             using (var store = GetDocumentStore())
@@ -63,7 +64,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task CanDoBatchOperationsWithBatchIdentityRequest()
         {
             using (var store = GetDocumentStore())

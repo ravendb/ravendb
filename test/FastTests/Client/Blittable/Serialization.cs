@@ -1,4 +1,5 @@
-﻿using Xunit;
+using Xunit;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace FastTests.Client.Blittable
@@ -9,7 +10,7 @@ namespace FastTests.Client.Blittable
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_Store_And_Load_Boolean_And_Nullable_Boolean()
         {
             using (var store = GetDocumentStore())
@@ -32,7 +33,7 @@ namespace FastTests.Client.Blittable
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_Store_And_Load_Nullable()
         {
             using (var store = GetDocumentStore())
@@ -77,3 +78,4 @@ namespace FastTests.Client.Blittable
         }
     }
 }
+

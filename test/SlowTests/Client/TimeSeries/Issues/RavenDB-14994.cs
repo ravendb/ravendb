@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Tests.Core.Utils.Entities;
@@ -15,7 +15,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void GetOnNonExistingTimeSeriesShouldReturnNull()
         {
             using (var store = GetDocumentStore())
@@ -39,7 +39,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void GetOnEmptyRangeShouldReturnEmptyArray()
         {
             using (var store = GetDocumentStore())
@@ -72,7 +72,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void ConstantTimeValuesShouldReturnConstantHashCodes()
         {
             var zero = TimeValue.Zero;

@@ -7,6 +7,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanCompactWhenGlobalTempPathIsDefined()
         {
             var tempPath = NewDataPath(suffix: "-temp");

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
@@ -14,7 +14,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void WhenDefiningIndexWithSystemType_IndexShouldGetDefined(Options options)
         {

@@ -1,6 +1,7 @@
-﻿using System.IO;
+using System.IO;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron.Trees
 {
@@ -10,7 +11,7 @@ namespace FastTests.Voron.Trees
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDeleteAtRoot()
         {
             var size = 250;

@@ -2,6 +2,7 @@
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void document_query_with_projection_and_orderby_score_afterwards()
         {
             using (var store = GetDocumentStore())

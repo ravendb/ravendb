@@ -91,7 +91,7 @@ namespace SlowTests.Issues
             public string OtherField { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void SupportForCreateFieldWithOptions(Options options)
         {
@@ -126,7 +126,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Corax, Skip = "RavenDB-19393")]
         public void CheckHighlighting(Options options)

@@ -15,7 +15,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanParseMemInfo()
         {
             MemInfo memInfo;
@@ -94,3 +94,4 @@ namespace FastTests.Issues
         }
     }
 }
+

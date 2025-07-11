@@ -95,7 +95,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstDynamicIndex_NonLazy()
         {
             using (var store = GetDocumentStore())
@@ -166,7 +166,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanGetTotalResultsFromStatisticsOnLazySearchAgainstStaticIndex_NonLazy()
         {
             using (var store = GetDocumentStore())

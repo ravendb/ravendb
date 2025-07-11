@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanDoMapOnObject(Options options)
         {
@@ -60,7 +60,7 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanDoMapOnObject2(Options options)
         {
@@ -92,7 +92,7 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanDoMapOnObject3(Options options)
         {
@@ -129,7 +129,7 @@ from index 'TestDocumentByName' as item select output(item)", query.ToString());
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanDoMapOnObject4(Options options)
         {

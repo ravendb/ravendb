@@ -5,6 +5,7 @@ using Sparrow.Json.Parsing;
 using Raven.Client.Documents.Queries;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void JavascriptProjectionOfMapOfArrayWithNonexistingFieldShouldReturnArrayOfNulls()
         {
             using (var store = GetDocumentStore())                
@@ -58,7 +59,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void JavascriptProjectionOfMapOfArrayWithNonexistingFieldWrappedWithObjectShouldReturnArrayOfObjectsWithNulls()
         {
             using (var store = GetDocumentStore())
@@ -102,7 +103,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void RQLProjectionOfMapOfArrayWithNonexistingFieldShouldReturnArrayOfNulls()
         {
             using (var store = GetDocumentStore())

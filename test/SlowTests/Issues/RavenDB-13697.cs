@@ -8,6 +8,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData(true)]
         [InlineData(false)]
         public async Task CanGetValueAfterDbFirstCreation_WithPreviousError(bool waitForDatabaseChangesFailure)

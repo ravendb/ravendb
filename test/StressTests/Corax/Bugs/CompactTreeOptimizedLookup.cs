@@ -3,6 +3,7 @@ using System.IO;
 using FastTests.Voron;
 using SharpCompress.Compressors;
 using SharpCompress.Compressors.Deflate;
+using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
 using Xunit;
 using Xunit.Abstractions;
@@ -16,7 +17,7 @@ public class CompactTreeOptimizedLookup : StorageTest
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax)]
     public void CanUseTryGetNextValue()
     {
         using (var wtx = Env.WriteTransaction())

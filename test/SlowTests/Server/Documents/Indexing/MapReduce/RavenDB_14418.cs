@@ -104,7 +104,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void ShouldNotAllowToProvideSameCollectionNameForOutputReduceAndReferences()
         {
             using (var store = GetDocumentStore())

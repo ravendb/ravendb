@@ -179,7 +179,7 @@ public class RavenDB_19016 : RavenTestBase
         }
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.CompareExchange)]
     public async Task Can_Index_Nested_CompareExchange_Change()
     {
         using (var server = GetNewServer())

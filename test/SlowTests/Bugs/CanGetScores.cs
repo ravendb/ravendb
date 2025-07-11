@@ -1,4 +1,4 @@
-﻿using FastTests;
+using FastTests;
 using System.Linq;
 using Lucene.Net.Analysis;
 using Raven.Client;
@@ -56,7 +56,7 @@ namespace SlowTests.Bugs
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void FromQueryWithOrderByScoreThenName(Options options)
         {
@@ -104,7 +104,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void FromQueryWithOrderByScoreThenNameDescending(Options options)
         {
@@ -152,7 +152,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void FromQueryWithOrderByNameThenByScore(Options options)
         {
@@ -211,7 +211,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void FromQueryWithOrderByNameThenByScoreDescending(Options options)
         {
@@ -270,7 +270,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void FromQueryWithOrderByNameThenByScoreThenByAge(Options options)
         {
@@ -331,7 +331,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData]
         public void FromQueryWithOrderByNameThenByScoreDescendingThenByAge(Options options)
         {

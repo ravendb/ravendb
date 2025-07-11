@@ -2,6 +2,7 @@
 using Raven.Server.Config;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanGenerateConfigurationEntryMetadata()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -30,3 +31,4 @@ namespace FastTests.Issues
         }
     }
 }
+

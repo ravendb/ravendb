@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication)]
         public async Task ChangesApiShouldWorkOnAllDatabaseInClusterWhenUsingAggresiveCaching()
         {
             var db = "changes-api-aggressive-caching";

@@ -129,7 +129,7 @@ namespace ETIS
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCompileAdditionalSource_List()
         {
             using (var store = GetDocumentStore())
@@ -195,7 +195,7 @@ namespace ETIS
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCompileAdditionalSource_IList()
         {
             using (var store = GetDocumentStore())
@@ -261,7 +261,7 @@ namespace ETIS
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCompileAdditionalSource_ICollection()
         {
             using (var store = GetDocumentStore())
@@ -327,7 +327,7 @@ namespace ETIS
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCompileAdditionalSource_Hashset()
         {
             using (var store = GetDocumentStore())
@@ -393,7 +393,7 @@ namespace ETIS
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanCompileAdditionalSource_Dictionary()
         {
             using (var store = GetDocumentStore())

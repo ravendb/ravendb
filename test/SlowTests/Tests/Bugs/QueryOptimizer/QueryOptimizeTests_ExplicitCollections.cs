@@ -109,7 +109,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void WillCreateWiderIndex_UsingEnityName()
         {
             using (var store = GetDocumentStore())
@@ -142,7 +142,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
                 }
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void WillCreateWiderIndex_UsingDifferentEntityNames()
         {
             using (var store = GetDocumentStore())
@@ -176,7 +176,7 @@ namespace SlowTests.Tests.Bugs.QueryOptimizer
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void WillAlwaysUseSpecifiedIndex()
         {
             using (var store = GetDocumentStore())

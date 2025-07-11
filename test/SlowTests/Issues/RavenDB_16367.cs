@@ -9,6 +9,7 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanLockDatabase()
         {
             using (var store = GetDocumentStore())
@@ -105,7 +106,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanLockDatabase_Multiple()
         {
             using (var store = GetDocumentStore())
@@ -156,7 +157,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanLockDatabase_Disabled()
         {
             using (var store = GetDocumentStore())
@@ -179,7 +180,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void CanLockDatabase_Backup_Restore()
         {
             var backupPath = NewDataPath();

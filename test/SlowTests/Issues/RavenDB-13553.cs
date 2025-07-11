@@ -5,6 +5,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Test()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

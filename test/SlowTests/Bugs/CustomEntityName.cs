@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="CustomEntityName.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -27,7 +27,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanCustomizeEntityName()
         {
             using (var store = GetDocumentStore(new Options
@@ -121,14 +121,14 @@ namespace SlowTests.Bugs
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenIndexWithLoadByString(char c)
         {
             await TestWhenCollectionAndIdContainSpecialChars<LoadWithStringIndex>(c);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [MemberData(nameof(GetCharactersToTestWithSpecial))]
         public async Task FindCollectionName_WhenIndexWithLoadByLazyString(char c)
         {
@@ -170,7 +170,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenSubscribeToApiChanges(char c)
         {
@@ -206,14 +206,14 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenIndexWithMultiMap(char c)
         {
             await TestWhenCollectionAndIdContainSpecialChars<MultiMapIndex>(c);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenQuery(char c)
         {
@@ -267,7 +267,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [MemberData(nameof(GetCharactersToTest))]
         public async Task FindCollectionName_WhenLoadWithInclude(char c)
         {

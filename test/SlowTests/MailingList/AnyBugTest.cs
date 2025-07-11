@@ -1,4 +1,4 @@
-﻿using System.Linq;
+﻿﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
@@ -30,7 +30,7 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void FailTest()
         {
             using (var docStore = GetDocumentStore())

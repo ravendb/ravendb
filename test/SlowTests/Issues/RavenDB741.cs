@@ -59,7 +59,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Nested_Dictionary_Dynamic_Enumerable_Count_Should_Work()
         {
             using (var documentStore = GetDocumentStore())
@@ -82,7 +82,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Nested_Dictionary_Static_Count_Property_Should_Work()
         {
             using (var documentStore = GetDocumentStore())
@@ -104,7 +104,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Nested_Dictionary_Static_Count_Method_Should_Work()
         {
             using (var documentStore = GetDocumentStore())
@@ -126,7 +126,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Nested_Dictionary_Static_Enumerable_Count_Should_Work()
         {
             using (var documentStore = GetDocumentStore())

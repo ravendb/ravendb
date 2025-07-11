@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void LoadingDocumentInProjectionUsingStoredIndexIdInMapReduceIndex(Options options)
         {

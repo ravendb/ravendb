@@ -7,6 +7,7 @@ using Orders;
 using Raven.Client.Documents.Operations.Revisions;
 using Raven.Server.ServerWide;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task limitRevisionDeletion()
         {
             using (var store = GetDocumentStore())
@@ -152,7 +153,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Revisions)]
         public async Task limitRevisionDeletionWithEnforceConfiguration()
         {
             using (var store = GetDocumentStore())

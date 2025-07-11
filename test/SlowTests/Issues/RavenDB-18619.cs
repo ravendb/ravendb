@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void NormsAreGeneratedCorrectlyOnWholeDocument()
         {
             using var store = GetDocumentStore();

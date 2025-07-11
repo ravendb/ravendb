@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Json.Serialization;
@@ -6,6 +6,7 @@ using SlowTests.Core.Utils.Entities;
 using Sparrow.Json;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void can_delete_collection_except_few_docs()
         {
             using (var store = GetDocumentStore())

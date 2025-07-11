@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Orders;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_use_alias_in_group_by()
         {
             using (var store = GetDocumentStore())
@@ -52,7 +53,7 @@ select count(), key() as City").ToList();
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Can_use_alias_in_sum_by()
         {
             using (var store = GetDocumentStore())

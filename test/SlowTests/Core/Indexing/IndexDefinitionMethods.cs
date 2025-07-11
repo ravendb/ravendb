@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using SlowTests.Core.Utils.Indexes;
@@ -18,7 +18,7 @@ namespace SlowTests.Core.Indexing
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMetadataFor(Options options)
         {
@@ -76,7 +76,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUseAsDocumentToIndexAllDocumentFields(Options options)
         {
@@ -103,7 +103,7 @@ namespace SlowTests.Core.Indexing
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUseRecurse(Options options)
         {

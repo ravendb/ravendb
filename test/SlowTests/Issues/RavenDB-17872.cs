@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions)]
         public async Task CompareExchangeMetadata_Create_WithoutPropChange()
         {
             using var store = GetDocumentStore();
@@ -52,7 +52,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions)]
         public async Task CompareExchangeMetadata_CreateAndTryToChangeToSameVal()
         {
             using var store = GetDocumentStore();
@@ -90,7 +90,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions)]
         public async Task CompareExchangeMetadata_CreateAndTryToChangeToDifferentVal()
         {
             using var store = GetDocumentStore();
@@ -129,7 +129,7 @@ namespace SlowTests.Issues
              }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions)]
         public async Task CompareExchangeMetadata_DontDoAnything()
         {
             using var store = GetDocumentStore();
@@ -158,7 +158,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions)]
         public async Task CompareExchangeMetadata_CreateAndTryToRemoveAndAddVal()
         {
             using var store = GetDocumentStore();
@@ -199,7 +199,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions)]
         public async Task CompareExchangeMetadata_CreateAndTryToRemove()
         {
             using var store = GetDocumentStore();
@@ -248,7 +248,7 @@ namespace SlowTests.Issues
 #pragma warning restore CS0649
         }
 
-        [Fact(Skip = "This test will cause the atomic guard not be in sync with the doc")]
+        [RavenFact(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions, Skip = "This test will cause the atomic guard not be in sync with the doc")]
         public async Task Can_Modify_Empty_Metadata()
         {
             using (var store = GetDocumentStore())
@@ -281,7 +281,7 @@ namespace SlowTests.Issues
             public string Prop { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions)]
         public async Task CompareExchangeNestedMetadata_Create_WithoutPropChange()
         {
             using var store = GetDocumentStore();
@@ -315,7 +315,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange | RavenTestCategory.ClusterTransactions)]
         public async Task CompareExchangeDoubleNestedMetadata_Create_WithoutPropChange()
         {
             using var store = GetDocumentStore();

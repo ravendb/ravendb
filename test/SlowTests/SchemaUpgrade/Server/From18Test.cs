@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -9,6 +9,7 @@ using Raven.Client.Json.Serialization;
 using Raven.Server.Config.Settings;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.SchemaUpgrade.Server
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Interversion)]
         public void RavenDB_13724()
         {
             var folder = NewDataPath(forceCreateDir: true, prefix: Guid.NewGuid().ToString());

@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;
@@ -54,7 +54,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanGetQueryResults()
         {
             using (var document = GetDocumentStore())

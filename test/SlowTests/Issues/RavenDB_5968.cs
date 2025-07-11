@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void EtagNullShouldOverrideDocument()
         {
             using (var store = GetDocumentStore())
@@ -30,7 +31,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void EtagNullShouldOverrideDocumentPut()
         {
             using (var store = GetDocumentStore())

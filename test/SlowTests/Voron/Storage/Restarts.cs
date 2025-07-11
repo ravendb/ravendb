@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿﻿using System.IO;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -11,7 +12,7 @@ namespace SlowTests.Voron.Storage
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void DataIsKeptAfterRestart_OnDisk()
         {
             using (var pager = StorageEnvironmentOptions.ForPathForTests(DataDir))
@@ -46,7 +47,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void DataIsKeptAfterRestart()
         {
             using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnlyForTests())
@@ -81,7 +82,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void DataIsKeptAfterRestartForSubTrees()
         {
             using (var pureMemoryPager = StorageEnvironmentOptions.CreateMemoryOnlyForTests())

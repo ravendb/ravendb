@@ -2,6 +2,7 @@
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Raven.Client.Documents.Session;
@@ -34,7 +35,7 @@ namespace SlowTests.Issues
             _companies.Sort(CompaniesSortById);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineData("c")]
         [InlineData("co")]
         public void CheckIfPagingWorksForUnboundedSet(string startsWithParam)
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
                 Assert.Equal(_companies[i].Id, result[i].Id);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CheckIfPagingWorksForUnboundedSetOnAllDocs()
         {
             var result = Act<dynamic>("@all_docs", "c");

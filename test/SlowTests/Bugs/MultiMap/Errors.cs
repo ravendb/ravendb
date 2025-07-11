@@ -1,7 +1,8 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Compilation;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Bugs.MultiMap
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void MultiMapsMustHaveSameOutput()
         {
             using(var store = GetDocumentStore())
@@ -41,7 +42,7 @@ Additional fields		: Title", exception.Message);
             }            
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void MultiMapsMustHaveSameOutputAsReduce()
         {
             using (var store = GetDocumentStore())

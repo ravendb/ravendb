@@ -3,6 +3,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Session;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
 #pragma warning restore 169,649
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanUseBeforeStoreToAddNewDocsToSaveChanges()
         {
             using (var store = GetDocumentStore(new Options

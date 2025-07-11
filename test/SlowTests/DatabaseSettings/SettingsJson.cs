@@ -1,7 +1,8 @@
-﻿using System.IO;
+using System.IO;
 using FastTests;
 using Raven.Server.Config;
 using Raven.Server.Config.Settings;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.DatabaseSettings
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void CanParseNestedJsonObjectsFromSettingsJsonFile()
         {
             DoNotReuseServer();

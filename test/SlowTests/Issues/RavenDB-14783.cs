@@ -8,6 +8,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Smuggler;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldWork()
         {
             var dummyDump = CreateDummyDump(1);

@@ -8,25 +8,31 @@ using Xunit.Abstractions;
 
 namespace FastTests.Voron.PostingLists
 {
-    public class PostingListTests : StorageTest
+    public class PostingListTests(ITestOutputHelper output) : StorageTest(output)
     {
-        private readonly List<long> _data;
-        private readonly List<long> _random;
+        private readonly List<long> _data = InitializeData();
+        private readonly List<long> _random = InitializeRandom();
 
-        public PostingListTests(ITestOutputHelper output) : base(output)
+        private static List<long> InitializeData()
         {
             const int Size = 400_000;
             var diff = new[] { 17, 250, 4828, 28, 12, 3 };
             var random = new Random(231);
-            _data = new List<long>();
+            var data = new List<long>();
             long s = 0;
             for (int i = 0; i < Size; i++)
             {
                 s += diff[random.Next(diff.Length)];
-                _data.Add(s);
+                data.Add(s);
             }
+            return data;
+        }
 
-            _random = _data.OrderBy(x => random.Next()).ToList();
+        private static List<long> InitializeRandom()
+        {
+            var data = InitializeData();
+            var random = new Random(231);
+            return data.OrderBy(x => random.Next()).ToList();
         }
 
         private unsafe List<long> AllValues(PostingList postingList)
@@ -47,7 +53,7 @@ namespace FastTests.Voron.PostingLists
             return l;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanCreateSet()
         {
             using (var wtx = Env.WriteTransaction())
@@ -66,7 +72,7 @@ namespace FastTests.Voron.PostingLists
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanCreateSetAndAddLargeValue()
         {
             using (var wtx = Env.WriteTransaction())
@@ -85,7 +91,7 @@ namespace FastTests.Voron.PostingLists
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDeleteItem()
         {
             using (var wtx = Env.WriteTransaction())
@@ -108,8 +114,8 @@ namespace FastTests.Voron.PostingLists
                 Assert.Empty(AllValues(tree));
             }
         }
-        
-        [Fact]
+
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddHugeOffsets_Large()
         {
             HashSet<long> valuesInSet = new();
@@ -151,13 +157,13 @@ namespace FastTests.Voron.PostingLists
             {
                 var tree = rtx.OpenPostingList("test");
                 var it = tree.DumpAllValues();
-                
+
                 foreach( long item in valuesInSet)
                     Assert.True(it.Contains(item));
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanDeletesSmallNumberOfItems()
         {
             int count = 3213 * 2;

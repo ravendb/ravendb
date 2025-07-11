@@ -1,5 +1,6 @@
 using System;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ public class RavenDB_19453 : RavenTestBase
         public double Lat, Lng;
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.JavaScript)]
     public void CanGetSpatialDistanceFromJavaScriptProjection()
     {
         using var store = GetDocumentStore();

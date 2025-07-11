@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void AutoMapReduceIndexShouldNotErrorIfCompositeGroupByKeyIsEmptyCollection()
         {
             using (var store = GetDocumentStore())

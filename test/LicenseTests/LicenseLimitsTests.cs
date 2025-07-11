@@ -32,7 +32,7 @@ namespace LicenseTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Licensing)]
         public async Task WillUtilizeAllAvailableCores()
         {
             var server = GetNewServer(new ServerCreationOptions
@@ -68,7 +68,7 @@ namespace LicenseTests
             Assert.True(detailsPerNode.UtilizedCores == ProcessorInfo.ProcessorCount, $"detailsPerNode.UtilizedCores == {ProcessorInfo.ProcessorCount}");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Licensing)]
         public async Task WillUtilizeAllAvailableCoresInACluster()
         {
             DoNotReuseServer();
@@ -108,7 +108,7 @@ namespace LicenseTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Licensing)]
         public async Task UtilizedCoresShouldNotChangeAfterRestart()
         {
             var server = GetNewServer(new ServerCreationOptions
@@ -143,7 +143,7 @@ namespace LicenseTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Licensing)]
         public async Task DemotePromoteShouldNotChangeTheUtilizedCores()
         {
             DoNotReuseServer();

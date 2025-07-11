@@ -15,6 +15,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Sparrow.Platform;
 using Sparrow.Utils;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
@@ -28,7 +29,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void PageModificationInAnyTreeMustRemoveItFromListOfFreedPagesInAllStores()
         {
             using (var database = CreateDocumentDatabase())

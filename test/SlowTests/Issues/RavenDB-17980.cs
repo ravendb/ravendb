@@ -5,6 +5,7 @@ using Raven.Client.Documents;
 using Raven.Server.Utils;
 using Raven.TestDriver;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace SlowTests.Issues
@@ -33,7 +34,7 @@ namespace SlowTests.Issues
 
     public class Test_Without_Overriding_PreInitialize : Abstract_RavenDB_17980
     {
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Disable_Creating_Topology_Files_For_TestDrivers()
         {
             using (var store = GetDocumentStore())
@@ -63,7 +64,7 @@ namespace SlowTests.Issues
             documentStore.Conventions.DisableTopologyCache = false;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Creating_Topology_Files_For_TestDrivers()
         {
             using (var store = GetDocumentStore())

@@ -156,7 +156,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanDeleteTimestampUsingStoreOperations()
         {
             const string documentId = "users/ayende";
@@ -263,7 +263,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanDeleteLargeRange()
         {
             using (var store = GetDocumentStore())
@@ -378,7 +378,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanAppendAndRemoveTimestampsInSingleBatch()
         {
             const string documentId = "users/ayende";
@@ -492,7 +492,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void ShouldThrowOnAttemptToCreateTimeSeriesOnMissingDocument()
         {
             using (var store = GetDocumentStore())
@@ -513,7 +513,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanGetMultipleRangesInSingleRequest()
         {
             const string documentId = "users/ayende";
@@ -605,7 +605,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanGetMultipleTimeSeriesInSingleRequest()
         {
             using (var store = GetDocumentStore())
@@ -779,7 +779,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void ShouldThrowOnNullOrEmptyRanges()
         {
             using (var store = GetDocumentStore())
@@ -823,7 +823,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void GetMultipleTimeSeriesShouldThrowOnMissingNameFromRange()
         {
             using (var store = GetDocumentStore())
@@ -871,7 +871,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void GetTimeSeriesShouldThrowOnMissingName()
         {
             using (var store = GetDocumentStore())
@@ -912,7 +912,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public async Task GetTimeSeriesStatistics()
         {
             using (var store = GetDocumentStore())
@@ -959,7 +959,7 @@ namespace SlowTests.Client.TimeSeries.Operations
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.TimeSeries)]
         public void CanDeleteWithoutProvidingFromAndToDates()
         {
             using (var store = GetDocumentStore())

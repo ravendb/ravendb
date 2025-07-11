@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
         public async Task ImportExistingAutoMapReduceIndexShouldWork()
         {
             var folder = NewDataPath(forceCreateDir: true);

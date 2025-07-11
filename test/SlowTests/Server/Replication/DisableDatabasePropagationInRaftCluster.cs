@@ -23,7 +23,7 @@ namespace SlowTests.Server.Replication
             public string Name;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task DisableDatabaseToggleOperation_should_propagate_through_raft_cluster()
         {
             var (_, leaderServer) = await CreateRaftCluster(2, shouldRunInMemory:false);

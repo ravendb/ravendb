@@ -4,6 +4,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanGetArrayWithType()
         {
             using (var store = GetDocumentStore())
@@ -60,7 +61,7 @@ select doc.Array";
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanGetByteArrayWithType()
         {
             using (var store = GetDocumentStore())

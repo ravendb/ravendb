@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Bugs
             public Dictionary<DateTime, int> Items { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanBeSerializedProperly()
         {
             var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();
@@ -41,7 +42,7 @@ namespace SlowTests.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanBeDeSerializedProperly()
         {
             var jsonSerializer = (JsonSerializer)DocumentConventions.Default.Serialization.CreateSerializer();

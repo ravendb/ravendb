@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Sparrow;
 using Sparrow.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace FastTests.Sparrow
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CanComputeNoDifference()
         {
 
@@ -39,7 +40,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CanComputeSmallDifference()
         {
             var fst = new byte[4096];
@@ -66,7 +67,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CanComputeSmallDifferenceFromNew()
         {
             var fst = new byte[4096];
@@ -90,7 +91,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CanComputeSmallDifference_AndThenApplyit()
         {
             var fst = new byte[4096];
@@ -151,7 +152,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Memory)]
         [MemberData(nameof(ChangedBytes))]
         public void CanComputeSmallDifference_AndThenApplyOnBig(int value)
         {
@@ -191,7 +192,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void ComputeAndThenApplyRandomized()
         {
             const int Size = 4096 * 4;
@@ -242,7 +243,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CompletelyDifferent()
         {
             var fst = new byte[4096];
@@ -266,7 +267,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void Applying_diff_calculated_as_new_multiple_times()
         {
             const int size = 4096;

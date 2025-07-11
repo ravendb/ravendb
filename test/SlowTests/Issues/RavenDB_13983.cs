@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,7 +25,7 @@ namespace SlowTests.Issues
             public List<string> SomeList { get; set; } = new List<string>();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Attachments)]
         public async Task SaveChangesShouldNotThrow()
         {
             using (var store = GetDocumentStore())
@@ -62,7 +63,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void BjraShouldNotDisposeParentIfItsNotTheRoot()
         {
             const string jsonArr = "{\"b\":[1,2,3]}";

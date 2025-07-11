@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using Raven.Client.Documents.Session;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void DocumentQueriesShouldNotInheritForEnumerableInterface()
         {
             var baseDocumentQuery = typeof(IDocumentQueryBase<>);
@@ -45,3 +46,4 @@ namespace FastTests.Issues
         }
     }
 }
+

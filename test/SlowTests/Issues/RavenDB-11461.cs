@@ -1,5 +1,6 @@
 ﻿using System.Linq;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
             public string Name;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanQueryOnTwoBools()
         {
             using (var store = GetDocumentStore())

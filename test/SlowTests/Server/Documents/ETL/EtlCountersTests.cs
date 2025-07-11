@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Server.Config;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -22,7 +23,7 @@ namespace SlowTests.Server.Documents.ETL
         {
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Counters)]
         [InlineData(16)]
         [InlineData(1024)]
         public async Task EtlCounter_WhenUseAddCountersAndRemoveCounterFromSrc_ShouldRemoveTheCounterFromDest(int count)
@@ -70,7 +71,7 @@ for (var i = 0; i < counters.length; i++) {
             }, interval:_waitInterval);
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Counters)]
         [InlineData(16)]
         [InlineData(1024)]
         public async Task EtlCounter_WhenUseAddCountersAndRemoveCounterFromSrc_ShouldRemoveTheCounterFromDest2(int count)

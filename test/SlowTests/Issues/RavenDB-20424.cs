@@ -1,4 +1,5 @@
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,7 +11,7 @@ public class RavenDB_20424 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Rql)]
     public void CanProjectRelatedDocumentViaJS()
     {
         using var store = GetDocumentStore();

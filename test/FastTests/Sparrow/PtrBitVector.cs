@@ -1,4 +1,5 @@
 ﻿using Sparrow.Binary;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,7 +11,7 @@ namespace FastTests.Sparrow
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void SetIndex()
         {
             var original = new byte[8] { 0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00 };

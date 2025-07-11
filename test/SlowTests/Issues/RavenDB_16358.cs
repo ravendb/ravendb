@@ -6,6 +6,7 @@ using Raven.Client.Documents;
 using Sparrow.Collections;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AggressiveCacheWithTimeoutTestAsync()
         {
             using var store = GetDocumentStore(new Options()
@@ -66,7 +67,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void AggressiveCacheWithTimeoutTest()
         {
             using var store = GetDocumentStore(new Options()
@@ -123,3 +124,4 @@ namespace SlowTests.Issues
         }
     }
 }
+

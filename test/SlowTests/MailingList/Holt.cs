@@ -3,6 +3,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         [InlineData(100.0, 100.0, 0)]
         [InlineData(100.0, 101, -1)]
         [InlineData(100.0, 100.01, -0.01)]

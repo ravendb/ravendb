@@ -13,7 +13,7 @@ public class RavenDB_20923 : RavenTestBase
     {
     }
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Corax | RavenTestCategory.Querying)]
     public void SortingBigSetReturnsCorrectOrder()
     {
         using var store = GetDocumentStore(Options.ForSearchEngine(RavenSearchEngineMode.Corax));

@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -42,7 +43,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CollectionNameWithDashesCanBeIndexed()
         {
             using (var store = GetDocumentStore(new Options()

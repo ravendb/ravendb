@@ -14,6 +14,7 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Server.Config;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Voron.Util;
 using Xunit;
 using Xunit.Abstractions;
@@ -26,7 +27,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineData(1)]
         public async Task ServerWideBackupShouldBackupIdleDatabase(int rounds)
         {

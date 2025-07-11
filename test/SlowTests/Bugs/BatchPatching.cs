@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanSuccessfullyPatchInBatches()
         {
             using (var store = GetDocumentStore())

@@ -10,6 +10,7 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Util;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory(Skip = "RavenDB-5918, RavenDB-6283")]
+        [RavenTheory(RavenTestCategory.Sharding, Skip = "RavenDB-5918, RavenDB-6283")]
         [InlineData("ShardA")]
         [InlineData("ShardB")]
         public void ShouldLoadUserFromSessionTwiceInShardingDocumentStore(string mainShard)
@@ -29,7 +30,7 @@ namespace SlowTests.Issues
             //TestWithShardedStore(AssertLoadUsersWithIncludes, mainShard);
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Embedded, Skip = "RavenDB-6283")]
         public void ShouldLoadUserFromSessionTwiceInEmbeddedDocumentStore()
         {
             using (var store = GetDocumentStore())
@@ -38,7 +39,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory(Skip = "RavenDB-5918, RavenDB-6283")]
+        [RavenTheory(RavenTestCategory.Sharding, Skip = "RavenDB-5918, RavenDB-6283")]
         [InlineData("ShardA")]
         [InlineData("ShardB")]
         public void ShouldLoadUserFromAsyncSessionTwiceInShardingDocumentStore(string mainShard)
@@ -46,7 +47,7 @@ namespace SlowTests.Issues
             //TestWithShardedStore(AssertLoadUsersWithIncludesAsync, mainShard);
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Embedded, Skip = "RavenDB-6283")]
         public void ShouldLoadUserFromAsyncSessionTwiceInEmbeddedDocumentStore()
         {
             using (var store = GetDocumentStore())
@@ -55,7 +56,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory(Skip = "RavenDB-5918, RavenDB-6283")]
+        [RavenTheory(RavenTestCategory.Sharding, Skip = "RavenDB-5918, RavenDB-6283")]
         [InlineData("ShardA")]
         [InlineData("ShardB")]
         public void ShouldLoadMultipleUsersWithIncludesFromSessionInShardingDocumentStore(string mainShard)
@@ -63,7 +64,7 @@ namespace SlowTests.Issues
             //TestWithShardedStore(AssertLoadMultipleUsersWithIncludes, mainShard);
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Embedded, Skip = "RavenDB-6283")]
         public void ShouldLoadMultipleUsersWithIncludesFromSessionInEmbeddedDocumentStore()
         {
             using (var store = GetDocumentStore())
@@ -72,7 +73,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory(Skip = "RavenDB-5918, RavenDB-6283")]
+        [RavenTheory(RavenTestCategory.Sharding, Skip = "RavenDB-5918, RavenDB-6283")]
         [InlineData("ShardA")]
         [InlineData("ShardB")]
         public void ShouldLoadMultipleUsersWithIncludesFromAsyncSessionInShardingDocumentStore(string mainShard)
@@ -80,7 +81,7 @@ namespace SlowTests.Issues
             //TestWithShardedStore(AssertLoadMultipleUsersWithIncludesAsync, mainShard);
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Embedded, Skip = "RavenDB-6283")]
         public void ShouldLoadMultipleUsersWithIncludesFromAsyncSessionInEmbeddedDocumentStore()
         {
             using (var store = GetDocumentStore())

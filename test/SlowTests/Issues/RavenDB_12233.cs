@@ -10,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -21,7 +22,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task FailingTest_Context()
         {
             const int size = 7000;
@@ -62,7 +63,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void FailingTest_BulkInsert()
         {
             const int count = 500;
@@ -112,7 +113,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void FailingTest_MapReduce()
         {
             using (var store = GetDocumentStore())

@@ -2,6 +2,7 @@
 using Raven.Server.Documents.Queries;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -11,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Should_not_cache_query_metadata_if_addSpatialProperties_is_set_to_true()
         {
             var cache = new QueryMetadataCache();
@@ -34,3 +35,4 @@ namespace SlowTests.Issues
         }
     }
 }
+

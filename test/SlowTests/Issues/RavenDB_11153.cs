@@ -1,10 +1,11 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Should_mark_idle_index_as_normal()
         {
             using (var store = GetDocumentStore())

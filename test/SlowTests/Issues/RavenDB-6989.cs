@@ -1,4 +1,4 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.Static;
@@ -7,6 +7,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Logging;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -16,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void multi_map_index_with_load_document_to_same_collection()
         {
             using (var database = CreateDocumentDatabase())

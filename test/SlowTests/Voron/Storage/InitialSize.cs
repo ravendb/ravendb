@@ -1,10 +1,5 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="InitialSize.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.IO;
+﻿﻿using System.IO;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Xunit;
@@ -23,7 +18,7 @@ namespace SlowTests.Voron.Storage
             return 64 * 1024;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void WhenInitialFileSizeIsNotSetTheFileSizeForDataFileAndScratchFileShouldBeSetToSystemAllocationGranularity()
         {
             DeleteDataDir();
@@ -41,7 +36,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordingly()
         {
             DeleteDataDir();
@@ -59,7 +54,7 @@ namespace SlowTests.Voron.Storage
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void WhenInitialFileSizeIsSetTheFileSizeForDataFileAndScratchFileShouldBeSetAccordinglyAndItWillBeRoundedToTheNearestGranularity()
         {
             DeleteDataDir();

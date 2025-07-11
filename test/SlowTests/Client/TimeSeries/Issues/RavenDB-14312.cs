@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using SlowTests.Core.Utils.Entities;
@@ -14,7 +14,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanHaveNullTag()
         {
             using (var store = GetDocumentStore())
@@ -44,7 +44,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanHaveNullTag2()
         {
             using (var store = GetDocumentStore())

@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void ChangingCollectionNameByPutAndDeleteShouldNotDeleteTheOriginalTheTombstone()
         {
             using (var store = GetDocumentStore())

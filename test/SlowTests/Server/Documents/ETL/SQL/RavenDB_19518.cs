@@ -131,7 +131,7 @@ for (var i = 0; i < this.OrderLines.length; i++) {
     });
 }";
     
-    [RequiresNpgSqlFact]
+    [RavenFact(RavenTestCategory.Etl, Requires = RavenServiceRequirement.NpgSql)]
     public async Task CanReplicateToArraysInPostgresSQL()
     {
         MigrationProvider provider = MigrationProvider.NpgSQL;

@@ -31,7 +31,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
     {
     }
 
-    [LicenseRequiredFact]
+    [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Setup, LicenseRequired = true)]
     public async Task Should_Create_Secured_Cluster_Generating_Self_Singed_Cert_And_Setup_Zip_File_From_Rvn_Three_Nodes()
     {
         DoNotReuseServerAndUseStagingLetsEncrypt();
@@ -233,7 +233,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
         Server.Configuration.Core.AcmeUrl = StagingAcmeClientUrl;
     }
 
-    [LicenseRequiredFact]
+    [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Setup, LicenseRequired = true)]
     public async Task Should_Create_Secured_Cluster_Generating_Self_Singed_Cert_And_Setup_Zip_File_From_Rvn_One_Node()
     {
         DoNotReuseServerAndUseStagingLetsEncrypt();
@@ -346,7 +346,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
 
     }
 
-    [LicenseRequiredRetryFact(delayBetweenRetriesMs: 1000)]
+    [RavenRetryFact(RavenTestCategory.Cluster | RavenTestCategory.Setup, delayBetweenRetriesMs: 1000, LicenseRequired = true)]
     public async Task Should_Create_Secured_Cluster_From_Rvn_Using_Lets_Encrypt_Mode_One_Node()
     {
         DoNotReuseServerAndUseStagingLetsEncrypt();
@@ -484,7 +484,7 @@ public class SetupSecuredClusterUsingRvn : ClusterTestBase
             Assert.True(await WaitForValueAsync(() => server.ServerStore.GetClusterTopology().Members.Count == numberOfExpectedNodes, true));
     }
 
-    [LicenseRequiredRetryFact(delayBetweenRetriesMs: 1000)]
+    [RavenRetryFact(RavenTestCategory.Cluster | RavenTestCategory.Setup, delayBetweenRetriesMs: 1000, LicenseRequired = true)]
     public async Task Should_Create_Secured_Cluster_From_Rvn_Using_Lets_Encrypt_Mode_Three_Nodes()
     {
         DoNotReuseServerAndUseStagingLetsEncrypt();

@@ -1,6 +1,7 @@
 ﻿using System;
 using FastTests;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void CreateServerWithIllegalAppdrivePath()
         {
             Assert.IsType(typeof(ArgumentException),

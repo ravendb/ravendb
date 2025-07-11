@@ -17,7 +17,7 @@ namespace SlowTests.Issues
 
         private readonly TimeSpan _reasonableWaitTime = Debugger.IsAttached ? TimeSpan.FromSeconds(30 * 10) : TimeSpan.FromSeconds(3);
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Replication)]
         public async Task NullTimerInRecordFastest()
         {
             var (servers, leader) = await CreateRaftCluster(3, watcherCluster: true);

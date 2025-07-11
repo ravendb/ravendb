@@ -15,6 +15,7 @@ using System.Threading;
 using Sparrow.Collections;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
+using Voron.Impl.Paging;
 using Voron.Util;
 using Constants = Voron.Global.Constants;
 using Voron.Logging;
@@ -141,6 +142,7 @@ namespace Voron.Impl.Journal
         /// </summary>
         public void Write(long posBy4Kb, byte* p, int numberOf4Kbs)
         {
+            PagingStatistics.MarkWrite(numberOf4Kbs / 2 + numberOf4Kbs % 2);
             int posBy4Kbs = 0;
             while (posBy4Kbs < numberOf4Kbs)
             {

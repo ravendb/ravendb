@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Orders;
@@ -6,6 +6,7 @@ using Raven.Client.Documents.Session;
 using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.CompareExchange | RavenTestCategory.Monitoring)]
         public async Task CanUsePagingHint_ForCompareExchange()
         {
             using (var store = GetDocumentStore(new Options

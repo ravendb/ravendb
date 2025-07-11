@@ -1,10 +1,11 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="MutipleScratchBuffersHandling.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Xunit;
@@ -25,7 +26,7 @@ namespace SlowTests.Voron
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddContinuallyGrowingValue()
         {
             // this test does not have any assertion - we just check here that we don't get ScratchBufferSizeLimitException
@@ -63,7 +64,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void CanAddContinuallyGrowingValue_ButNotCommitting()
         {
             // this test does not have any assertion - we just check here that we don't get ScratchBufferSizeLimitException

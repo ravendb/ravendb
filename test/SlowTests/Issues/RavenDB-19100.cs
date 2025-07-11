@@ -14,7 +14,7 @@ namespace SlowTests.Issues
             DoNotReuseServer();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task UpdateDbTopologyOperation_RemoveMember()
         {
             var (nodes, leader) = await CreateRaftCluster(3);
@@ -47,7 +47,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task UpdateDbTopologyOperationTest_TurnMemberIntoRehab()
         {
             var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);

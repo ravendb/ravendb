@@ -9,6 +9,7 @@ using FastTests;
 using Microsoft.CSharp.RuntimeBinder;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Documents.Indexes.Static;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void CaseOne()
         {
             using (var store = GetDocumentStore())
@@ -49,7 +50,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void CaseTwo()
         {
             using (var store = GetDocumentStore())
@@ -84,7 +85,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.JavaScript)]
         public void CaseThree()
         {
             using (var store = GetDocumentStore())

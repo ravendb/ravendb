@@ -25,7 +25,7 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Cluster)]
         public async Task Cluster_identity_for_single_document_should_work()
         {
             const int clusterSize = 3;
@@ -55,7 +55,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Cluster)]
         public async Task Cluster_identity_for_multiple_documents_on_different_nodes_should_work()
         {
             const int clusterSize = 3;
@@ -199,7 +199,7 @@ namespace SlowTests.Issues
             throw new TimeoutException("Waited too long for rolling index deployment");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Cluster)]
         public async Task Cluster_identity_for_single_document_on_different_nodes_should_work()
         {
             const int clusterSize = 3;
@@ -286,7 +286,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Cluster)]
         public async Task Cluster_identity_for_single_document_in_parallel_on_different_nodes_should_work()
         {
             //LoggingSource.Instance.SetupLogMode(LogMode.Information, "D:\\raven-test-log");
@@ -385,7 +385,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Cluster)]
         public async Task Cluster_identity_for_multiple_documents_on_leader_should_work()
         {
             const int clusterSize = 3;

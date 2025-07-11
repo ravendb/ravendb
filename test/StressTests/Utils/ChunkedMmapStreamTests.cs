@@ -12,7 +12,7 @@ namespace StressTests.Utils
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [InlineDataWithRandomSeed(128*1024 + 17, 64)]
         public void Can_seek_and_read_from_chunked_mmap_file(int totalSize, int chunkSize, int seed)
         {

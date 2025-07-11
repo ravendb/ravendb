@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -57,7 +57,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster)]
         public async Task CanExportDirectlyToRemote()
         {
             using (var store1 = GetDocumentStore(new Options
@@ -120,7 +120,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanExportAndImport()
         {
             var file = GetTempFileName();
@@ -174,7 +174,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task RavenDB_17387()
         {
             var file = GetTempFileName();
@@ -218,7 +218,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanExportAndImportEncrypted()
         {
             var file = GetTempFileName();
@@ -278,7 +278,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Encryption)]
         public async Task ShouldReturnCorrectSmugglerResult()
         {
             var file = GetTempFileName();
@@ -340,7 +340,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task SkipExpiredDocumentWhenExport()
         {
             var file = GetTempFileName();
@@ -390,7 +390,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanExportAndImportWithRevisionDocuments()
         {
             var file = GetTempFileName();
@@ -460,7 +460,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         public async Task CanExportAndImportWithRevisionDocumentsFromCollection()
         {
             var file = GetTempFileName();
@@ -528,7 +528,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         public async Task ImportCountersWithoutDocuments()
         {
             var file = Path.Combine(NewDataPath(forceCreateDir: true), Guid.NewGuid().ToString());
@@ -577,7 +577,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Counters)]
         public async Task ImportRevisionDocumentsWithoutDocuments()
         {
             var file = Path.Combine(NewDataPath(forceCreateDir: true), Guid.NewGuid().ToString());
@@ -655,7 +655,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         public async Task WillNotCreateMoreRevisionsAfterImport()
         {
             var file = GetTempFileName();
@@ -728,7 +728,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Counters)]
         public async Task CanExportAndImportCounters()
         {
             var file = GetTempFileName();
@@ -853,7 +853,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task ShouldAvoidCreatingNewRevisionsDuringImport()
         {
             var file = GetTempFileName();
@@ -928,7 +928,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Revisions)]
         public async Task ExportShouldSkipDeadSegments()
         {
             var file = GetTempFileName();
@@ -978,7 +978,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
         public async Task CanExportAndImportTimeSeriesWithRollups()
         {
             var file = GetTempFileName();
@@ -1075,7 +1075,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
         public async Task CanExportAndImportTimeSeries()
         {
             var file = GetTempFileName();
@@ -1171,7 +1171,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
         public async Task CanExportAndImportIncrementalTimeSeries()
         {
             var file = GetTempFileName();
@@ -1268,7 +1268,7 @@ namespace SlowTests.Smuggler
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
         public async Task ImportIncrementalTimeSeriesTwice()
         {
             var file = GetTempFileName();
@@ -1321,7 +1321,7 @@ namespace SlowTests.Smuggler
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
         public async Task CanExportAndImportTimeSeriesWithMultipleSegments()
         {
             var file = GetTempFileName();
@@ -1400,7 +1400,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
         public async Task CanSkipTimeSeriesOnExport()
         {
             var file = GetTempFileName();
@@ -1480,7 +1480,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
         public async Task CanSkipTimeSeriesOnImport()
         {
             var file = GetTempFileName();
@@ -1558,7 +1558,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
         public async Task Timeseries_export_should_respect_collection_selection_1()
         {
             var file = GetTempFileName();
@@ -1616,7 +1616,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
         public async Task Timeseries_export_should_respect_collection_selection_2()
         {
             var file = GetTempFileName();
@@ -1705,7 +1705,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.TimeSeries)]
         public async Task CanImportJustOneCollection()
         {
             const int numberOfUsers = 7;
@@ -1923,7 +1923,7 @@ namespace SlowTests.Smuggler
         }
 
         // Smuggler Export and Import need to work with ForDatabase method when store database name is null
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Smuggler_Export_And_Import_Should_Work_With_ForDatabase()
         {
             using (var server = GetNewServer())
@@ -1979,7 +1979,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task CanImportLegacyDatabaseRecordWithoutErrors()
         {
             using (var store = GetDocumentStore())
@@ -1994,7 +1994,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task Keep_The_Same_Document_Id_After_Counters_Import()
         {
             var file = GetTempFileName();
@@ -2040,7 +2040,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Counters)]
         public async Task Smuggler_WhenContainRevisionWithoutConfiguration_ShouldExportImportRevisions()
         {
             using var src = GetDocumentStore();
@@ -2068,7 +2068,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Compression)]
         public async Task CanExportAndImportIfCompressionDictionaryMissed()
         {
             const int documentsWithoutRevisions = 1024;

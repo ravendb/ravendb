@@ -3,18 +3,15 @@ using System.Threading.Tasks;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_5610 : RavenLowLevelTestBase
+    public class RavenDB_5610(ITestOutputHelper output) : RavenLowLevelTestBase(output)
     {
-        public RavenDB_5610(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task UpdateType()
         {
             using (var database = CreateDocumentDatabase())
@@ -49,7 +46,7 @@ namespace FastTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task WillUpdate()
         {
             using (CreatePersistentDocumentDatabase(NewDataPath(), out var database))
@@ -90,3 +87,4 @@ namespace FastTests.Issues
         }
     }
 }
+

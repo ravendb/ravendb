@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client;
@@ -69,7 +69,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void DocumentWithIdPropertyIsStored_HashSymbolInId_HashSymbolNotRemovedFromId()
         {
             const string TEST_DOCUMENT_ID = "FooDocument/#123";

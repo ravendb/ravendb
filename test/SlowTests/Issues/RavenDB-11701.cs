@@ -1,5 +1,6 @@
 ﻿using FastTests;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void RawQueryIncludeCounterByPropertyWithoutAliasNotation()
         {
             using (var store = GetDocumentStore())

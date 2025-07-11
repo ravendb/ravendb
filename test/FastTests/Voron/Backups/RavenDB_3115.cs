@@ -1,14 +1,9 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenDB_3115.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
 using System;
-using Xunit;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Voron.Impl.Backup;
+using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Voron.Backups
@@ -30,7 +25,7 @@ namespace FastTests.Voron.Backups
             return options;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron | RavenTestCategory.BackupExportImport)]
         public void ShouldCorrectlyLoadAfterRestartIfIncrementalBackupWasDone()
         {
             var bytes = new byte[1024];

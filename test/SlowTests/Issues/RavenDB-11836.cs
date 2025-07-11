@@ -6,6 +6,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldThrowIfTryingToCreateDatabaseWithSamePathAsServerDataDir()
         {
             using (var store = GetDocumentStore())
@@ -39,7 +40,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldThrowIfTryingToCreateDatabaseWithRootDirectoryAsPath()
         {
             using (var store = GetDocumentStore())

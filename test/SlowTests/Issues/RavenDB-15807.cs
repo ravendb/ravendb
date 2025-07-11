@@ -23,7 +23,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Certificates | RavenTestCategory.Replication)]
         public async Task ChangeCertificateTypeInPullReplication()
         {
             var hubSettings = new ConcurrentDictionary<string, string>();

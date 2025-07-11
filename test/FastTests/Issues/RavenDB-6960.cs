@@ -1,4 +1,5 @@
 ﻿using Raven.Server.Documents.Indexes.Static;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,10 +11,11 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void EnableDebuggingMustBeSetToFalseForSecurityReasons()
         {
             Assert.False(IndexCompiler.EnableDebugging);
         }
     }
 }
+

@@ -1,7 +1,8 @@
-﻿using System.Linq;
+using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public Task CanCompoundOrderingInMapReduceResult()
         {
             using var store = GetDocumentStore();

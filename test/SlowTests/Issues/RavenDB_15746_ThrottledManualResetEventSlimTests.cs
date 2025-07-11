@@ -2,6 +2,7 @@
 using System.Threading;
 using FastTests;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldSetMreImmediatelyWhenThrottlingDisabled()
         {
             using (var mre = new ThrottledManualResetEventSlim(null))
@@ -31,7 +32,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ShouldNotSetMreImmediatelyWhenThrottlingEnabled()
         {
             using (var mre = new ThrottledManualResetEventSlim(TimeSpan.FromHours(1)))
@@ -44,7 +45,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WillSetMreOnTime()
         {
             using (var mre = new ThrottledManualResetEventSlim(TimeSpan.FromSeconds(5)))
@@ -55,7 +56,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanUpdateThrottlingToDisableIt()
         {
             using (var mre = new ThrottledManualResetEventSlim(TimeSpan.FromSeconds(10)))
@@ -75,7 +76,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanUpdateThrottlingToEnableIt()
         {
             using (var mre = new ThrottledManualResetEventSlim(null))
@@ -90,7 +91,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanUpdateThrottlingTime()
         {
             using (var mre = new ThrottledManualResetEventSlim(TimeSpan.FromSeconds(3)))
@@ -107,7 +108,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanForceSetByIgnoringThrottling()
         {
             using (var mre = new ThrottledManualResetEventSlim(TimeSpan.FromHours(3)))
@@ -122,7 +123,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void CanEnableDisableThrottlingTimer()
         {
             using (var mre = new ThrottledManualResetEventSlim(TimeSpan.FromSeconds(1), timerManagement: ThrottledManualResetEventSlim.TimerManagement.Manual))

@@ -1,14 +1,15 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.MailingList
 {
-    public class RavenTestSample : RavenTestBase
+    public class LuceneSortDouble : RavenTestBase
     {
-        public RavenTestSample(ITestOutputHelper output) : base(output)
+        public LuceneSortDouble(ITestOutputHelper output) : base(output)
         {
         }
 
@@ -35,10 +36,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void NormalQuery_SortingByDoubleShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void NormalQuery_SortingByDoubleShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new ClassWithDouble_Index().Execute(store);
 
@@ -88,10 +90,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void LuceneQuery_SortingByDoubleDescShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LuceneQuery_SortingByDoubleDescShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new ClassWithDouble_Index().Execute(store);
 
@@ -141,10 +144,11 @@ namespace SlowTests.MailingList
             }
         }
 
-        [Fact]
-        public void LuceneQuery_SortingByDoubleShouldWork()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LuceneQuery_SortingByDoubleShouldWork(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new ClassWithDouble_Index().Execute(store);
 

@@ -62,7 +62,7 @@ namespace SlowTests.Tests
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         private void ShouldWork(Options options)
         {

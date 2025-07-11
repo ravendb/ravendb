@@ -1,8 +1,9 @@
-﻿using FastTests;
+using FastTests;
 using Xunit;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Tests.Infrastructure;
 using Xunit.Abstractions;
 
 namespace SlowTests.Bugs
@@ -13,7 +14,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void ShouldNotDoThat()
         {
             using(var store = GetDocumentStore())

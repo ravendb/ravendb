@@ -3,6 +3,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [InlineData((char)0)]
         [InlineData((char)1)]
         [InlineData((char)16)]
@@ -47,7 +48,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task GetStoreAndGetControlChar()
         {
             using (var store = GetDocumentStore())
@@ -76,7 +77,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task JsonWithEscapeChar()
         {
             using (var stream = new MemoryStream())
@@ -111,7 +112,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task JsonWithEscapeChar_Manual()
         {
             await using (var stream = new MemoryStream())

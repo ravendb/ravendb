@@ -23,7 +23,7 @@ namespace SlowTests.Tests.Queries
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanPerformIntersectionQuery(Options options)
         {
@@ -33,7 +33,7 @@ namespace SlowTests.Tests.Queries
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.Single)]
         public void CanPerformIntersectionQuery_Linq(Options options)
         {

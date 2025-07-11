@@ -2,6 +2,7 @@
 using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void MaxNumberOfDocsToDeleteParameterShouldBeRespected()
         {
             using (var db = CreateDocumentDatabase())

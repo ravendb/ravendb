@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public void CheckGetNodeByTag()
         {
             const string dbid1 = "07e2GrSMdkunq1AC+KgwIg";
@@ -33,7 +33,7 @@ namespace SlowTests.Issues
             Assert.Equal("A", nodeTag);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Counters)]
         public async Task GetFullCounterValues_NodeTagsShouldNotStartWithSpace()
         {
             var cluster = await CreateRaftCluster(3);

@@ -1,7 +1,8 @@
-﻿using System.Linq;
+using System.Linq;
 using FastTests.Voron;
 using Sparrow;
 using Sparrow.Platform;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Voron.Impl;
@@ -24,7 +25,7 @@ namespace SlowTests.Voron.Issues
             options.Encryption.MasterKey = _masterKey.ToArray();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void RecoveryOfEncryptedStorageNeedsToTakeIntoAccountFreedOverflowPages()
         {
             RequireFileBasedPager();
@@ -93,7 +94,7 @@ namespace SlowTests.Voron.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void RecoveryOfEncryptedStorageNeedsToTakeIntoAccountFreedPagesThatCouldOverlapAnotherFreedPages()
         {
             RequireFileBasedPager();
@@ -171,7 +172,7 @@ namespace SlowTests.Voron.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void FreeingPageShouldAlsoMarkItsRelatedEncryptionBufferAsNotValidForCommit()
         {
             RequireFileBasedPager();

@@ -10,6 +10,7 @@ using Raven.Server.Documents.Indexes.Auto;
 using Raven.Server.Documents.Indexes.MapReduce.Auto;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.Dynamic;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 using Index = Raven.Server.Documents.Indexes.Index;
@@ -33,7 +34,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             _sut = new DynamicQueryToIndexMatcher(_documentDatabase.IndexStore);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Failure_match_if_there_is_no_index()
         {
             Initialize();
@@ -45,7 +46,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Complete_match_for_single_matching_index_with_sort_options()
         {
             Initialize();
@@ -79,7 +80,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(definition.Name, result.IndexName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Failure_match_for_map_index_containing_the_same_field_names()
         {
             Initialize();
@@ -107,7 +108,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Failure_match_for_map_reduce_index_having_different_aggregation_function()
         {
             Initialize();
@@ -139,7 +140,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Partial_match_for_map_reduce_index_not_having_all_map_fields_defined_in_query()
         {
             Initialize();
@@ -172,7 +173,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(definition.Name, result.IndexName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Failure_match_for_map_reduce_index_not_matching_exactly_group_by_fields()
         {
             Initialize();
@@ -241,7 +242,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Complete_match_and_surpassed_map_reduce_index_is_choosen()
         {
             Initialize();
@@ -299,7 +300,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(usersByCountAndTotalAgeGroupedByLocation.Name, result.IndexName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void Partial_match_when_sort_field_is_not_mapped()
         {
             Initialize();
@@ -323,7 +324,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
             Assert.Equal(definition.Name, result.IndexName);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task Partial_match_if_analyzer_is_required_on_group_by_field()
         {
             Initialize();
@@ -352,7 +353,7 @@ select Name, count()"), DefaultAutoIndexingEngineType);
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task Partial_match_if_exact_is_required_on_group_by_field()
         {
             Initialize();

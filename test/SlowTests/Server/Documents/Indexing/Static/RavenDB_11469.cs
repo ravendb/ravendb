@@ -14,6 +14,7 @@ using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Sparrow.Logging;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,7 +28,7 @@ namespace SlowTests.Server.Documents.Indexing.Static
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(5, new[] { "Israel", "Poland" })]
         [InlineData(100, new[] { "Israel", "Poland", "USA" })]
         public void Map_reduce_index_should_produce_multiple_output_docs_even_there_is_hash_collision(int numberOfUsers, string[] locations)

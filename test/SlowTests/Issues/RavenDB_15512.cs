@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -12,7 +13,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Replication)]
         public void ShouldNotThrowOnWriteAssurance()
         {
             using (var store = GetDocumentStore())

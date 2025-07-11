@@ -4,6 +4,7 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Server.Basic
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Configuration)]
         public void ValidateDatabaseName()
         {
             using (var store = GetDocumentStore())

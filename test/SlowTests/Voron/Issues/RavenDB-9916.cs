@@ -1,4 +1,5 @@
-﻿using FastTests.Voron;
+using FastTests.Voron;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -10,7 +11,7 @@ namespace SlowTests.Voron.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void Should_not_corrupt_state_deleting_from_nested_page_right_side()
         {
             using (var tx = Env.WriteTransaction())
@@ -55,7 +56,7 @@ namespace SlowTests.Voron.Issues
                 tx.Commit();
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void Should_not_corrupt_state_deleting_from_nested_page_left_side()
         {
             using (var tx = Env.WriteTransaction())

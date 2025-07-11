@@ -1,6 +1,7 @@
-﻿using System.Dynamic;
+using System.Dynamic;
 using System.Threading.Tasks;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,7 +13,7 @@ namespace SlowTests.Bugs.Async
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task AsyncMatchesSyncGeneratedIdForDynamicBehavior()
         {
             using (var store = GetDocumentStore())
@@ -28,7 +29,7 @@ namespace SlowTests.Bugs.Async
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task GeneratedIdForDynamicTagNameAsync()
         {
             using (var store = GetDocumentStore(new Options

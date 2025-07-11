@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using Xunit.Abstractions;
@@ -28,7 +28,7 @@ namespace SlowTests.Core.Commands
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanDoSimpleQueryOnDatabase(Options options)
         {
@@ -72,7 +72,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public void CanProcessLongQueryString(Options options)
         {
@@ -146,7 +146,7 @@ namespace SlowTests.Core.Commands
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanGetFacets(Options options)
         {

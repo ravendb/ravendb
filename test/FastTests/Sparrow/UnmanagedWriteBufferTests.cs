@@ -1,5 +1,6 @@
 ﻿using System;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -27,7 +28,7 @@ namespace FastTests.Sparrow
                 AllocationsBatch[i] = (byte)i;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WriteSingleByteNoAllocations()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -44,7 +45,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WriteTwoBytesWithAllocation()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -63,7 +64,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WriteMultipleBytesNoAllocations()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -83,7 +84,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WriteMultipleBytesWithAllocations()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -106,7 +107,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WriteMultipleBytesInBatchNoAllocations()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -125,7 +126,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WriteMultipleBytesInBatchWithAllocations()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -144,7 +145,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CopyToNoAllocations()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -170,7 +171,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CopyToWithAllocations()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -196,7 +197,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void ClearResetsSizeAndEffectivellyClears()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -222,7 +223,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void RepeatedDisposeDoesNotThrow()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -236,7 +237,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void RepeatedDisposeOnDistinctCopiesDoesNotThrow()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -255,7 +256,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void RepeatedDisposeOnDistinctCopiesDoesNotThrowMirror()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -274,7 +275,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CopiedDisposedObjectRemainsDisposed()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -289,7 +290,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WriteByteThrowsAfterDispose()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -305,7 +306,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void WriteThrowsAfterDispose()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -322,7 +323,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CopyToThrowsAfterDispose()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -364,7 +365,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void EnsureSingleChunkDoesNotChangeSizeOrContentsWithAllocations()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -387,7 +388,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void DoesNotLeakMemoryWhenClearing()
         {
             int Size = 1024;
@@ -413,7 +414,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void BehavesWithRespectToCopying()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())

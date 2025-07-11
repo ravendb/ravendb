@@ -70,7 +70,7 @@ namespace SlowTests.Tests.Indexes
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CorrectlyUseExtensionMethodsOnConvertedType()
         {
             var indexDefinition = new PainfulIndex { Conventions = new DocumentConventions() }.CreateIndexDefinition();

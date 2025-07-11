@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -35,7 +36,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Spatial | RavenTestCategory.Indexes)]
         public void Spatial_index_should_not_stop_indexing_after_one_bad_document()
         {
             var validPizzeriaDoc = new Pizzeria

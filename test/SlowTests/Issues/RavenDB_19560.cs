@@ -5,6 +5,7 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ public class RavenDB_19560 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Indexes)]
     public void BackwardCompatibilityForDictionaryProcessing()
     {
         var backupPath = NewDataPath(forceCreateDir: true);
@@ -58,10 +59,10 @@ public class RavenDB_19560 : RavenTestBase
             stream.CopyTo(file);
         }
     }
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes)]
     public void CanStoreAndGetDictionaryFromIndexViaLinq() => CanStoreAndGetDictionaryFromIndexViaBase<LinqDictIndex>();
     
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.JavaScript)]
     public void CanStoreAndGetDictionaryFromIndexViaJavaScript() => CanStoreAndGetDictionaryFromIndexViaBase<JavaScriptDictIndex>();
     
     private void CanStoreAndGetDictionaryFromIndexViaBase<TIndex>() where TIndex : AbstractIndexCreationTask, new ()

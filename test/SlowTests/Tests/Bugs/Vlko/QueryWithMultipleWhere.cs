@@ -13,7 +13,7 @@ namespace SlowTests.Tests.Bugs.Vlko
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ShouldGenerateProperPrecedence()
         {
             using (var store = GetDocumentStore())

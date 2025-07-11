@@ -2,6 +2,7 @@
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Linq;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void Support_TimeSpan_In_Projections()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public void Can_use_dollar_args_in_queries()
         {
             using (var store = GetDocumentStore())

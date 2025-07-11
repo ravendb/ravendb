@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Dynamic;
 using FastTests;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Bugs
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanReadFromDB()
         {
             using(var s = GetDocumentStore())

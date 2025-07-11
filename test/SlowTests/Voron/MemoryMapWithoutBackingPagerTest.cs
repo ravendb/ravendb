@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests.Voron;
@@ -97,7 +97,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void Should_be_able_to_allocate_new_pages_multiple_times()
         {
             var numberOfPages = PagerInitialSize / Constants.Storage.PageSize;

@@ -35,7 +35,7 @@ namespace StressTests.Issues
             public string Source;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Sinks_should_not_update_hubs_change_vector_with_conflicts()
         {
             var certificates = Certificates.SetupServerAuthentication();
@@ -174,7 +174,7 @@ namespace StressTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task Sinks_should_not_update_hubs_change_vector_with_conflicts2()
         {
             var certificates = Certificates.SetupServerAuthentication();

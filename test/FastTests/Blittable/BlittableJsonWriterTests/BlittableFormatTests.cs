@@ -7,18 +7,15 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Conventions;
 using Sparrow.Json;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace FastTests.Blittable.BlittableJsonWriterTests
 {
-    public class BlittableFormatTests : NoDisposalNeeded
+    public class BlittableFormatTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public BlittableFormatTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Theory]
+        [RavenTheory(RavenTestCategory.Core)]
         [MemberData(nameof(Samples))]
         public async Task CheckRoundtrip(string name)
         {
@@ -46,7 +43,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void InvalidJSon()
         {
             using (var context = JsonOperationContext.ShortTermSingleUse())
@@ -61,7 +58,7 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task ShouldNotCrashForManyDifferentProperties()
         {
             foreach (var name in new[] { "geo.json", "comments.json", "blog_post.json" })

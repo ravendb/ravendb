@@ -1,9 +1,10 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using Sparrow.Server.Json.Sync;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ public class RavenDB_20070 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.ClientApi)]
     public void Will_Throw_When_Deserializing_Blacklisted_Type()
     {
         var binder = new DefaultRavenSerializationBinder();

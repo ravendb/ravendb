@@ -23,7 +23,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.ClientApi)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
         public void CanSetStudioConfiguration(Options options)
         {

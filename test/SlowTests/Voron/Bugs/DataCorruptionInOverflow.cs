@@ -1,10 +1,11 @@
-﻿// -----------------------------------------------------------------------
+// -----------------------------------------------------------------------
 //  <copyright file="DataCorruptionInOverflow.cs" company="Hibernating Rhinos LTD">
 //      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 //  </copyright>
 // -----------------------------------------------------------------------
 
 using System;
+using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
@@ -22,7 +23,7 @@ namespace SlowTests.Voron.Bugs
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_RavenDB_2585()
         {
             const int testedOverflowSize = 20000;
@@ -66,7 +67,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_2_RavenDB_2585()
         {
             const int testedOverflowSize = 16000;
@@ -118,7 +119,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_RavenDB_2806()
         {
             RequireFileBasedPager();
@@ -165,7 +166,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_2_RavenDB_2806()
         {
             RequireFileBasedPager();
@@ -221,7 +222,7 @@ namespace SlowTests.Voron.Bugs
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void IncorrectWriteOfOverflowPagesFromJournalsToDataFile_RavenDB_2891()
         {
             const int testedOverflowSize = 50000;

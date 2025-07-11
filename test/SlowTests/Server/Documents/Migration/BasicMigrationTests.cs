@@ -739,7 +739,7 @@ namespace SlowTests.Server.Documents.Migration
             }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
         [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -805,7 +805,7 @@ namespace SlowTests.Server.Documents.Migration
             }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
         [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]
@@ -870,7 +870,7 @@ namespace SlowTests.Server.Documents.Migration
             }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
         [RequiresMsSqlInlineData]
         [RequiresNpgSqlInlineData]
         [RequiresOracleSqlInlineData]

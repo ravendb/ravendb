@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Orders;
 using Raven.Client.Documents;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public async Task ToArrayAsyncShouldWork()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FastTests;
 using Xunit;
 using System.Linq;
@@ -44,7 +44,7 @@ namespace SlowTests.Bugs.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void QueryOnMultipleItems()
         {
             using (var store = GetDocumentStore())

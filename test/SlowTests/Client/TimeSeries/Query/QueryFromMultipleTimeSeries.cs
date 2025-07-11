@@ -1600,7 +1600,7 @@ select out()
         public static IEnumerable<object[]> DaysInJuly => Enumerable.Range(1, 31).Select(x => new object[] {x});
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         [MemberData(nameof(DaysInJuly))]
         public async Task SameQueryResultForRawAndRollupForJuly(int day)
         {

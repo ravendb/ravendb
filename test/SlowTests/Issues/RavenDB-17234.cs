@@ -14,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster)]
         public async Task CanTargetOperationsAgainstWatcherNodeUsingDocumentStoreServerOperationsExecutor()
         {
             var databaseName = GetDatabaseName();

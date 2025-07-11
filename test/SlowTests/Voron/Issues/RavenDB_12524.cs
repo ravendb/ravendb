@@ -1,5 +1,6 @@
-﻿using FastTests.Voron;
+using FastTests.Voron;
 using Sparrow;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Xunit;
@@ -18,7 +19,7 @@ namespace SlowTests.Voron.Issues
             options.ManualFlushing = true;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void RecoveryValidationNeedsToTakeIntoAccountOverflows()
         {
             RequireFileBasedPager();
@@ -72,7 +73,7 @@ namespace SlowTests.Voron.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public unsafe void RecoveryValidationNeedsToTakeIntoAccountFreedPages()
         {
             RequireFileBasedPager();

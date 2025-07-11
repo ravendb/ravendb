@@ -220,7 +220,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         public void Query_Dictionary_Simple()
         {
             using (var store = GetDocumentStore())
@@ -334,7 +334,7 @@ namespace FastTests.Client
             }
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         public void Query_Dictionary_With_Where_Clause()
         {
             using (var store = GetDocumentStore())
@@ -365,7 +365,7 @@ namespace FastTests.Client
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         public void Query_Dictionary_With_Where_Equality_Clause()
         {
             using (var store = GetDocumentStore())
@@ -920,3 +920,8 @@ namespace FastTests.Client
         }
     }
 }
+
+
+
+
+

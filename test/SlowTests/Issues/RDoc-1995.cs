@@ -8,6 +8,7 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Server.Routing;
 using Raven.Server.Smuggler.Migration;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task Can_Live_Import_Tombstones()
         {
             using (var store1 = GetDocumentStore())
@@ -78,7 +79,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task Can_Live_Import_Documents_Incremental()
         {
             using (var store1 = GetDocumentStore())
@@ -117,7 +118,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task Can_Live_Import_CompareExchange_Incremental()
         {
             using (var store1 = GetDocumentStore())

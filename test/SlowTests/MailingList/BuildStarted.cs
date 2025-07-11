@@ -49,7 +49,7 @@ namespace SlowTests.MailingList
         //This test adds a new item to the database and then performs a lookup on a
         //non existing item. Sets the variable to a new value and stores it.
         //works like expected
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         public void DocumentStoreWorksWhenAddingItemAndThenGrabbingNonExistingItemAndStoringNewOne()
         {
             using (var store = GetDocumentStore())
@@ -76,7 +76,7 @@ namespace SlowTests.MailingList
         //This test adds a new item to the database and then deletes it and then
         //performs a lookup on a non existing item. Sets the variable to a new 
         //value and stores it, however, fails.
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying)]
         public void DocumentStoreWorksWhenAddingItemThenDeletingItAndThenGrabbingNonExistingItemAndStoringNewOne()
         {
             using (var store = GetDocumentStore())

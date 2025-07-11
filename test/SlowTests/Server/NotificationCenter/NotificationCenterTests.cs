@@ -35,7 +35,7 @@ namespace SlowTests.Server.NotificationCenter
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Should_get_notification()
         {
             using (var database = CreateDocumentDatabase())
@@ -52,7 +52,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Request_latency_hints_are_stored_and_can_be_read()
         {
             using (var database = CreateDocumentDatabase())
@@ -82,7 +82,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Persistent_action_is_stored_and_can_be_read()
         {
             using (var database = CreateDocumentDatabase())
@@ -120,7 +120,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Can_update_alert()
         {
             using (var database = CreateDocumentDatabase())
@@ -151,7 +151,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Repeated_alert_should_retain_postpone_until_date()
         {
             using (var database = CreateDocumentDatabase())
@@ -184,7 +184,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public async Task Can_postpone_persistent_action_and_get_notified_about_it()
         {
             using (var database = CreateDocumentDatabase())
@@ -228,7 +228,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public async Task Can_dismiss_persistent_action_and_get_notified_about_it()
         {
             using (var database = CreateDocumentDatabase())
@@ -263,7 +263,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Can_get_alerts_count()
         {
             using (var database = CreateDocumentDatabase())
@@ -287,7 +287,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Can_get_performance_hint_count()
         {
             using (var database = CreateDocumentDatabase())
@@ -311,7 +311,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Can_filter_out_postponed_actions()
         {
             using (var database = CreateDocumentDatabase())
@@ -340,7 +340,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Persistent_actions_are_returned_in_creation_order()
         {
             using (var database = CreateDocumentDatabase())
@@ -363,7 +363,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public async Task Should_send_postponed_notification_when_postpone_date_reached()
         {
             using (var database = CreateDocumentDatabase())
@@ -403,7 +403,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public async Task Duplicated_notification_should_not_arrive_before_postponed_until_date()
         {
             using (var database = CreateDocumentDatabase())
@@ -429,7 +429,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Should_persist_operation_if_result_requires_persistance()
         {
             using (var database = CreateDocumentDatabase())
@@ -447,7 +447,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Can_postpone_notification_forever_then_next_notifictions_wont_be_sent()
         {
             using (var database = CreateDocumentDatabase())
@@ -472,7 +472,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public async Task Should_be_notified_about_changed_database_stats()
         {
             using (var database = CreateDocumentDatabase())
@@ -521,7 +521,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Monitoring)]
         public void Should_skip_filtered_out_notifications()
         {
             // Filtering out two AlertType notifications and two entire notification types: PerformanceHint and DatabaseChanged
@@ -550,7 +550,7 @@ namespace SlowTests.Server.NotificationCenter
             }
         }
 
-        [LinuxFact]
+        [LinuxFact(RavenTestCategory.Monitoring)]
         public void WhenActualSwapSmallerThenMinSwapConfigured_ShouldRaiseNotification()
         {
             var memoryInfoResult = MemoryInformation.GetMemoryInfo();

@@ -2,6 +2,7 @@
 using Raven.Client.Documents.Queries;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void Can_sort_by_aggregation_function_in_dynamic_group_by_query()
         {
             using (var store = GetDocumentStore())
@@ -139,7 +140,7 @@ select sum(AccountsReceivable) as Sum", "Sum")
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void Filter_by_aggregation_function_in_dynamic_group_by_query()
         {
             using (var store = GetDocumentStore())

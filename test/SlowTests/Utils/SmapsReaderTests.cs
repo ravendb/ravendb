@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
@@ -67,7 +67,7 @@ Locked:                0 kB
             Assert.Equal(totalDirty.GetValue(SizeUnit.Bytes), result.TotalDirty);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Linux | RavenTestCategory.Memory)]
         public void ParsesSmapsProperly()
         {
             var assembly = typeof(SmapsReaderTests).Assembly;

@@ -18,7 +18,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Monitoring)]
         public void GetIndexingPerformanceStatisticsShouldWork()
         {
             using (var store = GetDocumentStore())

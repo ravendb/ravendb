@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -18,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task CmpgXcngShouldUseClientConventions()
         {
             using (var store = GetDocumentStore(options: new Options

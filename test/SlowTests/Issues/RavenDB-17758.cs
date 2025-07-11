@@ -4,6 +4,7 @@ using FastTests.Voron;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Data.Tables;
 using Xunit;
@@ -30,7 +31,7 @@ namespace SlowTests.Issues
             return sb.ToString();
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void WillNotRememberOldDictionariesAfterRestart()
         {
             RequireFileBasedPager();

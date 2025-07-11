@@ -1,9 +1,10 @@
-﻿using FastTests;
+using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Identity;
 using Raven.Tests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -50,7 +51,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void CanCustomizeHiloGeneration()
         {
             using (var store = GetDocumentStore(new Options

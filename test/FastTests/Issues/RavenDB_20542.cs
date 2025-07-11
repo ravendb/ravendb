@@ -2,6 +2,7 @@
 using System.Linq;
 using Raven.Client.Documents;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace FastTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void AddLongSkipToLINQ()
         {
             using (var store = GetDocumentStore())
@@ -38,3 +39,4 @@ namespace FastTests.Issues
         }
     }
 }
+

@@ -1527,7 +1527,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [Theory, Trait("Category", "Smuggler")]
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
         [InlineData(true)]
         [InlineData(false)]
         public async Task CanDisableTasksAfterRestore(bool disableOngoingTasks)

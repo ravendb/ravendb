@@ -1,20 +1,17 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
 using Voron.Util;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace FastTests.Voron
 {
-    public class ReaderWriterLockTests : NoDisposalNeeded
+    public class ReaderWriterLockTests(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public ReaderWriterLockTests(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task WriterWhileHavingMultipleReaders()
         {
             var readWriteLock = new ThreadHoppingReaderWriterLock();

@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Tests.Infrastructure;
@@ -15,7 +15,7 @@ namespace SlowTests.Issues
         }
 
         //5.2
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.ClientApi)]
         public async Task LazilyLoad_WhenCachedResultAndFailover_ShouldNotReturnReturnNull()
         {
             var (nodes, leader) = await CreateRaftCluster(2, watcherCluster: true);

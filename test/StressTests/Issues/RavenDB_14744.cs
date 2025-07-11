@@ -18,7 +18,7 @@ namespace StressTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task LoadingIdleDatabaseShouldNotMoveToRehab()
         {
             const int clusterSize = 3;

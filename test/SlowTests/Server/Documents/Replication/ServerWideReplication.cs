@@ -325,7 +325,7 @@ namespace SlowTests.Server.Documents.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.BackupExportImport)]
         public async Task SkipExportingTheServerWideExternalReplication1()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -414,7 +414,7 @@ namespace SlowTests.Server.Documents.Replication
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.BackupExportImport)]
         public async Task SkipExportingTheServerWideExternalReplication2()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

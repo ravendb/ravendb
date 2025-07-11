@@ -17,7 +17,7 @@ namespace FastTests.Sparrow
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CanProperlyReportIoMetrics()
         {
             var metrics = new IoMetrics(4, 4);
@@ -58,7 +58,7 @@ namespace FastTests.Sparrow
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CanReportMetricsInParallel()
         {
             var currentBuffer = 2048;
@@ -85,7 +85,7 @@ namespace FastTests.Sparrow
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Memory)]
         public void CanCleanExpiredMetrics()
         {
             var files = new List<string>(new[] { "file1.txt", "file2.txt", "file3.txt" });

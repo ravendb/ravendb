@@ -59,7 +59,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionDeleteCounter()
         {
             using (var store = GetDocumentStore())
@@ -245,7 +245,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public async Task SessionGetCountersAsync()
         {
             using (var store = GetDocumentStore())
@@ -322,7 +322,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionGetCountersWithNonDefaultDatabase()
         {
             using (var store = GetDocumentStore())
@@ -415,7 +415,7 @@ namespace SlowTests.Client.Counters
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void DifferentTypesOfCountersOperationsInOneSession()
         {
             using (var store = GetDocumentStore())
@@ -457,7 +457,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void IncrementCounterAndModifyDocInOneSession()
         {
             using (var store = GetDocumentStore())
@@ -488,7 +488,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void ShouldThrow()
         {
             using (var store = GetDocumentStore())
@@ -523,7 +523,7 @@ namespace SlowTests.Client.Counters
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionShouldTrackCounters()
         {
             using (var store = GetDocumentStore())
@@ -551,7 +551,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionShouldKeepNullsInCountersCache()
         {
             using (var store = GetDocumentStore())
@@ -589,7 +589,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionShouldKnowWhenItHasAllCountersInCacheAndAvoidTripToServer_WhenUsingEntity()
         {
             using (var store = GetDocumentStore())
@@ -640,7 +640,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionShouldUpdateMissingCountersInCacheAndRemoveDeletedCounters_AfterRefresh()
         {
             using (var store = GetDocumentStore())
@@ -704,7 +704,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionShouldUpdateMissingCountersInCacheAndRemoveDeletedCounters_AfterLoadFromServer()
         {
             using (var store = GetDocumentStore())
@@ -754,7 +754,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionClearShouldClearCountersCache()
         {
             using (var store = GetDocumentStore())
@@ -800,7 +800,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionEvictShouldRemoveEntryFromCountersCache()
         {
             using (var store = GetDocumentStore())
@@ -850,7 +850,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionShouldAlwaysLoadCountersFromCacheAfterGetAll()
         {
             using (var store = GetDocumentStore())
@@ -888,7 +888,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionShouldOverrideExistingCounterValuesInCacheAfterGetAll()
         {
             using (var store = GetDocumentStore())
@@ -950,7 +950,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionIncrementCounterShouldUpdateCounterValueAfterSaveChanges()
         {
             using (var store = GetDocumentStore())
@@ -1004,7 +1004,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionShouldRemoveCounterFromCacheAfterCounterDeletion()
         {
             using (var store = GetDocumentStore())
@@ -1035,7 +1035,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionShouldRemoveCountersFromCacheAfterDocumentDeletion()
         {
             using (var store = GetDocumentStore())
@@ -1139,7 +1139,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionChainedIncludeAndIncludeCounter()
         {
             using (var store = GetDocumentStore())
@@ -1262,7 +1262,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public async Task AsyncSessionIncludeCounters()
         {
             using (var store = GetDocumentStore())
@@ -1298,7 +1298,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public async Task AsyncSessionIncludeAllCounters()
         {
             using (var store = GetDocumentStore())
@@ -1337,7 +1337,7 @@ namespace SlowTests.Client.Counters
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Counters)]
         public void SessionIncludeSingleCounterAfterIncludeAllCountersShouldThrow()
         {
             using (var store = GetDocumentStore())

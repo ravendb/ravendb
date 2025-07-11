@@ -41,21 +41,26 @@ class databaseTrafficWidget extends abstractDatabaseAndNodeAwareTableWidget<Rave
         return [
             new textColumn<trafficWatchItem>(grid, x => x.hideDatabaseName && !grid.sortEnabled() ? "" : DatabaseUtils.default.formatName(x.database), "Database", "30%"),
             new nodeTagColumn<trafficWatchItem>(grid, item => this.prepareUrl(item, "Traffic Watch View")),
-            new textColumn<trafficWatchItem>(grid, x => widget.formatNumber(x.requestsPerSecond), "Requests/s", "12%", {
+            new textColumn<trafficWatchItem>(grid, x => x.requestsPerSecond, "Requests/s", "12%", {
                 headerTitle: "Requests made to node per second",
                 sortable: "number",
+                transformValue: (x: number) => widget.formatNumber(x)
             }),
-            new textColumn<trafficWatchItem>(grid, x => widget.formatNumber(x.writesPerSecond), "Writes/s", "12%", {
+            new textColumn<trafficWatchItem>(grid, x => x.writesPerSecond, "Writes/s", "12%", {
                 headerTitle: "Items written by node per second",
                 sortable: "number",
+                transformValue: (x: number) => widget.formatNumber(x)
             }),
-            new textColumn<trafficWatchItem>(grid, x => x.noData ? "-" : generalUtils.formatBytesToSize(x.dataWritesPerSecond), "Data written/s", "12%", {
+            new textColumn<trafficWatchItem>(grid, x => x.noData ? -1 : x.dataWritesPerSecond, "Data written/s", "12%", {
                 headerTitle: "Bytes written by node per second",
                 sortable: "number",
+                transformValue: (x: number) => x === -1 ? "-" : generalUtils.formatBytesToSize(x)
+
             }),
-            new textColumn<trafficWatchItem>(grid, x => x.noData ? "-" : Math.round(x.averageDuration).toLocaleString() + " ms", "Avg Req Time", "12%", {
+            new textColumn<trafficWatchItem>(grid, x => x.noData ? -1 : Math.round(x.averageDuration) + " ms", "Avg Req Time", "12%", {
                 headerTitle: "Average request time",
                 sortable: "number",
+                transformValue: (x: number) => x === -1 ? "-" : x.toLocaleString()
             }),
         ];
     }

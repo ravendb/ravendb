@@ -3,6 +3,7 @@ using FastTests;
 using Orders;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -28,7 +29,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void CanConfigureIndexViaAbstractIndexCreationTask()
         {
             var definition = new Index1().CreateIndexDefinition();

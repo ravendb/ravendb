@@ -3,6 +3,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Server;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -14,7 +15,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ChangesApi)]
         public async Task BasicChangesApi()
         {
             using (var store = GetDocumentStore())

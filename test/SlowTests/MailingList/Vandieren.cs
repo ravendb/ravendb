@@ -1,6 +1,7 @@
 ﻿using FastTests;
 using System.Linq;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -41,7 +42,7 @@ namespace SlowTests.MailingList
             public string Id { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void WillNotGetInvalidCastException()
         {
             using (var store = GetDocumentStore())

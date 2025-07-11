@@ -3,6 +3,7 @@ using System.Threading;
 using FastTests;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents.BulkInsert;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void bulk_insert_throws_when_server_is_down()
         {
             DoNotReuseServer();

@@ -5,6 +5,7 @@ using Orders;
 using Raven.Client.Documents.Operations;
 using Raven.Server.Config;
 using SlowTests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using PatchRequest = Raven.Client.Documents.Operations.PatchRequest;
 using Xunit.Abstractions;
@@ -17,7 +18,7 @@ namespace SlowTests.Server.Documents.Patching
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task CanReuseCachedItem()
         {
             using (var store = GetDocumentStore(new Options
@@ -43,7 +44,7 @@ namespace SlowTests.Server.Documents.Patching
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching)]
         public async Task MaximumScriptSteps()
         {
             using (var store = GetDocumentStore(new Options

@@ -32,7 +32,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanIndexReferencedDocumentChange()
         {
             using (var store = GetDocumentStore(new Options
@@ -237,7 +237,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanIndexReferencedDocumentMultipleChanges()
         {
             using (var store = GetDocumentStore(new Options
@@ -308,7 +308,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanIndexReferencedDocumentDelete()
         {
             using (var store = GetDocumentStore(new Options
@@ -369,7 +369,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public async Task CanIndexReferencedDocumentChangeWithQuery()
         {
             using (var store = GetDocumentStore(new Options
@@ -435,7 +435,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.CompareExchange | RavenTestCategory.Querying)]
         public async Task CanIndexReferencedCompareExchangeWithQuery()
         {
             using (var store = GetDocumentStore(new Options
@@ -498,7 +498,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         public async Task CanIndexReferencedDocumentByTimeSeriesChangeWithQuery()
         {
             using (var store = GetDocumentStore(new Options
@@ -567,7 +567,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.CompareExchange | RavenTestCategory.Querying)]
         public async Task CanIndexTimeSeriesReferencedCompareExchangeWithQuery()
         {
             using (var store = GetDocumentStore(new Options
@@ -631,7 +631,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         public async Task CanIndexReferencedDocumentByTimeSeriesMapReduceChangeWithQuery()
         {
             using (var store = GetDocumentStore(new Options
@@ -700,7 +700,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public async Task CanIndexReferencedDocumentByCountersChangeWithQuery()
         {
             using (var store = GetDocumentStore(new Options
@@ -764,7 +764,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Counters | RavenTestCategory.CompareExchange | RavenTestCategory.Querying)]
         public async Task CanIndexCountersReferencedCompareExchangeWithQuery()
         {
             using (var store = GetDocumentStore(new Options
@@ -822,7 +822,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Counters | RavenTestCategory.Querying)]
         public async Task CanIndexReferencedDocumentByCountersMapReduceChangeWithQuery()
         {
             using (var store = GetDocumentStore(new Options
@@ -888,7 +888,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task Can_Index_Referenced_Document_Change_With_New_Transactions()
         {
             using (var store = GetDocumentStore(new Options

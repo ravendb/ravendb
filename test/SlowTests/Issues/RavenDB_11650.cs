@@ -9,6 +9,7 @@ using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow.Json;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanLimitOffsetCollectionQuery()
         {
             using (var store = GetDocumentStore())
@@ -161,7 +162,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void CanLimitOffsetStartsWithQuery()
         {
             using (var store = GetDocumentStore())

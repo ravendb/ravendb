@@ -55,7 +55,7 @@ namespace SlowTests.Tests.Linq
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CanQueryUsingEnum()
         {
             using (var store = GetDocumentStore(new Options

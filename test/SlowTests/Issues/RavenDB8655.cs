@@ -39,32 +39,32 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ProjectFullDocumentWithAlias()
         {
             var results = ExecuteQuery("from Employees e select e");
             Assert.Equal(9, results.Count);
         }
 
-        [Theory]
-        [InlineData(@"from Orders 
-select count()", "count may only be used in group by queries")]
-        [InlineData(@"from Orders 
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(@"from Orders 
+select count()", "count may only be used in group by queries", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(@"from Orders 
 group by ShippedAt
 order by count() asc
-select id()", "Cannot use id() method in a group by query")]
-        [InlineData(@"from Users
-select 1 as B, 2 as B ", "Duplicate alias")]
-        [InlineData(@"from Users group by Age 
-select count(), Name as Count ", "Duplicate alias")]
-        public void InvalidQuery(string q, string err)
+select id()", "Cannot use id() method in a group by query", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(@"from Users
+select 1 as B, 2 as B ", "Duplicate alias", DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(@"from Users group by Age 
+select count(), Name as Count ", "Duplicate alias", DatabaseMode = RavenDatabaseMode.All)]
+        public void InvalidQuery(Options options, string q, string err)
         {
             var iqe = Assert.Throws<InvalidQueryException>(() => ExecuteQuery(q));
             Assert.Contains(err, iqe.Message);
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Patching | RavenTestCategory.Querying)]
         public void PatchWithLoad()
         {
             ExecutePatch(@"from Employees e
@@ -74,7 +74,7 @@ update {
 }");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void UseCountInOrderByAndNonInSelect()
         {
             ExecuteQuery(@"from Orders 
@@ -83,7 +83,7 @@ order by count() asc
 select key()");
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ProjectReferenceWithAliasFromLoad()
         {
             var results = ExecuteQuery(@"from Employees as e
@@ -92,7 +92,7 @@ select r");
             Assert.Equal(9, results.Count);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Querying)]
         public void ProjectDocumentReferenceWithAlias()
         {
             var results = ExecuteQuery(@"

@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Exceptions.Database;
@@ -6,6 +6,7 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void SholdBeAbleToDeleteADatabaseViaRequestBody()
         {
             using (var store = GetDocumentStore())

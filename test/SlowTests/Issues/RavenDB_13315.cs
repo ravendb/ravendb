@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using FastTests;
 using Raven.Client.Documents.Session;
 using SlowTests.Core.Utils.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
+using Tests.Infrastructure;
 namespace SlowTests.Issues
 {
     public class RavenDB_13315:RavenTestBase
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Memory)]
         public void SaveChangesShouldNotCreateUnneccessaryAllocations()
         {
             using (var store = GetDocumentStore())

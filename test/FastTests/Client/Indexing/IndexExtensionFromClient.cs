@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
@@ -25,7 +25,7 @@ namespace FastTests.Client.Indexing
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanCompileIndexWithExtensions(Options options)
         {
@@ -45,7 +45,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         public void CanCompileIndexWithExtensions2()
         {
             CopyNodaTimeIfNeeded();
@@ -65,7 +65,7 @@ namespace FastTests.Client.Indexing
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public async Task CanUpdateIndexExtensions(Options options)
         {
@@ -108,7 +108,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_List(Options options)
         {
@@ -149,7 +149,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_Dictionary(Options options)
         {
@@ -204,7 +204,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_ICollection(Options options)
         {
@@ -249,7 +249,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_Hashset(Options options)
         {
@@ -294,7 +294,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_ListOfUsers(Options options)
         {
@@ -350,7 +350,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_Array(Options options)
         {
@@ -406,7 +406,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_MyList(Options options)
         {
@@ -447,7 +447,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_MyEnumerable(Options options)
         {
@@ -488,7 +488,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_DateTime(Options options)
         {
@@ -531,7 +531,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [Fact(Skip = "need to use DynamicDictionary. waiting for PR from Egor")]
+        [RavenFact(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes, Skip = "need to use DynamicDictionary. waiting for PR from Egor")]
         public void CanUseMethodFromExtensionsInIndex_DictionaryFunctions()
         {
             using (var store = GetDocumentStore())
@@ -588,7 +588,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithIEnumerableReturnType(Options options)
         {
@@ -638,7 +638,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithIEnumerableParameterAndIEnumerableReturnType(Options options)
         {
@@ -682,7 +682,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithUintReturnType(Options options)
         {
@@ -721,7 +721,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithListReturnType(Options options)
         {
@@ -768,7 +768,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithHashsetReturnType(Options options)
         {
@@ -815,7 +815,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithArrayReturnType(Options options)
         {
@@ -863,7 +863,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithMyListReturnType(Options options)
         {
@@ -909,7 +909,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithMyEnumerableReturnType(Options options)
         {
@@ -955,7 +955,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithListParameterAndListReturnType(Options options)
         {
@@ -1007,7 +1007,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CanUseMethodFromExtensionsInIndex_WithValueTypeListReturnType(Options options)
         {
@@ -1049,7 +1049,7 @@ namespace My.Crazy.Namespace
         }
 
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithVoidReturnType(Options options)
         {
@@ -1084,7 +1084,7 @@ namespace My.Crazy.Namespace
             }
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseMethodFromExtensionsInIndex_WithXmlComments(Options options)
         {
@@ -2336,3 +2336,4 @@ namespace ETIS
 
     }
 }
+

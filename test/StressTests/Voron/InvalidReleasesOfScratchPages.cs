@@ -22,7 +22,7 @@ namespace StressTests.Voron
             options.MaxScratchBufferSize *= 2;
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public async Task ParallelWritesInBatchesAndReadsByUsingTreeIterator()
         {
             const int numberOfWriteThreads = 10;

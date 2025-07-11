@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Config;
 using Raven.Server.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Issues
         {
         }
         
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ChangingThrottlingConfigurationDoesNotRequireIndexReset()
         {
             using (var store = GetDocumentStore())
@@ -41,7 +42,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ShouldNotThrottleBetweenBatchesWhereThereAreStillDocumentsToProcess()
         {
             using (var store = GetDocumentStore())
@@ -74,7 +75,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task ShouldIndexAllDocumentsWithThrottlingSet()
         {
             using (var store = GetDocumentStore())
@@ -129,7 +130,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task CanGetThrottlingValueFromIndexDefinition()
         {
             using (var store = GetDocumentStore())
@@ -153,7 +154,7 @@ namespace SlowTests.Issues
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task IndexMustBeStaleDuringThrottlingTime()
         {
             using (var store = GetDocumentStore())

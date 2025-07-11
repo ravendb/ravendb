@@ -1,6 +1,7 @@
 ﻿using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -12,10 +13,11 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
-        public void LuceneSearchTest()
+        [RavenTheory(RavenTestCategory.Querying)]
+        [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+        public void LuceneSearchTest(Options options)
         {
-            using (var store = GetDocumentStore())
+            using (var store = GetDocumentStore(options))
             {
                 new SampleSearchIndex().Execute(store);
 

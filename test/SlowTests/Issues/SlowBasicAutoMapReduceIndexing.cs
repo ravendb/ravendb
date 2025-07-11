@@ -12,7 +12,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(50000, new[] {"Canada", "France"})] // reduce key tree with depth 3
         public async Task MultipleReduceKeys(int numberOfUsers, string[] locations)
         {

@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client;
 using Raven.Client.Documents;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -20,7 +21,7 @@ namespace SlowTests.Issues
             public string Name { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task LastModifiedDate_IsUpdated_Local()
         {
             using (var documentStore = GetDocumentStore())

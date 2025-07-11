@@ -44,7 +44,7 @@ namespace SlowTests.Server.Documents.Migration
             }
         }
 
-        [RequiresMongoDBFact]
+        [RavenFact(RavenTestCategory.BackupExportImport, Requires = RavenServiceRequirement.MongoDB)]
         public async Task MigrateMongodb_WhenHasTwoCollectionAndImportAll_ShouldImportTheTwoCollectionWithAllThereDocuments()
         {
             var expectedBooks = new[] { new Book { Title = "Great Book1!!!" } };

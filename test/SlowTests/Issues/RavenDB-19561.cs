@@ -66,7 +66,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Replication | RavenTestCategory.Configuration)]
         public async Task Check_NumberOfEnumeratedDocumentsToCheckIfPulseLimitExceeded_Configuration_Change()
         {
             var settings = new Dictionary<string, string>()

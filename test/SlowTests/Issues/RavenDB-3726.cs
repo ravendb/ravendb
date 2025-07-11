@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -53,7 +54,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact(Skip = "RavenDB-6283")]
+        [RavenFact(RavenTestCategory.Indexes, Skip = "RavenDB-6283")]
         public void Test()
         {
             using (var shard1 = GetDocumentStore())

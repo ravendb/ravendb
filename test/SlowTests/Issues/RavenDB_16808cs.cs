@@ -17,7 +17,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task ShouldIncrementOnlySessionAdvancedNumberOfRequests()
         {
             using DocumentStore store = GetDocumentStore();

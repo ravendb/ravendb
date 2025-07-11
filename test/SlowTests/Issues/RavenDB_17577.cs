@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -16,7 +17,7 @@ public class RavenDB_17577 : RavenTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.JavaScript)]
     public void WillRejectJsIndexDeploymentAsValidUserIfItIsRestrictedToAdminsOnly()
     {
         var certificates = Certificates.SetupServerAuthentication(customSettings: new Dictionary<string, string>

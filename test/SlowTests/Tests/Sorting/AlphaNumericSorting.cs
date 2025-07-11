@@ -470,7 +470,7 @@ namespace SlowTests.Tests.Sorting
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [InlineDataWithRandomSeed]
         public async Task random_words_using_document_query_async(int seed)
         {

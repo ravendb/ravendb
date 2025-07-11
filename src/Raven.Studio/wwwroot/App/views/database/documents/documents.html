@@ -125,3 +125,7 @@
 <div class="tooltip json-preview js-documents-preview" style="opacity: 0">
     <pre><code></code></pre>
 </div>
+
+<div data-bind="if: isDeleteDocumentsModalVisible()">
+    <div data-bind="react: $root.deleteDocumentsModalView"></div>
+</div>

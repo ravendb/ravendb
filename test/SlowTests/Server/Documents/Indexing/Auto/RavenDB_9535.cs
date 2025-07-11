@@ -6,6 +6,7 @@ using Raven.Server.ServerWide;
 using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Threading;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -17,7 +18,7 @@ namespace SlowTests.Server.Documents.Indexing.Auto
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Invalid_hash_calculation_on_null()
         {
             using (var bufferPool = new UnmanagedBuffersPoolWithLowMemoryHandling(RavenLogManager.Instance.CreateNullLogger(), "RavenDB_9535"))

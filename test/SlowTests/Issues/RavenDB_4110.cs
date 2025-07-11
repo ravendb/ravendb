@@ -11,6 +11,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Tests.Core.Utils.Entities;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -34,7 +35,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void WhenIndexDefinitionDidNotChangeThenWeShouldNotThrowErrorIfIndexIsInLockedErrorState()
         {
             using (var store = GetDocumentStore())
@@ -64,7 +65,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public async Task WhenIndexDefinitionDidNotChangeThenWeShouldNotThrowErrorIfIndexIsInLockedErrorStateAsync()
         {
             using (var store = GetDocumentStore())

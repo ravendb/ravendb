@@ -9,6 +9,7 @@ using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Json.Serialization.NewtonsoftJson;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -20,7 +21,7 @@ namespace SlowTests.Tests.Queries
         {
         }
 
-        [Fact(Skip = "RavenDB-6263")]
+        [RavenFact(RavenTestCategory.Querying | RavenTestCategory.ClientApi, Skip = "RavenDB-6263")]
         public void UsingConverter()
         {
             using (var store = GetDocumentStore(new Options

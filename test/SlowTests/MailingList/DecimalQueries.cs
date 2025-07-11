@@ -48,7 +48,7 @@ namespace SlowTests.MailingList
         }
 
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying | RavenTestCategory.ClientApi)]
         [CriticalCultures]
         public void CanQueryWithOtherCulture(CultureInfo culture)
         {

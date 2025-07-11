@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Util;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace FastTests
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Core)]
         public void ReadOnlyStreamShouldNotThrow()
         {
             var streamWithTimeout = new StreamWithTimeout(new MyReadOnlyStream());

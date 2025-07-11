@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(1)]
         [InlineData(LazyStringReader.MinLengthForLazyStringStreamReader)]
         public void Exceeding_The_Field_Cache_Size_Should_Not_Cause_Indexing_Issues_With_Disposed_Reader(int length)

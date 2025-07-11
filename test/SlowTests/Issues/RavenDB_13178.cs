@@ -1,9 +1,10 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.Config;
 using Xunit;
 using Xunit.Abstractions;
+using Tests.Infrastructure;
 
 namespace SlowTests.Issues
 {
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.JavaScript)]
         public void CompilationOfJavaScriptIndexShouldNotTakeIntoAccountTheMaxStepsForScript()
         {
             using (var store = GetDocumentStore(new Options

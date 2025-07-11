@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Linq;
 using FastTests;
 using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 
+using Tests.Infrastructure;
 namespace SlowTests.Client.TimeSeries.Issues
 {
     public class RavenDB_14293 : RavenTestBase
@@ -13,7 +14,7 @@ namespace SlowTests.Client.TimeSeries.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanRemoveTimeSeriesEntry()
         {
             using (var store = GetDocumentStore())
@@ -47,7 +48,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void ShouldNotAppendSameValueTwice()
         {
             using (var store = GetDocumentStore())
@@ -81,7 +82,7 @@ namespace SlowTests.Client.TimeSeries.Issues
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void CanGetTimeSeriesRange()
         {
             using (var store = GetDocumentStore())

@@ -1,4 +1,4 @@
-﻿//-----------------------------------------------------------------------
+//-----------------------------------------------------------------------
 // <copyright file="CachingOfDocumentInclude.cs" company="Hibernating Rhinos LTD">
 //     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
 // </copyright>
@@ -33,7 +33,7 @@ namespace SlowTests.Bugs.Caching
             public bool Active { get; set; }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_cache_document_with_includes()
         {
             using (var store = GetDocumentStore())
@@ -62,7 +62,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public async Task Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cacheAsync()
         {
             using (var store = GetDocumentStore())
@@ -88,7 +88,7 @@ namespace SlowTests.Bugs.Caching
                 }
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cacheLazy()
         {
             using (var store = GetDocumentStore())
@@ -116,7 +116,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_avoid_using_server_for_load_with_include_if_everything_is_in_session_cache()
         {
             using (var store = GetDocumentStore())
@@ -142,7 +142,7 @@ namespace SlowTests.Bugs.Caching
                 }
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Can_avoid_using_server_for_multiload_with_include_if_everything_is_in_session_cache()
         {
             using (var store = GetDocumentStore())
@@ -181,7 +181,7 @@ namespace SlowTests.Bugs.Caching
                 }
             }
         }
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Will_refresh_result_when_main_document_changes()
         {
             using (var store = GetDocumentStore())
@@ -283,7 +283,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.ClientApi)]
         public void Will_refresh_result_when_included_document_changes()
         {
             using (var store = GetDocumentStore())

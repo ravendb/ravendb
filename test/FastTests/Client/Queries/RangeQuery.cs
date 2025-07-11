@@ -1,4 +1,4 @@
-﻿using System.Linq;
+using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Tests.Infrastructure;
 using Xunit;
@@ -12,7 +12,7 @@ namespace FastTests.Client.Queries
         {
         }
 
-        [RavenTheory(RavenTestCategory.Indexes)]
+        [RavenTheory(RavenTestCategory.ClientApi | RavenTestCategory.Querying | RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void RangeQuery(Options options)
         {
@@ -90,3 +90,5 @@ namespace FastTests.Client.Queries
         }
     }
 }
+
+

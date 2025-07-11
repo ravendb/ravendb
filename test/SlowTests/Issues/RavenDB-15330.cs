@@ -14,7 +14,7 @@ public class RavenDB_15330 : ClusterTestBase
     {
     }
 
-    [Fact]
+    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Cluster)]
     public async Task Command_With_DontCareId_Should_Be_Committed()
     {
         using var store = GetDocumentStoreForRollingIndexes(new Options

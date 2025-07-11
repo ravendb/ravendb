@@ -4,6 +4,7 @@ using FastTests;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -15,7 +16,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public async Task FullBackupShouldBackupDocumentTombstones()
         {
             using var store = GetDocumentStore();

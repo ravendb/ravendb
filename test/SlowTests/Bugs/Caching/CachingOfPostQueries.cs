@@ -1,4 +1,4 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -58,7 +58,7 @@ namespace SlowTests.Bugs.Caching
             return store;
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CachedGetQyuery(Options options)
         {
@@ -76,7 +76,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CachedPostQyuery(Options options)
         {
@@ -94,7 +94,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CachedFacetsGetRequest(Options options)
         {
@@ -126,7 +126,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene)]
         public void CachedFacetsPostRequest(Options options)
         {
@@ -150,7 +150,7 @@ namespace SlowTests.Bugs.Caching
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Querying)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.Lucene, DatabaseMode = RavenDatabaseMode.All)]
         public async Task CachedMultiFacetsRequest(Options options)
         {

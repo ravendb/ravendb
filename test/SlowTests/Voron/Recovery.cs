@@ -1,8 +1,9 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
 using FastTests.Voron;
+using Tests.Infrastructure;
 using Voron;
 using Voron.Global;
 using Xunit;
@@ -16,7 +17,7 @@ namespace SlowTests.Voron
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void StorageRecoveryShouldWorkWhenThereAreNoTransactionsToRecoverFromLog()
         {
             using (var env = new StorageEnvironment(StorageEnvironmentOptions.ForPathForTests(DataDir)))
@@ -28,7 +29,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void StorageRecoveryShouldWorkWhenThereSingleTransactionToRecoverFromLog()
         {
 
@@ -69,7 +70,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void StorageRecoveryShouldWorkWhenThereAreCommitedAndUncommitedTransactions()
         {
 
@@ -96,7 +97,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void StorageRecoveryShouldWorkWhenThereAreCommitedAndUncommitedTransactions2()
         {
 
@@ -125,7 +126,7 @@ namespace SlowTests.Voron
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void StorageRecoveryShouldWorkWhenThereAreMultipleCommitedTransactions()
         {
 
@@ -185,7 +186,7 @@ namespace SlowTests.Voron
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void StorageRecoveryShouldWorkWhenThereAreMultipleCommitedTransactions2()
         {
 
@@ -245,7 +246,7 @@ namespace SlowTests.Voron
 
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Voron)]
         public void StorageRecoveryShouldWorkForSplitTransactions()
         {
             var random = new Random(1234);

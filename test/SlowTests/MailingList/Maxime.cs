@@ -78,7 +78,7 @@ namespace SlowTests.MailingList
         }
 
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes)]
         public void Can_just_set_to_sort_by_relevance_without_filtering()
         {
             using (var store = GetDocumentStore())

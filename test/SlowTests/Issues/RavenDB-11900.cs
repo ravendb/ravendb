@@ -69,7 +69,7 @@ namespace SlowTests.Issues
             public string Id { get; set; }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All)]
         public void CanUseFindProjectedPropertyNameForIndexToGetDotNotationInProjections(RavenTestParameters config)
         {
@@ -115,7 +115,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void WhenFindProjectedPropertyNameForIndexIsNullShouldFallbackToFindPropertyNameForIndex(Options options)
         {
@@ -152,7 +152,7 @@ namespace SlowTests.Issues
             }
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void WhenFindProjectedPropertyNameForIndexReturnsNullShouldFallbackToFindPropertyNameForIndex(RavenTestParameters config)
         {
@@ -198,7 +198,7 @@ namespace SlowTests.Issues
             }
         }
         
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [RavenExplicitData(SearchEngineMode = RavenSearchEngineMode.All, DatabaseMode = RavenDatabaseMode.All)]
         public void CanUseDifferentConventionsPerIndex(RavenTestParameters config)
         {

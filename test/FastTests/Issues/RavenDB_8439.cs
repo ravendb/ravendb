@@ -4,16 +4,13 @@ using Xunit.Abstractions;
 
 namespace FastTests.Issues
 {
-    public class RavenDB_8439 : NoDisposalNeeded
+    public class RavenDB_8439(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        public RavenDB_8439(ITestOutputHelper output) : base(output)
-        {
-        }
-
-        [Fact]
+        [RavenFact(RavenTestCategory.Codebase)]
         public void NighlyBuildForceShouldBeSetToFalse()
         {
             Assert.False(NightlyBuildTheoryAttribute.Force);
         }
     }
 }
+

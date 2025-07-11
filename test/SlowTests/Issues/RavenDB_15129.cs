@@ -2,6 +2,7 @@
 using FastTests;
 using Orders;
 using Raven.Client.Documents.Session.TimeSeries;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.TimeSeries)]
         public void TimeSeriesValue_RequiresDoubleType()
         {
             using (var store = GetDocumentStore())

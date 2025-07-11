@@ -8,6 +8,7 @@ using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.MapReduce.Static;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json.Parsing;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -19,7 +20,7 @@ namespace SlowTests.Server.Documents.Indexing.MapReduce
         {
         }
 
-        [Theory]
+        [RavenTheory(RavenTestCategory.Indexes)]
         [InlineData(1)]
         [InlineData(1000)]
         public void When_map_results_do_not_change_then_we_skip_the_reduce_phase(int numberOfDocs)

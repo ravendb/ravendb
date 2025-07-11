@@ -2,6 +2,7 @@
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Exceptions;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -13,7 +14,7 @@ namespace SlowTests.MailingList
         {
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
         public void ThrowsOnUnindexedSorts()
         {
             using (var store = GetDocumentStore())
