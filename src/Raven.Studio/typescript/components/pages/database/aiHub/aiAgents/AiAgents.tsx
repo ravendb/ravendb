@@ -29,8 +29,7 @@ export default function AiAgents() {
             return [];
         }
 
-        const result = await aiAgentService.getAiAgents(db.name);
-        return result;
+        return await aiAgentService.getAiAgents(db.name);
     }, [db.name]);
 
     const [nameFilter, setNameFilter] = useState("");
@@ -78,17 +77,17 @@ export default function AiAgents() {
                 </div>
             </div>
             {asyncGetAiAgents.loading && <LoadingView />}
-            {asyncGetAiAgents.result && Object.entries(asyncGetAiAgents.result).length === 0 && (
+            {asyncGetAiAgents.result && asyncGetAiAgents.result.length === 0 && (
                 <div className="mt-3">
                     <EmptySet>No agents found</EmptySet>
                 </div>
             )}
             {asyncGetAiAgents.result && (
                 <div className="d-flex flex-wrap gap-2 mt-3">
-                    {Object.entries(asyncGetAiAgents.result)
-                        .filter(([name]) => name.toLowerCase().includes(nameFilter.trim().toLowerCase()))
-                        .map(([name, config]) => (
-                            <AiAgentCard key={name} name={name} config={config} />
+                    {asyncGetAiAgents.result
+                        .filter((config) => config.Name.toLowerCase().includes(nameFilter.trim().toLowerCase()))
+                        .map((config) => (
+                            <AiAgentCard key={config.Identifier} config={config} />
                         ))}
                 </div>
             )}
@@ -97,24 +96,23 @@ export default function AiAgents() {
 }
 
 interface AiAgentCardProps {
-    name: string;
     config: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
 }
 
-function AiAgentCard({ name, config }: AiAgentCardProps) {
+function AiAgentCard({ config }: AiAgentCardProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { aiAgentService } = useServices();
     const confirm = useConfirm();
 
     const { appUrl } = useAppUrls();
 
-    const asyncDeleteAiAgent = useAsyncCallback(() => aiAgentService.deleteAiAgent(databaseName, name));
+    const asyncDeleteAiAgent = useAsyncCallback(() => aiAgentService.deleteAiAgent(databaseName, config.Identifier));
 
     const handleDelete = async () => {
         const isConfirmed = await confirm({
             title: (
                 <>
-                    You&apos;re about to delete <strong>{name}</strong>
+                    You&apos;re about to delete <strong>{config.Name}</strong>
                 </>
             ),
             message: (
@@ -136,13 +134,13 @@ function AiAgentCard({ name, config }: AiAgentCardProps) {
 
     return (
         <Col className="panel-bg-1 p-2 rounded-2 border border-secondary" sm={12} xl={6} xxl={4}>
-            <h4 className="m-0">{name}</h4>
+            <h4 className="m-0">{config.Name}</h4>
             <div className="text-muted">Last run: TODO</div>
             <div className="mt-2 text-truncate" title={config.SystemPrompt}>
                 {config.SystemPrompt}
             </div>
             <div className="hstack justify-content-between mt-2">
-                <a href={appUrl.forChatAiAgent(databaseName, name)} className="btn btn-primary">
+                <a href={appUrl.forChatAiAgent(databaseName, config.Identifier)} className="btn btn-primary">
                     <Icon icon="llm" />
                     Start new chat
                 </a>
@@ -151,10 +149,10 @@ function AiAgentCard({ name, config }: AiAgentCardProps) {
                         <Icon icon="more" margin="m-0" />
                     </Dropdown.Toggle>
                     <Dropdown.Menu>
-                        <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, name)}>
+                        <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier)}>
                             <Icon icon="edit" /> Edit agent
                         </Dropdown.Item>
-                        <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, name, true)}>
+                        <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier, true)}>
                             <Icon icon="copy" /> Clone agent
                         </Dropdown.Item>
                         <Dropdown.Item

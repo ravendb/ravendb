@@ -6,7 +6,6 @@ import { editAiAgentActions, editAiAgentSelectors } from "./store/editAiAgentSli
 import { FormInput } from "components/common/Form";
 import { useAsyncCallback } from "react-async-hook";
 import { useServices } from "components/hooks/useServices";
-import genUtils from "common/generalUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useRef, useEffect } from "react";
@@ -54,12 +53,13 @@ export default function EditAiAgentTestPanel() {
         );
 
         try {
-            const result = await aiAgentService.testAiAgent(
-                databaseName,
-                getConfigDto(formValues),
-                formValues.testPrompt,
-                Object.fromEntries(formValues.testParameters.map((item) => [item.name, item.value]))
-            );
+            const result = await aiAgentService.testAiAgent(databaseName, {
+                Configuration: editAiAgentUtils.mapToDto(formValues),
+                UserPrompt: formValues.testPrompt,
+                Parameters: Object.fromEntries(formValues.testParameters.map((item) => [item.name, item.value])),
+                ActionResponses: [],
+                RequestBody: undefined,
+            });
 
             setValue("testPrompt", "");
             dispatch(
@@ -68,7 +68,7 @@ export default function EditAiAgentTestPanel() {
                     content: JSON.stringify(result.Response, null, 2),
                     state: "success",
                     usage: result.Usage,
-                    toolCalls: Object.entries(result.ToolRequests).map(([_, toolCall]) => ({
+                    toolCalls: result.ToolRequests.map((toolCall) => ({
                         id: toolCall.ToolId,
                         name: toolCall.Name,
                         arguments: toolCall.Arguments,
@@ -171,33 +171,4 @@ export default function EditAiAgentTestPanel() {
             )}
         </>
     );
-}
-
-function getConfigDto(
-    formValues: EditAiAgentFormData
-): Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration {
-    return {
-        ConnectionStringName: formValues.connectionStringName,
-        SystemPrompt: formValues.systemPrompt,
-        OutputSchema: formValues.outputSchema,
-        SampleObject: formValues.sampleObject,
-        Persistence: {
-            Collection: formValues.persistenceCollectionName,
-            Expires: genUtils.formatAsTimeSpan(formValues.persistenceExpiresInSeconds * 1000),
-        },
-        Queries: formValues.queries.map((x) => ({
-            Name: x.name,
-            Description: x.description,
-            Query: x.query,
-            ParametersSampleObject: x.parametersSampleObject,
-            ParametersSchema: x.parametersSchema,
-        })),
-        Actions: formValues.actions.map((x) => ({
-            Name: x.name,
-            Description: x.description,
-            ParametersSampleObject: x.parametersSampleObject,
-            ParametersSchema: x.parametersSchema,
-        })),
-        Parameters: formValues.parameters.map((x) => x.name),
-    };
 }

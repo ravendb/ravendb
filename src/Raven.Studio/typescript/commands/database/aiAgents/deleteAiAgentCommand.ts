@@ -4,14 +4,14 @@ import endpoints = require("endpoints");
 class deleteAiAgentCommand extends commandBase {
     constructor(
         private db: string,
-        private name: string
+        private id: string
     ) {
         super();
     }
 
     execute() {
         const args = {
-            name: this.name,
+            id: this.id,
         };
 
         const url = endpoints.databases.aiAgent.adminAiAgent;

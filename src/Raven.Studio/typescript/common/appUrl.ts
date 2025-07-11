@@ -131,9 +131,9 @@ class appUrl {
         // AI Hub
         aiConnectionStrings: ko.pureComputed(() => appUrl.forAiConnectionStrings(appUrl.currentDatabase())),
         aiAgents: ko.pureComputed(() => appUrl.forAiAgents(appUrl.currentDatabase())),
-        editAiAgent: (agentName: string) => ko.pureComputed(() => appUrl.forEditAiAgent(appUrl.currentDatabase(), agentName)),
+        editAiAgent: (id: string) => ko.pureComputed(() => appUrl.forEditAiAgent(appUrl.currentDatabase(), id)),
         editAiAgentUrl: ko.pureComputed(() => appUrl.forEditAiAgent(appUrl.currentDatabase())),
-        chatAiAgent: (agentName: string) => ko.pureComputed(() => appUrl.forChatAiAgent(appUrl.currentDatabase(), agentName)),
+        chatAiAgent: (id: string) => ko.pureComputed(() => appUrl.forChatAiAgent(appUrl.currentDatabase(), id)),
         aiTasks: ko.pureComputed(() => appUrl.forAiTasks(appUrl.currentDatabase())),
         aiTasksStats: ko.pureComputed(() => appUrl.forAiTasksStats(appUrl.currentDatabase())),
     };
@@ -779,17 +779,17 @@ class appUrl {
         return "#databases/ai/agents?" + databasePart;
     }
 
-    static forEditAiAgent(db: database | string, agentName?: string, isClone?: boolean): string {
+    static forEditAiAgent(db: database | string, id?: string, isClone?: boolean): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        const agentNamePart = agentName ? "&agentName=" + encodeURIComponent(agentName) : "";
+        const idPart = id ? "&id=" + encodeURIComponent(id) : "";
         const isClonePart = isClone ? "&isClone=true" : "";
-        return "#databases/ai/agents/edit?" + databasePart + agentNamePart + isClonePart;
+        return "#databases/ai/agents/edit?" + databasePart + idPart + isClonePart;
     }
 
-    static forChatAiAgent(db: database | string, agentName: string): string {
+    static forChatAiAgent(db: database | string, id: string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        const agentNamePart = "&agentName=" + encodeURIComponent(agentName);
-        return "#databases/ai/agents/chat?" + databasePart + agentNamePart;
+        const idPart = "&id=" + encodeURIComponent(id);
+        return "#databases/ai/agents/chat?" + databasePart + idPart;
     }
 
     static forAiTasks(db: database | string): string {

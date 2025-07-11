@@ -2,15 +2,16 @@ import genUtils from "common/generalUtils";
 import { EditAiAgentFormData } from "./editAiAgentValidation";
 
 function mapFromDto(
-    name: string,
     dto?: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration,
     isClone?: boolean
 ): EditAiAgentFormData {
-    if (!name) {
+    if (!dto) {
         return {
             name: "",
+            identifier: "",
             connectionStringName: "",
             systemPrompt: "",
+            sampleObject: "",
             outputSchema: "",
             persistenceCollectionName: "",
             persistenceExpiresInSeconds: 2592000, // 30 days
@@ -23,9 +24,11 @@ function mapFromDto(
     }
 
     return {
-        name: isClone ? "" : name,
+        name: isClone ? "" : dto.Name,
+        identifier: isClone ? "" : dto.Identifier,
         connectionStringName: dto.ConnectionStringName,
         systemPrompt: dto.SystemPrompt,
+        sampleObject: dto.SampleObject,
         outputSchema: dto.OutputSchema,
         persistenceCollectionName: dto.Persistence.Collection,
         persistenceExpiresInSeconds: genUtils.timeSpanToSeconds(dto.Persistence.Expires),
@@ -63,6 +66,8 @@ function mapFromDto(
 
 function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration {
     return {
+        Name: formData.name,
+        Identifier: formData.identifier,
         ConnectionStringName: formData.connectionStringName,
         SystemPrompt: formData.systemPrompt,
         OutputSchema: formData.outputSchema,

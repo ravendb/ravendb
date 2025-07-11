@@ -607,10 +607,10 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AiModelsRequest));
 
             // AI Agent
-            scripter.AddType(typeof(StartChatBody));
-            scripter.AddType(typeof(ResumeChatBody));
-            scripter.AddType(typeof(ChatResult<object>));
-            scripter.AddType(typeof(ChatDocument));
+            scripter.AddType(typeof(AiAgentConfiguration));
+            scripter.AddType(typeof(AbstractAiAgentProcessor.RequestBody));
+            scripter.AddType(typeof(AiAgentProcessorForTestConversation.AiAgentTestRequest));
+            scripter.AddType(typeof(AiAgentActionRequest));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));

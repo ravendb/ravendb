@@ -23,7 +23,7 @@ interface EditAiAgentState {
     config: loadableData<Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration>;
     historyDocuments: loadableData<documentDto[]>;
     currentDocument: loadableData<documentDto>;
-    chatId: string;
+    conversationId: string;
     messages: AiAgentMessage[];
     toolParameters: AiAgentToolCall[];
 }
@@ -32,7 +32,7 @@ const initialState: EditAiAgentState = {
     config: createIdleState(),
     historyDocuments: createIdleState([]),
     currentDocument: createIdleState(),
-    chatId: "",
+    conversationId: "",
     messages: [],
     toolParameters: [],
 };
@@ -41,8 +41,8 @@ export const chatAiAgentSlice = createSlice({
     name: "chatAiAgent",
     initialState,
     reducers: {
-        chatIdSet: (state, action: PayloadAction<string>) => {
-            state.chatId = action.payload;
+        conversationIdSet: (state, action: PayloadAction<string>) => {
+            state.conversationId = action.payload;
         },
         messagesAdd: (state, action: PayloadAction<AiAgentMessage>) => {
             state.messages.push(action.payload);
@@ -64,7 +64,7 @@ export const chatAiAgentSlice = createSlice({
         },
         historyChatSelected: (state, action: PayloadAction<{ docId: string }>) => {
             const docId = action.payload.docId;
-            state.chatId = docId;
+            state.conversationId = docId;
 
             const messagesFromDoc: DocMessage[] =
                 state.historyDocuments.data.find((x) => x["@metadata"]["@id"] === docId)?.Messages ?? [];
@@ -134,16 +134,17 @@ const getConfig = createAsyncThunk(
     chatAiAgentSlice.name + "/getConfig",
     async (payload: {
         databaseName: string;
-        agentName: string;
+        id: string;
     }): Promise<Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration> => {
-        return services.aiAgentService.getAiAgents(payload.databaseName, payload.agentName);
+        const agents = await services.aiAgentService.getAiAgents(payload.databaseName, payload.id);
+        return agents[0];
     }
 );
 
 const getHistoryDocuments = createAsyncThunk(
     chatAiAgentSlice.name + "/getHistoryDocuments",
-    async (payload: { databaseName: string; agentName: string }): Promise<documentDto[]> => {
-        return services.databasesService.getDocumentsByIDPrefix(payload.agentName, 1024, payload.databaseName);
+    async (payload: { databaseName: string; id: string }): Promise<documentDto[]> => {
+        return services.databasesService.getDocumentsByIDPrefix(payload.id, 1024, payload.databaseName);
     }
 );
 
@@ -167,7 +168,7 @@ export const chatAiAgentActions = {
 
 export const chatAiAgentSelectors = {
     messages: (state: RootState) => state.chatAiAgent.messages,
-    chatId: (state: RootState) => state.chatAiAgent.chatId,
+    conversationId: (state: RootState) => state.chatAiAgent.conversationId,
     historyDocuments: (state: RootState) => state.chatAiAgent.historyDocuments,
     config: (state: RootState) => state.chatAiAgent.config,
     toolParameters: (state: RootState) => state.chatAiAgent.toolParameters,

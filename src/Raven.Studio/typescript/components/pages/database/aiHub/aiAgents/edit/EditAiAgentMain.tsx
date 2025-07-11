@@ -30,6 +30,8 @@ import rqlLanguageService from "common/rqlLanguageService";
 import Badge from "react-bootstrap/Badge";
 import { EmptySet } from "components/common/EmptySet";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import TaskUtils from "components/utils/TaskUtils";
 
 export default function EditAiAgentMain() {
     const { control, setValue, formState } = useFormContext<EditAiAgentFormData>();
@@ -81,9 +83,13 @@ export default function EditAiAgentMain() {
         label: x,
     }));
 
-    if (formState.isLoading) {
-        return <LoadingView />;
-    }
+    const handleGenerateIdentifier = () => {
+        setValue("identifier", TaskUtils.getGeneratedIdentifier(formValues.name));
+    };
+
+    // if (formState.isLoading) {
+    //     return <LoadingView />;
+    // }
 
     return (
         <>
@@ -95,7 +101,42 @@ export default function EditAiAgentMain() {
             <div className="panel-bg-1 p-2 rounded-2 border border-secondary">
                 <FormGroup>
                     <FormLabel>Name</FormLabel>
-                    <FormInput type="text" control={control} name="name" placeholder="e.g. Customer Service Agent" />
+                    <FormInput
+                        type="text"
+                        control={control}
+                        name="name"
+                        placeholder="e.g. Customer Service Agent"
+                        onBlur={() => {
+                            if (!formValues.identifier) {
+                                handleGenerateIdentifier();
+                            }
+                        }}
+                    />
+                </FormGroup>
+                <FormGroup>
+                    <FormLabel>
+                        Identifier
+                        <PopoverWithHoverWrapper message="A unique identifier for the agent">
+                            <Icon icon="info" color="info" margin="ms-1" id="identifier" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
+                    <FormInput
+                        control={control}
+                        name="identifier"
+                        type="text"
+                        placeholder="my-task"
+                        addon={
+                            <Button
+                                variant="link"
+                                className="text-reset px-0"
+                                onClick={handleGenerateIdentifier}
+                                title="Click to generate the identifier from the task name"
+                            >
+                                <Icon icon="refresh" />
+                                Regenerate
+                            </Button>
+                        }
+                    />
                 </FormGroup>
                 <FormGroup>
                     <FormLabel>Connection String</FormLabel>

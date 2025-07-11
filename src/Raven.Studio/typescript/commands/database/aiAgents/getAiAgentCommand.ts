@@ -1,26 +1,29 @@
 import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
-type AiAgentResult<TName extends string | undefined> = TName extends string
-    ? Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration
-    : Record<string, Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration>;
+type AiAgentConfiguration = Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
 
-class GetAiAgentCommand<TName extends string | undefined = undefined> extends commandBase {
+class GetAiAgentCommand<TId extends string | undefined = undefined> extends commandBase {
     constructor(
         private db: string,
-        private name?: TName
+        private id?: TId
     ) {
         super();
     }
 
-    execute(): JQueryPromise<AiAgentResult<TName>> {
+    execute(): JQueryPromise<AiAgentConfiguration[]> {
         const args = {
-            name: this.name,
+            id: this.id,
         };
 
         const url = endpoints.databases.aiAgent.adminAiAgent;
 
-        return this.query<AiAgentResult<TName>>(url, args, this.db).fail((response: JQueryXHR) =>
+        return this.query<AiAgentConfiguration[]>(url, args, this.db).then((result: unknown) => {
+            if (this.id) {
+                return [result as AiAgentConfiguration];
+            }
+            return (result as { AiAgents: AiAgentConfiguration[] }).AiAgents;
+        }).fail((response: JQueryXHR) =>
             this.reportError("Failed to get AI agent", response.responseText, response.statusText)
         );
     }

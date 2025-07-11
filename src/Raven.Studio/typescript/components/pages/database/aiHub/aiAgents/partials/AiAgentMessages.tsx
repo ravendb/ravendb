@@ -13,8 +13,8 @@ import { FormAceEditor, FormGroup, FormLabel } from "components/common/Form";
 import Button from "react-bootstrap/Button";
 import { AiAgentMessage, AiAgentToolCall } from "../utils/aiAgentsTypes";
 
-type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration.ToolQuery;
-type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration.ToolAction;
+type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
+type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
 
 interface AiAgentMessagesProps {
     messages: AiAgentMessage[];

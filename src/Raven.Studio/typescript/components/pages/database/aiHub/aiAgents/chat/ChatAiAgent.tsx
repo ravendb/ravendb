@@ -19,14 +19,12 @@ import { FormInput } from "components/common/Form";
 import { tryHandleSubmit } from "components/utils/common";
 import moment from "moment";
 
-type ChatResult = Raven.Client.Documents.Operations.AI.Agents.ChatResult<object>;
-
 interface QueryParams {
-    agentName: string;
+    id: string;
 }
 
 export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<QueryParams>) {
-    const agentName = queryParams?.agentName;
+    const id = queryParams?.id;
 
     const dispatch = useAppDispatch();
     const { appUrl } = useAppUrls();
@@ -34,7 +32,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const messages = useAppSelector(chatAiAgentSelectors.messages);
-    const chatId = useAppSelector(chatAiAgentSelectors.chatId);
+    const conversationId = useAppSelector(chatAiAgentSelectors.conversationId);
     const historyDocuments = useAppSelector(chatAiAgentSelectors.historyDocuments);
     const config = useAppSelector(chatAiAgentSelectors.config);
     const toolParameters = useAppSelector(chatAiAgentSelectors.toolParameters);
@@ -53,7 +51,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         control,
     });
 
-    const asyncChat = useAsyncCallback(async (chatAction: () => Promise<ChatResult>) => {
+    const asyncChat = useAsyncCallback(async () => {
         dispatch(
             chatAiAgentActions.messagesAdd({
                 id: _.uniqueId(),
@@ -75,10 +73,23 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         );
 
         try {
-            const result = await chatAction();
+            const result = await aiAgentService.runAiAgent(
+                databaseName,
+                {
+                    UserPrompt: formValues.prompt,
+                    Parameters: Object.fromEntries(formValues.parameters.map((x) => [x.name, x.value])),
+                    ActionResponses:
+                        toolParameters?.map((x) => ({
+                            ToolId: x.id,
+                            Content: x.arguments,
+                        })) ?? [],
+                },
+                config.data.Identifier,
+                conversationId
+            );
 
-            if (result.ChatId) {
-                dispatch(chatAiAgentActions.chatIdSet(result.ChatId));
+            if (result.ConversationId) {
+                dispatch(chatAiAgentActions.conversationIdSet(result.ConversationId));
             }
 
             dispatch(chatAiAgentActions.toolParametersSet([]));
@@ -89,14 +100,14 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                     content: result.Response ? JSON.stringify(result.Response, null, 2) : null,
                     state: "success",
                     usage: result.Usage,
-                    toolCalls: Object.entries(result.ToolRequests).map(([_, toolCall]) => ({
+                    toolCalls: result.ToolRequests.map((toolCall) => ({
                         id: toolCall.ToolId,
                         name: toolCall.Name,
                         arguments: toolCall.Arguments,
                     })),
                 })
             );
-            dispatch(chatAiAgentActions.getHistoryDocuments({ databaseName, agentName }));
+            dispatch(chatAiAgentActions.getHistoryDocuments({ databaseName, id }));
         } catch {
             dispatch(
                 chatAiAgentActions.messagesUpdate({
@@ -107,38 +118,16 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         }
     });
 
-    const startChatAction = (): Promise<ChatResult> => {
-        return aiAgentService.startAiAgent(databaseName, agentName, {
-            Parameters: Object.fromEntries(formValues.parameters.map((x) => [x.name, x.value])),
-            Prompt: formValues.prompt,
-        });
-    };
-
-    const resumeChatAction = (): Promise<ChatResult> => {
-        return aiAgentService.resumeAiAgent(databaseName, agentName, chatId, {
-            ToolResponse:
-                toolParameters?.map((x) => ({
-                    ToolId: x.id,
-                    Content: x.arguments,
-                })) ?? [],
-            UserPrompt: formValues.prompt,
-        });
-    };
-
     const handleSend = async () => {
         return tryHandleSubmit(async () => {
-            if (!chatId) {
-                return asyncChat.execute(startChatAction);
-            } else {
-                return asyncChat.execute(resumeChatAction);
-            }
+            return asyncChat.execute();
         });
     };
 
     // Get data on load
     useEffect(() => {
-        dispatch(chatAiAgentActions.getHistoryDocuments({ databaseName, agentName }));
-        dispatch(chatAiAgentActions.getConfig({ databaseName, agentName })).then((action: TODO) => {
+        dispatch(chatAiAgentActions.getHistoryDocuments({ databaseName, id }));
+        dispatch(chatAiAgentActions.getConfig({ databaseName, id })).then((action: TODO) => {
             setValue(
                 "parameters",
                 action.payload.Parameters.map((x: string) => ({ name: x, value: "" }))
@@ -162,10 +151,10 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const handleAddChat = () => {
         dispatch(chatAiAgentActions.messagesSet([]));
-        dispatch(chatAiAgentActions.chatIdSet(null));
+        dispatch(chatAiAgentActions.conversationIdSet(null));
     };
 
-    if (!agentName) {
+    if (!id) {
         router.navigate(appUrl.forAiAgents(databaseName));
         return null;
     }
@@ -173,7 +162,12 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     return (
         <div className="content-padding h-100 vstack">
             <div className="hstack justify-content-between align-items-start">
-                <AboutViewHeading title={agentName} icon="ai-agents" marginBottom={3} className="text-truncate" />
+                <AboutViewHeading
+                    title={config.data?.Name ?? "AI Agent"}
+                    icon="ai-agents"
+                    marginBottom={3}
+                    className="text-truncate"
+                />
                 <ChatAiAgentInfoHub />
             </div>
             <div className="hstack gap-2 mb-2">

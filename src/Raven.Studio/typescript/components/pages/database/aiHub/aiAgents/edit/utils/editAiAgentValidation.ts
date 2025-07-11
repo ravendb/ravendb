@@ -3,11 +3,13 @@ import * as yup from "yup";
 
 const schema = yup.object({
     name: yup.string().required(),
+    identifier: yup.string().required(),
     connectionStringName: yup.string().required(),
     systemPrompt: yup.string().required(),
-    sampleObject: yup.string(),
+    sampleObject: yup.string().nullable(),
     outputSchema: yup
         .string()
+        .nullable()
         .test(
             "sampleObjectOrJsonSchema",
             "Either 'Sample response object' or 'JSON schema' must be provided",
@@ -16,7 +18,7 @@ const schema = yup.object({
             }
         ),
     persistenceCollectionName: yup.string().required(),
-    persistenceExpiresInSeconds: yup.number(),
+    persistenceExpiresInSeconds: yup.number().nullable(),
     parameterInput: yup.string().test("unique-parameter", "Parameter name must be unique", function (value) {
         if (!value) {
             return true;
@@ -26,7 +28,7 @@ const schema = yup.object({
     }),
     parameters: yup.array().of(
         yup.object({
-            name: yup.string().required(),
+            name: yup.string(),
         })
     ),
     queries: yup.array().of(

@@ -20,7 +20,7 @@ import { editAiAgentUtils } from "./utils/editAiAgentUtils";
 import SizeGetter from "components/common/SizeGetter";
 
 interface QueryParams {
-    agentName: string;
+    id: string;
     isClone?: boolean;
 }
 
@@ -31,13 +31,13 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const form = useForm<EditAiAgentFormData>({
         defaultValues: async () => {
-            if (!queryParams?.agentName) {
+            console.log("kalczur queryParams", queryParams);
+            if (!queryParams?.id) {
                 return editAiAgentUtils.mapFromDto(null);
             }
 
-            const agent = await aiAgentService.getAiAgents(databaseName, queryParams.agentName);
-
-            return editAiAgentUtils.mapFromDto(queryParams.agentName, agent, queryParams.isClone);
+            const agents = await aiAgentService.getAiAgents(databaseName, queryParams.id);
+            return editAiAgentUtils.mapFromDto(agents[0], queryParams.isClone);
         },
         resolver: editAiAgentYupResolver,
     });
@@ -57,7 +57,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const saveAgent: SubmitHandler<EditAiAgentFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
-            await aiAgentService.saveAiAgent(databaseName, formData.name, editAiAgentUtils.mapToDto(formData));
+            await aiAgentService.saveAiAgent(databaseName, editAiAgentUtils.mapToDto(formData));
 
             reset(formData);
             setIsDirty(false);
