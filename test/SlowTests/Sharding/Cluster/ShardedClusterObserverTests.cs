@@ -524,8 +524,8 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [Fact]
-        public async Task CompareExchangeTombstonesWillNotBeCleanedIfSomeShardsNeverBackedUp()
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
+        public async Task CompareExchangeTombstonesCleaner_ShouldBeClean_IfSomeShardsNeverBackedUp()
         {
             var database = GetDatabaseName();
             var settings = new Dictionary<string, string>
@@ -632,8 +632,8 @@ namespace SlowTests.Sharding.Cluster
                     //await WaitAndAssertForGreaterThanAsync(() => Task.FromResult(leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks), timeBeforeCxDeletion.Ticks);
                     await Cluster.RunCompareExchangeTombstoneCleaner(leader, simulateClusterTransactionIndex: true);
 
-                    //ensure no compare exchange tombstones were deleted after the tombstone cleanup
-                    await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 3, nodes);
+                    //ensure compare exchange tombstones were deleted after the tombstone cleanup
+                    await AssertCompareExchangesAsync(database, expectedCompareExchanges: 0, expectedTombstones: 0, nodes);
                 }
                 finally
                 {
@@ -676,7 +676,7 @@ namespace SlowTests.Sharding.Cluster
             }
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.Cluster | RavenTestCategory.Sharding)]
         public async Task CompareExchangeTombstoneWillBeCleanedOnlyWhenAllShardsHaveBackedUpPreviousOnes()
         {
             var database = GetDatabaseName();

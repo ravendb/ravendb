@@ -1,13 +1,15 @@
 ﻿using System;
 using NCrontab.Advanced;
 using Raven.Server.Utils;
+using Tests.Infrastructure;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace FastTests.Utils
 {
-    public class BackupUtilsTests
+    public class BackupUtilsTest(ITestOutputHelper output) : NoDisposalNeeded(output)
     {
-        [Theory]
+        [RavenTheory(RavenTestCategory.BackupExportImport)]
         // Minute-based Schedules (every 15 minutes)
         [InlineData("*/15 * * * *", "2023-10-30 10:15:00", "2023-10-30 10:15:00")] // Base time is exactly on the scheduled time
         [InlineData("*/15 * * * *", "2023-10-30 10:20:00", "2023-10-30 10:15:00")] // Base time is between occurrences
@@ -55,7 +57,7 @@ namespace FastTests.Utils
             Assert.Equal(expected, actual.Value);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void GetLastOccurrence_WhenBaseTimeIsBeforeSupportedDate_ShouldThrowException()
         {
             // Arrange
@@ -68,7 +70,7 @@ namespace FastTests.Utils
             Assert.Contains("Dates before 2015-01-01 are not supported", ex.Message);
         }
 
-        [Fact]
+        [RavenFact(RavenTestCategory.BackupExportImport)]
         public void GetLastOccurrence_WhenBaseTimeIsAtSupportedDateBoundary_ShouldWork()
         {
             var schedule = CrontabSchedule.Parse("0 0 1 * *");

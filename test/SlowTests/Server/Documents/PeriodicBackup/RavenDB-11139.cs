@@ -1201,7 +1201,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup", diagnosticLogBuilder);
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task CompareExchangeTombstoneCleaner_ShouldCleanUp_WithBackupTask_TombstonesCreatedBeforeBackupTaskCreation()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1248,7 +1248,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup", diagnosticLogBuilder);
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task CompareExchangeTombstoneCleaner_ShouldNotCleanUp_WithBackupTask_TaskDisabled()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1297,7 +1297,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup after failed full backup", diagnosticLogBuilder);
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task CompareExchangeTombstoneCleaner_ShouldNotCleanUp_FirstBackup_IsSuccessful_ThenSecondBackup_IsFaulted()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1328,7 +1328,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             AssertCompareExchangeCounts(server, store.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup after failed full backup", diagnosticLogBuilder);
         }
 
-        [Fact, Trait("Category", "Smuggler")]
+        [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.CompareExchange)]
         public async Task IncrementalBackupWithCompareExchangeTombstones()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -1403,7 +1403,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             (List <RavenServer> clusterNodes, RavenServer leaderNode) = await CreateRaftCluster(clusterSize);
             var diagnosticLogBuilder = new StringBuilder();
             foreach (var node in clusterNodes.Where(node => node.ServerStore.Observer is not null))
-                node.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}][Node {node.ServerStore.NodeTag}] {logLine}");
+                node.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.UtcNow:O}][Node {node.ServerStore.NodeTag}] {logLine}");
 
             await CreateDatabaseInCluster(databaseName, clusterSize, leaderNode.WebUrl);
             var secondNode = clusterNodes.First(x => x != leaderNode);
@@ -1417,7 +1417,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             options.Server = secondNode;
             using var secondStore = GetDocumentStore(options);
 
-            var backupConfiguration = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "*/3 * * * *", incrementalBackupFrequency: "* * * * *");
+            var backupConfiguration = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "*/3 * * * *", incrementalBackupFrequency: "* * * * *", mentorNode: leaderNode.ServerStore.NodeTag, disabled: true);
 
             // Since the removal of CompareExchangeTombstones is tied to the backup schedule, it is critical that we start the test when a full backup has been
             // completed on schedule. If a full backup runs every three minutes and the test starts, for example, at 10:01, we will wait until 10:02 and then
@@ -1434,11 +1434,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             AssertCompareExchangeCounts(leaderNode, firstStore.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 0, "Before the backup configuration creation, after first compare exchange tombstone cleanup", diagnosticLogBuilder);
             AssertCompareExchangeCounts(secondNode, secondStore.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 0, "Before the backup configuration creation, after first compare exchange tombstone cleanup", diagnosticLogBuilder);
 
-            var backupTaskId = await Backup.UpdateConfigAsync(leaderNode, backupConfiguration, firstStore);
-
-            var nextBackupWaiter = new NextBackupWaiter(this)
+            var nextBackupWaiter = new NextBackupWaiter(clusterTestBase: this)
                 .WithDatabase(databaseName)
-                .WithBackupTaskId(backupTaskId)
+                .WithBackupConfiguration(backupConfiguration)
                 .WithClusterNodes(clusterNodes)
                 .WithClusterObserverConfirmation()
                 .WithDiagnosticLog(diagnosticLogBuilder);
@@ -1446,7 +1444,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             // Schedule     | First Node  | Second Node |
             // -------------|-------------|-------------|
             // Full         | Full        | -           | <- we are here
-            // Incremental  | Incremental | Full        |
+            // Incremental  | -           | Full        |
             // Incremental  | -           | Incremental |
             // Full         | Full        | Full        |
             await nextBackupWaiter
@@ -1464,13 +1462,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             // Schedule     | First Node  | Second Node |
             // -------------|-------------|-------------|
             // Full         | Full        | -           |
-            // Incremental  | Incremental | Full        | <- we are here (simultaneous backup execution on two nodes is a known issue that will be resolved in RavenDB-19958)
+            // Incremental  | -           | Full        | <- we are here
             // Incremental  | -           | Incremental |
             // Full         | Full        | Full        |
-            await nextBackupWaiter
-                .Expect(BackupKind.Incremental)
-                .WaitNextOccurrenceAsync();
-
             await nextBackupWaiter
                 .SetMentorNodeTo(secondNode, secondStore)
                 .Expect(BackupKind.Full)
@@ -1486,7 +1480,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             // Schedule     | First Node  | Second Node |
             // -------------|-------------|-------------|
             // Full         | Full        | -           |
-            // Incremental  | Incremental | Full        |
+            // Incremental  | -           | Full        |
             // Incremental  | -           | Incremental | <- we are here
             // Full         | Full        | Full        |
             await nextBackupWaiter
@@ -1497,20 +1491,23 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             await CompareExchangeTombstoneCleanerTestHelper.Clean(clusterNodes, databaseName, ignoreClustrTrx: true);
 
-            // First node did not perform incremental backup this minute, so GetNextBackupDetails will return Incremental backup. In this case we cannot delete tombstones, as they are needed for incremental backup.
+            // The first node did not perform incremental backup at this point, so GetNextBackupDetails will return Incremental backup. In this case we cannot delete tombstones, as they are needed for incremental backup.
             AssertCompareExchangeCounts(leaderNode, firstStore.Database, expectedTombstonesNumber: 3, expectedCompareExchangeNumber: 0, "After the first incremental backup on the second node and tombstone creation", diagnosticLogBuilder);
             AssertCompareExchangeCounts(secondNode, secondStore.Database, expectedTombstonesNumber: 3, expectedCompareExchangeNumber: 0, "After the first incremental backup on the second node and tombstone creation", diagnosticLogBuilder);
+
+            // After we returned the mentor node to the first node, the backup runner will detect that there is a missed incremental backup and will run it. It is a known issue that will be resolved in RavenDB-19958
+            // We need to wait first that missed incremental backup to be run on the first node.
+            await nextBackupWaiter
+                .SetMentorNodeTo(leaderNode, firstStore)
+                .Expect(BackupKind.Incremental)
+                .WaitNextOccurrenceAsync();
 
             // Schedule     | First Node  | Second Node |
             // -------------|-------------|-------------|
             // Full         | Full        | -           |
-            // Incremental  | Incremental | Full        |
+            // Incremental  | -           | Full        |
             // Incremental  | -           | Incremental |
-            // Full         | Full        | Full        | <- we are here (simultaneous backup execution on two nodes is a known issue that will be resolved in RavenDB-19958)
-            await nextBackupWaiter
-                .Expect(BackupKind.Full)
-                .WaitNextOccurrenceAsync();
-
+            // Full         | Full        | -           | <- we are here
             await nextBackupWaiter
                 .SetMentorNodeTo(leaderNode, firstStore)
                 .Expect(BackupKind.Full)
@@ -1532,7 +1529,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             private List<RavenServer> _clusterNodes;
             private RavenServer _runningOnServer;
             private string _databaseName;
-            private long _backupTaskId;
+            private PeriodicBackupConfiguration _backupConfiguration;
             private bool _shouldWaitClusterObserverConfirmation = false;
             private BackupKind? _expectedBackupKind;
             private StringBuilder _diagnosticLogBuilder;
@@ -1555,9 +1552,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 return this;
             }
 
-            public NextBackupWaiter WithBackupTaskId(long backupTaskId)
+            public NextBackupWaiter WithBackupConfiguration(PeriodicBackupConfiguration backupConfiguration)
             {
-                _backupTaskId = backupTaskId;
+                _backupConfiguration = backupConfiguration;
                 return this;
             }
 
@@ -1594,13 +1591,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             public async Task WaitNextOccurrenceAsync()
             {
+                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] --- Entering WaitNextOccurrenceAsync for backup task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}` on node `{_runningOnServer.ServerStore.NodeTag}`.");
+
                 Assert.True(_store != null, "DocumentStore must be set before waiting for the next backup.");
                 Assert.True(_clusterNodes is { Count: > 0 }, "Cluster nodes must be set before waiting for the next backup.");
                 Assert.True(_runningOnServer != null, "Running server must be set before waiting for the next backup.");
                 Assert.False(string.IsNullOrEmpty(_databaseName), "Database name must be set before waiting for the next backup.");
-                Assert.True(_backupTaskId > 0, "Backup task ID must be set before waiting for the next backup.");
 
-                await ChangeMentorNodeIfNeededAsync();
                 var operationId = await WaitForNextBackupOccurrenceAsync();
                 await WaitForFinishedBackupLocallyAsync(operationId);
 
@@ -1609,22 +1606,31 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                 var status = await GetPeriodicBackupStatusAsync();
                 await WaitClusterObservationConfirmation(_clusterNodes, status, _store);
-                _diagnosticLogBuilder?.AppendLine($"[{DateTime.Now:O}] Cluster observer confirmed the backup task with ID `{_backupTaskId}` on database `{_databaseName}` on node `{_runningOnServer.ServerStore.NodeTag}`.");
+                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Cluster observer confirmed the backup task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}` on node `{_runningOnServer.ServerStore.NodeTag}`.");
             }
 
             private async Task ChangeMentorNodeIfNeededAsync()
             {
-                var database = await _runningOnServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(_databaseName);
+                var database = await _parent.GetDatabase(_databaseName, _runningOnServer);
                 Assert.NotNull(database);
 
-                var periodicBackupConfiguration = database.ReadDatabaseRecord().PeriodicBackups.Single(x => x.TaskId == _backupTaskId);
-                if (periodicBackupConfiguration.MentorNode == _runningOnServer.ServerStore.NodeTag)
+                var periodicBackupConfiguration = database.ReadDatabaseRecord().PeriodicBackups.SingleOrDefault(x => x.TaskId == _backupConfiguration.TaskId);
+                if (periodicBackupConfiguration == null)
+                {
+                    _backupConfiguration.TaskId = await _parent.Backup.UpdateConfigAsync(_runningOnServer, _backupConfiguration, _store);
+                }
+                else if (periodicBackupConfiguration.MentorNode == _runningOnServer.ServerStore.NodeTag &&
+                          periodicBackupConfiguration.Disabled == false)
+                {
+                    _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Mentor node for backup task with ID `{_backupConfiguration.TaskId}` is enabled and already set to `{_runningOnServer.ServerStore.NodeTag}`. No need to change it.");
                     return;
+                }
 
-                periodicBackupConfiguration.MentorNode = _runningOnServer.ServerStore.NodeTag;
-                await _parent.Backup.UpdateConfigAsync(_runningOnServer, periodicBackupConfiguration, _store);
+                _backupConfiguration.MentorNode = _runningOnServer.ServerStore.NodeTag;
+                _backupConfiguration.Disabled = false;
+                await _parent.Backup.UpdateConfigAsync(_runningOnServer, _backupConfiguration, _store);
 
-                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}] Setting mentor node for backup task with ID `{_backupTaskId}` to `{_runningOnServer.ServerStore.NodeTag}`.");
+                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Setting mentor node for backup task with ID `{_backupConfiguration.TaskId}` to `{_runningOnServer.ServerStore.NodeTag}`.");
 
                 await WaitAndAssertForValueAsync(() =>
                     {
@@ -1632,33 +1638,40 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         if (record == null)
                             return Task.FromResult<string>(null);
 
-                        var config = record.PeriodicBackups.SingleOrDefault(x => x.TaskId == _backupTaskId);
+                        var config = record.PeriodicBackups.SingleOrDefault(x => x.TaskId == _backupConfiguration.TaskId);
                         return Task.FromResult(config?.MentorNode);
                     },
                     expectedVal: _runningOnServer.ServerStore.NodeTag,
                     interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds,
                     timeout: (int)TimeSpan.FromSeconds(30).TotalMilliseconds);
 
-                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}] Updated backup task with ID `{_backupTaskId}` to have mentor node `{_runningOnServer.ServerStore.NodeTag}`.");
+                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Updated backup task with ID `{_backupConfiguration.TaskId}` to have mentor node `{_runningOnServer.ServerStore.NodeTag}`.");
             }
 
             private async Task<long> WaitForNextBackupOccurrenceAsync()
             {
-                var database = await _runningOnServer.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(_databaseName);
-                Assert.NotNull(database);
-
                 long operationId = 0;
-                var onGoingTaskInfo = await _store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(_backupTaskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                Assert.NotNull(onGoingTaskInfo);
-                Assert.Null(onGoingTaskInfo.OnGoingBackup); // No backup is in progress when we start waiting for the next execution
 
-                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}] Starting to wait for the next backup occurrence for task with ID `{_backupTaskId}` on database `{_databaseName}`.");
+                var database = await _parent.GetDatabase(_databaseName, _runningOnServer);
+                Assert.NotNull(database);
 
                 await _parent.Backup.HoldBackupExecutionIfNeededAndInvoke(database.PeriodicBackupRunner.ForTestingPurposesOnly(), async () =>
                 {
+                    await ChangeMentorNodeIfNeededAsync();
+
+                    OngoingTaskBackup onGoingTaskInfo = null;
+                    if (_backupConfiguration.TaskId != 0)
+                    {
+                        onGoingTaskInfo = await _store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(_backupConfiguration.TaskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                        Assert.NotNull(onGoingTaskInfo);
+                        Assert.Null(onGoingTaskInfo.OnGoingBackup); // No backup is in progress when we start waiting for the next execution
+                    }
+
+                    _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Starting to wait for the next backup occurrence for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}`.");
+
                     await WaitAndAssertForValueAsync(async () =>
                         {
-                            onGoingTaskInfo = await _store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(_backupTaskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                            onGoingTaskInfo = await _store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(_backupConfiguration.TaskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
                             return onGoingTaskInfo?.OnGoingBackup != null;
                         }, expectedVal: true,
                         interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds,
@@ -1670,7 +1683,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
                     operationId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
 
-                    _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}] Backup task with ID `{operationId}` started for task with ID `{_backupTaskId}` on database `{_databaseName}` on node `{_runningOnServer.ServerStore.NodeTag}`.");
+                    _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Backup operation with ID `{operationId}` started for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}`.");
 
                     var ongoingBackupKind = onGoingTaskInfo.OnGoingBackup.IsFull ? BackupKind.Full : BackupKind.Incremental;
                     Assert.True(ongoingBackupKind == _expectedBackupKind, $"Expected the ongoing backup task to be a {_expectedBackupKind}, but it is {ongoingBackupKind}.{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
@@ -1692,9 +1705,9 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     timeout: timeout,
                     interval: interval);
 
-                await _parent.Backup.CheckBackupOperationStatus(OperationStatus.Completed, command, _store, _backupTaskId, operationId, periodicBackupRunner: null);
-                Assert.True(OperationStatus.Completed == command.Result.Status, $"Expected the backup operation with ID `{operationId}` for task with ID `{_backupTaskId}` on database `{_databaseName}` to be completed, but it is {command.Result.Status}.{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
-                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}] Backup operation with ID `{operationId}` for task with ID `{_backupTaskId}` on database `{_databaseName}` {command.Result.Status} on the node `{_runningOnServer.ServerStore.NodeTag}`.");
+                await _parent.Backup.CheckBackupOperationStatus(OperationStatus.Completed, command, _store, _backupConfiguration.TaskId, operationId, periodicBackupRunner: null);
+                Assert.True(OperationStatus.Completed == command.Result.Status, $"Expected the backup operation with ID `{operationId}` for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}` to be completed, but it is {command.Result.Status}.{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
+                _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Backup operation with ID `{operationId}` {command.Result.Status} for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}`.");
             }
 
             private async Task<PeriodicBackupStatus> GetPeriodicBackupStatusAsync()
@@ -1702,8 +1715,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 PeriodicBackupStatus status = null;
                 await WaitAndAssertForValueAsync(() =>
                     {
-                        status = _runningOnServer.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(_databaseName, _backupTaskId);
-                        Console.WriteLine($"[{DateTime.UtcNow:O}] Backup task with ID `{_backupTaskId}` status is not null: {status != null}");
+                        status = _runningOnServer.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(_databaseName, _backupConfiguration.TaskId);
                         return Task.FromResult(status != null);
                     }, expectedVal: true,
                     interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds,
@@ -1766,7 +1778,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     $"Values check failed. Expected: {expectedCompareExchangeNumber}, Actual: {actualCompareExchangeNumber}. " +
                     $"Step: '{message ?? "N/A"}' {Environment.NewLine}Diagnostic Info: {diagnosticLogBuilder?.ToString() ?? "N/A"}");
 
-                diagnosticLogBuilder?.AppendLine($"On step '{message ?? "N/A"}': Tombstones: {actualTombstonesNumber}, Values: {actualCompareExchangeNumber}");
+                diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {server.ServerStore.NodeTag}] On step '{message ?? "N/A"}': Tombstones: {actualTombstonesNumber}, Values: {actualCompareExchangeNumber}");
             }
         }
 
