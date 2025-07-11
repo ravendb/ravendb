@@ -51,14 +51,6 @@ namespace Voron.Data.BTrees
 
         private const int MaxNumberOfPagerPerChunk = 4 * Constants.Size.Megabyte / Constants.Storage.PageSize;
 
-        [ThreadStatic]
-        private static byte[] _localBuffer;
-
-        static Tree()
-        {
-            ThreadLocalCleanup.ReleaseThreadLocalState += () => _localBuffer = null;
-        }
-
         private struct StreamToPageWriter
         {
             private int _chunkNumber;
@@ -87,60 +79,54 @@ namespace Voron.Data.BTrees
 
             public void Write(Stream stream)
             {
-                _localBuffer = ArrayPool<byte>.Shared.Rent(512 * Constants.Size.Kilobyte);
-                try
+                AllocateNextPage();
+
+                ((StreamPageHeader*)_currentPage.Pointer)->StreamPageFlags |= StreamPageFlags.First;
+
+                const int bufferSize = 512 * Constants.Size.Kilobyte;
+                using (_parent._tx.Allocator.Allocate(bufferSize, out var localBuffer))
                 {
-                    AllocateNextPage();
-
-                    ((StreamPageHeader*)_currentPage.Pointer)->StreamPageFlags |= StreamPageFlags.First;
-
-                    fixed (byte* pBuffer = _localBuffer)
+                    var buffer = new Span<byte>(localBuffer.Ptr, bufferSize);
+                    while (true)
                     {
+                        var read = stream.Read(buffer);
+                        if (read == 0)
+                            break;
+
+                        var toWrite = 0L;
                         while (true)
                         {
-                            var read = stream.Read(_localBuffer, 0, _localBuffer.Length);
-                            if (read == 0)
+                            toWrite += WriteBufferToPage(localBuffer.Ptr + toWrite, read - toWrite);
+                            if (toWrite == read)
                                 break;
 
-                            var toWrite = 0L;
-                            while (true)
-                            {
-                                toWrite += WriteBufferToPage(pBuffer + toWrite, read - toWrite);
-                                if (toWrite == read)
-                                    break;
-
-                                // run out of room, need to allocate more
-                                RecordChunkPage(_currentPage.PageNumber, (int)(_writePos - _currentPage.DataPointer));
-                                AllocateNextPage();
-                            }
-                        }
-
-                        var chunkSize = (int)(_writePos - _currentPage.DataPointer);
-                        RecordChunkPage(_currentPage.PageNumber, chunkSize);
-
-                        var remaining = _writePosEnd - _writePos;
-                        var infoSize = StreamInfo.SizeOf;
-
-                        if (_tag != null)
-                            infoSize += _tag.Value.Size;
-
-                        if (remaining < infoSize)
-                        {
-                            _numberOfPagesPerChunk = 1;
+                            // run out of room, need to allocate more
+                            RecordChunkPage(_currentPage.PageNumber, (int)(_writePos - _currentPage.DataPointer));
                             AllocateNextPage();
-                            chunkSize = 0;
-                            RecordChunkPage(_currentPage.PageNumber, chunkSize);
                         }
-
-                        RecordStreamInfo();
-
-                        _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize + infoSize, _parent.State);
                     }
                 }
-                finally
+
+                var chunkSize = (int)(_writePos - _currentPage.DataPointer);
+                RecordChunkPage(_currentPage.PageNumber, chunkSize);
+
+                var remaining = _writePosEnd - _writePos;
+                var infoSize = StreamInfo.SizeOf;
+
+                if (_tag != null)
+                    infoSize += _tag.Value.Size;
+
+                if (remaining < infoSize)
                 {
-                    ArrayPool<byte>.Shared.Return(_localBuffer);
+                    _numberOfPagesPerChunk = 1;
+                    AllocateNextPage();
+                    chunkSize = 0;
+                    RecordChunkPage(_currentPage.PageNumber, chunkSize);
                 }
+
+                RecordStreamInfo();
+
+                _parent._tx.LowLevelTransaction.ShrinkOverflowPage(_currentPage.PageNumber, chunkSize + infoSize, _parent.State);
             }
 
             private long WriteBufferToPage(byte* pBuffer, long size)
