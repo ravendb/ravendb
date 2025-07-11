@@ -29,7 +29,6 @@ using Raven.Client.Exceptions.Database;
 using Raven.Client.Exceptions.Server;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
-using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands;
@@ -817,7 +816,8 @@ namespace Raven.Server.ServerWide
 
             _server.Statistics.Load(ContextPool, Logger);
 
-            _timer = new Timer(IdleOperations, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
+            _timer = new Timer(IdleOperationsCallback, null, _frequencyToCheckForIdleDatabases, TimeSpan.FromDays(7));
+
             _notificationsStorage.Initialize(_env, ContextPool);
             _operationsStorage.Initialize(_env, ContextPool);
             DatabaseInfoCache.Initialize(_env, ContextPool);
@@ -847,6 +847,12 @@ namespace Raven.Server.ServerWide
 
             Initialized = true;
             InitializationCompleted.Set();
+            return;
+
+            void IdleOperationsCallback(object state)
+            {
+                IdleOperations();
+            }
         }
 
         private void CheckSwapOrPageFileAndRaiseNotification()
@@ -2542,7 +2548,7 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public void IdleOperations(object state)
+        public void IdleOperations(Dictionary<StringSegment, DatabasesDebugHandler.IdleDatabaseStatistics> stats = null)
         {
             try
             {
@@ -2571,7 +2577,14 @@ namespace Raven.Server.ServerWide
 
                     foreach (var databaseKvp in DatabasesLandlord.LastRecentlyUsed.ForceEnumerateInThreadSafeManner())
                     {
-                        if (CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics: null, out DocumentDatabase database) == false)
+                        DatabasesDebugHandler.IdleDatabaseStatistics statistics = null;
+                        if (stats != null)
+                        {
+                            if (stats.TryGetValue(databaseKvp.Key, out statistics) == false)
+                                stats[databaseKvp.Key] = statistics = new DatabasesDebugHandler.IdleDatabaseStatistics();
+                        }
+                        
+                        if (CanUnloadDatabase(databaseKvp.Key, databaseKvp.Value, statistics: statistics, out DocumentDatabase database) == false)
                             continue;
 
                         var dbIdEtagDictionary = new Dictionary<string, long>();
