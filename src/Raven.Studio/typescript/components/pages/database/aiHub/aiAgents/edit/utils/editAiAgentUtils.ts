@@ -3,7 +3,8 @@ import { EditAiAgentFormData } from "./editAiAgentValidation";
 
 function mapFromDto(
     dto?: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration,
-    isClone?: boolean
+    isClone?: boolean,
+    isDocumentExpirationEnabled?: boolean
 ): EditAiAgentFormData {
     if (!dto) {
         return {
@@ -13,6 +14,7 @@ function mapFromDto(
             systemPrompt: "",
             sampleObject: "",
             outputSchema: "",
+            isEnableDocumentExpiration: !isDocumentExpirationEnabled,
             persistenceCollectionName: "",
             persistenceExpiresInSeconds: 2592000, // 30 days
             parameters: [],
@@ -30,6 +32,7 @@ function mapFromDto(
         systemPrompt: dto.SystemPrompt,
         sampleObject: dto.SampleObject,
         outputSchema: dto.OutputSchema,
+        isEnableDocumentExpiration: !isDocumentExpirationEnabled,
         persistenceCollectionName: dto.Persistence.Collection,
         persistenceExpiresInSeconds: dto.Persistence.Expires ? Number(dto.Persistence.Expires) / 1000 : null, // Expires is in milliseconds
         parameters:

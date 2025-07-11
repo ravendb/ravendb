@@ -7,6 +7,7 @@ import {
     FormLabel,
     FormSelect,
     FormSelectAutocomplete,
+    FormSwitch,
 } from "components/common/Form";
 import { SelectOption } from "components/common/select/Select";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
@@ -32,6 +33,7 @@ import { EmptySet } from "components/common/EmptySet";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import TaskUtils from "components/utils/TaskUtils";
+import { editAiAgentSelectors } from "./store/editAiAgentSlice";
 
 export default function EditAiAgentMain() {
     const { control, setValue, formState } = useFormContext<EditAiAgentFormData>();
@@ -53,6 +55,7 @@ export default function EditAiAgentMain() {
     const systemPromptRef = useRef<ReactAce>(null);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isDocumentExpirationEnabled = useAppSelector(editAiAgentSelectors.isDocumentExpirationEnabled);
 
     const { tasksService } = useServices();
 
@@ -191,6 +194,13 @@ export default function EditAiAgentMain() {
                     jsonSchema={formValues.outputSchema}
                     jsonSchemaSyntaxHelp={<div>TODO</div>}
                 />
+                {isDocumentExpirationEnabled.status === "success" && !isDocumentExpirationEnabled.data && (
+                    <FormGroup>
+                        <FormSwitch control={control} name="isEnableDocumentExpiration">
+                            Enable document expiration
+                        </FormSwitch>
+                    </FormGroup>
+                )}
             </div>
             <h3 className="m-0 mt-3">Set chat persistence</h3>
             <div className="mb-1">TODO</div>

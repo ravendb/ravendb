@@ -13,11 +13,14 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
 import router from "plugins/router";
 import { useAppUrls } from "components/hooks/useAppUrls";
-import { editAiAgentActions } from "./store/editAiAgentSlice";
+import { editAiAgentActions, editAiAgentSelectors } from "./store/editAiAgentSlice";
 import { useEffect } from "react";
 import EditAiAgentInfoHub from "./EditAiAgentInfoHub";
 import { editAiAgentUtils } from "./utils/editAiAgentUtils";
 import SizeGetter from "components/common/SizeGetter";
+import { TimeInSeconds } from "common/constants/timeInSeconds";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
 
 interface QueryParams {
     id: string;
@@ -27,15 +30,21 @@ interface QueryParams {
 export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<QueryParams>) {
     const dispatch = useAppDispatch();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const { aiAgentService } = useServices();
+    const { aiAgentService, databasesService } = useServices();
 
     const form = useForm<EditAiAgentFormData>({
-        defaultValues: queryParams?.id
-            ? async () => {
-                  const agents = await aiAgentService.getAiAgents(databaseName, queryParams.id);
-                  return editAiAgentUtils.mapFromDto(agents[0], queryParams.isClone);
-              }
-            : editAiAgentUtils.mapFromDto(null),
+        defaultValues: async () => {
+            const isDocumentExpirationEnabled = await dispatch(
+                editAiAgentActions.getIsDocumentExpirationEnabled(databaseName)
+            ).unwrap();
+
+            if (queryParams?.id) {
+                const agents = await aiAgentService.getAiAgents(databaseName, queryParams.id);
+                return editAiAgentUtils.mapFromDto(agents[0], queryParams.isClone, isDocumentExpirationEnabled);
+            } else {
+                return editAiAgentUtils.mapFromDto(null, false, isDocumentExpirationEnabled);
+            }
+        },
         resolver: editAiAgentYupResolver,
     });
 
@@ -51,9 +60,23 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
     });
 
     const { appUrl } = useAppUrls();
+    const isDocumentExpirationEnabled = useAppSelector(editAiAgentSelectors.isDocumentExpirationEnabled);
+    const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
 
     const saveAgent: SubmitHandler<EditAiAgentFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
+            if (
+                isDocumentExpirationEnabled.status === "success" &&
+                !isDocumentExpirationEnabled.data &&
+                formData.isEnableDocumentExpiration
+            ) {
+                await databasesService.saveExpirationConfiguration(databaseName, {
+                    Disabled: false,
+                    DeleteFrequencyInSec: isCommunityLicense ? minimumCommunityDeleteFrequencyInSec : null,
+                    MaxItemsToProcess: defaultItemsToProcess,
+                });
+            }
+
             await aiAgentService.saveAiAgent(databaseName, editAiAgentUtils.mapToDto(formData));
 
             reset(formData);
@@ -62,7 +85,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
         });
     };
 
-    // Reset slice on unmount
+    // Reset on unmount
     useEffect(() => {
         return () => {
             dispatch(editAiAgentActions.reset());
@@ -121,3 +144,5 @@ function ColumnResize({ handleMouseDown }: { handleMouseDown: (e: React.MouseEve
         />
     );
 }
+
+const minimumCommunityDeleteFrequencyInSec = TimeInSeconds.Day * 36;

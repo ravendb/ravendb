@@ -17,6 +17,7 @@ const schema = yup.object({
                 return !!parent.sampleObject || !!parent.outputSchema;
             }
         ),
+    isEnableDocumentExpiration: yup.boolean(),
     persistenceCollectionName: yup.string().required(),
     persistenceExpiresInSeconds: yup.number().nullable(),
     parameterInput: yup.string().test("unique-parameter", "Parameter name must be unique", function (value) {

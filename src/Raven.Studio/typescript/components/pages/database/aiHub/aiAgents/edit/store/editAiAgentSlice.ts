@@ -1,12 +1,16 @@
-import { createSlice, PayloadAction } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
 import { AiAgentMessage, AiAgentToolCall } from "../../utils/aiAgentsTypes";
+import { services } from "components/hooks/useServices";
+import { loadableData } from "components/models/common";
+import { createFailureState, createIdleState, createSuccessState } from "components/utils/common";
 
 interface EditAiAgentState {
     isTestOpen: boolean;
     testMessages: AiAgentMessage[];
     testToolParameters: AiAgentToolCall[];
     testDocument: any;
+    isDocumentExpirationEnabled: loadableData<boolean>;
 }
 
 const initialState: EditAiAgentState = {
@@ -14,6 +18,7 @@ const initialState: EditAiAgentState = {
     testMessages: [],
     testToolParameters: [],
     testDocument: null,
+    isDocumentExpirationEnabled: createIdleState(),
 };
 
 export const editAiAgentSlice = createSlice({
@@ -40,13 +45,39 @@ export const editAiAgentSlice = createSlice({
         },
         reset: () => initialState,
     },
+    extraReducers: (builder) => {
+        builder.addCase(getIsDocumentExpirationEnabled.pending, (state) => {
+            state.isDocumentExpirationEnabled.status = "loading";
+        });
+        builder.addCase(getIsDocumentExpirationEnabled.rejected, (state, action) => {
+            state.isDocumentExpirationEnabled = createFailureState(action.error.message);
+        });
+        builder.addCase(getIsDocumentExpirationEnabled.fulfilled, (state, action) => {
+            state.isDocumentExpirationEnabled = createSuccessState(action.payload);
+        });
+    },
 });
 
-export const editAiAgentActions = editAiAgentSlice.actions;
+const getIsDocumentExpirationEnabled = createAsyncThunk(
+    editAiAgentSlice.name + "/getIsDocumentExpirationEnabled",
+    async (databaseName: string): Promise<boolean> => {
+        const result = await services.databasesService.getExpirationConfiguration(databaseName);
+        if (!result) {
+            return false;
+        }
+        return !result.Disabled;
+    }
+);
+
+export const editAiAgentActions = {
+    ...editAiAgentSlice.actions,
+    getIsDocumentExpirationEnabled,
+};
 
 export const editAiAgentSelectors = {
     isTestOpen: (state: RootState) => state.editAiAgent.isTestOpen,
     testMessages: (state: RootState) => state.editAiAgent.testMessages,
     testToolParameters: (state: RootState) => state.editAiAgent.testToolParameters,
     testDocument: (state: RootState) => state.editAiAgent.testDocument,
+    isDocumentExpirationEnabled: (state: RootState) => state.editAiAgent.isDocumentExpirationEnabled,
 };
