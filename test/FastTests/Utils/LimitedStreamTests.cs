@@ -44,7 +44,8 @@ namespace FastTests.Utils
 
                 if (i == numberOfChunks - 1)
                 {
-                    Assert.Equal(ms.Length % max, ls.Length);
+                    var remainder = ms.Length % max;
+                    Assert.Equal(remainder == 0 ? max : remainder, ls.Length);
                 }
                 else
                 {
