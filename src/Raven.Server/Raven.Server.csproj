@@ -130,7 +130,6 @@
     <ProjectReference Include="..\Voron\Voron.csproj" />
   </ItemGroup>
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="AWSSDK.Core" />
     <PackageReference Include="AWSSDK.Glacier" />
     <PackageReference Include="AWSSDK.S3" />
@@ -195,6 +194,8 @@
     </PackageReference>
     <PackageReference Include="Snappier" />
     <PackageReference Include="Snowflake.Data" />
+    <!-- Explicit dependency needed to work around issues with build.ps-->
+    <PackageReference Include="System.Collections.Immutable" />
     <PackageReference Include="System.Linq.Async" />
     <PackageReference Include="System.Private.Uri" />
     <PackageReference Include="System.Runtime.Caching" />

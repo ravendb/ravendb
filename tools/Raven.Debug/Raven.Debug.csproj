@@ -11,11 +11,12 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <PackageReference Include="McMaster.Extensions.CommandLineUtils" />
     <PackageReference Include="Microsoft.Diagnostics.NETCore.Client" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" VersionOverride="2.0.77" />
     <PackageReference Include="Newtonsoft.Json" />
+    <!-- Explicit dependency needed to work around issues with build.ps-->
+    <PackageReference Include="System.Collections.Immutable" />
     <PackageReference Include="System.Diagnostics.EventLog" />
   </ItemGroup>
   <ItemGroup>

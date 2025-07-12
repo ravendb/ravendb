@@ -47,4 +47,8 @@
   <ItemGroup Condition="$(TargetFramework) == 'netstandard2.0'">
     <PackageReference Include="System.Runtime.Loader" />
   </ItemGroup>
+  <!-- Version override needed to work around issues with build.ps-->
+  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
+    <PackageReference Include="System.Collections.Immutable" VersionOverride="8.0.0" />
+  </ItemGroup>
 </Project>

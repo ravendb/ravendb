@@ -110,6 +110,8 @@
     <PackageVersion Include="Snappier" Version="1.2.0" />
     <PackageVersion Include="Snowflake.Data" Version="4.7.0" />
     <PackageVersion Include="Spatial4n" Version="0.4.1.1" />
+    <!-- Explicit dependency needed to work around issues with build.ps-->
+    <PackageVersion Include="System.Collections.Immutable" Version="9.0.7" />
     <PackageVersion Include="System.Data.HashFunction.Blake2" Version="2.0.0" />
     <PackageVersion Include="System.Diagnostics.EventLog" Version="9.0.7" />
     <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="9.0.7" />
@@ -142,9 +144,6 @@
     <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageVersion Include="System.Text.Encodings.Web" Version="9.0.7" />
     <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
-  </ItemGroup>
-  <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible($(TargetFramework), 'net8.0'))">
-    <PackageVersion Include="System.Collections.Immutable" Version="9.0.7" />
   </ItemGroup>
   <!--Needed until out of date dependencies are replaced-->
   <ItemGroup>
