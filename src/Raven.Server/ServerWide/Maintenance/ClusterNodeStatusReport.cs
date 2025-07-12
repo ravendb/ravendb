@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.ServerWide.Maintenance.Sharding;
 using Sparrow.Json.Parsing;
@@ -69,6 +70,41 @@ namespace Raven.Server.ServerWide.Maintenance
         public long LastCompareExchangeIndex { get; set; }
         public long LastClusterWideTransactionRaftIndex { get; set; }
 
+        public DatabaseStatusReport()
+        {
+        }
+
+        /// <summary>
+        /// This is a Shallow Copy Ctor
+        /// </summary>
+        public DatabaseStatusReport([NotNull] DatabaseStatusReport other)
+        {
+            if (other == null)
+                throw new ArgumentNullException(nameof(other));
+
+            Name = other.Name;
+            NodeName = other.NodeName;
+            DatabaseChangeVector = other.DatabaseChangeVector;
+
+            // shallow
+            LastIndexStats = other.LastIndexStats;
+            LastSentEtag = other.LastSentEtag;
+            ReportPerBucket = other.ReportPerBucket;
+
+            LastCompareExchangeIndex = other.LastCompareExchangeIndex;
+            LastClusterWideTransactionRaftIndex = other.LastClusterWideTransactionRaftIndex;
+            LastEtag = other.LastEtag;
+            LastTombstoneEtag = other.LastTombstoneEtag;
+            NumberOfConflicts = other.NumberOfConflicts;
+            NumberOfDocuments = other.NumberOfDocuments;
+            LastCompletedClusterTransaction = other.LastCompletedClusterTransaction;
+            Status = other.Status;
+            Error = other.Error;
+            UpTime = other.UpTime;
+            LastTransactionId = other.LastTransactionId;
+            EnvironmentsHash = other.EnvironmentsHash;
+        }
+
         public sealed class ObservedIndexStatus
         {
             public bool IsSideBySide;
@@ -128,6 +164,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     [nameof(stat.Value.State)] = stat.Value.State
                 };
             }
+
             dynamicJsonValue[nameof(LastIndexStats)] = indexStats;
 
             return dynamicJsonValue;

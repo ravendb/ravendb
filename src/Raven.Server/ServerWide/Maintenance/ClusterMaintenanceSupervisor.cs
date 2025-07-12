@@ -399,13 +399,15 @@ namespace Raven.Server.ServerWide.Maintenance
                             $"We got '{DatabaseStatus.NoChange}' for the database '{dbReport}', but it is missing in the last good report");
                     }
 
-                    previous.LastSentEtag = dbReport.LastSentEtag;
-                    previous.LastCompareExchangeIndex = dbReport.LastCompareExchangeIndex;
-                    previous.LastClusterWideTransactionRaftIndex = dbReport.LastClusterWideTransactionRaftIndex;
-                    previous.LastCompletedClusterTransaction = dbReport.LastCompletedClusterTransaction;
+                    var copy = new DatabaseStatusReport(previous);
 
-                    previous.UpTime = dbReport.UpTime;
-                    nodeReport.Report[dbName] = previous;
+                    copy.LastSentEtag = dbReport.LastSentEtag;
+                    copy.LastCompareExchangeIndex = dbReport.LastCompareExchangeIndex;
+                    copy.LastClusterWideTransactionRaftIndex = dbReport.LastClusterWideTransactionRaftIndex;
+                    copy.LastCompletedClusterTransaction = dbReport.LastCompletedClusterTransaction;
+
+                    copy.UpTime = dbReport.UpTime;
+                    nodeReport.Report[dbName] = copy;
                 }
             }
 
