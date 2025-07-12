@@ -100,12 +100,17 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                if (_forTestingPurposes != null && _forTestingPurposes.SimulateFailedBackup)
-                    throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
-                if (_forTestingPurposes != null && _forTestingPurposes.OnBackupTaskRunHoldBackupExecution != null)
+                if (_forTestingPurposes?.OnBackupTaskRunHoldBackupExecution != null)
+                {
+                    var shouldThrowAfterWait = _forTestingPurposes.SimulateFailedBackup;
                     _forTestingPurposes.OnBackupTaskRunHoldBackupExecution?.Task.Wait();
-                if (Database.ForTestingPurposes != null && Database.ForTestingPurposes.ActionToCallOnGetTempPath != null)
-                    Database.ForTestingPurposes.ActionToCallOnGetTempPath?.Invoke(_tempBackupPath);
+                    if (shouldThrowAfterWait) throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
+                }
+
+                if (_forTestingPurposes?.SimulateFailedBackup == true)
+                    throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
+
+                Database.ForTestingPurposes?.ActionToCallOnGetTempPath?.Invoke(_tempBackupPath);
 
                 runningBackupStatus.LocalBackup ??= new LocalBackup();
                 runningBackupStatus.LastRaftIndex ??= new LastRaftIndex();

@@ -55,7 +55,7 @@ namespace FastTests
             }
 
             /// <summary>
-            /// Run backup with provided task id and wait for completion. Full backup by default.
+            /// Run backup with the provided task ID and wait for completion. Full backup by default.
             /// </summary>
             public async Task<long> RunBackupAsync(RavenServer server, long taskId, IDocumentStore store, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Completed, int? timeout = default)
             {
@@ -707,14 +707,14 @@ namespace FastTests
                 }
             }
 
-            internal async Task RunFaultedBackupAsync(DocumentStore store, long taskId, RavenServer server = null, bool isFullBackup = true, int? timeout = null)
+            internal async Task RunFaultedBackupAsync(DocumentStore store, long taskId, RavenServer server = null, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Faulted, int? timeout = null)
             {
-                var database = await _parent.GetDatabase(store.Database, server);
+                var database = await _parent.GetDatabase(store.Database, server ?? _parent.Server);
 
                 try
                 {
                     database.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
-                    await RunBackupAsync(server ?? _parent.Server, taskId, store, isFullBackup, OperationStatus.Faulted, timeout);
+                    await RunBackupAsync(server ?? _parent.Server, taskId, store, isFullBackup, opStatus, timeout);
                 }
                 finally
                 {
@@ -794,8 +794,11 @@ namespace FastTests
                             databaseStatusReport.BackupStatuses.TryGetValue(expectedBackupStatus.TaskId, out var backupStatusReport) == false)
                             return false;
 
-                        return backupStatusReport?.LastRaftIndexEtag != null && backupStatusReport.LastRaftIndexEtag >= expectedBackupStatus.LastRaftIndex.LastEtag &&
-                               backupStatusReport?.LastFullBackupRaftIndexEtag != null && backupStatusReport.LastFullBackupRaftIndexEtag >= expectedBackupStatus.LastRaftIndex.LastFullBackupEtag;
+                        bool isExpectedRaftIndex = expectedBackupStatus?.LastRaftIndex == null ||
+                                                   (backupStatusReport?.LastRaftIndexEtag != null && backupStatusReport.LastRaftIndexEtag >= expectedBackupStatus.LastRaftIndex.LastEtag &&
+                                                    backupStatusReport?.LastFullBackupRaftIndexEtag != null && backupStatusReport.LastFullBackupRaftIndexEtag >= expectedBackupStatus.LastRaftIndex.LastFullBackupEtag);
+
+                        return isExpectedRaftIndex && backupStatusReport.IsErrored == (expectedBackupStatus.Error != null);
                     },
                     expectedVal: true,
                     timeout, interval);

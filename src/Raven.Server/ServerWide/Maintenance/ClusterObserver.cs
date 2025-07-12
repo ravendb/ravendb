@@ -703,8 +703,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         {
                             if (databaseState.GetCurrentDatabaseReport(nodeTag)?.BackupStatuses.TryGetValue(backupConfig.TaskId, out var statusReport) == true &&
                                 statusReport.LastFullBackupInternal.HasValue &&
-                                statusReport.LastFullBackupRaftIndexEtag.HasValue &&
-                                statusReport.IsErrored == false)
+                                statusReport.LastFullBackupRaftIndexEtag.HasValue)
                             {
                                 allHistoricalFullBackups.Add((statusReport.LastFullBackupInternal.Value, statusReport.LastFullBackupRaftIndexEtag.Value));
                             }
@@ -970,8 +969,6 @@ namespace Raven.Server.ServerWide.Maintenance
                 States[shardNumber] = state;
             }
 
-            [SuppressMessage("ReSharper", "ConditionIsAlwaysTrueOrFalse")]
-            [SuppressMessage("ReSharper", "HeuristicUnreachableCode")]
             internal bool IsValid(Action<string> onDiagnosticLog)
             {
                 foreach (DatabaseObservationState databaseObservationState in States.Values)

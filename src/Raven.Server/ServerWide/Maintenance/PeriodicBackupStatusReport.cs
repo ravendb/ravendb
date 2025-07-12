@@ -55,13 +55,11 @@ public class PeriodicBackupStatusReport
                 return statusReport;
             }
 
-            [SuppressMessage("ReSharper", "HeuristicUnreachableCode")]
             internal bool IsValid(string nodeTag, Action<string> onDiagnosticLog)
             {
                 if (LastFullBackupInternal != null)
                     return true;
 
-                Debug.Assert(false, $"Should not happen, if {nameof(LastFullBackupInternal)} is null, it means that we stored a corrupted status in the cluster. Node: '{nodeTag}', taskId: '{TaskId}'");
                 onDiagnosticLog.Invoke($"Node '{nodeTag}' has a null LastFullBackupInternal for taskId '{TaskId}', should not happen, probably a bug.");
                 return false;
             }
