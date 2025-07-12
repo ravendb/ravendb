@@ -296,13 +296,6 @@ namespace Raven.Server.ServerWide
         private PoolOfThreads.LongRunningWork _updateTopologyChangeNotification;
 
         public bool ValidateFixedPort = true;
-
-        public Dictionary<string, ClusterNodeStatusReport> ClusterStats()
-        {
-            if (_engine.LeaderTag != NodeTag)
-                throw new NotLeadingException($"Stats can be requested only from the raft leader {_engine.LeaderTag}");
-            return ClusterMaintenanceSupervisor?.GetStats();
-        }
         
         internal LicenseType GetLicenseType()
         {
