@@ -114,7 +114,7 @@ function LicenseTable(props: LicenseTableProps) {
 
     const showUpgradeButton = licenseType !== "EnterpriseAi";
 
-    const isDeveloperOrEnterprise = licenseType === "Developer" || licenseType === "Enterprise";
+    const isDeveloperOrEnterprise = licenseType === "Developer" || licenseType === "Enterprise" || licenseType == "EnterpriseAi;
 
     const getColumnHeader = (column: LicenseColumn) => {
         if (column === "community" && licenseType === "Essential") {
