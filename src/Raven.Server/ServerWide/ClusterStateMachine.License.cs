@@ -33,7 +33,7 @@ public sealed partial class ClusterStateMachine
     private const int MinBuildVersion60102 = 60_026;
     private const int MinBuildVersion60105 = 60_039;
 
-    private static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new()
+    internal static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new()
     {
         nameof(PutIndexesCommand),
         nameof(PutAutoIndexCommand),
@@ -60,7 +60,7 @@ public sealed partial class ClusterStateMachine
         nameof(PutServerWideExternalReplicationCommand),
     };
 
-    private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context)
+    internal void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context)
     {
         switch (type)
         {
@@ -299,7 +299,7 @@ public sealed partial class ClusterStateMachine
             if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                 return;
 
-            throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
+            throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerCluster}");
         }
     }
 
