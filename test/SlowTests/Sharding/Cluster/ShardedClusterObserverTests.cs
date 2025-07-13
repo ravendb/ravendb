@@ -8,6 +8,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Client.Documents.Session;
+using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
@@ -693,8 +694,9 @@ namespace SlowTests.Sharding.Cluster
             {
                 Database = database,
                 Urls = new string[] { leader.WebUrl }
-            }.Initialize())
+            })
             {
+                store.Initialize();
                 var user = new User
                 {
                     Name = "🤡"
@@ -782,7 +784,9 @@ namespace SlowTests.Sharding.Cluster
                 //trigger periodic backup again on leader
                 var documentDatabase = await Cluster.GetAnyDocumentDatabaseInstanceFor(store, new List<RavenServer>() {leader}, ShardHelper.ToShardName(database, shardOnLeader));
                 documentDatabase.PeriodicBackupRunner.StartBackupTask(backupTaskId, isFullBackup: false);
-                
+
+                PeriodicBackupStatus backupStatus = null;
+
                 //wait for periodic backup to finish running
                 var done = await WaitForValueAsync(() =>
                 {
@@ -795,8 +799,12 @@ namespace SlowTests.Sharding.Cluster
                             return false;
                         status.TryGet(nameof(LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable);
                         lastRaftIndexBlittable.TryGet(nameof(LastRaftIndex.LastEtag), out long etag);
-                        
-                        return etag >= lastDeletedCx.Index;
+
+                        if (etag < lastDeletedCx.Index)
+                            return false;
+
+                        backupStatus = JsonDeserializationClient.PeriodicBackupStatus(status);
+                        return true;
                     }
                 }, true);
 
@@ -804,6 +812,8 @@ namespace SlowTests.Sharding.Cluster
                 
                 //unsuspend and wait for the tombstone cleaner
                 leader.ServerStore.Observer.Suspended = false;
+
+                await Backup.WaitAndAssertForClusterObserverToGetUpdatedBackupStatusAsync(ShardHelper.ToShardName(database, shardOnLeader), backupStatus, [leader]);
                 
                 //wait for the cleaner to execute
                 await WaitAndAssertForValueAsync(() =>

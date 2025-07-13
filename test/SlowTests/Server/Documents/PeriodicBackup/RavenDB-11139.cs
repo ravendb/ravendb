@@ -1770,7 +1770,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             private async Task WaitClusterObservationConfirmation(List<RavenServer> clusterNodes, PeriodicBackupStatus status, DocumentStore store)
             {
-                await _parent.Backup.WaitAndAssertForClusterObserverToGetUpdatedBackupStatusAsync(store, status, clusterNodes);
+                await _parent.Backup.WaitAndAssertForClusterObserverToGetUpdatedBackupStatusAsync(store.Database, status, clusterNodes);
             }
         }
 

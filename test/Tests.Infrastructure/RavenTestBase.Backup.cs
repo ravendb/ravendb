@@ -778,7 +778,7 @@ namespace FastTests
                 return taskId.Value;
             }
 
-            public async Task WaitAndAssertForClusterObserverToGetUpdatedBackupStatusAsync(DocumentStore store, PeriodicBackupStatus expectedBackupStatus, List<RavenServer> clusterNodes, int timeout = 15_000, int interval = 1000)
+            public async Task WaitAndAssertForClusterObserverToGetUpdatedBackupStatusAsync(string databaseName, PeriodicBackupStatus expectedBackupStatus, List<RavenServer> clusterNodes, int timeout = 15_000, int interval = 1000)
             {
                 await _parent.WaitAndAssertForValueAsync(() =>
                     {
@@ -789,7 +789,7 @@ namespace FastTests
                         var clusterNodeStatusReports = leader.ServerStore.Observer.Maintenance.GetStats();
 
                         if (clusterNodeStatusReports.TryGetValue(expectedBackupStatus.NodeTag, out var clusterNodeStatusReport) == false ||
-                            clusterNodeStatusReport.Report.TryGetValue(store.Database, out var databaseStatusReport) == false ||
+                            clusterNodeStatusReport.Report.TryGetValue(databaseName, out var databaseStatusReport) == false ||
                             databaseStatusReport?.BackupStatuses == null ||
                             databaseStatusReport.BackupStatuses.TryGetValue(expectedBackupStatus.TaskId, out var backupStatusReport) == false)
                             return false;
