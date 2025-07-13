@@ -356,7 +356,18 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
 
         var mainObj = args[0].AsObject();
 
-        var aiEtlEmbeddingItem = new EmbeddingGenerationScriptResult(Current.DocumentId, Current.Collection);
+        EmbeddingGenerationScriptResult aiEtlEmbeddingItem;
+        bool isNewInstance;
+        if (_currentRun.Additions.Count > 0 && _currentRun.Additions[^1].DocumentId == Current.DocumentId)
+        {
+            isNewInstance = false;
+            aiEtlEmbeddingItem = _currentRun.Additions[^1];
+        }
+        else
+        {
+            isNewInstance = true;
+            aiEtlEmbeddingItem = new EmbeddingGenerationScriptResult(Current.DocumentId, Current.Collection);
+        }
 
         foreach (var propertyKey in mainObj.GetOwnPropertyKeys())
         {
@@ -405,7 +416,10 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
             }
         }
 
-        _currentRun.Additions.Add(aiEtlEmbeddingItem);
+        if (isNewInstance)
+        {
+            _currentRun.Additions.Add(aiEtlEmbeddingItem);
+        }
 
         return JsValue.Null;
     }
