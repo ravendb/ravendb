@@ -20,6 +20,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
     public List<BlittableJsonReaderObject> Messages = [];
     public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
+    public string ChangeVector;
     public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration, string userPrompt)
     {
         if (Messages.Count > 0)

@@ -19,6 +19,8 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
 
     private readonly string _conversationId;
     private readonly List<AiAgentActionResponse> _actionResponses;
+    private readonly string _changeVector;
+
     public RunConversationOperation(string agentId, string userPrompt, Dictionary<string, object> parameters)
     {
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
@@ -29,18 +31,19 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         _parameters = parameters;
     }
 
-    public RunConversationOperation(string conversationId, string userPrompt = null, List<AiAgentActionResponse> actionResponses = null)
+    public RunConversationOperation(string conversationId, string userPrompt = null, List<AiAgentActionResponse> actionResponses = null, string changeVector = null)
     {
         ValidationMethods.AssertNotNullOrEmpty(conversationId, nameof(conversationId));
      
         _conversationId = conversationId;
         _userPrompt = userPrompt;
         _actionResponses = actionResponses;
+        _changeVector = changeVector;
     }
 
     public RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
-        return new RunConversationOperationCommand(_conversationId, _agentId, _userPrompt, _parameters, _actionResponses, conventions);
+        return new RunConversationOperationCommand(_conversationId, _agentId, _userPrompt, _parameters, _actionResponses, _changeVector, conventions);
     }
 
     internal sealed class RunConversationOperationCommand : RavenCommand<ConversationResult<TSchema>>
@@ -50,15 +53,18 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         private readonly string _prompt;
         private readonly Dictionary<string, object> _parameters;
         private readonly List<AiAgentActionResponse> _actionResponses;
+        private readonly string _changeVector;
         private readonly DocumentConventions _conventions;
 
-        public RunConversationOperationCommand(string conversationId, string agentId, string prompt, Dictionary<string, object> parameters, List<AiAgentActionResponse> actionResponses, DocumentConventions conventions)
+        public RunConversationOperationCommand(string conversationId, string agentId, string prompt, Dictionary<string, object> parameters,
+            List<AiAgentActionResponse> actionResponses, string changeVector, DocumentConventions conventions)
         {
             _conversationId = conversationId;
             _agentId = agentId;
             _prompt = prompt;
             _parameters = parameters;
             _actionResponses = actionResponses;
+            _changeVector = changeVector;
             _conventions = conventions;
         }
         public override bool IsReadRequest => false;
@@ -74,6 +80,9 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             {
                 url += $"?conversationId={Uri.EscapeDataString(_conversationId)}";
             }
+
+            if (_changeVector != null)
+                url += $"&changeVector={Uri.EscapeDataString(_changeVector)}";
 
             var body = new ConversionRequestBody
             {
@@ -123,6 +132,7 @@ internal class ConversionRequestBody : IDynamicJson
 public class ConversationResult<TSchema>
 {
     public string ConversationId { get; set; }
+    public string ChangeVector { get; set; }
     public TSchema Response { get; set; }
     public AiUsage Usage { get; set; }
     public List<AiAgentActionRequest> ActionRequests { get; set; }
@@ -132,6 +142,7 @@ public class ConversationResult<TSchema>
         response.TryGet(nameof(Usage), out BlittableJsonReaderObject usage);
         response.TryGet(nameof(Response), out BlittableJsonReaderObject result);
         response.TryGet(nameof(ConversationId), out string conversationId);
+        response.TryGet(nameof(ChangeVector), out string changeVector);
 
         List<AiAgentActionRequest> requests = null;
         if (response.TryGet(nameof(ActionRequests), out BlittableJsonReaderArray actionRequests) && actionRequests != null)
@@ -147,6 +158,7 @@ public class ConversationResult<TSchema>
         return new ConversationResult<TSchema>
         {
             ConversationId = conversationId,
+            ChangeVector = changeVector,
             ActionRequests = requests,
             Usage = JsonDeserializationClient.AiUsage(usage),
             Response = result == null ? default : conventions.Serialization.DefaultConverter.FromBlittable<TSchema>(result, conversationId)

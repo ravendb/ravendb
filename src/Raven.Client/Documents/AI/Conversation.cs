@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Exceptions;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.AI;
@@ -17,7 +18,7 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
     private List<AiAgentActionRequest> _actionRequests;
     private List<AiAgentActionResponse> _actionResponses = [];
     private string _userPrompt;
-
+    private string _changeVector;
     public Conversation(AiOperations aiOperations, string agentId, Dictionary<string, object> parameters)
     {
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
@@ -27,12 +28,13 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
         _parameters = parameters;
     }
 
-    public Conversation(AiOperations aiOperations, string conversationId)
+    public Conversation(AiOperations aiOperations, string conversationId, string changeVector)
     {
         ValidationMethods.AssertNotNullOrEmpty(conversationId, nameof(conversationId));
 
         _aiOperations = aiOperations;
         _conversationId = conversationId;
+        _changeVector = changeVector;
     }
 
     public IEnumerable<AiAgentActionRequest> RequiredActions() => _actionRequests ?? throw new InvalidOperationException($"You have to call {nameof(Run)}/{nameof(RunAsync)} first");
@@ -69,9 +71,6 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
 
     public async Task<bool> RunAsync(CancellationToken token = default)
     {
-        // clear to avoid reusing old conversation answer
-        _answer = default;
-
         IMaintenanceOperation<ConversationResult<T>> op;
         if (string.IsNullOrWhiteSpace(_conversationId))
         {
@@ -84,15 +83,21 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
             if (_actionRequests != null && string.IsNullOrEmpty(_userPrompt) && _actionResponses.Count == 0)
                 return false;
 
-            op = new RunConversationOperation<T>(_conversationId, _userPrompt, _actionResponses);
+            op = new RunConversationOperation<T>(_conversationId, _userPrompt, _actionResponses, _changeVector);
         }
 
         try
         {
             var r = await _aiOperations._executor.SendAsync(op, token).ConfigureAwait(false);
+            r.ChangeVector = _changeVector;
             _conversationId = r.ConversationId;
             _actionRequests = r.ActionRequests ?? new List<AiAgentActionRequest>();
             _answer = r.Response;
+        }
+        catch (ConcurrencyException e)
+        {
+            _changeVector = e.ActualChangeVector;
+            throw;
         }
         finally
         {

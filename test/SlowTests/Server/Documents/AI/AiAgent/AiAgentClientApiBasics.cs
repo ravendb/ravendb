@@ -250,4 +250,60 @@ public class AiAgentClientApiBasics : RavenTestBase
         r = await chat.RunAsync(CancellationToken.None);
         Assert.False(r);
     }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    public async Task ThrowConcurrencyException(Options options, GenAiConfiguration config)
+    {
+        using var store = GetDocumentStore(options);
+
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        using var session = store.OpenAsyncSession();
+
+        var agent = new AiAgentConfiguration("shopping assistant",config.ConnectionStringName,
+            "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
+
+        agent.Persistence = new AiAgentPersistenceConfiguration
+        {
+            Collection = "Chats",
+            Expires = TimeSpan.FromDays(30)
+        };
+        
+        agent.Parameters.Add("company");
+        agent.Queries =
+        [
+            new AiAgentToolQuery
+            {
+                Name = "ProductSearch", 
+                Description =  "semantic search the store product catalog",
+                Query = "from Products where vector.search(embedding.text(Name), $query)",
+                ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+            }
+            ,
+            new AiAgentToolQuery
+            {
+                Name = "RecentOrder",
+                Description = "Get the recent orders of the current user",
+                Query = "from Orders where Company = $company order by OrderedAt desc limit 10",
+                ParametersSampleObject = "{}"
+            }
+        ];
+
+        var identifier = (await store.AI.CreateAgentAsync<OutputSchema>(agent)).Identifier;
+
+        var chat = store.AI.StartConversation<OutputSchema>(identifier,
+            p => p.AddParameter("company", "companies/90-A"));
+        chat.SetUserPrompt("what goes well with my cheese?");
+        var r = await chat.RunAsync(CancellationToken.None);
+        Assert.False(r);
+
+        chat = store.AI.ResumeConversation<OutputSchema>(chat.Id, "foo");
+        chat.SetUserPrompt("Can you give me some alternatives?");
+        await Assert.ThrowsAsync<ConcurrencyException>(() => chat.RunAsync(CancellationToken.None));
+
+        chat.SetUserPrompt("Can you give me some alternatives?");
+        r = await chat.RunAsync(CancellationToken.None);
+        Assert.False(r);
+    }
 }

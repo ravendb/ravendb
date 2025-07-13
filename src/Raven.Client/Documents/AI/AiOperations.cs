@@ -94,5 +94,6 @@ public class AiOperations
     /// </summary>
     /// <typeparam name="TSchema">The schema type for the conversation response.</typeparam>
     /// <param name="conversationId">The ID of the existing conversation.</param>
-    public IConversationOperations<TSchema> ResumeConversation<TSchema>(string conversationId) where TSchema : new() => new Conversation<TSchema>(this, conversationId);
+    /// <param name="changeVector">Optional parameter to control concurrency.</param>
+    public IConversationOperations<TSchema> ResumeConversation<TSchema>(string conversationId, string changeVector = null) where TSchema : new() => new Conversation<TSchema>(this, conversationId, changeVector);
 }

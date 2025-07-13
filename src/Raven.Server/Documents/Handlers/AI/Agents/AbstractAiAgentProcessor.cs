@@ -1,25 +1,25 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents.AI;
-using Raven.Server.Documents.AI.AiGen;
-using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.ServerWide.Context;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
-using Sparrow.Server.Json.Sync;
-using System.Net;
-using Raven.Client;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Serialization;
+using Raven.Server.Documents.AI;
+using Raven.Server.Documents.AI.AiGen;
+using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Handlers.Processors.MultiGet;
+using Raven.Server.ServerWide.Context;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
 {
@@ -82,6 +82,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
             var conversationId = RequestHandler.GetStringQueryString("conversationId", required: false);
             var agentId = RequestHandler.GetStringQueryString("agentId", required: false);
+            var changeVector = RequestHandler.GetStringQueryString("changeVector", required: false);
 
             if (string.IsNullOrEmpty(conversationId) && string.IsNullOrEmpty(agentId))
                 throw new ArgumentException("conversation ID or agent name must be provided.");
@@ -103,6 +104,20 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     throw new DocumentDoesNotExistException(conversationId);
 
                 conversationDocument = ConversationDocument.ToDocument(conversationId, conversation.Data);
+
+                if (changeVector != null)
+                {
+                    if (conversation.ChangeVector != changeVector)
+                        throw new ConcurrencyException($"The conversation '{conversationId}' was changed, please try again")
+                        {
+                            ExpectedChangeVector = changeVector,
+                            ActualChangeVector = conversation.ChangeVector,
+                            Id = conversationId
+                        };
+
+                    conversationDocument.ChangeVector = conversation.ChangeVector;
+                }
+               
                 configuration = GetAiAgentConfiguration(conversationDocument.Agent);
             }
 
@@ -220,6 +235,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var output = new DynamicJsonValue
             {
                 [nameof(ConversationResult<object>.ConversationId)] = conversationId,
+                [nameof(ConversationResult<object>.ChangeVector)] = r.Document.ChangeVector,
                 [nameof(ConversationResult<object>.Response)] = r.Response,
                 [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(r.Document.OpenActionCalls.Select(t => t.Value.ToJson())),
                 [nameof(ConversationResult<object>.Usage)] = r.Document.TotalUsage.ToJson()
@@ -330,11 +346,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         }
         public async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation)
         {
+            var changeVectorLsv = context.GetLazyString(conversation.ChangeVector);
             if (configuration.Persistence is not null)
             {
                 // we don't pass change vector here, so last write wins
-                MergedPutCommand putCmd = new(conversation.ToBlittable(context, configuration), conversationId, changeVector: null, RequestHandler.Database);
+                MergedPutCommand putCmd = new(conversation.ToBlittable(context, configuration), conversationId, changeVectorLsv, RequestHandler.Database);
                 await RequestHandler.Database.TxMerger.Enqueue(putCmd);
+                conversation.ChangeVector = putCmd.PutResult.ChangeVector;
                 return putCmd.PutResult.Id;
             }
 
