@@ -581,7 +581,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
                     databaseRecord.DataArchival = smugglerDatabaseRecord.DataArchival;
                     databaseRecord.QueueSinks = smugglerDatabaseRecord.QueueSinks;
                     databaseRecord.SupportedFeatures = smugglerDatabaseRecord.SupportedFeatures;
+
+                    //Enforce license limitations on the restored database record.
+                    using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        var items = context.Transaction.InnerTransaction.OpenTable(ClusterStateMachine.ItemsSchema, ClusterStateMachine.Items);
+                        foreach (var command in ClusterStateMachine._licenseLimitsCommandsForCreateDatabase)
+                        {
+                            ServerStore.Engine.StateMachine.AssertLicenseLimits(command, ServerStore, databaseRecord, items, context);
+                        }
+                    }
                 };
+
             }
 
             smuggler.OnDatabaseRecordAction += smugglerDatabaseRecord =>

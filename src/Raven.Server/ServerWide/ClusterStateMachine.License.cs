@@ -33,7 +33,7 @@ public sealed partial class ClusterStateMachine
     private const int MinBuildVersion60102 = 60_026;
     private const int MinBuildVersion60105 = 60_039;
 
-    private static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new()
+    internal static readonly List<string> _licenseLimitsCommandsForCreateDatabase = new()
     {
         nameof(PutIndexesCommand),
         nameof(PutAutoIndexCommand),
@@ -60,7 +60,7 @@ public sealed partial class ClusterStateMachine
         nameof(PutServerWideExternalReplicationCommand),
     };
 
-    private void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context)
+    internal void AssertLicenseLimits(string type, ServerStore serverStore, DatabaseRecord databaseRecord, Table items, ClusterOperationContext context)
     {
         switch (type)
         {
@@ -299,60 +299,54 @@ public sealed partial class ClusterStateMachine
             if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
                 return;
 
-            throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerDatabase}");
+            throw new LicenseLimitException(LimitType.Indexes, $"The maximum number of auto indexes per cluster cannot exceed the limit of: {maxAutoIndexesPerCluster}");
         }
     }
 
-    private void AssertRevisionConfiguration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    internal void AssertRevisionConfiguration(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
     {
-        if (databaseRecord.Revisions == null)
-            return;
-
-        if (databaseRecord.Revisions.Default == null &&
-            (databaseRecord.Revisions.Collections == null || databaseRecord.Revisions.Collections.Count == 0))
+        var revisions = databaseRecord.Revisions;
+        if (revisions?.Default == null && (revisions?.Collections?.Count ?? 0) == 0)
             return;
 
         var maxRevisionsToKeep = licenseStatus.MaxNumberOfRevisionsToKeep;
         var maxRevisionAgeToKeepInDays = licenseStatus.MaxNumberOfRevisionAgeToKeepInDays;
-        if (licenseStatus.CanSetupDefaultRevisionsConfiguration &&
-            maxRevisionsToKeep == null && maxRevisionAgeToKeepInDays == null)
+
+        if (licenseStatus.CanSetupDefaultRevisionsConfiguration && maxRevisionsToKeep == null && maxRevisionAgeToKeepInDays == null)
             return;
 
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60000) == false)
             return;
 
-        if (licenseStatus.CanSetupDefaultRevisionsConfiguration == false &&
-            databaseRecord.Revisions.Default != null &&
-            databaseRecord.Revisions.Default.Disabled == false)
-        {
+        if (licenseStatus.CanSetupDefaultRevisionsConfiguration == false && revisions.Default is { Disabled: false })
             throw new LicenseLimitException(LimitType.RevisionsConfiguration, "Your license doesn't allow the creation of a default configuration for revisions.");
-        }
 
-        if (databaseRecord.Revisions.Collections == null)
+        if (revisions.Collections == null)
             return;
 
-        foreach (KeyValuePair<string, RevisionsCollectionConfiguration> revisionPerCollectionConfiguration in databaseRecord.Revisions.Collections)
+        foreach (var (collectionName, config) in revisions.Collections)
         {
-            if (revisionPerCollectionConfiguration.Value.Disabled)
+            if (config.Disabled)
                 continue;
 
-            if (revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep != null &&
-                maxRevisionsToKeep != null &&
-                revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep > maxRevisionsToKeep)
-            {
-                throw new LicenseLimitException(LimitType.RevisionsConfiguration,
-                    $"The defined minimum revisions to keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionsToKeep}' " +
-                    $"for collection '{revisionPerCollectionConfiguration.Key}' exceeds the licensed one '{maxRevisionsToKeep}'");
-            }
+            var minRevisionsToKeep = config.MinimumRevisionsToKeep;
+            var minRevisionAge = config.MinimumRevisionAgeToKeep;
 
-            if (revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep != null &&
-                maxRevisionAgeToKeepInDays != null &&
-                revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep.Value.TotalDays > maxRevisionAgeToKeepInDays)
-            {
+            if (minRevisionsToKeep != null && maxRevisionsToKeep != null && minRevisionsToKeep > maxRevisionsToKeep)
                 throw new LicenseLimitException(LimitType.RevisionsConfiguration,
-                    $"The defined minimum revisions age to keep '{revisionPerCollectionConfiguration.Value.MinimumRevisionAgeToKeep}' " +
-                    $"for collection '{revisionPerCollectionConfiguration.Key}' exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
-            }
+                    $"The defined minimum revisions to keep '{minRevisionsToKeep}' for collection '{collectionName}' exceeds the licensed one '{maxRevisionsToKeep}'");
+
+            if (minRevisionAge != null && maxRevisionAgeToKeepInDays != null && minRevisionAge.Value.TotalDays > maxRevisionAgeToKeepInDays)
+                throw new LicenseLimitException(LimitType.RevisionsConfiguration,
+                    $"The defined minimum revisions age to keep '{minRevisionAge}' for collection '{collectionName}' exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
+
+            if (minRevisionsToKeep == null && maxRevisionsToKeep != null)
+                throw new LicenseLimitException(LimitType.RevisionsConfiguration,
+                    $"The defined unlimited revisions to keep for collection '{collectionName}' exceeds the licensed one '{maxRevisionsToKeep}'");
+
+            if (minRevisionAge == null && maxRevisionAgeToKeepInDays != null)
+                throw new LicenseLimitException(LimitType.RevisionsConfiguration,
+                    $"The defined unlimited revisions age to keep for collection '{collectionName}' exceeds the licensed one '{maxRevisionAgeToKeepInDays}'");
         }
     }
 
