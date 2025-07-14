@@ -189,7 +189,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 Task<(string Result, AiUsage Usage)> task;
                 try
                 {
-                    task = _chatCompletionClient.CompleteAsync(Configuration.Prompt, json, CancellationToken);
+                    task = _chatCompletionClient.CompleteAsync(Configuration.Prompt, json, item.ContextOutput.Attachments, CancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -489,7 +489,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 {
                     Context = scriptResult.Context,
                     IsCached = scriptResult.IsCached,
-                    AiHash = scriptResult.AiHash
+                    AiHash = scriptResult.AiHash,
+                    Attachments = scriptResult.Attachments
                 }
             };
 

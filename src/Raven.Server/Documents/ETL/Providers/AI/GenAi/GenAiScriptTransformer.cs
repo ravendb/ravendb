@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography;
+using System.Text;
 using Acornima.Ast;
 using Jint;
 using Jint.Native;
@@ -10,6 +13,7 @@ using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
+using Microsoft.IO;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
@@ -18,6 +22,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Json;
 using Sparrow.Platform;
 
@@ -27,15 +32,15 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
 {
     private readonly GenAiConfiguration _configuration;
     private byte[] _configurationPartialHash;
-    private readonly PatchRequest _mainScript;
     private List<GenAiScriptResult> _currentRun;
+    private Dictionary<string, Attachment> _attachments;
     private readonly GenAiStatsScope _stats;
 
     private static readonly string JavaScriptApi = @"
 class AIContextItem {
   #withAttachment(type, data) {
-    if(!this.attachments) {
-      this.attachments = [];
+    if (typeof type !== 'string' || typeof data !== 'string') {
+        throw new Error('both type and data must be strings');
     }
     this.attachments.push({ type, data });
     return this;
@@ -46,11 +51,15 @@ class AIContextItem {
       throw new Error('ctx must be an object');
     }
     this.ctx = ctx;
-    this.attachments;
+    this.attachments = [];
   }
 
   withText(data) {
     return this.#withAttachment('text/plain', data);
+  }
+
+  withJpeg(data) {
+    return this.#withAttachment('image/Jpeg', data);
   }
 
   withPng(data) {
@@ -81,7 +90,7 @@ class AI {
 
   genContext(...args) {
     if (args.length !== 1) {
-      throw new Error('invalid number of arguments, expected ai.genContext(ctx);');
+      throw new Error('Invalid number of arguments for ai.genContext(ctx)');
     }
     const ctx = new AIContextItem(args[0]);
     this.#allContexts.push(ctx);
@@ -92,34 +101,29 @@ class AI {
 var ai = new AI();
 "; 
 
-    public GenAiScriptTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, GenAiConfiguration configuration, GenAiStatsScope stats) : base(database, context, null, behaviorFunctions)
+    public GenAiScriptTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, GenAiConfiguration configuration, GenAiStatsScope stats) 
+        : base(database, context, new PatchRequest(transformation.Script, PatchRequestType.GenAi), behaviorFunctions)
     {
         _configuration = configuration;
         _stats = stats.For(EtlOperations.Transform, start: false);
-        _mainScript = new PatchRequest(transformation.Script, PatchRequestType.GenAi);
     }
 
     public override void Initialize(bool debugMode)
     {
-        ReturnMainRun = Database.Scripts.GetScriptRunner(_mainScript, true, out DocumentScript);
+        _configurationPartialHash = GetInitialHash(_configuration);
+
+        base.Initialize(debugMode);
         JsValue aiAlreadyExists = DocumentScript.ScriptEngine.GetValue("ai");
         if (aiAlreadyExists.IsNull() || aiAlreadyExists.IsUndefined())
         {
             DocumentScript.ScriptEngine.Execute(JavaScriptApi);
         }
-        
-        if (DocumentScript == null)
-            return;
-
-        if (debugMode)
-            DocumentScript.DebugMode = true;
-
-        _configurationPartialHash = GetInitialHash(_configuration);
     }
 
     protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
     {
-        throw new NotSupportedException("Attachment are not supported in GenAI Task");
+        _attachments ??= [];
+        _attachments.Add(reference.AsString(), attachment);
     }
 
     protected override void AddLoadedCounter(JsValue reference, string name, long value)
@@ -163,14 +167,27 @@ var ai = new AI();
         ObjectInstance ai = DocumentScript.ScriptEngine.GetValue("ai").AsObject();
         Function retrieveContexts = ai.Prototype!.GetOwnProperty("__retrieveContexts").Value.AsFunctionInstance();
         JsArray contexts = retrieveContexts.Call(ai, []).AsArray();
+        List<string> attachmentsHashes = null;
         foreach (var ctx in contexts)
         {
+            attachmentsHashes?.Clear();
+            
             ObjectInstance ctxObj = ctx.AsObject();
-            ObjectInstance userSpecifixCtx = ctxObj.GetOwnProperty("ctx").Value.AsObject();
-            var context = JsBlittableBridge.Translate(Context, DocumentScript.ScriptEngine, userSpecifixCtx);
+            ObjectInstance userSpecificCtx = ctxObj.GetOwnProperty("ctx").Value.AsObject();
+            var context = JsBlittableBridge.Translate(Context, DocumentScript.ScriptEngine, userSpecificCtx);
             _stats.NumberOfContextObjects++;
 
-            string hash = CalculateHash(context);
+            foreach (var current in ctxObj.GetOwnProperty("attachments").Value.AsArray())
+            {
+                attachmentsHashes ??= [];
+                
+                var attachmentObj = current.AsObject();
+                var data = attachmentObj.GetOwnProperty("data").Value.AsString();
+                attachmentsHashes.Add(_attachments?.TryGetValue(data, out var attachment) is true ? attachment.Base64Hash.ToString() : data);
+                attachmentsHashes.Add(attachmentObj.GetOwnProperty("type").Value.AsString());
+            }
+            
+            string hash = CalculateHash(context, attachmentsHashes);
             var isCached = ShouldSendContext(hash, _configuration.Identifier, Current.Document) == false;
 
             if (isCached)
@@ -178,7 +195,43 @@ var ai = new AI();
 
             using (context)
             {
-                _currentRun.Add(new GenAiScriptResult(Current.DocumentId, context.CloneOnTheSameContext(), hash, isCached));
+                var result = new GenAiScriptResult(Current.DocumentId, context.CloneOnTheSameContext(), hash, isCached);
+                if (attachmentsHashes?.Count > 0)
+                {
+                    result.Attachments = [];
+                    
+                    foreach (var current in ctxObj.GetOwnProperty("attachments").Value.AsArray())
+                    {
+                        var attachmentObj = current.AsObject();
+                        var data = attachmentObj.GetOwnProperty("data").Value.AsString();
+                        string type = attachmentObj.GetOwnProperty("type").Value.AsString();
+                        string filename = "unknown.name";
+
+                        // TODO: we aren't being really efficient here in terms of allocations / memory
+                        // but the problem is that the API itself may require large BASE64 strings, annoying 
+                        if (_attachments?.TryGetValue(data, out var attachment) is true)
+                        {
+                            filename = attachment.Name.ToString(CultureInfo.InvariantCulture);
+                            using var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream();
+                            if (type == "text/plain")
+                            {
+                                attachment.Stream.CopyTo(memoryStream);
+                            }
+                            else // anything but text is using BASE64
+                            {
+                                using var transform = new ToBase64Transform();
+                                using var cryptoStream = new CryptoStream(attachment.Stream, transform, CryptoStreamMode.Read);
+                                cryptoStream.CopyTo(memoryStream);
+                            }
+
+                            Span<byte> readOnlySpan = memoryStream.GetBuffer();
+                            data = Encoding.ASCII.GetString(readOnlySpan[..(int)memoryStream.Length]);
+                        }
+
+                        result.Attachments.Add(new GenAiAttachment(filename, type, data));
+                    }
+                }
+                _currentRun.Add(result);
             }
         }
     }
@@ -229,13 +282,22 @@ var ai = new AI();
     }
 
     [SkipLocalsInit]
-    private unsafe string CalculateHash(BlittableJsonReaderObject contextObj)
+    private unsafe string CalculateHash(BlittableJsonReaderObject contextObj, List<string> attachmentsHashes)
     {
         var state = stackalloc byte[_configurationPartialHash.Length];
         _configurationPartialHash.CopyTo(new Span<byte>(state, _configurationPartialHash.Length));
 
         if (Sodium.crypto_generichash_update(state, contextObj.BasePointer, (ulong)contextObj.Size) != 0)
             ComputeHttpEtags.ThrowFailedToUpdateHash();
+
+        foreach (string attachmentsHash in attachmentsHashes ?? [])
+        {
+            fixed(char* p = attachmentsHash)
+            {
+                if (Sodium.crypto_generichash_update(state, (byte*)p, (ulong)(sizeof(char) * attachmentsHash.Length)) != 0)
+                    ComputeHttpEtags.ThrowFailedToUpdateHash();
+            }
+        }
 
         var hash = stackalloc byte[Sodium.GenericHashSize];
         if (Sodium.crypto_generichash_final(state, hash, Sodium.GenericHashSize) != 0)
