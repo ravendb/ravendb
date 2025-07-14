@@ -30,7 +30,7 @@ describe("FeatureAvailabilitySummary", () => {
         expect(screen.getByRole("link", { name: /See full comparison/ })).toBeInTheDocument();
     });
 
-    it.each(["None", "Community", "Essential", "Professional"] satisfies LicenseType[])(
+    it.each(["None", "Community", "Essential", "Professional", "Enterprise", "EnterpriseAi"] satisfies LicenseType[])(
         "can show 'Are you developing?' for %s license",
         (licenseType) => {
             const { screen } = rtlRender(<FeatureAvailabilitySummaryStory licenseType={licenseType} />);
@@ -40,13 +40,10 @@ describe("FeatureAvailabilitySummary", () => {
         }
     );
 
-    it.each(["Developer", "Enterprise"] satisfies LicenseType[])(
-        "can hide 'Are you developing?' for %s license",
-        (licenseType) => {
-            const { screen } = rtlRender(<FeatureAvailabilitySummaryStory licenseType={licenseType} />);
+    it("can hide 'Are you developing?' for Developer license", () => {
+        const { screen } = rtlRender(<FeatureAvailabilitySummaryStory licenseType="Developer" />);
 
-            expect(screen.queryByText(selectors.areYouDevelopingText)).not.toBeInTheDocument();
-            expect(screen.queryByRole("link", { name: selectors.developerLicenseLink })).not.toBeInTheDocument();
-        }
-    );
+        expect(screen.queryByText(selectors.areYouDevelopingText)).not.toBeInTheDocument();
+        expect(screen.queryByRole("link", { name: selectors.developerLicenseLink })).not.toBeInTheDocument();
+    });
 });

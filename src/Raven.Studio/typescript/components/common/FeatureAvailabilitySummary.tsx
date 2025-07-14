@@ -224,7 +224,7 @@ export function FeatureAvailabilitySummary(props: FeatureAvailabilitySummaryProp
                 </div>
             )}
             {currentLicense !== "Enterprise" && currentLicense !== "None" && <UpgradeLinkSection />}
-            {currentLicense !== "Enterprise" && currentLicense !== "Developer" && <DeveloperLicenseSection />}
+            {currentLicense !== "Developer" && <DeveloperLicenseSection />}
         </>
     );
 }
