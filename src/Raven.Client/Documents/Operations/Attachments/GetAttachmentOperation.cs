@@ -157,7 +157,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                 DateTime? attachmentRetireAt = null;
                 if (response.Headers.TryGetValues(Constants.Headers.AttachmentRetireAt, out IEnumerable<string> dt))
                 {
-                    if (DateTime.TryParse(dt.First(), out var retireAt))
+                    if (DateTime.TryParse(dt.First(), null, System.Globalization.DateTimeStyles.AdjustToUniversal, out var retireAt))
                     {
                         attachmentRetireAt = retireAt;
                     }

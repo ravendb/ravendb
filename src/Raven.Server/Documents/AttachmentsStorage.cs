@@ -238,7 +238,7 @@ namespace Raven.Server.Documents
 
         public AttachmentDetailsServer PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
             string hash, AttachmentFlags flags, long size, DateTime? retireAtDt, string expectedChangeVector = null, Stream stream = null, 
-            bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false, bool fromEtl = false, bool forceRetireAt = false)
+            bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false, bool fromEtl = false)
         {
             if (context.Transaction == null)
             {
@@ -292,16 +292,14 @@ namespace Raven.Server.Documents
 
                     }
 
-                    var keyExists = table.ReadByKey(keySlice, out TableValueReader oldValue);
-                    var existingFlags = new Lazy<AttachmentFlags>(() => TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue));
-
-                    bool retiredAttachmentExists = false;
-                    if (keyExists)
+                    var keyExists = false;
+                    AttachmentFlags? existingFlags = null;
+                    if (table.ReadByKey(keySlice, out TableValueReader oldValue))
                     {
-                        if (existingFlags.Value == AttachmentFlags.Retired)
+                        existingFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue);
+                        if (existingFlags == AttachmentFlags.None)
                         {
-                            keyExists = false; //TODO: egor now just to go to else clause few lines below
-                            retiredAttachmentExists = true;
+                            keyExists = true;
                         }
                     }
 
@@ -318,27 +316,7 @@ namespace Raven.Server.Documents
                         }
 
                         size = TableValueToLong((int)AttachmentsTable.Size, ref oldValue);
-
-                        if (forceRetireAt == false)
-                        {
-                            retireAt = TableValueToLong((int)AttachmentsTable.RetireAt, ref oldValue);
-                            if (existingFlags.Value == AttachmentFlags.None)
-                            {
-                                if (retireAt == -1L)
-                                {
-                                    Debug.Assert(flags == AttachmentFlags.None, "flags == AttachmentFlags.None");
-
-                                    TryPutRetiredAttachment(context, keySlice, retireAtDt, out retireAt);
-                                }
-                            }
-                        }
-                        else
-                        {
-                            Debug.Assert(retireAtDt != null, "retireAtDt != null");
-                            Debug.Assert(flags == AttachmentFlags.None, "flags == AttachmentFlags.None");
-                            retireAt = retireAtDt.Value.Ticks;
-                            RetiredAttachmentsStorage.Put(context, keySlice, retireAtDt.Value.GetDefaultRavenFormat());
-                        }
+                        retireAt = TryUpdateRetiredAttachment(context, retireAtDt, TableValueToLong((int)AttachmentsTable.RetireAt, ref oldValue), keySlice);
 
                         using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
                         using (table.Allocate(out TableValueBuilder tvb))
@@ -384,7 +362,7 @@ namespace Raven.Server.Documents
                                 // Delete the attachment stream only if we have a different hash
                                 using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref partialTvr, out Slice existingHash))
                                 {
-                                    putStream = (existingHash.Content.Match(base64Hash.Content) == false) || retiredAttachmentExists;
+                                    putStream = (existingHash.Content.Match(base64Hash.Content) == false) || existingFlags is AttachmentFlags.Retired;
                                     if (putStream)
                                     {
                                         using (TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
@@ -424,17 +402,7 @@ namespace Raven.Server.Documents
                             else
                             {
                                 Debug.Assert(flags == AttachmentFlags.None, "flags == AttachmentFlags.None");
-
-                                if (retireAtDt != null)
-                                {
-                                    //TODO: egor now this is only done from ETL, but in theory can be done using the client API, this mean the client can add attachment and mark it as retired, do we want that?
-                                    retireAt = retireAtDt.Value.Ticks;
-                                    RetiredAttachmentsStorage.Put(context, keySlice, retireAtDt.Value.GetDefaultRavenFormat());
-                                }
-                                else
-                                {
-                                    TryPutRetiredAttachment(context, keySlice, retireAtDt, out retireAt);
-                                }
+                                retireAt = TryUpdateRetiredAttachment(context, retireAtDt, current: -1L, keySlice);
                             }
                         }
                         else
@@ -477,6 +445,30 @@ namespace Raven.Server.Documents
                     };
                 }
             }
+        }
+
+        private long TryUpdateRetiredAttachment(DocumentsOperationContext context, DateTime? retireAtDt, long current, Slice keySlice)
+        {
+            if (current == -1L)
+            {
+                TryPutRetiredAttachment(context, keySlice, retireAtDt, out current);
+                return current;
+            }
+
+            if (retireAtDt.HasValue)
+            {
+                if (retireAtDt.Value.Ticks != current)
+                {
+                    // update to retireAt, we need to update the retired attachment storage
+                    RetiredAttachmentsStorage.RemoveRetirePutValue(context, keySlice, current);
+                    TryPutRetiredAttachment(context, keySlice, retireAtDt, out current);
+                }
+
+                return current;
+            }
+
+            RetiredAttachmentsStorage.RemoveRetirePutValue(context, keySlice, current);
+            return -1L;
         }
 
         private void TryPutRetiredAttachment(DocumentsOperationContext context, Slice keySlice, DateTime? retireAtDt, out long retireAt)
