@@ -31,7 +31,7 @@ namespace SlowTests.Issues
 
         [RavenTheory(RavenTestCategory.Certificates)]
         [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        public void CanGetRetireConfigWithValidUserPermission(Options options)
+        public void CannotGetRetireConfigWithValidUserPermission(Options options)
         {
             var certs = Certificates.SetupServerAuthentication();
             var db = GetDatabaseName();
@@ -46,6 +46,39 @@ namespace SlowTests.Issues
                 certs.ServerCertificate.Value,
                 certs.ClientCertificate2.Value,
                 new Dictionary<string, DatabaseAccess> { [db] = DatabaseAccess.Read },
+                SecurityClearance.ValidUser);
+
+            options.AdminCertificate = adminCert;
+            options.ClientCertificate = userCert;
+            options.ModifyDatabaseName = _ => db;
+
+            using (var store = GetDocumentStore(options))
+            {
+                AuthorizationException ex = Assert.Throws<AuthorizationException>(() =>
+                    store.Maintenance.Send(new GetRetireAttachmentsConfigurationOperation()));
+                Assert.NotNull(ex);
+
+                Assert.Contains($"Forbidden access to {store.Database}", ex.Message);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanGetRetireConfigWithValidAdminPermission(Options options)
+        {
+            var certs = Certificates.SetupServerAuthentication();
+            var db = GetDatabaseName();
+
+            var adminCert = Certificates.RegisterClientCertificate(
+                certs.ServerCertificate.Value,
+                certs.ClientCertificate1.Value,
+                new Dictionary<string, DatabaseAccess> { [db] = DatabaseAccess.Admin },
+                SecurityClearance.ClusterAdmin);
+
+            var userCert = Certificates.RegisterClientCertificate(
+                certs.ServerCertificate.Value,
+                certs.ClientCertificate2.Value,
+                new Dictionary<string, DatabaseAccess> { [db] = DatabaseAccess.Admin },
                 SecurityClearance.ValidUser);
 
             options.AdminCertificate = adminCert;
