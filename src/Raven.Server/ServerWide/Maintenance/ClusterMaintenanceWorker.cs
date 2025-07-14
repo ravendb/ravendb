@@ -285,7 +285,7 @@ namespace Raven.Server.ServerWide.Maintenance
                                 report.ReportPerBucket[currentMigration.Bucket] = bucketReport;
                             }
 
-                            var periodicBackupStatuses = _server.DatabaseInfoCache.BackupStatusStorage.CollectPeriodicBackupStatuses(ctx, dbName, rawRecord.PeriodicBackupsTaskIds);
+                            var periodicBackupStatuses = _server.DatabaseInfoCache.BackupStatusStorage.GetDatabasePeriodicBackupStatuses(ctx, dbName, rawRecord.PeriodicBackupsTaskIds);
 
                             // Calculate the hash based on all relevant components (db state plus backup statuses).
                             report.EnvironmentsHash = Hashing.Combine(dbInstance.GetEnvironmentsHash(), DatabaseStatusReport.GetPeriodicBackupStatusesHash(periodicBackupStatuses));

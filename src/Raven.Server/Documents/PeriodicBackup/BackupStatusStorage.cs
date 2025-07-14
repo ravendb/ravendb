@@ -29,7 +29,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         static BackupStatusStorage()
         {
-            using (StorageEnvironment.GetStaticContext(out var ctx))
+            using (StorageEnvironment.GetStaticContext(out ByteStringContext ctx))
             {
                 Slice.From(ctx, nameof(BackupStatusStorage), ByteStringType.Immutable, out BackupStatusSlice);
             }
@@ -56,14 +56,6 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public PeriodicBackupStatus GetBackupStatus(ClusterOperationContext context, string databaseName, long taskId)
-        {
-            var backupStatusBlittable = GetBackupStatusBlittable(context, databaseName, taskId);
-            return backupStatusBlittable == null
-                ? null
-                : JsonDeserializationClient.PeriodicBackupStatus(backupStatusBlittable);
-        }
-
         public PeriodicBackupStatus GetBackupStatus(string databaseName, long taskId)
         {
             using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
@@ -73,28 +65,53 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
+        public PeriodicBackupStatus GetBackupStatus(ClusterOperationContext context, string databaseName, long taskId)
+        {
+            var backupStatusBlittable = GetBackupStatusBlittable(context, databaseName, taskId);
+            return backupStatusBlittable == null
+                ? null
+                : JsonDeserializationClient.PeriodicBackupStatus(backupStatusBlittable);
+        }
+
         public BlittableJsonReaderObject GetBackupStatusBlittable(ClusterOperationContext context, string databaseName, long taskId)
         {
-            var localStatus = GetLocalBackupStatusBlittable(context, databaseName, taskId);
-            if (localStatus != null)
-                return localStatus;
+            var statusBlittable = GetLocalBackupStatusBlittableInternal(context, databaseName, taskId);
+            if (statusBlittable != null)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Retrieved backup status with task ID `{taskId}` from local storage.");
+
+                return statusBlittable;
+            }
 
             // backwards compatibility - fallback to cluster status - only if the node tag matches
             var clusterStatus = BackupUtils.GetBackupStatusFromClusterBlittable(_serverStore, context, databaseName, taskId);
-            if (clusterStatus == null ||
-                clusterStatus.TryGet(nameof(PeriodicBackupStatus.NodeTag), out string nodeTag) == false ||
-                string.IsNullOrEmpty(nodeTag))
-                return null;
+            if (clusterStatus == null || clusterStatus.TryGet(nameof(PeriodicBackupStatus.NodeTag), out string nodeTag) == false || string.IsNullOrEmpty(nodeTag))
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"No backup status found with task ID `{taskId}` in local storage or cluster.");
 
-            return nodeTag == _serverStore.NodeTag
-                ? clusterStatus
-                : null;
+                return null;
+            }
+
+            if (nodeTag == _serverStore.NodeTag)
+            {
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Retrieved backup status with task ID `{taskId}` from cluster storage.");
+
+                return clusterStatus;
+            }
+
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Backup status with task ID `{taskId}` found in cluster storage, but node tag '{nodeTag}' does not match current node tag '{_serverStore.NodeTag}'. Returning null.");
+
+            return null;
         }
 
-        public unsafe BlittableJsonReaderObject GetLocalBackupStatusBlittable<T>(TransactionOperationContext<T> context, string databaseName, long taskId)
+        internal unsafe BlittableJsonReaderObject GetLocalBackupStatusBlittableInternal<T>(TransactionOperationContext<T> context, string databaseName, long taskId)
             where T : RavenTransaction
         {
-            var key = PeriodicBackupStatus.GenerateItemName(databaseName, _serverStore._env.Base64Id, taskId);
+            var key = PeriodicBackupStatus.GenerateItemName(databaseName, taskId);
             var table = context.Transaction.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
 
             TableValueReader statusTvr;
@@ -104,7 +121,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     return null;
             }
 
-            //it seems like the database was shutdown rudely and never wrote it stats onto the disk
+            //it seems like the database was shutdown rudely and never wrote its stats onto the disk
             if (statusTvr.Pointer == null)
                 return null;
 
@@ -114,13 +131,13 @@ namespace Raven.Server.Documents.PeriodicBackup
             return statusBlittable;
         }
 
-        internal Dictionary<long, PeriodicBackupStatusReport> CollectPeriodicBackupStatuses(ClusterOperationContext context, string dbName, List<long> backupTaskIds)
+        internal Dictionary<long, PeriodicBackupStatusReport> GetDatabasePeriodicBackupStatuses(ClusterOperationContext context, string databaseName, List<long> backupTaskIds)
         {
             var result = new Dictionary<long, PeriodicBackupStatusReport>();
 
             foreach (var taskId in backupTaskIds)
             {
-                using var statusBlittable = GetBackupStatusBlittable(context, dbName, taskId);
+                using var statusBlittable = GetBackupStatusBlittable(context, databaseName, taskId);
                 if (statusBlittable == null)
                     continue;
 
@@ -134,16 +151,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             return result;
         }
 
-        public void InsertBackupStatus(PeriodicBackupStatus backupStatus, string databaseName, string dbId, long taskId)
+        public void Insert(PeriodicBackupStatus backupStatus, string databaseName)
         {
-            _serverStore.Engine.TxMerger.EnqueueSync(new UpdateLocalBackupStatusCommand(backupStatus, databaseName, dbId, taskId));
+            _serverStore.Engine.TxMerger.EnqueueSync(new UpdateLocalBackupStatusCommand(backupStatus, databaseName, backupStatus.TaskId));
+
+            if (_logger.IsInfoEnabled)
+                _logger.Info($"Inserted backup status for database '{databaseName}' with task ID {backupStatus.TaskId}.");
         }
 
-        public static unsafe void InsertBackupStatusBlittable<T>(TransactionOperationContext<T> context, BlittableJsonReaderObject backupStatus, string databaseName,
-            string dbId, long taskId)
+        public static unsafe void Insert<T>(TransactionOperationContext<T> context, BlittableJsonReaderObject backupStatus, string databaseName, long taskId)
             where T : RavenTransaction
         {
-            var key = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
+            var key = PeriodicBackupStatus.GenerateItemName(databaseName, taskId);
             using (var id = context.GetLazyString(key.ToLowerInvariant()))
             using (backupStatus)
             {
@@ -158,14 +177,23 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public static void DeleteBackupStatus(ClusterOperationContext context, string databaseName, string dbId, long taskId)
+        public static void Delete(ClusterOperationContext context, string databaseName, long taskId)
         {
             // this is called from csm, so commiting will be done outside
-            var backupKey = PeriodicBackupStatus.GenerateItemName(databaseName, dbId, taskId);
+            var backupKey = PeriodicBackupStatus.GenerateItemName(databaseName, taskId);
             using (Slice.From(context.Allocator, backupKey.ToLowerInvariant(), out Slice key))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
                 table.DeleteByKey(key);
+            }
+        }
+
+        internal static void Delete(TransactionOperationContext context, string prefix)
+        {
+            using (Slice.From(context.Allocator, prefix.ToLowerInvariant(), out Slice key))
+            {
+                var table = context.Transaction.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
+                table.DeleteByPrimaryKeyPrefix(key);
             }
         }
 

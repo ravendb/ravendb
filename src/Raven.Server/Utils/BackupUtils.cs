@@ -630,13 +630,13 @@ internal static class BackupUtils
             try
             {
                 // if cluster command failed then we save the status locally on our own
-                serverStore.DatabaseInfoCache.BackupStatusStorage.InsertBackupStatus(status, databaseName, serverStore._env.Base64Id, status.TaskId);
+                serverStore.DatabaseInfoCache.BackupStatusStorage.Insert(status, databaseName);
                 message += $"{Environment.NewLine}Saving the local backup status directly succeeded";
             }
-            catch (Exception ex)
+            catch (Exception innerException)
             {
                 message += $"{Environment.NewLine}Attempt at saving the local status directly failed as well";
-                fullException = new AggregateException(e, ex);
+                fullException = new AggregateException(e, innerException);
             }
 
             if (logger.IsOperationsEnabled)

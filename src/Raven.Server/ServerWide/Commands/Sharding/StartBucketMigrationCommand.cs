@@ -72,7 +72,7 @@ namespace Raven.Server.ServerWide.Commands.Sharding
             record.Sharding.BucketMigrations.Add(Bucket, _migration);
         }
 
-        public override  void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, ServerStore serverStore, Logger clusterAuditLog)
+        public override void AfterDatabaseRecordUpdate(ClusterOperationContext ctx, Table items, Logger clusterAuditLog)
         {
             if (_migration == null)
                 return;

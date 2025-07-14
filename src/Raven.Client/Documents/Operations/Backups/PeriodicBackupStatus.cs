@@ -96,16 +96,8 @@ namespace Raven.Client.Documents.Operations.Backups
         }
 
         public static string Prefix => "periodic-backups/";
-
-        public static string GenerateItemName(string databaseName, long taskId)
-        {
-            return $"values/{databaseName}/{Prefix}{taskId}";
-        }
-
-        internal static string GenerateItemName(string databaseName, string base64DbId, long taskId)
-        {
-            return $"{GenerateItemName(databaseName, taskId)}/{base64DbId}";
-        }
+        internal static string GenerateBackupStoragePrefix(string databaseName) => $"values/{databaseName}/{Prefix}";
+        internal static string GenerateItemName(string databaseName, long taskId) => $"{GenerateBackupStoragePrefix(databaseName)}{taskId}";
     }
 
     public sealed class Error

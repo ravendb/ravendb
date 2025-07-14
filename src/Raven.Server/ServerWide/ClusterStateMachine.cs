@@ -2726,7 +2726,7 @@ namespace Raven.Server.ServerWide
                         throw new RachisApplyException("Failed to update database record.", e);
                     }
 
-                    updateCommand.AfterDatabaseRecordUpdate(context, items, serverStore, _clusterAuditLog);
+                    updateCommand.AfterDatabaseRecordUpdate(context, items, _clusterAuditLog);
 
                     if (databaseRecord.Topology?.Count == 0 && databaseRecord.DeletionInProgress.Count == 0)
                     {

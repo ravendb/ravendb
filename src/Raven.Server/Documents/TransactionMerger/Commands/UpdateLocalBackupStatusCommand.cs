@@ -11,21 +11,19 @@ namespace Raven.Server.Documents.TransactionMerger.Commands
     {
         private readonly DynamicJsonValue _backupStatusAsJson;
         private readonly string _databaseName;
-        private readonly string _dbId;
         private readonly long _taskId;
 
-        public UpdateLocalBackupStatusCommand(PeriodicBackupStatus backupStatus, string databaseName, string dbId, long taskId)
+        public UpdateLocalBackupStatusCommand(PeriodicBackupStatus backupStatus, string databaseName, long taskId)
         {
             _backupStatusAsJson = (backupStatus ?? throw new ArgumentNullException(nameof(backupStatus))).ToJson();
             _databaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
-            _dbId = dbId;
             _taskId = taskId;
         }
 
         protected override long ExecuteCmd(ClusterOperationContext context)
         {
             var statusBlittable = context.ReadObject(_backupStatusAsJson, $"backup-status-update-taskId-{_taskId}", BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-            BackupStatusStorage.InsertBackupStatusBlittable(context, statusBlittable, _databaseName, _dbId, _taskId);
+            BackupStatusStorage.Insert(context, statusBlittable, _databaseName, _taskId);
             return 1;
         }
 

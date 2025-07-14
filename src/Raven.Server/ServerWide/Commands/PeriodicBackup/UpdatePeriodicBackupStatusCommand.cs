@@ -37,7 +37,7 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
             if (PeriodicBackupStatus.NodeTag == serverStore.NodeTag)
             {
                 var status = GetUpdatedValue(index, record, context, null);
-                BackupStatusStorage.InsertBackupStatusBlittable(context, status.Value, DatabaseName, serverStore._env.Base64Id, PeriodicBackupStatus.TaskId);
+                BackupStatusStorage.Insert(context, status.Value, DatabaseName, PeriodicBackupStatus.TaskId);
             }
 
             // Delete the local status if we are a non-responsible node, and we are overdue on a full backup
@@ -47,23 +47,21 @@ namespace Raven.Server.ServerWide.Commands.PeriodicBackup
 
             var responsibleNode = BackupUtils.GetResponsibleNodeTag(serverStore, DatabaseName, PeriodicBackupStatus.TaskId);
             var config = record.GetPeriodicBackupConfiguration(PeriodicBackupStatus.TaskId);
-            if (responsibleNode != null && responsibleNode != serverStore.NodeTag && config.FullBackupFrequency != null)
+            if (responsibleNode == null || responsibleNode == serverStore.NodeTag || config.FullBackupFrequency == null)
+                return;
+
+            DateTime? nextFullBackup = BackupUtils.GetNextBackupOccurrence(new BackupUtils.NextBackupOccurrenceParameters
             {
-                var nextFullBackup = BackupUtils.GetNextBackupOccurrence(new BackupUtils.NextBackupOccurrenceParameters()
-                {
-                    BackupFrequency = config.FullBackupFrequency,
-                    Configuration = config,
-                    LastBackupUtc = localStatus.LastFullBackupInternal ?? DateTime.MinValue
-                });
+                BackupFrequency = config.FullBackupFrequency,
+                Configuration = config,
+                LastBackupUtc = localStatus.LastFullBackupInternal ?? DateTime.MinValue
+            });
 
-                var now = DateTime.UtcNow;
-                if (nextFullBackup != null && nextFullBackup.Value.ToUniversalTime() < now)
-                {
-                    // we are overdue for a full backup, we can delete the local status to ensure the next backup will be full
-                    // this is in order to free the tombstone cleaners (for both local and compare exchange tombstones) to delete freely for this node
-
-                    BackupStatusStorage.DeleteBackupStatus(context, DatabaseName, serverStore._env.Base64Id, PeriodicBackupStatus.TaskId);
-                }
+            if (nextFullBackup?.ToUniversalTime() < DateTime.UtcNow)
+            {
+                // We're overdue for a full backup. We can delete the local status to ensure the next backup is full.
+                // This is to allow the tombstone cleaner to freely delete tombstones for this node.
+                BackupStatusStorage.Delete(context, DatabaseName, PeriodicBackupStatus.TaskId);
             }
         }
 

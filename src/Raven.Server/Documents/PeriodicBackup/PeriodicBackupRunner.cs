@@ -344,15 +344,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 try
                 {
-                    // in the case cluster backup status was overridden by a different node since our last backup,
-                    // we fetch the last local backup status to check if we need to continue where we left off or start fresh with a full backup
-
+                    // If another node has overridden the cluster backup status since our last backup,
+                    // we retrieve the most recent local backup status to determine whether to continue where we stopped or start a completely new, full backup.
                     var localBackupStatus = periodicBackup.BackupStatus = GetMostUpdatedLocalBackupStatus(periodicBackup.Configuration.TaskId, inMemoryBackupStatus: periodicBackup.BackupStatus);
                     var backupToLocalFolder = BackupConfiguration.CanBackupUsing(periodicBackup.Configuration.LocalSettings);
 
                     // check if we need to do a new full backup
                     if (localBackupStatus.LastFullBackup == null || // no full backup was previously performed
-                        localBackupStatus.BackupType != periodicBackup.Configuration.BackupType || // backup type has changed
+                        localBackupStatus.BackupType != periodicBackup.Configuration.BackupType || // the backup type has changed
                         localBackupStatus.LastEtag == null || // last document etag wasn't updated
                         backupToLocalFolder && BackupTask.DirectoryContainsBackupFiles(localBackupStatus.LocalBackup.BackupDirectory, IsFullBackupOrSnapshot) == false)
                     // the local folder already includes a full backup or snapshot
@@ -654,11 +653,9 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var config = record.GetPeriodicBackupConfiguration(taskId);
 
                     var localStatus = _serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(context, _database.Name, taskId);
-
-                    var responsibleNode = BackupUtils.GetResponsibleNodeTag(_serverStore, _database.Name, taskId);
-
                     if (localStatus == null)
                     {
+                        var responsibleNode = BackupUtils.GetResponsibleNodeTag(_serverStore, _database.Name, taskId);
                         if (responsibleNode == null || responsibleNode == _serverStore.NodeTag)
                         {
                             // the first backup might run on this node, don't delete anything until then

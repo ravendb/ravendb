@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
+using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -131,6 +132,7 @@ namespace Raven.Server.Documents
             using (Slice.From(ctx.Allocator, databaseName.ToLowerInvariant(), out Slice key))
             {
                 DeleteInternal(ctx, key);
+                BackupStatusStorage.Delete(ctx, PeriodicBackupStatus.GenerateBackupStoragePrefix(databaseName));
                 tx.Commit();
             }
         }
