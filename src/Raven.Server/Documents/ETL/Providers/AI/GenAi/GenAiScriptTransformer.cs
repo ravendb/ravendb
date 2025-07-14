@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Acornima.Ast;
 using Jint;
 using Jint.Native;
+using Jint.Native.Function;
 using Jint.Native.Object;
 using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
@@ -29,6 +31,67 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
     private List<GenAiScriptResult> _currentRun;
     private readonly GenAiStatsScope _stats;
 
+    private static readonly string JavaScriptApi = @"
+class AIContextItem {
+  #withAttachment(type, data) {
+    if(!this.attachments) {
+      this.attachments = [];
+    }
+    this.attachments.push({ type, data });
+    return this;
+  }
+
+  constructor(ctx) {
+    if (ctx !== null && (typeof ctx !== 'object' || Array.isArray(ctx))) {
+      throw new Error('ctx must be an object');
+    }
+    this.ctx = ctx;
+    this.attachments;
+  }
+
+  withText(data) {
+    return this.#withAttachment('text/plain', data);
+  }
+
+  withPng(data) {
+    return this.#withAttachment('image/png', data);
+  }
+
+  withWebp(data) {
+    return this.#withAttachment('image/webp', data);
+  }
+
+  withGif(data) {
+    return this.#withAttachment('image/gif', data);
+  }
+
+  withPdf(data) {
+    return this.#withAttachment('application/pdf', data);
+  }
+}
+
+class AI {
+  #allContexts = [];
+
+  __retrieveContexts() {
+     const ctxs = this.#allContexts;
+     this.#allContexts = [];
+     return ctxs;
+  }
+
+  genContext(...args) {
+    if (args.length !== 1) {
+      throw new Error('invalid number of arguments, expected ai.genContext(ctx);');
+    }
+    const ctx = new AIContextItem(args[0]);
+    this.#allContexts.push(ctx);
+    return ctx;
+  }
+}
+
+var ai = new AI();
+"; 
+
     public GenAiScriptTransformer(DocumentDatabase database, DocumentsOperationContext context, Transformation transformation, PatchRequest behaviorFunctions, GenAiConfiguration configuration, GenAiStatsScope stats) : base(database, context, null, behaviorFunctions)
     {
         _configuration = configuration;
@@ -39,17 +102,17 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
     public override void Initialize(bool debugMode)
     {
         ReturnMainRun = Database.Scripts.GetScriptRunner(_mainScript, true, out DocumentScript);
-
+        JsValue aiAlreadyExists = DocumentScript.ScriptEngine.GetValue("ai");
+        if (aiAlreadyExists.IsNull() || aiAlreadyExists.IsUndefined())
+        {
+            DocumentScript.ScriptEngine.Execute(JavaScriptApi);
+        }
+        
         if (DocumentScript == null)
             return;
 
         if (debugMode)
             DocumentScript.DebugMode = true;
-
-        var contextFunc = new ClrFunction(DocumentScript.ScriptEngine, "genContext", AddContext);
-        ObjectInstance aiObject = new JsObject(DocumentScript.ScriptEngine);
-        aiObject.FastSetProperty("genContext", new PropertyDescriptor(contextFunc, false, false, false));
-        DocumentScript.ScriptEngine.SetValue("ai", aiObject);
 
         _configurationPartialHash = GetInitialHash(_configuration);
     }
@@ -91,35 +154,35 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
             Debug.Assert(item.IsDelete is false);
 
             DocumentScript.Run(Context, Context, "execute", [Current.Document]);
+            ProcessScriptResults();
+        }
+    }
+
+    private void ProcessScriptResults()
+    {
+        ObjectInstance ai = DocumentScript.ScriptEngine.GetValue("ai").AsObject();
+        Function retrieveContexts = ai.Prototype!.GetOwnProperty("__retrieveContexts").Value.AsFunctionInstance();
+        JsArray contexts = retrieveContexts.Call(ai, []).AsArray();
+        foreach (var ctx in contexts)
+        {
+            ObjectInstance ctxObj = ctx.AsObject();
+            ObjectInstance userSpecifixCtx = ctxObj.GetOwnProperty("ctx").Value.AsObject();
+            var context = JsBlittableBridge.Translate(Context, DocumentScript.ScriptEngine, userSpecifixCtx);
+            _stats.NumberOfContextObjects++;
+
+            string hash = CalculateHash(context);
+            var isCached = ShouldSendContext(hash, _configuration.Identifier, Current.Document) == false;
+
+            if (isCached)
+                _stats.TotalCachedContexts++;
+
+            using (context)
+            {
+                _currentRun.Add(new GenAiScriptResult(Current.DocumentId, context.CloneOnTheSameContext(), hash, isCached));
+            }
         }
     }
     
-    private JsValue AddContext(JsValue self, JsValue[] args)
-    {
-        const string methodDecl = "ai.genContext(ctx);";
-        if (args.Length != 1)
-            throw new InvalidOperationException($"Invalid number of arguments for {methodDecl}, got {args.Length} but expected 1.");
-
-        if (args[0].IsObject() is false)
-            throw new ArgumentException("Expected 'ctx' to be an object, but was: " + args[0].Type + ", " + args[0]);
-
-        var context = JsBlittableBridge.Translate(Context, DocumentScript.ScriptEngine, args[0].AsObject());
-        _stats.NumberOfContextObjects++;
-
-        string hash = CalculateHash(context);
-        var isCached = ShouldSendContext(hash, _configuration.Identifier, Current.Document) == false;
-
-        if (isCached)
-            _stats.TotalCachedContexts++;
-
-        using (context)
-        {
-            _currentRun.Add(new GenAiScriptResult(Current.DocumentId, context.CloneOnTheSameContext(), hash, isCached));
-        }
-
-        return JsValue.Null;
-    }
-
     private static bool ShouldSendContext(string hash, string taskIdentifier, Document doc)
     {
         if (doc.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
@@ -129,7 +192,8 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
 
         foreach (var h in existingHashes)
         {
-            if (string.Equals(hash, h?.ToString(), StringComparison.OrdinalIgnoreCase))
+            // those are base 64 values, they are case _sensitive_
+            if (string.Equals(hash, h?.ToString(), StringComparison.Ordinal))
                 return false; // already sent
         }
 
