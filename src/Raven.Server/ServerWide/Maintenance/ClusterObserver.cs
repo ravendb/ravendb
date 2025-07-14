@@ -772,6 +772,15 @@ namespace Raven.Server.ServerWide.Maintenance
 
             long minClusterConstraintEtag = -1;
 
+            if (_server?.ForTestingPurposes?.IgnoreClusterTransactionIndexInCompareExchangeCleaner == true)
+            {
+                minClusterConstraintEtag = long.MaxValue;
+
+                // ReSharper disable once UseNullPropagation
+                if (onDiagnosticLog != null)
+                    onDiagnosticLog($"Ignoring cluster transaction index in compare exchange cleaner, setting minClusterConstraintEtag to {minClusterConstraintEtag}.");
+            }
+
             foreach (var databaseState in mergedState.States.Values)
             {
                 foreach (var nodeTag in databaseState.DatabaseTopology.AllNodes)

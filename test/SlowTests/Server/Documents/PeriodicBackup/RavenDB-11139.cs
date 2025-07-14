@@ -17,10 +17,10 @@ using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
+using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Maintenance;
 using Raven.Tests.Core.Utils.Entities;
 using SlowTests.Utils;
 using Tests.Infrastructure;
@@ -1186,11 +1186,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         public async Task CompareExchangeTombstoneCleaner_ShouldCleanUp_WithoutBackupTasks()
         {
             var diagnosticLogBuilder = new StringBuilder();
+            var serverCreationOptions = new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "100" } }
+            };
 
-            using var server = GetNewServer();
+            using var server = GetNewServer(serverCreationOptions);
             using var store = GetDocumentStore(new Options { Server = server });
 
             server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}] {logLine}");
+            server.ServerStore.ForTestingPurposesOnly().IgnoreClusterTransactionIndexInCompareExchangeCleaner = true;
+            Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
 
             await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
             await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
@@ -1206,11 +1212,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var diagnosticLogBuilder = new StringBuilder();
+            var serverCreationOptions = new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "100" } }
+            };
 
-            using var server = GetNewServer();
-            using var store = GetDocumentStore(new Options { Server = server });
+            using var server = GetNewServer(serverCreationOptions);
+            using var store = GetDocumentStore(new Options { Server = server});
 
             server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}] {logLine}");
+            server.ServerStore.ForTestingPurposesOnly().IgnoreClusterTransactionIndexInCompareExchangeCleaner = true;
+            Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
 
             await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
             await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
@@ -1230,11 +1242,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var diagnosticLogBuilder = new StringBuilder();
+            var serverCreationOptions = new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "100" } }
+            };
 
-            using var server = GetNewServer();
+            using var server = GetNewServer(serverCreationOptions);
             using var store = GetDocumentStore(new Options { Server = server });
 
             server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}] {logLine}");
+            server.ServerStore.ForTestingPurposesOnly().IgnoreClusterTransactionIndexInCompareExchangeCleaner = true;
+            Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
 
             var backupConfiguration = Backup.CreateBackupConfiguration(backupPath, name: "FirstBackupConfiguration");
             _ = await Backup.UpdateConfigAsync(server, backupConfiguration, store);
@@ -1253,11 +1271,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var diagnosticLogBuilder = new StringBuilder();
+            var serverCreationOptions = new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "100" } }
+            };
 
-            using var server = GetNewServer();
+            using var server = GetNewServer(serverCreationOptions);
             using var store = GetDocumentStore(new Options { Server = server });
 
             server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}] {logLine}");
+            server.ServerStore.ForTestingPurposesOnly().IgnoreClusterTransactionIndexInCompareExchangeCleaner = true;
+            Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
 
             var backupConfiguration = Backup.CreateBackupConfiguration(backupPath, name: "FirstBackupConfiguration", disabled: true);
             _ = await Backup.UpdateConfigAsync(server, backupConfiguration, store);
@@ -1276,11 +1300,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var diagnosticLogBuilder = new StringBuilder();
+            var serverCreationOptions = new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "100" } }
+            };
 
-            using var server = GetNewServer();
+            using var server = GetNewServer(serverCreationOptions);
             using var store = GetDocumentStore(new Options { Server = server });
 
             server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}] {logLine}");
+            server.ServerStore.ForTestingPurposesOnly().IgnoreClusterTransactionIndexInCompareExchangeCleaner = true;
+            Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
 
             await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
             await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
@@ -1310,11 +1340,17 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var diagnosticLogBuilder = new StringBuilder();
+            var serverCreationOptions = new ServerCreationOptions
+            {
+                CustomSettings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "100" } }
+            };
 
-            using var server = GetNewServer();
+            using var server = GetNewServer(serverCreationOptions);
             using var store = GetDocumentStore(new Options { Server = server });
 
             server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.UtcNow:O}] {logLine}");
+            server.ServerStore.ForTestingPurposesOnly().IgnoreClusterTransactionIndexInCompareExchangeCleaner = true;
+            Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
 
             await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
             await store.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
@@ -1416,11 +1452,16 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
             var databaseName = GetDatabaseName();
+            var customSettings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "100" } };
 
-            (List <RavenServer> clusterNodes, RavenServer leaderNode) = await CreateRaftCluster(clusterSize);
+            (List <RavenServer> clusterNodes, RavenServer leaderNode) = await CreateRaftCluster(clusterSize, customSettings: customSettings);
             var diagnosticLogBuilder = new StringBuilder();
             foreach (var node in clusterNodes.Where(node => node.ServerStore.Observer is not null))
+            {
                 node.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.UtcNow:O}][Node {node.ServerStore.NodeTag}] {logLine}");
+                node.ServerStore.ForTestingPurposesOnly().IgnoreClusterTransactionIndexInCompareExchangeCleaner = true;
+                Cluster.WaitForFirstCompareExchangeTombstonesClean(node);
+            }
 
             await CreateDatabaseInCluster(databaseName, clusterSize, leaderNode.WebUrl);
             var secondNode = clusterNodes.First(x => x != leaderNode);
@@ -1440,16 +1481,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             // completed on schedule. If a full backup runs every three minutes and the test starts, for example, at 10:01, we will wait until 10:02 and then
             // proceed to create a periodic backup task. This way Full backup will start at 10:03
             await Backup.WaitUntilNextFullBackupActionWindowAsync(backupConfiguration, actionWindow: TimeSpan.FromSeconds(30), leaderNode.ServerStore.ServerShutdown, diagnosticLogBuilder);
-
-            await CreateCompareExchangeTombstone(firstStore, "cx/1");
-
-            AssertCompareExchangeCounts(leaderNode, firstStore.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 0, "Before the backup configuration creation, before first compare exchange tombstone cleanup", diagnosticLogBuilder);
-            AssertCompareExchangeCounts(secondNode, secondStore.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 0, "Before the backup configuration creation, before first compare exchange tombstone cleanup", diagnosticLogBuilder);
-
-            await CompareExchangeTombstoneCleanerTestHelper.Clean(clusterNodes, databaseName, ignoreClustrTrx: true);
-
-            AssertCompareExchangeCounts(leaderNode, firstStore.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 0, "Before the backup configuration creation, after first compare exchange tombstone cleanup", diagnosticLogBuilder);
-            AssertCompareExchangeCounts(secondNode, secondStore.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 0, "Before the backup configuration creation, after first compare exchange tombstone cleanup", diagnosticLogBuilder);
 
             var nextBackupWaiter = new NextBackupWaiter(clusterTestBase: this)
                 .WithDatabase(databaseName)
