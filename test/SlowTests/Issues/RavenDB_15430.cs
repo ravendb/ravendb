@@ -217,7 +217,7 @@ namespace SlowTests.Issues
                     },
                     PolicyCheckFrequency = TimeSpan.FromSeconds(1)
                 };
-                await store.Maintenance.SendAsync(new ConfigureTimeSeriesOperation(config));
+                await store.Maintenance.ForNode(cluster.Leader.ServerStore.NodeTag).SendAsync(new ConfigureTimeSeriesOperation(config));
 
                 var now = new DateTime(2021, 6, 1, 18, 45, 0, 999, DateTimeKind.Utc);
                 foreach (var server in Servers)
