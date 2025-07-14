@@ -98,9 +98,9 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         _contextPool = contextPool;
     }
 
-    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, AiUsage usage, CancellationToken token)
+    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, AiUsage usage, CancellationToken token)
     {
-        using var request = CreateCompletionRequest(context, messages, tools);
+        using var request = CreateCompletionRequest(context, messages, tools, useTools);
         using var response = await _client.SendAsync(request, token).ConfigureAwait(false);
         using var responseContent = await GetResponseContentAsync(context, response, token);
 
@@ -185,12 +185,12 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         var messages = new List<BlittableJsonReaderObject>() { ctx.ReadObject(msg1, "system/msg"), ctx.ReadObject(msg2, "user/msg") };
         var usage = new AiUsage();
-        var results = await CompleteAsync(ctx, messages, tools: null, usage, token);
+        var results = await CompleteAsync(ctx, messages, tools: null, useTools: false, usage, token);
 
         return (results.Result.ToString(), usage);
     }
 
-    private HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools)
+    private HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools)
     {
         var content = new BlittableJsonContent(async stream =>
         {
@@ -202,7 +202,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                     return;
                 }
 
-                WriteCompletionRequestPayload(ctx, messages, tools, writer);
+                WriteCompletionRequestPayload(ctx, messages, tools, useTools, writer);
             }
         }, ConventionsToUse);
 
@@ -224,7 +224,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return request;
     }
 
-    private void WriteCompletionRequestPayload(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, AsyncBlittableJsonTextWriter writer)
+    private void WriteCompletionRequestPayload(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, AsyncBlittableJsonTextWriter writer)
     {
         writer.WriteStartObject();
 
@@ -240,6 +240,13 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         {
             writer.WriteArray(Constants.RequestFields.Tools, tools);
             writer.WriteComma();
+
+            if (useTools is false)
+            {
+                writer.WritePropertyName(Constants.RequestFields.ToolChoice);
+                writer.WriteString("none");
+                writer.WriteComma();
+            }
         }
 
         writer.WritePropertyName(Constants.RequestFields.ResponseFormat);
@@ -255,7 +262,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         if (_think.HasValue)
         {
             writer.WriteComma();
-            writer.WritePropertyName("think");
+            writer.WritePropertyName(Constants.RequestFields.Think);
             writer.WriteBool(_think.Value);
         }
 
@@ -662,6 +669,9 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string ResponseFormat = "response_format";
             public const string Type = "type";
             public const string JsonSchema = "json_schema";
+            public const string Think = "think";
+            public const string ToolChoice = "tool_choice";
+            public const string MaxCompletionToken = "max_completion_tokens";
 
             // JSON property values / enums
             public const string RoleSystemValue = "system";

@@ -12,12 +12,13 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-public class ConversationDocument(string agent, BlittableJsonReaderObject parameters)
+public class ConversationDocument(string agent, BlittableJsonReaderObject parameters) : ICloneable
 {
     public string Agent = agent ?? throw new ArgumentNullException(nameof(agent));
     
-    public BlittableJsonReaderObject Parameters = parameters ;
+    public BlittableJsonReaderObject Parameters = parameters;
     public List<BlittableJsonReaderObject> Messages = [];
+    public List<string> HistoryDocuments = [];
     public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
     public string ChangeVector;
@@ -45,15 +46,19 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
             throw new InvalidOperationException("conversation document is not initialized. Call Initialize() first.");
     }
 
-    public BlittableJsonReaderObject ToBlittable(JsonOperationContext context, AiAgentConfiguration configuration)
+    public BlittableJsonReaderObject ToBlittable(JsonOperationContext context, AiAgentConfiguration configuration, TimeSpan? expiration = null)
     {
         var metadata = new DynamicJsonValue
         {
             [Constants.Documents.Metadata.Collection] = configuration.Persistence.Collection,
         };
-        if (configuration.Persistence.Expires is { } expire)
+        if (expiration is { } expire1)
         {
-            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expire);
+            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expire1);
+        }
+        else if (configuration.Persistence.Expires is { } expire2)
+        {
+            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expire2);
         }
 
         var conversation = ToJson();
@@ -69,6 +74,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
             [nameof(Agent)] = Agent,
             [nameof(Parameters)] = Parameters,
             [nameof(Messages)] = Messages,
+            [nameof(HistoryDocuments)] = HistoryDocuments,
             [nameof(TotalUsage)] = TotalUsage.ToJson(),
             [nameof(OpenActionCalls)] = DynamicJsonValue.Convert(OpenActionCalls),
         };
@@ -124,6 +130,19 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
         Messages.Add(msg);
     }
 
+    object ICloneable.Clone() => Clone();
+
+    public ConversationDocument Clone() => 
+        new ConversationDocument(Agent, Parameters)
+        {
+            Messages = new List<BlittableJsonReaderObject>(Messages),
+            HistoryDocuments = new List<string>(HistoryDocuments),
+            OpenActionCalls = OpenActionCalls,
+            TotalUsage = TotalUsage.Clone(),
+            ChangeVector = ChangeVector
+        };
+    
+
     public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document)
     {
         if (document.TryGet(nameof(Agent), out string agent) == false)
@@ -132,6 +151,8 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
             throw new ArgumentException($"Missing Parameters in '{id}' conversation document");
         if (document.TryGet(nameof(Messages), out BlittableJsonReaderArray messages) == false)
             throw new ArgumentException($"Missing Messages in '{id}' conversation document");
+        if (document.TryGet(nameof(HistoryDocuments), out BlittableJsonReaderArray historyDocs) == false)
+            throw new ArgumentException($"Missing HistoryDocuments in '{id}' conversation document");
         if (document.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject usage) == false)
             throw new ArgumentException($"AI Usage in '{id}' conversation document");
         if (document.TryGet(nameof(OpenActionCalls), out BlittableJsonReaderObject openToolCalls) == false)
@@ -149,6 +170,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
         return new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
             Messages = messages.Items.Select(m=>((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
+            HistoryDocuments = historyDocs.Items.Select(s => s.ToString()).ToList(),
             TotalUsage = JsonDeserializationClient.AiUsage(usage),
             OpenActionCalls = openTools
         };

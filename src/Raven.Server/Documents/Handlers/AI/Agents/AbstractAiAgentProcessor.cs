@@ -20,6 +20,8 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using Newtonsoft.Json;
+using ChatConstants = Raven.Server.Documents.AI.ChatCompletionClient.Constants;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
 {
@@ -58,8 +60,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             if (document.OpenActionCalls.Count > 0)
             {
-                await TryPersistAsync(context, configuration, conversationId, document);
-                await WriteResponseAsync(context, conversationId, (Response: null, document));
+                await TryPersistAsync(context, configuration, conversationId, document, null);
+                await WriteResponseAsync(context, conversationId, response: null, document);
                 return;
             }
 
@@ -73,8 +75,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             var r = await TalkAsync(context, configuration, document, token: token);
 
-            conversationId = await TryPersistAsync(context, configuration, conversationId, r.Document);
-            await WriteResponseAsync(context, conversationId, r);
+            conversationId = await TryPersistAsync(context, configuration, conversationId, r.Document, r.History);
+            await WriteResponseAsync(context, conversationId, r.Response, r.Document);
         }
 
         public override async ValueTask ExecuteAsync()
@@ -180,7 +182,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
         }
 
-        public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration,
+        public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, ConversationDocument History)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration,
             ConversationDocument document, CancellationToken token)
         {
             document.EnsureInitialized();
@@ -189,31 +191,122 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             var schema = ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
 
-            using var client = ChatCompletionClient.CreateChatCompletionClient(ContextPool, conStr, schema);
-
             var tools = document.GenerateTools(context, configuration);
 
             AiResponse aiResponse;
 
-            while (true)
+            using (var client = ChatCompletionClient.CreateChatCompletionClient(ContextPool, conStr, schema))
             {
-                aiResponse = await client.CompleteAsync(
-                    context,
-                    document.Messages,
-                    tools,
-                    document.TotalUsage,
-                    token
-                );
-                if (aiResponse.Type is AiResponseType.Result)
-                    break;
+                var count = configuration.MaxToolCallResponses;
 
-                await HandleQueryToolCallsAsync(context, configuration, document, aiResponse);
+                while (true)
+                {
+                    aiResponse = await client.CompleteAsync(
+                        context,
+                        document.Messages,
+                        tools,
+                        useTools: count-- > 0,
+                        document.TotalUsage,
+                        token
+                    );
 
-                if (TryGetUserTools(context, document, configuration, aiResponse))
-                    break; // we need to return the user tool requests to the client, so we can continue the conversation
+                    if (aiResponse.Type is AiResponseType.Result)
+                        break;
+
+                    await HandleQueryToolCallsAsync(context, configuration, document, aiResponse);
+
+                    if (TryGetUserTools(context, document, configuration, aiResponse))
+                        break; // we need to return the user tool requests to the client, so we can continue the conversation
+                }
             }
 
-            return (aiResponse.Result, document);
+            var history = await TryReduceChatSize();
+
+            return (aiResponse.Result, document, history);
+
+
+            async Task<ConversationDocument> TryReduceChatSize()
+            {
+                var reduction = configuration.ChatReduction;
+                if (reduction == null || document.OpenActionCalls.Count > 0)
+                    return null;
+
+                var clone = reduction.History == null ? null : document.Clone();
+
+                if (reduction.Truncate != null)
+                {
+                    if (document.Messages.Count > reduction.Truncate.MessagesLengthBeforeTruncate)
+                    {
+                        var truncateCount = document.Messages.Count - reduction.Truncate.MessagesLengthAfterTruncate;
+                        truncateCount = int.Min(truncateCount, document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
+                        truncateCount = int.Max(truncateCount, 0); // prevent negative
+                        if(truncateCount > 0)
+                            document.Messages.RemoveRange(1, truncateCount);
+                    }
+                }
+                else if (reduction.Tokens != null)
+                {
+                    if (document.TotalUsage.LatestPromptTokens > reduction.Tokens.MaxTokensBeforeSummarization)
+                        await SummarizeAsync(context, conStr, reduction.Tokens, document, token);
+                }
+
+                return clone;
+            }
+        }
+
+        private async Task SummarizeAsync(JsonOperationContext context, AiConnectionString connectionString, AiAgentSummarizationByTokens summarization, ConversationDocument oldChat, CancellationToken token)
+        {
+            const string summaryPrefix = "Summary of previous conversation: ";
+
+            var systemPrompt = oldChat.Messages.FirstOrDefault();
+            if (systemPrompt == null)
+                throw new InvalidOperationException("System prompt cannot be null.");
+
+            if (systemPrompt.TryGet(ChatConstants.RequestFields.Content, out string _) == false)
+                throw new InvalidOperationException($"Invalid system prompt: required field '{ChatConstants.RequestFields.Content}' is missing.");
+
+            var messages = new List<BlittableJsonReaderObject>()
+            {
+                context.ReadObject(
+                    new DynamicJsonValue
+                    {
+                        [ChatConstants.RequestFields.Role] = ChatConstants.RequestFields.RoleSystemValue,
+                        [ChatConstants.RequestFields.Content] = string.IsNullOrEmpty(summarization.SummarizationTaskBeginningPrompt) ? RequestHandler.Database.Configuration.Ai.SummarizationTaskBeginningPrompt : summarization.SummarizationTaskBeginningPrompt + $" The original system prompt was: {systemPrompt}, the rest of follows",
+                    }, "system/summary/msg"),
+            };
+            messages.AddRange(oldChat.Messages.Skip(1));
+
+            messages.Add(context.ReadObject(
+                new DynamicJsonValue
+                {
+                    [ChatConstants.RequestFields.Role] = ChatConstants.RequestFields.RoleSystemValue,
+                    [ChatConstants.RequestFields.Content] = string.IsNullOrEmpty(summarization.SummarizationTaskEndPrompt) ? RequestHandler.Database.Configuration.Ai.SummarizationTaskEndPrompt : summarization.SummarizationTaskEndPrompt,
+                    [ChatConstants.RequestFields.MaxCompletionToken] = summarization.MaxTokensAfterSummarization
+                }, "system/summary/final/msg"));
+
+
+            var usage = new AiUsage();
+            AiResponse result;
+
+            using (var client = ChatCompletionClient.CreateChatCompletionClient(ContextPool, connectionString, SummarizationOutputSchema))
+            {
+                result = await client.CompleteAsync(context, messages, tools: null, useTools: false, usage, token);
+            }
+
+            if (result.Result.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)
+                throw new UnexpectedResponseException($"Unable to get a summary from response of agent '{oldChat.Agent}'.") { RequestId = null };
+
+            oldChat.Messages.RemoveRange(1, oldChat.Messages.Count - 1);
+            oldChat.AddMessage(context,
+                context.ReadObject(
+                    new DynamicJsonValue
+                    {
+                        [ChatConstants.RequestFields.Role] = ChatConstants.RequestFields.RoleUserValue,
+                        [ChatConstants.RequestFields.Content] = summaryPrefix + messagesSummary
+                    },
+                    "system/msg"));
+
+            oldChat.UpdateUsage(usage);
         }
 
         private bool TryGetUserTools(JsonOperationContext context, ConversationDocument document, AiAgentConfiguration configuration, AiResponse result)
@@ -230,15 +323,15 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             return document.OpenActionCalls.Count > 0;
         }
 
-        public virtual async Task WriteResponseAsync(JsonOperationContext context, string conversationId, (BlittableJsonReaderObject Response, ConversationDocument Document) r)
+        public virtual async Task WriteResponseAsync(JsonOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
         {
             var output = new DynamicJsonValue
             {
                 [nameof(ConversationResult<object>.ConversationId)] = conversationId,
-                [nameof(ConversationResult<object>.ChangeVector)] = r.Document.ChangeVector,
-                [nameof(ConversationResult<object>.Response)] = r.Response,
-                [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(r.Document.OpenActionCalls.Select(t => t.Value.ToJson())),
-                [nameof(ConversationResult<object>.Usage)] = r.Document.TotalUsage.ToJson()
+                [nameof(ConversationResult<object>.ChangeVector)] = document.ChangeVector,
+                [nameof(ConversationResult<object>.Response)] = response,
+                [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(document.OpenActionCalls.Select(t => t.Value.ToJson())),
+                [nameof(ConversationResult<object>.Usage)] = document.TotalUsage.ToJson()
             };
 
             await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
@@ -344,19 +437,26 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 }
             }
         }
-        public async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation)
+
+        public async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation, ConversationDocument history)
         {
             var changeVectorLsv = context.GetLazyString(conversation.ChangeVector);
+
             if (configuration.Persistence is not null)
             {
-                // we don't pass change vector here, so last write wins
-                MergedPutCommand putCmd = new(conversation.ToBlittable(context, configuration), conversationId, changeVectorLsv, RequestHandler.Database);
-                await RequestHandler.Database.TxMerger.Enqueue(putCmd);
-                conversation.ChangeVector = putCmd.PutResult.ChangeVector;
-                return putCmd.PutResult.Id;
+                var cmd = new PutChatCommand(conversationId, conversation, history, changeVectorLsv, configuration, RequestHandler.Database);
+                await RequestHandler.Database.TxMerger.Enqueue(cmd);
+                return cmd.PutResult.Conversation.Id;
             }
 
             return null;
+        }
+
+        private static readonly string SummarizationOutputSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new SummarizationSampleObject()));
+
+        private class SummarizationSampleObject
+        {
+            public string Answer = "Summary of the following chat messages history";
         }
     }
 }

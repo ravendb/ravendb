@@ -57,7 +57,7 @@ namespace FastTests
                 var method = typeof(ChatCompletionClient).GetMethod("WriteCompletionRequestPayload", 
                     BindingFlags.NonPublic | BindingFlags.Instance);
                 
-                method?.Invoke(client, [context, new List<BlittableJsonReaderObject>(), new List<BlittableJsonReaderObject>(), writer]);
+                method?.Invoke(client, [context, new List<BlittableJsonReaderObject>(), new List<BlittableJsonReaderObject>(), true, writer]);
                 await writer.FlushAsync();
                 
                 capturedParameters = Encoding.UTF8.GetString(stream.ToArray());

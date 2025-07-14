@@ -60,6 +60,10 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
 
     private static void ValidateConfiguration(JsonOperationContext context, AiAgentConfiguration configuration)
     {
+        var reduction = configuration.ChatReduction;
+        if (reduction != null && reduction.Tokens != null && reduction.Truncate != null)
+            throw new InvalidOperationException($"'{nameof(configuration.ChatReduction)}' cannot have both '{nameof(reduction.Tokens)}' and '{nameof(reduction.Truncate)}'. Please specify at most one of these strategies.");
+
         var scopeParams = configuration.Parameters;
         foreach (var tool in configuration.Queries)
         {

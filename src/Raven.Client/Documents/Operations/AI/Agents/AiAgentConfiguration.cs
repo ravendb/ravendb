@@ -93,7 +93,27 @@ public class AiAgentConfiguration : IDynamicJson
     /// Which has to be provided by the user each time we start a new chat.
     /// </summary>
     public HashSet<string> Parameters { get; set; } = new ();
-    
+
+    /// <summary>
+    /// Configuration for reducing the chat messages list of the AI agent.
+    /// </summary>
+    /// <remarks>
+    /// Defines how the chat messages list should be minimized before continuing the conversation,
+    /// either by summarizing older messages into a compact prompt or by truncating them entirely.
+    /// Only one reduction strategy (summarization or truncation) can be active at a time.
+    /// </remarks>
+    public AiAgentChatReductionConfiguration ChatReduction { get; set; }
+
+    /// <summary>
+    /// The maximum number of times the AI model can return tool call requests (responses that include <c>tool_calls</c>)
+    /// for a single user prompt (e.g. when starting or resuming a chat).
+    /// </summary>
+    /// <value>
+    /// Specifies the upper limit on how many tool-invocation responses
+    /// the model is allowed to produce per individual user request.
+    /// </value>
+    public int MaxToolCallResponses { get; set; } = 16;
+
     internal AiAgentToolQuery FindQuery(string name)
     {
         foreach (AiAgentToolQuery query in Queries ?? [])
@@ -129,7 +149,9 @@ public class AiAgentConfiguration : IDynamicJson
             [nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null,
             [nameof(Actions)] = Actions != null ? new DynamicJsonArray(Actions) : null,
             [nameof(Persistence)] = Persistence?.ToJson(),
-            [nameof(Parameters)] = new DynamicJsonArray(Parameters)
+            [nameof(Parameters)] = new DynamicJsonArray(Parameters),
+            [nameof(ChatReduction)] = ChatReduction?.ToJson(),
+            [nameof(MaxToolCallResponses)] = MaxToolCallResponses
         };
     }
 }

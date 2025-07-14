@@ -251,7 +251,7 @@ public class AiAgentErrors : RavenTestBase
                 userPrompt: "How many of them have more then 1 orders?"))
         );
 
-        Assert.Contains("ABAD_CHAT_ID' does not exist", e.Message);
+        Assert.Contains("BAD_CHAT_ID' does not exist", e.Message);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]

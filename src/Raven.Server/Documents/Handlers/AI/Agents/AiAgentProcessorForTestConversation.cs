@@ -42,14 +42,14 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         await HandleRequest(context, body.Configuration, "test", conversation, body.RequestBody, token.Token);
     }
 
-    public override async Task WriteResponseAsync(JsonOperationContext context, string conversationId, (BlittableJsonReaderObject Response, ConversationDocument Document) r)
+    public override async Task WriteResponseAsync(JsonOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
     {
         var output = new DynamicJsonValue
         {
-            [nameof(AiAgentTestResult.Document)] = r.Document.ToJson(),
-            [nameof(AiAgentTestResult.Response)] = r.Response,
-            [nameof(AiAgentTestResult.ActionRequests)] = new DynamicJsonArray(r.Document.OpenActionCalls.Select(t => t.Value.ToJson())),
-            [nameof(AiAgentTestResult.Usage)] = r.Document.TotalUsage.ToJson()
+            [nameof(AiAgentTestResult.Document)] = document.ToJson(),
+            [nameof(AiAgentTestResult.Response)] = response,
+            [nameof(AiAgentTestResult.ActionRequests)] = new DynamicJsonArray(document.OpenActionCalls.Select(t => t.Value.ToJson())),
+            [nameof(AiAgentTestResult.Usage)] = document.TotalUsage.ToJson()
         };
 
         await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
