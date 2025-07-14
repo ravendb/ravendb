@@ -11,16 +11,15 @@ using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Commands.AI;
+using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
-internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
-    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
-    where TOperationContext : JsonOperationContext 
+internal class AiAgentProcessorForAddOrUpdateAiAgent: AbstractDatabaseHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public AiAgentProcessorForAddOrUpdateAiAgent([NotNull] TRequestHandler requestHandler) : base(requestHandler)
+    public AiAgentProcessorForAddOrUpdateAiAgent([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
@@ -58,11 +57,42 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
         }
     }
 
-    private static void ValidateConfiguration(JsonOperationContext context, AiAgentConfiguration configuration)
+    private void ValidateConfiguration(JsonOperationContext context, AiAgentConfiguration configuration)
     {
         var reduction = configuration.ChatReduction;
-        if (reduction != null && reduction.Tokens != null && reduction.Truncate != null)
-            throw new InvalidOperationException($"'{nameof(configuration.ChatReduction)}' cannot have both '{nameof(reduction.Tokens)}' and '{nameof(reduction.Truncate)}'. Please specify at most one of these strategies.");
+        if (reduction != null)
+        {
+            if ((reduction.Tokens != null) == (reduction.Truncate != null))
+            {
+                throw new InvalidOperationException($"{nameof(configuration.ChatReduction)} requires exactly one strategy: " +
+                                                    $"either {nameof(reduction.Tokens)} or {nameof(reduction.Truncate)}, " +
+                                                    "but not both or neither.");
+            }
+
+            if (reduction.Tokens != null)
+            {
+                var aiConfig = RequestHandler.Database.Configuration.Ai;
+
+                if (string.IsNullOrEmpty(reduction.Tokens.SummarizationTaskBeginningPrompt))
+                    reduction.Tokens.SummarizationTaskBeginningPrompt = aiConfig.SummarizationTaskBeginningPrompt;
+
+                if (string.IsNullOrEmpty(reduction.Tokens.SummarizationTaskEndPrompt))
+                    reduction.Tokens.SummarizationTaskEndPrompt = aiConfig.SummarizationTaskEndPrompt;
+            }
+
+            if (reduction.Truncate != null)
+            {
+                var after = reduction.Truncate.MessagesLengthAfterTruncate;
+                var before = reduction.Truncate.MessagesLengthBeforeTruncate;
+                if (after > before)
+                    throw new InvalidOperationException(
+                        $"{nameof(reduction.Truncate.MessagesLengthAfterTruncate)} ({after}) must be less of equal then {nameof(reduction.Truncate.MessagesLengthBeforeTruncate)} ({before})");
+
+                if(after <= 0)
+                    throw new InvalidOperationException(
+                        $"{nameof(reduction.Truncate.MessagesLengthAfterTruncate)} ({after}) must be greater then 0");
+            }
+        }
 
         var scopeParams = configuration.Parameters;
         foreach (var tool in configuration.Queries)

@@ -12,38 +12,64 @@ namespace Raven.Client.Documents.Operations.AI.Agents
     /// </remarks>
     public class AiAgentChatReductionConfiguration
     {
-        private AiAgentSummarizationByTokens _tokens;
-        private AiAgentTruncateChat _truncate;
+        public AiAgentChatReductionConfiguration()
+        {
+            // for serialization
+        }
+
+        /// <summary>
+        /// Initializes a new <see cref="AiAgentChatReductionConfiguration"/> using a summarization strategy.
+        /// </summary>
+        /// <param name="tokensConfig">
+        /// The settings that control how and when the chat history is summarized into a concise prompt
+        /// (e.g. token thresholds, prompt prefix, etc.).
+        /// </param>
+        /// <param name="historyConfig">
+        /// Optional. Configuration for persisting the chat history when summarization occurs.
+        /// If <c>null</c>, no history documents will be created.
+        /// </param>
+        /// <remarks>
+        /// Only one reduction strategy may be active at a time. Do not use this constructor in conjunction
+        /// with the truncation-based constructor.
+        /// </remarks>
+        public AiAgentChatReductionConfiguration(AiAgentSummarizationByTokens tokensConfig, AiAgentHistoryConfiguration historyConfig = null)
+        {
+            Tokens = tokensConfig;
+            History = historyConfig;
+        }
+
+        /// <summary>
+        /// Initializes a new <see cref="AiAgentChatReductionConfiguration"/> using a truncation strategy.
+        /// </summary>
+        /// <param name="truncateConfig">
+        /// The settings that control how and when older messages are discarded once the message count
+        /// exceeds the configured maximum.
+        /// </param>
+        /// <param name="historyConfig">
+        /// Optional. Configuration for persisting the chat history when truncation occurs.
+        /// If <c>null</c>, no history documents will be created.
+        /// </param>
+        /// <remarks>
+        /// Only one reduction strategy may be active at a time. Do not use this constructor in conjunction
+        /// with the summarization-based constructor.
+        /// </remarks>
+        public AiAgentChatReductionConfiguration(AiAgentTruncateChat truncateConfig, AiAgentHistoryConfiguration historyConfig = null)
+        {
+            Truncate = truncateConfig;
+            History = historyConfig;
+        }
 
         /// <summary>
         /// Summarizes chat messages into a compact prompt when token count exceeds a threshold.
         /// Cannot be used together with <see cref="Truncate"/>.
         /// </summary>
-        public AiAgentSummarizationByTokens Tokens
-        {
-            get => _tokens;
-            set
-            {
-                if (Truncate is not null)
-                    throw new InvalidOperationException($"Cannot set {nameof(Tokens)} when {nameof(Truncate)} is already configured.");
-                _tokens = value;
-            }
-        }
+        public AiAgentSummarizationByTokens Tokens { get; set; }
 
         /// <summary>
         /// Truncates older chat messages when the number of messages exceeds a maximum length.
         /// Cannot be used together with <see cref="Tokens"/>.
         /// </summary>
-        public AiAgentTruncateChat Truncate
-        {
-            get => _truncate;
-            set
-            {
-                if (Truncate is not null)
-                    throw new InvalidOperationException($"Cannot set {nameof(Truncate)} when {nameof(Tokens)} is already configured.");
-                _truncate = value;
-            }
-        }
+        public AiAgentTruncateChat Truncate { get; set; }
 
         /// <summary>
         /// Configuration settings for storing AI agent conversation history.
@@ -103,6 +129,8 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// </remarks>
         public string SummarizationTaskEndPrompt { get; set; }
 
+        public string ResultPrefix { get; set; } = "Summary of previous conversation: ";
+
         /// <summary>
         /// The maximum number of tokens allowed before summarization is triggered.
         /// When the token count of the conversation exceeds this limit, the content will be summarized.
@@ -113,9 +141,9 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// Maximum number of tokens allowed in the generated summary.
         /// </summary>
         /// <value>
-        /// The upper bound on the summary’s length, measured in tokens (default is <c>500</c>).
+        /// The upper bound on the summary’s length, measured in tokens( default is <c>1024</c>).
         /// </value>
-        public long MaxTokensAfterSummarization { get; set; } = DefaultMaxTokensBeforeSummarization / 10;
+        public long MaxTokensAfterSummarization { get; set; } = 1024;
 
         public DynamicJsonValue ToJson()
         {

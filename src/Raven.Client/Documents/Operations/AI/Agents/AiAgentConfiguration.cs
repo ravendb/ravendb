@@ -112,7 +112,7 @@ public class AiAgentConfiguration : IDynamicJson
     /// Specifies the upper limit on how many tool-invocation responses
     /// the model is allowed to produce per individual user request.
     /// </value>
-    public int MaxToolCallResponses { get; set; } = 16;
+    public int MaxModelIterationsPerCall { get; set; } = 16;
 
     internal AiAgentToolQuery FindQuery(string name)
     {
@@ -151,7 +151,7 @@ public class AiAgentConfiguration : IDynamicJson
             [nameof(Persistence)] = Persistence?.ToJson(),
             [nameof(Parameters)] = new DynamicJsonArray(Parameters),
             [nameof(ChatReduction)] = ChatReduction?.ToJson(),
-            [nameof(MaxToolCallResponses)] = MaxToolCallResponses
+            [nameof(MaxModelIterationsPerCall)] = MaxModelIterationsPerCall
         };
     }
 }

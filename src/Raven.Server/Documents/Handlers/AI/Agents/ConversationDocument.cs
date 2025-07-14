@@ -12,7 +12,7 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-public class ConversationDocument(string agent, BlittableJsonReaderObject parameters) : ICloneable
+public class ConversationDocument(string agent, BlittableJsonReaderObject parameters)
 {
     public string Agent = agent ?? throw new ArgumentNullException(nameof(agent));
     
@@ -52,13 +52,13 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
         {
             [Constants.Documents.Metadata.Collection] = configuration.Persistence.Collection,
         };
-        if (expiration is { } expire1)
+        if (expiration is { } expire)
         {
-            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expire1);
+            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expire);
         }
-        else if (configuration.Persistence.Expires is { } expire2)
+        else if (configuration.Persistence.Expires is { } configExpire)
         {
-            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expire2);
+            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(configExpire);
         }
 
         var conversation = ToJson();
@@ -129,19 +129,6 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
 
         Messages.Add(msg);
     }
-
-    object ICloneable.Clone() => Clone();
-
-    public ConversationDocument Clone() => 
-        new ConversationDocument(Agent, Parameters)
-        {
-            Messages = new List<BlittableJsonReaderObject>(Messages),
-            HistoryDocuments = new List<string>(HistoryDocuments),
-            OpenActionCalls = OpenActionCalls,
-            TotalUsage = TotalUsage.Clone(),
-            ChangeVector = ChangeVector
-        };
-    
 
     public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document)
     {

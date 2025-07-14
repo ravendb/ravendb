@@ -202,15 +202,12 @@ public class AiUsage : IDynamicJsonValueConvertible
     public int CompletionTokens { get; set; }
     public int TotalTokens { get; set; }
     public int CachedTokens { get; set; }
-    public int LatestPromptTokens { get; set; } // on memory only
 
     internal void UpdateFrom(BlittableJsonReaderObject json)
     {
         json.TryGet("prompt_tokens", out int promptTokens);
         json.TryGet("completion_tokens", out int completionTokens);
         json.TryGet("total_tokens", out int totalTokens);
-
-        LatestPromptTokens = promptTokens; // explicitly not doing addition here
 
         PromptTokens += promptTokens;
         CompletionTokens += completionTokens;
@@ -255,12 +252,4 @@ public class AiUsage : IDynamicJsonValueConvertible
         writer.WriteEndObject();
     }
 
-    public AiUsage Clone() => new AiUsage()
-    {
-        PromptTokens = PromptTokens,
-        CompletionTokens = CompletionTokens,
-        TotalTokens = TotalTokens,
-        CachedTokens = CachedTokens,
-        LatestPromptTokens = LatestPromptTokens
-    };
 }

@@ -60,7 +60,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             if (document.OpenActionCalls.Count > 0)
             {
-                await TryPersistAsync(context, configuration, conversationId, document, null);
+                // We have pending tool-call results from the user;
+                // skip reduction - persist the document now without history,
+                // ensuring we can recover if TalkAsync fails.
+                await TryPersistAsync(context, configuration, conversationId, document, history: null);
                 await WriteResponseAsync(context, conversationId, response: null, document);
                 return;
             }
@@ -73,7 +76,15 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 document.AddMessage(context, context.ReadObject(new DynamicJsonValue { ["role"] = "user", ["content"] = body.UserPrompt }, "user/msg"));
             }
 
-            var r = await TalkAsync(context, configuration, document, token: token);
+            (BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History) r;
+            try
+            {
+                r = await TalkAsync(context, configuration, document, token: token);
+            }
+            catch (Exception e)
+            {
+                throw new AiException($"Failed to 'talk' with the agent '{configuration.Identifier}', conversation: '{conversationId}'.", e) { RequestId = null };
+            }
 
             conversationId = await TryPersistAsync(context, configuration, conversationId, r.Document, r.History);
             await WriteResponseAsync(context, conversationId, r.Response, r.Document);
@@ -182,7 +193,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
         }
 
-        public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, ConversationDocument History)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration,
+        public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration,
             ConversationDocument document, CancellationToken token)
         {
             document.EnsureInitialized();
@@ -194,22 +205,24 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var tools = document.GenerateTools(context, configuration);
 
             AiResponse aiResponse;
-
+            AiUsage aiUsage; 
             using (var client = ChatCompletionClient.CreateChatCompletionClient(ContextPool, conStr, schema))
             {
-                var count = configuration.MaxToolCallResponses;
+                var count = configuration.MaxModelIterationsPerCall;
 
                 while (true)
                 {
+                    aiUsage = new();
                     aiResponse = await client.CompleteAsync(
                         context,
                         document.Messages,
                         tools,
                         useTools: count-- > 0,
-                        document.TotalUsage,
+                        aiUsage,
                         token
                     );
 
+                    document.UpdateUsage(aiUsage);
                     if (aiResponse.Type is AiResponseType.Result)
                         break;
 
@@ -225,13 +238,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             return (aiResponse.Result, document, history);
 
 
-            async Task<ConversationDocument> TryReduceChatSize()
+            async Task<BlittableJsonReaderObject> TryReduceChatSize()
             {
                 var reduction = configuration.ChatReduction;
                 if (reduction == null || document.OpenActionCalls.Count > 0)
                     return null;
 
-                var clone = reduction.History == null ? null : document.Clone();
+                var clone = reduction.History == null ? null : document.ToBlittable(context, configuration, reduction.History.HistoryExpiration);
 
                 if (reduction.Truncate != null)
                 {
@@ -239,14 +252,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     {
                         var truncateCount = document.Messages.Count - reduction.Truncate.MessagesLengthAfterTruncate;
                         truncateCount = int.Min(truncateCount, document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
-                        truncateCount = int.Max(truncateCount, 0); // prevent negative
                         if(truncateCount > 0)
                             document.Messages.RemoveRange(1, truncateCount);
                     }
                 }
                 else if (reduction.Tokens != null)
                 {
-                    if (document.TotalUsage.LatestPromptTokens > reduction.Tokens.MaxTokensBeforeSummarization)
+                    if (aiUsage.TotalTokens > reduction.Tokens.MaxTokensBeforeSummarization)
                         await SummarizeAsync(context, conStr, reduction.Tokens, document, token);
                 }
 
@@ -256,14 +268,17 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
         private async Task SummarizeAsync(JsonOperationContext context, AiConnectionString connectionString, AiAgentSummarizationByTokens summarization, ConversationDocument oldChat, CancellationToken token)
         {
-            const string summaryPrefix = "Summary of previous conversation: ";
-
             var systemPrompt = oldChat.Messages.FirstOrDefault();
             if (systemPrompt == null)
-                throw new InvalidOperationException("System prompt cannot be null.");
+                throw new InvalidOperationException($"System prompt cannot be null.");
 
             if (systemPrompt.TryGet(ChatConstants.RequestFields.Content, out string _) == false)
                 throw new InvalidOperationException($"Invalid system prompt: required field '{ChatConstants.RequestFields.Content}' is missing.");
+
+            var beginningPrompt = string.IsNullOrEmpty(summarization.SummarizationTaskBeginningPrompt)
+                ? RequestHandler.Database.Configuration.Ai.SummarizationTaskBeginningPrompt
+                : summarization.SummarizationTaskBeginningPrompt;
+            beginningPrompt += $" The original system prompt was: {systemPrompt}, the rest of follows";
 
             var messages = new List<BlittableJsonReaderObject>()
             {
@@ -271,16 +286,19 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     new DynamicJsonValue
                     {
                         [ChatConstants.RequestFields.Role] = ChatConstants.RequestFields.RoleSystemValue,
-                        [ChatConstants.RequestFields.Content] = string.IsNullOrEmpty(summarization.SummarizationTaskBeginningPrompt) ? RequestHandler.Database.Configuration.Ai.SummarizationTaskBeginningPrompt : summarization.SummarizationTaskBeginningPrompt + $" The original system prompt was: {systemPrompt}, the rest of follows",
+                        [ChatConstants.RequestFields.Content] = beginningPrompt,
                     }, "system/summary/msg"),
             };
             messages.AddRange(oldChat.Messages.Skip(1));
 
+            var endPrompt = string.IsNullOrEmpty(summarization.SummarizationTaskEndPrompt)
+                ? RequestHandler.Database.Configuration.Ai.SummarizationTaskEndPrompt
+                : summarization.SummarizationTaskEndPrompt;
             messages.Add(context.ReadObject(
                 new DynamicJsonValue
                 {
-                    [ChatConstants.RequestFields.Role] = ChatConstants.RequestFields.RoleSystemValue,
-                    [ChatConstants.RequestFields.Content] = string.IsNullOrEmpty(summarization.SummarizationTaskEndPrompt) ? RequestHandler.Database.Configuration.Ai.SummarizationTaskEndPrompt : summarization.SummarizationTaskEndPrompt,
+                    [ChatConstants.RequestFields.Role] = ChatConstants.RequestFields.RoleUserValue,
+                    [ChatConstants.RequestFields.Content] = endPrompt,
                     [ChatConstants.RequestFields.MaxCompletionToken] = summarization.MaxTokensAfterSummarization
                 }, "system/summary/final/msg"));
 
@@ -302,7 +320,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     new DynamicJsonValue
                     {
                         [ChatConstants.RequestFields.Role] = ChatConstants.RequestFields.RoleUserValue,
-                        [ChatConstants.RequestFields.Content] = summaryPrefix + messagesSummary
+                        [ChatConstants.RequestFields.Content] = summarization.ResultPrefix + messagesSummary
                     },
                     "system/msg"));
 
@@ -438,7 +456,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
         }
 
-        public async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation, ConversationDocument history)
+        public async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history)
         {
             var changeVectorLsv = context.GetLazyString(conversation.ChangeVector);
 

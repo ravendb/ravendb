@@ -124,7 +124,7 @@ public class RavenDB_24407 : RavenTestBase
             {
                 Truncate = new AiAgentTruncateChat()
                 {
-                    MessagesLengthBeforeTruncate = 0,
+                    MessagesLengthBeforeTruncate = 2,
                     MessagesLengthAfterTruncate = 2
                 }
             };
@@ -208,7 +208,7 @@ public class RavenDB_24407 : RavenTestBase
             {
                 Truncate = new AiAgentTruncateChat()
                 {
-                    MessagesLengthBeforeTruncate = 0,
+                    MessagesLengthBeforeTruncate = 2,
                     MessagesLengthAfterTruncate = 2
                 }
             };

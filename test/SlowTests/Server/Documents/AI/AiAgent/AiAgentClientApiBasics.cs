@@ -167,9 +167,17 @@ public class AiAgentClientApiBasics : RavenTestBase
        
         r = await chat.RunAsync(CancellationToken.None);
 
-        Assert.False(r);
-        Assert.True(chat.Answer != null);
-        Assert.NotNull(chat.Id);
+        if (r)
+        {
+            // agent could ask for action tools again
+            Assert.True(chat.RequiredActions().Any());
+            Assert.NotNull(chat.Id);
+        }
+        else
+        {
+            Assert.True(chat.Answer != null);
+            Assert.NotNull(chat.Id);
+        }
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
