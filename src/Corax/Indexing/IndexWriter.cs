@@ -1093,94 +1093,11 @@ namespace Corax.Indexing
                 }
             }
         }
-
-        /// <summary>
-        /// TextualFieldBuffers are used to prepare field terms in sorted order without allocating native memory and do not changing the orders of IndexedField properties since we're linking them via positions in buffers.
-        /// 
-        /// </summary>
-        private class TextualFieldBuffers : IDisposable
-        {
-            private readonly IndexWriter _parent;
-            public const int BatchSize = 1024;
-
-            private Slice[] _sortedTerms;
-            private int[] _termIndexes;
-            
-            public CompactTree.CompactKeyLookup[] Keys;
-            public int[] PageOffsets;
-            public long[] PostListIds;
-            private int[] _entriesOffsets;
-
-            public void PrepareTerms(IndexedField field, out Span<Slice> terms, out Span<int> indexes)
-            {
-                int termsCount = field.Textual.Count;
-                if (_sortedTerms == null || _sortedTerms.Length < termsCount)
-                {
-                    if (_sortedTerms != null)
-                    {
-                        ArrayPool<Slice>.Shared.Return(_sortedTerms);
-                        ArrayPool<int>.Shared.Return(_termIndexes);
-                    }
-                    _sortedTerms = ArrayPool<Slice>.Shared.Rent(termsCount);
-                    _termIndexes = ArrayPool<int>.Shared.Rent(termsCount);
-                }
-
-                int idx = 0;
-                foreach (var (k,v) in field.Textual)
-                {
-                    _sortedTerms[idx] = k;
-                    _termIndexes[idx] = v;
-                    idx++;
-                }
-
-                terms = new Span<Slice>(_sortedTerms, 0, termsCount);
-                indexes = new Span<int>(_termIndexes, 0, termsCount);
-
-                terms.Sort(indexes, SliceComparer.Instance);
-            }
-
-            public TextualFieldBuffers(IndexWriter parent)
-            {
-                _parent = parent;
-                Keys = ArrayPool<CompactTree.CompactKeyLookup>.Shared.Rent(BatchSize);
-                PageOffsets = ArrayPool<int>.Shared.Rent(BatchSize);
-                PostListIds = ArrayPool<long>.Shared.Rent(BatchSize);
-                _entriesOffsets = ArrayPool<int>.Shared.Rent(BatchSize);
-            }
-
-            public void Dispose()
-            {
-                if (PostListIds != null) ArrayPool<long>.Shared.Return(PostListIds);
-                if (PageOffsets != null) ArrayPool<int>.Shared.Return(PageOffsets);
-                if (_entriesOffsets != null) ArrayPool<int>.Shared.Return(_entriesOffsets);
-
-                if (_sortedTerms != null) ArrayPool<Slice>.Shared.Return(_sortedTerms);
-                if (_termIndexes != null) ArrayPool<int>.Shared.Return(_termIndexes);
-                
-                if (Keys != null)
-                {
-                    var llt = _parent._transaction.LowLevelTransaction;
-                    for (int i = 0; i < Keys.Length; i++)
-                    {
-                        ref var k = ref Keys[i].Key;
-                        if (k != null)
-                        {
-                           llt.ReleaseCompactKey(ref k); 
-                        }
-                    }
-                    ArrayPool<CompactTree.CompactKeyLookup>.Shared.Return(Keys);
-                }
-
-                PostListIds = null;
-                PageOffsets = null;
-                _entriesOffsets = null;
-                Keys = null;
-            }
-        }
-
-        private TextualFieldBuffers _textualFieldBuffers;
-
-
+        
+        private FieldBuffers<Slice, CompactTree.CompactKeyLookup> _textualFieldBuffers;
+        private FieldBuffers<long, Int64LookupKey> _longFieldBuffers;
+        private FieldBuffers<double, DoubleLookupKey> _doubleFieldBuffers;
+        
         private ref struct TextualFieldInserter
         {
             private readonly IndexWriter _writer;
@@ -1188,7 +1105,7 @@ namespace Corax.Indexing
             private readonly IndexedField _indexedField;
             private readonly Span<byte> _tmpBuf;
             private readonly CompactTree _fieldTree;
-            private readonly TextualFieldBuffers _buffers;
+            private readonly FieldBuffers<Slice, CompactTree.CompactKeyLookup> _buffers;
 
             private IndexTermDumper _dumper;
             private NativeList<TermInEntryModification> _entriesForTerm;
@@ -1216,7 +1133,7 @@ namespace Corax.Indexing
                 _entriesForTerm = new NativeList<TermInEntryModification>();
                 _entriesForTerm.Initialize(_writer._entriesAllocator);
                 _pagesToPrefetch = new ContextBoundNativeList<long>(_writer._entriesAllocator);
-                _buffers = _writer._textualFieldBuffers ??= new TextualFieldBuffers(_writer);
+                _buffers = _writer._textualFieldBuffers ??= new FieldBuffers<Slice, CompactTree.CompactKeyLookup>(_writer);
 
                 if (indexedField.FieldSupportsPhraseQuery)
                 {
@@ -1596,7 +1513,7 @@ namespace Corax.Indexing
                 entriesForTerm.AddRangeUnsafe(entries.Updates.ToSpan());
             }
 
-            private void PrepareTextualFieldBatch(TextualFieldBuffers buffers,
+            private void PrepareTextualFieldBatch(FieldBuffers<Slice, CompactTree.CompactKeyLookup> buffers,
                 IndexedField indexedField,
                 CompactTree fieldTree,
                 Span<Slice> sortedTerms,
@@ -1605,7 +1522,7 @@ namespace Corax.Indexing
                 out Span<long> postListIds,
                 out Span<int> pageOffsets)
             {
-                var max = Math.Min(TextualFieldBuffers.BatchSize, sortedTerms.Length);
+                var max = Math.Min(FieldBuffers<Slice, CompactTree.CompactKeyLookup>.BatchSize, sortedTerms.Length);
                 var llt = _writer._transaction.LowLevelTransaction;
                 for (int i = 0; i < max; i++)
                 {
