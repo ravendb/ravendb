@@ -118,7 +118,8 @@ function LicenseTable(props: LicenseTableProps) {
 
     const showUpgradeButton = licenseType !== "Enterprise";
 
-    const isDeveloperOrEnterprise = licenseType === "Developer" || licenseType === "Enterprise";
+    const isDeveloperOrEnterprise =
+        licenseType === "Developer" || licenseType === "Enterprise" || licenseType == "EnterpriseAi";
 
     const isAgpl = licenseType === "None" || licenseType === "Invalid";
 
