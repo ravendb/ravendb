@@ -49,7 +49,7 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         agent.Persistence = new AiAgentPersistenceConfiguration
         {
-            Collection = "Chats",
+            ConversationIdPrefix = "Chats",
             Expires = TimeSpan.FromDays(30)
         };
         
@@ -121,7 +121,7 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         agent.Persistence = new AiAgentPersistenceConfiguration
         {
-            Collection = "Chats",
+            ConversationIdPrefix = "Chats",
             Expires = TimeSpan.FromDays(30)
         };
 
@@ -195,7 +195,7 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         agent.Persistence = new AiAgentPersistenceConfiguration
         {
-            Collection = "Chats",
+            ConversationIdPrefix = "Chats",
             Expires = TimeSpan.FromDays(30)
         };
         
@@ -274,7 +274,7 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         agent.Persistence = new AiAgentPersistenceConfiguration
         {
-            Collection = "Chats",
+            ConversationIdPrefix = "Chats",
             Expires = TimeSpan.FromDays(30)
         };
         

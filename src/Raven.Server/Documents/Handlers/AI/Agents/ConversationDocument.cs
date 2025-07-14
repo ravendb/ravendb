@@ -50,7 +50,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
     {
         var metadata = new DynamicJsonValue
         {
-            [Constants.Documents.Metadata.Collection] = configuration.Persistence.Collection,
+            [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.AiAgentConversationCollection,
         };
         
         if (expiration.HasValue)

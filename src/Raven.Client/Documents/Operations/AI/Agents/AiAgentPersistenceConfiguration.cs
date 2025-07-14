@@ -19,28 +19,28 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// Initializes a new instance of the <see cref="AiAgentPersistenceConfiguration"/> class
         /// with the specified target collection and optional expiration.
         /// </summary>
-        /// <param name="collection">
-        /// The name of the database collection where chat session documents should be stored.
-        /// This is typically a collection like "Chats" or "Conversations".
+        /// <param name="conversationIdPrefix">
+        /// The prefix of the conversation ID.
+        /// This is typically a collection like "Chats/" or "Conversations/".
         /// </param>
         /// <param name="expires">
         /// Optional expiration duration. If provided, chat documents will expire (and be deleted)
         /// automatically after this time has passed since creation.
         /// </param>
-        public AiAgentPersistenceConfiguration(string collection, TimeSpan? expires = null)
+        public AiAgentPersistenceConfiguration(string conversationIdPrefix, TimeSpan? expires = null)
         {
-            ValidationMethods.AssertNotNullOrEmpty(collection, nameof(collection));
+            ValidationMethods.AssertNotNullOrEmpty(conversationIdPrefix, nameof(conversationIdPrefix));
 
-            Collection = collection;
+            ConversationIdPrefix = conversationIdPrefix;
             Expires = expires;
         }
 
         /// <summary>
-        /// The name of the database collection where chat session documents should be stored.
-        /// This is typically a collection like "Chats" or "Conversations".
+        /// The prefix of the conversation ID.
+        /// This is typically a collection like "Chats/" or "Conversations/".
         /// This allows separation between different types of persisted AI conversations.
         /// </summary>
-        public string Collection { get; set; }
+        public string ConversationIdPrefix { get; set; }
 
         /// <summary>
         /// Optional expiration duration. If provided, chat documents will expire (and be deleted)
@@ -50,7 +50,11 @@ namespace Raven.Client.Documents.Operations.AI.Agents
 
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue { [nameof(Collection)] = Collection, [nameof(Expires)] = Expires?.TotalMilliseconds };
+            return new DynamicJsonValue
+            {
+                [nameof(ConversationIdPrefix)] = ConversationIdPrefix, 
+                [nameof(Expires)] = Expires?.TotalMilliseconds
+            };
         }
     }
 }

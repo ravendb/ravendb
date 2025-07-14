@@ -38,7 +38,15 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
             cfg.Identifier = EmbeddingsGenerationConfiguration.GenerateIdentifier(cfg.Name);
         
         ValidateConfiguration(context, cfg);
-        
+
+        if (cfg.Persistence?.ConversationIdPrefix != null)
+        {
+            if (cfg.Persistence.ConversationIdPrefix.EndsWith(RequestHandler.IdentityPartsSeparator) == false)
+            {
+                cfg.Persistence.ConversationIdPrefix += RequestHandler.IdentityPartsSeparator;
+            }
+        }
+
         var r = await ServerStore.SendToLeaderAsync(new AddOrUpdateAiAgentCommand(RequestHandler.DatabaseName, cfg, RequestHandler.GetRaftRequestIdFromQuery()),
             token.Token);
 

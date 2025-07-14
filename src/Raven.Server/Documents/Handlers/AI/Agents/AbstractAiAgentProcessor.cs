@@ -140,18 +140,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 configuration = GetAiAgentConfiguration(agentId);
                 conversationDocument = new ConversationDocument(agentId, body.Parameters);
                 conversationDocument.Initialize(context, configuration, body.UserPrompt);
-                conversationId = BuildId(configuration);
+                conversationId = configuration.Persistence?.ConversationIdPrefix ?? ":InMemory:";
             }
 
             await HandleRequest(context, configuration, conversationId, conversationDocument, body, token.Token);
-        }
-
-        private string BuildId(AiAgentConfiguration configuration)
-        {
-            var agentPrefix = $"{configuration.Identifier}{RequestHandler.IdentityPartsSeparator}";
-            var collection = configuration.Persistence?.Collection ?? Constants.Documents.Collections.AiAgentConversationCollection;
-
-            return $"{agentPrefix}{collection}{RequestHandler.IdentityPartsSeparator}";
         }
 
         public async Task<RequestBody> ReadRequestBodyAsync(JsonOperationContext context, CancellationToken token)

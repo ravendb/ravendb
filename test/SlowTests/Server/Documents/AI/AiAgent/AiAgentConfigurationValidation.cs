@@ -32,7 +32,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             agent.Persistence = new AiAgentPersistenceConfiguration
             {
-                Collection = "Chats",
+                ConversationIdPrefix = "Chats",
                 Expires = TimeSpan.FromDays(30)
             };
 
@@ -74,7 +74,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             agent.Persistence = new AiAgentPersistenceConfiguration
             {
-                Collection = "Chats",
+                ConversationIdPrefix = "Chats",
                 Expires = TimeSpan.FromDays(30)
             };
 
@@ -117,7 +117,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             agent.Persistence = new AiAgentPersistenceConfiguration
             {
-                Collection = "Chats",
+                ConversationIdPrefix = "Chats",
                 Expires = TimeSpan.FromDays(30)
             };
             
