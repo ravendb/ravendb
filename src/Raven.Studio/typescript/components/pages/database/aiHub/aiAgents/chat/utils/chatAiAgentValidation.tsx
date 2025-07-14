@@ -5,8 +5,8 @@ const schema = yup.object({
     prompt: yup.string().required(),
     parameters: yup.array().of(
         yup.object({
-            name: yup.string().required(),
-            value: yup.string().required(),
+            name: yup.string(),
+            value: yup.string(),
         })
     ),
 });

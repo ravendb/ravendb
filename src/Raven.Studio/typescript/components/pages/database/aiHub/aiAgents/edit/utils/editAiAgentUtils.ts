@@ -67,7 +67,10 @@ function mapFromDto(
     };
 }
 
-function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration {
+function mapToDto(
+    formData: EditAiAgentFormData,
+    isDocumentExpirationEnabled?: boolean
+): Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration {
     return {
         Name: formData.name,
         Identifier: formData.identifier,
@@ -77,7 +80,10 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
         SampleObject: formData.sampleObject,
         Persistence: {
             Collection: formData.persistenceCollectionName,
-            Expires: genUtils.formatAsTimeSpan(formData.persistenceExpiresInSeconds * 1000),
+            Expires:
+                isDocumentExpirationEnabled || formData.isEnableDocumentExpiration
+                    ? genUtils.formatAsTimeSpan(formData.persistenceExpiresInSeconds * 1000)
+                    : null,
         },
         Queries:
             formData.queries?.map((x) => ({

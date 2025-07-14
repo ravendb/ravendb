@@ -77,7 +77,10 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                 });
             }
 
-            await aiAgentService.saveAiAgent(databaseName, editAiAgentUtils.mapToDto(formData));
+            await aiAgentService.saveAiAgent(
+                databaseName,
+                editAiAgentUtils.mapToDto(formData, isDocumentExpirationEnabled.data)
+            );
 
             reset(formData);
             setIsDirty(false);

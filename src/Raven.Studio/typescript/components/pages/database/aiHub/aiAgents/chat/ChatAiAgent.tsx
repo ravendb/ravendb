@@ -21,6 +21,9 @@ import moment from "moment";
 import { aiAgentsUtils } from "../utils/aiAgentsUtils";
 import { AiAgentToolCall } from "../utils/aiAgentsTypes";
 import SizeGetter from "components/common/SizeGetter";
+import classNames from "classnames";
+import AceEditor from "components/common/ace/AceEditor";
+import { Switch } from "components/common/Checkbox";
 
 interface QueryParams {
     id: string;
@@ -38,6 +41,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const conversationId = useAppSelector(chatAiAgentSelectors.conversationId);
     const historyDocuments = useAppSelector(chatAiAgentSelectors.historyDocuments);
     const config = useAppSelector(chatAiAgentSelectors.config);
+    const isRawData = useAppSelector(chatAiAgentSelectors.isRawData);
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);
 
@@ -88,8 +92,8 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                         Content: x.arguments,
                     })),
                 },
-                !conversationId ? config.data.Identifier : undefined,
-                conversationId
+                conversationId ? undefined : config.data.Identifier,
+                conversationId ? conversationId : undefined
             );
 
             const doc = await databasesService.getDocumentWithMetadata(result.ConversationId, databaseName);
@@ -163,13 +167,24 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                 />
                 <ChatAiAgentInfoHub />
             </div>
-            <div className="hstack gap-2 mb-2">
-                <a className="btn btn-secondary rounded-pill" href={appUrl.forAiAgents(databaseName)}>
-                    <Icon icon="cancel" /> Cancel
-                </a>
-                <Button variant="primary" className="rounded-pill" onClick={handleAddChat}>
-                    <Icon icon="plus" /> Add chat
-                </Button>
+            <div className="hstack mb-2 justify-content-between">
+                <div className="hstack gap-2">
+                    {messages.length > 0 && (
+                        <Button variant="primary" className="rounded-pill" onClick={handleAddChat}>
+                            <Icon icon="plus" /> New chat
+                        </Button>
+                    )}
+                    <a className="btn btn-secondary rounded-pill" href={appUrl.forAiAgents(databaseName)}>
+                        <Icon icon="cancel" /> Cancel
+                    </a>
+                </div>
+                <Switch
+                    color="primary"
+                    selected={isRawData}
+                    toggleSelection={() => dispatch(chatAiAgentActions.isRawDataSet(!isRawData))}
+                >
+                    Raw data
+                </Switch>
             </div>
 
             <div className="flex-grow-1">
@@ -179,7 +194,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                         <div style={{ height }} className="hstack">
                             <div
                                 style={{ width: "250px" }}
-                                className="p-3 border border-secondary panel-bg-2 h-100 rounded-2"
+                                className="p-2 border border-secondary panel-bg-2 h-100 rounded-2"
                             >
                                 <h5 className="text-muted">Chat history</h5>
                                 {historyDocuments.status === "success" && (
@@ -194,7 +209,12 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                                         })
                                                     )
                                                 }
-                                                className="hover-filter cursor-pointer text-truncate"
+                                                className={classNames(
+                                                    "hover-filter cursor-pointer text-truncate p-1 rounded-2",
+                                                    {
+                                                        "panel-bg-3": conversationId === doc["@metadata"]["@id"],
+                                                    }
+                                                )}
                                             >
                                                 {
                                                     doc.Messages?.find((x: { role: string }) => x.role === "user")
@@ -207,7 +227,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                             </div>
                             <form className="vstack overflow-auto h-100" onSubmit={handleSubmit(handleSend)}>
                                 <div ref={messagesPanelRef} className="overflow-auto ps-2 flex-grow-1">
-                                    {messages.length === 0 ? (
+                                    {messages.length === 0 && (
                                         <div className="p-5">
                                             <AiAgentParametersField
                                                 control={control}
@@ -215,12 +235,27 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                                 value={formValues.parameters}
                                             />
                                         </div>
-                                    ) : (
+                                    )}
+                                    {!isRawData && messages.length > 0 && (
                                         <AiAgentMessages
                                             messages={messages}
                                             toolQueries={config.data?.Queries}
                                             toolActions={config.data?.Actions}
                                             handleSaveParameters={(parameters) => asyncChat.execute(parameters)}
+                                        />
+                                    )}
+                                    {isRawData && messages.length > 0 && (
+                                        <AceEditor
+                                            mode="json"
+                                            value={JSON.stringify(
+                                                historyDocuments.data?.find(
+                                                    (x) => x["@metadata"]["@id"] === conversationId
+                                                ),
+                                                null,
+                                                2
+                                            )}
+                                            height={`${height - 100}px`}
+                                            readOnly
                                         />
                                     )}
                                 </div>
@@ -235,6 +270,12 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                             rows={3}
                                             className="rounded-2"
                                             style={{ resize: "none" }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter" && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleSubmit(handleSend)();
+                                                }
+                                            }}
                                         />
                                         {formValues.prompt && (
                                             <ButtonWithSpinner

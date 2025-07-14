@@ -194,13 +194,6 @@ export default function EditAiAgentMain() {
                     jsonSchema={formValues.outputSchema}
                     jsonSchemaSyntaxHelp={<div>TODO</div>}
                 />
-                {isDocumentExpirationEnabled.status === "success" && !isDocumentExpirationEnabled.data && (
-                    <FormGroup>
-                        <FormSwitch control={control} name="isEnableDocumentExpiration">
-                            Enable document expiration
-                        </FormSwitch>
-                    </FormGroup>
-                )}
             </div>
             <h3 className="m-0 mt-3">Set chat persistence</h3>
             <div className="mb-1">TODO</div>
@@ -213,10 +206,19 @@ export default function EditAiAgentMain() {
                         options={collectionOptions}
                     />
                 </FormGroup>
-                <FormGroup>
-                    <FormLabel>Expire in</FormLabel>
-                    <FormDurationPicker control={control} name="persistenceExpiresInSeconds" showDays isFlexGrow />
-                </FormGroup>
+                {isDocumentExpirationEnabled.status === "success" && !isDocumentExpirationEnabled.data && (
+                    <FormGroup>
+                        <FormSwitch control={control} name="isEnableDocumentExpiration">
+                            Enable document expiration
+                        </FormSwitch>
+                    </FormGroup>
+                )}
+                {(formValues.isEnableDocumentExpiration || isDocumentExpirationEnabled.data) && (
+                    <FormGroup>
+                        <FormLabel>Expire in</FormLabel>
+                        <FormDurationPicker control={control} name="persistenceExpiresInSeconds" showDays isFlexGrow />
+                    </FormGroup>
+                )}
             </div>
             <ParametersField />
             <h3 className="m-0 mt-3">Define agent tools</h3>

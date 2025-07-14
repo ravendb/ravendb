@@ -16,6 +16,7 @@ import moment from "moment";
 import { editAiAgentUtils } from "./utils/editAiAgentUtils";
 import { aiAgentsUtils } from "../utils/aiAgentsUtils";
 import { AiAgentToolCall } from "../utils/aiAgentsTypes";
+import Button from "react-bootstrap/Button";
 
 export default function EditAiAgentTestPanel() {
     const dispatch = useAppDispatch();
@@ -71,14 +72,14 @@ export default function EditAiAgentTestPanel() {
             dispatch(editAiAgentActions.testDocumentSet(result.Document));
             setValue("testPrompt", "");
             dispatch(
-                editAiAgentActions.messagesUpdate(
+                editAiAgentActions.testMessagesUpdate(
                     aiAgentsUtils.mapMessageFromResponse(result, agentMessageId, result.Document)
                 )
             );
         } catch (e) {
             console.error(e);
             dispatch(
-                editAiAgentActions.messagesUpdate({
+                editAiAgentActions.testMessagesUpdate({
                     id: agentMessageId,
                     state: "error",
                 })
@@ -100,13 +101,24 @@ export default function EditAiAgentTestPanel() {
 
     const { Actions, Queries } = editAiAgentUtils.mapToDto(formValues);
 
+    const handleReset = () => {
+        dispatch(editAiAgentActions.isTestOpenSet(false));
+        dispatch(editAiAgentActions.testDocumentSet(null));
+        dispatch(editAiAgentActions.testMessagesSet([]));
+        setValue("testPrompt", "");
+    };
+
     return (
         <>
-            <div className="panel-bg-2 p-3 border-bottom border-secondary">
+            <div className="panel-bg-2 p-3 border-bottom border-secondary hstack justify-content-between">
                 <h3 className="m-0">
                     <Icon icon="test" color="primary" />
                     Test results
                 </h3>
+                <Button variant="secondary" size="sm" onClick={handleReset} className="rounded-pill">
+                    <Icon icon="reset" />
+                    Reset
+                </Button>
             </div>
             {!isTestOpen && (
                 <div className="p-3 flex-grow-1 vstack justify-content-center align-items-center">
@@ -148,6 +160,12 @@ export default function EditAiAgentTestPanel() {
                                 className="rounded-2"
                                 style={{ resize: "none" }}
                                 disabled={asyncHandleTest.loading}
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                        e.preventDefault();
+                                        asyncHandleTest.execute();
+                                    }
+                                }}
                             />
                             {formValues.testPrompt && (
                                 <ButtonWithSpinner

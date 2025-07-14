@@ -31,11 +31,14 @@ export const editAiAgentSlice = createSlice({
         testMessagesAdd: (state, action: PayloadAction<AiAgentMessage>) => {
             state.testMessages.push(action.payload);
         },
-        messagesUpdate: (state, action: PayloadAction<Partial<AiAgentMessage>>) => {
+        testMessagesUpdate: (state, action: PayloadAction<Partial<AiAgentMessage>>) => {
             const message = state.testMessages.find((m) => m.id === action.payload.id);
             if (message) {
                 Object.assign(message, action.payload);
             }
+        },
+        testMessagesSet: (state, action: PayloadAction<AiAgentMessage[]>) => {
+            state.testMessages = action.payload;
         },
         testToolParametersSet: (state, action: PayloadAction<AiAgentToolCall[]>) => {
             state.testToolParameters = action.payload;

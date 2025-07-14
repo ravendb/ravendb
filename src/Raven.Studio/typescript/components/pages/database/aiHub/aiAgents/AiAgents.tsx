@@ -142,7 +142,7 @@ function AiAgentCard({ config }: AiAgentCardProps) {
             <div className="hstack justify-content-between mt-2">
                 <a href={appUrl.forChatAiAgent(databaseName, config.Identifier)} className="btn btn-primary">
                     <Icon icon="llm" />
-                    Start new chat
+                    Chat
                 </a>
                 <Dropdown>
                     <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="secondary">
