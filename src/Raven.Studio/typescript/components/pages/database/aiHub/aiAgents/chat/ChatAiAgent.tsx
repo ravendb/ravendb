@@ -59,7 +59,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                 content: formValues.prompt,
                 role: "user",
                 state: "success",
-                date: moment().format("HH:mm A"),
+                date: moment().format(aiAgentsUtils.messageDateFormat),
                 toolCalls: toolParameters,
             })
         );
@@ -69,7 +69,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
             chatAiAgentActions.messagesAdd({
                 id: agentMessageId,
                 role: "assistant",
-                date: moment().format("HH:mm A"),
+                date: moment().format(aiAgentsUtils.messageDateFormat),
                 state: "loading",
             })
         );

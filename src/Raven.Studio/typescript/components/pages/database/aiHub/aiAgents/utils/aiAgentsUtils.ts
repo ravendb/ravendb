@@ -56,4 +56,5 @@ const mapMessageFromResponse = (
 export const aiAgentsUtils = {
     mapMessageFromDoc,
     mapMessageFromResponse,
+    messageDateFormat: "HH:mm A",
 };

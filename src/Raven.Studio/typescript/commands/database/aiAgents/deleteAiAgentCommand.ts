@@ -17,7 +17,7 @@ class deleteAiAgentCommand extends commandBase {
         const url = endpoints.databases.aiAgent.adminAiAgent;
 
         return this.del(url, args, this.db).fail((response: JQueryXHR) =>
-            this.reportError("Failed to get AI agent", response.responseText, response.statusText)
+            this.reportError("Failed to delete AI agent", response.responseText, response.statusText)
         );
     }
 }

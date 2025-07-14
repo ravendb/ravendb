@@ -39,7 +39,7 @@ export default function EditAiAgentTestPanel() {
                 content: formValues.testPrompt,
                 role: "user",
                 state: "success",
-                date: moment().format("HH:mm A"),
+                date: moment().format(aiAgentsUtils.messageDateFormat),
                 toolCalls: toolParameters,
             })
         );
@@ -50,7 +50,7 @@ export default function EditAiAgentTestPanel() {
             editAiAgentActions.testMessagesAdd({
                 id: agentMessageId,
                 role: "assistant",
-                date: moment().format("HH:mm A"),
+                date: moment().format(aiAgentsUtils.messageDateFormat),
                 state: "loading",
             })
         );
