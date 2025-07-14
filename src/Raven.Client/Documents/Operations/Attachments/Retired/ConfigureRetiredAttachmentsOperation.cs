@@ -47,7 +47,7 @@ namespace Raven.Client.Documents.Operations.Attachments.Retired
 
                 var request = new HttpRequestMessage
                 {
-                    Method = HttpMethod.Post,
+                    Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false), _conventions)
                 };
 

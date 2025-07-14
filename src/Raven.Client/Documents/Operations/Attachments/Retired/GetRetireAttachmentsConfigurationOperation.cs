@@ -20,7 +20,7 @@ namespace Raven.Client.Documents.Operations.Attachments.Retired
 
             public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
             {
-                url = $"{node.Url}/databases/{node.Database}/attachments/retire/config";
+                url = $"{node.Url}/databases/{node.Database}/admin/attachments/retire/config";
 
                 var request = new HttpRequestMessage { Method = HttpMethod.Get };
 
