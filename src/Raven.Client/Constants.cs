@@ -302,7 +302,6 @@ namespace Raven.Client
 
                 internal const string GenAiHashes = "@gen-ai-hashes";
 
-
                 internal sealed class Sharding
                 {
                     internal const string ShardNumber = "@shard-number";
@@ -332,6 +331,11 @@ namespace Raven.Client
                 public const string EmbeddingsCacheCollection = "@embeddings-cache";
 
                 public const string AiAgentConversationCollection = "@conversations";
+            }
+
+            internal sealed class Ai
+            {
+                public const string AiAgentIdPrefix = "Conversations";
             }
 
             public sealed class Indexing

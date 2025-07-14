@@ -62,7 +62,7 @@ public class RavenDB_24407 : RavenTestBase
         agent.Parameters.Add("company");
         agent.Persistence = new AiAgentPersistenceConfiguration
         {
-            Collection = "Chats",
+            ConversationIdPrefix = "Chats",
             Expires = TimeSpan.FromDays(30)
         };
         agent.Queries =
@@ -217,7 +217,7 @@ public class RavenDB_24407 : RavenTestBase
 
         agent.Persistence = new AiAgentPersistenceConfiguration
         {
-            Collection = "Chats",
+            ConversationIdPrefix = "Chats",
             Expires = TimeSpan.FromDays(30)
         };
 

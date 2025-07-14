@@ -21,23 +21,21 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// </summary>
         /// <param name="conversationIdPrefix">
         /// The prefix of the conversation ID.
-        /// This is typically a collection like "Chats/" or "Conversations/".
+        /// This is typically like "chats/" or "conversations/".
         /// </param>
         /// <param name="expires">
         /// Optional expiration duration. If provided, chat documents will expire (and be deleted)
         /// automatically after this time has passed since creation.
         /// </param>
-        public AiAgentPersistenceConfiguration(string conversationIdPrefix, TimeSpan? expires = null)
+        public AiAgentPersistenceConfiguration(string conversationIdPrefix = null, TimeSpan? expires = null)
         {
-            ValidationMethods.AssertNotNullOrEmpty(conversationIdPrefix, nameof(conversationIdPrefix));
-
             ConversationIdPrefix = conversationIdPrefix;
             Expires = expires;
         }
 
         /// <summary>
         /// The prefix of the conversation ID.
-        /// This is typically a collection like "Chats/" or "Conversations/".
+        /// This is typically like "chats/" or "conversations/".
         /// This allows separation between different types of persisted AI conversations.
         /// </summary>
         public string ConversationIdPrefix { get; set; }

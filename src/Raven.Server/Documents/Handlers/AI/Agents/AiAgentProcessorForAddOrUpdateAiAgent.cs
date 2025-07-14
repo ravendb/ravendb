@@ -39,14 +39,6 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
         
         ValidateConfiguration(context, cfg);
 
-        if (cfg.Persistence?.ConversationIdPrefix != null)
-        {
-            if (cfg.Persistence.ConversationIdPrefix.EndsWith(RequestHandler.IdentityPartsSeparator) == false)
-            {
-                cfg.Persistence.ConversationIdPrefix += RequestHandler.IdentityPartsSeparator;
-            }
-        }
-
         var r = await ServerStore.SendToLeaderAsync(new AddOrUpdateAiAgentCommand(RequestHandler.DatabaseName, cfg, RequestHandler.GetRaftRequestIdFromQuery()),
             token.Token);
 
