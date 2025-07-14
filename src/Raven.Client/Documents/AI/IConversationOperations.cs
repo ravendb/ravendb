@@ -9,6 +9,7 @@ public interface IConversationOperations<out T> where T : new()
 {
     string Id { get; }
     T Answer { get; }
+    string ChangeVector { get; }
     IEnumerable<AiAgentActionRequest> RequiredActions();
     void AddActionResponse(string actionId, string actionResponse);
     void AddActionResponse<TResponse>(string actionId, TResponse actionResponse) where TResponse : class;

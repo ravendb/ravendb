@@ -53,7 +53,6 @@ public class RavenDB_24407 : RavenTestBase
     public async Task CanResumeConversationWithSummarization(Options options, GenAiConfiguration config, bool summarization, bool withHistory)
     {
         using var store = GetDocumentStore(options);
-        await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 

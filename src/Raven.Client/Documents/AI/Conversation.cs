@@ -19,6 +19,8 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
     private List<AiAgentActionResponse> _actionResponses = [];
     private string _userPrompt;
     private string _changeVector;
+    public string ChangeVector => _changeVector;
+
     public Conversation(AiOperations aiOperations, string agentId, Dictionary<string, object> parameters)
     {
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
@@ -89,9 +91,9 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
         try
         {
             var r = await _aiOperations._executor.SendAsync(op, token).ConfigureAwait(false);
-            r.ChangeVector = _changeVector;
+            _changeVector = r.ChangeVector;
             _conversationId = r.ConversationId;
-            _actionRequests = r.ActionRequests ?? new List<AiAgentActionRequest>();
+            _actionRequests = r.ActionRequests ?? [];
             _answer = r.Response;
         }
         catch (ConcurrencyException e)

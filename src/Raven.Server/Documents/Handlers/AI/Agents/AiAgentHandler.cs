@@ -9,7 +9,7 @@ public class AiAgentHandler : DatabaseRequestHandler
     [RavenAction("/databases/*/admin/ai/agent", "PUT", AuthorizationStatus.DatabaseAdmin)]
     public async Task AddOrModifyAiAgent()
     {
-        using (var processor = new AiAgentProcessorForAddOrUpdateAiAgent(this))
+        using (var processor = new AiAgentProcessorForAddOrUpdateAiAgent<DatabaseRequestHandler, DocumentsOperationContext>(this))
         {
             await processor.ExecuteAsync();
         }

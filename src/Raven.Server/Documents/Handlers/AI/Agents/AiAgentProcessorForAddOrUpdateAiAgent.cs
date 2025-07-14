@@ -11,15 +11,16 @@ using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Queries;
 using Raven.Server.Documents.Queries.AST;
 using Raven.Server.ServerWide.Commands.AI;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
-internal class AiAgentProcessorForAddOrUpdateAiAgent: AbstractDatabaseHandlerProcessor<DatabaseRequestHandler, DocumentsOperationContext>
+internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperationContext> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+    where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
+    where TOperationContext : JsonOperationContext 
 {
-    public AiAgentProcessorForAddOrUpdateAiAgent([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+    public AiAgentProcessorForAddOrUpdateAiAgent([NotNull] TRequestHandler requestHandler) : base(requestHandler)
     {
     }
 
@@ -71,7 +72,7 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent: AbstractDatabaseHandlerPro
 
             if (reduction.Tokens != null)
             {
-                var aiConfig = RequestHandler.Database.Configuration.Ai;
+                var aiConfig = RequestHandler.Configuration.Ai;
 
                 if (string.IsNullOrEmpty(reduction.Tokens.SummarizationTaskBeginningPrompt))
                     reduction.Tokens.SummarizationTaskBeginningPrompt = aiConfig.SummarizationTaskBeginningPrompt;

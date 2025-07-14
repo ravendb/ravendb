@@ -121,10 +121,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 if (changeVector != null)
                 {
                     if (conversation.ChangeVector != changeVector)
-                        throw new ConcurrencyException($"The conversation '{conversationId}' was changed, please try again")
+                        throw new ConcurrencyException(
+                            $"The conversation '{conversationId}' was updated and doesn't match the expected change vector. Reload the conversation and try again.")
                         {
-                            ExpectedChangeVector = changeVector,
-                            ActualChangeVector = conversation.ChangeVector,
+                            ExpectedChangeVector = changeVector, 
+                            ActualChangeVector = conversation.ChangeVector, 
                             Id = conversationId
                         };
 
@@ -244,7 +245,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 if (reduction == null || document.OpenActionCalls.Count > 0)
                     return null;
 
-                var clone = reduction.History == null ? null : document.ToBlittable(context, configuration, reduction.History.HistoryExpiration);
+                var clone = reduction.History == null ? null : document.ToBlittable(context, configuration, reduction.History?.HistoryExpiration);
 
                 if (reduction.Truncate != null)
                 {
@@ -464,6 +465,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             {
                 var cmd = new PutChatCommand(conversationId, conversation, history, changeVectorLsv, configuration, RequestHandler.Database);
                 await RequestHandler.Database.TxMerger.Enqueue(cmd);
+                conversation.ChangeVector = cmd.PutResult.Conversation.ChangeVector;
                 return cmd.PutResult.Conversation.Id;
             }
 

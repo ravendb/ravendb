@@ -52,13 +52,10 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
         {
             [Constants.Documents.Metadata.Collection] = configuration.Persistence.Collection,
         };
-        if (expiration is { } expire)
+        
+        if (expiration.HasValue)
         {
-            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expire);
-        }
-        else if (configuration.Persistence.Expires is { } configExpire)
-        {
-            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(configExpire);
+            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expiration.Value);
         }
 
         var conversation = ToJson();

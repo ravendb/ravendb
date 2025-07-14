@@ -309,9 +309,16 @@ public class AiAgentClientApiBasics : RavenTestBase
         chat = store.AI.ResumeConversation<OutputSchema>(chat.Id, "foo");
         chat.SetUserPrompt("Can you give me some alternatives?");
         await Assert.ThrowsAsync<ConcurrencyException>(() => chat.RunAsync(CancellationToken.None));
+        Assert.NotNull(chat.ChangeVector);
 
         chat.SetUserPrompt("Can you give me some alternatives?");
         r = await chat.RunAsync(CancellationToken.None);
         Assert.False(r);
+        Assert.NotNull(chat.ChangeVector);
+
+        chat.SetUserPrompt("even better choice?");
+        r = await chat.RunAsync(CancellationToken.None);
+        Assert.False(r);
+        Assert.NotNull(chat.ChangeVector);
     }
 }
