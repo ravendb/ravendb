@@ -9,7 +9,6 @@ import { useServices } from "components/hooks/useServices";
 import { useEffect, useRef } from "react";
 import AiAgentMessages from "../partials/AiAgentMessages";
 import { Icon } from "components/common/Icon";
-import { AboutViewHeading } from "components/common/AboutView";
 import ChatAiAgentInfoHub from "./ChatAiAgentInfoHub";
 import Button from "react-bootstrap/Button";
 import { useForm, useWatch } from "react-hook-form";
@@ -159,12 +158,9 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     return (
         <div className="content-padding h-100 vstack">
             <div className="hstack justify-content-between align-items-start">
-                <AboutViewHeading
-                    title={config.data?.Name ?? "AI Agent"}
-                    icon="ai-agents"
-                    marginBottom={3}
-                    className="text-truncate"
-                />
+                <h2 className="text-truncate w-50 mb-3" title={config.data?.Name}>
+                    <Icon icon="ai-agents" /> {config.data?.Name ?? "AI Agent"}{" "}
+                </h2>
                 <ChatAiAgentInfoHub />
             </div>
             <div className="hstack mb-2 justify-content-between">
