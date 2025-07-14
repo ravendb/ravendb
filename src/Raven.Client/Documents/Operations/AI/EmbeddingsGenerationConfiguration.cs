@@ -86,6 +86,10 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
         if (validateConnection && TestMode == false)
         {
             Connection.Validate(errors);
+        }
+
+        if (validateConnection)
+        {
             if (Connection.ModelType != AiModelType.TextEmbeddings)
                 errors.Add($"{nameof(Connection.ModelType)} of Embeddings Generation configuration must be {nameof(AiModelType.TextEmbeddings)}");
         }

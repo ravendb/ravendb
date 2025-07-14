@@ -77,6 +77,10 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         if (validateConnection && TestMode == false)
         {
             Connection.Validate(errors);
+        }
+
+        if (validateConnection)
+        {
             if (Connection.ModelType != AiModelType.Chat)
                 errors.Add($"{nameof(Connection.ModelType)} of GenAI configuration must be {nameof(AiModelType.Chat)}");
         }

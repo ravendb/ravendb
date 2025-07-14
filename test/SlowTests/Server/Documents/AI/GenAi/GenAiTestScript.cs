@@ -1729,7 +1729,7 @@ if($output.Blocked)
         }
     }
 
-    private class GenAiTestCmd : RavenCommand<BlittableJsonReaderObject>
+    internal class GenAiTestCmd : RavenCommand<BlittableJsonReaderObject>
     {
         private readonly DocumentConventions _conventions;
         private readonly BlittableJsonReaderObject _testScript;

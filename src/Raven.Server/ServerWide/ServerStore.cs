@@ -2213,7 +2213,14 @@ namespace Raven.Server.ServerWide
                     case EtlType.EmbeddingsGeneration:
                     {
                         var aiIntegration = JsonDeserializationCluster.EmbeddingsGenerationConfiguration(etlConfiguration);
-                        aiIntegration.Validate(out var aiIntegrationErr, validateName: false, validateConnection: false);
+                        if (rawRecord.AiConnectionStrings?.TryGetValue(aiIntegration.ConnectionStringName, out var cs) != true)
+                        {
+                            throw new InvalidOperationException(
+                                $"Could not find connection string named '{aiIntegration.ConnectionStringName}' for ETL type '{EtlType.EmbeddingsGeneration}'. Please supply an existing connection string.");
+                        }
+
+                        aiIntegration.Initialize(cs);
+                        aiIntegration.Validate(out var aiIntegrationErr, validateName: false, validateConnection: true);
                         if (ValidateConnectionString(rawRecord, aiIntegration.ConnectionStringName, aiIntegration.EtlType) == false)
                             aiIntegrationErr.Add(
                                 $"Could not find connection string named '{aiIntegration.ConnectionStringName}'. Please supply an existing connection string.");
@@ -2227,7 +2234,14 @@ namespace Raven.Server.ServerWide
                             throw new NotSupportedInShardingException("GenAI is currently not supported in sharding");
 
                         var genAi = JsonDeserializationCluster.GenAiConfiguration(etlConfiguration);
-                        genAi.Validate(out var genAiErr, validateName: false, validateConnection: false);
+                        if (rawRecord.AiConnectionStrings?.TryGetValue(genAi.ConnectionStringName, out var cs) != true)
+                        {
+                            throw new InvalidOperationException(
+                                $"Could not find connection string named '{genAi.ConnectionStringName}' for ETL type '{EtlType.GenAi}'. Please supply an existing connection string.");
+                        }
+
+                        genAi.Initialize(cs);
+                        genAi.Validate(out var genAiErr, validateName: false, validateConnection: true);
                         if (ValidateConnectionString(rawRecord, genAi.ConnectionStringName, genAi.EtlType) == false)
                             genAiErr.Add($"Could not find connection string named '{genAi.ConnectionStringName}'. Please supply an existing connection string.");
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, genAiErr);
