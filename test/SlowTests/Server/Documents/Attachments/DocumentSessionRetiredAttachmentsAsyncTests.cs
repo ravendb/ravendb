@@ -20,7 +20,7 @@ namespace SlowTests.Server.Documents.Attachments
         {
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryFact]
         public async Task CanCheckIfRetiredAttachmentExists()
         {
             await using (var holder = CreateCloudSettings())
@@ -63,7 +63,106 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryTheory]
+        [InlineData(null)]
+        [InlineData(15)]
+        public async Task CanChangeRetireAtOfAttachment(int? minutesToAdd)
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var id = "Orders/1";
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/1", Company = $"Companies/1" });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream)
+                    {
+                        RetireAt = DateTime.UtcNow.AddMinutes(3),
+                        ContentType = "image/png"
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var exists = session.Advanced.Attachments.Exists(id, "test.png");
+                    Assert.True(exists);
+                }
+
+                if (minutesToAdd.HasValue == false)
+                {
+                    using (var session = store.OpenSession())
+                    {
+                        using var profileStream = new MemoryStream([1, 2, 3]);
+                        session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream)
+                        {
+                            RetireAt = null,
+                            ContentType = "image/png"
+                        });
+                        session.SaveChanges();
+                    }
+
+                    // try to retire  - nothing should happen
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+
+                    using (var session = store.OpenSession())
+                    {
+                        var attachment = session.Advanced.Attachments.Get(id, "test.png");
+
+                        Assert.NotNull(attachment);
+                        Assert.Equal("test.png", attachment.Details.Name);
+                        Assert.Equal(AttachmentFlags.None, attachment.Details.Flags);
+                        Assert.Null(attachment.Details.RetireAt);
+                        Assert.Equal("image/png", attachment.Details.ContentType);
+                    }
+                }
+                else
+                {
+                    var retireAtDate = DateTime.UtcNow.AddMinutes(minutesToAdd.Value);
+                    using (var session = store.OpenSession())
+                    {
+                        using var profileStream = new MemoryStream([1, 2, 3]);
+                        session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream)
+                        {
+                            RetireAt = retireAtDate,
+                            ContentType = "image/png"
+                        });
+                        session.SaveChanges();
+                    }
+
+                    // try to retire  - nothing should happen
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+
+                    using (var session = store.OpenSession())
+                    {
+                        var attachment = session.Advanced.Attachments.Get(id, "test.png");
+
+                        Assert.NotNull(attachment);
+                        Assert.Equal("test.png", attachment.Details.Name);
+                        Assert.Equal(AttachmentFlags.None, attachment.Details.Flags);
+                        Assert.Equal(retireAtDate, attachment.Details.RetireAt);
+                        Assert.Equal("image/png", attachment.Details.ContentType);
+                    }
+                }
+
+            }
+        }
+
+        [AmazonS3RetryFact]
         public async Task CanGetRetiredAttachmentByDocumentIdAndName()
         {
             using (var store = GetDocumentStore())
@@ -98,7 +197,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryFact]
         public async Task CanGetRetiredAttachmentByEntityAndName()
         {
             await using (var holder = CreateCloudSettings())
@@ -135,7 +234,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryFact]
         public async Task CanGetEnumeratorOfRetiredAttachments()
         {
             await using (var holder = CreateCloudSettings())
@@ -169,7 +268,119 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryTheory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanDeleteAttachmentWithSameHashAsRetiredAttachment(bool flag)
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var id = "Orders/5";
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    //save retired
+                    await session.StoreAsync(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/5", Company = $"Companies/5" });
+                    using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    await session.SaveChangesAsync();
+                }
+
+                if (flag)
+                {
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    //save attachment with the same hash
+                    await session.StoreAsync(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/5", Company = $"Companies/5" });
+                    using var profileStream = new MemoryStream([1, 2, 3]);
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test2.png", profileStream) { ContentType = "image/png" });
+                    await session.SaveChangesAsync();
+                }
+
+                if (flag == false)
+                {
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Attachments.Delete(id, "test.png");
+                    session.SaveChanges();
+
+                    Assert.False(session.Advanced.Attachments.Exists(id, "test.png"));
+                    Assert.True(session.Advanced.Attachments.Exists(id, "test2.png"));
+                }
+
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1);
+            }
+        }
+
+        [AmazonS3RetryTheory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public async Task CanDeleteAttachmentWithSameHashAsRetiredAttachment2(bool flag)
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var id = "Orders/5";
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    //save retired
+                    await session.StoreAsync(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/5", Company = $"Companies/5" });
+                    using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    await session.SaveChangesAsync();
+                }
+
+                if (flag)
+                {
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                }
+
+                using (var session = store.OpenAsyncSession())
+                {
+                    //save attachment with the same hash
+                    await session.StoreAsync(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/5", Company = $"Companies/5" });
+                    using var profileStream = new MemoryStream([1, 2, 3]);
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test2.png", profileStream) { ContentType = "image/png" });
+                    await session.SaveChangesAsync();
+                }
+
+                if (flag == false)
+                {
+                    var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                    database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    session.Advanced.Attachments.Delete(id, "test2.png");
+                    session.SaveChanges();
+
+                    Assert.True(session.Advanced.Attachments.Exists(id, "test.png"));
+                    Assert.False(session.Advanced.Attachments.Exists(id, "test2.png"));
+                }
+
+                await GetBlobsFromCloudAndAssertForCount(Settings, 1);
+            }
+        }
+
+        [AmazonS3RetryFact]
         public async Task CanDeleteRetiredAttachmentByDocumentIdAndName()
         {
             await using (var holder = CreateCloudSettings())
@@ -202,7 +413,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryFact]
         public async Task CanDeleteRetiredAttachmentByEntityAndName()
         {
             await using (var holder = CreateCloudSettings())
@@ -239,7 +450,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryFact]
         public async Task CanCheckIfRetiredAttachmentExistsAsync()
         {
             await using (var holder = CreateCloudSettings())
@@ -279,7 +490,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryFact]
         public async Task CanGetRetiredAttachmentByDocumentIdAndNameAsync()
         {
             await using (var holder = CreateCloudSettings())
@@ -314,7 +525,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryFact]
         public async Task CanGetRetiredAttachmentByEntityAndNameAsync()
         {
             await using (var holder = CreateCloudSettings())
@@ -352,7 +563,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryFact]
         public async Task CanGetEnumeratorOfRetiredAttachmentsAsync()
         {
             await using (var holder = CreateCloudSettings())
@@ -390,7 +601,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryFact]
         public async Task CanDeleteRetiredAttachmentByDocumentIdAndNameAsync()
         {
             await using (var holder = CreateCloudSettings())
@@ -429,7 +640,7 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryFact]
         public async Task CanDeleteRetiredAttachmentByEntityAndNameAsync()
         {
             await using (var holder = CreateCloudSettings())
@@ -469,7 +680,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenTheory(RavenTestCategory.Attachments)]
+        [AmazonS3RetryTheory]
         [InlineData(new byte[] { 1, 2, 3 })]
         [InlineData(new byte[] { 3, 2, 1 })]
         public async Task CanOverwriteRetireAttachment(byte[] buffer)
@@ -553,7 +764,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [RavenFact(RavenTestCategory.Attachments)]
+        [AmazonS3RetryFact]
         public async Task CanDeleteRetiredAttachmentByDocumentIdAndNameAndRead()
         {
             await using (var holder = CreateCloudSettings())
