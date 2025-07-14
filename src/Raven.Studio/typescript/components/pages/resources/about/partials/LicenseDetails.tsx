@@ -115,8 +115,6 @@ function LicenseTable(props: LicenseTableProps) {
 
     const showUpgradeButton = licenseType !== "Enterprise";
 
-    const isDeveloperOrEnterprise = licenseType === "Developer" || licenseType === "Enterprise";
-
     const isAgpl = licenseType === "None" || licenseType === "Invalid";
 
     return (
@@ -264,7 +262,7 @@ function LicenseTable(props: LicenseTableProps) {
                     </div>
                 </div>
             )}
-            {!isDeveloperOrEnterprise && (
+            {licenseType !== "Developer" && (
                 <small className="pb-2 text-center text-muted">
                     <Icon icon="info" />
                     We offer a free{" "}
