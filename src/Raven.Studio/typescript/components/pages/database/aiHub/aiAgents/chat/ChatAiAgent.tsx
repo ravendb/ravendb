@@ -20,6 +20,7 @@ import { tryHandleSubmit } from "components/utils/common";
 import moment from "moment";
 import { aiAgentsUtils } from "../utils/aiAgentsUtils";
 import { AiAgentToolCall } from "../utils/aiAgentsTypes";
+import SizeGetter from "components/common/SizeGetter";
 
 interface QueryParams {
     id: string;
@@ -171,71 +172,86 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                 </Button>
             </div>
 
-            <div className="flex-grow-1 hstack">
-                <div style={{ width: "250px" }} className="p-3 border border-secondary panel-bg-2 h-100 rounded-2">
-                    <h5 className="text-muted">Chat history</h5>
-                    {historyDocuments.status === "success" && (
-                        <div className="vstack gap-2">
-                            {historyDocuments.data.map((doc) => (
-                                <div
-                                    key={doc["@metadata"]["@id"]}
-                                    onClick={() =>
-                                        dispatch(
-                                            chatAiAgentActions.historyChatSelected({ docId: doc["@metadata"]["@id"] })
-                                        )
-                                    }
-                                    className="hover-filter cursor-pointer text-truncate"
-                                >
-                                    {doc.Messages?.find((x: { role: string }) => x.role === "user")?.content}
+            <div className="flex-grow-1">
+                <SizeGetter
+                    isHeighRequired
+                    render={({ height }) => (
+                        <div style={{ height }} className="hstack">
+                            <div
+                                style={{ width: "250px" }}
+                                className="p-3 border border-secondary panel-bg-2 h-100 rounded-2"
+                            >
+                                <h5 className="text-muted">Chat history</h5>
+                                {historyDocuments.status === "success" && (
+                                    <div className="vstack gap-2">
+                                        {historyDocuments.data.map((doc) => (
+                                            <div
+                                                key={doc["@metadata"]["@id"]}
+                                                onClick={() =>
+                                                    dispatch(
+                                                        chatAiAgentActions.historyChatSelected({
+                                                            docId: doc["@metadata"]["@id"],
+                                                        })
+                                                    )
+                                                }
+                                                className="hover-filter cursor-pointer text-truncate"
+                                            >
+                                                {
+                                                    doc.Messages?.find((x: { role: string }) => x.role === "user")
+                                                        ?.content
+                                                }
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                            <form className="vstack overflow-auto h-100" onSubmit={handleSubmit(handleSend)}>
+                                <div ref={messagesPanelRef} className="overflow-auto ps-2 flex-grow-1">
+                                    {messages.length === 0 ? (
+                                        <div className="p-5">
+                                            <AiAgentParametersField
+                                                control={control}
+                                                name="parameters"
+                                                value={formValues.parameters}
+                                            />
+                                        </div>
+                                    ) : (
+                                        <AiAgentMessages
+                                            messages={messages}
+                                            toolQueries={config.data?.Queries}
+                                            toolActions={config.data?.Actions}
+                                            handleSaveParameters={(parameters) => asyncChat.execute(parameters)}
+                                        />
+                                    )}
                                 </div>
-                            ))}
+                                <div className="mt-3 px-2">
+                                    <div className="position-relative">
+                                        <FormInput
+                                            type="textarea"
+                                            as="textarea"
+                                            control={control}
+                                            name="prompt"
+                                            placeholder="Message an agent"
+                                            rows={3}
+                                            className="rounded-2"
+                                            style={{ resize: "none" }}
+                                        />
+                                        {formValues.prompt && (
+                                            <ButtonWithSpinner
+                                                type="submit"
+                                                variant="secondary"
+                                                icon="arrow-up"
+                                                isSpinning={asyncChat.loading}
+                                                className="position-absolute rounded-pill"
+                                                style={{ right: "10px", bottom: "10px", zIndex: 5 }}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            </form>
                         </div>
                     )}
-                </div>
-                <form className="flex-grow-1 vstack" onSubmit={handleSubmit(handleSend)}>
-                    <div ref={messagesPanelRef} className="flex-grow-1 overflow-auto ps-2">
-                        {messages.length === 0 ? (
-                            <div className="p-5">
-                                <AiAgentParametersField
-                                    control={control}
-                                    name="parameters"
-                                    value={formValues.parameters}
-                                />
-                            </div>
-                        ) : (
-                            <AiAgentMessages
-                                messages={messages}
-                                toolQueries={config.data?.Queries}
-                                toolActions={config.data?.Actions}
-                                handleSaveParameters={(parameters) => asyncChat.execute(parameters)}
-                            />
-                        )}
-                    </div>
-                    <div className="mt-3 px-2">
-                        <div className="position-relative">
-                            <FormInput
-                                type="textarea"
-                                as="textarea"
-                                control={control}
-                                name="prompt"
-                                placeholder="Message an agent"
-                                rows={3}
-                                className="rounded-2"
-                                style={{ resize: "none" }}
-                            />
-                            {formValues.prompt && (
-                                <ButtonWithSpinner
-                                    type="submit"
-                                    variant="secondary"
-                                    icon="arrow-up"
-                                    isSpinning={asyncChat.loading}
-                                    className="position-absolute rounded-pill"
-                                    style={{ right: "10px", bottom: "10px", zIndex: 5 }}
-                                />
-                            )}
-                        </div>
-                    </div>
-                </form>
+                />
             </div>
         </div>
     );
