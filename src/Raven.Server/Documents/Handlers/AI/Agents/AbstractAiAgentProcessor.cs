@@ -221,32 +221,30 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var tools = document.GenerateTools(context, configuration);
 
             AiResponse aiResponse;
-            AiUsage aiUsage; 
-            using (var client = ChatCompletionClient.CreateChatCompletionClient(ContextPool, conStr, schema))
+            AiUsage aiUsage;
+            using var client = ChatCompletionClient.CreateChatCompletionClient(ContextPool, conStr);
+            var count = configuration.MaxModelIterationsPerCall;
+
+            while (true)
             {
-                var count = configuration.MaxModelIterationsPerCall;
+                aiUsage = new();
+                using var request = client.CreateCompletionRequest(context, document.Messages, tools, useTools: count-- > 0, schema);
 
-                while (true)
-                {
-                    aiUsage = new();
-                    using var request = client.CreateCompletionRequest(context, document.Messages, tools, useTools: count-- > );
+                aiResponse = await client.CompleteAsync(
+                    context,
+                    request,
+                    aiUsage,
+                    token
+                );
 
-                    aiResponse = await client.CompleteAsync(
-                        context,
-                        request,
-                        aiUsage,
-                        token
-                    );
+                document.UpdateUsage(aiUsage);
+                if (aiResponse.Type is AiResponseType.Result)
+                    break;
 
-                    document.UpdateUsage(aiUsage);
-                    if (aiResponse.Type is AiResponseType.Result)
-                        break;
+                await HandleQueryToolCallsAsync(context, configuration, document, aiResponse);
 
-                    await HandleQueryToolCallsAsync(context, configuration, document, aiResponse);
-
-                    if (TryGetUserTools(context, document, configuration, aiResponse))
-                        break; // we need to return the user tool requests to the client, so we can continue the conversation
-                }
+                if (TryGetUserTools(context, document, configuration, aiResponse))
+                    break; // we need to return the user tool requests to the client, so we can continue the conversation
             }
 
             var history = await TryReduceChatSize();
@@ -268,21 +266,21 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     {
                         var truncateCount = document.Messages.Count - reduction.Truncate.MessagesLengthAfterTruncate;
                         truncateCount = int.Min(truncateCount, document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
-                        if(truncateCount > 0)
+                        if (truncateCount > 0)
                             document.Messages.RemoveRange(1, truncateCount);
                     }
                 }
                 else if (reduction.Tokens != null)
                 {
                     if (aiUsage.TotalTokens > reduction.Tokens.MaxTokensBeforeSummarization)
-                        await SummarizeAsync(context, conStr, reduction.Tokens, document, token);
+                        await SummarizeAsync(context, client, reduction.Tokens, document, token);
                 }
 
                 return clone;
             }
         }
 
-        private async Task SummarizeAsync(JsonOperationContext context, AiConnectionString connectionString, AiAgentSummarizationByTokens summarization, ConversationDocument oldChat, CancellationToken token)
+        private async Task SummarizeAsync(JsonOperationContext context, ChatCompletionClient client, AiAgentSummarizationByTokens summarization, ConversationDocument oldChat, CancellationToken token)
         {
             var systemPrompt = oldChat.Messages.FirstOrDefault();
             if (systemPrompt == null)
@@ -320,12 +318,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
 
             var usage = new AiUsage();
-            AiResponse result;
-
-            using (var client = ChatCompletionClient.CreateChatCompletionClient(ContextPool, connectionString, SummarizationOutputSchema))
-            {
-                result = await client.CompleteAsync(context, messages, tools: null, useTools: false, usage, token);
-            }
+            using var request = client.CreateCompletionRequest(context, messages, SummarizationOutputSchema);
+            var result = await client.CompleteAsync(context, request, usage, token);
 
             if (result.Result.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)
                 throw new UnexpectedResponseException($"Unable to get a summary from response of agent '{oldChat.Agent}'.") { RequestId = null };
@@ -338,7 +332,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                         [ChatConstants.RequestFields.Role] = ChatConstants.RequestFields.RoleUserValue,
                         [ChatConstants.RequestFields.Content] = summarization.ResultPrefix + messagesSummary
                     },
-                    "system/msg"));
+                    "system/msg"), usage);
 
             oldChat.UpdateUsage(usage);
         }

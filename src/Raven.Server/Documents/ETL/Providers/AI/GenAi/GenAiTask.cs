@@ -50,8 +50,9 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             _chatCompletionClient = GetClient();
     }
 
-    private IChatCompletionClient GetClient() => ChatCompletionClient.CreateChatCompletionClient(Database.DocumentsStorage.ContextPool, Configuration.Connection,
-        schema: ChatCompletionClient.GetSchemaForRequest(Configuration.JsonSchema, Configuration.SampleObject));
+    public string Schema => field ??= ChatCompletionClient.GetSchemaForRequest(Configuration.JsonSchema, Configuration.SampleObject);
+    
+    private IChatCompletionClient GetClient() => ChatCompletionClient.CreateChatCompletionClient(Database.DocumentsStorage.ContextPool, Configuration.Connection);
 
     public override EtlType EtlType => EtlType.GenAi;
     public override bool ShouldTrackCounters() => false;
@@ -189,7 +190,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 Task<(string Result, AiUsage Usage)> task;
                 try
                 {
-                    task = _chatCompletionClient.CompleteAsync(Configuration.Prompt, json, CancellationToken);
+                    task = _chatCompletionClient.CompleteAsync(Configuration.Prompt, json, Schema, CancellationToken);
                 }
                 catch (Exception e)
                 {

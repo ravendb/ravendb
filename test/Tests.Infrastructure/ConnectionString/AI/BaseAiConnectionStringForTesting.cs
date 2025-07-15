@@ -178,10 +178,10 @@ public abstract class AbstractGenAiConnectorForTesting<T> : BaseAiConnectorForTe
         var configuration = _aiIntegrationConfiguration.Value;
         var schema = ChatCompletionClient.GetSchemaFromSampleObject("{ \"Answer\" : \"answer here\" }");
         using (var contextPool = new JsonContextPool())
-        using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection, schema))
+        using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
         {
             logger = null;
-            var result = client.CompleteAsync(systemPrompt: "Reply with exact word only: raven", "", token).GetAwaiter().GetResult();
+            var result = client.CompleteAsync(systemPrompt: "Reply with exact word only: raven", "", schema, token).GetAwaiter().GetResult();
 
             return true;
 

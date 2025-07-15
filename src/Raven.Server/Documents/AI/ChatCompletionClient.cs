@@ -37,13 +37,14 @@ namespace Raven.Server.Documents.AI;
 
 internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClientForTesting
 {
+    public static string EmptySchema = GetSchemaFromSampleObject("{}");
+    
     private readonly string _model;
     private readonly string _organizationId;
     private readonly string _projectId;
     private readonly bool? _think;
     private readonly HttpClientCacheKey _httpClientCacheKey;
     private readonly HttpClient _client;
-    private readonly string _structuredOutputSchema;
     private readonly IMemoryContextPool _contextPool;
 
     public static DocumentConventions ConventionsToUse = new DocumentConventions
@@ -61,7 +62,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         ConventionsToUse.Freeze();
     }
 
-    public static ChatCompletionClient CreateChatCompletionClient(IMemoryContextPool contextPool, AiConnectionString connection, string schema)
+    public static ChatCompletionClient CreateChatCompletionClient(IMemoryContextPool contextPool, AiConnectionString connection)
     {
         if (connection.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model, out var organizationId, out var projectId, out var think) == false)
         {
@@ -69,10 +70,10 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             throw new NotSupportedException($"The specified provider (\"{connectorType.ToString()}\") is not supported.");
         }
 
-        return new ChatCompletionClient(contextPool, uri, apiKey, model, organizationId, projectId, schema, think, ConventionsToUse);
+        return new ChatCompletionClient(contextPool, uri, apiKey, model, organizationId, projectId, think, ConventionsToUse);
     }
 
-    internal ChatCompletionClient(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, string structuredOutputSchema, bool? think = null, DocumentConventions conventions = null)
+    internal ChatCompletionClient(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, bool? think = null, DocumentConventions conventions = null)
     {
         _model = model ?? throw new ArgumentNullException(nameof(model));
         _organizationId = organizationId;
@@ -96,7 +97,6 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             }
         });
 
-        _structuredOutputSchema = structuredOutputSchema ?? GetSchemaFromSampleObject("{}");
         _contextPool = contextPool;
     }
 
@@ -164,7 +164,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return new AiResponse(AiResponseType.Result) { Result = result, Message = msg};
     }
 
-    public async Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken token)
+    public async Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, CancellationToken token)
     {
         if (_forTestingPurposes?.SimulateFailureAsync != null)
             await _forTestingPurposes.SimulateFailureAsync(userPrompt);
@@ -183,14 +183,15 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         };
 
         var messages = new List<BlittableJsonReaderObject>() { ctx.ReadObject(msg1, "system/msg"), ctx.ReadObject(msg2, "user/msg") };
-        using var request = CreateCompletionRequest(ctx, messages, tools: null, useTools: false);
+        using var request = CreateCompletionRequest(ctx, messages, schema);
         var usage = new AiUsage();
         var results = await CompleteAsync(ctx, request, usage, token);
 
         return (results.Result.ToString(), usage);
     }
+    public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, string schema) => CreateCompletionRequest(ctx, messages, tools: null, useTools: false, schema);
 
-    private HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools)
+    public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, string schema)
     {
         var content = new BlittableJsonContent(async stream =>
         {
@@ -202,7 +203,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                     return;
                 }
 
-                WriteCompletionRequestPayload(ctx, messages, tools, useTools, writer);
+                WriteCompletionRequestPayload(writer, ctx, messages, tools, useTools, schema);
             }
         }, ConventionsToUse);
 
@@ -224,7 +225,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return request;
     }
 
-    private void WriteCompletionRequestPayload(JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, AsyncBlittableJsonTextWriter writer)
+    private void WriteCompletionRequestPayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, string schema)
     {
         writer.WriteStartObject();
 
@@ -278,7 +279,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         BlittableJsonReaderObject GetStructuredOutputSchemaAsBlittable()
         {
-            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(_structuredOutputSchema)))
+            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(schema)))
             {
                 return ctx.Sync.ReadForMemory(stream, "json");
             }

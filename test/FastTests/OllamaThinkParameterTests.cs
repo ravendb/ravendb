@@ -45,7 +45,7 @@ namespace FastTests
             };
 
             using var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()));
-            using var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, genAiConfig.Connection, "{}");
+            using var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, genAiConfig.Connection);
             
             string capturedParameters;
             

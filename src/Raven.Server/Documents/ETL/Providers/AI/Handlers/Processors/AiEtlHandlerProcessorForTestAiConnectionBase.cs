@@ -95,9 +95,10 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                                 $"Failed to generate embeddings for test values. Expected '{EmbeddingsHelper.ValuesListToVerifyConnection.Count}' result, but got '{embeddings.Count}'.");
                         break;
                     case AiModelType.Chat:
-                        using (var client = ChatCompletionClient.CreateChatCompletionClient( ServerStore.ContextPool, aiConnectionString, schema: null))
+                        using (var client = ChatCompletionClient.CreateChatCompletionClient( ServerStore.ContextPool, aiConnectionString))
                         {
-                            await client.CompleteAsync("foo", "bar", HttpContext.RequestAborted);
+                            var schema = ChatCompletionClient.GetSchemaFromSampleObject("{}");
+                            await client.CompleteAsync("foo", "bar", schema, HttpContext.RequestAborted);
                         }
 
                         break;
