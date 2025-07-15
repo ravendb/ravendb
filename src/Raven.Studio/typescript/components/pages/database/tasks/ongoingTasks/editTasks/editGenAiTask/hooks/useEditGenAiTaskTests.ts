@@ -54,6 +54,7 @@ export function useEditGenAiTaskTests() {
                         Context: JSON.parse(x.value),
                         AiHash: formValues.isForceSendingCachedObjects ? null : x.aiHash,
                         IsCached: formValues.isForceSendingCachedObjects ? false : x.isCached,
+                        Attachments: [], // FIXME
                     },
                     DebugActions: null,
                     DebugOutput: [],
@@ -108,6 +109,7 @@ export function useEditGenAiTaskTests() {
                         IsCached: formValues.isForceSendingCachedObjects
                             ? false
                             : formValues.playgroundContexts[idx].isCached,
+                        Attachments: [],//FIXME
                     },
                     DebugActions: null,
                     DebugOutput: [],

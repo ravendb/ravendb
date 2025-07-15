@@ -19,8 +19,6 @@ public interface IChatCompletionClient : IDisposable
     Task<(string Result, AiUsage Usage)> CompleteAsync(string prompt, string context, List<GenAiAttachment> contextOutputAttachments,
         CancellationToken token);
     
-    Task<(string Result, AiUsage Usage)> CompleteAsync(string prompt, string context, 
-        CancellationToken token);
     Task<BlittableJsonReaderObject> GetResponseContentAsync(JsonOperationContext context, HttpResponseMessage response, CancellationToken token);
 }
 
