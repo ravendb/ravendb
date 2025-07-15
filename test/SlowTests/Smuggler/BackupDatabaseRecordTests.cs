@@ -9,10 +9,12 @@ using System.Threading.Tasks;
 using FastTests;
 using FastTests.Utils;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -66,7 +68,7 @@ namespace SlowTests.Smuggler
                 .Select(field => field.Name)
                 .ToList();
 
-            Assert.Equal(51, fieldNames.Count);
+            Assert.Equal(52, fieldNames.Count);
         }
 
         [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
@@ -252,6 +254,18 @@ namespace SlowTests.Smuggler
                         AllowEtlOnNonEncryptedChannel = true
                     };
 
+                    await store1.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
+                    {
+                        S3Settings = new S3Settings()
+                        {
+                            AwsAccessKey = "DummyAccessKey",
+                            RemoteFolderName = "retired-attachments",
+                            BucketName = "dummy-bucket",
+                        },
+                        Disabled = false,
+                        RetireFrequencyInSec = 1000
+                    }));
+
                     embeddingsGenerationConfiguration.Identifier = embeddingsGenerationConfiguration.GenerateIdentifier();
                     await store1.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(aiConnectionString));
                     await store1.Maintenance.SendAsync(new AddEmbeddingsGenerationOperation(embeddingsGenerationConfiguration));
@@ -337,6 +351,14 @@ namespace SlowTests.Smuggler
                     Assert.Equal("aiconnection", record.EmbeddingsGenerations.First().ConnectionStringName);
                     Assert.Equal(true, record.EmbeddingsGenerations.First().AllowEtlOnNonEncryptedChannel);
                     Assert.Equal(true, record.EmbeddingsGenerations.First().Disabled);
+
+                    Assert.NotNull(record.RetiredAttachments);
+                    Assert.Equal(1000, record.RetiredAttachments.RetireFrequencyInSec);
+                    Assert.NotNull(record.RetiredAttachments.S3Settings);
+                    Assert.Equal("DummyAccessKey", record.RetiredAttachments.S3Settings.AwsAccessKey);
+                    Assert.Equal("retired-attachments", record.RetiredAttachments.S3Settings.RemoteFolderName);
+                    Assert.Equal("dummy-bucket", record.RetiredAttachments.S3Settings.BucketName);
+
                 }
             }
             finally
@@ -1305,6 +1327,18 @@ namespace SlowTests.Smuggler
                 // add data archival configuration
                 await DataArchivalHelper.SetupDataArchival(store, Server.ServerStore, new DataArchivalConfiguration { Disabled = false, ArchiveFrequencyInSec = 100 });
 
+                await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
+                {
+                    S3Settings = new S3Settings()
+                    {
+                        AwsAccessKey = "DummyAccessKey",
+                        RemoteFolderName = "retired-attachments",
+                        BucketName = "dummy-bucket",
+                    },
+                    Disabled = false,
+                    RetireFrequencyInSec = 1000
+                }));
+
                 //add queue sink configuration
                 store.Maintenance.Send(new PutConnectionStringOperation<QueueConnectionString>(
                     new QueueConnectionString
@@ -1425,6 +1459,13 @@ namespace SlowTests.Smuggler
 
                     Assert.NotNull(record.DataArchival);
                     Assert.False(record.DataArchival.Disabled);
+
+                    Assert.NotNull(record.RetiredAttachments);
+                    Assert.Equal(1000, record.RetiredAttachments.RetireFrequencyInSec);
+                    Assert.NotNull(record.RetiredAttachments.S3Settings);
+                    Assert.Equal("DummyAccessKey", record.RetiredAttachments.S3Settings.AwsAccessKey);
+                    Assert.Equal("retired-attachments", record.RetiredAttachments.S3Settings.RemoteFolderName);
+                    Assert.Equal("dummy-bucket", record.RetiredAttachments.S3Settings.BucketName);
 
                     Assert.NotNull(record.QueueSinks);
                     Assert.Equal(1, record.QueueSinks.Count);

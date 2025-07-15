@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Operations.Configuration
 {
-    public class StudioConfiguration
+    public class StudioConfiguration : IDynamicJson
     {
         public bool Disabled { get; set; }
         
