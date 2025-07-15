@@ -31,7 +31,16 @@ public partial class IndexWriter
 
         public void PrepareTerms(IndexedField field, out Span<TKey> terms, out Span<int> indexes)
         {
-            int termsCount = field.Textual.Count;
+            int termsCount;
+            if (typeof(TKey) == typeof(Slice))
+                termsCount = field.Textual.Count;
+            else if (typeof(TKey) == typeof(long))
+                termsCount = field.Longs.Count;
+            else if (typeof(TKey) == typeof(double))
+                termsCount = field.Doubles.Count;
+            else
+                throw new InvalidDataException($"Type {typeof(TKey).FullName} is not supported");
+            
             if (_sortedTerms == null || _sortedTerms.Length < termsCount)
             {
                 if (_sortedTerms != null)

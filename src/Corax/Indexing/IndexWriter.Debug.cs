@@ -153,7 +153,7 @@ namespace Corax.Indexing
 #endif
 
             [Conditional("ENABLE_TERMDUMPER")]
-            public void WriteAddition(Slice term, long termId)
+            public void WriteAddition<TKey>(TKey term, long termId)
             {
 #if ENABLE_TERMDUMPER
                 _writer.WriteLine($"+ {term} {termId}");
@@ -161,7 +161,7 @@ namespace Corax.Indexing
             }
 
             [Conditional("ENABLE_TERMDUMPER")]
-            public void WriteRemoval(Slice term, long termId)
+            public void WriteRemoval<TKey>(TKey term, long termId)
             {
 #if ENABLE_TERMDUMPER
                 _writer.WriteLine($"- {term} {termId}");

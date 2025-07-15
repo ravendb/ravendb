@@ -21,7 +21,6 @@ public unsafe partial class IndexWriter
     private ref struct TextualFieldInserter
     {
         private readonly IndexWriter _writer;
-        private readonly Tree _entriesToTermsTree;
         private readonly IndexedField _indexedField;
         private readonly Span<byte> _tmpBuf;
         private readonly CompactTree _fieldTree;
@@ -40,15 +39,14 @@ public unsafe partial class IndexWriter
         private int _offsetAdjustment;
         private long _curPage;
 
-        public TextualFieldInserter(IndexWriter writer, Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf)
+        public TextualFieldInserter(IndexWriter writer, IndexedField indexedField, Span<byte> tmpBuf)
         {
             _writer = writer;
-            _entriesToTermsTree = entriesToTermsTree;
             _indexedField = indexedField;
             _tmpBuf = tmpBuf;
             _fieldTree = writer._fieldsTree.CompactTreeFor(_indexedField.Name);
             _dumper = new IndexTermDumper(writer._fieldsTree, _indexedField.Name);
-            _writer.ClearEntriesForTerm();
+            _writer._entriesToTermsTracker.ClearEntriesForTerm();
             _fieldTree.InitializeStateForTryGetNextValue();
             _entriesForTerm = new NativeList<TermInEntryModification>();
             _entriesForTerm.Initialize(_writer._entriesAllocator);
@@ -119,7 +117,7 @@ public unsafe partial class IndexWriter
                     _offsetAdjustment = 0;
                     int read = _fieldTree.BulkUpdateStart(keys, postListIds, pageOffsets, out _curPage);
 
-                    PrefetchContainerPages(ref _pagesToPrefetch, postListIds[..read]);
+                    FieldInserterHelper.PrefetchContainerPages(_writer, ref _pagesToPrefetch, postListIds[..read]);
 
                     int idx = 0;
                     for (; idx < read; idx++)
@@ -159,7 +157,7 @@ public unsafe partial class IndexWriter
                 }
             }
 
-            _writer.InsertEntriesForTermBulk(_entriesToTermsTree, _indexedField.Name);
+            _writer._entriesToTermsTracker.CommitCurrentDataFor(_indexedField.Name);
 
             _writer._indexMetadata.Increment(_indexedField.NameTotalLengthOfTerms, totalLengthOfTerm);
 
@@ -180,10 +178,7 @@ public unsafe partial class IndexWriter
         {
             UpdateEntriesForTerm(ref _entriesForTerm, in entries);
             if (_indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
-            {
-                _writer.SetRange(_writer._additionsForTerm, entries.Additions);
-                _writer.SetRange(_writer._removalsForTerm, entries.Removals);
-            }
+                _writer._entriesToTermsTracker.InsertEntries(entries);
 
             bool found = postListId != Constants.IndexSearcher.InvalidId;
             Debug.Assert(found || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
@@ -197,7 +192,7 @@ public unsafe partial class IndexWriter
                     if (entries.Removals.Count != 0)
                         throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {_indexedField.Name}! This is a bug.");
 
-                    _writer.AddNewTerm(ref entries, _tmpBuf, out termId);
+                    _writer.CreatePostingListForNewTerm(ref entries, _tmpBuf, out termId);
                     totalLengthOfTerm = entries.TermSize;
 
                     _dumper.WriteAddition(term, termId);
@@ -224,7 +219,7 @@ public unsafe partial class IndexWriter
                             if (_fieldTree.BulkUpdateRemove(ref key, _curPage, pageOffset, ref _offsetAdjustment, out long oldValue) == false)
                             {
                                 _dumper.WriteRemoval(term, termId);
-                                ThrowTriedToDeleteTermThatDoesNotExists(term, _indexedField);
+                                ThrowTriedToDeleteTermThatDoesNotExists(term, _indexedField.Name);
                             }
 
                             totalLengthOfTerm = -entries.TermSize;
@@ -239,7 +234,7 @@ public unsafe partial class IndexWriter
                 }
             }
 
-            RecordTermsForEntries(_entriesForTerm, entries, termContainerId);
+            RecordTermsForEntries(entries, termContainerId);
 
             //Update mapping virtual<=> storage location location. Final writing will be done after inserting ALL terms for specific field.
             if (_indexedField.FieldSupportsPhraseQuery)
@@ -253,7 +248,7 @@ public unsafe partial class IndexWriter
             if (_indexedField.Spatial == null)
             {
                 Debug.Assert(termContainerId > 0);
-                _writer.InsertEntriesForTerm(termContainerId);
+                _writer._entriesToTermsTracker.ProcessCurrentEntriesForTerm(termContainerId);
             }
 
             return totalLengthOfTerm;
@@ -389,9 +384,9 @@ public unsafe partial class IndexWriter
             }
         }
 
-        private void RecordTermsForEntries(in NativeList<TermInEntryModification> entriesForTerm, in EntriesModifications entries, long termContainerId)
+        private void RecordTermsForEntries(in EntriesModifications entries, long termContainerId)
         {
-            foreach (var entry in entriesForTerm)
+            foreach (var entry in _entriesForTerm)
             {
                 ref var recordedTermList = ref _writer.GetEntryTerms(entry.TermsPerEntryIndex);
 
@@ -504,7 +499,12 @@ public unsafe partial class IndexWriter
             return (encodedPostingListId, nullMarkerId);
         }
 
-        private void PrefetchContainerPages(ref ContextBoundNativeList<long> pagesToPrefetch, Span<long> postListIds)
+        
+    }
+
+    private static class FieldInserterHelper
+    {
+        public static void PrefetchContainerPages(IndexWriter writer, ref ContextBoundNativeList<long> pagesToPrefetch, Span<long> postListIds)
         {
             pagesToPrefetch.Clear();
             pagesToPrefetch.EnsureCapacityFor(postListIds.Length);
@@ -522,7 +522,7 @@ public unsafe partial class IndexWriter
 
             pagesToPrefetch.Count = Sorting.SortAndRemoveDuplicates(pagesToPrefetch.RawItems, pagesToPrefetch.Count);
 
-            _writer._transaction.LowLevelTransaction.DataPager.MaybePrefetchMemory(pagesToPrefetch.GetEnumerator());
+            writer._transaction.LowLevelTransaction.DataPager.MaybePrefetchMemory(pagesToPrefetch.GetEnumerator());
         }
     }
 }

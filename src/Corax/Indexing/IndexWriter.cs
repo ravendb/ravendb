@@ -18,8 +18,6 @@ using Sparrow.Compression;
 using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
-using Sparrow.Server.Utils;
-using Sparrow.Server.Utils.VxSort;
 using Sparrow.Threading;
 using Voron;
 using Voron.Data;
@@ -32,7 +30,6 @@ using Voron.Data.PostingLists;
 using Voron.Impl;
 using Voron.Util;
 using Voron.Util.PFor;
-using InvalidOperationException = System.InvalidOperationException;
 
 
 namespace Corax.Indexing
@@ -50,14 +47,19 @@ namespace Corax.Indexing
         private Tree _indexMetadata;
         private long _numberOfTermModifications;
         private CompactKeyCacheScope _compactKeyScope;
-
+        
+        /// <summary>
+        /// Meta-tree that contains mapping Field -> EntryId -> TermId.
+        /// This is used by SortingMatches for building an array of terms to sort.
+        /// </summary>
+        private Tree _entriesToTermsTree; 
+        
+        private ContextBoundNativeList<long> _smallPostingListWorkingBuffer;
+        
+        
         private bool _ownsTransaction;
         private JsonOperationContext _jsonOperationContext;
         private readonly Transaction _transaction;
-        private ContextBoundNativeList<long> _entriesToTermsBuffer;
-        private ContextBoundNativeList<long> _entriesForTermsRemovalsBuffer;
-        private NativeList<(long EntryId, long TermId)> _entriesForTermsAdditionsBuffer;
-
         private Token[] _tokensBufferHandler;
         private byte[] _encodingBufferHandler;
         private byte[] _utf8ConverterBufferHandler;
@@ -74,6 +76,7 @@ namespace Corax.Indexing
         private IndexFieldsMapping _dynamicFieldsMapping;
         private PostingList _largePostingListSet;
         private long _compactTreeDictionaryId = Constants.IndexSearcher.InvalidId;
+        private EntriesToTermsTracker _entriesToTermsTracker;
 
         /// <summary>
         /// Container of deleted entries' IDs. Even if we're not bulk-removing them in the Commit phase,
@@ -135,10 +138,6 @@ namespace Corax.Indexing
             {
                 _knownFieldsTerms[i] = new IndexedField(fieldsMapping.GetByFieldId(i), _supportedFeatures);
             }
-
-            _entriesAlreadyAdded = new HashSet<long>();
-            _additionsForTerm = new List<long>();
-            _removalsForTerm = new List<long>();
         }
 
         public IndexWriter([NotNull] StorageEnvironment environment, IndexFieldsMapping fieldsMapping, SupportedFeatures supportedFeatures) : this(fieldsMapping,
@@ -180,15 +179,16 @@ namespace Corax.Indexing
             _entriesAllocator = new ByteStringContext(SharedMultipleUseFlag.None);
 
             _tempListBuffer = new ContextBoundNativeList<long>(_entriesAllocator);
-            _entriesToTermsBuffer = new ContextBoundNativeList<long>(_entriesAllocator);
-            _entriesForTermsRemovalsBuffer = new ContextBoundNativeList<long>(_entriesAllocator);
-            _entriesForTermsAdditionsBuffer = new NativeList<(long EntryId, long TermId)>();
+            _smallPostingListWorkingBuffer = new ContextBoundNativeList<long>(_entriesAllocator);
+
+            _entriesToTermsTracker = new(this);
 
             _pforDecoder = new FastPForDecoder(_entriesAllocator);
 
             // We want to use the LLT allocator because the list will be small most of the time,
             // and we do not want to manually handle updating the allocator after a flush.
             _entriesToDelete = new(_transaction.LowLevelTransaction.Allocator);
+            _entriesToTermsTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToTermsSlice);
         }
 
         private void InitializeFieldRootPage(IndexedField field)
@@ -370,8 +370,6 @@ namespace Corax.Indexing
         }
 
         private long _initialNumberOfEntries;
-        private readonly HashSet<long> _entriesAlreadyAdded;
-        private readonly List<long> _additionsForTerm, _removalsForTerm;
         private readonly IndexOperationsDumper _indexDebugDumper;
         private FastPForDecoder _pforDecoder;
         private long _lastEntryId;
@@ -746,9 +744,7 @@ namespace Corax.Indexing
         {
             _indexedEntries.Clear();
             _deletedEntries.Clear();
-            _entriesAlreadyAdded.Clear();
-            _additionsForTerm.Clear();
-            _removalsForTerm.Clear();
+            _entriesToTermsTracker.ClearEntriesForTerm();
 
             // We have to reset markers and root pages because we may have created new ones in the commit phase.
             _nullTermsMarkers = null;
@@ -771,9 +767,8 @@ namespace Corax.Indexing
             // PERF: Since we are resetting the entries allocator, we can avoid disposing every internal data structure
             // that uses the allocator internally. 
             _entriesAllocator.Reset();
-            _entriesToTermsBuffer = new(_entriesAllocator);
-            _entriesForTermsAdditionsBuffer = new NativeList<(long EntryId, long TermId)>();
-            _entriesForTermsRemovalsBuffer = new(_entriesAllocator);
+            _entriesToTermsTracker.Reset();
+            _smallPostingListWorkingBuffer = new(_entriesAllocator);
 
             _tempListBuffer = new(_entriesAllocator);
             _termsPerEntryId = new NativeList<NativeList<RecordedTerm>>();
@@ -908,7 +903,7 @@ namespace Corax.Indexing
             _indexDebugDumper.Commit();
             using var _ = _entriesAllocator.Allocate(Container.MaxSizeInsideContainerPage, out Span<byte> workingBuffer);
 
-            Tree entriesToTermsTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToTermsSlice);
+
             Tree entriesToSpatialTree = _transaction.CreateTree(Constants.IndexWriter.EntriesToSpatialSlice);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfEntriesSlice, _numberOfModifications);
             _indexMetadata.Increment(Constants.IndexWriter.NumberOfTermsInIndex, _numberOfTermModifications);
@@ -952,15 +947,27 @@ namespace Corax.Indexing
 
                 using (staticFieldScope.For(CommitOperation.TextualValues))
                 {
-                    using var inserter = new TextualFieldInserter(this, entriesToTermsTree, indexedField, workingBuffer);
+                    using var inserter = new TextualFieldInserter(this, indexedField, workingBuffer);
                     inserter.InsertTextualField(token);
                 }
 
                 using (staticFieldScope.For(CommitOperation.IntegerValues))
-                    InsertNumericFieldLongs(entriesToTermsTree, indexedField, workingBuffer, token);
+                {
+                    if (indexedField.Longs.Count > 0)
+                    {
+                        using var inserter = new NumericalFieldInserter<long, Int64LookupKey>(this, indexedField, workingBuffer);
+                        inserter.InsertNumericalField(token);
+                    }
+                }
 
                 using (staticFieldScope.For(CommitOperation.FloatingValues))
-                    InsertNumericFieldDoubles(entriesToTermsTree, indexedField, workingBuffer, token);
+                {
+                    if (indexedField.Doubles.Count > 0)
+                    {
+                        using var inserter = new NumericalFieldInserter<double, DoubleLookupKey>(this, indexedField, workingBuffer);
+                        inserter.InsertNumericalField(token);
+                    }
+                }
 
                 using (staticFieldScope.For(CommitOperation.SpatialValues))
                     InsertSpatialField(entriesToSpatialTree, indexedField, token);
@@ -1111,51 +1118,7 @@ namespace Corax.Indexing
         {
             return ref _termsPerEntryId[termsPerEntryIndex];
         }
-
-        private void ClearEntriesForTerm()
-        {
-            _entriesAlreadyAdded.Clear();
-            _entriesForTermsRemovalsBuffer.Clear();
-            _entriesForTermsAdditionsBuffer.Clear();
-        }
-
-        private void InsertEntriesForTermBulk(Tree entriesToTermsTree, Slice name)
-        {
-            var entriesToTerms = entriesToTermsTree.LookupFor<Int64LookupKey>(name);
-            if (_entriesForTermsRemovalsBuffer.Count > 0)
-            {
-                Sort.Run(_entriesForTermsRemovalsBuffer.ToSpan());
-
-                entriesToTerms.InitializeCursorState();
-
-                foreach (var entryId in _entriesForTermsRemovalsBuffer)
-                {
-                    Int64LookupKey key = entryId;
-                    if (entriesToTerms.TryGetNextValue(ref key, out _))
-                        entriesToTerms.TryRemoveExistingValue(ref key, out _);
-                }
-            }
-
-            if (_entriesForTermsAdditionsBuffer.Count > 0)
-            {
-                _entriesForTermsAdditionsBuffer.Sort();
-                entriesToTerms.InitializeCursorState();
-                foreach (var (entryId, termId) in _entriesForTermsAdditionsBuffer)
-                {
-                    Int64LookupKey key = entryId;
-                    entriesToTerms.TryGetNextValue(ref key, out _);
-                    entriesToTerms.AddOrSetAfterGetNext(ref key, termId);
-                }
-            }
-        }
-
-        private void SetRange(List<long> list, in NativeList<TermInEntryModification> span)
-        {
-            list.Clear();
-            for (int i = 0; i < span.Count; i++)
-                list.Add(span[i].EntryId);
-        }
-
+        
         private enum AddEntriesToTermResult
         {
             NothingToDo,
@@ -1197,12 +1160,11 @@ namespace Corax.Indexing
             // which diminish the amount of work this method has to do.
 
             var count = VariableSizeEncoding.Read<int>(item.Address, out var offset);
-
             int capacity = Math.Max(256, count + entries.Additions.Count + entries.Removals.Count);
-            _entriesToTermsBuffer.EnsureCapacityFor(capacity);
+            _smallPostingListWorkingBuffer.EnsureCapacityFor(capacity);
             _pforDecoder.Init(item.Address + offset, item.Length - offset);
-            Debug.Assert(_entriesToTermsBuffer.Capacity > 0 && _entriesToTermsBuffer.Capacity % 256 == 0, "The buffer must be multiple of 256 for PForDecoder.REad");
-            _entriesToTermsBuffer.Count = _pforDecoder.Read(_entriesToTermsBuffer.RawItems, _entriesToTermsBuffer.Capacity);
+            Debug.Assert(_smallPostingListWorkingBuffer.Capacity > 0 && _smallPostingListWorkingBuffer.Capacity % 256 == 0, "The buffer must be multiple of 256 for PForDecoder.REad");
+            _smallPostingListWorkingBuffer.Count = _pforDecoder.Read(_smallPostingListWorkingBuffer.RawItems, _smallPostingListWorkingBuffer.Capacity);
             entries.GetEncodedAdditionsAndRemovals(_entriesAllocator, out long* additions, out long* removals);
 
             // Merging between existing, additions and removals, there is one scenario where we can just concat the lists together
@@ -1212,17 +1174,17 @@ namespace Corax.Indexing
             // In all other scenarios, we have to sort and remove duplicates & removals
             var needSorting = entries.Removals.Count > 0 || // any removal force sorting
                               // here we test if the first new addition is smaller than the largest existing, requiring sorting  
-                              (entries.Additions.Count > 0 && additions[0] <= _entriesToTermsBuffer.RawItems[_entriesToTermsBuffer.Count - 1]);
+                              (entries.Additions.Count > 0 && additions[0] <= _smallPostingListWorkingBuffer.RawItems[_smallPostingListWorkingBuffer.Count - 1]);
 
-            _entriesToTermsBuffer.AddRange(new ReadOnlySpan<long>(additions, entries.Additions.Count));
-            _entriesToTermsBuffer.AddRange(new ReadOnlySpan<long>(removals, entries.Removals.Count));
+            _smallPostingListWorkingBuffer.AddRange(new ReadOnlySpan<long>(additions, entries.Additions.Count));
+            _smallPostingListWorkingBuffer.AddRange(new ReadOnlySpan<long>(removals, entries.Removals.Count));
 
             if (needSorting)
             {
-                PostingList.SortEntriesAndRemoveDuplicatesAndRemovals(ref _entriesToTermsBuffer);
+                PostingList.SortEntriesAndRemoveDuplicatesAndRemovals(ref _smallPostingListWorkingBuffer);
             }
 
-            if (_entriesToTermsBuffer.Count == 0)
+            if (_smallPostingListWorkingBuffer.Count == 0)
             {
                 Container.Delete(llt, _postingListContainerId, containerId);
                 termIdInTree = Constants.IndexSearcher.InvalidId;
@@ -1230,7 +1192,7 @@ namespace Corax.Indexing
             }
 
 
-            if (TryEncodingToBuffer(_entriesToTermsBuffer.RawItems, _entriesToTermsBuffer.Count, tmpBuf, out var encoded) == false)
+            if (TryEncodingToBuffer(_smallPostingListWorkingBuffer.RawItems, _smallPostingListWorkingBuffer.Count, tmpBuf, out var encoded) == false)
             {
                 AddNewTermToSet(out termIdInTree);
                 return AddEntriesToTermResult.UpdateTermId;
@@ -1326,7 +1288,7 @@ namespace Corax.Indexing
             }
 
 
-            AddNewTerm(ref entries, tmpBuf, out termId);
+            CreatePostingListForNewTerm(ref entries, tmpBuf, out termId);
             return AddEntriesToTermResult.UpdateTermId;
         }
 
@@ -1366,131 +1328,7 @@ namespace Corax.Indexing
             _largePostingListSet ??= _transaction.OpenPostingList(Constants.IndexWriter.LargePostingListsSetSlice);
             _largePostingListSet.Remove(containerId);
         }
-
-        private void InsertNumericFieldLongs(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, CancellationToken token)
-        {
-            var fieldTree = _fieldsTree.LookupFor<Int64LookupKey>(indexedField.NameLong);
-
-            ClearEntriesForTerm();
-
-            foreach (var (term, entriesLocation) in indexedField.Longs)
-            {
-                token.ThrowIfCancellationRequested();
-                ref var entries = ref indexedField.Storage.GetAsRef(entriesLocation);
-
-                // We are not going to be using these entries anymore after this. 
-                // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
-                // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
-                var localEntry = entries;
-                localEntry.Prepare(_entriesAllocator);
-                if (localEntry.HasChanges == false)
-                    continue;
-
-                UpdateEntriesForTerm(localEntry, term);
-
-                long termId;
-                var hasTerm = fieldTree.TryGetValue(term, out var existing);
-                if (localEntry.Additions.Count > 0 && hasTerm == false)
-                {
-                    Debug.Assert(localEntry.Removals.Count == 0, "entries.TotalRemovals == 0");
-                    AddNewTerm(ref localEntry, tmpBuf, out termId);
-
-                    fieldTree.Add(term, termId);
-                    continue;
-                }
-
-                switch (AddEntriesToTerm(tmpBuf, existing, isNullTerm: false, ref localEntry, out termId))
-                {
-                    case AddEntriesToTermResult.UpdateTermId:
-                        fieldTree.Add(term, termId);
-                        break;
-                    case AddEntriesToTermResult.RemoveTermId:
-                        fieldTree.TryRemove(term);
-                        break;
-                }
-            }
-
-            InsertEntriesForTermBulk(entriesToTermsTree, indexedField.NameLong);
-        }
-
-        private void UpdateEntriesForTerm(EntriesModifications entries, long term)
-        {
-            SetRange(_additionsForTerm, entries.Additions);
-            SetRange(_removalsForTerm, entries.Removals);
-
-            InsertEntriesForTerm(term);
-        }
-
-        private void InsertEntriesForTerm(long term)
-        {
-            _entriesForTermsRemovalsBuffer.EnsureCapacityFor(_removalsForTerm.Count + _entriesForTermsRemovalsBuffer.Count);
-            foreach (long removal in _removalsForTerm)
-            {
-                // if already added, we don't need to remove it in this batch
-                if (_entriesAlreadyAdded.Contains(removal))
-                    continue;
-                _entriesForTermsRemovalsBuffer.AddUnsafe(removal);
-            }
-
-            if (_entriesForTermsAdditionsBuffer.HasCapacityFor(_additionsForTerm.Count) == false)
-                _entriesForTermsAdditionsBuffer.Grow(_entriesAllocator, _additionsForTerm.Count);
-            foreach (long addition in _additionsForTerm)
-            {
-                if (_entriesAlreadyAdded.Add(addition) == false)
-                    continue;
-                ref var tuple = ref _entriesForTermsAdditionsBuffer.AddByRefUnsafe();
-                tuple = (addition, term);
-            }
-        }
-
-        private void InsertNumericFieldDoubles(Tree entriesToTermsTree, IndexedField indexedField, Span<byte> tmpBuf, CancellationToken token)
-        {
-            var fieldTree = _fieldsTree.LookupFor<DoubleLookupKey>(indexedField.NameDouble);
-
-            ClearEntriesForTerm();
-
-            foreach (var (term, entriesLocation) in indexedField.Doubles)
-            {
-                token.ThrowIfCancellationRequested();
-
-                ref var entries = ref indexedField.Storage.GetAsRef(entriesLocation);
-
-                // We are not going to be using these entries anymore after this. 
-                // Therefore, we can copy and we dont need to get a reference to the entry in the dictionary.
-                // IMPORTANT: No modification to the dictionary can happen from this point onwards. 
-                var localEntry = entries;
-                localEntry.Prepare(_entriesAllocator);
-
-                if (localEntry.HasChanges == false)
-                    continue;
-
-                UpdateEntriesForTerm(localEntry, BitConverter.DoubleToInt64Bits(term));
-
-                var hasTerm = fieldTree.TryGetValue(term, out var existing);
-
-                long termId;
-                if (localEntry.Additions.Count > 0 && hasTerm == false) // no existing value
-                {
-                    Debug.Assert(localEntry.Removals.Count == 0, "entries.TotalRemovals == 0");
-                    AddNewTerm(ref localEntry, tmpBuf, out termId);
-                    fieldTree.Add(term, termId);
-                    continue;
-                }
-
-                switch (AddEntriesToTerm(tmpBuf, existing, isNullTerm: false, ref localEntry, out termId))
-                {
-                    case AddEntriesToTermResult.UpdateTermId:
-                        fieldTree.Add(term, termId);
-                        break;
-                    case AddEntriesToTermResult.RemoveTermId:
-                        fieldTree.TryRemove(term);
-                        break;
-                }
-            }
-
-            InsertEntriesForTermBulk(entriesToTermsTree, indexedField.NameDouble);
-        }
-
+        
         private bool TryEncodingToBuffer(long* additions, int additionsCount, Span<byte> tmpBuf, out Span<byte> encoded)
         {
             fixed (byte* pOutput = tmpBuf)
@@ -1513,7 +1351,13 @@ namespace Corax.Indexing
             }
         }
 
-        private void AddNewTerm(ref EntriesModifications entries, Span<byte> tmpBuf, out long termId)
+        /// <summary>
+        /// Create a new posting list or just encode entryId (in case when a term is unique).
+        /// </summary>
+        /// <param name="entries">Term's entries</param>
+        /// <param name="tmpBuf">Working buffer</param>
+        /// <param name="termId">Location of stored entries / encoded entry id</param>
+        private void CreatePostingListForNewTerm(ref EntriesModifications entries, Span<byte> tmpBuf, out long termId)
         {
             _numberOfTermModifications += 1;
             Debug.Assert(entries.Additions.Count > 0, "entries.TotalAdditions > 0");
@@ -1537,8 +1381,7 @@ namespace Corax.Indexing
             termId = AllocatedSpaceForSmallSet(encoded, _transaction.LowLevelTransaction, out Span<byte> space);
             encoded.CopyTo(space);
         }
-
-
+        
         private void AddNewTermToSet(out long termId)
         {
             long setId = Container.Allocate(_transaction.LowLevelTransaction, _postingListContainerId, sizeof(PostingListState), out var setSpace);
