@@ -6,14 +6,10 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
-using Acornima.Ast;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
 using Jint.Native.Object;
-using Jint.Runtime.Descriptors;
-using Jint.Runtime.Interop;
-using Microsoft.IO;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ETL;
@@ -59,7 +55,7 @@ class AIContextItem {
   }
 
   withJpeg(data) {
-    return this.#withAttachment('image/Jpeg', data);
+    return this.#withAttachment('image/jpeg', data);
   }
 
   withPng(data) {
