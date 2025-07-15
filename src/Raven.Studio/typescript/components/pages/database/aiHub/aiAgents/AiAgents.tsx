@@ -135,14 +135,13 @@ function AiAgentCard({ config }: AiAgentCardProps) {
     return (
         <Col className="panel-bg-1 p-2 rounded-2 border border-secondary" sm={12} xl={6} xxl={4}>
             <h4 className="m-0">{config.Name}</h4>
-            <div className="text-muted">Last run: TODO</div>
             <div className="mt-2 text-truncate" title={config.SystemPrompt}>
                 {config.SystemPrompt}
             </div>
             <div className="hstack justify-content-between mt-2">
                 <a href={appUrl.forChatAiAgent(databaseName, config.Identifier)} className="btn btn-primary">
                     <Icon icon="llm" />
-                    Chat
+                    Start new chat
                 </a>
                 <Dropdown>
                     <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="secondary">

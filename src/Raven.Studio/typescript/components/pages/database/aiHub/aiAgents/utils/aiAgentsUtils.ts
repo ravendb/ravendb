@@ -1,3 +1,4 @@
+import moment from "moment";
 import { AiAgentDocMessage, AiAgentDocumentResponse, AiAgentMessage, AiAgentRunResult } from "./aiAgentsTypes";
 
 const getContentFromDoc = (docMessage: AiAgentDocMessage): string => {
@@ -13,7 +14,6 @@ const mapMessageFromDoc = (docMessage: AiAgentDocMessage): AiAgentMessage => {
         role: docMessage.role,
         content: getContentFromDoc(docMessage),
         state: "success",
-        date: "TODO date",
         toolCalls: docMessage.tool_calls
             ? docMessage.tool_calls.map((x) => ({
                   id: x.id,
@@ -21,6 +21,8 @@ const mapMessageFromDoc = (docMessage: AiAgentDocMessage): AiAgentMessage => {
                   arguments: x.function.arguments,
               }))
             : [],
+        date: docMessage.date ? moment(docMessage.date).format(aiAgentsUtils.messageDateFormat) : null,
+        usage: docMessage.usage,
     };
 };
 

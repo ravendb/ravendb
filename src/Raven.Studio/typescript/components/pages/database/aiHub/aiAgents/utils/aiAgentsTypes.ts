@@ -14,7 +14,6 @@ export interface AiAgentMessage {
     state?: "loading" | "success" | "error";
     usage?: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
     toolCalls?: AiAgentToolCall[];
-    transcript?: AiAgentMessage[];
 }
 
 export interface AiAgentDocumentResponse {
@@ -44,4 +43,6 @@ export interface AiAgentDocMessage {
             arguments: string;
         };
     }[];
+    date?: string;
+    usage?: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
 }

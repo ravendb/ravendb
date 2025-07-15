@@ -184,6 +184,8 @@ class editDocument extends shardViewModelBase {
     collapseDocsWhenOpening = ko.observable<boolean>(false);
     isDocumentCollapsed = ko.observable<boolean>(false);
     forceFold = false;
+
+    isAiAgentConversation: KnockoutComputed<boolean>;
     
     constructor(db: database) {
         super(db);
@@ -696,6 +698,10 @@ class editDocument extends shardViewModelBase {
                 return this.isHugeDocument() && !this.ignoreHugeDocument();
             }
         });
+
+        this.isAiAgentConversation = ko.pureComputed(() => {
+            return !!this.document().getValue("Agent");
+        });
     }
 
     async onDiffModeChanged(newMode: "previous" | "manual") {
@@ -818,6 +824,15 @@ class editDocument extends shardViewModelBase {
     
     viewRaw() {
         window.open(this.rawJsonUrl(), "_blank");
+    }
+
+    continueAiAgentConversation() {
+        const doc = this.document();
+        const agentName = String(doc.getValue("Agent"));
+        
+        if (agentName) {
+            router.navigate(appUrl.forChatAiAgent(this.db.name, agentName, doc.getId()));
+        }
     }
     
     copyDocumentBodyToClipboard() {

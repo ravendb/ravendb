@@ -4,7 +4,6 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
 import { Fragment, useEffect, useRef } from "react";
 import ReactAce from "react-ace";
-import Spinner from "react-bootstrap/Spinner";
 import useUniqueId from "components/hooks/useUniqueId";
 import Accordion from "react-bootstrap/Accordion";
 import IconName from "typings/server/icons";
@@ -20,7 +19,7 @@ interface AiAgentMessagesProps {
     messages: AiAgentMessage[];
     toolQueries: ToolQuery[];
     toolActions: ToolAction[];
-    handleSaveParameters: (parameters: AiAgentToolCall[]) => void;
+    handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
 }
 
 export default function AiAgentMessages({
@@ -33,10 +32,10 @@ export default function AiAgentMessages({
         <div className="w-100 vstack gap-2 ai-agent-messages">
             {messages.map((message, idx) => (
                 <Fragment key={message.id}>
-                    {message.role === "user" && (
+                    {(message.role === "user" || message.role === "tool") && (
                         <UserMessage message={message} idx={idx} toolQueries={toolQueries} toolActions={toolActions} />
                     )}
-                    {message.role === "assistant" && (
+                    {(message.role === "assistant" || message.role === "system") && (
                         <AgentMessage
                             agentMessage={message}
                             allMessages={messages}
@@ -59,15 +58,31 @@ interface UserMessageProps {
 }
 
 function UserMessage({ message, idx, toolQueries, toolActions }: UserMessageProps) {
+    const contentMode = message.content?.includes("{") ? "json" : "text";
+    const aceRef = useRef<ReactAce>(null);
+
     return (
         <div>
             {idx === 0 && <div className="text-muted text-center">{message.date}</div>}
             <div className="hstack justify-content-end user-message">
                 <div
                     className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset"
-                    style={{ maxWidth: "75%" }}
+                    style={{ maxWidth: "75%", width: contentMode === "json" ? "50%" : undefined }}
                 >
-                    <div>{message.content}</div>
+                    {contentMode === "json" ? (
+                        <AceEditor
+                            aceRef={aceRef}
+                            value={message.content}
+                            readOnly
+                            mode="json"
+                            height="150px"
+                            wrapEnabled
+                            setOptions={{ indentedSoftWrap: false }}
+                            actions={[{ component: <AceEditor.FullScreenAction /> }]}
+                        />
+                    ) : (
+                        <div>{message.content}</div>
+                    )}
                     {message.toolCalls?.length > 0 && (
                         <div className="vstack gap-2">
                             {message.toolCalls.map((toolCall) => (
@@ -136,10 +151,13 @@ function AgentMessage({
     };
 
     const agentMessageIndex = allMessages.findIndex((x) => x.id === agentMessage.id);
-    const transcript = agentMessage.transcript ?? [];
-
     const isLastItem = agentMessageIndex === allMessages.length - 1;
-    const isRequireParameters = isLastItem && agentMessage.toolCalls?.length > 0 && !formState.isSubmitted;
+    const isToolAction = agentMessage.toolCalls?.some((x) => toolActions?.some((y) => y.Name === x.name));
+
+    const isRequireParameters =
+        isLastItem && isToolAction && agentMessage.toolCalls?.length > 0 && !formState.isSubmitted;
+
+    const contentMode = agentMessage.content?.includes("{") ? "json" : "text";
 
     return (
         <div>
@@ -182,36 +200,41 @@ function AgentMessage({
                     </div>
                 )}
             </div>
-            {agentMessage.state === "loading" && (
-                <div className="hstack">
-                    <Spinner size="sm" className="me-1" />
-                    <span>Thinking...</span>
-                </div>
-            )}
-            {agentMessage.state === "error" && <div className="text-danger">Error</div>}
             {agentMessage.state === "success" && (
                 <div>
-                    <Transcript transcript={transcript} toolQueries={toolQueries} toolActions={toolActions} />
                     {agentMessage.content && (
                         <div className="mt-2">
                             <AceEditor
                                 aceRef={aceRef}
                                 value={agentMessage.content}
                                 readOnly
-                                mode="json"
+                                mode={contentMode}
                                 actions={[{ component: <AceEditor.FullScreenAction /> }]}
                                 height={getAgentAceEditorHeight(agentMessage.content)}
+                                wrapEnabled
+                                setOptions={{
+                                    indentedSoftWrap: false,
+                                }}
                             />
+                        </div>
+                    )}
+                    {agentMessage.toolCalls?.length > 0 && (
+                        <div className="vstack gap-2">
+                            {agentMessage.toolCalls.map((toolCall) => (
+                                <TranscriptTool
+                                    key={toolCall.id}
+                                    toolCall={toolCall}
+                                    toolQueries={toolQueries}
+                                    toolActions={toolActions}
+                                />
+                            ))}
                         </div>
                     )}
                 </div>
             )}
             {isRequireParameters && (
                 <div className="hstack justify-content-end mt-2">
-                    <div
-                        className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset"
-                        style={{ maxWidth: "75%" }}
-                    >
+                    <div className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset w-70">
                         {parametersFieldsArray.fields.map((field, idx) => (
                             <FormGroup key={field.id}>
                                 <FormLabel>
@@ -221,7 +244,7 @@ function AgentMessage({
                                     control={control}
                                     name={`parameters.${idx}.arguments`}
                                     mode="json"
-                                    height="100px"
+                                    height="150px"
                                 />
                             </FormGroup>
                         ))}
@@ -233,67 +256,6 @@ function AgentMessage({
                 </div>
             )}
         </div>
-    );
-}
-
-interface TranscriptProps {
-    transcript: AiAgentMessage[];
-    toolQueries: ToolQuery[];
-    toolActions: ToolAction[];
-}
-
-function Transcript({ transcript, toolQueries, toolActions }: TranscriptProps) {
-    const id = useUniqueId("transcript");
-
-    const getTitle = (message: AiAgentMessage) => {
-        if (message.role === "system") {
-            return "System Role was set.";
-        }
-        if (message.role === "user") {
-            return "User Role input.";
-        }
-        if (message.role === "assistant") {
-            return "Assistant Role response.";
-        }
-        if (message.role === "tool") {
-            return "Tool Role response.";
-        }
-
-        return message.role;
-    };
-
-    return (
-        <Accordion className="transcript border border-secondary rounded-2 panel-bg-2">
-            <Accordion.Item eventKey={id} className="panel-bg-2">
-                <Accordion.Header>Transcript</Accordion.Header>
-                <Accordion.Body className="panel-bg-2 rounded-2">
-                    <div className="vstack gap-2">
-                        {transcript.map((message) => (
-                            <div key={message.id}>
-                                <div>{getTitle(message)}</div>
-                                {message.content && (
-                                    <div className="border border-secondary rounded-2 p-2 well mt-1">
-                                        {message.content}
-                                    </div>
-                                )}
-                                {message.toolCalls?.length > 0 && (
-                                    <div className="vstack gap-2">
-                                        {message.toolCalls.map((toolCall) => (
-                                            <TranscriptTool
-                                                key={toolCall.id}
-                                                toolCall={toolCall}
-                                                toolQueries={toolQueries}
-                                                toolActions={toolActions}
-                                            />
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        ))}
-                    </div>
-                </Accordion.Body>
-            </Accordion.Item>
-        </Accordion>
     );
 }
 
@@ -379,7 +341,7 @@ function getAgentAceEditorHeight(content: string): `${number}px` {
     }
 
     const lineHeight = 26;
-    const lineCount = content.split("\n").length;
+    const lineCount = content.split("\n").length + 1;
 
     if (lineCount <= 12) {
         return `${lineCount * lineHeight}px`;

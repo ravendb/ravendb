@@ -2,28 +2,26 @@ import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
 import { AiAgentDocMessage, AiAgentMessage, AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { services } from "components/hooks/useServices";
-import { loadableData } from "components/models/common";
+import { loadableData, loadStatus } from "components/models/common";
 import { createSuccessState, createIdleState, createFailureState } from "components/utils/common";
 import document from "models/database/documents/document";
 import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
 
 interface EditAiAgentState {
     config: loadableData<Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration>;
-    historyDocuments: loadableData<documentDto[]>;
-    currentDocument: loadableData<documentDto>;
+    document: loadableData<documentDto>;
+    runChatState: loadStatus;
     conversationId: string;
     messages: AiAgentMessage[];
-    toolParameters: AiAgentToolCall[];
     isRawData: boolean;
 }
 
 const initialState: EditAiAgentState = {
     config: createIdleState(),
-    historyDocuments: createIdleState([]),
-    currentDocument: createIdleState(),
+    document: createIdleState(),
+    runChatState: "idle",
     conversationId: "",
     messages: [],
-    toolParameters: [],
     isRawData: false,
 };
 
@@ -46,26 +44,8 @@ export const chatAiAgentSlice = createSlice({
         messagesSet: (state, action: PayloadAction<AiAgentMessage[]>) => {
             state.messages = action.payload;
         },
-        toolParametersSet: (state, action: PayloadAction<AiAgentToolCall[]>) => {
-            state.toolParameters = action.payload;
-        },
-        historyChatSelected: (state, action: PayloadAction<{ docId: string }>) => {
-            const docId = action.payload.docId;
-            state.conversationId = docId;
-
-            const messagesFromDoc: AiAgentDocMessage[] =
-                state.historyDocuments.data.find((x) => x["@metadata"]["@id"] === docId)?.Messages ?? [];
-
-            const messages: AiAgentMessage[] = messagesFromDoc.map((message, idx) => {
-                const transcript = messagesFromDoc.slice(0, idx + 1);
-
-                return {
-                    ...aiAgentsUtils.mapMessageFromDoc(message),
-                    transcript: transcript.map((x) => aiAgentsUtils.mapMessageFromDoc(x)),
-                };
-            });
-
-            state.messages = messages;
+        documentSet: (state, action: PayloadAction<documentDto>) => {
+            state.document = createSuccessState(action.payload);
         },
         isRawDataSet: (state, action: PayloadAction<boolean>) => {
             state.isRawData = action.payload;
@@ -83,23 +63,28 @@ export const chatAiAgentSlice = createSlice({
             .addCase(getConfig.fulfilled, (state, action) => {
                 state.config = createSuccessState(action.payload);
             })
-            .addCase(getHistoryDocuments.pending, (state) => {
-                state.historyDocuments.status = "loading";
+            .addCase(getDocument.pending, (state) => {
+                state.document.status = "loading";
             })
-            .addCase(getHistoryDocuments.rejected, (state, action) => {
-                state.historyDocuments = createFailureState(action.error.message);
+            .addCase(getDocument.rejected, (state, action) => {
+                state.document = createFailureState(action.error.message);
             })
-            .addCase(getHistoryDocuments.fulfilled, (state, action) => {
-                state.historyDocuments = createSuccessState(action.payload.reverse());
+            .addCase(getDocument.fulfilled, (state, action) => {
+                state.document = createSuccessState(action.payload);
+
+                const messages = action.payload.Messages.map((x: AiAgentDocMessage) =>
+                    aiAgentsUtils.mapMessageFromDoc(x)
+                );
+                state.messages = messages;
             })
-            .addCase(getCurrentDocument.pending, (state) => {
-                state.currentDocument.status = "loading";
+            .addCase(runChat.pending, (state) => {
+                state.runChatState = "loading";
             })
-            .addCase(getCurrentDocument.rejected, (state, action) => {
-                state.currentDocument = createFailureState(action.error.message);
+            .addCase(runChat.rejected, (state) => {
+                state.runChatState = "failure";
             })
-            .addCase(getCurrentDocument.fulfilled, (state, action) => {
-                state.currentDocument = createSuccessState(action.payload);
+            .addCase(runChat.fulfilled, (state) => {
+                state.runChatState = "success";
             });
     },
 });
@@ -115,17 +100,10 @@ const getConfig = createAsyncThunk(
     }
 );
 
-const getHistoryDocuments = createAsyncThunk(
-    chatAiAgentSlice.name + "/getHistoryDocuments",
-    async (payload: { databaseName: string; id: string }): Promise<documentDto[]> => {
-        return services.databasesService.getDocumentsByIDPrefix(payload.id, 1024, payload.databaseName);
-    }
-);
-
-const getCurrentDocument = createAsyncThunk(
-    chatAiAgentSlice.name + "/getCurrentDocument",
-    async (payload: { databaseName: string; chatId: string }): Promise<documentDto> => {
-        const result = await services.databasesService.getDocumentWithMetadata(payload.chatId, payload.databaseName);
+const getDocument = createAsyncThunk(
+    chatAiAgentSlice.name + "/getDocument",
+    async (payload: { databaseName: string; id: string }): Promise<documentDto> => {
+        const result = await services.databasesService.getDocumentWithMetadata(payload.id, payload.databaseName);
 
         if (result instanceof document) {
             return result.toDto();
@@ -134,17 +112,61 @@ const getCurrentDocument = createAsyncThunk(
     }
 );
 
+const runChat = createAsyncThunk(
+    chatAiAgentSlice.name + "/runChat",
+    async (
+        payload: {
+            databaseName: string;
+            prompt: string;
+            initialParameters: { name?: string; value?: string }[];
+            toolCallParameters?: AiAgentToolCall[];
+        },
+        { getState, dispatch }
+    ): Promise<void> => {
+        const { databaseName, prompt, initialParameters, toolCallParameters } = payload;
+
+        const state = getState() as RootState;
+        const conversationId = state.chatAiAgent.conversationId;
+        const config = state.chatAiAgent.config;
+
+        const result = await services.aiAgentService.runAiAgent(
+            databaseName,
+            {
+                UserPrompt: toolCallParameters?.length > 0 ? null : prompt,
+                Parameters:
+                    conversationId == null ? Object.fromEntries(initialParameters.map((x) => [x.name, x.value])) : null,
+                ActionResponses: toolCallParameters?.map((x) => ({
+                    ToolId: x.id,
+                    Content: x.arguments,
+                })),
+            },
+            conversationId != null ? undefined : config.data?.Identifier,
+            conversationId != null ? conversationId : undefined
+        );
+        dispatch(chatAiAgentActions.conversationIdSet(result.ConversationId));
+
+        // TODO add conversationId to URL
+
+        await dispatch(chatAiAgentActions.getDocument({ databaseName, id: result.ConversationId })).unwrap();
+    }
+);
+
 export const chatAiAgentActions = {
     ...chatAiAgentSlice.actions,
     getConfig,
-    getHistoryDocuments,
+    getDocument,
+    runChat,
 };
 
 export const chatAiAgentSelectors = {
     messages: (state: RootState) => state.chatAiAgent.messages,
     conversationId: (state: RootState) => state.chatAiAgent.conversationId,
-    historyDocuments: (state: RootState) => state.chatAiAgent.historyDocuments,
     config: (state: RootState) => state.chatAiAgent.config,
-    toolParameters: (state: RootState) => state.chatAiAgent.toolParameters,
     isRawData: (state: RootState) => state.chatAiAgent.isRawData,
+    document: (state: RootState) => state.chatAiAgent.document,
+    runChatState: (state: RootState) => state.chatAiAgent.runChatState,
+    isLoading: (state: RootState) =>
+        state.chatAiAgent.runChatState === "loading" ||
+        state.chatAiAgent.config.status === "loading" ||
+        state.chatAiAgent.document.status === "loading",
 };
