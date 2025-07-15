@@ -109,7 +109,7 @@ public class RavenDB_24407 : RavenTestBase
         // resume - with summarization
         if (summarization)
         {
-            agent.ChatReduction = new AiAgentChatReductionConfiguration()
+            agent.ChatTrimming = new AiAgentChatTrimmingConfiguration()
             {
                 Tokens = new AiAgentSummarizationByTokens()
                 {
@@ -119,7 +119,7 @@ public class RavenDB_24407 : RavenTestBase
         }
         else
         {
-            agent.ChatReduction = new AiAgentChatReductionConfiguration()
+            agent.ChatTrimming = new AiAgentChatTrimmingConfiguration()
             {
                 Truncate = new AiAgentTruncateChat()
                 {
@@ -129,7 +129,7 @@ public class RavenDB_24407 : RavenTestBase
             };
         }
         if (withHistory)
-            agent.ChatReduction.History = new();
+            agent.ChatTrimming.History = new();
         await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSampleObject>(agent));
 
         var r3 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSampleObject>(r.ConversationId,
@@ -159,7 +159,7 @@ public class RavenDB_24407 : RavenTestBase
         Assert.Equal(withHistory ? 2 : 0, chat.HistoryDocuments.Count);
 
         // resume
-        agent.ChatReduction = null;
+        agent.ChatTrimming = null;
         await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSampleObject>(agent));
 
         var r4 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSampleObject>(r.ConversationId,
@@ -193,7 +193,7 @@ public class RavenDB_24407 : RavenTestBase
 
         if (summarization)
         {
-            agent.ChatReduction = new AiAgentChatReductionConfiguration()
+            agent.ChatTrimming = new AiAgentChatTrimmingConfiguration()
             {
                 Tokens = new AiAgentSummarizationByTokens()
                 {
@@ -203,7 +203,7 @@ public class RavenDB_24407 : RavenTestBase
         }
         else
         {
-            agent.ChatReduction = new AiAgentChatReductionConfiguration()
+            agent.ChatTrimming = new AiAgentChatTrimmingConfiguration()
             {
                 Truncate = new AiAgentTruncateChat()
                 {
@@ -213,7 +213,7 @@ public class RavenDB_24407 : RavenTestBase
             };
         }
         if(withHistory)
-            agent.ChatReduction.History = new();
+            agent.ChatTrimming.History = new();
 
         agent.Persistence = new AiAgentPersistenceConfiguration
         {

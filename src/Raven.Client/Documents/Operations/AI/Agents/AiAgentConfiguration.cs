@@ -102,7 +102,7 @@ public class AiAgentConfiguration : IDynamicJson
     /// either by summarizing older messages into a compact prompt or by truncating them entirely.
     /// Only one reduction strategy (summarization or truncation) can be active at a time.
     /// </remarks>
-    public AiAgentChatReductionConfiguration ChatReduction { get; set; }
+    public AiAgentChatTrimmingConfiguration ChatTrimming { get; set; }
 
     /// <summary>
     /// The maximum number of times the AI model can return tool call requests (responses that include <c>tool_calls</c>)
@@ -150,7 +150,7 @@ public class AiAgentConfiguration : IDynamicJson
             [nameof(Actions)] = Actions != null ? new DynamicJsonArray(Actions) : null,
             [nameof(Persistence)] = Persistence?.ToJson(),
             [nameof(Parameters)] = new DynamicJsonArray(Parameters),
-            [nameof(ChatReduction)] = ChatReduction?.ToJson(),
+            [nameof(ChatTrimming)] = ChatTrimming?.ToJson(),
             [nameof(MaxModelIterationsPerCall)] = MaxModelIterationsPerCall
         };
     }

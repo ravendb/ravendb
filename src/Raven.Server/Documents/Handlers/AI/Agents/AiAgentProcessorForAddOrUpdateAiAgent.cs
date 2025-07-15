@@ -60,12 +60,12 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
 
     private void ValidateConfiguration(JsonOperationContext context, AiAgentConfiguration configuration)
     {
-        var reduction = configuration.ChatReduction;
+        var reduction = configuration.ChatTrimming;
         if (reduction != null)
         {
             if ((reduction.Tokens != null) == (reduction.Truncate != null))
             {
-                throw new InvalidOperationException($"{nameof(configuration.ChatReduction)} requires exactly one strategy: " +
+                throw new InvalidOperationException($"{nameof(configuration.ChatTrimming)} requires exactly one strategy: " +
                                                     $"either {nameof(reduction.Tokens)} or {nameof(reduction.Truncate)}, " +
                                                     "but not both or neither.");
             }
@@ -79,6 +79,9 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
 
                 if (string.IsNullOrEmpty(reduction.Tokens.SummarizationTaskEndPrompt))
                     reduction.Tokens.SummarizationTaskEndPrompt = aiConfig.SummarizationTaskEndPrompt;
+
+                if (string.IsNullOrEmpty(reduction.Tokens.ResultPrefix))
+                    reduction.Tokens.ResultPrefix = aiConfig.SummarizationResultPrefix;
             }
 
             if (reduction.Truncate != null)
@@ -92,6 +95,10 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
                 if(after <= 0)
                     throw new InvalidOperationException(
                         $"{nameof(reduction.Truncate.MessagesLengthAfterTruncate)} ({after}) must be greater then 0");
+
+                if (before <= 0)
+                    throw new InvalidOperationException(
+                        $"{nameof(reduction.Truncate.MessagesLengthBeforeTruncate)} ({before}) must be greater then 0");
             }
         }
 

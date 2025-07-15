@@ -7,18 +7,18 @@ namespace Raven.Client.Documents.Operations.AI.Agents
     /// Defines configuration options for reducing the size of the AI agent's chat history.
     /// </summary>
     /// <remarks>
-    /// Only one reduction strategy can be active at a time: either summarization or truncation.
+    /// Only one trimming strategy can be active at a time: either summarization or truncation.
     /// This is used to control memory and token limits by either summarizing or discarding older messages.
     /// </remarks>
-    public class AiAgentChatReductionConfiguration
+    public class AiAgentChatTrimmingConfiguration
     {
-        public AiAgentChatReductionConfiguration()
+        public AiAgentChatTrimmingConfiguration()
         {
             // for serialization
         }
 
         /// <summary>
-        /// Initializes a new <see cref="AiAgentChatReductionConfiguration"/> using a summarization strategy.
+        /// Initializes a new <see cref="AiAgentChatTrimmingConfiguration"/> using a summarization strategy.
         /// </summary>
         /// <param name="tokensConfig">
         /// The settings that control how and when the chat history is summarized into a concise prompt
@@ -29,17 +29,17 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// If <c>null</c>, no history documents will be created.
         /// </param>
         /// <remarks>
-        /// Only one reduction strategy may be active at a time. Do not use this constructor in conjunction
+        /// Only one trimming strategy may be active at a time. Do not use this constructor in conjunction
         /// with the truncation-based constructor.
         /// </remarks>
-        public AiAgentChatReductionConfiguration(AiAgentSummarizationByTokens tokensConfig, AiAgentHistoryConfiguration historyConfig = null)
+        public AiAgentChatTrimmingConfiguration(AiAgentSummarizationByTokens tokensConfig, AiAgentHistoryConfiguration historyConfig = null)
         {
             Tokens = tokensConfig;
             History = historyConfig;
         }
 
         /// <summary>
-        /// Initializes a new <see cref="AiAgentChatReductionConfiguration"/> using a truncation strategy.
+        /// Initializes a new <see cref="AiAgentChatTrimmingConfiguration"/> using a truncation strategy.
         /// </summary>
         /// <param name="truncateConfig">
         /// The settings that control how and when older messages are discarded once the message count
@@ -50,10 +50,10 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// If <c>null</c>, no history documents will be created.
         /// </param>
         /// <remarks>
-        /// Only one reduction strategy may be active at a time. Do not use this constructor in conjunction
+        /// Only one trimming strategy may be active at a time. Do not use this constructor in conjunction
         /// with the summarization-based constructor.
         /// </remarks>
-        public AiAgentChatReductionConfiguration(AiAgentTruncateChat truncateConfig, AiAgentHistoryConfiguration historyConfig = null)
+        public AiAgentChatTrimmingConfiguration(AiAgentTruncateChat truncateConfig, AiAgentHistoryConfiguration historyConfig = null)
         {
             Truncate = truncateConfig;
             History = historyConfig;
@@ -76,9 +76,9 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// </summary>
         /// <remarks>
         /// If this field is <c>null</c>, no history documents will be created or saved
-        /// for the chat when a reduction operation (truncation or summarization) occurs.
+        /// for the chat when a trimming operation (truncation or summarization) occurs.
         /// </remarks>
-        public AiAgentHistoryConfiguration History;
+        public AiAgentHistoryConfiguration History { get; set; }
 
         public DynamicJsonValue ToJson()
         {
@@ -129,7 +129,16 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// </remarks>
         public string SummarizationTaskEndPrompt { get; set; }
 
-        public string ResultPrefix { get; set; } = "Summary of previous conversation: ";
+        /// <summary>
+        /// The text prefix that appears before the generated summary of the previous conversation.
+        /// </summary>
+        /// <value>
+        /// A <see cref="string"/> containing the introductory label for the summary output.  
+        /// </value>
+        /// <remarks>
+        /// Customize this prefix to change how the summary is introduced when producing conversation summaries.
+        /// </remarks>
+        public string ResultPrefix { get; set; }
 
         /// <summary>
         /// The maximum number of tokens allowed before summarization is triggered.
@@ -151,6 +160,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents
             {
                 [nameof(SummarizationTaskBeginningPrompt)] = SummarizationTaskBeginningPrompt,
                 [nameof(SummarizationTaskEndPrompt)] = SummarizationTaskEndPrompt,
+                [nameof(ResultPrefix)] = ResultPrefix,
                 [nameof(MaxTokensBeforeSummarization)] = MaxTokensBeforeSummarization,
                 [nameof(MaxTokensAfterSummarization)] = MaxTokensAfterSummarization
             };
@@ -194,7 +204,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents
     /// <remarks>
     /// History documents are stored copies of chats before they have been summarized or truncated.
     /// If an instance of this class is <c>null</c> (i.e. the containing <see cref="History"/> field is <c>null</c>),
-    /// no history documents will be created or persisted when a reduction operation (truncation or summarization) occurs.
+    /// no history documents will be created or persisted when a trimming operation (truncation or summarization) occurs.
     /// </remarks>
     public class AiAgentHistoryConfiguration
     {

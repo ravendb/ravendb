@@ -255,11 +255,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             async Task<BlittableJsonReaderObject> TryReduceChatSize()
             {
-                var reduction = configuration.ChatReduction;
+                var reduction = configuration.ChatTrimming;
                 if (reduction == null || document.OpenActionCalls.Count > 0)
                     return null;
-
-                var clone = reduction.History == null ? null : document.ToBlittable(context, configuration, reduction.History?.HistoryExpiration);
 
                 if (reduction.Truncate != null)
                 {
@@ -268,28 +266,36 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                         var truncateCount = document.Messages.Count - reduction.Truncate.MessagesLengthAfterTruncate;
                         truncateCount = int.Min(truncateCount, document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
                         if (truncateCount > 0)
+                        {
+                            var chatBefore = reduction.History == null ? null : document.ToBlittable(context, configuration, reduction.History.HistoryExpiration);
                             document.Messages.RemoveRange(1, truncateCount);
+                            return chatBefore;
+                        }
                     }
                 }
                 else if (reduction.Tokens != null)
                 {
                     if (aiUsage.TotalTokens > reduction.Tokens.MaxTokensBeforeSummarization)
+                    {
+                        var chatBefore = reduction.History == null ? null : document.ToBlittable(context, configuration, reduction.History.HistoryExpiration);
                         await SummarizeAsync(context, client, configuration, document, token);
+                        return chatBefore;
+                    }
                 }
 
-                return clone;
+                return null; // if reduction wasn't executed -> no history to persist (return null)
             }
         }
 
         private async Task SummarizeAsync(JsonOperationContext context, ChatCompletionClient client, AiAgentConfiguration configuration, ConversationDocument oldChat, CancellationToken token)
         {
-            var summarization = configuration.ChatReduction.Tokens;
+            var summarization = configuration.ChatTrimming.Tokens;
             var systemPrompt = oldChat.Messages.FirstOrDefault();
             if (systemPrompt == null)
-                throw new InvalidOperationException($"System prompt cannot be null.");
+                throw new InvalidOperationException("Cannot perform summarization: the conversation's original system prompt is null.");
 
             if (systemPrompt.TryGet(ChatConstants.RequestFields.Content, out string _) == false)
-                throw new InvalidOperationException($"Invalid system prompt: required field '{ChatConstants.RequestFields.Content}' is missing.");
+                throw new InvalidOperationException($"Cannot perform summarization: the conversation's original system prompt has no '{ChatConstants.RequestFields.Content}' field.");
 
             var beginningPrompt = string.IsNullOrEmpty(summarization.SummarizationTaskBeginningPrompt)
                 ? RequestHandler.Database.Configuration.Ai.SummarizationTaskBeginningPrompt
