@@ -2360,24 +2360,7 @@ namespace Raven.Server.Json
             bool first = true;
             if (metadata != null)
             {
-                var size = metadata.Count;
-                var prop = new BlittableJsonReaderObject.PropertyDetails();
-
-                for (int i = 0; i < size; i++)
-                {
-                    metadata.GetPropertyByIndex(i, ref prop);
-
-                    if (filterMetadataProperty != null && filterMetadataProperty(prop.Name))
-                        continue;
-
-                    if (first == false)
-                    {
-                        writer.WriteComma();
-                    }
-                    first = false;
-                    writer.WritePropertyName(prop.Name);
-                    writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
-                }
+                first = WriteObjectWithFilter(writer, metadata, filterMetadataProperty);
             }
 
             if (first == false)
@@ -2469,6 +2452,30 @@ namespace Raven.Server.Json
             }
 
             writer.WriteEndObject();
+        }
+
+        public static bool WriteObjectWithFilter(this AbstractBlittableJsonTextWriter writer, BlittableJsonReaderObject obj, Func<LazyStringValue, bool> filterProperty)
+        {
+            var size = obj.Count;
+            var prop = new BlittableJsonReaderObject.PropertyDetails();
+            var first = true;
+            for (int i = 0; i < size; i++)
+            {
+                obj.GetPropertyByIndex(i, ref prop);
+
+                if (filterProperty != null && filterProperty(prop.Name))
+                    continue;
+
+                if (first == false)
+                    writer.WriteComma();
+
+                first = false;
+                writer.WritePropertyName(prop.Name);
+                writer.WriteValue(prop.Token & BlittableJsonReaderBase.TypesMask, prop.Value);
+            }
+
+            // true if everything was filtered out
+            return first;
         }
 
         internal static readonly StringSegment MetadataKeySegment = new StringSegment(Constants.Documents.Metadata.Key);

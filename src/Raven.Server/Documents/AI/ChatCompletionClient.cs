@@ -23,6 +23,8 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.AI.AiGen;
+using Raven.Server.Documents.Handlers.AI.Agents;
+using Raven.Server.Json;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Json;
@@ -98,11 +100,10 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         _contextPool = contextPool;
     }
 
-    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, AiUsage usage, CancellationToken token)
+    public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, CancellationToken token)
     {
-        using var request = CreateCompletionRequest(context, messages, tools, useTools);
         using var response = await _client.SendAsync(request, token).ConfigureAwait(false);
-        using var responseContent = await GetResponseContentAsync(context, response, token);
+        var responseContent = await GetResponseContentAsync(context, response, token);
 
         if (response.IsSuccessStatusCode == false)
         {
@@ -123,8 +124,6 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             throw new UnexpectedResponseException("No message/content property in choice: " + responseContent) { RequestId = GetRequestId(response.Headers) };
         }
         
-        messages.Add(context.ReadObject(msg,"copy-msg"));
-        
         if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson) == false)
             throw new UnexpectedResponseException("No choices property in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
         
@@ -136,7 +135,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                 finishReason == Constants.ResponseFields.ToolCalls && 
                 msg.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray calls))
             {
-                var resp = new AiResponse(AiResponseType.Tool) { ToolCalls = [] };
+                var resp = new AiResponse(AiResponseType.Tool) { ToolCalls = [], Message = msg};
                 foreach (BlittableJsonReaderObject call in calls)
                 {
                     if (call.TryGet("id", out string callId) is false ||
@@ -162,30 +161,31 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         }
 
         var result = context.Sync.ReadForMemory(content, "ai/output");
-        return new AiResponse(AiResponseType.Result) { Result = result };
+        return new AiResponse(AiResponseType.Result) { Result = result, Message = msg};
     }
 
-    public async Task<(string Result, AiUsage Usage)> CompleteAsync(string prompt, string context, CancellationToken token)
+    public async Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, CancellationToken token)
     {
         if (_forTestingPurposes?.SimulateFailureAsync != null)
-            await _forTestingPurposes.SimulateFailureAsync(context);
+            await _forTestingPurposes.SimulateFailureAsync(userPrompt);
 
         using var _ = _contextPool.AllocateOperationContext(out JsonOperationContext ctx);
 
         var msg1 = new DynamicJsonValue
         {
             [Constants.RequestFields.Role] = Constants.RequestFields.RoleSystemValue,
-            [Constants.RequestFields.Content] = prompt
+            [Constants.RequestFields.Content] = systemPrompt
         };
         var msg2 = new DynamicJsonValue
         {
             [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
-            [Constants.RequestFields.Content] = context
+            [Constants.RequestFields.Content] = userPrompt
         };
 
         var messages = new List<BlittableJsonReaderObject>() { ctx.ReadObject(msg1, "system/msg"), ctx.ReadObject(msg2, "user/msg") };
+        using var request = CreateCompletionRequest(ctx, messages, tools: null, useTools: false);
         var usage = new AiUsage();
-        var results = await CompleteAsync(ctx, messages, tools: null, useTools: false, usage, token);
+        var results = await CompleteAsync(ctx, request, usage, token);
 
         return (results.Result.ToString(), usage);
     }
@@ -224,7 +224,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return request;
     }
 
-    private void WriteCompletionRequestPayload(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, AsyncBlittableJsonTextWriter writer)
+    private void WriteCompletionRequestPayload(JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, AsyncBlittableJsonTextWriter writer)
     {
         writer.WriteStartObject();
 
@@ -232,7 +232,14 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         writer.WriteString(_model);
         writer.WriteComma();
 
-        writer.WriteArray(Constants.RequestFields.Messages, messages);
+        List<LazyStringValue> filterProperties = [ctx.GetLazyString(ConversationDocument.DateProperty), ctx.GetLazyString(ConversationDocument.UsageProperty)];
+
+        writer.WriteArray(ctx, Constants.RequestFields.Messages, messages, (w, context, message) =>
+        {
+            w.WriteStartObject();
+            w.WriteObjectWithFilter(message, filterProperties.Contains);
+            w.WriteEndObject();
+        });
         writer.WriteComma();
 
         // Optional

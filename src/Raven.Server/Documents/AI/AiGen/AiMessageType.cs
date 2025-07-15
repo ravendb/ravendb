@@ -25,6 +25,7 @@ public record AiResponse(AiResponseType Type)
 {
     public BlittableJsonReaderObject Result;
     public List<AiToolCall> ToolCalls;
+    public BlittableJsonReaderObject Message;
 }
 
 public record AiToolCall(string Id, string Name, string Arguments);

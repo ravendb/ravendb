@@ -53,8 +53,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     if (document.OpenActionCalls.Remove(t.ToolId) == false)
                         throw new InvalidOperationException($"{t.ToolId} is an unknown action ID for conversation '{conversationId}'");
 
-                    document.Messages.Add(context.ReadObject(new DynamicJsonValue { ["tool_call_id"] = t.ToolId, ["role"] = "tool", ["content"] = t.Content },
-                        "user/tool"));
+                    document.AddMessage(context,context.ReadObject(
+                        new DynamicJsonValue
+                        {
+                            ["tool_call_id"] = t.ToolId, 
+                            ["role"] = "tool", 
+                            ["content"] = t.Content
+                        },
+                        "user/tool"), usage: null);
                 }
             }
 
@@ -73,7 +79,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             if (string.IsNullOrEmpty(body.UserPrompt) == false)
             {
-                document.AddMessage(context, context.ReadObject(new DynamicJsonValue { ["role"] = "user", ["content"] = body.UserPrompt }, "user/msg"));
+                document.AddMessage(context, context.ReadObject(new DynamicJsonValue
+                {
+                    ["role"] = "user", 
+                    ["content"] = body.UserPrompt
+                }, "user/msg"), usage: null);
             }
 
             (BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History) r;
@@ -219,11 +229,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 while (true)
                 {
                     aiUsage = new();
+                    using var request = client.CreateCompletionRequest(context, document.Messages, tools, useTools: count-- > );
+
                     aiResponse = await client.CompleteAsync(
                         context,
-                        document.Messages,
-                        tools,
-                        useTools: count-- > 0,
+                        request,
                         aiUsage,
                         token
                     );
@@ -456,8 +466,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     if (queryResponseResult.TryGet("Results", out BlittableJsonReaderArray queryResult) is false)
                         throw new InvalidOperationException("Missing Results from query output"); // TODO: shouldn't happen, but add error handling
 
-                    document.Messages.Add(context.ReadObject(
-                        new DynamicJsonValue { ["tool_call_id"] = toolCallsIds[i], ["role"] = "tool", ["content"] = queryResult.ToString() }, "tool-call/response"));
+                    document.AddMessage(context, context.ReadObject(
+                        new DynamicJsonValue
+                        {
+                            ["tool_call_id"] = toolCallsIds[i], 
+                            ["role"] = "tool", 
+                            ["content"] = queryResult.ToString()
+                        }, "tool-call/response"), usage: null);
                 }
             }
         }

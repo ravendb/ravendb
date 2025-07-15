@@ -37,7 +37,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
         {
             ["role"] = "system",
             ["content"] = configuration.SystemPrompt
-        }, "system/msg"));
+        }, "system/msg"), usage: null);
     }
 
     public void EnsureInitialized()
@@ -76,54 +76,16 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
             [nameof(OpenActionCalls)] = DynamicJsonValue.Convert(OpenActionCalls),
         };
     }
+    
+    public const string DateProperty = "date";
+    public const string UsageProperty = "usage";
 
-    public void AddMessage(JsonOperationContext context, BlittableJsonReaderObject msg)
+    public void AddMessage(JsonOperationContext context, BlittableJsonReaderObject msg, AiUsage usage)
     {
-        if (msg.TryGet("role", out string role) is false)
-            return;
-
-        switch (role)
-        {
-            case "system":
-            case "user":
-                break;
-            case "tool":
-            {
-                // TODO: assuming an array only here. 
-                if (msg.TryGet("content", out string content) is false)
-                    return;
-
-                var array = context.ParseBufferToArray(content, "tool-response", BlittableJsonDocumentBuilder.UsageMode.None);
-                msg.Modifications = new DynamicJsonValue(msg) { ["content"] = array };
-                break;
-            }
-            case "assistant":
-            {
-                if (msg.TryGet("content", out string content) && content is not null)
-                {
-                    //TODO: assuming an object only here
-                    var obj = context.Sync.ReadForMemory(content, "assistant-response");
-                    msg.Modifications = new DynamicJsonValue(msg) { ["content"] = obj };
-                }
-
-                if (msg.TryGet("tool_calls", out BlittableJsonReaderArray toolCalls) && toolCalls is not null)
-                {
-                    foreach (BlittableJsonReaderObject call in toolCalls)
-                    {
-                        if (call.TryGet("function", out BlittableJsonReaderObject function) && function is not null)
-                        {
-                            if (function.TryGet("arguments", out string args) && args is not null)
-                            {
-                                var obj = context.Sync.ReadForMemory(args, "tool-arguments");
-                                function.Modifications = new DynamicJsonValue(function) { ["arguments"] = obj };
-                            }
-                        }
-                    }
-                }
-                break;
-            }
-        }
-
+        msg.Modifications ??= new DynamicJsonValue(msg);
+        msg.Modifications[DateProperty] = DateTime.UtcNow;
+        if (usage != null)
+            msg.Modifications[UsageProperty] = usage.ToJson();
         Messages.Add(msg);
     }
 
