@@ -368,7 +368,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.Studio));
 
-                    WriteStudioConfiguration(databaseRecord.Studio);
+                    WriteTaskConfiguration(databaseRecord.Studio);
                 }
 
                 if (databaseRecord.RevisionsForConflicts != null)
@@ -376,7 +376,7 @@ namespace Raven.Server.Smuggler.Documents
                     _writer.WriteComma();
                     _writer.WritePropertyName(nameof(databaseRecord.RevisionsForConflicts));
 
-                    WriteRevisionsForConflictsConfiguration(databaseRecord.RevisionsForConflicts);
+                    WriteTaskConfiguration(databaseRecord.RevisionsForConflicts);
                 }
 
                 if (databaseRecord.IsSharded)
@@ -551,26 +551,6 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 await _writer.MaybeFlushAsync();
-            }
-
-            private void WriteRevisionsForConflictsConfiguration(RevisionsCollectionConfiguration revisionsForConflictsConfiguration)
-            {
-                if (revisionsForConflictsConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, revisionsForConflictsConfiguration.ToJson());
-            }
-
-            private void WriteStudioConfiguration(StudioConfiguration studioConfiguration)
-            {
-                if (studioConfiguration == null)
-                {
-                    _writer.WriteNull();
-                    return;
-                }
-                _context.Write(_writer, studioConfiguration.ToJson());
             }
 
             private void WriteHubPullReplications(List<PullReplicationDefinition> hubPullReplications)
