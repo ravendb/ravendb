@@ -100,7 +100,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const handleSend = async () => {
         return tryHandleSubmit(async () => {
-            runChat(null);
+            runChat();
         });
     };
 

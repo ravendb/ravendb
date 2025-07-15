@@ -4,19 +4,16 @@ import { EditAiAgentFormData } from "./utils/editAiAgentValidation";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { editAiAgentActions, editAiAgentSelectors } from "./store/editAiAgentSlice";
 import { FormInput } from "components/common/Form";
-import { useAsyncCallback } from "react-async-hook";
-import { useServices } from "components/hooks/useServices";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useRef, useEffect } from "react";
 import _ from "lodash";
 import AiAgentMessages from "../partials/AiAgentMessages";
 import AiAgentParametersField from "../partials/AiAgentParametersField";
-import moment from "moment";
 import { editAiAgentUtils } from "./utils/editAiAgentUtils";
-import { aiAgentsUtils } from "../utils/aiAgentsUtils";
 import { AiAgentToolCall } from "../utils/aiAgentsTypes";
 import Button from "react-bootstrap/Button";
+import Spinner from "react-bootstrap/Spinner";
 
 export default function EditAiAgentTestPanel() {
     const dispatch = useAppDispatch();
@@ -29,63 +26,12 @@ export default function EditAiAgentTestPanel() {
 
     const isTestOpen = useAppSelector(editAiAgentSelectors.isTestOpen);
     const messages = useAppSelector(editAiAgentSelectors.testMessages);
-    const testDocument = useAppSelector(editAiAgentSelectors.testDocument);
+    const runTestState = useAppSelector(editAiAgentSelectors.runTestState);
 
-    const { aiAgentService } = useServices();
-
-    const asyncHandleTest = useAsyncCallback(async (toolParameters?: AiAgentToolCall[]) => {
-        dispatch(
-            editAiAgentActions.testMessagesAdd({
-                id: _.uniqueId(),
-                content: formValues.testPrompt,
-                role: "user",
-                state: "success",
-                date: moment().format(aiAgentsUtils.messageDateFormat),
-                toolCalls: toolParameters,
-            })
-        );
-
-        const agentMessageId = _.uniqueId();
-
-        dispatch(
-            editAiAgentActions.testMessagesAdd({
-                id: agentMessageId,
-                role: "assistant",
-                date: moment().format(aiAgentsUtils.messageDateFormat),
-                state: "loading",
-            })
-        );
-
-        try {
-            const result = await aiAgentService.testAiAgent(databaseName, {
-                Configuration: editAiAgentUtils.mapToDto(formValues),
-                UserPrompt: toolParameters?.length > 0 ? null : formValues.testPrompt,
-                Parameters: Object.fromEntries(formValues.testParameters.map((item) => [item.name, item.value])),
-                ActionResponses: toolParameters?.map((x) => ({
-                    ToolId: x.id,
-                    Content: x.arguments,
-                })),
-                Document: testDocument,
-                RequestBody: undefined,
-            });
-
-            dispatch(editAiAgentActions.testDocumentSet(result.Document));
-            setValue("testPrompt", "");
-            dispatch(
-                editAiAgentActions.testMessagesUpdate(
-                    aiAgentsUtils.mapMessageFromResponse(result, agentMessageId, result.Document)
-                )
-            );
-        } catch (e) {
-            console.error(e);
-            dispatch(
-                editAiAgentActions.testMessagesUpdate({
-                    id: agentMessageId,
-                    state: "error",
-                })
-            );
-        }
-    });
+    const runTest = async (toolCallParameters?: AiAgentToolCall[]) => {
+        await dispatch(editAiAgentActions.runTest({ databaseName, formValues, toolCallParameters })).unwrap();
+        setValue("testPrompt", "");
+    };
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);
 
@@ -132,20 +78,29 @@ export default function EditAiAgentTestPanel() {
             )}
             {isTestOpen && (
                 <div className="w-100 flex-grow-1 vstack justify-content-center align-items-center overflow-auto">
-                    <div className="flex-grow-1 vstack w-100 overflow-auto p-2" ref={messagesPanelRef}>
-                        {messages.length === 0 ? (
+                    <div
+                        className="flex-grow-1 vstack w-100 overflow-auto p-2 position-relative"
+                        ref={messagesPanelRef}
+                    >
+                        {messages.length === 0 && (
                             <AiAgentParametersField
                                 control={control}
                                 name="testParameters"
                                 value={formValues.testParameters}
                             />
-                        ) : (
+                        )}
+                        {messages.length > 0 && (
                             <AiAgentMessages
                                 messages={messages}
                                 toolQueries={Queries}
                                 toolActions={Actions}
-                                handleSaveParameters={(parameters) => asyncHandleTest.execute(parameters)}
+                                handleSaveParameters={(toolCallParameters) => runTest(toolCallParameters)}
                             />
+                        )}
+                        {runTestState === "loading" && (
+                            <div className="position-absolute top-50 start-50 translate-middle">
+                                <Spinner animation="border" />
+                            </div>
                         )}
                     </div>
                     <div className="w-100 p-2 panel-bg-2 border-top border-secondary">
@@ -159,11 +114,11 @@ export default function EditAiAgentTestPanel() {
                                 rows={3}
                                 className="rounded-2"
                                 style={{ resize: "none" }}
-                                disabled={asyncHandleTest.loading}
+                                disabled={runTestState === "loading"}
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" && !e.shiftKey) {
                                         e.preventDefault();
-                                        asyncHandleTest.execute();
+                                        runTest();
                                     }
                                 }}
                             />
@@ -171,8 +126,8 @@ export default function EditAiAgentTestPanel() {
                                 <ButtonWithSpinner
                                     variant="secondary"
                                     icon="arrow-up"
-                                    onClick={() => asyncHandleTest.execute()}
-                                    isSpinning={asyncHandleTest.loading}
+                                    onClick={() => runTest()}
+                                    isSpinning={runTestState === "loading"}
                                     className="position-absolute rounded-pill"
                                     style={{ right: "10px", bottom: "10px", zIndex: 5 }}
                                 />

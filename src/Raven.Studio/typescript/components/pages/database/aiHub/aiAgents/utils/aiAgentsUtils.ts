@@ -1,5 +1,5 @@
 import moment from "moment";
-import { AiAgentDocMessage, AiAgentDocumentResponse, AiAgentMessage, AiAgentRunResult } from "./aiAgentsTypes";
+import { AiAgentDocMessage, AiAgentMessage } from "./aiAgentsTypes";
 
 const getContentFromDoc = (docMessage: AiAgentDocMessage): string => {
     if (docMessage.content && (docMessage.role === "assistant" || docMessage.role === "tool")) {
@@ -26,37 +26,7 @@ const mapMessageFromDoc = (docMessage: AiAgentDocMessage): AiAgentMessage => {
     };
 };
 
-const getContentFromResponse = (dto: AiAgentRunResult): string => {
-    if (dto.Response) {
-        return JSON.stringify(dto.Response, null, 2);
-    }
-    return dto.Response;
-};
-
-const mapMessageFromResponse = (
-    dto: AiAgentRunResult,
-    id: string,
-    document?: AiAgentDocumentResponse
-): AiAgentMessage => {
-    return {
-        id,
-        role: "assistant",
-        content: getContentFromResponse(dto),
-        state: "success",
-        date: "TODO date",
-        toolCalls:
-            dto.ActionRequests?.map((x) => ({
-                id: x.ToolId,
-                name: x.Name,
-                arguments: x.Arguments,
-            })) ?? [],
-        transcript: document?.Messages.map((x: AiAgentDocMessage) => mapMessageFromDoc(x)) ?? [],
-        usage: dto.Usage,
-    };
-};
-
 export const aiAgentsUtils = {
     mapMessageFromDoc,
-    mapMessageFromResponse,
     messageDateFormat: "HH:mm A",
 };

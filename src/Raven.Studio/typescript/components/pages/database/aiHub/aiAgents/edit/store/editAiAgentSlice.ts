@@ -1,16 +1,20 @@
 import { createAsyncThunk, createSlice, PayloadAction } from "@reduxjs/toolkit";
 import { RootState } from "components/store";
-import { AiAgentMessage, AiAgentToolCall } from "../../utils/aiAgentsTypes";
+import { AiAgentMessage, AiAgentRunResult, AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { services } from "components/hooks/useServices";
-import { loadableData } from "components/models/common";
+import { loadableData, loadStatus } from "components/models/common";
 import { createFailureState, createIdleState, createSuccessState } from "components/utils/common";
+import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
+import { editAiAgentUtils } from "../utils/editAiAgentUtils";
+import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
 
 interface EditAiAgentState {
     isTestOpen: boolean;
     testMessages: AiAgentMessage[];
     testToolParameters: AiAgentToolCall[];
-    testDocument: any;
+    testDocument: documentDto;
     isDocumentExpirationEnabled: loadableData<boolean>;
+    runTestState: loadStatus;
 }
 
 const initialState: EditAiAgentState = {
@@ -19,6 +23,7 @@ const initialState: EditAiAgentState = {
     testToolParameters: [],
     testDocument: null,
     isDocumentExpirationEnabled: createIdleState(),
+    runTestState: "idle",
 };
 
 export const editAiAgentSlice = createSlice({
@@ -58,6 +63,20 @@ export const editAiAgentSlice = createSlice({
         builder.addCase(getIsDocumentExpirationEnabled.fulfilled, (state, action) => {
             state.isDocumentExpirationEnabled = createSuccessState(action.payload);
         });
+        builder.addCase(runTest.pending, (state) => {
+            state.runTestState = "loading";
+        });
+        builder.addCase(runTest.rejected, (state) => {
+            state.runTestState = "failure";
+        });
+        builder.addCase(runTest.fulfilled, (state, action) => {
+            state.runTestState = "success";
+
+            state.testDocument = action.payload.Document;
+
+            const messages = action.payload.Document.Messages.map((x) => aiAgentsUtils.mapMessageFromDoc(x));
+            state.testMessages = messages;
+        });
     },
 });
 
@@ -72,9 +91,36 @@ const getIsDocumentExpirationEnabled = createAsyncThunk(
     }
 );
 
+const runTest = createAsyncThunk(
+    editAiAgentSlice.name + "/runTest",
+    async (
+        payload: { databaseName: string; formValues: EditAiAgentFormData; toolCallParameters?: AiAgentToolCall[] },
+        { getState }
+    ): Promise<AiAgentRunResult> => {
+        const { databaseName, formValues, toolCallParameters } = payload;
+
+        const state = getState() as RootState;
+        const testDocument = state.editAiAgent.testDocument;
+
+        const result = await services.aiAgentService.testAiAgent(databaseName, {
+            Configuration: editAiAgentUtils.mapToDto(formValues),
+            UserPrompt: toolCallParameters?.length > 0 ? null : formValues.testPrompt,
+            Parameters: Object.fromEntries(formValues.testParameters.map((item) => [item.name, item.value])),
+            ActionResponses: toolCallParameters?.map((x) => ({
+                ToolId: x.id,
+                Content: x.arguments,
+            })),
+            Document: testDocument,
+            RequestBody: undefined,
+        });
+
+        return result;
+    }
+);
 export const editAiAgentActions = {
     ...editAiAgentSlice.actions,
     getIsDocumentExpirationEnabled,
+    runTest,
 };
 
 export const editAiAgentSelectors = {
@@ -83,4 +129,5 @@ export const editAiAgentSelectors = {
     testToolParameters: (state: RootState) => state.editAiAgent.testToolParameters,
     testDocument: (state: RootState) => state.editAiAgent.testDocument,
     isDocumentExpirationEnabled: (state: RootState) => state.editAiAgent.isDocumentExpirationEnabled,
+    runTestState: (state: RootState) => state.editAiAgent.runTestState,
 };

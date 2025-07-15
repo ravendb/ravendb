@@ -52,7 +52,6 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const { setIsDirty } = useDirtyFlag(formState.isDirty);
 
-    // It's not working as expected, let's fix it later
     const testAreaResizable = useResizableWidth({
         initialWidth: 500,
         minWidth: 500,
