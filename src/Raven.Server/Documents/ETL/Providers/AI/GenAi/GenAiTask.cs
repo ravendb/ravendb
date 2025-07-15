@@ -39,6 +39,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
     private const string TestDocumentId = "GenAi/TestDocument";
     private int _maxConcurrency;
     private IChatCompletionClient _chatCompletionClient;
+    private string _schema;
+    public string Schema => _schema ??= ChatCompletionClient.GetSchemaForRequest(Configuration.JsonSchema, Configuration.SampleObject);
 
     public GenAiTask(Transformation transformation, GenAiConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
         : base(transformation, configuration, database, serverStore, GenAiTaskTag)
@@ -49,8 +51,6 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         if (configuration.TestMode == false)
             _chatCompletionClient = GetClient();
     }
-
-    public string Schema => field ??= ChatCompletionClient.GetSchemaForRequest(Configuration.JsonSchema, Configuration.SampleObject);
     
     private IChatCompletionClient GetClient() => ChatCompletionClient.CreateChatCompletionClient(Database.DocumentsStorage.ContextPool, Configuration.Connection);
 

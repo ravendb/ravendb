@@ -53,11 +53,7 @@ namespace FastTests
             using (var stream = new MemoryStream())
             await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
             {
-                // Simulate calling WriteCustomParameters like the real payload generation does
-                var method = typeof(ChatCompletionClient).GetMethod("WriteCompletionRequestPayload", 
-                    BindingFlags.NonPublic | BindingFlags.Instance);
-                
-                method?.Invoke(client, [context, new List<BlittableJsonReaderObject>(), new List<BlittableJsonReaderObject>(), true, writer]);
+                client.WriteCompletionRequestPayload(writer, context, [], [], true, ChatCompletionClient.EmptySchema);
                 await writer.FlushAsync();
                 
                 capturedParameters = Encoding.UTF8.GetString(stream.ToArray());

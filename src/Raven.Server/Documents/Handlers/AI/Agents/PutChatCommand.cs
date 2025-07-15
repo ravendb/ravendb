@@ -33,14 +33,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
         protected override long ExecuteCmd(DocumentsOperationContext context)
         {
-            if (_id?.EndsWith(_database.IdentityPartsSeparator) == true)
-                _id = MergedPutCommand.GenerateNonConflictingId(_database, _id);
+            _id = _database.DocumentsStorage.DocumentPut.BuildDocumentId(_id, _database.DocumentsStorage.GenerateNextEtag(), out _);
 
             PutOperationResults putHistoryResult = default;
             if (_historyDoc != null)
             {
                 var historyId = $"{_id}{_database.IdentityPartsSeparator}{AiAgentConversationHistoryIdAddition}{_database.IdentityPartsSeparator}";
-                historyId = MergedPutCommand.GenerateNonConflictingId(_database, historyId);
+                historyId = _database.DocumentsStorage.DocumentPut.BuildDocumentId(historyId, _database.DocumentsStorage.GenerateNextEtag(), out _);
                 putHistoryResult = _database.DocumentsStorage.Put(context, historyId, _expectedChangeVector, _historyDoc);
                 _conversation.HistoryDocuments.Add(putHistoryResult.Id);
             }

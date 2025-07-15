@@ -237,6 +237,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     token
                 );
 
+                document.AddMessage(context, aiResponse.Message, aiUsage);
                 document.UpdateUsage(aiUsage);
                 if (aiResponse.Type is AiResponseType.Result)
                     break;
@@ -273,15 +274,16 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 else if (reduction.Tokens != null)
                 {
                     if (aiUsage.TotalTokens > reduction.Tokens.MaxTokensBeforeSummarization)
-                        await SummarizeAsync(context, client, reduction.Tokens, document, token);
+                        await SummarizeAsync(context, client, configuration, document, token);
                 }
 
                 return clone;
             }
         }
 
-        private async Task SummarizeAsync(JsonOperationContext context, ChatCompletionClient client, AiAgentSummarizationByTokens summarization, ConversationDocument oldChat, CancellationToken token)
+        private async Task SummarizeAsync(JsonOperationContext context, ChatCompletionClient client, AiAgentConfiguration configuration, ConversationDocument oldChat, CancellationToken token)
         {
+            var summarization = configuration.ChatReduction.Tokens;
             var systemPrompt = oldChat.Messages.FirstOrDefault();
             if (systemPrompt == null)
                 throw new InvalidOperationException($"System prompt cannot be null.");
@@ -318,7 +320,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
 
             var usage = new AiUsage();
-            using var request = client.CreateCompletionRequest(context, messages, SummarizationOutputSchema);
+            var tools = oldChat.GenerateTools(context, configuration);
+            using var request = client.CreateCompletionRequest(context, messages, tools, useTools: false, SummarizationOutputSchema);
             var result = await client.CompleteAsync(context, request, usage, token);
 
             if (result.Result.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)

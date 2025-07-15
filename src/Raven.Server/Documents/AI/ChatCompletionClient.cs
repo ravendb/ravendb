@@ -225,7 +225,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return request;
     }
 
-    private void WriteCompletionRequestPayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, string schema)
+    public void WriteCompletionRequestPayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, string schema)
     {
         writer.WriteStartObject();
 
