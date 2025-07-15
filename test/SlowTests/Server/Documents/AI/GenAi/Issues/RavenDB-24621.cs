@@ -28,6 +28,8 @@ public class RavenDB_24621(ITestOutputHelper output) : RavenTestBase(output)
     //  - jpeg / gif as well
     //  - need specific model for vision? 
     //  - test with multiple attachments
+    //  - withJpeg('image.jpg') <-- should validate that this is an error (not base64)
+    //  - withJpeg(this.ImageBase64) <-- should work
     
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
