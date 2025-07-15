@@ -338,28 +338,32 @@ interface TranscriptToolBodyProps {
 function TranscriptToolBody({ tool, toolCall }: TranscriptToolBodyProps) {
     return (
         <div>
-            <small className="text-muted">Description</small>
-            <div>{tool.Description}</div>
-            <hr className="my-1" />
-            {tool.ParametersSampleObject && (
-                <div>
-                    <small className="text-muted">Parameters</small>
-                    <AceEditor value={tool.ParametersSampleObject} readOnly mode="json" height="100px" />
-                </div>
+            {tool && (
+                <>
+                    <small className="text-muted">Description</small>
+                    <div>{tool.Description}</div>
+                    <hr className="my-1" />
+                    {tool.ParametersSampleObject && (
+                        <div>
+                            <small className="text-muted">Parameters</small>
+                            <AceEditor value={tool.ParametersSampleObject} readOnly mode="json" height="100px" />
+                        </div>
+                    )}
+                    {tool.ParametersSchema && (
+                        <div>
+                            <small className="text-muted">Parameters schema</small>
+                            <AceEditor value={tool.ParametersSchema} readOnly mode="json" height="100px" />
+                        </div>
+                    )}
+                    {"Query" in tool && tool.Query && (
+                        <div>
+                            <small className="text-muted">Query</small>
+                            <AceEditor value={tool.Query} readOnly mode="text" height="100px" />
+                        </div>
+                    )}
+                </>
             )}
-            {tool.ParametersSchema && (
-                <div>
-                    <small className="text-muted">Parameters schema</small>
-                    <AceEditor value={tool.ParametersSchema} readOnly mode="json" height="100px" />
-                </div>
-            )}
-            {"Query" in tool && tool.Query && (
-                <div>
-                    <small className="text-muted">Query</small>
-                    <AceEditor value={tool.Query} readOnly mode="text" height="100px" />
-                </div>
-            )}
-            {toolCall.arguments && (
+            {toolCall?.arguments && (
                 <div>
                     <small className="text-muted">Arguments</small>
                     <AceEditor value={toolCall.arguments} readOnly mode="text" height="100px" />

@@ -15,7 +15,7 @@ function mapFromDto(
             sampleObject: "",
             outputSchema: "",
             isEnableDocumentExpiration: !isDocumentExpirationEnabled,
-            persistenceCollectionName: "",
+            persistenceConversationIdPrefix: "",
             persistenceExpiresInSeconds: 2592000, // 30 days
             parameters: [],
             queries: [],
@@ -33,7 +33,7 @@ function mapFromDto(
         sampleObject: dto.SampleObject,
         outputSchema: dto.OutputSchema,
         isEnableDocumentExpiration: !isDocumentExpirationEnabled,
-        persistenceCollectionName: dto.Persistence.Collection,
+        persistenceConversationIdPrefix: dto.Persistence.ConversationIdPrefix,
         persistenceExpiresInSeconds: dto.Persistence.Expires ? Number(dto.Persistence.Expires) / 1000 : null, // Expires is in milliseconds
         parameters:
             dto.Parameters?.map((x) => ({
@@ -79,7 +79,7 @@ function mapToDto(
         OutputSchema: formData.outputSchema,
         SampleObject: formData.sampleObject,
         Persistence: {
-            Collection: formData.persistenceCollectionName,
+            ConversationIdPrefix: formData.persistenceConversationIdPrefix,
             Expires:
                 isDocumentExpirationEnabled || formData.isEnableDocumentExpiration
                     ? genUtils.formatAsTimeSpan(formData.persistenceExpiresInSeconds * 1000)
@@ -101,6 +101,8 @@ function mapToDto(
                 ParametersSchema: x.parametersSchema || null,
             })) ?? [],
         Parameters: formData.parameters?.map((x) => x.name) ?? [],
+        ChatReduction: undefined, // omit for now - lets wait for the design
+        MaxModelIterationsPerCall: undefined, // omit for now - lets wait for the design
     };
 }
 

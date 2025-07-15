@@ -188,9 +188,11 @@ export default function EditAiAgentMain() {
                     control={control}
                     setValue={setValue}
                     sampleObjectName="sampleObject"
+                    sampleObjectLabel="Sample object"
                     sampleObject={formValues.sampleObject}
                     sampleObjectSyntaxHelp={<div>TODO</div>}
                     jsonSchemaName="outputSchema"
+                    jsonSchemaLabel="Output JSON schema"
                     jsonSchema={formValues.outputSchema}
                     jsonSchemaSyntaxHelp={<div>TODO</div>}
                 />
@@ -199,10 +201,10 @@ export default function EditAiAgentMain() {
             <div className="mb-1">TODO</div>
             <div className="panel-bg-1 p-2 rounded-2 border border-secondary">
                 <FormGroup>
-                    <FormLabel>Collection name</FormLabel>
+                    <FormLabel>Conversation ID prefix</FormLabel>
                     <FormSelectAutocomplete
                         control={control}
-                        name="persistenceCollectionName"
+                        name="persistenceConversationIdPrefix"
                         options={collectionOptions}
                     />
                 </FormGroup>
@@ -507,9 +509,11 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
                 control={control}
                 setValue={setValue}
                 sampleObjectName={`queries.${index}.parametersSampleObject`}
+                sampleObjectLabel="Parameters sample object"
                 sampleObject={queryItem.parametersSampleObject}
                 sampleObjectSyntaxHelp={<div>TODO</div>}
                 jsonSchemaName={`queries.${index}.parametersSchema`}
+                jsonSchemaLabel="Parameters JSON schema"
                 jsonSchema={queryItem.parametersSchema}
                 jsonSchemaSyntaxHelp={<div>TODO</div>}
             />
@@ -602,9 +606,11 @@ function ActionField({ index, remove, save, edit, cancelEdit }: ActionFieldProps
                 control={control}
                 setValue={setValue}
                 sampleObjectName={`actions.${index}.parametersSampleObject`}
+                sampleObjectLabel="Parameters sample object"
                 sampleObject={actionItem.parametersSampleObject}
                 sampleObjectSyntaxHelp={<div>TODO</div>}
                 jsonSchemaName={`actions.${index}.parametersSchema`}
+                jsonSchemaLabel="Parameters JSON schema"
                 jsonSchema={actionItem.parametersSchema}
                 jsonSchemaSyntaxHelp={<div>TODO</div>}
             />

@@ -6,7 +6,7 @@ import { FormAceEditor, FormGroup, FormLabel } from "../Form";
 import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
 import { Control, FieldPath, FieldValues, UseFormSetValue } from "react-hook-form";
 import ReactAce from "react-ace";
-import { useRef, useState } from "react";
+import { ReactNode, useRef, useState } from "react";
 import { useServices } from "components/hooks/useServices";
 import { useAsyncCallback } from "react-async-hook";
 
@@ -14,9 +14,11 @@ interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TNa
     control: Control<TFieldValues>;
     setValue: UseFormSetValue<TFieldValues>;
     sampleObjectName: TName;
+    sampleObjectLabel?: ReactNode;
     sampleObject: string;
     sampleObjectSyntaxHelp: React.ReactNode;
     jsonSchemaName: TName;
+    jsonSchemaLabel?: ReactNode;
     jsonSchema: string;
     jsonSchemaSyntaxHelp: React.ReactNode;
 }
@@ -28,9 +30,11 @@ export default function SampleObjectAndSchemaFields<
     control,
     setValue,
     sampleObjectName,
+    sampleObjectLabel = "Sample response object",
     sampleObject,
     sampleObjectSyntaxHelp,
     jsonSchemaName,
+    jsonSchemaLabel = "JSON schema",
     jsonSchema,
     jsonSchemaSyntaxHelp,
 }: SampleObjectAndSchemaFieldsProps<TFieldValues, TName>) {
@@ -56,7 +60,7 @@ export default function SampleObjectAndSchemaFields<
                     <FormGroup className="vstack">
                         <FormLabel className="hstack justify-content-between align-items-start">
                             <div>
-                                Sample response object
+                                {sampleObjectLabel}
                                 <PopoverWithHoverWrapper
                                     message={
                                         <>
@@ -108,7 +112,7 @@ export default function SampleObjectAndSchemaFields<
                     <FormGroup className="vstack">
                         <FormLabel className="flex-grow-1 hstack justify-content-between align-items-start">
                             <div>
-                                JSON schema
+                                {jsonSchemaLabel}
                                 <PopoverWithHoverWrapper
                                     message={
                                         <>
