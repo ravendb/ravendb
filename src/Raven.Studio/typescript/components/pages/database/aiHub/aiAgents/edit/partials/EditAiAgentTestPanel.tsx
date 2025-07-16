@@ -30,7 +30,7 @@ export default function EditAiAgentTestPanel() {
 
     const runTest = async (toolCallParameters?: AiAgentToolCall[]) => {
         await dispatch(editAiAgentActions.runTest({ databaseName, formValues, toolCallParameters })).unwrap();
-        setValue("testPrompt", "");
+        setValue("test.prompt", "");
     };
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);
@@ -51,7 +51,7 @@ export default function EditAiAgentTestPanel() {
         dispatch(editAiAgentActions.isTestOpenSet(false));
         dispatch(editAiAgentActions.testDocumentSet(null));
         dispatch(editAiAgentActions.testMessagesSet([]));
-        setValue("testPrompt", "");
+        setValue("test.prompt", "");
     };
 
     return (
@@ -85,8 +85,8 @@ export default function EditAiAgentTestPanel() {
                         {messages.length === 0 && (
                             <AiAgentParametersField
                                 control={control}
-                                name="testParameters"
-                                value={formValues.testParameters}
+                                name="test.parameters"
+                                value={formValues.test.parameters}
                             />
                         )}
                         {messages.length > 0 && (
@@ -109,7 +109,7 @@ export default function EditAiAgentTestPanel() {
                                 type="textarea"
                                 as="textarea"
                                 control={control}
-                                name="testPrompt"
+                                name="test.prompt"
                                 placeholder="Message an agent"
                                 rows={3}
                                 className="rounded-2"
@@ -122,7 +122,7 @@ export default function EditAiAgentTestPanel() {
                                     }
                                 }}
                             />
-                            {formValues.testPrompt && (
+                            {formValues.test.prompt && (
                                 <ButtonWithSpinner
                                     variant="secondary"
                                     icon="arrow-up"

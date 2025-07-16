@@ -23,8 +23,6 @@ function mapFromDto(
             queries: [],
             actions: [],
             maxModelIterationsPerCall: null,
-            testPrompt: "",
-            testParameters: [],
             trimming: {
                 method: null,
                 historyExpirationInSeconds: null,
@@ -35,6 +33,10 @@ function mapFromDto(
                 resultPrefix: "",
                 summarizationTaskBeginningPrompt: "",
                 summarizationTaskEndPrompt: "",
+            },
+            test: {
+                prompt: "",
+                parameters: [],
             },
         };
     }
@@ -76,33 +78,35 @@ function mapFromDto(
         maxModelIterationsPerCall: dto.MaxModelIterationsPerCall,
         trimming: {
             method: getTrimmingMethod(dto),
-            historyExpirationInSeconds: dto.ChatReduction?.History?.HistoryExpiration
-                ? Number(dto.ChatReduction.History.HistoryExpiration) / 1000
+            historyExpirationInSeconds: dto.ChatTrimming?.History?.HistoryExpiration
+                ? Number(dto.ChatTrimming.History.HistoryExpiration) / 1000
                 : null,
-            messagesLengthBeforeTruncate: dto.ChatReduction?.Truncate?.MessagesLengthBeforeTruncate,
-            messagesLengthAfterTruncate: dto.ChatReduction?.Truncate?.MessagesLengthAfterTruncate,
-            maxTokensBeforeSummarization: dto.ChatReduction?.Tokens?.MaxTokensBeforeSummarization,
-            maxTokensAfterSummarization: dto.ChatReduction?.Tokens?.MaxTokensAfterSummarization,
-            resultPrefix: dto.ChatReduction?.Tokens?.ResultPrefix,
-            summarizationTaskBeginningPrompt: dto.ChatReduction?.Tokens?.SummarizationTaskBeginningPrompt,
-            summarizationTaskEndPrompt: dto.ChatReduction?.Tokens?.SummarizationTaskEndPrompt,
+            messagesLengthBeforeTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthBeforeTruncate,
+            messagesLengthAfterTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthAfterTruncate,
+            maxTokensBeforeSummarization: dto.ChatTrimming?.Tokens?.MaxTokensBeforeSummarization,
+            maxTokensAfterSummarization: dto.ChatTrimming?.Tokens?.MaxTokensAfterSummarization,
+            resultPrefix: dto.ChatTrimming?.Tokens?.ResultPrefix,
+            summarizationTaskBeginningPrompt: dto.ChatTrimming?.Tokens?.SummarizationTaskBeginningPrompt,
+            summarizationTaskEndPrompt: dto.ChatTrimming?.Tokens?.SummarizationTaskEndPrompt,
         },
-        testPrompt: "",
-        testParameters:
-            dto.Parameters?.map((x) => ({
-                name: x,
-                value: "",
-            })) ?? [],
+        test: {
+            prompt: "",
+            parameters:
+                dto.Parameters?.map((x) => ({
+                    name: x,
+                    value: "",
+                })) ?? [],
+        },
     };
 }
 
 function getTrimmingMethod(
     dto?: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration
 ): AiAgentTrimmingMethod {
-    if (dto.ChatReduction?.Tokens) {
+    if (dto.ChatTrimming?.Tokens) {
         return "Tokens";
     }
-    if (dto.ChatReduction?.Truncate) {
+    if (dto.ChatTrimming?.Truncate) {
         return "Truncate";
     }
     return null;
@@ -143,7 +147,7 @@ function mapToDto(
                 ParametersSchema: x.parametersSchema || null,
             })) ?? [],
         MaxModelIterationsPerCall: formData.maxModelIterationsPerCall,
-        ChatReduction: {
+        ChatTrimming: {
             History: formData.trimming?.historyExpirationInSeconds
                 ? {
                       HistoryExpiration: genUtils.formatAsTimeSpan(formData.trimming.historyExpirationInSeconds * 1000),

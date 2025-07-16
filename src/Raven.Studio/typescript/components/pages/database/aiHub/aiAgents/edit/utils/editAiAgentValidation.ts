@@ -100,14 +100,15 @@ const schema = yup.object({
         })
         .nullable(),
 
-    // test
-    testPrompt: yup.string(),
-    testParameters: yup.array().of(
-        yup.object({
-            name: yup.string().nullable(),
-            value: yup.string().nullable(),
-        })
-    ),
+    test: yup.object({
+        prompt: yup.string().required(),
+        parameters: yup.array().of(
+            yup.object({
+                name: yup.string().required(),
+                value: yup.string().required(),
+            })
+        ),
+    }),
 });
 
 export const editAiAgentYupResolver = yupResolver(schema);

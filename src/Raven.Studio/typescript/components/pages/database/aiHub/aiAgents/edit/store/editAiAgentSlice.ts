@@ -104,8 +104,8 @@ const runTest = createAsyncThunk(
 
         const result = await services.aiAgentService.testAiAgent(databaseName, {
             Configuration: editAiAgentUtils.mapToDto(formValues),
-            UserPrompt: toolCallParameters?.length > 0 ? null : formValues.testPrompt,
-            Parameters: Object.fromEntries(formValues.testParameters.map((item) => [item.name, item.value])),
+            UserPrompt: toolCallParameters?.length > 0 ? null : formValues.test.prompt,
+            Parameters: Object.fromEntries(formValues.test.parameters.map((item) => [item.name, item.value])),
             ActionResponses: toolCallParameters?.map((x) => ({
                 ToolId: x.id,
                 Content: x.arguments,

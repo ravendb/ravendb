@@ -25,7 +25,7 @@ export default function EditAiAgentFooter() {
         }
 
         setValue(
-            "testParameters",
+            "test.parameters",
             formValues.parameters.map((x) => ({ name: x.name, value: "" }))
         );
         dispatch(editAiAgentActions.isTestOpenSet(true));
