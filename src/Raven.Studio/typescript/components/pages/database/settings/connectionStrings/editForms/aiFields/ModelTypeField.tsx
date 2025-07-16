@@ -5,9 +5,8 @@ import {
     ConnectionFormData,
     AiConnection,
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
-import classNames from "classnames";
-import IconName from "typings/server/icons";
 import { FormLabel } from "components/common/Form";
+import ClickableCard from "components/common/ClickableCard";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -41,43 +40,6 @@ export default function ModelTypeField() {
                     isSelected={formValues.modelType === "TextEmbeddings"}
                     onClick={() => setValue("modelType", "TextEmbeddings")}
                 />
-            </div>
-        </div>
-    );
-}
-
-interface ClickableCardProps {
-    icon: IconName;
-    title: string;
-    description: string;
-    isSelected: boolean;
-    className?: string;
-    onClick: () => void;
-}
-
-function ClickableCard({ description, icon, onClick, title, isSelected, className }: ClickableCardProps) {
-    return (
-        <div
-            className={classNames(
-                "border rounded p-2 cursor-pointer",
-                {
-                    "bg-faded-primary border-primary": isSelected,
-                },
-                {
-                    "border-secondary": !isSelected,
-                },
-                className
-            )}
-            onClick={onClick}
-        >
-            <div className="text-emphasis hstack gap-2">
-                <div>
-                    <Icon icon={icon} margin="mx-1" />
-                </div>
-                <div className="flex-grow">
-                    <div className="fw-semibold">{title}</div>
-                    <div>{description}</div>
-                </div>
             </div>
         </div>
     );

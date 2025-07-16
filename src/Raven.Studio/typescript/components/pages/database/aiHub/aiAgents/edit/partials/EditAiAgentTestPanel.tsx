@@ -1,17 +1,17 @@
 import { Icon } from "components/common/Icon";
 import { useFormContext, useWatch } from "react-hook-form";
-import { EditAiAgentFormData } from "./utils/editAiAgentValidation";
+import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import { useAppDispatch, useAppSelector } from "components/store";
-import { editAiAgentActions, editAiAgentSelectors } from "./store/editAiAgentSlice";
+import { editAiAgentActions, editAiAgentSelectors } from "../store/editAiAgentSlice";
 import { FormInput } from "components/common/Form";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useRef, useEffect } from "react";
 import _ from "lodash";
-import AiAgentMessages from "../partials/AiAgentMessages";
-import AiAgentParametersField from "../partials/AiAgentParametersField";
-import { editAiAgentUtils } from "./utils/editAiAgentUtils";
-import { AiAgentToolCall } from "../utils/aiAgentsTypes";
+import AiAgentMessages from "../../partials/AiAgentMessages";
+import AiAgentParametersField from "../../partials/AiAgentParametersField";
+import { editAiAgentUtils } from "../utils/editAiAgentUtils";
+import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 

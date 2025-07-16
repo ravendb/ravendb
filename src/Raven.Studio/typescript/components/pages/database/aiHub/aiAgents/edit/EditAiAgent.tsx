@@ -3,9 +3,8 @@ import { AboutViewHeading } from "components/common/AboutView";
 import useResizableWidth from "../hooks/useResizableWidth";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { EditAiAgentFormData, editAiAgentYupResolver } from "./utils/editAiAgentValidation";
-import EditAiAgentMain from "./EditAiAgentMain";
-import EditAiAgentFooter from "./EditAiAgentFooter";
-import EditAiAgentTestPanel from "./EditAiAgentTestPanel";
+import EditAiAgentFooter from "./partials/EditAiAgentFooter";
+import EditAiAgentTestPanel from "./partials/EditAiAgentTestPanel";
 import { tryHandleSubmit } from "components/utils/common";
 import { useServices } from "components/hooks/useServices";
 import { useAppDispatch, useAppSelector } from "components/store";
@@ -15,12 +14,19 @@ import router from "plugins/router";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { editAiAgentActions, editAiAgentSelectors } from "./store/editAiAgentSlice";
 import { useEffect } from "react";
-import EditAiAgentInfoHub from "./EditAiAgentInfoHub";
+import EditAiAgentInfoHub from "./partials/EditAiAgentInfoHub";
 import { editAiAgentUtils } from "./utils/editAiAgentUtils";
 import SizeGetter from "components/common/SizeGetter";
 import { TimeInSeconds } from "common/constants/timeInSeconds";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
+import EditAiAgentBasicSection from "./partials/EditAiAgentBasicSection";
+import EditAiAgentParametersSection from "./partials/EditAiAgentParametersSection";
+import EditAiAgentPersistenceSection from "./partials/EditAiAgentPersistenceSection";
+import EditAiAgentToolsSection from "./partials/EditAiAgentToolsSection";
+import EditAiAgentTrimmingSection from "./partials/EditAiAgentTrimmingSection";
+import EditAiAgentToolsAdvancedSection from "./partials/EditAiAgentToolsAdvancedSection";
+import { LoadingView } from "components/common/LoadingView";
 
 interface QueryParams {
     id: string;
@@ -101,12 +107,23 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                     render={({ width }) => (
                         <div className="hstack h-100">
                             <div className="vstack h-100" style={{ width: `${width - testAreaResizable.width}px` }}>
-                                <div className="hstack justify-content-between align-items-start p-3">
+                                <div className="hstack justify-content-between align-items-start p-4">
                                     <AboutViewHeading title="Create AI Agent" icon="ai-agents" marginBottom={0} />
                                     <EditAiAgentInfoHub />
                                 </div>
-                                <div className="p-3 flex-grow-1 overflow-scroll h-100">
-                                    <EditAiAgentMain />
+                                <div className="px-4 pb-4 flex-grow-1 overflow-scroll h-100">
+                                    {formState.isLoading ? (
+                                        <LoadingView />
+                                    ) : (
+                                        <>
+                                            <EditAiAgentBasicSection />
+                                            <EditAiAgentPersistenceSection />
+                                            <EditAiAgentParametersSection />
+                                            <EditAiAgentToolsSection />
+                                            <EditAiAgentToolsAdvancedSection />
+                                            <EditAiAgentTrimmingSection />
+                                        </>
+                                    )}
                                 </div>
                                 <div className="p-3 border-top border-secondary">
                                     <EditAiAgentFooter />

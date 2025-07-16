@@ -1,10 +1,10 @@
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
 import { useAppDispatch } from "components/store";
-import { editAiAgentActions } from "./store/editAiAgentSlice";
+import { editAiAgentActions } from "../store/editAiAgentSlice";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useFormContext, useWatch } from "react-hook-form";
-import { EditAiAgentFormData } from "./utils/editAiAgentValidation";
+import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 
 export default function EditAiAgentFooter() {

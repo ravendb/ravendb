@@ -1,6 +1,8 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 
+export type AiAgentTrimmingMethod = "Tokens" | "Truncate";
+
 const schema = yup.object({
     name: yup.string().required(),
     identifier: yup.string().required(),
@@ -32,6 +34,7 @@ const schema = yup.object({
             name: yup.string(),
         })
     ),
+    isToolsAdvancedSettings: yup.boolean(),
     queries: yup.array().of(
         yup.object({
             name: yup.string().required(),
@@ -69,6 +72,33 @@ const schema = yup.object({
             isEditing: yup.boolean(),
         })
     ),
+    maxModelIterationsPerCall: yup.number().nullable(),
+
+    trimming: yup
+        .object({
+            method: yup.string<"Tokens" | "Truncate">().nullable(),
+            historyExpirationInSeconds: yup.number().nullable(),
+            messagesLengthBeforeTruncate: yup.number().nullable(),
+            messagesLengthAfterTruncate: yup.number().nullable(),
+            maxTokensBeforeSummarization: yup.number().nullable(),
+            maxTokensAfterSummarization: yup.number().nullable(),
+            resultPrefix: yup.string().nullable(),
+            summarizationTaskBeginningPrompt: yup
+                .string()
+                .nullable()
+                .when("method", {
+                    is: "Tokens",
+                    then: (schema) => schema.required(),
+                }),
+            summarizationTaskEndPrompt: yup
+                .string()
+                .nullable()
+                .when("method", {
+                    is: "Tokens",
+                    then: (schema) => schema.required(),
+                }),
+        })
+        .nullable(),
 
     // test
     testPrompt: yup.string(),
