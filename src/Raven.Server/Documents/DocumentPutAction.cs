@@ -240,6 +240,27 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                if (document.TryGetMetadata(out BlittableJsonReaderObject docMetadata))
+                {
+                    // drop the @archived: true metadata field for new documents (happens often by cloning archived documents from Studio)
+                    if (oldValue.Pointer == null && newFlags.Contain(DocumentFlags.Archived) == false)
+                    {
+                        if (docMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool isArchivedInMetadata))
+                        {
+                            if (isArchivedInMetadata)
+                            {
+                                docMetadata.Modifications = new DynamicJsonValue(docMetadata);
+                                docMetadata.Modifications.Remove(Constants.Documents.Metadata.Archived);
+                            }
+
+                            document.Modifications = new DynamicJsonValue(document);
+                            document.Modifications[Constants.Documents.Metadata.Key] = docMetadata;
+                            document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                            ValidateDocument(id, document, ref documentDebugHash);
+                        }
+                    }
+                }
+
                 FlagsProperlySet(newFlags, changeVector);
                 using (Slice.From(context.Allocator, changeVector.AsString(), out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
@@ -263,11 +284,11 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                if (collectionName.IsHiLo == false && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+                if (collectionName.IsHiLo == false && docMetadata != null)
                 {
-                    var hasExpirationDate = metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate);
-                    var hasRefreshDate = metadata.TryGet(Constants.Documents.Metadata.Refresh, out string refreshDate);
-                    var hasArchiveAtDate= metadata.TryGet(Constants.Documents.Metadata.ArchiveAt, out string archiveAtDate);
+                    var hasExpirationDate = docMetadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate);
+                    var hasRefreshDate = docMetadata.TryGet(Constants.Documents.Metadata.Refresh, out string refreshDate);
+                    var hasArchiveAtDate= docMetadata.TryGet(Constants.Documents.Metadata.ArchiveAt, out string archiveAtDate);
 
                     if (hasExpirationDate)
                         _documentsStorage.ExpirationStorage.Put(context, lowerId, expirationDate);
