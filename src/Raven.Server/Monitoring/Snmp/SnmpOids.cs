@@ -110,6 +110,10 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Total number of pages written by the server since last start (across all databases & indexes)")]
             public const string TotalPagesWritten = "1.5.5.2";
             
+            [SnmpDataType(SnmpType.Integer32)]
+            [Description("Number of open file descriptors for Server (Linux only)")]
+            public const string ProcessOpenFileDescriptors = "1.5.6";
+            
             [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server allocated memory in MB")]
             public const string TotalMemory = "1.6.1";
