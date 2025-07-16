@@ -684,6 +684,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             // JSON property values / enums
             public const string RoleSystemValue = "system";
             public const string RoleUserValue = "user";
+            public const string RoleAssistantValue = "assistant";
 
             // HTTP headers
             public const string HeaderContentType = "Content-Type";

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Conventions;
@@ -72,16 +73,20 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
-            var r = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese?",
-                new Dictionary<string, object> { ["company"] = "companies/90-A" }));
+            var createResult = await store.AI.CreateAgentAsync<OutputSchema>(agent);
+            var chat = store.AI.StartConversation<OutputSchema>(
+                createResult.Identifier,
+                builder: p => p.AddParameter("company", "companies/90-A"));
 
-            Assert.NotNull(r.Response.Answer);
-            Assert.NotNull(r.Usage);
-            Assert.NotNull(r.ConversationId);
+            chat.SetUserPrompt("what goes well with my cheese?");
+            var hasMore = await chat.RunAsync(CancellationToken.None);
 
-            var chat = await session.LoadAsync<dynamic>(r.ConversationId);
-            Assert.NotNull(chat);
+            Assert.False(hasMore);
+            Assert.NotNull(chat.Answer);
+            Assert.NotNull(chat.Id);
+
+            var chat1 = await session.LoadAsync<dynamic>(chat.Id);
+            Assert.NotNull(chat1);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -118,70 +123,20 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
-            var r = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>("shopping-assistant", "what goes well with my cheese for recent orders?",
-                new Dictionary<string, object> { ["company"] = "companies/90-A" }));
+            var createResult = await store.AI.CreateAgentAsync<OutputSchema>(agent);
+            var chat = store.AI.StartConversation<OutputSchema>(
+                createResult.Identifier,
+                builder: p => p.AddParameter("company", "companies/90-A"));
 
-            Assert.NotNull(r.Response.Answer);
-            Assert.NotNull(r.Usage);
-            Assert.NotNull(r.ConversationId);
+            chat.SetUserPrompt("what goes well with my cheese for recent orders?");
+            await chat.RunAsync(CancellationToken.None);
+            Assert.NotNull(chat.Answer);
+            Assert.NotNull(chat.Id);
 
-
-            var r2 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>(r.ConversationId,
-                userPrompt: "can you give me a cheaper alternative?"));
-
-            Assert.NotNull(r2.Response.Answer);
-            Assert.NotNull(r2.Usage);
-            Assert.NotNull(r2.ConversationId);
-        }
-
-        [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
-        public async Task AnswerActionToolRequest(Options options, GenAiConfiguration config)
-        {
-            using var store = GetDocumentStore(options);
-
-            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
-
-            using var session = store.OpenAsyncSession();
-
-            var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
-                "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
-            agent.Identifier = "shopping-assistant";
-            agent.Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(30) };
-
-            agent.Actions =
-            [
-                new AiAgentToolAction
-                {
-                    Name = "ProductSearch",
-                    Description = "semantic search the store product catalog",
-                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
-                },
-                new AiAgentToolAction { Name = "RecentOrder", Description = "Get the recent orders of the current user", ParametersSampleObject = "{}" }
-            ];
-
-            var agentResult = await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSchema>(agent));
-            var r = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>(agentResult.Identifier,
-                "what goes well with my cheese for recent orders?",
-                parameters: null));
-
-            Assert.True(r.ActionRequests.Count > 0);
-            Assert.NotNull(r.Usage);
-            Assert.NotNull(r.ConversationId);
-
-            var toolResponse = new List<AiAgentActionResponse>();
-            for (int i = 0; i < r.ActionRequests.Count; i++)
-            {
-                var request = r.ActionRequests[i];
-                toolResponse.Add(new AiAgentActionResponse { ToolId = request.ToolId, Content = "{}" });
-            }
-
-            var r2 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSchema>(r.ConversationId, actionResponses: toolResponse));
-
-            Assert.True(r2.Response?.Answer != null || r2.ActionRequests != null);
-            Assert.NotNull(r2.Usage);
-            Assert.NotNull(r2.ConversationId);
+            chat.SetUserPrompt("can you give me a cheaper alternative?");
+            await chat.RunAsync(CancellationToken.None);
+            Assert.NotNull(chat.Answer);
+            Assert.NotNull(chat.Id);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]

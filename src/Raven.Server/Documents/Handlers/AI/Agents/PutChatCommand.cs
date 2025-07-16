@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             {
                 var historyId = $"{_id}{_database.IdentityPartsSeparator}{AiAgentConversationHistoryIdAddition}{_database.IdentityPartsSeparator}";
                 historyId = _database.DocumentsStorage.DocumentPut.BuildDocumentId(historyId, _database.DocumentsStorage.GenerateNextEtag(), out _);
-                putHistoryResult = _database.DocumentsStorage.Put(context, historyId, _expectedChangeVector, _historyDoc);
+                putHistoryResult = _database.DocumentsStorage.Put(context, historyId, null, _historyDoc);
                 _conversation.HistoryDocuments.Add(putHistoryResult.Id);
             }
 

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -53,6 +54,7 @@ public class RavenDB_24407 : RavenTestBase
     public async Task CanResumeConversationWithSummarization(Options options, GenAiConfiguration config, bool summarization, bool withHistory)
     {
         using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
@@ -84,27 +86,27 @@ public class RavenDB_24407 : RavenTestBase
                 }
         ];
 
-        await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSampleObject>(agent));
+        var identifier = (await store.AI.CreateAgentAsync<OutputSampleObject>(agent)).Identifier;
         // start chat
-        var r = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSampleObject>("shopping-assistant", "what goes well with my cheese for recent orders?",
-            new Dictionary<string, object> { ["company"] = "companies/90-A" }));
+        var chat = store.AI.StartConversation<OutputSampleObject>(
+            agent.Identifier,
+            builder: p => p.AddParameter("company", "companies/90-A"));
 
-        Assert.NotNull(r.Response.Answer);
-        Assert.NotNull(r.Usage);
-        Assert.NotNull(r.ConversationId);
+        chat.SetUserPrompt("what goes well with my cheese for recent orders?");
+        await chat.RunAsync(CancellationToken.None);
+
+        Assert.NotNull(chat.Answer);
 
         // resume
-        var r2 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSampleObject>(r.ConversationId,
-            userPrompt: "can you give me a cheaper alternative?"));
+        chat.SetUserPrompt("can you give me a cheaper alternative?");
+        await chat.RunAsync(CancellationToken.None);
 
-        Assert.NotNull(r2.Response.Answer);
-        Assert.NotNull(r2.Usage);
-        Assert.NotNull(r2.ConversationId);
+        Assert.NotNull(chat.Answer);
 
-        var chat = await GetChat(store, r.ConversationId);
-        Assert.True(chat.Messages.Count > 2, "messages count: " + chat.Messages.Count);
-        Assert.Equal(systemPrompt, chat.Messages[0].Content);
-        Assert.Equal(0, chat.HistoryDocuments.Count);
+        var chatDoc = await GetChat(store, chat.Id);
+        Assert.True(chatDoc.Messages.Count > 2, "messages count: " + chatDoc.Messages.Count);
+        Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
+        Assert.Equal(0, chatDoc.HistoryDocuments.Count);
 
         // resume - with summarization
         if (summarization)
@@ -130,48 +132,43 @@ public class RavenDB_24407 : RavenTestBase
         }
         if (withHistory)
             agent.ChatTrimming.History = new();
-        await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSampleObject>(agent));
 
-        var r3 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSampleObject>(r.ConversationId,
-            userPrompt: "can you give me a cheaper alternative?"));
+        await store.AI.CreateAgentAsync<OutputSampleObject>(agent);
 
-        Assert.NotNull(r3.Response.Answer);
-        Assert.NotNull(r3.Usage);
-        Assert.NotNull(r3.ConversationId);
+        chat.SetUserPrompt("can you give me a cheaper alternative?");
+        await chat.RunAsync(CancellationToken.None);
 
-        chat = await GetChat(store, r.ConversationId);
-        Assert.Equal(2, chat.Messages.Count);
-        Assert.Equal(systemPrompt, chat.Messages[0].Content);
-        Assert.Equal(withHistory ? 1 : 0, chat.HistoryDocuments.Count);
+        Assert.NotNull(chat.Answer);
+
+        chatDoc = await GetChat(store, chat.Id);
+        Assert.Equal(2, chatDoc.Messages.Count);
+        Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
+        Assert.Equal(withHistory ? 1 : 0, chatDoc.HistoryDocuments.Count);
 
         // resume - still with summarization
 
-        var r33 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSampleObject>(r.ConversationId,
-            userPrompt: "can you give me a cheaper alternative?"));
+        chat.SetUserPrompt("can you give me a cheaper alternative?");
+        await chat.RunAsync(CancellationToken.None);
 
-        Assert.NotNull(r33.Response.Answer);
-        Assert.NotNull(r33.Usage);
-        Assert.NotNull(r33.ConversationId);
+        Assert.NotNull(chat.Answer);
 
-        chat = await GetChat(store, r.ConversationId);
-        Assert.Equal(2, chat.Messages.Count);
-        Assert.Equal(systemPrompt, chat.Messages[0].Content);
-        Assert.Equal(withHistory ? 2 : 0, chat.HistoryDocuments.Count);
+        chatDoc = await GetChat(store, chat.Id);
+        Assert.Equal(2, chatDoc.Messages.Count);
+        Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
+        Assert.Equal(withHistory ? 2 : 0, chatDoc.HistoryDocuments.Count);
 
         // resume
         agent.ChatTrimming = null;
-        await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSampleObject>(agent));
+        await store.AI.CreateAgentAsync<OutputSampleObject>(agent);
 
-        var r4 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSampleObject>(r.ConversationId,
-            userPrompt: "can you give me another alternative?"));
+        chat.SetUserPrompt("can you give me another alternative?");
+        await chat.RunAsync(CancellationToken.None);
 
-        Assert.NotNull(r4.Response.Answer);
-        Assert.NotNull(r4.Usage);
-        Assert.NotNull(r4.ConversationId);
+        Assert.NotNull(chat.Answer);
 
-        chat = await GetChat(store, r.ConversationId);
-        Assert.True(chat.Messages.Count > 2, "messages count: " + chat.Messages.Count);
-        Assert.Equal(withHistory ? 2 : 0, chat.HistoryDocuments.Count);
+        chatDoc = await GetChat(store, chat.Id);
+        Assert.True(chatDoc.Messages.Count > 2, "messages count: " + chatDoc.Messages.Count);
+        Assert.Equal(withHistory ? 2 : 0, chatDoc.HistoryDocuments.Count);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -238,43 +235,44 @@ public class RavenDB_24407 : RavenTestBase
                 }
         ];
 
-        await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<OutputSampleObject>(agent));
-        var r = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSampleObject>("shopping-assistant", "what goes well with my cheese for recent orders?", parameters: null));
+        await store.AI.CreateAgentAsync<OutputSampleObject>(agent);
+        var chat = store.AI.StartConversation<OutputSampleObject>(
+            agent.Identifier,
+            builder: null);
+        chat.SetUserPrompt("what goes well with my cheese for recent orders?");
+        var hasMore = await chat.RunAsync(CancellationToken.None);
 
-        Assert.True(r.ActionRequests.Count > 0);
-        Assert.NotNull(r.Usage);
-        Assert.NotNull(r.ConversationId);
+        Assert.True(hasMore);
 
-        var toolResponse = new List<AiAgentActionResponse>();
-        for (int i = 0; i < r.ActionRequests.Count; i++)
+
+        foreach (var req in chat.RequiredActions())
         {
-            var request = r.ActionRequests[i];
-            toolResponse.Add(new AiAgentActionResponse
-            {
-                ToolId = request.ToolId,
-                Content = "{}"
-            });
+            chat.AddActionResponse(req.ToolId, "{}");
         }
+
         // shouldn't summarize in the middle of tool request
-        var chat = await GetChat(store, r.ConversationId);
-        Assert.True(chat.Messages.Count > 2, "messages count: " + chat.Messages.Count);
-        Assert.Equal(systemPrompt, chat.Messages[0].Content);
-        Assert.Equal(0, chat.HistoryDocuments.Count);
+        var chatDoc = await GetChat(store, chat.Id);
+        Assert.True(chatDoc.Messages.Count > 2, "messages count: " + chatDoc.Messages.Count);
+        Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
+        Assert.Equal(0, chatDoc.HistoryDocuments.Count);
 
-        var r2 = await store.Maintenance.SendAsync(new RunConversationOperation<OutputSampleObject>(r.ConversationId, actionResponses: toolResponse));
-
-        Assert.True(r2.Response?.Answer != null || r2.ActionRequests != null);
-        Assert.NotNull(r2.Usage);
-        Assert.NotNull(r2.ConversationId);
+        hasMore = await chat.RunAsync(CancellationToken.None);
 
         // can be answer *OR* another tool call
-        if (r2.Response?.Answer != null)
+        chatDoc = await GetChat(store, chat.Id);
+        if (hasMore)
+        {
+            // if it is 'Tool Requests' is shouldn't be summarized
+            Assert.True(2 < chatDoc.Messages.Count);
+            Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
+            Assert.Equal(0, chatDoc.HistoryDocuments.Count);
+        }
+        else
         {
             // if it is 'Answer' is should be summarized
-            chat = await GetChat(store, r.ConversationId);
-            Assert.Equal(2, chat.Messages.Count);
-            Assert.Equal(systemPrompt, chat.Messages[0].Content);
-            Assert.Equal(withHistory ? 1 : 0, chat.HistoryDocuments.Count);
+            Assert.Equal(2, chatDoc.Messages.Count);
+            Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
+            Assert.Equal(withHistory ? 1 : 0, chatDoc.HistoryDocuments.Count);
         }
     }
 

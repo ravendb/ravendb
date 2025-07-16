@@ -338,7 +338,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 context.ReadObject(
                     new DynamicJsonValue
                     {
-                        [ChatConstants.RequestFields.Role] = ChatConstants.RequestFields.RoleUserValue,
+                        [ChatConstants.RequestFields.Role] = ChatConstants.RequestFields.RoleAssistantValue,
                         [ChatConstants.RequestFields.Content] = summarization.ResultPrefix + messagesSummary
                     },
                     "system/msg"), usage);

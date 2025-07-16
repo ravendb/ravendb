@@ -27,7 +27,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         public async Task TwoConfigsWithSimilarIdentifierShouldThrow(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
-            await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
@@ -54,7 +53,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         public async Task UpdateConfig(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
-            await store.Maintenance.SendAsync(new CreateSampleDataOperation());
 
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.AI;
@@ -55,7 +56,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            var e = await Assert.ThrowsAsync<RavenException>( () => store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agent)));
+            var e = await Assert.ThrowsAsync<RavenException>(() => store.AI.CreateAgentAsync<AiAgentBasics.OutputSchema>(agent));
             Assert.Contains("Tool query 'RecentOrder' contains parameters that are not defined in the agent configuration: 'company'", e.Message);
         }
 
@@ -98,7 +99,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            var e = await Assert.ThrowsAsync<RavenException>( () => store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agent)));
+            var e = await Assert.ThrowsAsync<RavenException>(() => store.AI.CreateAgentAsync<AiAgentBasics.OutputSchema>(agent));
             Assert.Contains("Parameter company is defined on both the agent level and the query level for ProductSearch", e.Message);
         }
 
@@ -141,8 +142,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            var identifier = (await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agent))).Identifier;
-            var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new RunConversationOperation<AiAgentBasics.OutputSchema>(identifier, "what goes well with my cheese for recent orders?", parameters: null)));
+            var identifier = (await store.AI.CreateAgentAsync<AiAgentBasics.OutputSchema>(agent)).Identifier;
+            var chat = store.AI.StartConversation<AiAgentBasics.OutputSchema>(identifier, builder: null);
+            chat.SetUserPrompt("what goes well with my cheese for recent orders?");
+            var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
             Assert.Contains($"Parameter 'company' is missing", e.Message);
         }
     }

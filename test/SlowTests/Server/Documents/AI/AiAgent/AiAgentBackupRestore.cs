@@ -39,7 +39,7 @@ public class AiAgentBackupRestore : ReplicationTestBase
             var agents = GetAgents(aiConfig);
             foreach (var agentConfig in agents)
             {
-                await source.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agentConfig));
+                await source.AI.CreateAgentAsync<AiAgentBasics.OutputSchema>(agentConfig);
             }
 
             var backupOperation = await source.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
