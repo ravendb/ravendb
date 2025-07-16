@@ -101,7 +101,7 @@ function mapToDto(
                 ParametersSchema: x.parametersSchema || null,
             })) ?? [],
         Parameters: formData.parameters?.map((x) => x.name) ?? [],
-        ChatReduction: undefined, // omit for now - lets wait for the design
+        ChatTrimming: undefined, // omit for now - lets wait for the design
         MaxModelIterationsPerCall: undefined, // omit for now - lets wait for the design
     };
 }
