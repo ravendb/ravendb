@@ -129,29 +129,28 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         
         usage.UpdateFrom(usageJson);
 
+        if (msg.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray calls))
+        {
+            var resp = new AiResponse(AiResponseType.Tool) { ToolCalls = [], Message = msg };
+            foreach (BlittableJsonReaderObject call in calls)
+            {
+                if (call.TryGet("id", out string callId) is false ||
+                    call.TryGet("function", out BlittableJsonReaderObject function) is false ||
+                    function.TryGet("name", out string name) is false ||
+                    function.TryGet("arguments", out string args) is false)
+                    throw new UnexpectedResponseException("Invalid function call: " + call.ToString())
+                    {
+                        RequestId = GetRequestId(response.Headers)
+                    };
+                resp.ToolCalls.Add(new AiToolCall(callId, name, args));
+            }
+
+            return resp;
+        }
+
         if (string.IsNullOrEmpty(content))
         {
-            if (choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason) && 
-                finishReason == Constants.ResponseFields.ToolCalls && 
-                msg.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray calls))
-            {
-                var resp = new AiResponse(AiResponseType.Tool) { ToolCalls = [], Message = msg};
-                foreach (BlittableJsonReaderObject call in calls)
-                {
-                    if (call.TryGet("id", out string callId) is false ||
-                        call.TryGet("function", out BlittableJsonReaderObject function) is false ||
-                        function.TryGet("name", out string name) is false ||
-                        function.TryGet("arguments", out string args) is false)
-                        throw new UnexpectedResponseException("Invalid function call: " + call.ToString())
-                        {
-                            RequestId = GetRequestId(response.Headers)
-                        };
-                    resp.ToolCalls.Add(new AiToolCall(callId, name, args));
-                }
-                
-                return resp;
-            }
-            
+            choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
             choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal); 
             //TODO: full output if we get here?
             throw new RefusedToAnswerException("The request was refused by the model")
