@@ -56,6 +56,8 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const { handleSubmit, formState, reset } = form;
 
+    console.log("kalczur formState", formState.errors);
+
     const { setIsDirty } = useDirtyFlag(formState.isDirty);
 
     const testAreaResizable = useResizableWidth({

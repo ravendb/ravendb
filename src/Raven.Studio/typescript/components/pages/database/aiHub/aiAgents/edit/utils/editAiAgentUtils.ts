@@ -20,6 +20,7 @@ function mapFromDto(
             persistenceExpiresInSeconds: TimeInSeconds.Day * 30,
             parameterInput: "",
             parameters: [],
+            isToolsAdvancedSettings: false,
             queries: [],
             actions: [],
             maxModelIterationsPerCall: null,
@@ -50,12 +51,13 @@ function mapFromDto(
         outputSchema: dto.OutputSchema,
         isEnableDocumentExpiration: !isDocumentExpirationEnabled,
         persistenceConversationIdPrefix: dto.Persistence.ConversationIdPrefix,
-        persistenceExpiresInSeconds: dto.Persistence.Expires ? Number(dto.Persistence.Expires) / 1000 : null, // Expires is in milliseconds
+        persistenceExpiresInSeconds: dto.Persistence.Expires ? Number(dto.Persistence.Expires) / 1000 : null,
         parameterInput: "",
         parameters:
             dto.Parameters?.map((x) => ({
                 name: x,
             })) ?? [],
+        isToolsAdvancedSettings: dto.MaxModelIterationsPerCall != null,
         queries:
             dto.Queries?.map((x) => ({
                 name: x.Name,

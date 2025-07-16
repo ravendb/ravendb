@@ -20,7 +20,12 @@ export default function EditAiAgentToolsAdvancedSection() {
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>
                     <FormLabel>Max model iterations per call</FormLabel>
-                    <FormInput type="number" control={control} name="maxModelIterationsPerCall" placeholder="16" />
+                    <FormInput
+                        type="number"
+                        control={control}
+                        name="maxModelIterationsPerCall"
+                        placeholder="Default (16)"
+                    />
                 </FormGroup>
             </div>
         </>

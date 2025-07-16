@@ -21,7 +21,7 @@ const schema = yup.object({
         ),
     isEnableDocumentExpiration: yup.boolean(),
     persistenceConversationIdPrefix: yup.string().required(),
-    persistenceExpiresInSeconds: yup.number().nullable(),
+    persistenceExpiresInSeconds: yup.number().nullable().positive().integer(),
     parameterInput: yup.string().test("unique-parameter", "Parameter name must be unique", function (value) {
         if (!value) {
             return true;
@@ -72,16 +72,16 @@ const schema = yup.object({
             isEditing: yup.boolean(),
         })
     ),
-    maxModelIterationsPerCall: yup.number().nullable(),
+    maxModelIterationsPerCall: yup.number().nullable().positive().integer(),
 
     trimming: yup
         .object({
             method: yup.string<"Tokens" | "Truncate">().nullable(),
-            historyExpirationInSeconds: yup.number().nullable(),
-            messagesLengthBeforeTruncate: yup.number().nullable(),
-            messagesLengthAfterTruncate: yup.number().nullable(),
-            maxTokensBeforeSummarization: yup.number().nullable(),
-            maxTokensAfterSummarization: yup.number().nullable(),
+            historyExpirationInSeconds: yup.number().nullable().positive().integer(),
+            messagesLengthBeforeTruncate: yup.number().nullable().positive().integer(),
+            messagesLengthAfterTruncate: yup.number().nullable().positive().integer(),
+            maxTokensBeforeSummarization: yup.number().nullable().positive().integer(),
+            maxTokensAfterSummarization: yup.number().nullable().positive().integer(),
             resultPrefix: yup.string().nullable(),
             summarizationTaskBeginningPrompt: yup
                 .string()
@@ -101,11 +101,11 @@ const schema = yup.object({
         .nullable(),
 
     test: yup.object({
-        prompt: yup.string().required(),
+        prompt: yup.string().nullable(),
         parameters: yup.array().of(
             yup.object({
-                name: yup.string().required(),
-                value: yup.string().required(),
+                name: yup.string().nullable(),
+                value: yup.string().nullable(),
             })
         ),
     }),

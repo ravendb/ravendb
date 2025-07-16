@@ -3,7 +3,7 @@ import Button from "react-bootstrap/Button";
 import { useFormContext, useWatch, useFieldArray } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import AceEditor from "components/common/ace/AceEditor";
-import { FormInput, FormAceEditor } from "components/common/Form";
+import { FormInput, FormAceEditor, FormSwitch } from "components/common/Form";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import useRqlLanguageService from "components/hooks/useRqlLanguageService";
 import { useRef } from "react";
@@ -29,7 +29,12 @@ export default function EditAiAgentToolsSection() {
 
     return (
         <>
-            <h3 className="m-0 mt-3">Define agent tools</h3>
+            <div className="hstack justify-content-between mt-3">
+                <h3 className="m-0">Define agent tools</h3>
+                <FormSwitch control={control} name="isToolsAdvancedSettings">
+                    Advanced settings
+                </FormSwitch>
+            </div>
             <div className="mb-1">
                 Define tool queries to let AI retrieve data, and tool actions to let perform tasks.
             </div>
@@ -86,7 +91,7 @@ export default function EditAiAgentToolsSection() {
                     ))}
                 </div>
             </div>
-            <div className="panel-bg-1 p-2 rounded-2 border border-secondary mt-2">
+            <div className="panel-bg-1 p-3 rounded-2 border border-secondary mt-2">
                 <div className="hstack justify-content-between">
                     <div className="hstack gap-2">
                         <div className="p-1 rounded-2 bg-faded-primary border border-primary">
