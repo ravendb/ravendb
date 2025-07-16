@@ -19,6 +19,7 @@ import { certificatesSlice } from "components/pages/resources/manageServer/certi
 import { editGenAiTaskSlice } from "./pages/database/tasks/ongoingTasks/editTasks/editGenAiTask/store/editGenAiTaskSlice";
 import { editAiAgentSlice } from "./pages/database/aiHub/aiAgents/edit/store/editAiAgentSlice";
 import { chatAiAgentSlice } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentSlice";
+import { chatAiAgentUpdateUrlMiddleware } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentMiddleware";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -51,7 +52,8 @@ export function createStoreConfiguration() {
             })
                 .prepend(listenerMiddleware.middleware)
                 .prepend(connectionStringsUpdateUrlMiddleware.middleware)
-                .prepend(adminLogsMiddleware.middleware),
+                .prepend(adminLogsMiddleware.middleware)
+                .prepend(chatAiAgentUpdateUrlMiddleware.middleware),
     });
 }
 

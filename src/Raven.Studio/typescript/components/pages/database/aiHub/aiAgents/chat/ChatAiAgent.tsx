@@ -18,6 +18,7 @@ import SizeGetter from "components/common/SizeGetter";
 import AceEditor from "components/common/ace/AceEditor";
 import { Switch } from "components/common/Checkbox";
 import Spinner from "react-bootstrap/Spinner";
+import Button from "react-bootstrap/Button";
 
 interface QueryParams {
     agentId: string;
@@ -104,6 +105,13 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         });
     };
 
+    const handleNewChat = () => {
+        dispatch(chatAiAgentActions.conversationIdSet(null));
+        dispatch(chatAiAgentActions.messagesSet([]));
+        dispatch(chatAiAgentActions.documentSet(null));
+        setValue("prompt", "");
+    };
+
     if (!queryParams?.agentId) {
         router.navigate(appUrl.forAiAgents(databaseName));
         return null;
@@ -118,9 +126,14 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                 <ChatAiAgentInfoHub />
             </div>
             <div className="hstack mb-2 justify-content-between">
-                <a className="btn btn-secondary rounded-pill" href={appUrl.forAiAgents(databaseName)}>
-                    <Icon icon="cancel" /> Cancel
-                </a>
+                <div className="hstack gap-2">
+                    <Button variant="primary" className="rounded-pill" onClick={handleNewChat}>
+                        <Icon icon="plus" /> New chat
+                    </Button>
+                    <a className="btn btn-secondary rounded-pill" href={appUrl.forAiAgents(databaseName)}>
+                        <Icon icon="cancel" /> Cancel
+                    </a>
+                </div>
                 <Switch
                     color="primary"
                     selected={isRawData}
@@ -130,14 +143,15 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                 </Switch>
             </div>
 
-            <div className="flex-grow-1">
+            <div className="flex-grow-1 hstack justify-content-center">
                 <SizeGetter
                     isHeighRequired
+                    style={{ maxWidth: 800 }}
                     render={({ height }) => (
                         <form className="vstack overflow-auto" onSubmit={handleSubmit(handleSend)} style={{ height }}>
                             <div
                                 ref={messagesPanelRef}
-                                className="overflow-auto ps-2 flex-grow-1 position-relative"
+                                className="overflow-auto ps-2 pe-2 flex-grow-1 position-relative"
                                 style={{ height: height - promptHeightInPx }}
                             >
                                 {messages.length === 0 && (
