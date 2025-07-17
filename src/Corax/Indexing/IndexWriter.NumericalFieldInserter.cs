@@ -26,6 +26,7 @@ public partial class IndexWriter
 
         private int _offsetAdjustment;
         private long _curPage;
+        private long _numberOfTermsToProcess;
 
         public NumericalFieldInserter(IndexWriter writer, IndexedField indexedField, Span<byte> tmpBuf)
         {
@@ -43,6 +44,7 @@ public partial class IndexWriter
 
             _writer._entriesToTermsTracker.ClearEntriesForTerm();
             _tmpBuf = tmpBuf;
+            _numberOfTermsToProcess = typeof(Int64LookupKey) == typeof(TLookupKey) ? _indexedField.Longs.Count : indexedField.Doubles.Count;
         }
 
         public void Dispose()
@@ -53,6 +55,9 @@ public partial class IndexWriter
 
         public void InsertNumericalField(CancellationToken token)
         {
+            if (_numberOfTermsToProcess == 0)
+                goto Finish;
+            
             _buffers.PrepareTerms(_indexedField, out var sortedTerms, out var termsOffsets);
             Debug.Assert(sortedTerms.Length > 0);
 
@@ -76,7 +81,7 @@ public partial class IndexWriter
                     for (; idX < read; idX++)
                     {
                         ref var entries = ref _indexedField.Storage.GetAsRef(entriesOffsets[idX]);
-                        ProcessSingleEntry(ref entries, ref keys[idX], sortedTerms[idX], postingListIds[idX], pageOffsets[idX], entriesOffsets[idX]);
+                        ProcessSingleEntry(ref entries, ref keys[idX], sortedTerms[idX], postingListIds[idX], pageOffsets[idX]);
                         entries.Dispose(_writer._entriesAllocator);
 
                         if (treeChanged.Changed)
@@ -95,10 +100,11 @@ public partial class IndexWriter
                 }
             }
 
+            Finish:
             _writer._entriesToTermsTracker.CommitCurrentDataFor(_fieldName);
         }
 
-        private void ProcessSingleEntry(ref EntriesModifications entries, ref TLookupKey key, TKey term, long postingListId, int pageOffset, int entriesOffset)
+        private void ProcessSingleEntry(ref EntriesModifications entries, ref TLookupKey key, TKey term, long postingListId, int pageOffset)
         {
             bool termFound = postingListId != Constants.IndexSearcher.InvalidId;
             Debug.Assert(termFound || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");

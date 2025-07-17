@@ -953,20 +953,14 @@ namespace Corax.Indexing
 
                 using (staticFieldScope.For(CommitOperation.IntegerValues))
                 {
-                    if (indexedField.Longs.Count > 0)
-                    {
-                        using var inserter = new NumericalFieldInserter<long, Int64LookupKey>(this, indexedField, workingBuffer);
-                        inserter.InsertNumericalField(token);
-                    }
+                    using var inserter = new NumericalFieldInserter<long, Int64LookupKey>(this, indexedField, workingBuffer);
+                    inserter.InsertNumericalField(token);
                 }
 
                 using (staticFieldScope.For(CommitOperation.FloatingValues))
                 {
-                    if (indexedField.Doubles.Count > 0)
-                    {
-                        using var inserter = new NumericalFieldInserter<double, DoubleLookupKey>(this, indexedField, workingBuffer);
-                        inserter.InsertNumericalField(token);
-                    }
+                    using var inserter = new NumericalFieldInserter<double, DoubleLookupKey>(this, indexedField, workingBuffer);
+                    inserter.InsertNumericalField(token);
                 }
 
                 using (staticFieldScope.For(CommitOperation.SpatialValues))
