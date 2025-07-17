@@ -68,6 +68,8 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, PutResult> PutResult = GenerateJsonDeserializationRoutine<PutResult>();
 
         public static readonly Func<BlittableJsonReaderObject, AttachmentDetails> AttachmentDetails = GenerateJsonDeserializationRoutine<AttachmentDetails>();
+      
+        public static readonly Func<BlittableJsonReaderObject, RetireAttachmentParameters> RetireAttachmentParameters = GenerateJsonDeserializationRoutine<RetireAttachmentParameters>();
 
         public static readonly Func<BlittableJsonReaderObject, AttachmentName> AttachmentName = GenerateJsonDeserializationRoutine<AttachmentName>();
 

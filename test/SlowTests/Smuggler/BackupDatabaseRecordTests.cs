@@ -256,14 +256,23 @@ namespace SlowTests.Smuggler
 
                     await store1.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
                     {
-                        S3Settings = new S3Settings()
+                        Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
                         {
-                            AwsAccessKey = "DummyAccessKey",
-                            RemoteFolderName = "retired-attachments",
-                            BucketName = "dummy-bucket",
+                            {
+                                "dummy-identifier", new RetiredAttachmentsDestinationConfiguration()
+                                {
+                                    S3Settings = new S3Settings()
+                                    {
+                                        AwsAccessKey = "DummyAccessKey",
+                                        RemoteFolderName = "retired-attachments",
+                                        BucketName = "dummy-bucket",
+                                    },
+                                    Disabled = false,
+                                    Identifier = "dummy-identifier"
+                                }
+                            }
                         },
-                        Disabled = false,
-                        RetireFrequencyInSec = 1000
+                        RetireFrequencyInSec = 1000,
                     }));
 
                     embeddingsGenerationConfiguration.Identifier = embeddingsGenerationConfiguration.GenerateIdentifier();
@@ -354,10 +363,10 @@ namespace SlowTests.Smuggler
 
                     Assert.NotNull(record.RetiredAttachments);
                     Assert.Equal(1000, record.RetiredAttachments.RetireFrequencyInSec);
-                    Assert.NotNull(record.RetiredAttachments.S3Settings);
-                    Assert.Equal("DummyAccessKey", record.RetiredAttachments.S3Settings.AwsAccessKey);
-                    Assert.Equal("retired-attachments", record.RetiredAttachments.S3Settings.RemoteFolderName);
-                    Assert.Equal("dummy-bucket", record.RetiredAttachments.S3Settings.BucketName);
+                    Assert.NotNull(record.RetiredAttachments.Destinations.First().Value.S3Settings);
+                    Assert.Equal("DummyAccessKey", record.RetiredAttachments.Destinations.First().Value.S3Settings.AwsAccessKey);
+                    Assert.Equal("retired-attachments", record.RetiredAttachments.Destinations.First().Value.S3Settings.RemoteFolderName);
+                    Assert.Equal("dummy-bucket", record.RetiredAttachments.Destinations.First().Value.S3Settings.BucketName);
 
                 }
             }
@@ -1329,14 +1338,23 @@ namespace SlowTests.Smuggler
 
                 await store.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
                 {
-                    S3Settings = new S3Settings()
+                    Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
                     {
-                        AwsAccessKey = "DummyAccessKey",
-                        RemoteFolderName = "retired-attachments",
-                        BucketName = "dummy-bucket",
+                        {
+                            "dummy-identifier", new RetiredAttachmentsDestinationConfiguration()
+                            {
+                                S3Settings = new S3Settings()
+                                {
+                                    AwsAccessKey = "DummyAccessKey",
+                                    RemoteFolderName = "retired-attachments",
+                                    BucketName = "dummy-bucket",
+                                },
+                                Disabled = false,
+                                Identifier = "dummy-identifier"
+                            }
+                        }
                     },
-                    Disabled = false,
-                    RetireFrequencyInSec = 1000
+                    RetireFrequencyInSec = 1000,
                 }));
 
                 //add queue sink configuration
@@ -1462,10 +1480,10 @@ namespace SlowTests.Smuggler
 
                     Assert.NotNull(record.RetiredAttachments);
                     Assert.Equal(1000, record.RetiredAttachments.RetireFrequencyInSec);
-                    Assert.NotNull(record.RetiredAttachments.S3Settings);
-                    Assert.Equal("DummyAccessKey", record.RetiredAttachments.S3Settings.AwsAccessKey);
-                    Assert.Equal("retired-attachments", record.RetiredAttachments.S3Settings.RemoteFolderName);
-                    Assert.Equal("dummy-bucket", record.RetiredAttachments.S3Settings.BucketName);
+                    Assert.NotNull(record.RetiredAttachments.Destinations.First().Value.S3Settings);
+                    Assert.Equal("DummyAccessKey", record.RetiredAttachments.Destinations.First().Value.S3Settings.AwsAccessKey);
+                    Assert.Equal("retired-attachments", record.RetiredAttachments.Destinations.First().Value.S3Settings.RemoteFolderName);
+                    Assert.Equal("dummy-bucket", record.RetiredAttachments.Destinations.First().Value.S3Settings.BucketName);
 
                     Assert.NotNull(record.QueueSinks);
                     Assert.Equal(1, record.QueueSinks.Count);

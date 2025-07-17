@@ -13,10 +13,10 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.Attachments
 {
-    public class DocumentSessionRetiredAttachmentsTests : RetiredAttachmentsS3Base
+    public class DocumentSessionRetiredAttachmentsAsyncTests : RetiredAttachmentsS3Base
     {
         //TODO: egor add cluster wide session test
-        public DocumentSessionRetiredAttachmentsTests(ITestOutputHelper output) : base(output)
+        public DocumentSessionRetiredAttachmentsAsyncTests(ITestOutputHelper output) : base(output)
         {
         }
 
@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/1";
                 using (var session = store.OpenSession())
                 {
@@ -39,7 +39,7 @@ namespace SlowTests.Server.Documents.Attachments
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
                     session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream)
                     {
-                        RetireAt = DateTime.UtcNow.AddMinutes(3),
+                        RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)),
                         ContentType = "image/png"
                     });
                     session.SaveChanges();
@@ -71,7 +71,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/1";
                 using (var session = store.OpenSession())
                 {
@@ -84,7 +84,7 @@ namespace SlowTests.Server.Documents.Attachments
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
                     session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream)
                     {
-                        RetireAt = DateTime.UtcNow.AddMinutes(3),
+                        RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)),
                         ContentType = "image/png"
                     });
                     session.SaveChanges();
@@ -103,7 +103,7 @@ namespace SlowTests.Server.Documents.Attachments
                         using var profileStream = new MemoryStream([1, 2, 3]);
                         session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream)
                         {
-                            RetireAt = null,
+                            RetireParameters = null,
                             ContentType = "image/png"
                         });
                         session.SaveChanges();
@@ -121,8 +121,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                         Assert.NotNull(attachment);
                         Assert.Equal("test.png", attachment.Details.Name);
-                        Assert.Equal(AttachmentFlags.None, attachment.Details.Flags);
-                        Assert.Null(attachment.Details.RetireAt);
+                        Assert.Null(attachment.Details.RetireParameters);
                         Assert.Equal("image/png", attachment.Details.ContentType);
                     }
                 }
@@ -134,7 +133,7 @@ namespace SlowTests.Server.Documents.Attachments
                         using var profileStream = new MemoryStream([1, 2, 3]);
                         session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream)
                         {
-                            RetireAt = retireAtDate,
+                            RetireParameters = new RetireAttachmentParameters(identifier, retireAtDate),
                             ContentType = "image/png"
                         });
                         session.SaveChanges();
@@ -153,8 +152,8 @@ namespace SlowTests.Server.Documents.Attachments
 
                         Assert.NotNull(attachment);
                         Assert.Equal("test.png", attachment.Details.Name);
-                        Assert.Equal(AttachmentFlags.None, attachment.Details.Flags);
-                        Assert.Equal(retireAtDate, attachment.Details.RetireAt);
+                        Assert.Equal(AttachmentFlags.None, attachment.Details.RetireParameters.Flags);
+                        Assert.Equal(retireAtDate, attachment.Details.RetireParameters.At);
                         Assert.Equal("image/png", attachment.Details.ContentType);
                     }
                 }
@@ -168,7 +167,7 @@ namespace SlowTests.Server.Documents.Attachments
             using (var store = GetDocumentStore())
             await using (var holder = CreateCloudSettings())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/2";
                 using (var session = store.OpenSession())
                 {
@@ -179,7 +178,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -192,7 +191,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = session.Advanced.Attachments.Get(id, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);
+                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
                 }
             }
         }
@@ -203,7 +202,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/3";
                 using (var session = store.OpenSession())
                 {
@@ -215,7 +214,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -229,7 +228,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = session.Advanced.Attachments.Get(order, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);
+                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
                 }
             }
         }
@@ -240,14 +239,14 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/4";
 
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/4", Company = $"Companies/4" });
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -263,7 +262,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = attachments.Current;
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);
+                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
                 }
             }
         }
@@ -276,7 +275,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/5";
 
                 using (var session = store.OpenAsyncSession())
@@ -284,7 +283,7 @@ namespace SlowTests.Server.Documents.Attachments
                     //save retired
                     await session.StoreAsync(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/5", Company = $"Companies/5" });
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -332,7 +331,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/5";
 
                 using (var session = store.OpenAsyncSession())
@@ -340,7 +339,7 @@ namespace SlowTests.Server.Documents.Attachments
                     //save retired
                     await session.StoreAsync(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/5", Company = $"Companies/5" });
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -386,14 +385,14 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/5";
 
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/5", Company = $"Companies/5" });
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -419,14 +418,14 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/6";
 
                 using (var session = store.OpenAsyncSession())
                 {
                     await session.StoreAsync(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/6", Company = $"Companies/6" });
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -456,7 +455,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/1";
                 using (var session = store.OpenAsyncSession())
                 {
@@ -468,8 +467,8 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     session.Advanced.Attachments.Store(id,
-                        new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
-                  await  session.SaveChangesAsync();
+                        new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
+                    await session.SaveChangesAsync();
                 }
 
                 using (var session = store.OpenAsyncSession())
@@ -496,7 +495,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/2";
                 using (var session = store.OpenAsyncSession())
                 {
@@ -507,7 +506,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -520,7 +519,8 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = await session.Advanced.Attachments.GetAsync(id, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);
+                    Assert.NotNull(attachment.Details.RetireParameters);
+                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
                 }
             }
         }
@@ -531,7 +531,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/3";
                 using (var session = store.OpenAsyncSession())
                 {
@@ -543,7 +543,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -558,7 +558,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = await session.Advanced.Attachments.GetAsync(order, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);
+                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
                 }
             }
         }
@@ -569,7 +569,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/4";
                 using (var session = store.OpenAsyncSession())
                 {
@@ -580,7 +580,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -596,7 +596,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = attachments.Current;
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);
+                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
                 }
             }
         }
@@ -607,7 +607,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/5";
                 using (var session = store.OpenAsyncSession())
                 {
@@ -618,7 +618,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -646,7 +646,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/6";
                 using (var session = store.OpenAsyncSession())
                 {
@@ -658,7 +658,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     using var profileStream = new MemoryStream(new byte[] { 1, 2, 3 });
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -688,7 +688,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/1";
                 using (var session = store.OpenSession())
                 {
@@ -698,7 +698,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                 var buf = new byte[] { 1, 2, 3 };
                 using var profileStream = new MemoryStream(buf);
-                await PutAttachmentForTests(store, id, "test.png", profileStream, "Orders");
+                await PutAttachmentForTests(store, id, "test.png", profileStream, identifier);
                 using (var session = store.OpenSession())
                 {
                     var exists = session.Advanced.Attachments.Exists(id, "test.png");
@@ -719,7 +719,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     using var profileStream2 = new MemoryStream(buffer);
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream2) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream2) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -770,7 +770,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
                 var id = "Orders/5";
                 using (var session = store.OpenSession())
                 {
@@ -786,7 +786,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     session.Advanced.Attachments.Store(id,
-                        new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                        new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -812,7 +812,7 @@ namespace SlowTests.Server.Documents.Attachments
                 using (var session = store.OpenAsyncSession())
                 {
                     using var newProfileStream = new MemoryStream(b);
-                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", newProfileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", newProfileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                     await session.SaveChangesAsync();
                 }
 
@@ -832,7 +832,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = session.Advanced.Attachments.Get(id, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.Flags);
+                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
 
                     // compare streams
                     using var ms = new MemoryStream();
@@ -844,12 +844,12 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        private async Task PutAttachmentForTests(DocumentStore store, string id, string name, MemoryStream profileStream, string collection)
+        private async Task PutAttachmentForTests(DocumentStore store, string id, string name, MemoryStream profileStream, string identifier)
         {
             using (var session = store.OpenAsyncSession())
             {
                 session.Advanced.Attachments.Store(id,
-                    new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" });
+                    new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" });
                 await session.SaveChangesAsync();
             }
 

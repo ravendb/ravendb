@@ -47,10 +47,10 @@ namespace Raven.Client.Documents.Session
 
         public void Store(string documentId, string name, Stream stream, string contentType = null)
         {
-            Store(documentId, name, stream, contentType, retireAt: null);
+            Store(documentId, name, stream, contentType, retireParameters: null);
         }
 
-        internal void Store(string documentId, string name, Stream stream, string contentType = null, DateTime? retireAt = null)
+        internal void Store(string documentId, string name, Stream stream, string contentType, RetireAttachmentParameters retireParameters)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
@@ -73,7 +73,7 @@ namespace Raven.Client.Documents.Session
                 Session.DeletedEntities.Contains(documentInfo.Entity))
                 ThrowDocumentAlreadyDeleted(documentId, name, "store", null, documentId);
 
-            Defer(new PutAttachmentCommandData(documentId, name, stream, contentType, changeVector: null, retireAt: retireAt));
+            Defer(new PutAttachmentCommandData(documentId, name, stream, contentType, changeVector: null, retireParameters));
         }
 
         public void Store(object entity, string name, Stream stream, string contentType = null)
@@ -86,7 +86,7 @@ namespace Raven.Client.Documents.Session
 
         public void Store(string documentId, StoreAttachmentParameters parameters)
         {
-            Store(documentId, parameters.Name, parameters.Stream, parameters.ContentType, parameters.RetireAt);
+            Store(documentId, parameters.Name, parameters.Stream, parameters.ContentType, parameters.RetireParameters);
         }
 
         protected void ThrowEntityNotInSessionOrMissingId(object entity)

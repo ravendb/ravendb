@@ -1013,7 +1013,7 @@ namespace Raven.Client.Documents.BulkInsert
 
             public async Task StoreAsync(string id, string name, Stream stream, string contentType = null, CancellationToken token = default)
             {
-                PutAttachmentCommandHelper.TryValidateStream(AttachmentFlags.None, stream);
+                PutAttachmentCommandHelper.TryValidateStream(stream, parameters: null);
 
                 using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(token, _token);
                 using (await _operation.ConcurrencyCheckAsync().ConfigureAwait(false))

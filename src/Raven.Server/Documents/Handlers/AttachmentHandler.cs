@@ -15,7 +15,6 @@ using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using static Raven.Server.Documents.AttachmentsStorage;
 
 namespace Raven.Server.Documents.Handlers
 {
@@ -123,10 +122,17 @@ namespace Raven.Server.Documents.Handlers
             public Stream Stream;
             public string Hash;
             public DateTime? RetireAt;
+            public string RetireIdentifier;
 
             protected override long ExecuteCmd(DocumentsOperationContext context)
             {
-                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, flags: AttachmentFlags.None, Stream.Length, RetireAt, ExpectedChangeVector, Stream);
+                RetireAttachmentParameters retireParameters = null;
+                if (RetireAt.HasValue)
+                {
+                    retireParameters = new RetireAttachmentParameters(RetireIdentifier, RetireAt.Value) {  Flags = AttachmentFlags.None };
+                }
+
+                Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, Stream.Length, retireParameters, ExpectedChangeVector, Stream);
                 return 1;
             }
 
@@ -140,7 +146,8 @@ namespace Raven.Server.Documents.Handlers
                     ContentType = ContentType,
                     Stream = Stream,
                     Hash = Hash,
-                    RetireAt = RetireAt
+                    RetireAt = RetireAt,
+                    RetireIdentifier = RetireIdentifier
                 };
             }
         }
@@ -179,7 +186,7 @@ namespace Raven.Server.Documents.Handlers
         public Stream Stream;
         public string Hash;
         public DateTime? RetireAt;
-
+        public string RetireIdentifier;
         public AttachmentHandler.MergedPutAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new AttachmentHandler.MergedPutAttachmentCommand
@@ -191,7 +198,8 @@ namespace Raven.Server.Documents.Handlers
                 Stream = Stream,
                 Hash = Hash,
                 Database = database,
-                RetireAt = RetireAt
+                RetireAt = RetireAt,
+                RetireIdentifier = RetireIdentifier
             };
         }
     }

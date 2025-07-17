@@ -862,10 +862,7 @@ namespace Voron.Recovery
 
             // retired attachment
             writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentName.Flags));
-            writer.WriteInteger(0);
-            writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentName.RetireAt));
+            writer.WritePropertyName(nameof(IStoreAttachmentParameters.RetireParameters));
             writer.WriteNull();
         }
 

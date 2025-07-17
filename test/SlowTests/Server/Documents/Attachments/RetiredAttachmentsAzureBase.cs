@@ -38,19 +38,33 @@ public abstract class RetiredAttachmentsAzureBase : RetiredAttachmentsHolder<Azu
         });
     }
 
-    public override async Task PutRetireAttachmentsConfiguration(IDocumentStore store, AzureSettings settings, List<string> collections = null, string database = null)
+    public override async Task<string> PutRetireAttachmentsConfiguration(IDocumentStore store, AzureSettings settings, List<string> collections = null, string database = null)
     {
         if (collections == null)
             collections = new List<string> { "Orders" };
         if (string.IsNullOrEmpty(database))
             database = store.Database;
 
+        var id = "conf-identifier-azure";
         var config = new RetiredAttachmentsConfiguration()
         {
-            AzureSettings = settings, Disabled = false, RetireFrequencyInSec = 1000
+            Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>
+            {
+                {
+                    id, new RetiredAttachmentsDestinationConfiguration()
+                    {
+                        AzureSettings = settings,
+                        Disabled = false,
+                        Identifier = id
+                    }
+                }
+            },
+            RetireFrequencyInSec = 1000
         };
         ModifyRetiredAttachmentsConfig?.Invoke(config);
         await store.Maintenance.ForDatabase(database).SendAsync(new ConfigureRetiredAttachmentsOperation(config));
+
+        return id;
     }
 
     protected override async Task<List<FileInfoDetails>> GetBlobsFromCloudAndAssertForCount(AzureSettings settings, int expected, int timeout = 120_000)

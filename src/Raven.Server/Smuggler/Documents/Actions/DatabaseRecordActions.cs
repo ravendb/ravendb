@@ -399,7 +399,7 @@ public sealed class DatabaseRecordActions : IDatabaseRecordActions
         if (databaseRecord.RetiredAttachments != null && databaseRecordItemType.HasFlag(DatabaseRecordItemType.RetireAttachments))
         {
             if (_log.IsInfoEnabled)
-                _log.Info($"Configuring Retire Attachments from smuggler");
+                _log.Info("Configuring Retire Attachments from smuggler");
 
             tasks.Add(_server.SendToLeaderAsync(new EditRetireAttachmentsCommand(databaseRecord.RetiredAttachments, _name, RaftIdGenerator.DontCareId)));
             result.DatabaseRecord.RetireAttachmentsConfigurationUpdated = true;

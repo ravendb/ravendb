@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -12,18 +12,18 @@ namespace Raven.Client.Documents.Commands.Batches
     {
         [Obsolete("This constructor is deprecated and will be removed in next RavenDB major version, use the overload with retireAt instead")]
         public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector)
-            : this(documentId, name, stream, contentType, changeVector, retireAt: null, size: null, flags: AttachmentFlags.None, hash: null, fromEtl: false)
+            : this(documentId, name, stream, contentType, changeVector, size: null, retireAttachmentParameters: null, hash: null, fromEtl: false)
         {
             SizeInBytes = stream.Length;
         }
 
-        public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, DateTime? retireAt) 
-            : this(documentId, name, stream, contentType, changeVector, retireAt, size: null, flags: AttachmentFlags.None, hash: null, fromEtl: false)
+        public PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, RetireAttachmentParameters retireAttachmentParameters) 
+            : this(documentId, name, stream, contentType, changeVector, size: null, retireAttachmentParameters: retireAttachmentParameters, hash: null, fromEtl: false)
         {
             SizeInBytes = stream.Length;
         }
 
-        internal PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, DateTime? retireAt, long? size, AttachmentFlags flags, string hash, bool fromEtl)
+        internal PutAttachmentCommandData(string documentId, string name, Stream stream, string contentType, string changeVector, long? size, RetireAttachmentParameters retireAttachmentParameters, string hash, bool fromEtl)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
@@ -36,14 +36,13 @@ namespace Raven.Client.Documents.Commands.Batches
             ContentType = contentType;
             ChangeVector = changeVector;
             FromEtl = fromEtl;
-            RetireAt = retireAt;
-            Flags = flags;
+            RetireParameters = retireAttachmentParameters;
             Hash = hash;
 
             if (size != null)
                 SizeInBytes = size.Value;
 
-            PutAttachmentCommandHelper.TryValidateStream(flags, stream);
+            PutAttachmentCommandHelper.TryValidateStream(stream, RetireParameters);
         }
 
         public string Id { get; }
@@ -53,9 +52,8 @@ namespace Raven.Client.Documents.Commands.Batches
         public string ContentType { get; }
         public CommandType Type { get; } = CommandType.AttachmentPUT;
         internal bool FromEtl { get; }
-        public DateTime? RetireAt { get; }
+        public RetireAttachmentParameters RetireParameters { get; }
         public long SizeInBytes { get; }
-        internal AttachmentFlags Flags { get; }
         public string Hash { get; }
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
@@ -68,9 +66,8 @@ namespace Raven.Client.Documents.Commands.Batches
                 [nameof(ChangeVector)] = ChangeVector,
                 [nameof(Type)] = Type.ToString(),
                 [nameof(FromEtl)] = FromEtl,
-                [nameof(RetireAt)] = RetireAt,
+                [nameof(RetireParameters)] = RetireParameters?.ToJson(),
                 [nameof(SizeInBytes)] = SizeInBytes,
-                [nameof(Flags)] = Flags.ToString(),
                 [nameof(Hash)] = Hash
 
             };

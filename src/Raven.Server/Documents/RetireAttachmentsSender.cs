@@ -38,6 +38,7 @@ namespace Raven.Server.Documents
         private  UploaderSettings _uploaderSettings;
         private readonly OperationCancelToken _token;
         private RetireAttachmentsStatsScope _uploadScope;
+        private bool _allHalted =>  Configuration == null || Configuration.Destinations.Count == 0 || Configuration.Destinations.All(x => x.Value.Disabled == true);
 
         public RetiredAttachmentsConfiguration Configuration { get; }
 
@@ -51,15 +52,16 @@ namespace Raven.Server.Documents
 
         protected override Task DoWork()
         {
-            if (Configuration == null || Configuration.Disabled)
+            if (_allHalted)
                 return Task.CompletedTask;
 
+            //TODO: egor now I got multiple uploaders :) need to handle that and not use first :)
             _uploaderSettings = UploaderSettings.GenerateDirectUploaderSetting(_database, nameof(RetireAttachmentsSender),
-                Configuration.S3Settings, Configuration.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null, ConcurrentThreadsNumber);
+                Configuration.Destinations.First().Value.S3Settings, Configuration.Destinations.First().Value.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null, ConcurrentThreadsNumber);
 
             var t = Task.Run(async () =>
             {
-                while (Configuration.Disabled == false)
+                while (_allHalted == false)
                 {
                     await WaitOrThrowOperationCanceled(_retirePeriod);
                     await RetireAttachments(BatchSize, Configuration.MaxItemsToProcess ?? ExpiredDocumentsCleaner.DefaultMaxItemsToProcessInSingleRun);

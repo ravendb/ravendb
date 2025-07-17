@@ -67,7 +67,40 @@ namespace Raven.Client.Documents.Operations.Attachments
         /// <summary>
         /// The date to upload the attachment to cloud.
         /// </summary>
-        DateTime? RetireAt { get; set; }
+        RetireAttachmentParameters RetireParameters { get; set; }
+    }
+
+    public class RetireAttachmentParameters : IDynamicJson
+    {
+        public RetireAttachmentParameters()
+        {
+            // Parameterless constructor for serialization
+        }
+
+        public RetireAttachmentParameters(string identifier, DateTime at)
+        {
+            if (string.IsNullOrWhiteSpace(identifier))
+                throw new ArgumentNullException(nameof(identifier), "Attachment identifier cannot be null or whitespace.");
+            if (at == default)
+                throw new ArgumentException("Attachment retirement date cannot be default value.", nameof(at));
+            Identifier = identifier;
+            At = at;
+        }
+
+        public DateTime At { get; set; }
+        public string Identifier { get; set; }
+        public AttachmentFlags Flags { get; set; }
+
+        public DynamicJsonValue ToJson()
+        {
+            var json = new DynamicJsonValue
+            {
+                [nameof(At)] = At,
+                [nameof(Identifier)] = Identifier,
+                [nameof(Flags)] = Flags.ToString()
+            };
+            return json;
+        }
     }
 
     /// <summary>
@@ -87,7 +120,7 @@ namespace Raven.Client.Documents.Operations.Attachments
         public string ContentType { get; set; }
 
         /// <inheritdoc />
-        public DateTime? RetireAt { get; set; }
+        public RetireAttachmentParameters RetireParameters { get; set; }
 
         public StoreAttachmentParameters(string name, Stream stream)
         {
@@ -134,8 +167,8 @@ namespace Raven.Client.Documents.Operations.Attachments
         /// The size of the attachment in bytes.
         /// </summary>
         public long Size;
-        public AttachmentFlags Flags;
-        public DateTime? RetireAt;
+
+        public RetireAttachmentParameters RetireParameters;
 
         internal virtual DynamicJsonValue ToJson()
         {
@@ -146,8 +179,10 @@ namespace Raven.Client.Documents.Operations.Attachments
                 [nameof(ContentType)] = ContentType,
                 [nameof(Size)] = Size
             };
-            json[nameof(Flags)] = Flags.ToString();
-            json[nameof(RetireAt)] = RetireAt;
+
+            if (RetireParameters != null)
+                json[nameof(RetireParameters)] = RetireParameters.ToJson();
+
             return json;
         }
     }
@@ -191,8 +226,5 @@ namespace Raven.Client.Documents.Operations.Attachments
         /// Gets the ID of the document associated with the attachment.
         /// </summary>
         public string DocumentId { get; }
-
-
-        internal AttachmentFlags Flags;
     }
 }

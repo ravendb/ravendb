@@ -50,7 +50,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                             continue;
 
                         IBulkPostAttachmentStrategy strategy;
-                        if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+                        if (attachment.IsRetired())
                         {
                             strategy = new RetiredBulkPostAttachmentStrategyProcessor(RequestHandler);
                             downloader ??= strategy.GetAttachmentsDownloader(tcs);

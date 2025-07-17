@@ -70,13 +70,13 @@ public abstract class RetiredAttachmentsHolderBase : ReplicationTestBase
         Assert.Equal(collections.Count, ids.GroupBy(x => x.Item2).Count());
     }
 
-    public static async Task GetAndCompareRetiredAttachment(IDocumentStore store, string id, string attachmentName, string hash, string contentType, MemoryStream stream, int streamSize, AttachmentFlags flags = AttachmentFlags.Retired)
+    public static async Task GetAndCompareRetiredAttachment(IDocumentStore store, string id, string attachmentName, string hash, string contentType, MemoryStream stream, int streamSize, string identifier, AttachmentFlags flags = AttachmentFlags.Retired)
     {
         var retired = await store.Operations.SendAsync(new GetAttachmentOperation(id, attachmentName, AttachmentType.Document, null));
-        await CompareAttachment(attachmentName, hash, contentType, stream, streamSize, flags, retired.Details, retired.Stream);
+        await CompareAttachment(attachmentName, hash, contentType, stream, streamSize, identifier, flags, retired.Details, retired.Stream);
     }
 
-    internal static async Task CompareAttachment(string attachmentName, string hash, string contentType, MemoryStream stream, long streamSize, AttachmentFlags flags,
+    internal static async Task CompareAttachment(string attachmentName, string hash, string contentType, MemoryStream stream, long streamSize, string identifier, AttachmentFlags flags,
         AttachmentDetails retired, Stream stream1)
     {
         Assert.NotNull(retired);
@@ -84,8 +84,20 @@ public abstract class RetiredAttachmentsHolderBase : ReplicationTestBase
         Assert.Equal(contentType, retired.ContentType);
         Assert.Equal(attachmentName, retired.Name);
         Assert.Equal(streamSize, retired.Size);
-        Assert.Equal(flags, retired.Flags);
-        Assert.NotNull(retired.RetireAt);
+
+        if (flags == AttachmentFlags.None)
+        {
+            //TODO: egor this will change after we drop unwrapped attachments
+            Assert.True(retired.RetireParameters == null || retired.RetireParameters.Flags == AttachmentFlags.None);
+        }
+        else
+        {
+            Assert.NotNull(retired.RetireParameters);
+            Assert.Equal(flags, retired.RetireParameters.Flags);
+            Assert.NotNull(retired.RetireParameters.At);
+            Assert.Equal(identifier, retired.RetireParameters.Identifier);
+        }
+
         using var retiredStream = new MemoryStream();
         await stream1.CopyToAsync(retiredStream);
         stream.Position = 0;

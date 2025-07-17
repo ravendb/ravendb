@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -1680,9 +1679,10 @@ namespace Raven.Server.Smuggler.Documents
                 ["Hash"] = details.Hash,
                 ["ContentType"] = string.Empty,
                 ["Size"] = details.Size,
-                [nameof(AttachmentName.Flags)] = AttachmentFlags.None,
-                [nameof(AttachmentName.RetireAt)] = null,
+                [nameof(IStoreAttachmentParameters.RetireParameters)] = null
+
             };
+
             var attachments = new DynamicJsonArray();
             attachments.Add(attachment);
             var metadata = new DynamicJsonValue
@@ -1872,31 +1872,15 @@ namespace Raven.Server.Smuggler.Documents
                             }
                         }
 
-                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false)
-                        {
-                            flags |= AttachmentFlags.None;
-                            if (attachmentInMetadata.Modifications == null)
-                            {
-                                attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata)
-                                {
-                                    [nameof(AttachmentName.Flags)] = flags.ToString()
-                                };
-                            }
-                            else
-                            {
-                                attachmentInMetadata.Modifications[nameof(AttachmentName.Flags)] = flags.ToString();
-                            }
-                        }
-
-                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.RetireAt), out DateTime? _) == false)
+                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParameters) == false)
                         {
                             if (attachmentInMetadata.Modifications == null)
                             {
-                                attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata) { [nameof(AttachmentName.RetireAt)] = null };
+                                attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata) { [nameof(AttachmentName.RetireParameters)] = null };
                             }
                             else
                             {
-                                attachmentInMetadata.Modifications[nameof(AttachmentName.RetireAt)] = null;
+                                attachmentInMetadata.Modifications[nameof(AttachmentName.RetireParameters)] = null;
                             }
                         }
 

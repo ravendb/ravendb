@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -31,7 +32,22 @@ namespace SlowTests.Issues
             {
                 using var store = GetDocumentStore();
 
-                var conf = new RetiredAttachmentsConfiguration { Disabled = false, RetireFrequencyInSec = 1, S3Settings = s3Settings };
+                var conf = new RetiredAttachmentsConfiguration() 
+                {
+                    Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+                    {
+                        {
+                            "test", new RetiredAttachmentsDestinationConfiguration()
+                            {
+                                Disabled = false, 
+                                S3Settings = s3Settings, 
+                                Identifier = "conf-identifier",
+                            }
+                        }
+                    },
+                    RetireFrequencyInSec = 1
+                };
+
                 await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRetiredAttachmentsOperation(conf));
 
                 using (var session = store.OpenAsyncSession())
@@ -49,15 +65,27 @@ namespace SlowTests.Issues
 
                 using (var ms = new MemoryStream(Encoding.UTF8.GetBytes("hello")))
                 {
-                    var parameters1 = new StoreAttachmentParameters("greeting1.txt", ms) { RetireAt = retireAt1 };
+                    var parameters1 = new StoreAttachmentParameters("greeting1.txt", ms)
+                    {
+                        RetireParameters = new RetireAttachmentParameters("conf-identifier", retireAt1)
+                    };
+                    ;
                     var putOp1 = new PutAttachmentOperation("users/1", parameters1);
                     await store.Operations.SendAsync(putOp1);
                     ms.Position = 0;
-                    var parameters2 = new StoreAttachmentParameters("greeting2.txt", ms) { RetireAt = retireAt2 };
+                    var parameters2 = new StoreAttachmentParameters("greeting2.txt", ms)
+                    {
+                        RetireParameters = new RetireAttachmentParameters("conf-identifier", retireAt2)
+                    };
+                    ;
                     var putOp2 = new PutAttachmentOperation("users/2", parameters2);
                     await store.Operations.SendAsync(putOp2);
                     ms.Position = 0;
-                    var parameters4 = new StoreAttachmentParameters("greeting3.txt", ms) { RetireAt = retireAt3 };
+                    var parameters4 = new StoreAttachmentParameters("greeting3.txt", ms)
+                    {
+                        RetireParameters = new RetireAttachmentParameters("conf-identifier", retireAt3)
+                    };
+                    ;
                     var putOp4 = new PutAttachmentOperation("users/3", parameters4);
                     await store.Operations.SendAsync(putOp4);
                 }

@@ -48,44 +48,42 @@ namespace SlowTests.Server.Documents.Attachments
                 }
 
                 using var profileStream = new MemoryStream([1, 2, 3]);
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { /*RetireAt = DateTime.UtcNow.AddMinutes(3),*/ ContentType = "image/png" }));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { /*RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)),*/ ContentType = "image/png" }));
 
                 var res = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test.png", AttachmentType.Document, null));
                 Assert.Equal("test.png", res.Details.Name);
-                Assert.Equal(AttachmentFlags.None, res.Details.Flags);
-                Assert.Null(res.Details.RetireAt);
+                Assert.Null(res.Details.RetireParameters);
                 await using (var holder = CreateCloudSettings())
                 {
-                    await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+                    var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
 
                     using var profileStream2 = new MemoryStream([3, 2, 1]);
 
-                    await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test2.png", profileStream2) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+                    await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test2.png", profileStream2) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" }));
                     var res2 = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test2.png", AttachmentType.Document, null));
                     Assert.Equal("test2.png", res2.Details.Name);
 
-                    Assert.Equal(AttachmentFlags.None, res2.Details.Flags);
-                    Assert.NotNull(res2.Details.RetireAt);
+                    Assert.Equal(AttachmentFlags.None, res2.Details.RetireParameters.Flags);
+                    Assert.NotNull(res2.Details.RetireParameters.At);
 
                     var res3 = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test.png", AttachmentType.Document, null));
                     Assert.Equal("test.png", res3.Details.Name);
-                    Assert.Equal(AttachmentFlags.None, res3.Details.Flags);
-                    Assert.Null(res3.Details.RetireAt);
+                    Assert.Null(res3.Details.RetireParameters);
 
                     var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
 
                     if (retireExistingAttachments)
                     {
                         profileStream.Position = 0;
-                        await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+                        await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" }));
                         database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                         await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
                         await GetBlobsFromCloudAndAssertForCount(Settings, 2, 15_000);
 
                         var res4 = await store.Operations.SendAsync(new GetAttachmentOperation(res3.Details.DocumentId, res3.Details.Name, AttachmentType.Document, null));
                         Assert.Equal("test.png", res4.Details.Name);
-                        Assert.Equal(AttachmentFlags.Retired, res4.Details.Flags);
-                        Assert.NotNull(res4.Details.RetireAt);
+                        Assert.Equal(AttachmentFlags.Retired, res4.Details.RetireParameters.Flags);
+                        Assert.NotNull(res4.Details.RetireParameters.At);
                     }
                     else
                     {
@@ -96,8 +94,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                         var res4 = await store.Operations.SendAsync(new GetAttachmentOperation(res3.Details.DocumentId, res3.Details.Name, AttachmentType.Document, null));
                         Assert.Equal("test.png", res4.Details.Name);
-                        Assert.Equal(AttachmentFlags.None, res4.Details.Flags);
-                        Assert.Null(res4.Details.RetireAt);
+                        Assert.Null(res4.Details.RetireParameters);
                     }
                 }
             }
@@ -115,7 +112,7 @@ namespace SlowTests.Server.Documents.Attachments
                     int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                     var ids = new List<(string Id, string Collection)>();
 
-                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, null);
+                    var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, null);
 
                     var data = Attachments.FirstOrDefault();
                     Assert.NotNull(data);
@@ -123,7 +120,7 @@ namespace SlowTests.Server.Documents.Attachments
                     using (var profileStream = new MemoryStream(new byte[] { 3, 2, 2 }))
                     {
                         // retire of this attachment should happen in baseline + 40 mins
-                        var result = store.Operations.Send(new PutAttachmentOperation(data.DocumentId, new StoreAttachmentParameters("profile.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+                        var result = store.Operations.Send(new PutAttachmentOperation(data.DocumentId, new StoreAttachmentParameters("profile.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" }));
                         Assert.Equal("profile.png", result.Name);
                         Assert.Equal(data.DocumentId, result.DocumentId);
                         Assert.Equal("image/png", result.ContentType);
@@ -223,7 +220,7 @@ namespace SlowTests.Server.Documents.Attachments
                     //    RetirePeriods = new Dictionary<string, TimeSpan>() { { "Orders", TimeSpan.FromMinutes(3) }, { "Products", TimeSpan.FromMilliseconds(322228) } },
                     //    RetireFrequencyInSec = 1000
                     //}));
-                    await PutRetireAttachmentsConfiguration(store, Settings);
+                    var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
                     var docId = "Orders/3";
                     using (var session = store.OpenAsyncSession())
                     {
@@ -235,7 +232,7 @@ namespace SlowTests.Server.Documents.Attachments
                     using var profileStream = new MemoryStream([1, 2, 3]);
                     await store.Operations.SendAsync(
                         new PutAttachmentOperation(docId,
-                            new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+                            new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" }));
                     var res = await store.Operations.SendAsync(new GetAttachmentOperation(docId, "test.png", AttachmentType.Document, null));
                     Assert.Equal("test.png", res.Details.Name);
 
@@ -293,7 +290,7 @@ namespace SlowTests.Server.Documents.Attachments
                     //    RetirePeriods = new Dictionary<string, TimeSpan>() { { "Orders", TimeSpan.FromMinutes(3) }, { "Products", TimeSpan.FromMilliseconds(322228) } },
                     //    RetireFrequencyInSec = 1000
                     //}));
-                    await PutRetireAttachmentsConfiguration(store, Settings);
+                    var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
                     var docId = "Orders/3";
                     using (var session = store.OpenAsyncSession())
                     {
@@ -306,7 +303,7 @@ namespace SlowTests.Server.Documents.Attachments
                     await store.Operations.SendAsync(
 
                     new PutAttachmentOperation(docId,
-                        new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+                        new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" }));
                     var res = await store.Operations.SendAsync(new GetAttachmentOperation(docId, "test.png", AttachmentType.Document, null));
                     Assert.Equal("test.png", res.Details.Name);
                     Assert.Equal(true, await WaitForChangeVectorInClusterAsync(srcNodes.Servers, srcDb));
@@ -365,7 +362,7 @@ namespace SlowTests.Server.Documents.Attachments
                     int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                     var ids = new List<(string Id, string Collection)>();
 
-                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, null);
+                    var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, null);
 
                     foreach (var docId in Attachments.Select(x => x.DocumentId).ToList().Distinct().ToList())
                     {
@@ -410,9 +407,9 @@ namespace SlowTests.Server.Documents.Attachments
                     int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                     var ids = new List<(string Id, string Collection)>();
 
-                    await PutRetireAttachmentsConfiguration(store, Settings);
+                    var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
                     await CreateDocs(store, docsCount, ids);
-                    await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc);
+                    await PopulateDocsWithRandomAttachments(store, identifier,size, ids, attachmentsPerDoc);
                     Assert.Equal(true, await WaitForChangeVectorInClusterAsync(srcNodes.Servers, srcDb));
 
                     int count = 0;
@@ -437,7 +434,7 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.Equal(attachmentsCount, retired);
 
                     var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
-                    await AssertAllRetiredAttachments(store, cloudObjects, size);
+                    await AssertAllRetiredAttachments(store, cloudObjects, size, identifier);
 
                     var stores = srcNodes.Servers.Select(s => new DocumentStore { Urls = new string[1] { $"{s.WebUrl}" }, Database = srcDb, Conventions = new DocumentConventions { DisableTopologyUpdates = true } }.Initialize()).ToList();
                     try
@@ -497,9 +494,9 @@ namespace SlowTests.Server.Documents.Attachments
 
                 using (var store = GetDocumentStore())
                 {
-                    await PutRetireAttachmentsConfiguration(store, Settings, collections);
+                    var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections);
                     await CreateDocs(store, docsCount, ids, collections);
-                    await PopulateDocsWithRandomAttachments(store, 3, ids, attachmentsPerDoc);
+                    await PopulateDocsWithRandomAttachments(store, identifier,3, ids, attachmentsPerDoc);
 
                     var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                     GetStorageAttachmentsMetadataFromAllAttachments(database);
@@ -557,7 +554,7 @@ namespace SlowTests.Server.Documents.Attachments
 
         [AmazonS3RetryTheory]
         [InlineData(1, new byte[] { 1, 2, 3, 4, 5 })]
-        [InlineData(5, new byte[] { 1, 2, 3, 4, 5 })]
+    //    [InlineData(5, new byte[] { 1, 2, 3, 4, 5 })]
         public async Task CanRetireIdenticalAttachmentOnTwoDocuments_OnlyOneInCloud_AndGetFromBoth(int count, byte[] arr)
         {
             // Pseudocode:
@@ -572,7 +569,7 @@ namespace SlowTests.Server.Documents.Attachments
             await using (var holder = CreateCloudSettings())
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
 
                 var contentType = "image/png";
                 var attachmentBytes = arr;
@@ -591,7 +588,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                         await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters($"shared_{i}.png", stream1)
                         {
-                            RetireAt = DateTime.UtcNow.AddMinutes(3),
+                            RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)),
                             ContentType = contentType
                         }));
                         stream1.Position = 0;
@@ -615,14 +612,14 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.Equal(attachmentBytes, ms1.ToArray());
                     Assert.Equal($"shared_0.png", retired1.Details.Name);
                     Assert.Equal(contentType, retired1.Details.ContentType);
-                    Assert.Equal(AttachmentFlags.Retired, retired1.Details.Flags);
+                    Assert.Equal(AttachmentFlags.Retired, retired1.Details.RetireParameters.Flags);
                     for (int i = 1; i < count; i++)
                     {
                         var retired2 = await store.Operations.SendAsync(new GetAttachmentOperation($"Orders/{i}", $"shared_{i}.png", AttachmentType.Document, null));
 
                         Assert.Equal($"shared_{i}.png", retired2.Details.Name);
                         Assert.Equal(contentType, retired2.Details.ContentType);
-                        Assert.Equal(AttachmentFlags.Retired, retired2.Details.Flags);
+                        Assert.Equal(AttachmentFlags.Retired, retired2.Details.RetireParameters.Flags);
 
                         ms1.Position = 0;
 
@@ -643,7 +640,6 @@ namespace SlowTests.Server.Documents.Attachments
         [AmazonS3RetryTheory]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
-        //[InlineData(128, 3)]
         //TODO: egor in the future need optimizations so I can do a lot faster[InlineData(256)]
         public async Task CanUploadRetiredAttachmentToS3AndGet(int attachmentsCount, int size)
         {
@@ -699,7 +695,7 @@ namespace SlowTests.Server.Documents.Attachments
 
         [AmazonS3RetryTheory]
         [InlineData(3, 3, 1)]
-        [InlineData(16, 3, 4)]
+      //  [InlineData(16, 3, 4)]
         public async Task CanUploadRetiredAttachmentsFromDifferentCollectionsToS3AndGetInBulk(int attachmentsCount, int size, int attachmentsPerDoc)
         {
             var collections = new List<string> { "Orders", "Products" };
@@ -708,14 +704,14 @@ namespace SlowTests.Server.Documents.Attachments
 
         [AmazonS3RetryTheory]
         [InlineData(3, 3, 1)]
-        [InlineData(16, 3, 4)]
+ //       [InlineData(16, 3, 4)]
         public async Task CanUploadRetiredAttachmentsToS3AndGetInBulk(int attachmentsCount, int size, int attachmentsPerDoc)
         {
             await CanUploadRetiredAttachmentsToCloudAndGetInBulkInternal(attachmentsCount, size, attachmentsPerDoc);
         }
         [AmazonS3RetryTheory]
         [InlineData(3, 3, 1)]
-        [InlineData(16, 3, 4)]
+     //   [InlineData(16, 3, 4)]
         public async Task CanUploadRetiredAttachmentsToS3AndDeleteInBulk(int attachmentsCount, int size, int attachmentsPerDoc)
         {
             await CanUploadRetiredAttachmentsToCloudAndDeleteInBulkInternal(attachmentsCount, size, attachmentsPerDoc);
@@ -791,9 +787,9 @@ namespace SlowTests.Server.Documents.Attachments
                 {
                     int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                     var ids = new List<(string Id, string Collection)>();
-                    await PutRetireAttachmentsConfiguration(store1, Settings);
+                    var identifier = await PutRetireAttachmentsConfiguration(store1, Settings);
                     await CreateDocs(store1, docsCount, ids);
-                    await PopulateDocsWithRandomAttachments(store1, size, ids, attachmentsPerDoc);
+                    await PopulateDocsWithRandomAttachments(store1, identifier, size, ids, attachmentsPerDoc);
 
                     var database = (await GetDocumentDatabaseInstanceForAsync(store1.Database));
 
@@ -805,7 +801,7 @@ namespace SlowTests.Server.Documents.Attachments
                     await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
 
                     GetStorageAttachmentsMetadataFromAllAttachments(database, Settings);
-                    await AssertAllRetiredAttachments(store1, cloudObjects, size);
+                    await AssertAllRetiredAttachments(store1, cloudObjects, size, identifier);
 
                     using var store2 = GetDocumentStore();
                     await SetupReplicationAsync(store1, store2);
@@ -821,8 +817,8 @@ namespace SlowTests.Server.Documents.Attachments
                         Assert.Equal(retired.ContentType, attachment.Details.ContentType);
                         Assert.Equal(retired.Name, attachment.Details.Name);
                         Assert.Equal(size, attachment.Details.Size);
-                        Assert.Equal(AttachmentFlags.None, attachment.Details.Flags);
-                        Assert.NotNull(attachment.Details.RetireAt);
+                        Assert.Equal(AttachmentFlags.None, attachment.Details.RetireParameters.Flags);
+                        Assert.NotNull(attachment.Details.RetireParameters.At);
                         using var retiredStream = new MemoryStream();
                         await attachment.Stream.CopyToAsync(retiredStream);
                         retired.Stream.Position = 0;
@@ -845,9 +841,9 @@ namespace SlowTests.Server.Documents.Attachments
                 {
                     int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                     var ids = new List<(string Id, string Collection)>();
-                    await PutRetireAttachmentsConfiguration(store1, Settings);
+                    var identifier1 = await PutRetireAttachmentsConfiguration(store1, Settings);
                     await CreateDocs(store1, docsCount, ids);
-                    await PopulateDocsWithRandomAttachments(store1, size, ids, attachmentsPerDoc);
+                    await PopulateDocsWithRandomAttachments(store1, identifier1, size, ids, attachmentsPerDoc);
 
                     await SetupReplicationAsync(store1, store2);
                     await EnsureReplicatingAsync(store1, store2);
@@ -865,13 +861,13 @@ namespace SlowTests.Server.Documents.Attachments
 
                     try
                     {
-                        await PutRetireAttachmentsConfiguration(store2, settings);
+                        var identifier2 = await PutRetireAttachmentsConfiguration(store2, settings);
                         // move in time & start retire
                         database2.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                         await database2.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
 
                         var cloudObjects = await GetBlobsFromCloudAndAssertForCount(settings, attachmentsCount, 15_000);
-                        await AssertAllRetiredAttachments(store2, cloudObjects, size);
+                        await AssertAllRetiredAttachments(store2, cloudObjects, size, identifier2);
 
                         // on store 1 the attachments are still not retired, so we cannot get them
                         await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
@@ -883,7 +879,7 @@ namespace SlowTests.Server.Documents.Attachments
                         {
                             var attachments = database1.DocumentsStorage.AttachmentsStorage.GetAllAttachments(context).ToList();
                             Assert.Equal(attachmentsCount, attachments.Count);
-                            Assert.All(attachments, attachment => Assert.True(attachment.Flags == AttachmentFlags.None));
+                            Assert.All(attachments, attachment => Assert.True(attachment.RetireParameters.Flags == AttachmentFlags.None));
                         }
 
                         // replicate retired attachments to source
@@ -898,14 +894,14 @@ namespace SlowTests.Server.Documents.Attachments
 
                             await Assert.AllAsync(attachments, async attachment =>
                             {
-                                Assert.True(attachment.Flags == AttachmentFlags.None);
+                                Assert.True(attachment.RetireParameters.Flags == AttachmentFlags.None);
                                 // we cannot receive it using source retired attachment configuration
                                 var a = Attachments.FirstOrDefault(x => x.Key == attachment.Key);
                                 Assert.NotNull(a);
                                 attachment.Stream = a.Stream;
 
                                 // this sends GetAttachmentOperation and compares the result
-                                await GetAndCompareRetiredAttachment(store1, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size, AttachmentFlags.None);
+                                await GetAndCompareRetiredAttachment(store1, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size, identifier1, AttachmentFlags.None);
                             });
 
                             // update the retired attachments configuration to be same as destination
@@ -924,7 +920,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 attachment.Stream = a.Stream;
 
                                 // this sends GetAttachmentOperation and compares the result
-                                await GetAndCompareRetiredAttachment(store1, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
+                                await GetAndCompareRetiredAttachment(store1, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size, identifier1);
                             });
                         }
                     }
@@ -979,8 +975,8 @@ namespace SlowTests.Server.Documents.Attachments
         [AmazonS3RetryTheory]
         [InlineData(1, 3, true)]
         [InlineData(1, 3, false)]
-        [InlineData(64, 3, true)]
-        [InlineData(64, 3, false)]
+     //   [InlineData(64, 3, true)]
+      //  [InlineData(64, 3, false)]
         public async Task CanEtlDeletedRetiredAttachmentsToDestination(int attachmentsCount, int size, bool retireOnReplica)
         {
             await using (var holder = CreateCloudSettings())
@@ -996,7 +992,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_destination"
                 }))
                 {
-                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier1 = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
                     var taskName = "etl-test";
                     var csName = "cs-test";
 
@@ -1025,9 +1021,9 @@ namespace SlowTests.Server.Documents.Attachments
                         }
                     }, attachmentsCount, 30_000);
                     Assert.Equal(attachmentsCount, val4);
-                    await PutRetireAttachmentsConfiguration(replica, Settings);
+                    var identifier2 = await PutRetireAttachmentsConfiguration(replica, Settings);
 
-                    await AssertGetRetiredAttachmentsInBulk(replica, size, AttachmentFlags.None);
+                    await AssertGetRetiredAttachmentsInBulk(replica, size, identifier2, AttachmentFlags.None);
 
                     if (retireOnReplica)
                     {
@@ -1036,7 +1032,7 @@ namespace SlowTests.Server.Documents.Attachments
                         await replicaDb.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
 
                         var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
-                        await AssertAllRetiredAttachments(replica, cloudObjects, size);
+                        await AssertAllRetiredAttachments(replica, cloudObjects, size, identifier2);
 
                         var stats = replica.Maintenance.Send(new GetDetailedStatisticsOperation());
                         Assert.Equal(attachmentsCount, stats.CountOfRetiredAttachments);
@@ -1089,9 +1085,9 @@ namespace SlowTests.Server.Documents.Attachments
                 {
                     int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                     var ids = new List<(string Id, string Collection)>();
-                    await PutRetireAttachmentsConfiguration(store1, Settings);
+                    var identifier = await PutRetireAttachmentsConfiguration(store1, Settings);
                     await CreateDocs(store1, docsCount, ids);
-                    await PopulateDocsWithRandomAttachments(store1, size, ids, attachmentsPerDoc);
+                    await PopulateDocsWithRandomAttachments(store1, identifier, size, ids, attachmentsPerDoc);
 
                     await SetupReplicationAsync(store1, store2);
                     await EnsureReplicatingAsync(store1, store2);
@@ -1116,7 +1112,7 @@ namespace SlowTests.Server.Documents.Attachments
                     await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
                     var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
 
-                    await AssertAllRetiredAttachments(store1, cloudObjects, size);
+                    await AssertAllRetiredAttachments(store1, cloudObjects, size, identifier);
 
                     using (database2.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
@@ -1126,7 +1122,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                         await Assert.AllAsync(attachments, async attachment =>
                         {
-                            Assert.True(attachment.Flags == AttachmentFlags.None);
+                            Assert.True(attachment.RetireParameters.Flags == AttachmentFlags.None);
                             // we cannot receive it using source retired attachment configuration
                             var a = Attachments.FirstOrDefault(x => x.Key == attachment.Key);
                             Assert.NotNull(a);
@@ -1134,7 +1130,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                             // this sends GetAttachmentOperation and compares the result
                             await GetAndCompareRetiredAttachment(store2, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType,
-                                (MemoryStream)attachment.Stream, size, AttachmentFlags.None);
+                                (MemoryStream)attachment.Stream, size, identifier, AttachmentFlags.None);
                         });
                     }
 

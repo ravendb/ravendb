@@ -35,10 +35,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                         if (attachment == null)
                             continue;
 
-                        attachmentRequests.Add(new AttachmentRequest(docId, name)
-                        {
-                            Flags = attachment.Flags,
-                        });
+                        attachmentRequests.Add(new AttachmentRequest(docId, name));
                     }
                 }
             }

@@ -1607,7 +1607,8 @@ namespace Raven.Server.Smuggler.Documents
                     }
 
                     progress.Attachments.ReadCount++;
-                    if (attachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false || flags == AttachmentFlags.None)
+                    if (attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParameters) == false || retireParameters == null 
+                        || (retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out AttachmentFlags flags) && flags == AttachmentFlags.None))
                     {
                         if (_attachmentStreamsAlreadyExported.Add(hash))
                         {

@@ -23,6 +23,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public long AttachmentSize;
         public AttachmentFlags Flags;
         public DateTime? RetireAtUtc;
+        public Slice RetireIdentifier;
 
         public override long Size => base.Size + // common
 
@@ -39,9 +40,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                                      Base64Hash.Size
 
                                      + sizeof(long)
-                                     + sizeof(int)
-                                     + (RetireAtUtc == null ? 0 : sizeof(long))
-                                     + sizeof(int);
+                                     + sizeof(int) // size of AttachmentSize
+                                     + (RetireAtUtc == null ? 0 : sizeof(long)) // size of RetireAtUtc
+                                     + sizeof(int) // size of Flags
+                                     + sizeof(int) + //  size of RetireIdentifier
+                                     +RetireIdentifier.Size;
 
         public long StreamSize => sizeof(byte) + // type
 
@@ -60,6 +63,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
             djv[nameof(Flags)] = Flags.ToString();
             djv[nameof(RetireAtUtc)] = RetireAtUtc;
+            djv[nameof(RetireIdentifier)] = RetireIdentifier.ToString();
             return djv;
         }
 
@@ -76,9 +80,20 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Stream = attachment.Stream,
                 TransactionMarker = attachment.TransactionMarker,
                 AttachmentSize = attachment.Size,
-                Flags = attachment.Flags,
-                RetireAtUtc = attachment.RetireAt,
             };
+
+            if (attachment.RetireParameters != null)
+            {
+                item.Flags = attachment.RetireParameters.Flags;
+                item.RetireAtUtc = attachment.RetireParameters.At;
+                item.ToDispose(Slice.From(context.Allocator, attachment.RetireParameters.Identifier, ByteStringType.Immutable, out item.RetireIdentifier));
+            }
+            else
+            {
+                item.Flags = AttachmentFlags.None;
+                item.RetireAtUtc = null;
+                item.RetireIdentifier = Slices.Empty;
+            }
 
             // although the key is LSV but is treated as slice and doesn't respect escaping
             item.ToDispose(Slice.From(context.Allocator, attachment.Key.Buffer, attachment.Key.Size, ByteStringType.Immutable, out item.Key));
@@ -131,6 +146,14 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 *(AttachmentFlags*)(pTemp + tempBufferPos) = Flags;
                 tempBufferPos += sizeof(AttachmentFlags);
 
+                *(int*)(pTemp + tempBufferPos) = RetireIdentifier.Size;
+                tempBufferPos += sizeof(int);
+                if (RetireIdentifier.Size != 0)
+                {
+                    Memory.Copy(pTemp + tempBufferPos, RetireIdentifier.Content.Ptr, RetireIdentifier.Size);
+                    tempBufferPos += RetireIdentifier.Size;
+                }
+
                 stream.Write(tempBuffer, 0, tempBufferPos);
                 stats.RecordAttachmentOutput(Size);
             }
@@ -155,7 +178,16 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                     RetireAtUtc = new DateTime(ticks, DateTimeKind.Utc);
 
                 Flags = *(AttachmentFlags*)Reader.ReadExactly(sizeof(AttachmentFlags)) | AttachmentFlags.None;
+                size = *(int*)Reader.ReadExactly(sizeof(int));
 
+                if (size == 0)
+                {
+                    RetireIdentifier = Slices.Empty;
+                }
+                else
+                {
+                    ToDispose(Slice.From(allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out RetireIdentifier));
+                }
 
                 stats.RecordAttachmentRead(Size);
             }
@@ -186,10 +218,13 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             item.AttachmentSize = AttachmentSize;
             item.RetireAtUtc = RetireAtUtc;
             item.Flags = Flags;
+            item.RetireIdentifier = RetireIdentifier.Clone(allocator);
+
             item.ToDispose(new DisposableAction(() =>
             {
                 item.Base64Hash.Release(allocator);
                 item.Key.Release(allocator);
+                item.RetireIdentifier.Release(allocator);
             }));
 
             return item;

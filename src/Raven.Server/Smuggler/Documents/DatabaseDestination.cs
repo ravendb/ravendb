@@ -13,6 +13,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Handlers;
@@ -846,17 +847,22 @@ namespace Raven.Server.Smuggler.Documents
                     if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                         attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
                         attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
-                        attachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false ||
                         attachment.TryGet(nameof(AttachmentName.Size), out long size) == false ||
-                        attachment.TryGet(nameof(AttachmentName.RetireAt), out DateTime? retireAt) == false) 
+                        attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject readerObject) == false) 
 
                         throw new ArgumentException($"The attachment info is missing a mandatory value: {attachment}");
 
+                    RetireAttachmentParameters retireParams = null;
+                    if (readerObject != null)
+                    {
+                        retireParams = JsonDeserializationClient.RetireAttachmentParameters(readerObject);
+                    }
+
                     if (isRevision == false)
                     {
-                        if (flags == AttachmentFlags.None && attachmentsStorage.AttachmentExists(context, hash) == false)
+                        if (retireParams == null && attachmentsStorage.AttachmentExists(context, hash) == false)
                             _documentIdsOfMissingAttachments.Add(document.Id);
-                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, flags, size, retireAt, updateDocument: false, fromSmuggler: true);
+                        attachmentsStorage.PutAttachment(context, document.Id, name, contentType, hash, size, retireParams, updateDocument: false, fromSmuggler: true);
                         continue;
                     }
 
@@ -868,7 +874,7 @@ namespace Raven.Server.Smuggler.Documents
                     using (AttachmentsStorage.AttachmentKey.GetKey(_context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                                base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
                     {
-                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, retireAt, flags, size, isRevision: true);
+                        attachmentsStorage.PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, retireParams, size, isRevision: true);
                     }
                 }
             }
@@ -1028,7 +1034,7 @@ namespace Raven.Server.Smuggler.Documents
                             metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                             continue;
 
-                        var attachmentsToRemoveNames = new HashSet<(LazyStringValue Name, AttachmentFlags Flags)>();
+                        var attachmentsToRemoveNames = new HashSet<(LazyStringValue Name, RetireAttachmentParameters RetireParameters)>();
                         var attachmentsToRemoveHashes = new HashSet<LazyStringValue>();
 
                         foreach (BlittableJsonReaderObject attachment in attachments)
@@ -1036,13 +1042,19 @@ namespace Raven.Server.Smuggler.Documents
                             if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                                 attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue _) == false ||
                                 attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
-                                attachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false)
+                                attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParametersBjro) == false)
                                 throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
 
                             var attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;
                             if (attachmentsStorage.AttachmentExists(context, hash) == false)
                             {
-                                attachmentsToRemoveNames.Add((name, flags));
+                                RetireAttachmentParameters retireParams = null;
+                                if (retireParametersBjro != null)
+                                {
+                                    retireParams = JsonDeserializationClient.RetireAttachmentParameters(retireParametersBjro);
+                                }
+
+                                attachmentsToRemoveNames.Add((name, retireParams));
                                 attachmentsToRemoveHashes.Add(hash);
                             }
                         }
@@ -1065,16 +1077,15 @@ namespace Raven.Server.Smuggler.Documents
 
                         foreach (var toRemove in attachmentsToRemoveNames)
                         {
-
-                            if (toRemove.Flags == AttachmentFlags.Retired)
+                            if (toRemove.RetireParameters == null || toRemove.RetireParameters.Flags == AttachmentFlags.None)
                             {
+                                //TODO: egor this method is same as below
                                 _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove.Name, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
                             }
                             else
                             {
                                 _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove.Name, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
                             }
-
                         }
 
                         metadata.Modifications = new DynamicJsonValue(metadata);

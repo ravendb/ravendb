@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Raven.Client;
@@ -37,7 +38,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
     public RetiredAttachmentsConfiguration Configuration;
 
-    public RetiredAttachmentsStorage(Transaction tx, DocumentDatabase database) : base(tx, database, AttachmentsByRetire, nameof(AttachmentName.RetireAt))
+    public RetiredAttachmentsStorage(Transaction tx, DocumentDatabase database) : base(tx, database, AttachmentsByRetire, nameof(AttachmentName.RetireParameters.At))
     {
         _logger = database.Loggers.GetLogger<RetiredAttachmentsStorage>();
     }
@@ -77,10 +78,12 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                     var attachmentInMetadata = (BlittableJsonReaderObject)attachments[i];
                     if (attachmentInMetadata.TryGet(nameof(AttachmentName.Name), out string name) == false)
                         continue;
+                    if (attachmentInMetadata.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParamsObject) == false)
+                        continue;
 
                     if (name == nameByKey)
                     {
-                        if (HasPassed(attachmentInMetadata, currentTime, MetadataPropertyName) == false)
+                        if (HasPassed(retireParamsObject, currentTime, MetadataPropertyName) == false)
                             return;
 
                         Database.DocumentsStorage.AttachmentsStorage.RetireAttachment(context, new AttachmentDetailsServer()
@@ -90,7 +93,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                         }, lowerId);
 
                         break;
-
                     }
                 }
             }
@@ -242,15 +244,15 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
         return (allExpired, collection);
     }
-
+    //TODO: egor now I got multiple uploaders :) need to handle that and not use first :)
     public DirectFileDownloader GetDownloader(OperationCancelToken tcs)
     {
         if (Configuration == null)
             throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetiredAttachmentsConfiguration)} is not configured on {Database.Name}.");
-        if (Configuration.Disabled)
+        if (Configuration.Destinations.First().Value.Disabled)
             throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetiredAttachmentsConfiguration)} is disabled.");
 
-        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(AttachmentHandlerProcessorForGetAttachment), Configuration.S3Settings, Configuration.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null, concurrentThreads: 8);
+        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(AttachmentHandlerProcessorForGetAttachment), Configuration.Destinations.First().Value.S3Settings, Configuration.Destinations.First().Value.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null, concurrentThreads: 8);
         return new DirectFileDownloader(settings, retentionPolicyParameters: null, _logger, FileUploaderBase.GenerateUploadResult(), progress => { }, tcs);
     }
 
@@ -289,7 +291,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             retireAttachmentsSender?.Dispose();
             Configuration = dbRecord.RetiredAttachments;
 
-            if (dbRecord.RetiredAttachments.Disabled)
+            if (dbRecord.RetiredAttachments.Destinations.All(x=> x.Value.Disabled))
                 return null;
 
             var cleaner = new RetireAttachmentsSender(Database, dbRecord.RetiredAttachments);

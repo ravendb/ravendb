@@ -30,7 +30,7 @@ internal class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHa
                 return;
             }
 
-            IGetAttachmentStrategy strategy = attachment.Flags.HasFlag(AttachmentFlags.Retired)
+            IGetAttachmentStrategy strategy = attachment.IsRetired()
                   ? new RetiredGetAttachmentStrategyProcessor(RequestHandler)
                   : new RegularGetAttachmentStrategyProcessor(RequestHandler);
 
@@ -70,8 +70,13 @@ internal class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHa
             HttpContext.Response.Headers[Constants.Headers.AttachmentHash] = attachment.Base64Hash.ToString();
             HttpContext.Response.Headers[Constants.Headers.AttachmentSize] = attachment.Size.ToString();
             HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{attachment.ChangeVector}\"";
-            HttpContext.Response.Headers[Constants.Headers.AttachmentRetireAt] = attachment.RetireAt?.GetDefaultRavenFormat();
-            HttpContext.Response.Headers[Constants.Headers.AttachmentFlags] = ((int)attachment.Flags).ToString();
+            if (attachment.RetireParameters != null)
+            {
+                HttpContext.Response.Headers[Constants.Headers.AttachmentRetireParametersAt] = attachment.RetireParameters.At.GetDefaultRavenFormat(isUtc: true);
+                HttpContext.Response.Headers[Constants.Headers.AttachmentRetireParametersIdentifier] = Uri.EscapeDataString(attachment.RetireParameters.Identifier);
+                HttpContext.Response.Headers[Constants.Headers.AttachmentRetireParametersFlags] = attachment.RetireParameters.Flags.ToString();
+            }
+
             strategy.DisposeReadTransactionIfNeeded(tx);
 
             await strategy.WriteResponseStream(context, attachment, collection, token);

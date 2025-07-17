@@ -1,24 +1,22 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Linq;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Attachments
 {
     public sealed class RetiredAttachmentsConfiguration : IDynamicJson
     {
-        public bool Disabled { get; set; }
-        public S3Settings S3Settings { get; set; }
-        public AzureSettings AzureSettings { get; set; }
-
+        public Dictionary<string, RetiredAttachmentsDestinationConfiguration> Destinations { get; set; }
         public long? RetireFrequencyInSec { get; set; }
         public long? MaxItemsToProcess { get; set; }
 
         public override int GetHashCode()
         {
             var hashCode = new HashCode();
-            hashCode.Add(Disabled);
-            hashCode.Add(S3Settings);
-            hashCode.Add(AzureSettings);
+            hashCode.Add(Destinations.GetHashCode());
             hashCode.Add(RetireFrequencyInSec);
             hashCode.Add(MaxItemsToProcess);
 
@@ -35,58 +33,57 @@ namespace Raven.Client.Documents.Attachments
 
         private bool Equals(RetiredAttachmentsConfiguration other)
         {
-            if (Disabled != other.Disabled)
-                return false;
             if (RetireFrequencyInSec != other.RetireFrequencyInSec)
                 return false;
             if (MaxItemsToProcess != other.MaxItemsToProcess)
                 return false;
-            
-            if (S3Settings != null)
-            {
-                if (other.S3Settings == null)
-                    return false;
-                if (S3Settings.Equals(other.S3Settings) == false)
-                    return false;
-            }
-            if (S3Settings == null && other.S3Settings != null)
-            {
-                return false;
-            }
 
-            if (AzureSettings != null)
-            {
-                if (other.AzureSettings == null)
-                    return false;
-                if (AzureSettings.Equals(other.AzureSettings) == false)
-                    return false;
-            }
-            if (AzureSettings == null && other.AzureSettings != null)
-            {
+            if (Destinations.Count != other.Destinations.Count)
                 return false;
-            }
 
+            foreach (var kvp in Destinations)
+            {
+                if (other.Destinations.TryGetValue(kvp.Key, out var otherConfig) == false)
+                    return false;
+                if (kvp.Value.Equals(otherConfig) == false)
+                    return false;
+            }
             return true;
         }
 
-        internal bool HasUploader() => BackupConfiguration.CanBackupUsing(S3Settings) ||
-                                       BackupConfiguration.CanBackupUsing(AzureSettings);
+        internal bool HasUploader()
+        {
+            if (Destinations == null || Destinations.Count == 0)
+                return false;
+
+            return Destinations.Any(x => BackupConfiguration.CanBackupUsing(x.Value.S3Settings)
+                                         || BackupConfiguration.CanBackupUsing(x.Value.AzureSettings));
+        }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(Disabled)] = Disabled,
+                [nameof(Destinations)] = Destinations.ToJson(),
                 [nameof(RetireFrequencyInSec)] = RetireFrequencyInSec,
                 [nameof(MaxItemsToProcess)] = MaxItemsToProcess,
-                [nameof(S3Settings)] = S3Settings?.ToJson(),
-                [nameof(AzureSettings)] = AzureSettings?.ToJson(),
             };
         }
 
         internal void AssertConfiguration(string databaseName = null)
         {
             var databaseNameStr = string.IsNullOrEmpty(databaseName) ? string.Empty : $" for database '{databaseName}'";
+
+            if (HasUploader() == false)
+                throw new InvalidOperationException($"Exactly one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} must be configured.");
+
+            foreach (var kvp in Destinations)
+            {
+                if (kvp.Value == null)
+                    throw new InvalidOperationException($"Destination configuration for key {kvp.Key} is null{databaseNameStr}.");
+
+                kvp.Value.AssertConfiguration(databaseName);
+            }
 
             if (RetireFrequencyInSec == null)
                 throw new InvalidOperationException($"{nameof(RetireFrequencyInSec)}{databaseNameStr} must have a value.");
@@ -96,10 +93,8 @@ namespace Raven.Client.Documents.Attachments
             if (MaxItemsToProcess <= 0)
                 throw new InvalidOperationException($"Max items to process{databaseNameStr} must be greater than 0.");
 
-            if (HasUploader() == false)
-                throw new InvalidOperationException($"Exactly one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} must be configured.");
-
-            if (BackupConfiguration.CanBackupUsing(S3Settings) && BackupConfiguration.CanBackupUsing(AzureSettings))
+            if (Destinations.Any(x => BackupConfiguration.CanBackupUsing(x.Value.S3Settings)
+                                        && BackupConfiguration.CanBackupUsing(x.Value.AzureSettings)))
                 throw new InvalidOperationException($"Only one uploader for {nameof(RetiredAttachmentsConfiguration)}{databaseNameStr} can be configured.");
         }
     }

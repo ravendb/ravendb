@@ -16,8 +16,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
-        protected override async ValueTask PutAttachmentsAsync(DocumentsOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, 
-            DateTime? retireAtDt, CancellationToken token)
+        protected override async ValueTask PutAttachmentsAsync(DocumentsOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector,
+            RetireAttachmentParameters retireAttachmentParameters, CancellationToken token)
         {
             AttachmentDetails result;
             using (var streamsTempFile = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.GetTempFile("put"))
@@ -57,7 +57,8 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                     Stream = stream,
                     Hash = hash,
                     ContentType = contentType,
-                    RetireAt = retireAtDt
+                    RetireAt = retireAttachmentParameters?.At,
+                    RetireIdentifier = retireAttachmentParameters?.Identifier,
                 };
                 await stream.FlushAsync(token);
                 await RequestHandler.Database.TxMerger.Enqueue(cmd);
@@ -93,11 +94,28 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 writer.WritePropertyName(nameof(AttachmentDetails.Size));
                 writer.WriteInteger(result.Size);
 
-                if (result.RetireAt.HasValue)
+                if (result.RetireParameters == null)
                 {
                     writer.WriteComma();
-                    writer.WritePropertyName(nameof(AttachmentDetails.RetireAt));
-                    writer.WriteDateTime(result.RetireAt.Value, true);
+                    writer.WritePropertyName(nameof(AttachmentDetails.RetireParameters));
+                    writer.WriteNull();
+                }
+                else
+                {
+                    writer.WriteComma();
+                    writer.WriteStartObject();
+                    writer.WritePropertyName(nameof(RetireAttachmentParameters.Identifier));
+                    writer.WriteString(result.RetireParameters.Identifier);
+
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(RetireAttachmentParameters.At));
+                    writer.WriteDateTime(result.RetireParameters.At, true);
+
+                    writer.WriteComma();
+                    writer.WritePropertyName(nameof(RetireAttachmentParameters.Flags));
+                    writer.WriteInteger((int)result.RetireParameters.Flags);
+
+                    writer.WriteEndObject();
                 }
 
                 writer.WriteEndObject();

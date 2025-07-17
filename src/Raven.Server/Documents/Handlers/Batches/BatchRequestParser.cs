@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session;
@@ -66,9 +67,8 @@ namespace Raven.Server.Documents.Handlers.Batches
             public string DestinationName;
             public string ContentType;
             public AttachmentType AttachmentType;
-            public AttachmentFlags Flags;
             public long SizeInBytes;
-            public DateTime? RetireAt;
+            public RetireAttachmentParameters RetireParameters;
             public string Hash;
             public MergedBatchCommand.AttachmentStream AttachmentStream { get; set; }// used for bulk insert only
 
@@ -334,15 +334,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                                 break;
                         }
                         break;
-                    case CommandPropertyName.Flags:
-                        while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
-                        if (state.CurrentTokenType != JsonParserToken.String)
-                        {
-                            ThrowUnexpectedToken(JsonParserToken.String, state);
-                        }
-                        commandData.Flags = GetAttachmentFlag(state, ctx);
-                        break;
+                    
                     case CommandPropertyName.SizeInBytes:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
@@ -353,25 +345,29 @@ namespace Raven.Server.Documents.Handlers.Batches
                         commandData.SizeInBytes = state.Long;
 
                         break;
-                    case CommandPropertyName.RetireAt:
+               
+                    case CommandPropertyName.RetireParameters:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
-                        switch (state.CurrentTokenType)
+                        var retireParameters = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
+                        if (retireParameters == null)
                         {
-                            case JsonParserToken.Null:
-                                commandData.RetireAt = null;
-                                break;
-
-                            case JsonParserToken.String:
-                                commandData.RetireAt = DateTime.Parse(GetStringPropertyValue(state)).ToUniversalTime();
-                                break;
-
-                            default:
-                                ThrowUnexpectedToken(JsonParserToken.String, state);
-                                break;
+                            break;
                         }
 
+                        if (retireParameters.TryGet(nameof(RetireAttachmentParameters.At), out DateTime at) == false)
+                            throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.At)}' property on '{nameof(RetireAttachmentParameters)}'");
+
+                        if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out AttachmentFlags flag) == false)
+                            throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.Flags)}' property on '{nameof(RetireAttachmentParameters)}'");
+
+                        if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Identifier), out string identifier) == false)
+                            throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.Identifier)}' property on '{nameof(RetireAttachmentParameters)}'");
+
+
+                        commandData.RetireParameters = new RetireAttachmentParameters(identifier, at) { Flags = flag};
                         break;
+
                     case CommandPropertyName.Hash:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
@@ -759,9 +755,8 @@ namespace Raven.Server.Documents.Handlers.Batches
             DestinationName,
             ContentType,
             AttachmentType,
-            Flags,
             SizeInBytes,
-            RetireAt,
+            RetireParameters,
             Hash,
             #endregion Attachment
 
@@ -819,8 +814,6 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     if ("Counters"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Counters;
-                    if ("RetireAt"u8.IsEqualConstant(state.StringBuffer))
-                        return CommandPropertyName.RetireAt;
 
                     return CommandPropertyName.NoSuchProperty;
 
@@ -841,8 +834,6 @@ namespace Raven.Server.Documents.Handlers.Batches
                         return CommandPropertyName.Index;
                     if ("Patch"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.Patch;
-                    if ("Flags"u8.IsEqualConstant(state.StringBuffer))
-                        return CommandPropertyName.Flags;
 
                     return CommandPropertyName.NoSuchProperty;
 
@@ -902,6 +893,11 @@ namespace Raven.Server.Documents.Handlers.Batches
                     if ("CreateIfMissing"u8.IsEqualConstant(state.StringBuffer))
                         return CommandPropertyName.CreateIfMissing;
 
+                    return CommandPropertyName.NoSuchProperty;
+
+                case 16:
+                    if ("RetireParameters"u8.IsEqualConstant(state.StringBuffer))
+                        return CommandPropertyName.RetireParameters;
                     return CommandPropertyName.NoSuchProperty;
 
                 case 20:

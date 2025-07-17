@@ -1,6 +1,8 @@
 using System;
+using System.Globalization;
 using System.IO;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations.Attachments;
 using Sparrow.Json;
 using Voron;
 
@@ -18,8 +20,32 @@ namespace Raven.Server.Documents
         public Stream Stream;
         public short TransactionMarker;
         public long Size;
-        public AttachmentFlags Flags;
-        public DateTime? RetireAt;
-        public LazyStringValue Collection;
+        public RetireAttachmentParameters RetireParameters;
+
+        public static RetireAttachmentParameters GetRetireAttachmentParameters(string identifier, DateTime? retireAt, AttachmentFlags flags)
+        {
+            RetireAttachmentParameters retireParameters = null;
+            if (retireAt.HasValue)
+            {
+                retireParameters = new RetireAttachmentParameters(identifier, retireAt.Value) { Flags = flags };
+            }
+
+            return retireParameters;
+        }
+
+        public static RetireAttachmentParameters GetRetireAttachmentParameters(LazyStringValue identifier, DateTime? retireAt, AttachmentFlags flags)
+        {
+            return GetRetireAttachmentParameters(identifier.ToString(CultureInfo.CurrentCulture), retireAt, flags);
+        }
+
+        public bool IsRetired()
+        {
+            if (RetireParameters == null)
+            {
+                return false;
+            }
+
+            return RetireParameters.Flags != AttachmentFlags.None;
+        }
     }
 }

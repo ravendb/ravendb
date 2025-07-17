@@ -46,9 +46,27 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
     public abstract IAsyncDisposable CreateCloudSettings([CallerMemberName] string caller = null);
     protected abstract Task<List<FileInfoDetails>> GetBlobsFromCloudAndAssertForCount(TSettings settings, int expected, int timeout = 120_000);
     public abstract Task DeleteObjects(TSettings settings);
-    public abstract Task PutRetireAttachmentsConfiguration(IDocumentStore store, TSettings settings, List<string> collections = null, string database = null);
+    public abstract Task<string> PutRetireAttachmentsConfiguration(IDocumentStore store, TSettings settings, List<string> collections = null, string database = null);
 
     public Action<RetiredAttachmentsConfiguration> ModifyRetiredAttachmentsConfig = null;
+
+    protected void AddAttachmentToAttachments(DocumentInfoHelper documentInfoHelper, Attachment attachment)
+    {
+        using (var docId = documentInfoHelper.GetDocumentId(attachment.Key))
+        {
+            var t = Attachments.FirstOrDefault(x =>
+                x.DocumentId.ToLowerInvariant() == docId && x.Name == attachment.Name &&
+                (x.RetireParameters == null || x.RetireParameters.Flags == AttachmentFlags.None) &&
+                x.Hash == attachment.Base64Hash.ToString());
+            Assert.NotNull(t);
+            Attachments.Remove(t);
+            t.Key = attachment.Key;
+            t.Hash = attachment.Base64Hash.ToString();
+            t.RetireParameters = new RetireAttachmentParameters(attachment.RetireParameters.Identifier, attachment.RetireParameters.At);
+            t.RetiredKey = $"{Settings.RemoteFolderName}/{t.Hash}";
+            Attachments.Add(t);
+        }
+    }
 
     public async ValueTask DisposeAttachmentsAndDeleteObjects()
     {
@@ -70,7 +88,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         await DeleteObjects(Settings);
     }
 
-    public async Task PopulateDocsWithRandomAttachments(DocumentStore store, int size, List<(string Id, string Collection)> ids, int attachmentsPerDoc, int start = 0)
+    public async Task PopulateDocsWithRandomAttachments(DocumentStore store, string identifier, int size, List<(string Id, string Collection)> ids, int attachmentsPerDoc, int start = 0)
     {
         // put attachments
         foreach (var (id, collection) in ids)
@@ -90,9 +108,11 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
                 var profileStream = new MemoryStream(b);
                 var name = $"test_{i + start}.png";
+
+                var retiredParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3));
                 await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters(name, profileStream)
                 {
-                    RetireAt = DateTime.UtcNow.AddMinutes(3),
+                    RetireParameters = retiredParameters,
                     ContentType = "image/png"
                 }));
                 profileStream.Position = 0;
@@ -105,7 +125,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     Stream = profileStream,
                     ContentType = "image/png",
                     Hash = a.Details.Hash,
-                    Flags = AttachmentFlags.None,
+                    RetireParameters = retiredParameters
                 });
             }
         }
@@ -130,8 +150,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     Attachments.Remove(t);
                     t.Key = attachment.Key;
                     t.Hash = attachment.Base64Hash.ToString();
-                    t.RetireAt = attachment.RetireAt;
-                    t.Flags = attachment.Flags;
+                    t.RetireParameters = attachment.RetireParameters;
                     t.RetiredKey =
                         $"{settings.RemoteFolderName}/{t.Hash}";
                     Attachments.Add(t);
@@ -145,14 +164,14 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         }
     }
 
-    public async Task AssertAllRetiredAttachments(IDocumentStore store, List<FileInfoDetails> cloudObjects, int size)
+    public async Task AssertAllRetiredAttachments(IDocumentStore store, List<FileInfoDetails> cloudObjects, int size, string identifier)
     {
         foreach (var attachment in Attachments)
         {
             Assert.Contains(cloudObjects, x => x.FullPath.Contains(attachment.RetiredKey));
 
             attachment.Stream.Position = 0;
-            await GetAndCompareRetiredAttachment(store, attachment.DocumentId, attachment.Name, attachment.Hash, attachment.ContentType, attachment.Stream, size);
+            await GetAndCompareRetiredAttachment(store, attachment.DocumentId, attachment.Name, attachment.Hash, attachment.ContentType, attachment.Stream, size, identifier);
         }
     }
 
@@ -165,17 +184,17 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
             using (var store = GetDocumentStore())
             {
-                await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
+                var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
             }
         }
     }
 
-    protected async Task CanUploadRetiredAttachmentToCloudAndGetInternal(int attachmentsCount, int size, DocumentStore store, int docsCount,
+    protected async Task<string> CanUploadRetiredAttachmentToCloudAndGetInternal(int attachmentsCount, int size, DocumentStore store, int docsCount,
         List<(string Id, string Collection)> ids, int attachmentsPerDoc, List<string> collections = null, RavenServer server = null)
     {
-        await PutRetireAttachmentsConfiguration(store, Settings, collections);
+        var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections);
         await CreateDocs(store, docsCount, ids, collections);
-        await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc);
+        await PopulateDocsWithRandomAttachments(store, identifier,size, ids, attachmentsPerDoc);
 
         var database = await Databases.GetDocumentDatabaseInstanceFor(server ?? Server, store);
         GetStorageAttachmentsMetadataFromAllAttachments(database);
@@ -186,10 +205,12 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
 
         var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
-        await AssertAllRetiredAttachments(store, cloudObjects, size);
+        await AssertAllRetiredAttachments(store, cloudObjects, size, identifier);
 
         var stats = store.Maintenance.Send(new GetDetailedStatisticsOperation());
         Assert.Equal(attachmentsCount, stats.CountOfRetiredAttachments);
+
+        return identifier;
     }
 
     protected async Task CanUploadRetiredAttachmentToCloudAndDeleteInternal(int attachmentsCount, int size, List<string> collections = null)
@@ -200,7 +221,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             var ids = new List<(string Id, string Collection)>();
             using (var store = GetDocumentStore())
             {
-                await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
+                var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
                 foreach (var attachment in Attachments)
                 {
                     await store.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
@@ -229,12 +250,12 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
             using (var store = GetDocumentStore())
             {
-                await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
-                await AssertGetRetiredAttachmentsInBulk(store, size);
+                var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
+                await AssertGetRetiredAttachmentsInBulk(store, size, identifier);
             }
         }
     }
-    protected async Task AssertGetRetiredAttachmentsInBulk(DocumentStore store, long size, AttachmentFlags flags = AttachmentFlags.Retired)
+    protected async Task AssertGetRetiredAttachmentsInBulk(DocumentStore store, long size, string identifier, AttachmentFlags flags = AttachmentFlags.Retired)
     {
         var attachmentRequests = new List<AttachmentRequest>();
         foreach (var attachment in Attachments)
@@ -254,7 +275,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             tuple.Stream.Position = 0;
 
 
-            await CompareAttachment(tuple.Name, tuple.Hash, tuple.ContentType, tuple.Stream, size, flags, current.Details, current.Stream);
+            await CompareAttachment(tuple.Name, tuple.Hash, tuple.ContentType, tuple.Stream, size, identifier, flags, current.Details, current.Stream);
             await current.Stream.DisposeAsync();
 
             attachmentsCount++;
@@ -272,7 +293,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
             using (var store = GetDocumentStore())
             {
-                await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
+                var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
                 await AssertDeleteRetiredAttachmentsInBulk(store, attachmentsCount);
             }
         }
@@ -308,7 +329,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             using (var store = GetDocumentStore())
             using (var replica = GetDocumentStore())
             {
-                await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
                 var taskName = "etl-test";
                 var csName = "cs-test";
 
@@ -337,7 +358,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     }
                 }, attachmentsCount, 30_000);
                 Assert.Equal(attachmentsCount, val3);
-                await AssertGetRetiredAttachmentsInBulk(replica, size, AttachmentFlags.None);
+                await AssertGetRetiredAttachmentsInBulk(replica, size, identifier, AttachmentFlags.None);
             }
         }
     }
@@ -352,7 +373,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
             using (var store = GetDocumentStore())
             {
-                await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
                 await Backup.UpdateConfigAndRunBackupAsync(Server, config, store);
@@ -369,7 +390,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
                     var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
                     using var store2 = new DocumentStore() { Database = restoredDatabaseName, Urls = store.Urls }.Initialize();
-                    await AssertAllRetiredAttachments(store2, cloudObjects, size);
+                    await AssertAllRetiredAttachments(store2, cloudObjects, size, identifier);
                 }
             }
 
@@ -385,16 +406,16 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             {
                 int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                 var ids = new List<(string Id, string Collection)>();
-                await PutRetireAttachmentsConfiguration(store1, Settings);
+                var identifier1 = await PutRetireAttachmentsConfiguration(store1, Settings);
                 await CreateDocs(store1, docsCount, ids);
-                await PopulateDocsWithRandomAttachments(store1, size, ids, attachmentsPerDoc);
+                await PopulateDocsWithRandomAttachments(store1, identifier1, size, ids, attachmentsPerDoc);
 
                 await SetupReplicationAsync(store1, store2);
                 await EnsureReplicatingAsync(store1, store2);
 
                 var database2 = (await GetDocumentDatabaseInstanceForAsync(store2.Database));
                 GetStorageAttachmentsMetadataFromAllAttachments(database2);
-                await PutRetireAttachmentsConfiguration(store2, Settings);
+                var identifier2 = await PutRetireAttachmentsConfiguration(store2, Settings);
 
                 Assert.Equal(attachmentsCount, Attachments.Count);
 
@@ -402,7 +423,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 database2.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 await database2.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
                 var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
-                await AssertAllRetiredAttachments(store2, cloudObjects, size);
+                await AssertAllRetiredAttachments(store2, cloudObjects, size, identifier2);
             }
         }
     }
@@ -415,10 +436,10 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             using (var store = GetDocumentStore())
             {
                 List<string> collections = null;
-                await PutRetireAttachmentsConfiguration(store, Settings, collections);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections);
                 await RetiredAttachmentsHolderBase.CreateDocs(store, docsCount, ids, collections);
 
-                await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc / 2, start: 0);
+                await PopulateDocsWithRandomAttachments(store, identifier,size, ids, attachmentsPerDoc / 2, start: 0);
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 GetStorageAttachmentsMetadataFromAllAttachments(database);
@@ -430,7 +451,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 var list = Attachments.ToList();
                 var t1 = Task.Run(async () =>
                 {
-                    await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc / 2, start: 1000);
+                    await PopulateDocsWithRandomAttachments(store, identifier,size, ids, attachmentsPerDoc / 2, start: 1000);
                 });
                 var t2 = Task.Run(async () =>
                 {
@@ -476,7 +497,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         {
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
 
                 var id = "Orders/3";
                 using (var session = store.OpenAsyncSession())
@@ -493,7 +514,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 }
 
                 using var profileStream = new MemoryStream([1, 2, 3]);
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" }));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
@@ -506,7 +527,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 }
 
                 var attachment = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test.png", AttachmentType.Document, null));
-                Assert.NotNull(attachment.Details.RetireAt);
+                Assert.NotNull(attachment.Details.RetireParameters);
             }
         }
     }
@@ -517,7 +538,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         {
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
 
                 var id = "Orders/3";
                 using (var session = store.OpenAsyncSession())
@@ -534,7 +555,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 }
 
                 using var profileStream = new MemoryStream([1, 2, 3]);
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" }));
 
                 var a = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test.png", AttachmentType.Document, null));
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
@@ -564,9 +585,9 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             {
                 int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                 var ids = new List<(string Id, string Collection)>();
-                await PutRetireAttachmentsConfiguration(store, Settings);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
                 await CreateDocs(store, docsCount, ids);
-                await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc);
+                await PopulateDocsWithRandomAttachments(store, identifier,size, ids, attachmentsPerDoc);
                 Assert.Equal(true, await WaitForChangeVectorInClusterAsync(srcNodes.Servers, srcDb));
 
                 int count = 0;
@@ -592,7 +613,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
                 var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
 
-                await AssertAllRetiredAttachments(store, cloudObjects, size);
+                await AssertAllRetiredAttachments(store, cloudObjects, size, identifier);
                 foreach (var attachment in Attachments)
                 {
                     await store.Operations.SendAsync(new DeleteAttachmentOperation(attachment.DocumentId, attachment.Name));
@@ -619,8 +640,8 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 ModifyDatabaseName = x => store.Database
             }))
             {
-                await PutRetireAttachmentsConfiguration(store, Settings);
-                await PutRetireAttachmentsConfiguration(store2, Settings);
+                var identifier1 = await PutRetireAttachmentsConfiguration(store, Settings);
+                var identifier2 = await PutRetireAttachmentsConfiguration(store2, Settings);
 
                 var id = "Orders/3";
                 using (var session = store.OpenAsyncSession())
@@ -648,9 +669,9 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     await session.SaveChangesAsync();
                 }
                 using var profileStream = new MemoryStream([1, 2, 3]);
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier1, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" }));
                 profileStream.Position = 0;
-                await store2.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+                await store2.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier2, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" }));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -659,7 +680,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 List<FileInfoDetails> cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 1);
                 Assert.Contains($"{Settings.RemoteFolderName}/EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", cloudObjects[0].FullPath);
 
-                await GetAndCompareRetiredAttachment(store, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", profileStream, 3);
+                await GetAndCompareRetiredAttachment(store, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", profileStream, 3, identifier1);
                 await WaitForTaskDelayIfNeeded();
 
                 var database2 = await Databases.GetDocumentDatabaseInstanceFor(server, store2);
@@ -673,7 +694,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 // should be the same attachment, not a new one
                 Assert.Equal(cloudObjects[0].LastModified, cloudObjects2[0].LastModified);
 
-                await GetAndCompareRetiredAttachment(store2, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", profileStream, 3);
+                await GetAndCompareRetiredAttachment(store2, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", profileStream, 3, identifier2);
             }
 
         }
@@ -691,7 +712,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         {
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
 
                 var id = "Orders/3";
                 using (var session = store.OpenAsyncSession())
@@ -708,7 +729,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 }
 
                 using var profileStream = new MemoryStream([1, 2, 3]);
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" }));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -719,7 +740,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
                 await DeleteObjects(Settings);
 
-                var e = await Assert.ThrowsAsync<RavenException>(async () => await RetiredAttachmentsHolderBase.GetAndCompareRetiredAttachment(store, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", profileStream, 3));
+                var e = await Assert.ThrowsAsync<RavenException>(async () => await RetiredAttachmentsHolderBase.GetAndCompareRetiredAttachment(store, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", profileStream, 3, identifier));
                 AssertUploadRetiredAttachmentToCloudThenManuallyDeleteAndGetShouldThrowInternal(e);
             }
         }
@@ -733,7 +754,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         {
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
 
                 var id = "Orders/3";
                 using (var session = store.OpenAsyncSession())
@@ -750,7 +771,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 }
 
                 using var profileStream = new MemoryStream([1, 2, 3]);
-                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireAt = DateTime.UtcNow.AddMinutes(3), ContentType = "image/png" }));
+                await store.Operations.SendAsync(new PutAttachmentOperation(id, new StoreAttachmentParameters("test.png", profileStream) { RetireParameters = new RetireAttachmentParameters(identifier, DateTime.UtcNow.AddMinutes(3)), ContentType = "image/png" }));
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
@@ -788,9 +809,9 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                 var ids = new List<(string Id, string Collection)>();
 
-                await PutRetireAttachmentsConfiguration(store, Settings);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
                 await CreateDocs(store, docsCount, ids);
-                await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc);
+                await PopulateDocsWithRandomAttachments(store, identifier,size, ids, attachmentsPerDoc);
                 Assert.Equal(true, await WaitForChangeVectorInClusterAsync(srcNodes.Servers, srcDb));
 
 
@@ -841,7 +862,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
                 var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
 
-                await AssertAllRetiredAttachments(store, cloudObjects, size);
+                await AssertAllRetiredAttachments(store, cloudObjects, size, identifier);
 
                 Assert.Equal(true, await WaitForChangeVectorInClusterAsync(srcNodes.Servers, srcDb));
             }
@@ -864,9 +885,9 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 int docsCount = RetiredAttachmentsHolderBase.GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
                 var ids = new List<(string Id, string Collection)>();
 
-                await PutRetireAttachmentsConfiguration(store, Settings);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
                 await RetiredAttachmentsHolderBase.CreateDocs(store, docsCount, ids);
-                await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc);
+                await PopulateDocsWithRandomAttachments(store, identifier,size, ids, attachmentsPerDoc);
                 Assert.Equal(true, await WaitForChangeVectorInClusterAsync(srcNodes.Servers, srcDb));
 
                 int count = 0;
@@ -936,7 +957,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
                 var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
 
-                await AssertAllRetiredAttachments(store, cloudObjects, size);
+                await AssertAllRetiredAttachments(store, cloudObjects, size, identifier);
                 Assert.Equal(true, await WaitForChangeVectorInClusterAsync(srcNodes.Servers, srcDb));
             }
         }
@@ -951,9 +972,9 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             List<string> collections = null;
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings, collections);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings, collections);
                 await CreateDocs(store, docsCount, ids, collections);
-                await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc);
+                await PopulateDocsWithRandomAttachments(store, identifier,size, ids, attachmentsPerDoc);
 
 
                 var config = Backup.CreateBackupConfiguration(backupPath);
@@ -980,7 +1001,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
                     using (var restored = new DocumentStore { Urls = store.Urls, Database = restoredDatabaseName }.Initialize())
                     {
-                        await AssertAllRetiredAttachments(restored, cloudObjects, size);
+                        await AssertAllRetiredAttachments(restored, cloudObjects, size, identifier);
                     }
                 }
             }
@@ -996,7 +1017,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             using (var store1 = GetDocumentStore())
             using (var store2 = GetDocumentStore())
             {
-                await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store1, docsCount, ids, attachmentsPerDoc);
+                var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store1, docsCount, ids, attachmentsPerDoc);
 
                 var exportFile = GetTempFileName();
 
@@ -1006,14 +1027,14 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
                 await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
                 var destinationRecord = await store2.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store2.Database));
-                Assert.False(destinationRecord.RetiredAttachments.Disabled);
+                Assert.False(destinationRecord.RetiredAttachments.Destinations.First().Value.Disabled);
 
                 var stats = await GetDatabaseStatisticsAsync(store2, store2.Database);
                 Assert.Equal(docsCount, stats.CountOfDocuments); // the marker
                 Assert.Equal(attachmentsCount, stats.CountOfAttachments); // the marker
 
                 var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
-                await AssertAllRetiredAttachments(store2, cloudObjects, size);
+                await AssertAllRetiredAttachments(store2, cloudObjects, size, identifier);
             }
         }
     }
@@ -1026,9 +1047,9 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             var ids = new List<(string Id, string Collection)>();
             using (var store = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings);
+                var identifier = await PutRetireAttachmentsConfiguration(store, Settings);
                 await CreateDocs(store, docsCount, ids);
-                await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc);
+                await PopulateDocsWithRandomAttachments(store, identifier,size, ids, attachmentsPerDoc);
 
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
@@ -1057,7 +1078,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
                 var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
 
-                await AssertAllRetiredAttachments(store, cloudObjects, size);
+                await AssertAllRetiredAttachments(store, cloudObjects, size, identifier);
 
                 await Indexes.WaitForIndexingAsync(store);
 
@@ -1089,9 +1110,9 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             using (var store = GetDocumentStore())
             using (var replica = GetDocumentStore())
             {
-                await PutRetireAttachmentsConfiguration(store, Settings);
+                var identifier1 = await PutRetireAttachmentsConfiguration(store, Settings);
                 await CreateDocs(store, docsCount, ids);
-                await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc);
+                await PopulateDocsWithRandomAttachments(store, identifier1,size, ids, attachmentsPerDoc);
 
                 var taskName = "etl-test";
                 var csName = "cs-test";
@@ -1114,10 +1135,10 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 var database2 = (await GetDocumentDatabaseInstanceForAsync(replica.Database));
                 GetStorageAttachmentsMetadataFromAllAttachments(database2);
 
-                Assert.True(Attachments.TrueForAll(x => x.RetireAt != null), "Attachments.TrueForAll(x => x.RetireAt != null)");
+                Assert.True(Attachments.TrueForAll(x => x.RetireParameters != null), "Attachments.TrueForAll(x => x.RetireParameters != null)");
 
 
-                await PutRetireAttachmentsConfiguration(replica, Settings);
+                var identifier2 = await PutRetireAttachmentsConfiguration(replica, Settings);
 
                 Assert.Equal(attachmentsCount, Attachments.Count);
 
@@ -1125,7 +1146,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 database2.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 await database2.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
                 var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
-                await AssertAllRetiredAttachments(replica, cloudObjects, size);
+                await AssertAllRetiredAttachments(replica, cloudObjects, size, identifier2);
             }
         }
     }

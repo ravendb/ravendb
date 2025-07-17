@@ -38,7 +38,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_source"
                 }))
                 {
-                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
 
                     foreach (var attachment in Attachments)
                     {
@@ -100,7 +100,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_source"
                 }))
                 {
-                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
                     var config = Backup.CreateBackupConfiguration(backupPath, type);
@@ -136,7 +136,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 attachment.Stream = a.Stream;
 
                                 // this sends GetAttachmentOperation and compares the result
-                                await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
+                                await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size, identifier);
                             });
 
                         }
@@ -162,7 +162,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_source"
                 }))
                 {
-                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
 
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -199,7 +199,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 attachment.Stream = a.Stream;
 
                                 // this sends GetAttachmentOperation and compares the result
-                                await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
+                                await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size, identifier);
                             });
 
                         }
@@ -224,7 +224,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_source"
                 }))
                 {
-                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
+                    var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc, collections);
 
                     // Perform backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -261,7 +261,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 attachment.Stream = a.Stream;
 
                                 // this sends GetAttachmentOperation and compares the result
-                                await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
+                                await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size, identifier);
                             });
 
                         }
@@ -286,7 +286,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_source"
                 }))
                 {
-                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
                     var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
@@ -299,20 +299,7 @@ namespace SlowTests.Server.Documents.Attachments
                         {
                             Assert.NotNull(attachment);
 
-                            using (var docId = documentInfoHelper.GetDocumentId(attachment.Key))
-                            {
-                                var t = Attachments.FirstOrDefault(x =>
-                                    x.DocumentId.ToLowerInvariant() == docId && x.Name == attachment.Name && x.Flags == AttachmentFlags.None &&
-                                    x.Hash == attachment.Base64Hash.ToString());
-                                Assert.NotNull(t);
-                                Attachments.Remove(t);
-                                t.Key = attachment.Key;
-                                t.Hash = attachment.Base64Hash.ToString();
-                                t.RetireAt = attachment.RetireAt;
-                                t.Flags = attachment.Flags;
-                                t.RetiredKey = $"{Settings.RemoteFolderName}/{t.Hash}";
-                                Attachments.Add(t);
-                            }
+                            AddAttachmentToAttachments(documentInfoHelper, attachment);
                         }
                     }
 
@@ -323,7 +310,7 @@ namespace SlowTests.Server.Documents.Attachments
                     config.TaskId = backupTaskId;
                     var newAttachments = attachmentsCount;
                     // Make some changes (e.g., add more attachments, retire them)
-                    await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc);
+                    await PopulateDocsWithRandomAttachments(store, identifier,size, ids, attachmentsPerDoc);
                     Assert.Equal(attachmentsCount + newAttachments, Attachments.Count);
 
                     // move in time & start retire
@@ -346,24 +333,26 @@ namespace SlowTests.Server.Documents.Attachments
 
                             using (var docId = _documentInfoHelper.GetDocumentId(attachment.Key))
                             {
-                                var newAttachment = Attachments.FirstOrDefault(x => x.DocumentId.ToLowerInvariant() == docId && x.Name == attachment.Name 
-                                    && x.Flags == AttachmentFlags.None && x.Hash == attachment.Base64Hash.ToString());
+                                var newAttachment = Attachments.FirstOrDefault(x =>
+                                x.DocumentId.ToLowerInvariant() == docId && x.Name == attachment.Name &&
+                                (x.RetireParameters == null || x.RetireParameters.Flags == AttachmentFlags.None) &&
+                                 x.Hash == attachment.Base64Hash.ToString());
+
                                 Assert.NotNull(newAttachment);
-                                var oldAttachment = Attachments.FirstOrDefault(x => x.DocumentId.ToLowerInvariant() == docId && x.Name == attachment.Name 
-                                    && x.Flags == AttachmentFlags.Retired && x.Hash != attachment.Base64Hash.ToString());
+                                var oldAttachment = Attachments.FirstOrDefault(x => x.DocumentId.ToLowerInvariant() == docId && x.Name == attachment.Name
+                                    && x.RetireParameters != null && x.Hash != attachment.Base64Hash.ToString());
                                 Assert.NotNull(oldAttachment);
 
                                 Attachments.Remove(newAttachment);
                                 newAttachment.Key = attachment.Key;
                                 newAttachment.Hash = attachment.Base64Hash.ToString();
-                                newAttachment.RetireAt = attachment.RetireAt;
-                                newAttachment.Flags = attachment.Flags;
+                                newAttachment.RetireParameters = attachment.RetireParameters;
                                 newAttachment.RetiredKey = $"{Settings.RemoteFolderName}/{newAttachment.Hash}";
                                 Attachments.Add(newAttachment);
                                 Attachments.Remove(oldAttachment);
 
                                 newAttachment.Stream.Position = 0;
-                                await GetAndCompareRetiredAttachment(store, newAttachment.DocumentId, newAttachment.Name, newAttachment.Hash, newAttachment.ContentType, newAttachment.Stream, size);
+                                await GetAndCompareRetiredAttachment(store, newAttachment.DocumentId, newAttachment.Name, newAttachment.Hash, newAttachment.ContentType, newAttachment.Stream, size, identifier);
                             }
                         }
                     }
@@ -404,7 +393,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 attachment.Stream = a.Stream;
 
                                 // this sends GetAttachmentOperation and compares the result
-                                await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
+                                await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size, identifier);
                             });
                         }
                     }
@@ -428,7 +417,7 @@ namespace SlowTests.Server.Documents.Attachments
                     ModifyDatabaseName = s => $"{s}_source"
                 }))
                 {
-                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
 
                     // Perform initial backup
                     var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -437,7 +426,7 @@ namespace SlowTests.Server.Documents.Attachments
                     config.TaskId = backupTaskId;
                     // Make some changes (e.g., add more attachments, retire them)
 
-                    await PopulateDocsWithRandomAttachments(store, size, ids, attachmentsPerDoc, start: attachmentsCount);
+                    await PopulateDocsWithRandomAttachments(store, identifier,size, ids, attachmentsPerDoc, start: attachmentsCount);
 
                     Assert.Equal(attachmentsCount * 2, Attachments.Count);
 
@@ -483,7 +472,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 attachment.Stream = a.Stream;
 
                                 // this sends GetAttachmentOperation and compares the result
-                                await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size);
+                                await GetAndCompareRetiredAttachment(restoredStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size, identifier);
                             });
                         }
                     }
@@ -502,7 +491,7 @@ namespace SlowTests.Server.Documents.Attachments
                 var ids = new List<(string Id, string Collection)>();
                 using (var store = GetDocumentStore(new Options { ModifyDatabaseName = s => $"{s}_source" }))
                 {
-                    await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
+                    var identifier = await CanUploadRetiredAttachmentToCloudAndGetInternal(attachmentsCount, size, store, docsCount, ids, attachmentsPerDoc);
 
                     // Export
                     var exportPath = NewDataPath(suffix: "ExportFolder");
@@ -533,7 +522,7 @@ namespace SlowTests.Server.Documents.Attachments
                                 Assert.NotNull(a);
                                 attachment.Stream = a.Stream;
                                 await GetAndCompareRetiredAttachment(importedStore, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(),
-                                    attachment.ContentType, (MemoryStream)attachment.Stream, size);
+                                    attachment.ContentType, (MemoryStream)attachment.Stream, size, identifier);
                             });
                         }
                     }

@@ -37,17 +37,32 @@ public abstract class RetiredAttachmentsS3Base : RetiredAttachmentsHolder<S3Sett
         });
     }
 
-    public override async Task PutRetireAttachmentsConfiguration(IDocumentStore store, S3Settings settings, List<string> collections = null, string database = null)
+    public override async Task<string> PutRetireAttachmentsConfiguration(IDocumentStore store, S3Settings settings, List<string> collections = null, string database = null)
     {
         if (string.IsNullOrEmpty(database))
             database = store.Database;
 
+        var id = "conf-identifier-s3";
         var config = new RetiredAttachmentsConfiguration()
         {
-            S3Settings = settings, Disabled = false, RetireFrequencyInSec = 1000
+            Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+            {
+                {
+                    id, new RetiredAttachmentsDestinationConfiguration()
+                    {
+                        S3Settings = settings,
+                        Disabled = false,
+                        Identifier = id
+                    }
+                }
+            },
+            RetireFrequencyInSec = 1000
         };
+
         ModifyRetiredAttachmentsConfig?.Invoke(config);
         await store.Maintenance.ForDatabase(database).SendAsync(new ConfigureRetiredAttachmentsOperation(config));
+
+        return id;
     }
 
     protected override void AssertUploadRetiredAttachmentToCloudThenManuallyDeleteAndGetShouldThrowInternal(RavenException e)

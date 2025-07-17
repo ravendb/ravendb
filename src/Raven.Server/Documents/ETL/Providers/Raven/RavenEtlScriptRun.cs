@@ -9,7 +9,6 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.ETL.Stats;
-using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -88,7 +87,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             {
                 foreach (var attachment in attachments)
                 {
-                    commands.Add(new PutAttachmentCommandData(remoteDocumentId, attachment.Name, attachment.Stream, attachment.ContentType, null, attachment.RetireAt, attachment.Size, attachment.Flags, attachment.Base64Hash.ToString(), fromEtl: true));
+                    commands.Add(new PutAttachmentCommandData(remoteDocumentId, attachment.Name, attachment.Stream, attachment.ContentType, null, attachment.Size, attachment.RetireParameters, attachment.Base64Hash.ToString(), fromEtl: true));
 
                     if (attachment.Stream == null)
                     {
@@ -132,22 +131,38 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 var hasRetired = false;
                 foreach (BlittableJsonReaderObject attachment in att)
                 {
-                    if (attachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false)
-                        throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
-
-                    if (flags == AttachmentFlags.Retired)
+                    if (attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParameters) == false)
                     {
-                        hasRetired = true;
-                        attachment.Modifications = new DynamicJsonValue(attachment)
-                        {
-                            [nameof(AttachmentName.Flags)] = AttachmentFlags.None
-                        };
-                            
-                        attachmentsToSave.Add(context.ReadObject(attachment, $"{id}_attachment", BlittableJsonDocumentBuilder.UsageMode.ToDisk));
+                        throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
+                    }
+
+                    if (retireParameters == null)
+                    {
+                        attachmentsToSave.Add(attachment);
                     }
                     else
                     {
-                        attachmentsToSave.Add(attachment);
+                        if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out AttachmentFlags flags) == false)
+                            throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
+
+                        if (flags == AttachmentFlags.Retired)
+                        {
+                            hasRetired = true;
+                            retireParameters.Modifications = new DynamicJsonValue(retireParameters)
+                            {
+                                [nameof(RetireAttachmentParameters.Flags)] = AttachmentFlags.None
+                            };
+                            attachment.Modifications = new DynamicJsonValue(attachment)
+                            {
+                                [nameof(AttachmentName.RetireParameters)] = retireParameters
+                            };
+
+                            attachmentsToSave.Add(context.ReadObject(attachment, $"{id}_attachment", BlittableJsonDocumentBuilder.UsageMode.ToDisk));
+                        }
+                        else
+                        {
+                            attachmentsToSave.Add(attachment);
+                        }
                     }
 
                 }
@@ -376,7 +391,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         foreach (var addAttachment in putAttachments)
                         {
                             commands.Add(new PutAttachmentCommandData(remoteDocumentId, addAttachment.Name, addAttachment.Attachment.Stream, addAttachment.Attachment.ContentType,
-                                null, addAttachment.Attachment.RetireAt, addAttachment.Attachment.Size, addAttachment.Attachment.Flags, addAttachment.Attachment.Base64Hash.ToString(), fromEtl: true));
+                                null, addAttachment.Attachment.Size, addAttachment.Attachment.RetireParameters, addAttachment.Attachment.Base64Hash.ToString(), fromEtl: true));
                         }
                     }
 

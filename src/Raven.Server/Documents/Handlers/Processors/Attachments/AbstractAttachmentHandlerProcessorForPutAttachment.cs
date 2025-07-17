@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
+using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Sparrow.Json;
 
@@ -17,7 +18,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
         
-        protected abstract ValueTask PutAttachmentsAsync(TOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, DateTime? retireAtDt, CancellationToken token); 
+        protected abstract ValueTask PutAttachmentsAsync(TOperationContext context, string id, string name, Stream requestBodyStream, string contentType, string changeVector, RetireAttachmentParameters retireAttachmentParameters, CancellationToken token); 
 
         public override async ValueTask ExecuteAsync()
         {
@@ -28,16 +29,24 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
                 var contentType = RequestHandler.GetStringQueryString("contentType", false) ?? "";
                 var retireAtStr = RequestHandler.GetStringQueryString("retireAt", false) ?? "";
-                DateTime? retireAtDt = null;
+                var retireIdentifierStr = RequestHandler.GetStringQueryString("retireIdentifier", false) ?? "";
+
+                if (string.IsNullOrEmpty(retireAtStr) ^ string.IsNullOrEmpty(retireIdentifierStr))
+                {
+                    throw new ArgumentException("Both 'retireAt' and 'retireIdentifier' must be specified together.");
+                }
+
+                RetireAttachmentParameters retireAttachmentParameters = null;
                 if (string.IsNullOrEmpty(retireAtStr) == false)
                 {
-                    retireAtDt = TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(retireAtStr, "retireAt");
+                    var retireAtDt = TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(retireAtStr, "retireAt");
+                    retireAttachmentParameters = new RetireAttachmentParameters(retireIdentifierStr, retireAtDt);
                 }
 
                 var requestBodyStream = RequestHandler.RequestBodyStream();
                 var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfMatch);
 
-                await PutAttachmentsAsync(context, id, name, requestBodyStream, contentType, changeVector, retireAtDt, token.Token);
+                await PutAttachmentsAsync(context, id, name, requestBodyStream, contentType, changeVector, retireAttachmentParameters, token.Token);
             }
         }
     }

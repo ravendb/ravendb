@@ -10,6 +10,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Client.Json.Serialization;
+using Raven.Client.Util;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -19,7 +20,6 @@ using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server;
-using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data;
@@ -30,7 +30,6 @@ using static Raven.Server.Documents.Schemas.Attachments;
 using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
 using static Voron.Data.Tables.Table;
-using Constants = Raven.Client.Constants;
 
 namespace Raven.Server.Documents
 {
@@ -98,7 +97,7 @@ namespace Raven.Server.Documents
                 var attachment = TableValueToAttachment(context, ref result.Reader);
 
                 var stream = GetAttachmentStream(context, attachment.Base64Hash);
-                if (stream == null && attachment.Flags != AttachmentFlags.Retired)
+                if (stream == null && attachment.IsRetired() == false)
                 {
                     ThrowMissingAttachment(context, attachment.Key);
                 }
@@ -213,6 +212,7 @@ namespace Raven.Server.Documents
                 using (TableValueToSlice(context, (int)AttachmentsTable.Name, ref attachmentTvr, out var nameSlice))
                 using (TableValueToSlice(context, (int)AttachmentsTable.ContentType, ref attachmentTvr, out var contentTypeSlice))
                 using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref attachmentTvr, out var hashSlice))
+                using (TableValueToSlice(context, (int)AttachmentsTable.Identifier, ref attachmentTvr, out var identifierSlice))
                 using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
                 using (table.Allocate(out TableValueBuilder tvb))
                 {
@@ -226,6 +226,7 @@ namespace Raven.Server.Documents
                     tvb.Add(size);
                     tvb.Add(Bits.SwapBytes((int)AttachmentFlags.Retired)); // add Retired flag
                     tvb.Add(retireAt);
+                    tvb.Add(identifierSlice);
                     table.Update(attachmentTvr.Id, tvb);
 
                     // Delete the attachment stream if needed
@@ -237,9 +238,11 @@ namespace Raven.Server.Documents
         }
 
         public AttachmentDetailsServer PutAttachment(DocumentsOperationContext context, string documentId, string name, string contentType,
-            string hash, AttachmentFlags flags, long size, DateTime? retireAtDt, string expectedChangeVector = null, Stream stream = null, 
+            string hash, long size, RetireAttachmentParameters retireParams, string expectedChangeVector = null, Stream stream = null,
             bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false, bool fromEtl = false)
         {
+            (AttachmentFlags flags, DateTime? retireAtDt, string identifier) = GetInfoFromRetiredParameters(retireParams);
+
             if (context.Transaction == null)
             {
                 DocumentPutAction.ThrowRequiresTransaction();
@@ -277,19 +280,34 @@ namespace Raven.Server.Documents
                     long retireAt;
 
                     var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-                    void SetTableValue(TableValueBuilder tvb, Slice cv)
+                    IDisposable SetTableValue(out TableValueBuilder tvb)
                     {
+                        var toDispose = new List<IDisposable>();
+                        Slice identifierSlice = Slices.Empty;
+                        if (string.IsNullOrEmpty(identifier) == false)
+                            toDispose.Add(Slice.From(context.Allocator, identifier, out identifierSlice));
+                        toDispose.Add(Slice.From(context.Allocator, changeVector, out var changeVectorSlice));
+                        toDispose.Add(table.Allocate(out tvb));
+
                         tvb.Add(keySlice.Content.Ptr, keySlice.Size);
                         tvb.Add(Bits.SwapBytes(attachmentEtag));
                         tvb.Add(namePtr);
                         tvb.Add(contentTypePtr);
                         tvb.Add(base64Hash.Content.Ptr, base64Hash.Size);
                         tvb.Add(context.GetTransactionMarker());
-                        tvb.Add(cv.Content.Ptr, cv.Size);
+                        tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
                         tvb.Add(size);
                         tvb.Add(Bits.SwapBytes((int)flags));
                         tvb.Add(retireAt);
+                        tvb.Add(identifierSlice.Content.Ptr, identifierSlice.Size);
 
+                        return new DisposableAction(() =>
+                        {
+                            foreach (var item in toDispose)
+                            {
+                                item.Dispose();
+                            }
+                        });
                     }
 
                     var keyExists = false;
@@ -316,12 +334,10 @@ namespace Raven.Server.Documents
                         }
 
                         size = TableValueToLong((int)AttachmentsTable.Size, ref oldValue);
-                        retireAt = TryUpdateRetiredAttachment(context, retireAtDt, TableValueToLong((int)AttachmentsTable.RetireAt, ref oldValue), keySlice);
+                        retireAt = TryUpdateRetiredAttachment(context, retireAtDt, TableValueToLong((int)AttachmentsTable.RetireAt, ref oldValue), identifier, TableValueToString(context, (int)AttachmentsTable.Identifier, ref oldValue), keySlice);
 
-                        using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
-                        using (table.Allocate(out TableValueBuilder tvb))
+                        using (SetTableValue(out TableValueBuilder tvb))
                         {
-                            SetTableValue(tvb, changeVectorSlice);
                             table.Update(oldValue.Id, tvb);
                         }
                     }
@@ -402,7 +418,7 @@ namespace Raven.Server.Documents
                             else
                             {
                                 Debug.Assert(flags == AttachmentFlags.None, "flags == AttachmentFlags.None");
-                                retireAt = TryUpdateRetiredAttachment(context, retireAtDt, current: -1L, keySlice);
+                                retireAt = TryUpdateRetiredAttachment(context, retireAtDt, currentDt: -1L, identifier, currentIdentifier: null, keySlice);
                             }
                         }
                         else
@@ -411,15 +427,15 @@ namespace Raven.Server.Documents
                             {
                                 retireAt = retireAtDt.Value.Ticks;
                                 RetiredAttachmentsStorage.Put(context, keySlice, retireAtDt.Value.GetDefaultRavenFormat());
-                            } 
-                            else 
+                            }
+                            else
+                            {
                                 retireAt = -1L;
+                            }
                         }
-                   
-                        using (Slice.From(context.Allocator, changeVector, out var changeVectorSlice))
-                        using (table.Allocate(out TableValueBuilder tvb))
+
+                        using (SetTableValue(out TableValueBuilder tvb))
                         {
-                            SetTableValue(tvb, changeVectorSlice);
                             table.Insert(tvb);
                         }
                     }
@@ -447,27 +463,28 @@ namespace Raven.Server.Documents
             }
         }
 
-        private long TryUpdateRetiredAttachment(DocumentsOperationContext context, DateTime? retireAtDt, long current, Slice keySlice)
+        private long TryUpdateRetiredAttachment(DocumentsOperationContext context, DateTime? retireAtDt, long currentDt, string identifier, string currentIdentifier, Slice keySlice)
         {
-            if (current == -1L)
+            //TODO: egor here I need to pass the retired attachment identifier now :) so I can select it in RetiredAttachmentsSender 
+            if (currentDt == -1L)
             {
-                TryPutRetiredAttachment(context, keySlice, retireAtDt, out current);
-                return current;
+                TryPutRetiredAttachment(context, keySlice, retireAtDt, out currentDt);
+                return currentDt;
             }
 
             if (retireAtDt.HasValue)
             {
-                if (retireAtDt.Value.Ticks != current)
+                if (retireAtDt.Value.Ticks != currentDt)
                 {
                     // update to retireAt, we need to update the retired attachment storage
-                    RetiredAttachmentsStorage.RemoveRetirePutValue(context, keySlice, current);
-                    TryPutRetiredAttachment(context, keySlice, retireAtDt, out current);
+                    RetiredAttachmentsStorage.RemoveRetirePutValue(context, keySlice, currentDt);
+                    TryPutRetiredAttachment(context, keySlice, retireAtDt, out currentDt);
                 }
 
-                return current;
+                return currentDt;
             }
 
-            RetiredAttachmentsStorage.RemoveRetirePutValue(context, keySlice, current);
+            RetiredAttachmentsStorage.RemoveRetirePutValue(context, keySlice, currentDt);
             return -1L;
         }
 
@@ -486,7 +503,7 @@ namespace Raven.Server.Documents
         /// <summary>
         /// Should be used only from replication or smuggler.
         /// </summary>
-        public void PutDirect(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, Slice base64Hash, DateTime? retireAt, AttachmentFlags flags, long size, bool isRevision, string changeVector = null)
+        public void PutDirect(DocumentsOperationContext context, Slice key, Slice name, Slice contentType, Slice base64Hash, RetireAttachmentParameters retireParams, long size, bool isRevision, string changeVector = null)
         {
             Debug.Assert(base64Hash.Size == AttachmentHashSize, $"Hash size should be 44 but was: {key.Size}");
 
@@ -510,19 +527,15 @@ namespace Raven.Server.Documents
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
                 tvb.Add(size);
-                tvb.Add(Bits.SwapBytes((int)flags));
-                if (retireAt.HasValue)
-                    tvb.Add(retireAt.Value.Ticks);
-                else
-                    tvb.Add(-1L);
-                table.Set(tvb);
-            }
 
-            if (isRevision == false)
-            {
-                // this works similar to expiration, we populate the tree even if we don't have a configuration for attachments retirement
-                if (flags != AttachmentFlags.Retired && retireAt.HasValue)
-                    RetiredAttachmentsStorage.Put(context, key, retireAt.Value.GetDefaultRavenFormat());
+                (AttachmentFlags flags, DateTime? retireAt, _) = WriteRetiredParameters(context, retireParams, tvb, table);
+
+                if (isRevision == false)
+                {
+                    // this works similar to expiration, we populate the tree even if we don't have a configuration for attachments retirement
+                    if (flags != AttachmentFlags.Retired && retireAt.HasValue)
+                        RetiredAttachmentsStorage.Put(context, key, retireAt.Value.GetDefaultRavenFormat());
+                }
             }
 
             _documentDatabase.Metrics.Attachments.PutsPerSec.MarkSingleThreaded(1);
@@ -556,31 +569,31 @@ namespace Raven.Server.Documents
                 var flags = DocumentFlags.None;
 
                 data.Modifications = new DynamicJsonValue(data);
-                if (data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+                if (data.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
                 {
                     metadata.Modifications = new DynamicJsonValue(metadata);
 
                     if (attachments.Count > 0)
                     {
                         flags |= DocumentFlags.HasAttachments;
-                        metadata.Modifications[Constants.Documents.Metadata.Attachments] = attachments;
+                        metadata.Modifications[Client.Constants.Documents.Metadata.Attachments] = attachments;
                     }
                     else
                     {
-                        metadata.Modifications.Remove(Constants.Documents.Metadata.Attachments);
+                        metadata.Modifications.Remove(Client.Constants.Documents.Metadata.Attachments);
                         flags &= ~DocumentFlags.HasAttachments;
                     }
 
-                    data.Modifications[Constants.Documents.Metadata.Key] = metadata;
+                    data.Modifications[Client.Constants.Documents.Metadata.Key] = metadata;
                 }
                 else
                 {
                     if (attachments.Count > 0)
                     {
                         flags |= DocumentFlags.HasAttachments;
-                        data.Modifications[Constants.Documents.Metadata.Key] = new DynamicJsonValue
+                        data.Modifications[Client.Constants.Documents.Metadata.Key] = new DynamicJsonValue
                         {
-                            [Constants.Documents.Metadata.Attachments] = attachments
+                            [Client.Constants.Documents.Metadata.Attachments] = attachments
                         };
                     }
                     else
@@ -648,14 +661,17 @@ namespace Raven.Server.Documents
                 if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                     attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
                     attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
-                    attachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false ||
                     attachment.TryGet(nameof(AttachmentName.Size), out long size) == false ||
-                    attachment.TryGet(nameof(AttachmentName.RetireAt), out DateTime? retireAt) == false)
+                    attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParamsBjro) == false)
                     throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
 
                 var cv = Slices.Empty;
                 var type = AttachmentType.Document;
-
+                RetireAttachmentParameters retireParams = null;
+                if (retireParamsBjro != null)
+                {
+                    retireParams = JsonDeserializationClient.RetireAttachmentParameters(retireParamsBjro);
+                }
                 using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerDocumentId))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, name, out Slice lowerName, out Slice nameSlice))
                 using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
@@ -663,7 +679,7 @@ namespace Raven.Server.Documents
                 using (AttachmentKey.GetKey(context, lowerDocumentId.Content.Ptr, lowerDocumentId.Size, lowerName.Content.Ptr, lowerName.Size,
                            base64Hash, lowerContentType.Content.Ptr, lowerContentType.Size, type, cv, out Slice keySlice))
                 {
-                    PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, retireAt, flags, size, isRevision: false);
+                    PutDirect(context, keySlice, nameSlice, contentTypeSlice, base64Hash, retireParams, size, isRevision: false);
                 }
             }
         }
@@ -689,14 +705,37 @@ namespace Raven.Server.Documents
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add(changeVector.Content.Ptr, changeVector.Size);
                 tvb.Add(attachment.Size);
-                tvb.Add(Bits.SwapBytes((int)attachment.Flags));
 
-                if (attachment.RetireAt.HasValue)
-                    tvb.Add(attachment.RetireAt.Value.Ticks);
-                else
-                    tvb.Add(-1L);
+                WriteRetiredParameters(context, attachment.RetireParameters, tvb, table);
+            }
+        }
+
+        private static (AttachmentFlags Flags, DateTime? RetireAt, string Identifier) WriteRetiredParameters(DocumentsOperationContext context, RetireAttachmentParameters retireParameters, TableValueBuilder tvb, Table table)
+        {
+            (AttachmentFlags flags, DateTime? retireAt, string identifier) = GetInfoFromRetiredParameters(retireParameters);
+
+            tvb.Add(Bits.SwapBytes((int)flags));
+
+            if (retireAt.HasValue)
+                tvb.Add(retireAt.Value.Ticks);
+            else
+                tvb.Add(-1L);
+
+            if (string.IsNullOrEmpty(identifier))
+            {
+                tvb.Add(Slices.Empty.Content.Ptr, Slices.Empty.Size);
                 table.Set(tvb);
             }
+            else
+            {
+                using (Slice.From(context.Allocator, identifier, out var identifierSlice))
+                {
+                    tvb.Add(identifierSlice.Content.Ptr, identifierSlice.Size);
+                    table.Set(tvb);
+                }
+            }
+
+            return (flags, retireAt, identifier);
         }
 
         public void PutAttachmentStream(DocumentsOperationContext context, Slice key, Slice base64Hash, Stream stream)
@@ -765,7 +804,7 @@ namespace Raven.Server.Documents
                 if (attachment == null)
                     continue;
 
-                if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+                if (attachment.IsRetired())
                 {
                     yield return attachment;
                 }
@@ -811,15 +850,13 @@ namespace Raven.Server.Documents
             {
                 foreach (Attachment attachment in GetAttachmentsForDocument(context, prefixSlice))
                 {
- 
                     attachments.Add(new DynamicJsonValue
                     {
                         [nameof(AttachmentName.Name)] = attachment.Name,
                         [nameof(AttachmentName.Hash)] = attachment.Base64Hash.ToString(),
                         [nameof(AttachmentName.ContentType)] = attachment.ContentType,
                         [nameof(AttachmentName.Size)] = attachment.Size,
-                        [nameof(AttachmentName.Flags)] = attachment.Flags.ToString(),
-                        [nameof(AttachmentName.RetireAt)] = attachment.RetireAt,
+                        [nameof(AttachmentName.RetireParameters)] = attachment.RetireParameters?.ToJson()
                     });
                 }
             }
@@ -841,8 +878,7 @@ namespace Raven.Server.Documents
                         Size = attachment.Size,
                         ChangeVector = attachment.ChangeVector,
                         DocumentId = lowerDocumentId.ToString(),
-                        Flags = attachment.Flags,
-                        RetireAt = attachment.RetireAt,
+                        RetireParameters = attachment.RetireParameters
                     });
                 }
             }
@@ -891,7 +927,7 @@ namespace Raven.Server.Documents
                     var document = _documentsStorage.Get(context, documentId, throwOnConflict: false);
                     if (document != null &&
                         document.TryGetMetadata(out var metadata) &&
-                        metadata.TryGet(Constants.Documents.Metadata.ChangeVector, out string exitingDocumentCv) &&
+                        metadata.TryGet(Client.Constants.Documents.Metadata.ChangeVector, out string exitingDocumentCv) &&
                         exitingDocumentCv == changeVector)
                     {
                         return _documentsStorage.AttachmentsStorage.GetAttachment(context, documentId, name, AttachmentType.Document, null);
@@ -901,11 +937,12 @@ namespace Raven.Server.Documents
                 return null;
             }
 
-            if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+            if (attachment.IsRetired())
             {
                 return attachment;
             }
-                var stream = GetAttachmentStream(context, attachment.Base64Hash);
+
+            var stream = GetAttachmentStream(context, attachment.Base64Hash);
             if (stream == null)
                 throw new FileNotFoundException($"Attachment's stream {name} on {documentId} was not found. This should not happen and is likely a bug.");
             attachment.Stream = stream;
@@ -1051,9 +1088,12 @@ namespace Raven.Server.Documents
                 Name = TableValueToId(context, (int)AttachmentsTable.Name, ref tvr),
                 ContentType = TableValueToId(context, (int)AttachmentsTable.ContentType, ref tvr),
                 Size = TableValueToLong((int)AttachmentsTable.Size, ref tvr),
-                Flags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref tvr),
-                RetireAt = TableValueToNullableDateTime((int)AttachmentsTable.RetireAt, ref tvr),
             };
+
+            result.RetireParameters = Attachment.GetRetireAttachmentParameters(
+                TableValueToString(context, (int)AttachmentsTable.Identifier, ref tvr),
+                TableValueToNullableDateTime((int)AttachmentsTable.RetireAt, ref tvr),
+                TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref tvr));
 
             TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out result.Base64Hash);
 
@@ -1110,7 +1150,7 @@ namespace Raven.Server.Documents
                 AttachmentDoesNotExistException.ThrowFor(documentId, name);
 
             var hash = attachment.Base64Hash.ToString();
-            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, attachment.Flags, attachment.Size, attachment.RetireAt, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
+            return PutAttachment(context, destinationId, destinationName, attachment.ContentType, hash, attachment.Size, attachment.RetireParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
         }
 
         public MoveAttachmentDetailsServer MoveAttachment(DocumentsOperationContext context, string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName, LazyStringValue changeVector, string hash = null, string contentType = null, bool usePartialKey = true, bool updateDocument = true, bool extractCollectionName = false)
@@ -1130,8 +1170,8 @@ namespace Raven.Server.Documents
             if (attachment == null)
                 AttachmentDoesNotExistException.ThrowFor(sourceDocumentId, sourceName);
 
-            var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Flags,attachment.Size, retireAtDt: null, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
-            Debug.Assert(attachment.Flags != AttachmentFlags.Retired, "attachment.Flags != AttachmentFlags.Retired");
+            var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Size, attachment.RetireParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
+            Debug.Assert(attachment.RetireParameters == null || attachment.RetireParameters.Flags == AttachmentFlags.None, "attachment.RetireParameters == null || attachment.RetireParameters.Flags == AttachmentFlags.None");
             DeleteAttachment(context, sourceDocumentId, sourceName, changeVector, out var sourceCollectionName, updateDocument, hash, contentType, usePartialKey, extractCollectionName: extractCollectionName);
 
             return new MoveAttachmentDetailsServer()
@@ -1235,12 +1275,12 @@ namespace Raven.Server.Documents
         public void DeleteAttachmentConflicts(DocumentsOperationContext context, Slice lowerId, BlittableJsonReaderObject document,
             BlittableJsonReaderObject conflictDocument, string changeVector)
         {
-            if (conflictDocument.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject conflictMetadata) == false ||
-                conflictMetadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray conflictAttachments) == false)
+            if (conflictDocument.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject conflictMetadata) == false ||
+                conflictMetadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray conflictAttachments) == false)
                 return;
 
-            if (document == null || document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
-                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+            if (document == null || document.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
+                metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
             {
                 attachments = null;
             }
@@ -1250,9 +1290,8 @@ namespace Raven.Server.Documents
                 if (conflictAttachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue conflictName) == false ||
                     conflictAttachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue conflictContentType) == false ||
                     conflictAttachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue conflictHash) == false ||
-                    conflictAttachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags conflictFlags) == false ||
-                    conflictAttachment.TryGet(nameof(AttachmentName.Size), out long conflictSize) == false ||
-                    conflictAttachment.TryGet(nameof(AttachmentName.RetireAt), out DateTime? conflictRetireAt) == false)
+                    conflictAttachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject conflictRetireParamsBjro) == false ||
+                    conflictAttachment.TryGet(nameof(AttachmentName.Size), out long conflictSize) == false)
                 {
                     Debug.Assert(false, "Should never happen.");
                     continue;
@@ -1266,9 +1305,8 @@ namespace Raven.Server.Documents
                         if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                             attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
                             attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
-                            attachment.TryGet(nameof(AttachmentName.Flags), out AttachmentFlags flags) == false ||
                             attachment.TryGet(nameof(AttachmentName.Size), out long size) == false ||
-                            attachment.TryGet(nameof(AttachmentName.RetireAt), out DateTime? retireAt) == false)
+                            attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParamsBjro) == false)
                         {
                             Debug.Assert(false, "Should never happen.");
                             continue;
@@ -1277,9 +1315,8 @@ namespace Raven.Server.Documents
                         if (conflictName.Equals(name) &&
                             conflictContentType.Equals(contentType) &&
                             conflictHash.Equals(hash) &&
-                            conflictFlags.Equals(flags) &&
                             conflictSize.Equals(size) &&
-                            conflictRetireAt.Equals(retireAt))
+                            Equals(conflictRetireParamsBjro, retireParamsBjro))
                         {
                             attachmentFoundInResolveDocument = true;
                             break;
@@ -1288,12 +1325,19 @@ namespace Raven.Server.Documents
                 }
 
                 if (attachmentFoundInResolveDocument == false)
-                    DeleteAttachmentFromConflict(context, lowerId, conflictName, conflictContentType, conflictHash, changeVector, conflictFlags);
+                {
+                    RetireAttachmentParameters retireParams = null;
+                    if (conflictRetireParamsBjro != null)
+                    {
+                        retireParams = JsonDeserializationClient.RetireAttachmentParameters(conflictRetireParamsBjro);
+                    }
+                    DeleteAttachmentFromConflict(context, lowerId, conflictName, conflictContentType, conflictHash, changeVector, retireParams);
+                }
             }
         }
 
         private void DeleteAttachmentFromConflict(DocumentsOperationContext context, Slice lowerId, LazyStringValue conflictName,
-            LazyStringValue conflictContentType, LazyStringValue conflictHash, string changeVector, AttachmentFlags conflictFlags)
+            LazyStringValue conflictContentType, LazyStringValue conflictHash, string changeVector, RetireAttachmentParameters retiredParams)
         {
             using (DocumentIdWorker.GetSliceFromId(context, conflictName, out Slice lowerName))
             using (DocumentIdWorker.GetSliceFromId(context, conflictContentType, out Slice lowerContentType))
@@ -1304,7 +1348,7 @@ namespace Raven.Server.Documents
             {
                 var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
 
-                if (conflictFlags == AttachmentFlags.Retired)
+                if (retiredParams is { Flags: AttachmentFlags.Retired })
                 {
                     DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
                 }
@@ -1495,8 +1539,8 @@ namespace Raven.Server.Documents
 
         public static IEnumerable<BlittableJsonReaderObject> GetAttachmentsFromDocumentMetadata(BlittableJsonReaderObject document)
         {
-            if (document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
-                metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
+            if (document.TryGet(Client.Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) &&
+                metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments))
             {
                 foreach (BlittableJsonReaderObject attachment in attachments)
                 {
@@ -1613,6 +1657,14 @@ namespace Raven.Server.Documents
             slice = new Slice(SliceOptions.Key, keyMem);
 
             return scope;
+        }
+
+        internal static (AttachmentFlags Flags, DateTime? RetireAtDt, string Identifier) GetInfoFromRetiredParameters(RetireAttachmentParameters retireParams)
+        {
+            AttachmentFlags flags = retireParams?.Flags ?? Client.Documents.Attachments.AttachmentFlags.None;
+            DateTime? retireAtDt = retireParams?.At;
+            string identifier = retireParams?.Identifier;
+            return (flags, retireAtDt, identifier);
         }
 
         public static class AttachmentKey

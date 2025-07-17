@@ -69,12 +69,12 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             get
             {
-                if (_attachment.RetireAt.HasValue == false)
+                if (_attachment.IsRetired() == false)
                 {
                     return DynamicNullObject.ExplicitNull;
                 }
 
-                return _attachment.RetireAt.Value;
+                return _attachment.RetireParameters.At;
             }
         }
 
@@ -82,7 +82,12 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             get
             {
-                return _attachment.Flags;
+                if (_attachment.IsRetired() == false)
+                {
+                    return AttachmentFlags.None;
+                }
+
+                return _attachment.RetireParameters.Flags;
             }
         }
 
@@ -93,7 +98,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public string GetContentAsString(Encoding encoding)
         {
-            if (_attachment.Flags == AttachmentFlags.Retired)
+            if (_attachment.IsRetired())
                 ThrowRetiredAttachmentException(nameof(GetContentAsString));
 
             if (_contentAsString == null)
@@ -109,7 +114,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public Stream GetContentAsStream()
         {
-            if (_attachment.Flags == AttachmentFlags.Retired)
+            if (_attachment.IsRetired())
                 ThrowRetiredAttachmentException(nameof(GetContentAsStream));
 
             _attachment.Stream.Position = 0;

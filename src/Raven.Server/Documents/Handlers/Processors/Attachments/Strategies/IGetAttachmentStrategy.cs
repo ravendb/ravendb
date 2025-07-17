@@ -14,7 +14,7 @@ public interface IGetAttachmentStrategy
 
     public static string CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(DocumentsOperationContext context, DocumentDatabase database, Attachment attachment, string documentId, string name, string method)
     {
-        if (attachment.Flags.HasFlag(AttachmentFlags.Retired) == false)
+        if (attachment.IsRetired() == false)
         {
             throw new InvalidOperationException($"Cannot {method} retired attachment '{name}' on document '{documentId}' because it is not retired. Please use dedicated API.");
         }
@@ -34,10 +34,16 @@ public interface IGetAttachmentStrategy
                 $"Cannot {method} retired attachment '{name}' on document '{documentId}' because it is doesn't have a {nameof(RetiredAttachmentsConfiguration)}.");
         }
 
-        if (config.Disabled)
+        var destination = config.Destinations[attachment.RetireParameters.Identifier];
+        if (destination == null)
         {
             throw new InvalidOperationException(
-                $"Cannot {method} retired attachment '{name}' on document '{documentId}' because {nameof(RetiredAttachmentsConfiguration)} is disabled.");
+                $"Cannot {method} retired attachment '{name}' with identifier '{attachment.RetireParameters.Identifier}' on document '{documentId}' because it is doesn't have {nameof(RetiredAttachmentsConfiguration)}.{nameof(RetiredAttachmentsConfiguration.Destinations)}.");
+        }
+        if (destination.Disabled)
+        {
+            throw new InvalidOperationException(
+                $"Cannot {method} retired attachment '{name}' with identifier '{attachment.RetireParameters.Identifier}' on document '{documentId}' because {nameof(RetiredAttachmentsConfiguration)}.{nameof(RetiredAttachmentsConfiguration.Destinations)} is disabled.");
         }
 
         return collectionStr;

@@ -437,8 +437,14 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                                 if (newChangeVector != null)
                                 {
+                                    RetireAttachmentParameters retiredParams = null;
+                                    if (attachment.RetireAtUtc.HasValue)
+                                    {
+                                        retiredParams = new RetireAttachmentParameters(attachment.RetireIdentifier.ToString(), attachment.RetireAtUtc.Value) { Flags = attachment.Flags };
+                                    }
+
                                     database.DocumentsStorage.AttachmentsStorage.PutDirect(context, attachment.Key, attachmentName,
-                                        contentType, attachment.Base64Hash, attachment.RetireAtUtc, attachment.Flags, attachment.AttachmentSize, isRevision, newChangeVector);
+                                        contentType, attachment.Base64Hash, retiredParams, attachment.AttachmentSize, isRevision, newChangeVector);
                                 }
 
                                 break;

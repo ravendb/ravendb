@@ -22,7 +22,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
 
         public override string CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
         {
-            if (attachment.Flags.HasFlag(AttachmentFlags.Retired))
+            if (attachment.IsRetired())
             {
                 throw new InvalidOperationException($"Cannot get attachment '{name}' on document '{documentId}' because it is retired. Please use dedicated API.");
             }

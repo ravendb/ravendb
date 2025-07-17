@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations.Attachments;
 
 namespace Raven.Client.Documents.Commands.Batches
 {
@@ -37,9 +38,9 @@ namespace Raven.Client.Documents.Commands.Batches
             stream.Position = 0;
         }
 
-        public static bool TryValidateStream(AttachmentFlags flags, Stream stream)
+        public static bool TryValidateStream(Stream stream, RetireAttachmentParameters parameters)
         {
-            if (flags == AttachmentFlags.Retired)
+            if (parameters is { Flags: AttachmentFlags.Retired })
             {
                 Debug.Assert(stream == null, "stream == null");
                 return false;

@@ -168,9 +168,9 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     var docId = EtlGetDocIdFromPrefixIfNeeded(cmd.Id, cmd, lastPutResult);
 
                     AttachmentStream attachmentStream = GetAttachmentStream(attachmentIterator, out Stream stream);
-                    AttachmentDetailsServer attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, attachmentStream.Hash, flags: AttachmentFlags.None, stream.Length, cmd.RetireAt, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
+                    AttachmentDetailsServer attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, attachmentStream.Hash, stream.Length, cmd.RetireParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
 
-                    Debug.Assert(cmd.Flags != AttachmentFlags.Retired, "cmd.Flags != AttachmentFlags.Retired");
+                    Debug.Assert(cmd.RetireParameters == null  || cmd.RetireParameters.Flags == AttachmentFlags.None, "cmd.RetireParameters == null  || cmd.RetireParameters.Flags == AttachmentFlags.None");
 
                     LastChangeVector = attachmentPutResult.ChangeVector;
 

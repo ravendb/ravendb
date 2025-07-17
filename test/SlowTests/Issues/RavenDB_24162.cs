@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Retired;
@@ -21,12 +22,24 @@ namespace SlowTests.Issues
 
         private RetiredAttachmentsConfiguration SampleConfig() => new RetiredAttachmentsConfiguration
         {
-            Disabled = true,
-            RetireFrequencyInSec = 123456,
-            S3Settings = new S3Settings
+            Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
             {
-                BucketName = "test-bucket-does-not-exist", AwsRegionName = "us-west-2", AwsAccessKey = "AKIAFAKEKEY", AwsSecretKey = "FAKESECRET"
-            }
+                {
+                    "test", new RetiredAttachmentsDestinationConfiguration()
+                    {
+                        Disabled = true,
+                        S3Settings = new S3Settings
+                        {
+                            BucketName = "test-bucket-does-not-exist", 
+                            AwsRegionName = "us-west-2", 
+                            AwsAccessKey = "AKIAFAKEKEY", 
+                            AwsSecretKey = "FAKESECRET"
+                        }, 
+                        Identifier = "conf-identifier"
+                    }
+                }
+            },
+            RetireFrequencyInSec = 123456,
         };
 
         [RavenTheory(RavenTestCategory.Certificates)]
@@ -120,7 +133,8 @@ namespace SlowTests.Issues
                 store.Maintenance.Send(new ConfigureRetiredAttachmentsOperation(cfg));
 
                 var returned = store.Maintenance.Send(new GetRetireAttachmentsConfigurationOperation());
-                Assert.True(returned.Disabled);
+                Assert.Equal(1, returned.Destinations.Count);
+                Assert.True(returned.Destinations.First().Value.Disabled);
                 var x = returned.RetireFrequencyInSec;
                 Assert.Equal(123456, returned.RetireFrequencyInSec);
             }

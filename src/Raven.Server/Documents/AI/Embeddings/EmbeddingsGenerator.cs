@@ -628,7 +628,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
 
                                 string embeddingHash = AttachmentsStorageHelper.CalculateHash(embedding.Span);
                                 attachmentsStorage.PutAttachment(context, docId, valueHash, EmbeddingAttachmentContentType,
-                                    embeddingHash, AttachmentFlags.None, embedding.Length, retireAtDt: null, expectedChangeVector: null, new ReadOnlyMemoryStream<byte>(embedding));
+                                    embeddingHash, embedding.Length, retireParams: null, expectedChangeVector: null, new ReadOnlyMemoryStream<byte>(embedding));
                                 operations++;
                             }
                         }
@@ -867,7 +867,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
                 {
                     operations++;
                     attachmentsStorage.PutAttachment(context, embeddingDocId, embeddingHash, EmbeddingAttachmentContentType,
-                        embeddingHash, AttachmentFlags.None, embedding.Length, retireAtDt: null, expectedChangeVector: null, new ReadOnlyMemoryStream<byte>(embedding));
+                        embeddingHash, embedding.Length, retireParams: null, expectedChangeVector: null, new ReadOnlyMemoryStream<byte>(embedding));
                 }
 
                 foreach (var toRemove in attachmentsToRemove)

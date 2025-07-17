@@ -42,14 +42,26 @@ internal abstract class AbstractBulkPostAttachmentStrategyProcessor<TRequestHand
         writer.WritePropertyName(nameof(AttachmentDetails.DocumentId));
         writer.WriteString(documentId);
         writer.WriteComma();
-        writer.WritePropertyName(nameof(AttachmentDetails.Flags));
-        writer.WriteInteger((int)attachment.Flags);
-
-        if (attachment.RetireAt.HasValue)
+        writer.WritePropertyName(nameof(AttachmentDetails.RetireParameters));
+        if (attachment.RetireParameters == null)
         {
+            writer.WriteNull();
+        }
+        else
+        {
+            writer.WriteStartObject();
+            writer.WritePropertyName(nameof(RetireAttachmentParameters.Identifier));
+            writer.WriteString(attachment.RetireParameters.Identifier);
+
             writer.WriteComma();
-            writer.WritePropertyName(nameof(AttachmentDetails.RetireAt));
-            writer.WriteDateTime(attachment.RetireAt.Value, true);
+            writer.WritePropertyName(nameof(RetireAttachmentParameters.At));
+            writer.WriteDateTime(attachment.RetireParameters.At, true);
+
+            writer.WriteComma();
+            writer.WritePropertyName(nameof(RetireAttachmentParameters.Flags));
+            writer.WriteInteger((int)attachment.RetireParameters.Flags);
+
+            writer.WriteEndObject();
         }
 
         writer.WriteEndObject();
