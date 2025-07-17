@@ -16,20 +16,19 @@ internal abstract class AiAssistantHandlerProcessorBase : AbstractHandlerProcess
 
     protected AiAssistantHandlerProcessorBase([NotNull] RequestHandler requestHandler) : base(requestHandler)
     {
-        // TODO Grisha
-        var licenseExists = ServerStore.LicenseManager.TryGetLicense(out _license);
+        _license = ServerStore.LoadLicense();
 
-        if (licenseExists == false)
+        if (_license is null)
             throw new InvalidOperationException($"AI Assistant is available only for licenses instances of RavenDB. Please register your license.");
 
-        _certificateThumbprint = RequestHandler.GetCurrentCertificate()?.Thumbprint ?? "unsecured node";
+        _certificateThumbprint = RequestHandler.GetCurrentCertificate()?.Thumbprint;
     }
 
     protected void FulfillRequestMetadata<TRequest>(TRequest request) where TRequest : AiAssistantRequestAuthentication
     {
         PortableExceptions.ThrowIf<InvalidDataException>(request.License is not null, $"License should be set by the server.");
         PortableExceptions.ThrowIf<InvalidDataException>(request.CertificateThumbprint is not null, $"Certificate thumbprint should be set by the server.");
-        
+
         request.License = _license;
         request.CertificateThumbprint = _certificateThumbprint;
     }

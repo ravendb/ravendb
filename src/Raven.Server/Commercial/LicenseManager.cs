@@ -121,8 +121,6 @@ namespace Raven.Server.Commercial
         }
         
         public bool IsEulaAccepted => _eulaAcceptedButHasPendingRestart || _serverStore.Configuration.Licensing.EulaAccepted;
-
-        public bool TryGetLicense(out License license) => _licenseHelper.TryGetLicense(out license);
         
         public void Initialize(StorageEnvironment environment, TransactionContextPool contextPool)
         {
