@@ -2652,7 +2652,10 @@ more responsive application.
             if (NoTracking == false)
                 return;
 
-            throw new InvalidOperationException("This session does not track any entities, because of that registering includes is forbidden to avoid false expectations when later load operations are performed on those and no requests are being sent to the server. Please avoid any 'Include' operations during non-tracking session actions like load or query.");
+            throw new InvalidOperationException(
+                "Cannot register includes when NoTracking is enabled. " +
+                "Included documents are not tracked, so subsequent Load operations for that data will still trigger additional server requests. " +
+                "To avoid confusion, 'Include' operations are disallowed when tracking is disabled on the session or query.");
         }
     }
 
