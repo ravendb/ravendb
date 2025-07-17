@@ -149,30 +149,36 @@ function mapToDto(
                 ParametersSchema: x.parametersSchema || null,
             })) ?? [],
         MaxModelIterationsPerCall: formData.maxModelIterationsPerCall,
-        ChatTrimming: {
-            History: formData.trimming?.historyExpirationInSeconds
+        ChatTrimming:
+            formData.trimming?.method != null
                 ? {
-                      HistoryExpiration: genUtils.formatAsTimeSpan(formData.trimming.historyExpirationInSeconds * 1000),
+                      History: formData.trimming.historyExpirationInSeconds
+                          ? {
+                                HistoryExpiration: genUtils.formatAsTimeSpan(
+                                    formData.trimming.historyExpirationInSeconds * 1000
+                                ),
+                            }
+                          : null,
+                      Tokens:
+                          formData.trimming.method === "Tokens"
+                              ? {
+                                    MaxTokensBeforeSummarization: formData.trimming.maxTokensBeforeSummarization,
+                                    MaxTokensAfterSummarization: formData.trimming.maxTokensAfterSummarization,
+                                    ResultPrefix: formData.trimming.resultPrefix,
+                                    SummarizationTaskBeginningPrompt:
+                                        formData.trimming.summarizationTaskBeginningPrompt,
+                                    SummarizationTaskEndPrompt: formData.trimming.summarizationTaskEndPrompt,
+                                }
+                              : null,
+                      Truncate:
+                          formData.trimming.method === "Truncate"
+                              ? {
+                                    MessagesLengthBeforeTruncate: formData.trimming.messagesLengthBeforeTruncate,
+                                    MessagesLengthAfterTruncate: formData.trimming.messagesLengthAfterTruncate,
+                                }
+                              : null,
                   }
                 : null,
-            Tokens:
-                formData.trimming?.method === "Tokens"
-                    ? {
-                          MaxTokensBeforeSummarization: formData.trimming.maxTokensBeforeSummarization,
-                          MaxTokensAfterSummarization: formData.trimming.maxTokensAfterSummarization,
-                          ResultPrefix: formData.trimming.resultPrefix,
-                          SummarizationTaskBeginningPrompt: formData.trimming.summarizationTaskBeginningPrompt,
-                          SummarizationTaskEndPrompt: formData.trimming.summarizationTaskEndPrompt,
-                      }
-                    : null,
-            Truncate:
-                formData.trimming?.method === "Truncate"
-                    ? {
-                          MessagesLengthBeforeTruncate: formData.trimming.messagesLengthBeforeTruncate,
-                          MessagesLengthAfterTruncate: formData.trimming.messagesLengthAfterTruncate,
-                      }
-                    : null,
-        },
     };
 }
 

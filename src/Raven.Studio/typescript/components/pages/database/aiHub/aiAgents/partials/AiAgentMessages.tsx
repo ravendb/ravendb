@@ -2,15 +2,20 @@ import "./AiAgentMessages.scss";
 import AceEditor from "components/common/ace/AceEditor";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
-import { Fragment, useEffect, useRef } from "react";
+import { Fragment, useEffect, useMemo, useRef } from "react";
 import ReactAce from "react-ace";
 import useUniqueId from "components/hooks/useUniqueId";
 import Accordion from "react-bootstrap/Accordion";
 import IconName from "typings/server/icons";
-import { SubmitHandler, useFieldArray, useForm } from "react-hook-form";
+import { Control, SubmitHandler, useFieldArray, useForm } from "react-hook-form";
 import { FormAceEditor, FormGroup, FormLabel } from "components/common/Form";
 import Button from "react-bootstrap/Button";
 import { AiAgentMessage, AiAgentToolCall } from "../utils/aiAgentsTypes";
+import { useDocumentColumnsProvider } from "components/common/virtualTable/columnProviders/useDocumentColumnsProvider";
+import { getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable } from "@tanstack/react-table";
+import VirtualTable from "components/common/virtualTable/VirtualTable";
+import document from "models/database/documents/document";
+import Badge from "react-bootstrap/Badge";
 
 type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
 type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
@@ -32,10 +37,12 @@ export default function AiAgentMessages({
         <div className="w-100 vstack gap-2 ai-agent-messages">
             {messages.map((message, idx) => (
                 <Fragment key={message.id}>
-                    {(message.role === "user" || message.role === "tool") && (
+                    {message.role === "system" && <SystemMessage message={message} />}
+                    {message.role === "tool" && <ToolMessage message={message} allMessages={messages} />}
+                    {message.role === "user" && (
                         <UserMessage message={message} idx={idx} toolQueries={toolQueries} toolActions={toolActions} />
                     )}
-                    {(message.role === "assistant" || message.role === "system") && (
+                    {message.role === "assistant" && (
                         <AgentMessage
                             agentMessage={message}
                             allMessages={messages}
@@ -46,6 +53,92 @@ export default function AiAgentMessages({
                     )}
                 </Fragment>
             ))}
+        </div>
+    );
+}
+
+interface ToolMessageProps {
+    message: AiAgentMessage;
+    allMessages: AiAgentMessage[];
+}
+
+function ToolMessage({ message, allMessages }: ToolMessageProps) {
+    const aceRef = useRef<ReactAce>(null);
+
+    const toolName = allMessages
+        .find((x) => x.toolCalls?.some((y) => y.id === message.toolCallId))
+        ?.toolCalls.find((x) => x.id === message.toolCallId)?.name;
+
+    const isTable = message.content.startsWith("[") && message.content.endsWith("]") && message.content.length > 2;
+    const tableData = useMemo(
+        () => (isTable ? JSON.parse(message.content).map((x: any) => new document(x)) : []),
+        [message.content, isTable]
+    );
+
+    const { columnDefs } = useDocumentColumnsProvider({
+        documents: tableData,
+        availableWidth: window.innerWidth,
+        hasCheckbox: false,
+        hasPreview: false,
+        hasFlags: true,
+    });
+
+    const table = useReactTable({
+        data: tableData,
+        columns: columnDefs,
+        columnResizeMode: "onChange",
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+    });
+
+    return (
+        <div className="bg-faded-primary p-2 rounded-3 border border-primary text-reset w-100">
+            {toolName && (
+                <div className="hstack justify-content-between mb-1">
+                    <div>
+                        Tool: <strong>{toolName}</strong>
+                    </div>
+                    <Badge bg="primary" pill>
+                        <Icon icon="check" /> Submitted
+                    </Badge>{" "}
+                </div>
+            )}
+            {isTable ? (
+                <VirtualTable table={table} heightInPx={300} className="border border-secondary" />
+            ) : (
+                <AceEditor
+                    aceRef={aceRef}
+                    value={message.content}
+                    readOnly
+                    mode="json"
+                    height="150px"
+                    wrapEnabled
+                    setOptions={{ indentedSoftWrap: false }}
+                    actions={[{ component: <AceEditor.FullScreenAction /> }]}
+                />
+            )}
+        </div>
+    );
+}
+
+interface SystemMessageProps {
+    message: AiAgentMessage;
+}
+
+function SystemMessage({ message }: SystemMessageProps) {
+    return (
+        <div className="text-muted">
+            <div className="text-center">{message.date}</div>
+            <div className="mt-2 p-2 border-start border-secondary">
+                <div>
+                    <Icon icon="system" size="xs" />
+                    System message
+                </div>
+                <div className="mt-2 overflow-auto" style={{ maxHeight: "200px" }}>
+                    {message.content}
+                </div>
+            </div>
         </div>
     );
 }
@@ -86,7 +179,7 @@ function UserMessage({ message, idx, toolQueries, toolActions }: UserMessageProp
                     {message.toolCalls?.length > 0 && (
                         <div className="vstack gap-2">
                             {message.toolCalls.map((toolCall) => (
-                                <TranscriptTool
+                                <ToolCall
                                     key={toolCall.id}
                                     toolCall={toolCall}
                                     toolQueries={toolQueries}
@@ -134,7 +227,7 @@ function AgentMessage({
         name: "parameters",
     });
 
-    // TODO: this is a workaround to reset the form when the tool calls change
+    // Reset the form when the tool calls change
     useEffect(() => {
         reset({
             parameters:
@@ -221,7 +314,7 @@ function AgentMessage({
                     {agentMessage.toolCalls?.length > 0 && (
                         <div className="vstack gap-2">
                             {agentMessage.toolCalls.map((toolCall) => (
-                                <TranscriptTool
+                                <ToolCall
                                     key={toolCall.id}
                                     toolCall={toolCall}
                                     toolQueries={toolQueries}
@@ -234,19 +327,9 @@ function AgentMessage({
             )}
             {isRequireParameters && (
                 <div className="hstack justify-content-end mt-2">
-                    <div className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset w-70">
+                    <div className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset w-100">
                         {parametersFieldsArray.fields.map((field, idx) => (
-                            <FormGroup key={field.id}>
-                                <FormLabel>
-                                    Define parameters for <strong>{field.name}</strong> tool call
-                                </FormLabel>
-                                <FormAceEditor
-                                    control={control}
-                                    name={`parameters.${idx}.arguments`}
-                                    mode="json"
-                                    height="150px"
-                                />
-                            </FormGroup>
+                            <ParameterField key={field.id} idx={idx} name={field.name} control={control} />
                         ))}
                         <Button variant="primary" className="rounded-pill" onClick={handleSubmit(handleSave)}>
                             <Icon icon="check" />
@@ -259,13 +342,39 @@ function AgentMessage({
     );
 }
 
-interface TranscriptToolProps {
+interface ParameterFieldProps {
+    idx: number;
+    name: string;
+    control: Control<{ parameters: AiAgentToolCall[] }>;
+}
+
+function ParameterField({ idx, name, control }: ParameterFieldProps) {
+    const aceRef = useRef<ReactAce>(null);
+
+    return (
+        <FormGroup>
+            <FormLabel>
+                Define parameters for <strong>{name}</strong> tool call
+            </FormLabel>
+            <FormAceEditor
+                aceRef={aceRef}
+                control={control}
+                name={`parameters.${idx}.arguments`}
+                mode="json"
+                height="150px"
+                actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
+            />
+        </FormGroup>
+    );
+}
+
+interface ToolCallProps {
     toolCall: AiAgentToolCall;
     toolQueries: ToolQuery[];
     toolActions: ToolAction[];
 }
 
-function TranscriptTool({ toolCall, toolQueries, toolActions }: TranscriptToolProps) {
+function ToolCall({ toolCall, toolQueries, toolActions }: ToolCallProps) {
     const id = useUniqueId("tool-call");
 
     const toolQuery = toolQueries?.find((x) => x.Name === toolCall.name);
@@ -285,19 +394,19 @@ function TranscriptTool({ toolCall, toolQueries, toolActions }: TranscriptToolPr
                     </div>
                 </Accordion.Header>
                 <Accordion.Body className="panel-bg-3 rounded-2">
-                    <TranscriptToolBody tool={toolQuery ?? toolAction} toolCall={toolCall} />
+                    <ToolCallBody tool={toolQuery ?? toolAction} toolCall={toolCall} />
                 </Accordion.Body>
             </Accordion.Item>
         </Accordion>
     );
 }
 
-interface TranscriptToolBodyProps {
+interface ToolCallBodyProps {
     tool: ToolQuery | ToolAction;
     toolCall: AiAgentToolCall;
 }
 
-function TranscriptToolBody({ tool, toolCall }: TranscriptToolBodyProps) {
+function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
     return (
         <div>
             {tool && (

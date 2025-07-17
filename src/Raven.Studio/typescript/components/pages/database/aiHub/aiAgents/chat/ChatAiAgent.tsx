@@ -155,7 +155,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                 style={{ height: height - promptHeightInPx }}
                             >
                                 {messages.length === 0 && (
-                                    <div className="p-5">
+                                    <div className="h-100 vstack justify-content-center">
                                         <AiAgentParametersField
                                             control={control}
                                             name="parameters"

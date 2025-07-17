@@ -83,11 +83,13 @@ export default function EditAiAgentTestPanel() {
                         ref={messagesPanelRef}
                     >
                         {messages.length === 0 && (
-                            <AiAgentParametersField
-                                control={control}
-                                name="test.parameters"
-                                value={formValues.test.parameters}
-                            />
+                            <div className="h-100 vstack justify-content-center">
+                                <AiAgentParametersField
+                                    control={control}
+                                    name="test.parameters"
+                                    value={formValues.test.parameters}
+                                />
+                            </div>
                         )}
                         {messages.length > 0 && (
                             <AiAgentMessages

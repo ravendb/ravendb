@@ -23,6 +23,7 @@ function mapMessageFromDoc(docMessage: AiAgentDocMessage): AiAgentMessage {
             : [],
         date: docMessage.date ? moment(docMessage.date).format(aiAgentsUtils.messageDateFormat) : null,
         usage: docMessage.usage,
+        toolCallId: docMessage.tool_call_id,
     };
 }
 

@@ -10,6 +10,7 @@ import { useServices } from "components/hooks/useServices";
 import { useAsync, useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import Button from "react-bootstrap/Button";
+import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import { useState } from "react";
 import { CustomDropdownToggle } from "components/common/Dropdown";
@@ -83,13 +84,14 @@ export default function AiAgents() {
                 </div>
             )}
             {asyncGetAiAgents.result && (
-                <div className="d-flex flex-wrap gap-2 mt-3">
+                <Row className="mt-3">
                     {asyncGetAiAgents.result
                         .filter((config) => config.Name.toLowerCase().includes(nameFilter.trim().toLowerCase()))
+                        .sort((a, b) => a.Name.localeCompare(b.Name))
                         .map((config) => (
                             <AiAgentCard key={config.Identifier} config={config} />
                         ))}
-                </div>
+                </Row>
             )}
         </div>
     );
@@ -133,36 +135,38 @@ function AiAgentCard({ config }: AiAgentCardProps) {
     };
 
     return (
-        <Col className="panel-bg-1 p-2 rounded-2 border border-secondary" sm={12} xl={6} xxl={4}>
-            <h4 className="m-0">{config.Name}</h4>
-            <div className="mt-2 text-truncate" title={config.SystemPrompt}>
-                {config.SystemPrompt}
-            </div>
-            <div className="hstack justify-content-between mt-2">
-                <a href={appUrl.forChatAiAgent(databaseName, config.Identifier)} className="btn btn-primary">
-                    <Icon icon="llm" />
-                    Start new chat
-                </a>
-                <Dropdown>
-                    <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="secondary">
-                        <Icon icon="more" margin="m-0" />
-                    </Dropdown.Toggle>
-                    <Dropdown.Menu>
-                        <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier)}>
-                            <Icon icon="edit" /> Edit agent
-                        </Dropdown.Item>
-                        <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier, true)}>
-                            <Icon icon="copy" /> Clone agent
-                        </Dropdown.Item>
-                        <Dropdown.Item
-                            className="text-danger"
-                            onClick={handleDelete}
-                            disabled={asyncDeleteAiAgent.loading}
-                        >
-                            <Icon icon="trash" /> Delete agent
-                        </Dropdown.Item>
-                    </Dropdown.Menu>
-                </Dropdown>
+        <Col className="p-1" sm={12} xl={6} xxl={4}>
+            <div className="panel-bg-1 p-2 rounded-2 border border-secondary">
+                <h4 className="m-0">{config.Name}</h4>
+                <div className="mt-2 text-truncate" title={config.SystemPrompt}>
+                    {config.SystemPrompt}
+                </div>
+                <div className="hstack justify-content-between mt-2">
+                    <a href={appUrl.forChatAiAgent(databaseName, config.Identifier)} className="btn btn-primary">
+                        <Icon icon="llm" />
+                        Start new chat
+                    </a>
+                    <Dropdown>
+                        <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="secondary">
+                            <Icon icon="more" margin="m-0" />
+                        </Dropdown.Toggle>
+                        <Dropdown.Menu>
+                            <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier)}>
+                                <Icon icon="edit" /> Edit agent
+                            </Dropdown.Item>
+                            <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier, true)}>
+                                <Icon icon="copy" /> Clone agent
+                            </Dropdown.Item>
+                            <Dropdown.Item
+                                className="text-danger"
+                                onClick={handleDelete}
+                                disabled={asyncDeleteAiAgent.loading}
+                            >
+                                <Icon icon="trash" /> Delete agent
+                            </Dropdown.Item>
+                        </Dropdown.Menu>
+                    </Dropdown>
+                </div>
             </div>
         </Col>
     );

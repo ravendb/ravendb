@@ -8,14 +8,14 @@ export const chatAiAgentUpdateUrlMiddleware = createListenerMiddleware();
 chatAiAgentUpdateUrlMiddleware.startListening({
     actionCreator: chatAiAgentActions.conversationIdSet,
     effect: (action, { getState }) => {
-        if (!action.payload) {
-            return;
-        }
-
         const state = getState() as RootState;
 
         const databaseName = state.databases.activeDatabaseName;
         const agentId = state.chatAiAgent.config.data?.Identifier;
+
+        if (!databaseName || !agentId) {
+            return;
+        }
 
         const url = appUrl.forChatAiAgent(databaseName, agentId, action.payload);
 

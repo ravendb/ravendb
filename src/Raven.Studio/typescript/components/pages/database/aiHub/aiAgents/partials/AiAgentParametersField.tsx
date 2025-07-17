@@ -18,7 +18,7 @@ export default function AiAgentParametersField<
     }
 
     return (
-        <div className="flex-grow-1 text-center w-100">
+        <div className="text-center w-100 overflow-auto py-2">
             <Icon icon="metrics" color="primary" size="lg" />
             <h3 className="mt-1">To start a new chat select a chosen parameters.</h3>
 
