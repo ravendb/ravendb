@@ -11,6 +11,14 @@ export function withPreventDefault(action: (...args: any[]) => void): MouseEvent
     };
 }
 
+export function withNestedSubmit(action: (...args: any[]) => void) {
+    return (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault();
+        e.stopPropagation();
+        action();
+    };
+}
+
 export function createIdleState(): loadableData<any> {
     return {
         data: null,
