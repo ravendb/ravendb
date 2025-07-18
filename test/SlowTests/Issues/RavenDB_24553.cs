@@ -16,7 +16,8 @@ public class RavenDB_24553 : RavenTestBase
     [RavenFact(RavenTestCategory.BackupExportImport)]
     public void CanUpdateDatabaseCompressionAfterServerwideBackup()
     {
-        using (var store = GetDocumentStore())
+        using (var server = GetNewServer())
+        using (var store = GetDocumentStore(new Options { Server = server }))
         {
             // Create serverwide backup
             var backupConfig = new ServerWideBackupConfiguration
