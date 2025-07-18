@@ -14,17 +14,23 @@ import { editAiAgentUtils } from "../utils/editAiAgentUtils";
 import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
+import SizeGetter from "components/common/SizeGetter";
+import AceEditor from "components/common/ace/AceEditor";
+import ReactAce from "react-ace";
 
 export default function EditAiAgentTestPanel() {
     const dispatch = useAppDispatch();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { control, setValue } = useFormContext<EditAiAgentFormData>();
+    const rawDataRef = useRef<ReactAce>(null);
 
     const formValues = useWatch({
         control,
     });
 
     const isTestOpen = useAppSelector(editAiAgentSelectors.isTestOpen);
+    const testDocument = useAppSelector(editAiAgentSelectors.testDocument);
+    const isRawData = useAppSelector(editAiAgentSelectors.isRawData);
     const messages = useAppSelector(editAiAgentSelectors.testMessages);
     const runTestState = useAppSelector(editAiAgentSelectors.runTestState);
 
@@ -47,8 +53,7 @@ export default function EditAiAgentTestPanel() {
 
     const { Actions, Queries } = editAiAgentUtils.mapToDto(formValues);
 
-    const handleReset = () => {
-        dispatch(editAiAgentActions.isTestOpenSet(false));
+    const handleNewChat = () => {
         dispatch(editAiAgentActions.testDocumentSet(null));
         dispatch(editAiAgentActions.testMessagesSet([]));
         setValue("test.prompt", "");
@@ -61,10 +66,33 @@ export default function EditAiAgentTestPanel() {
                     <Icon icon="test" color="primary" />
                     Test results
                 </h3>
-                <Button variant="secondary" size="sm" onClick={handleReset} className="rounded-pill">
-                    <Icon icon="reset" />
-                    Reset
-                </Button>
+                {isTestOpen && (
+                    <div className="hstack gap-2">
+                        {messages.length > 0 && (
+                            <Button variant="primary" size="sm" onClick={handleNewChat} className="rounded-pill">
+                                New chat
+                            </Button>
+                        )}
+                        {testDocument && messages.length > 0 && (
+                            <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => dispatch(editAiAgentActions.isRawDataSet(!isRawData))}
+                                className="rounded-pill"
+                            >
+                                <Icon icon={isRawData ? "ai-agents" : "json"} margin="m-0" />
+                            </Button>
+                        )}
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => dispatch(editAiAgentActions.isTestOpenSet(false))}
+                            className="rounded-pill"
+                        >
+                            <Icon icon="close" /> Close
+                        </Button>
+                    </div>
+                )}
             </div>
             {!isTestOpen && (
                 <div className="p-3 flex-grow-1 vstack justify-content-center align-items-center">
@@ -91,12 +119,27 @@ export default function EditAiAgentTestPanel() {
                                 />
                             </div>
                         )}
-                        {messages.length > 0 && (
+                        {!isRawData && messages.length > 0 && (
                             <AiAgentMessages
                                 messages={messages}
                                 toolQueries={Queries}
                                 toolActions={Actions}
                                 handleSaveParameters={(toolCallParameters) => runTest(toolCallParameters)}
+                            />
+                        )}
+                        {isRawData && testDocument && (
+                            <SizeGetter
+                                isHeighRequired
+                                render={({ height }) => (
+                                    <AceEditor
+                                        aceRef={rawDataRef}
+                                        mode="json"
+                                        value={JSON.stringify(testDocument, null, 2)}
+                                        height={`${height}px`}
+                                        readOnly
+                                        actions={[{ component: <AceEditor.FullScreenAction /> }]}
+                                    />
+                                )}
                             />
                         )}
                         {runTestState === "loading" && (

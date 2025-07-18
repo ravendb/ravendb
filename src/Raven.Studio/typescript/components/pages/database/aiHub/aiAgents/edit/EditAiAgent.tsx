@@ -1,6 +1,6 @@
 import "./EditAiAgent.scss";
 import { AboutViewHeading } from "components/common/AboutView";
-import useResizableWidth from "../hooks/useResizableWidth";
+import useResizableWidth from "components/hooks/useResizableWidth";
 import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
 import { EditAiAgentFormData, editAiAgentYupResolver } from "./utils/editAiAgentValidation";
 import EditAiAgentFooter from "./partials/EditAiAgentFooter";
@@ -35,8 +35,13 @@ interface QueryParams {
 
 export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<QueryParams>) {
     const dispatch = useAppDispatch();
-    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { aiAgentService, databasesService } = useServices();
+    const { appUrl } = useAppUrls();
+
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const isDocumentExpirationEnabled = useAppSelector(editAiAgentSelectors.isDocumentExpirationEnabled);
+    const isTestOpen = useAppSelector(editAiAgentSelectors.isTestOpen);
+    const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
 
     const form = useForm<EditAiAgentFormData>({
         defaultValues: async () => {
@@ -55,9 +60,6 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
     });
 
     const { handleSubmit, formState, reset } = form;
-
-    console.log("kalczur formState", formState.errors);
-
     const { setIsDirty } = useDirtyFlag(formState.isDirty);
 
     const testAreaResizable = useResizableWidth({
@@ -65,10 +67,6 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
         minWidth: 500,
         maxWidth: 1000,
     });
-
-    const { appUrl } = useAppUrls();
-    const isDocumentExpirationEnabled = useAppSelector(editAiAgentSelectors.isDocumentExpirationEnabled);
-    const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
 
     const saveAgent: SubmitHandler<EditAiAgentFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
@@ -113,7 +111,10 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                     <AboutViewHeading title="Create AI Agent" icon="ai-agents" marginBottom={0} />
                                     <EditAiAgentInfoHub />
                                 </div>
-                                <div className="px-4 pb-4 flex-grow-1 overflow-scroll h-100">
+                                <div
+                                    className="px-4 pb-4 flex-grow-1 overflow-scroll h-100"
+                                    style={{ opacity: isTestOpen ? 0.2 : 1 }}
+                                >
                                     {formState.isLoading ? (
                                         <LoadingView />
                                     ) : (

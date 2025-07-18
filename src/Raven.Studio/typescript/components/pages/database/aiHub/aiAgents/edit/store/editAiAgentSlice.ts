@@ -10,6 +10,7 @@ import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
 
 interface EditAiAgentState {
     isTestOpen: boolean;
+    isRawData: boolean;
     testMessages: AiAgentMessage[];
     testToolParameters: AiAgentToolCall[];
     testDocument: documentDto;
@@ -19,6 +20,7 @@ interface EditAiAgentState {
 
 const initialState: EditAiAgentState = {
     isTestOpen: false,
+    isRawData: false,
     testMessages: [],
     testToolParameters: [],
     testDocument: null,
@@ -32,6 +34,9 @@ export const editAiAgentSlice = createSlice({
     reducers: {
         isTestOpenSet: (state, action: PayloadAction<boolean>) => {
             state.isTestOpen = action.payload;
+        },
+        isRawDataSet: (state, action: PayloadAction<boolean>) => {
+            state.isRawData = action.payload;
         },
         testMessagesAdd: (state, action: PayloadAction<AiAgentMessage>) => {
             state.testMessages.push(action.payload);
@@ -125,6 +130,7 @@ export const editAiAgentActions = {
 
 export const editAiAgentSelectors = {
     isTestOpen: (state: RootState) => state.editAiAgent.isTestOpen,
+    isRawData: (state: RootState) => state.editAiAgent.isRawData,
     testMessages: (state: RootState) => state.editAiAgent.testMessages,
     testToolParameters: (state: RootState) => state.editAiAgent.testToolParameters,
     testDocument: (state: RootState) => state.editAiAgent.testDocument,
