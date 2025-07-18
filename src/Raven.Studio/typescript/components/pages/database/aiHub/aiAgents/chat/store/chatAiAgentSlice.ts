@@ -139,9 +139,6 @@ const runChat = createAsyncThunk(
             conversationId != null ? conversationId : undefined
         );
         dispatch(chatAiAgentActions.conversationIdSet(result.ConversationId));
-
-        // TODO add conversationId to URL
-
         await dispatch(chatAiAgentActions.getDocument({ databaseName, id: result.ConversationId })).unwrap();
     }
 );

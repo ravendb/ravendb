@@ -186,31 +186,15 @@ interface UserMessageProps {
 }
 
 function UserMessage({ message, idx, toolQueries, toolActions }: UserMessageProps) {
-    const contentMode = message.content?.includes("{") ? "json" : "text";
-    const aceRef = useRef<ReactAce>(null);
-
     return (
         <div>
             {idx === 0 && <div className="text-muted text-center">{message.date}</div>}
             <div className="hstack justify-content-end user-message">
                 <div
                     className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset"
-                    style={{ maxWidth: "75%", width: contentMode === "json" ? "50%" : undefined }}
+                    style={{ maxWidth: "75%" }}
                 >
-                    {contentMode === "json" ? (
-                        <AceEditor
-                            aceRef={aceRef}
-                            value={message.content}
-                            readOnly
-                            mode="json"
-                            height="150px"
-                            wrapEnabled
-                            setOptions={{ indentedSoftWrap: false }}
-                            actions={[{ component: <AceEditor.FullScreenAction /> }]}
-                        />
-                    ) : (
-                        <div>{message.content}</div>
-                    )}
+                    <div>{message.content}</div>
                     {message.toolCalls?.length > 0 && (
                         <div className="vstack gap-2">
                             {message.toolCalls.map((toolCall) => (
