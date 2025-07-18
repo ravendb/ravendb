@@ -93,7 +93,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
         });
     };
 
-    // Reset on unmount
+    // Reset store on unmount
     useEffect(() => {
         return () => {
             dispatch(editAiAgentActions.reset());
