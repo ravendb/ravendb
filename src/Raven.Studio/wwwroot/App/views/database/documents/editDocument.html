@@ -113,8 +113,8 @@
                 </div>
                 <div class="pull-right-sm" data-bind="visible: !isDeleteRevision()">
                     <div class="btn-group" data-bind="visible: !inDiffMode()">
-                        <a class="btn btn-success" data-bind="visible: !!continueAiAgentConversationUrl(), attr: { href: continueAiAgentConversationUrl() }" title="Continue conversation">
-                            <i class="icon-llm"></i>
+                        <a class="btn continue-ai-agent-conversation" data-bind="visible: !!continueAiAgentConversationUrl(), attr: { href: continueAiAgentConversationUrl() }" title="Continue conversation">
+                            <i class="icon-ai-agents"></i>
                             <span>Continue conversation</span>
                         </a>
                         <button type="button" class="btn btn-default" data-bind="click: copyDocumentBodyToClipboard, enable: !showHugeDocumentWarning()" title="Copy document content to clipboard">
