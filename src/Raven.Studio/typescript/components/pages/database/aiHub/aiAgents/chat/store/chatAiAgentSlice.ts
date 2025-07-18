@@ -32,15 +32,6 @@ export const chatAiAgentSlice = createSlice({
         conversationIdSet: (state, action: PayloadAction<string>) => {
             state.conversationId = action.payload;
         },
-        messagesAdd: (state, action: PayloadAction<AiAgentMessage>) => {
-            state.messages.push(action.payload);
-        },
-        messagesUpdate: (state, action: PayloadAction<Partial<AiAgentMessage>>) => {
-            const message = state.messages.find((m) => m.id === action.payload.id);
-            if (message) {
-                Object.assign(message, action.payload);
-            }
-        },
         messagesSet: (state, action: PayloadAction<AiAgentMessage[]>) => {
             state.messages = action.payload;
         },
@@ -72,10 +63,14 @@ export const chatAiAgentSlice = createSlice({
             .addCase(getDocument.fulfilled, (state, action) => {
                 state.document = createSuccessState(action.payload);
 
-                const messages = action.payload.Messages.map((x: AiAgentDocMessage) =>
+                const messages: AiAgentMessage[] = action.payload.Messages.map((x: AiAgentDocMessage) =>
                     aiAgentsUtils.mapMessageFromDoc(x)
                 );
-                state.messages = messages;
+
+                state.messages = aiAgentsUtils.mergeToolResults(
+                    messages,
+                    state.config.data?.Queries.map((x) => x.Name) ?? []
+                );
             })
             .addCase(runChat.pending, (state) => {
                 state.runChatState = "loading";

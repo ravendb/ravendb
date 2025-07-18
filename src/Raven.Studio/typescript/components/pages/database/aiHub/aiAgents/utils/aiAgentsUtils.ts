@@ -27,7 +27,26 @@ function mapMessageFromDoc(docMessage: AiAgentDocMessage): AiAgentMessage {
     };
 }
 
+function mergeToolResults(messages: AiAgentMessage[], allQueriesNames: string[]) {
+    for (const message of messages) {
+        if (message.toolCallId) {
+            const messageWithToolCall = messages.find((x) => x.toolCalls.some((y) => y.id === message.toolCallId));
+            const toolCall = messageWithToolCall.toolCalls.find((x) => x.id === message.toolCallId);
+            const isQueryTool = allQueriesNames.some((name) => name === toolCall.name);
+
+            if (toolCall && isQueryTool) {
+                toolCall.queryToolResult = message;
+            }
+
+            message.toolName = toolCall.name;
+        }
+    }
+
+    return messages;
+}
+
 export const aiAgentsUtils = {
     mapMessageFromDoc,
     messageDateFormat: "HH:mm A",
+    mergeToolResults,
 };

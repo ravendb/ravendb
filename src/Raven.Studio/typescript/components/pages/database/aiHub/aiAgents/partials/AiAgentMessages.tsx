@@ -36,38 +36,72 @@ export default function AiAgentMessages({
     return (
         <div className="w-100 vstack gap-2 ai-agent-messages">
             {messages.map((message, idx) => (
-                <Fragment key={message.id}>
-                    {message.role === "system" && <SystemMessage message={message} />}
-                    {message.role === "tool" && <ToolMessage message={message} allMessages={messages} />}
-                    {message.role === "user" && (
-                        <UserMessage message={message} idx={idx} toolQueries={toolQueries} toolActions={toolActions} />
-                    )}
-                    {message.role === "assistant" && (
-                        <AgentMessage
-                            agentMessage={message}
-                            allMessages={messages}
-                            toolQueries={toolQueries}
-                            toolActions={toolActions}
-                            handleSaveParameters={handleSaveParameters}
-                        />
-                    )}
-                </Fragment>
+                <AiAgentMessage
+                    key={message.id}
+                    idx={idx}
+                    message={message}
+                    allMessages={messages}
+                    toolQueries={toolQueries}
+                    toolActions={toolActions}
+                    handleSaveParameters={handleSaveParameters}
+                />
             ))}
+        </div>
+    );
+}
+
+interface AiAgentMessageProps {
+    idx: number;
+    message: AiAgentMessage;
+    allMessages: AiAgentMessage[];
+    toolQueries: ToolQuery[];
+    toolActions: ToolAction[];
+    handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
+}
+
+function AiAgentMessage({
+    idx,
+    message,
+    allMessages,
+    toolQueries,
+    toolActions,
+    handleSaveParameters,
+}: AiAgentMessageProps) {
+    const toolName = allMessages
+        .find((x) => x.toolCalls?.some((y) => y.id === message.toolCallId))
+        ?.toolCalls.find((x) => x.id === message.toolCallId)?.name;
+
+    const isActionTool = !!(toolName && toolActions.some((x) => x.Name === toolName));
+
+    return (
+        <div>
+            {message.role === "system" && <SystemMessage message={message} />}
+            {isActionTool && <ToolMessage message={message} type="action" />}
+            {message.role === "user" && (
+                <UserMessage message={message} idx={idx} toolQueries={toolQueries} toolActions={toolActions} />
+            )}
+            {message.role === "assistant" && (
+                <AgentMessage
+                    agentMessage={message}
+                    allMessages={allMessages}
+                    toolQueries={toolQueries}
+                    toolActions={toolActions}
+                    handleSaveParameters={handleSaveParameters}
+                />
+            )}
         </div>
     );
 }
 
 interface ToolMessageProps {
     message: AiAgentMessage;
-    allMessages: AiAgentMessage[];
+    type: "action" | "query";
 }
 
-function ToolMessage({ message, allMessages }: ToolMessageProps) {
+function ToolMessage({ message, type }: ToolMessageProps) {
     const aceRef = useRef<ReactAce>(null);
 
-    const toolName = allMessages
-        .find((x) => x.toolCalls?.some((y) => y.id === message.toolCallId))
-        ?.toolCalls.find((x) => x.id === message.toolCallId)?.name;
+    const toolName = message.toolName;
 
     const isTable = message.content.startsWith("[") && message.content.endsWith("]") && message.content.length > 2;
     const tableData = useMemo(
@@ -94,7 +128,8 @@ function ToolMessage({ message, allMessages }: ToolMessageProps) {
 
     return (
         <div className="bg-faded-primary p-2 rounded-3 border border-primary text-reset w-100">
-            {toolName && (
+            {type === "query" && <div>Query tool result</div>}
+            {type === "action" && toolName && (
                 <div className="hstack justify-content-between mb-1">
                     <div>
                         Tool: <strong>{toolName}</strong>
@@ -115,7 +150,7 @@ function ToolMessage({ message, allMessages }: ToolMessageProps) {
                     height="150px"
                     wrapEnabled
                     setOptions={{ indentedSoftWrap: false }}
-                    actions={[{ component: <AceEditor.FullScreenAction /> }]}
+                    actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
                 />
             )}
         </div>
@@ -408,7 +443,7 @@ interface ToolCallBodyProps {
 
 function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
     return (
-        <div>
+        <div className="vstack gap-2">
             {tool && (
                 <>
                     <small className="text-muted">Description</small>
@@ -440,6 +475,7 @@ function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
                     <AceEditor value={toolCall.arguments} readOnly mode="text" height="100px" />
                 </div>
             )}
+            {toolCall?.queryToolResult && <ToolMessage message={toolCall.queryToolResult} type="query" />}
         </div>
     );
 }

@@ -29,7 +29,7 @@ export default function EditAiAgentToolsSection() {
 
     return (
         <>
-            <h3 className="m-0">Define agent tools</h3>
+            <h3 className="m-0 mt-3">Define agent tools</h3>
             <div className="mb-1">
                 Define tool queries to let AI retrieve data, and tool actions to let perform tasks.
             </div>

@@ -38,15 +38,6 @@ export const editAiAgentSlice = createSlice({
         isRawDataSet: (state, action: PayloadAction<boolean>) => {
             state.isRawData = action.payload;
         },
-        testMessagesAdd: (state, action: PayloadAction<AiAgentMessage>) => {
-            state.testMessages.push(action.payload);
-        },
-        testMessagesUpdate: (state, action: PayloadAction<Partial<AiAgentMessage>>) => {
-            const message = state.testMessages.find((m) => m.id === action.payload.id);
-            if (message) {
-                Object.assign(message, action.payload);
-            }
-        },
         testMessagesSet: (state, action: PayloadAction<AiAgentMessage[]>) => {
             state.testMessages = action.payload;
         },
@@ -76,11 +67,11 @@ export const editAiAgentSlice = createSlice({
         });
         builder.addCase(runTest.fulfilled, (state, action) => {
             state.runTestState = "success";
+            state.testDocument = action.payload.result.Document;
 
-            state.testDocument = action.payload.Document;
+            const messages = action.payload.result.Document.Messages.map((x) => aiAgentsUtils.mapMessageFromDoc(x));
 
-            const messages = action.payload.Document.Messages.map((x) => aiAgentsUtils.mapMessageFromDoc(x));
-            state.testMessages = messages;
+            state.testMessages = aiAgentsUtils.mergeToolResults(messages, action.payload.allQueriesNames);
         });
     },
 });
@@ -101,7 +92,7 @@ const runTest = createAsyncThunk(
     async (
         payload: { databaseName: string; formValues: EditAiAgentFormData; toolCallParameters?: AiAgentToolCall[] },
         { getState }
-    ): Promise<AiAgentRunResult> => {
+    ): Promise<{ result: AiAgentRunResult; allQueriesNames: string[] }> => {
         const { databaseName, formValues, toolCallParameters } = payload;
 
         const state = getState() as RootState;
@@ -119,7 +110,7 @@ const runTest = createAsyncThunk(
             RequestBody: undefined,
         });
 
-        return result;
+        return { result, allQueriesNames: formValues.queries.map((x) => x.name) };
     }
 );
 export const editAiAgentActions = {

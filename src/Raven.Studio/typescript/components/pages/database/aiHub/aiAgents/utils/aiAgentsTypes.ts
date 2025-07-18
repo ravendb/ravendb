@@ -2,6 +2,7 @@ export interface AiAgentToolCall {
     id: string;
     name: string;
     arguments: string;
+    queryToolResult?: AiAgentMessage;
 }
 
 export type AiAgentRole = "system" | "user" | "assistant" | "tool";
@@ -15,6 +16,7 @@ export interface AiAgentMessage {
     usage?: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
     toolCalls?: AiAgentToolCall[];
     toolCallId?: string;
+    toolName?: string;
 }
 
 export interface AiAgentDocumentResponse {
