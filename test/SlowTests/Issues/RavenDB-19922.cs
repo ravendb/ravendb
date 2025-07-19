@@ -355,10 +355,10 @@ namespace SlowTests.Issues
                 using (Server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                 using (context.OpenReadTransaction())
                 {
-                    var responsibleNodeInfo = Raven.Server.Utils.BackupUtils.GetResponsibleNodeInfoFromCluster(Server.ServerStore, context, store.Database, backupTaskId);
+                    var responsibleNodeInfo = Raven.Server.Utils.BackupUtils.GetResponsibleNodeInfoFromCluster(context, store.Database, backupTaskId);
                     Assert.Null(responsibleNodeInfo);
 
-                    var backupStatus = Raven.Server.Utils.BackupUtils.GetBackupStatusFromCluster(Server.ServerStore, context, store.Database, backupTaskId);
+                    var backupStatus = Raven.Server.Utils.BackupUtils.GetBackupStatusFromCluster(context, store.Database, backupTaskId);
                     Assert.Null(backupStatus);
                 }
             }

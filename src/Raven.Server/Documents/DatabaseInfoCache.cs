@@ -132,10 +132,11 @@ namespace Raven.Server.Documents
             using (Slice.From(ctx.Allocator, databaseName.ToLowerInvariant(), out Slice key))
             {
                 DeleteInternal(ctx, key);
-                BackupStatusStorage.Delete(ctx, PeriodicBackupStatus.GenerateBackupStoragePrefix(databaseName));
                 tx.Commit();
             }
         }
+
+
 
         public static class DatabaseInfoSchema
         {

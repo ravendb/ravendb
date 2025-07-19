@@ -381,7 +381,7 @@ namespace Raven.Server.Rachis
             return read.Reader.ReadLittleEndianInt64();
         }
 
-        public string ReadNodeTag(ClusterOperationContext context)
+        public static string ReadNodeTag(ClusterOperationContext context)
         {
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);
 

@@ -693,6 +693,8 @@ namespace FastTests
 
             internal async Task HoldBackupExecutionIfNeededAndInvoke(PeriodicBackupRunner.TestingStuff ts, Func<Task> func, TaskCompletionSource<object> tcs)
             {
+                var shouldThrow = ts?.SimulateFailedBackup == true;
+
                 // hold backup execution 
                 try
                 {
@@ -703,25 +705,13 @@ namespace FastTests
                 }
                 finally
                 {
-                    tcs.TrySetResult(null);
+                    if (shouldThrow)
+                        tcs.SetException(new Exception(nameof(ts.SimulateFailedBackup)));
+                    else
+                        tcs.TrySetResult(null);
                 }
             }
 
-            internal async Task RunFaultedBackupAsync(DocumentStore store, long taskId, RavenServer server = null, bool isFullBackup = true, OperationStatus opStatus = OperationStatus.Faulted, int? timeout = null)
-            {
-                var database = await _parent.GetDatabase(store.Database, server ?? _parent.Server);
-
-                try
-                {
-                    database.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
-                    await RunBackupAsync(server ?? _parent.Server, taskId, store, isFullBackup, opStatus, timeout);
-                }
-                finally
-                {
-                    database.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = false;
-                }
-            }
-            
             public async Task<string[]> GetBackupFilesAndAssertCountAsync(string backupPath, int expectedCount, long backupOpId, string databaseName, int? shardNumber = null)
             {
                 var directory = Directory.GetDirectories(backupPath)
@@ -839,7 +829,7 @@ namespace FastTests
                     var searchTimeForLastIncremental = nextFullBackupDateTime.AddTicks(-1);
                     Log($"Searching for last incremental backup before: {searchTimeForLastIncremental:O}");
 
-                    var windowStart = BackupUtils.GetLastOccurrence(incrementalSchedule, searchTimeForLastIncremental)
+                    var windowStart = incrementalSchedule.GetPreviousOccurrence(searchTimeForLastIncremental)
                                       ?? nextFullBackupDateTime.AddMinutes(-1); // Fallback if no incremental schedule
                     Log($"Calculated safe window start: {windowStart:O}");
 

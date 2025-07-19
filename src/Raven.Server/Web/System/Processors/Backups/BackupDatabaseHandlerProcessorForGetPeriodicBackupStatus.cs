@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -46,8 +47,8 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
                 {
                     var dbName = ShardHelper.ToShardName(name, shardNumber);
                     var status = statusType == StatusType.Local
-                        ? ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatusBlittable(context, dbName, taskId)
-                        : BackupUtils.GetBackupStatusFromClusterBlittable(ServerStore, context, dbName, taskId);
+                        ? BackupStatusStorage.GetBackupStatusBlittable(context, dbName, taskId)
+                        : BackupUtils.GetBackupStatusFromClusterBlittable(context, dbName, taskId);
                     
                     toDispose.Add(status);
                     statusByShard[shardNumber.ToString()] = status;
@@ -59,8 +60,8 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
             else
             {
                 var status = statusType == StatusType.Local
-                    ? ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatusBlittable(context, name, taskId)
-                    : BackupUtils.GetBackupStatusFromClusterBlittable(ServerStore, context, name, taskId);
+                    ? BackupStatusStorage.GetBackupStatusBlittable(context, name, taskId)
+                    : BackupUtils.GetBackupStatusFromClusterBlittable(context, name, taskId);
                 toDispose.Add(status);
 
                 result[nameof(GetPeriodicBackupStatusOperationResult.IsSharded)] = false;

@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -100,16 +101,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                if (_forTestingPurposes?.OnBackupTaskRunHoldBackupExecution != null)
-                {
-                    var shouldThrowAfterWait = _forTestingPurposes.SimulateFailedBackup;
-                    _forTestingPurposes.OnBackupTaskRunHoldBackupExecution?.Task.Wait();
-                    if (shouldThrowAfterWait) throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
-                }
-
+                _forTestingPurposes?.OnBackupTaskRunHoldBackupExecution?.Task.Wait();
                 if (_forTestingPurposes?.SimulateFailedBackup == true)
                     throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
-
                 Database.ForTestingPurposes?.ActionToCallOnGetTempPath?.Invoke(_tempBackupPath);
 
                 runningBackupStatus.LocalBackup ??= new LocalBackup();
@@ -917,5 +911,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             return fileName.Length == LegacyDateTimeFormat.Length ? LegacyDateTimeFormat : DateTimeFormat;
         }
+
+        public PeriodicBackup.RunningBackupTask ToRunningBackupTask(Task task) => new() { Id = _operationId, Task = task };
     }
 }

@@ -1517,7 +1517,6 @@ namespace Raven.Server.ServerWide
                         throw new DatabaseDoesNotExistException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because it does not exist");
 
                     updateCommand.Execute(context, items, index, databaseRecord, _parent.CurrentState, out result);
-                    updateCommand.AfterExecute(index, databaseRecord, context, _parent.ServerStore);
                 }
             }
             catch (Exception e)
@@ -2922,7 +2921,7 @@ namespace Raven.Server.ServerWide
             if (licenseLimitsBlittable == null)
                 return;
 
-            var tag = _parent.ReadNodeTag(context);
+            var tag = RachisConsensus.ReadNodeTag(context);
             var licenseLimits = JsonDeserializationServer.LicenseLimits(licenseLimitsBlittable);
 
             if (licenseLimits.NodeLicenseDetails.ContainsKey(tag) && licenseLimits.NodeLicenseDetails.Count == 1)

@@ -77,7 +77,7 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Database
 
                 foreach (var periodicBackupTaskId in periodicBackupTaskIds)
                 {
-                    var status = BackupUtils.GetBackupStatusFromCluster(serverStore, context, databaseName, periodicBackupTaskId);
+                    var status = BackupUtils.GetBackupStatusFromCluster(context, databaseName, periodicBackupTaskId);
                     if (status == null)
                         continue; // we have a backup task but no backup was ever done
 

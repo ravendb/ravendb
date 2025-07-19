@@ -144,6 +144,7 @@ namespace Raven.Server.ServerWide.Maintenance
             {
                 hash = Hashing.Combine(hash, taskId);
                 hash = Hashing.Combine(hash, backupStatusReport?.LastRaftIndexEtag ?? 0);
+                hash = Hashing.Combine(hash, backupStatusReport?.IsErrored == true ? 1L : 0L); // If backup failed, we'll have the same RaftIndexEtag, so we need to include this in the hash
             }
 
             return hash;
@@ -185,20 +186,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             dynamicJsonValue[nameof(LastIndexStats)] = indexStats;
-
-            if (BackupStatuses != null)
-            {
-                var backupStatuses = new DynamicJsonValue();
-
-                foreach ((long taskId, PeriodicBackupStatusReport backupStatusReport) in BackupStatuses)
-                    backupStatuses[taskId.ToString()] = backupStatusReport?.ToJson();
-
-                dynamicJsonValue[nameof(BackupStatuses)] = backupStatuses;
-            }
-            else
-            {
-                dynamicJsonValue[nameof(BackupStatuses)] = null;
-            }
+            dynamicJsonValue[nameof(BackupStatuses)] = DynamicJsonValue.Convert(BackupStatuses);
 
             return dynamicJsonValue;
         }

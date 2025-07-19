@@ -20,6 +20,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Commands.Indexes;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -2058,8 +2059,8 @@ namespace RachisTests.DatabaseCluster
                     using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        localBackupStatusBlittable1 = clusterNode.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
-                        localBackupStatusBlittable2 = clusterNode.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration2.TaskId);
+                        localBackupStatusBlittable1 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
+                        localBackupStatusBlittable2 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration2.TaskId);
                     }
 
                     Assert.True(localBackupStatusBlittable1 == null, $"Local backup status should not exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration1)}` before backup is run.");
@@ -2076,8 +2077,8 @@ namespace RachisTests.DatabaseCluster
                             using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                             using (context.OpenReadTransaction())
                             {
-                                localBackupStatusBlittable1 = clusterNode.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
-                                localBackupStatusBlittable2 = clusterNode.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration2.TaskId);
+                                localBackupStatusBlittable1 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
+                                localBackupStatusBlittable2 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration2.TaskId);
                                 return Task.FromResult(localBackupStatusBlittable1 != null && localBackupStatusBlittable2 != null);
                             }
                         }, expectedVal: true,
@@ -2095,8 +2096,8 @@ namespace RachisTests.DatabaseCluster
                     using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        localBackupStatusBlittable1 = clusterNode.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
-                        localBackupStatusBlittable2 = clusterNode.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration2.TaskId);
+                        localBackupStatusBlittable1 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
+                        localBackupStatusBlittable2 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration2.TaskId);
                     }
 
                     Assert.True(localBackupStatusBlittable1 == null, $"Local backup status should not exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration1)}` after database deletion.");
@@ -2127,7 +2128,7 @@ namespace RachisTests.DatabaseCluster
                     BlittableJsonReaderObject localBackupStatusBlittable;
                     using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
-                        localBackupStatusBlittable = clusterNode.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
+                        localBackupStatusBlittable = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
 
                     Assert.True(localBackupStatusBlittable == null, $"Local backup status should not exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration1)}` before backup is run.");
 
@@ -2139,7 +2140,7 @@ namespace RachisTests.DatabaseCluster
                             using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                             using (context.OpenReadTransaction())
                             {
-                                localBackupStatusBlittable = clusterNode.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
+                                localBackupStatusBlittable = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
                                 return Task.FromResult(localBackupStatusBlittable != null);
                             }
                         }, expectedVal: true,
@@ -2154,7 +2155,7 @@ namespace RachisTests.DatabaseCluster
                     BlittableJsonReaderObject localBackupStatusBlittable;
                     using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
-                        localBackupStatusBlittable = clusterNode.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, anotherStore.Database, backupConfiguration2.TaskId);
+                        localBackupStatusBlittable = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, anotherStore.Database, backupConfiguration2.TaskId);
 
                     Assert.True(localBackupStatusBlittable == null, $"Local backup status should not exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration2)}` before backup is run.");
 
@@ -2166,7 +2167,7 @@ namespace RachisTests.DatabaseCluster
                             using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                             using (context.OpenReadTransaction())
                             {
-                                localBackupStatusBlittable = clusterNode.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, anotherStore.Database, backupConfiguration2.TaskId);
+                                localBackupStatusBlittable = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, anotherStore.Database, backupConfiguration2.TaskId);
                                 return Task.FromResult(localBackupStatusBlittable != null);
                             }
                         }, expectedVal: true,
@@ -2184,8 +2185,8 @@ namespace RachisTests.DatabaseCluster
                     using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        localBackupStatusBlittable1 = clusterNode.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
-                        localBackupStatusBlittable2 = clusterNode.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, anotherStore.Database, backupConfiguration2.TaskId);
+                        localBackupStatusBlittable1 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
+                        localBackupStatusBlittable2 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, anotherStore.Database, backupConfiguration2.TaskId);
                     }
 
                     Assert.True(localBackupStatusBlittable1 == null, $"Local backup status should not exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration1)}` after database deletion.");

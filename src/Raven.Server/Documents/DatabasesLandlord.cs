@@ -13,6 +13,7 @@ using Raven.Client.Extensions;
 using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -28,6 +29,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Threading;
 using Sparrow.Utils;
+using Voron;
 using Voron.Exceptions;
 using Voron.Util.Settings;
 
@@ -480,9 +482,8 @@ namespace Raven.Server.Documents
                 }
 
                 DeleteDatabaseNotifications(dbName, throwOnError: true);
-
-                // delete the cache info
                 DeleteDatabaseCachedInfo(dbName, throwOnError: true);
+                DeleteLocalBackupStatuses(dbName, throwOnError: true);
             }
             finally
             {
@@ -1118,6 +1119,23 @@ namespace Raven.Server.Documents
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Failed to delete database info for '{databaseName}' database.", e);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DeleteLocalBackupStatuses(string databaseName, bool throwOnError)
+        {
+            try
+            {
+                _serverStore.DatabaseInfoCache.BackupStatusStorage.Delete(databaseName);
+            }
+            catch (Exception e)
+            {
+                if (throwOnError)
+                    throw;
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to delete local backup statuses for '{databaseName}' database.", e);
             }
         }
 

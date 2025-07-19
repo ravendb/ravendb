@@ -58,6 +58,10 @@ namespace Raven.Client.Documents.Operations.Backups
         
         public bool IsEncrypted { get; set; }
 
+        public DateTime? EndTime => IsFull
+            ? LastFullBackupInternal?.AddMilliseconds(DurationInMs ?? 0)
+            : LastIncrementalBackupInternal?.AddMilliseconds(DurationInMs ?? 0);
+
         public DynamicJsonValue ToJson()
         {
             var json = new DynamicJsonValue();

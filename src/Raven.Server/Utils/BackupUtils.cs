@@ -6,6 +6,9 @@ using System.IO.Compression;
 using System.Threading;
 using System.Threading.Tasks;
 using NCrontab.Advanced;
+using NCrontab.Advanced.Enumerations;
+using NCrontab.Advanced.Filters;
+using NCrontab.Advanced.Interfaces;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -28,6 +31,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
+using Voron;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
 namespace Raven.Server.Utils;
@@ -85,7 +89,7 @@ internal static class BackupUtils
 
     internal static BackupInfo GetBackupInfo(BackupInfoParameters parameters)
     {
-        var oneTimeBackupStatus = GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, taskId: 0L);
+        var oneTimeBackupStatus = GetBackupStatusFromCluster(parameters.Context, parameters.DatabaseName, taskId: 0L);
 
         if (parameters.PeriodicBackups.Count == 0 && oneTimeBackupStatus == null)
             return null;
@@ -103,7 +107,7 @@ internal static class BackupUtils
         {
             // status is saved locally before it's saved to cluster, so it's guaranteed to be most up to date status for this node
             var status = ComparePeriodicBackupStatus(periodicBackup.Configuration.TaskId,
-                backupStatus: GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, periodicBackup.Configuration.TaskId),
+                backupStatus: GetBackupStatusFromCluster(parameters.Context, parameters.DatabaseName, periodicBackup.Configuration.TaskId),
                 inMemoryBackupStatus: periodicBackup.BackupStatus);
 
             if (status.LastFullBackup != null && status.LastFullBackup.Value.Ticks > lastBackup)
@@ -141,9 +145,9 @@ internal static class BackupUtils
         };
     }
 
-    internal static PeriodicBackupStatus GetBackupStatusFromCluster(ServerStore serverStore, ClusterOperationContext context, string databaseName, long taskId)
+    internal static PeriodicBackupStatus GetBackupStatusFromCluster(ClusterOperationContext context, string databaseName, long taskId)
     {
-        using var statusBlittable = GetBackupStatusFromClusterBlittable(serverStore, context, databaseName, taskId);
+        using var statusBlittable = GetBackupStatusFromClusterBlittable(context, databaseName, taskId);
 
         if (statusBlittable == null)
             return null;
@@ -152,15 +156,22 @@ internal static class BackupUtils
         return periodicBackupStatusJson;
     }
 
-    internal static BlittableJsonReaderObject GetBackupStatusFromClusterBlittable(ServerStore serverStore, ClusterOperationContext context, string databaseName, long taskId)
+    internal static BlittableJsonReaderObject GetBackupStatusFromClusterBlittable(ClusterOperationContext context, string databaseName, long taskId)
     {
-        return serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(databaseName, taskId));
+        var lowerName = PeriodicBackupStatus.GenerateItemName(databaseName, taskId).ToLowerInvariant();
+        using (Slice.From(context.Allocator, lowerName, out Slice key))
+        {
+            return ClusterStateMachine.ReadInternal(context, out _, key);
+        }
     }
 
-    internal static BlittableJsonReaderObject GetResponsibleNodeInfoFromCluster(ServerStore serverStore, ClusterOperationContext context, string databaseName, long taskId)
+    internal static BlittableJsonReaderObject GetResponsibleNodeInfoFromCluster(ClusterOperationContext context, string databaseName, long taskId)
     {
-        var responsibleNodeBlittable = serverStore.Cluster.Read(context, ResponsibleNodeInfo.GenerateItemName(databaseName, taskId));
-        return responsibleNodeBlittable;
+        var lowerName = ResponsibleNodeInfo.GenerateItemName(databaseName, taskId).ToLowerInvariant();
+        using (Slice.From(context.Allocator, lowerName, out Slice key))
+        {
+            return ClusterStateMachine.ReadInternal(context, out _, key);
+        }
     }
 
     internal static long GetTasksCountOnNode(ServerStore serverStore, string databaseName, ClusterOperationContext context)
@@ -187,13 +198,18 @@ internal static class BackupUtils
         using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
         {
-            var blittable = GetResponsibleNodeInfoFromCluster(serverStore, context, databaseName, taskId);
-            if (blittable == null)
-                return null;
-
-            blittable.TryGet(nameof(ResponsibleNodeInfo.ResponsibleNode), out string responsibleNodeTag);
-            return responsibleNodeTag;
+            return GetResponsibleNodeTag(context, databaseName, taskId);
         }
+    }
+
+    internal static string GetResponsibleNodeTag(ClusterOperationContext context, string databaseName, long taskId)
+    {
+        var blittable = GetResponsibleNodeInfoFromCluster(context, databaseName, taskId);
+        if (blittable == null)
+            return null;
+
+        blittable.TryGet(nameof(ResponsibleNodeInfo.ResponsibleNode), out string responsibleNodeTag);
+        return responsibleNodeTag;
     }
 
     internal static async ValueTask<string> WaitAndGetResponsibleNodeAsync(long taskId, DocumentDatabase database)
@@ -508,7 +524,7 @@ internal static class BackupUtils
         }
         
         // the local node is responsible for the backup
-        var backupStatus = parameters.ServerStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(parameters.Context, parameters.DatabaseName, parameters.Configuration.TaskId);
+        var backupStatus = BackupStatusStorage.GetBackupStatus(parameters.Context, parameters.DatabaseName, parameters.Configuration.TaskId);
         if (parameters.IsIdle == false)
         {
             if (backupStatus == null)
@@ -643,49 +659,6 @@ internal static class BackupUtils
                 logger.Operations(message, fullException);
 
             backupResult?.AddError($"{message}{Environment.NewLine}{fullException}");
-        }
-    }
-
-    internal static readonly DateTime BackupScheduleSearchLowerBound = new(year: 2015, month: 1, day: 1);
-
-    /// <summary>
-    /// Finds the last occurrence of a cron schedule at or before a given point in time.
-    /// Throws ArgumentOutOfRangeException for dates before 2015-01-01.
-    /// </summary>
-    internal static DateTime? GetLastOccurrence(CrontabSchedule schedule, DateTime baseTime)
-    {
-        if (baseTime < BackupScheduleSearchLowerBound)
-            throw new ArgumentOutOfRangeException(nameof(baseTime), $"Dates before {BackupScheduleSearchLowerBound:yyyy-MM-dd} are not supported for backup calculations.");
-
-        // This solves all exact match cases.
-        if (schedule.GetNextOccurrence(baseTime.AddTicks(-1)) == baseTime)
-            return baseTime;
-
-        // Estimate the schedule's interval to calculate a safe starting point for our backward search.
-        var t1 = schedule.GetNextOccurrence(BackupScheduleSearchLowerBound);
-        var t2 = schedule.GetNextOccurrence(t1);
-        var interval = t2 - t1;
-
-        if (interval < TimeSpan.FromMinutes(1))
-            interval = TimeSpan.FromMinutes(1); // Ensure a minimum jump to prevent excessive iterations
-
-        var searchStart = baseTime.Subtract(interval.Multiply(2));
-
-        if (searchStart < BackupScheduleSearchLowerBound)
-            searchStart = BackupScheduleSearchLowerBound;
-
-        DateTime? lastFound = null;
-        // We start searching from one tick *before* our searchStart to ensure searchStart itself is included if it's a valid time.
-        var searchCursor = searchStart.AddTicks(-1);
-
-        while (true)
-        {
-            searchCursor = schedule.GetNextOccurrence(searchCursor);
-
-            if (searchCursor >= baseTime)
-                return lastFound;
-
-            lastFound = searchCursor;
         }
     }
 

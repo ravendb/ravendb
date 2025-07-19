@@ -50,13 +50,12 @@ internal abstract class AbstractDatabasesHandlerProcessorForAllowedDatabases<TRe
                 periodicBackups.Add(new PeriodicBackup
                 {
                     Configuration = periodicBackupConfiguration,
-                    BackupStatus = BackupUtils.GetBackupStatusFromCluster(serverStore, context, databaseName, periodicBackupConfiguration.TaskId)
+                    BackupStatus = BackupUtils.GetBackupStatusFromCluster(context, databaseName, periodicBackupConfiguration.TaskId)
                 });
             }
 
             return BackupUtils.GetBackupInfo(new BackupUtils.BackupInfoParameters
             {
-                ServerStore = serverStore,
                 PeriodicBackups = periodicBackups,
                 DatabaseName = databaseName,
                 Context = context

@@ -1,7 +1,9 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
@@ -65,7 +67,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        public PeriodicBackupStatus GetBackupStatus(ClusterOperationContext context, string databaseName, long taskId)
+        public static PeriodicBackupStatus GetBackupStatus(ClusterOperationContext context, string databaseName, long taskId)
         {
             var backupStatusBlittable = GetBackupStatusBlittable(context, databaseName, taskId);
             return backupStatusBlittable == null
@@ -73,42 +75,24 @@ namespace Raven.Server.Documents.PeriodicBackup
                 : JsonDeserializationClient.PeriodicBackupStatus(backupStatusBlittable);
         }
 
-        public BlittableJsonReaderObject GetBackupStatusBlittable(ClusterOperationContext context, string databaseName, long taskId)
+        public static BlittableJsonReaderObject GetBackupStatusBlittable(ClusterOperationContext context, string databaseName, long taskId)
         {
             var statusBlittable = GetLocalBackupStatusBlittableInternal(context, databaseName, taskId);
             if (statusBlittable != null)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Retrieved backup status with task ID `{taskId}` from local storage.");
-
                 return statusBlittable;
-            }
 
             // backwards compatibility - fallback to cluster status - only if the node tag matches
-            var clusterStatus = BackupUtils.GetBackupStatusFromClusterBlittable(_serverStore, context, databaseName, taskId);
+            var clusterStatus = BackupUtils.GetBackupStatusFromClusterBlittable(context, databaseName, taskId);
             if (clusterStatus == null || clusterStatus.TryGet(nameof(PeriodicBackupStatus.NodeTag), out string nodeTag) == false || string.IsNullOrEmpty(nodeTag))
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"No backup status found with task ID `{taskId}` in local storage or cluster.");
-
                 return null;
-            }
 
-            if (nodeTag == _serverStore.NodeTag)
-            {
-                if (_logger.IsInfoEnabled)
-                    _logger.Info($"Retrieved backup status with task ID `{taskId}` from cluster storage.");
-
+            if (nodeTag == RachisConsensus.ReadNodeTag(context))
                 return clusterStatus;
-            }
-
-            if (_logger.IsInfoEnabled)
-                _logger.Info($"Backup status with task ID `{taskId}` found in cluster storage, but node tag '{nodeTag}' does not match current node tag '{_serverStore.NodeTag}'. Returning null.");
 
             return null;
         }
 
-        internal unsafe BlittableJsonReaderObject GetLocalBackupStatusBlittableInternal<T>(TransactionOperationContext<T> context, string databaseName, long taskId)
+        internal static unsafe BlittableJsonReaderObject GetLocalBackupStatusBlittableInternal<T>(TransactionOperationContext<T> context, string databaseName, long taskId)
             where T : RavenTransaction
         {
             var key = PeriodicBackupStatus.GenerateItemName(databaseName, taskId);
@@ -188,8 +172,12 @@ namespace Raven.Server.Documents.PeriodicBackup
             }
         }
 
-        internal static void Delete(TransactionOperationContext context, string prefix)
+        internal void Delete(string databaseName)
         {
+            var prefix = PeriodicBackupStatus.GenerateBackupStoragePrefix(databaseName);
+
+            using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction(TimeSpan.FromSeconds(5)))
             using (Slice.From(context.Allocator, prefix.ToLowerInvariant(), out Slice key))
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
@@ -202,9 +190,9 @@ namespace Raven.Server.Documents.PeriodicBackup
             public const string TableName = "BackupStatusTable";
 
             public static class BackupStatusColumns
-
             {
 #pragma warning disable 169
+                // Primary key structure: values/{databaseName}/periodic-backups/{taskId}
                 public const int PrimaryKey = 0;
                 public const int Data = 1;
 #pragma warning restore 169

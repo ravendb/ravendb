@@ -380,12 +380,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     var backupTask = BackupUtils.GetBackupTask(_database, backupParameters, periodicBackup.Configuration, token: null, _logger, _forTestingPurposes);
                     periodicBackup.CancelToken = backupTask.TaskCancelToken;
 
-                    periodicBackup.RunningTask = new PeriodicBackup.RunningBackupTask
-                    {
-                        Id = operationId.Value,
-                        Task = tcs.Task
-                    };
-
                     var task = _database.Operations.AddLocalOperation(
                         operationId.Value,
                         OperationType.DatabaseBackup,
@@ -473,6 +467,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 using (_database.PreventFromUnloadingByIdleOperations())
                 {
+                    periodicBackup.RunningTask = backupTask.ToRunningBackupTask(tcs.Task);
                     backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
 
                     periodicBackup.BackupStatus = runningBackupStatus;
@@ -629,7 +624,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var backupStatus = BackupUtils.GetBackupStatusFromCluster(_serverStore, context, _database.Name, taskId);
+                var backupStatus = BackupUtils.GetBackupStatusFromCluster(context, _database.Name, taskId);
                 return BackupUtils.ComparePeriodicBackupStatus(taskId, backupStatus, inMemoryBackupStatus);
             }
         }
@@ -652,7 +647,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     var config = record.GetPeriodicBackupConfiguration(taskId);
 
-                    var localStatus = _serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(context, _database.Name, taskId);
+                    var localStatus = BackupStatusStorage.GetBackupStatus(context, _database.Name, taskId);
                     if (localStatus == null)
                     {
                         var responsibleNode = BackupUtils.GetResponsibleNodeTag(_serverStore, _database.Name, taskId);
@@ -939,7 +934,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     new BackupUtils.BackupInfoParameters
                     {
                         Context = context,
-                        ServerStore = _serverStore,
                         PeriodicBackups = _periodicBackups.Values.ToList(),
                         DatabaseName = _database.Name
                     }
@@ -953,7 +947,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 new BackupUtils.BackupInfoParameters
                 {
                     Context = context,
-                    ServerStore = _serverStore,
                     PeriodicBackups = _periodicBackups.Values.ToList(),
                     DatabaseName = _database.Name
                 }

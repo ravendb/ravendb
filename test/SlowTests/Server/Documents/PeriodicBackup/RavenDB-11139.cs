@@ -1308,7 +1308,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             using var server = GetNewServer(serverCreationOptions);
             using var store = GetDocumentStore(new Options { Server = server });
 
-            server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.Now:O}] {logLine}");
+            server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.UtcNow:O}] {logLine}");
             server.ServerStore.ForTestingPurposesOnly().IgnoreClusterTransactionIndexInCompareExchangeCleaner = true;
             Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
 
@@ -1670,11 +1670,22 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             public async Task TriggerNextFaultedOccurenceNowAsync(BackupKind backupKind)
             {
                 Expect(backupKind);
-                await WaitNextOccurrenceAsync(async () =>
+
+                var database = await _parent.GetDatabase(_store.Database, _runningOnServer);
+                database.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
+
+                try
                 {
-                    await _parent.Backup.RunFaultedBackupAsync(_store, _backupConfiguration.TaskId, _runningOnServer, isFullBackup: backupKind == BackupKind.Full, opStatus: OperationStatus.InProgress);
-                    return OperationStatus.Faulted;
-                });
+                    await WaitNextOccurrenceAsync(async () =>
+                    {
+                        await _parent.Backup.RunBackupAsync(_runningOnServer, _backupConfiguration.TaskId, _store, isFullBackup: backupKind == BackupKind.Full, opStatus: OperationStatus.InProgress);
+                        return OperationStatus.Faulted;
+                    });
+                }
+                finally
+                {
+                    database.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = false;
+                }
             }
 
             private async Task ChangeMentorNodeIfNeededAsync()
@@ -1742,6 +1753,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Manually triggering backup for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}`.");
                         operationStatus = await manualTrigger.Invoke();
+                        _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Manual trigger for backup operation returned status: {operationStatus}.");
                     }
 
                     await WaitAndAssertForValueAsync(async () =>
@@ -1761,6 +1773,11 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Backup operation with ID `{operationId}` started for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}`.");
 
                     var ongoingBackupKind = onGoingTaskInfo.OnGoingBackup.IsFull ? BackupKind.Full : BackupKind.Incremental;
+                    if (ongoingBackupKind != _expectedBackupKind)
+                    {
+
+                    }
+
                     Assert.True(ongoingBackupKind == _expectedBackupKind, $"Expected the ongoing backup task to be a {_expectedBackupKind}, but it is {ongoingBackupKind}.{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
                 }, tcs: new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously));
 
@@ -1770,7 +1787,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             private async Task WaitForFinishedBackupLocallyAsync(long operationId, OperationStatus expectedOperationStatus, int timeout = 15_000, int interval = 1_000)
             {
                 RavenCommand<OperationState> command = null;
-                await WaitAndAssertForValueAsync(async () =>
+                await WaitForValueAsync(async () =>
                 {
                     command = await _parent.Backup.ExecuteGetOperationStateCommand(_store, operationId, _runningOnServer.ServerStore.NodeTag);
                     return command.Result?.Status == expectedOperationStatus &&
@@ -1779,6 +1796,15 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     expectedVal: true,
                     timeout: timeout,
                     interval: interval);
+
+                Assert.True(command.Result?.Status == expectedOperationStatus,
+                    $"Expected the backup operation with ID `{operationId}` for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}` " +
+                    $"to be {expectedOperationStatus}, but {(command.Result == null ? "command.Result is null" : $"it is {command.Result.Status}")}." +
+                    $"{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
+
+                Assert.True(command.StatusCode == HttpStatusCode.OK,
+                    $"Expected the backup operation with ID `{operationId}` for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}` " +
+                    $"to return status code {HttpStatusCode.OK}, but it is {command.StatusCode}.{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
 
                 await _parent.Backup.CheckBackupOperationStatus(expectedOperationStatus, command, _store, _backupConfiguration.TaskId, operationId, periodicBackupRunner: null);
                 Assert.True(expectedOperationStatus == command.Result.Status, $"Expected the backup operation with ID `{operationId}` for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}` to be {expectedOperationStatus}, but it is {command.Result.Status}.{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");
