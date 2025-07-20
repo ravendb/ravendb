@@ -209,6 +209,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
         }
 
+        private const int DefaultMaxModelIterationsPerCall = 16;
+
         public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration,
             ConversationDocument document, CancellationToken token)
         {
@@ -223,7 +225,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             AiResponse aiResponse;
             AiUsage aiUsage;
             using var client = ChatCompletionClient.CreateChatCompletionClient(ContextPool, conStr);
-            var count = configuration.MaxModelIterationsPerCall;
+            var count = configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
 
             while (true)
             {
