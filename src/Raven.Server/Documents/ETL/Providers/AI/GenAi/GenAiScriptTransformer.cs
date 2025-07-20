@@ -29,13 +29,13 @@ internal sealed class GenAiScriptTransformer : EtlTransformer<GenAiItem, GenAiSc
     private readonly GenAiConfiguration _configuration;
     private byte[] _configurationPartialHash;
     private List<GenAiScriptResult> _currentRun;
-    private Dictionary<string, Attachment> _attachments;
+    private Dictionary<JsValue, Attachment> _attachments;
     private readonly GenAiStatsScope _stats;
 
     private static readonly string JavaScriptApi = @"
 class AIContextItem {
   #withAttachment(type, data) {
-    if (typeof type !== 'string' || typeof data !== 'string') {
+    if (typeof type !== 'string' || (typeof data !== 'string' && data !== null)) {
         throw new Error('both type and data must be strings');
     }
     this.attachments.push({ type, data });
@@ -119,7 +119,7 @@ var ai = new AI();
     protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
     {
         _attachments ??= [];
-        _attachments.Add(reference.AsString(), attachment);
+        _attachments.Add(reference, attachment);
     }
 
     protected override void AddLoadedCounter(JsValue reference, string name, long value)
@@ -178,8 +178,14 @@ var ai = new AI();
                 attachmentsHashes ??= [];
                 
                 var attachmentObj = current.AsObject();
-                var data = attachmentObj.GetOwnProperty("data").Value.AsString();
-                attachmentsHashes.Add(_attachments?.TryGetValue(data, out var attachment) is true ? attachment.Base64Hash.ToString() : data);
+                var data = attachmentObj.GetOwnProperty("data").Value;
+                if (data.IsNull())
+                    attachmentsHashes.Add(string.Empty);
+                else
+                {
+                    attachmentsHashes.Add(_attachments?.TryGetValue(data, out var attachment) is true ? attachment?.Base64Hash.ToString() : data.AsString());
+                }
+
                 attachmentsHashes.Add(attachmentObj.GetOwnProperty("type").Value.AsString());
             }
             
@@ -199,29 +205,39 @@ var ai = new AI();
                     foreach (var current in ctxObj.GetOwnProperty("attachments").Value.AsArray())
                     {
                         var attachmentObj = current.AsObject();
-                        var data = attachmentObj.GetOwnProperty("data").Value.AsString();
+                        var reference = attachmentObj.GetOwnProperty("data").Value;
+                        var data = string.Empty;
                         string type = attachmentObj.GetOwnProperty("type").Value.AsString();
                         string filename = "unknown.name";
 
                         // TODO: we aren't being really efficient here in terms of allocations / memory
                         // but the problem is that the API itself may require large BASE64 strings, annoying 
-                        if (_attachments?.TryGetValue(data, out var attachment) is true)
+                        if (_attachments?.TryGetValue(reference, out var attachment) is true)
                         {
                             filename = attachment.Name.ToString(CultureInfo.InvariantCulture);
-                            using var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream();
-                            if (type == "text/plain")
+                            if (reference.IsNull())
                             {
-                                attachment.Stream.CopyTo(memoryStream);
+                                data = $"File '{filename}' (of type '{type}') could not be loaded: file not found";
+                                filename = "file.not.found";
+                                type = "text/plain";
                             }
-                            else // anything but text is using BASE64
+                            else
                             {
-                                using var transform = new ToBase64Transform();
-                                using var cryptoStream = new CryptoStream(attachment.Stream, transform, CryptoStreamMode.Read);
-                                cryptoStream.CopyTo(memoryStream);
-                            }
+                                using var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream();
+                                if (type == "text/plain")
+                                {
+                                    attachment.Stream.CopyTo(memoryStream);
+                                }
+                                else // anything but text is using BASE64
+                                {
+                                    using var transform = new ToBase64Transform();
+                                    using var cryptoStream = new CryptoStream(attachment.Stream, transform, CryptoStreamMode.Read);
+                                    cryptoStream.CopyTo(memoryStream);
+                                }
 
-                            Span<byte> readOnlySpan = memoryStream.GetBuffer();
-                            data = Encoding.ASCII.GetString(readOnlySpan[..(int)memoryStream.Length]);
+                                Span<byte> readOnlySpan = memoryStream.GetBuffer();
+                                data = Encoding.ASCII.GetString(readOnlySpan[..(int)memoryStream.Length]);
+                            }
                         }
 
                         result.Attachments.Add(new GenAiAttachment(filename, type, data));

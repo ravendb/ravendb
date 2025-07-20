@@ -140,22 +140,31 @@ namespace Raven.Server.Documents.ETL
 
             var attachmentName = args[0].AsString();
             var loadAttachmentReference = CreateLoadAttachmentReference(attachmentName);
-
+            Attachment attachment = null;
             if ((Current.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
-                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachmentName, AttachmentType.Document, null);
+                attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachmentName, AttachmentType.Document, null);
 
                 if (attachment == null)
-                    return JsValue.Null;
-
-                AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
+                    UpdateEmptyAttachmentInfo();
             }
             else
             {
-                return JsValue.Null;
+                UpdateEmptyAttachmentInfo();
             }
 
+            AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
+
             return loadAttachmentReference;
+
+            void UpdateEmptyAttachmentInfo()
+            {
+                loadAttachmentReference = (JsNull)Activator.CreateInstance(typeof(JsNull), true);
+                attachment = new Attachment()
+                {
+                    Name = Context.GetLazyString(attachmentName)
+                };
+            }
         }
 
         private static JsValue CreateLoadAttachmentReference(string attachmentName)
