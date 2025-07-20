@@ -1,11 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Documents.Handlers.Processors;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -22,9 +20,9 @@ internal class AiAgentProcessorForGetAiAgent<TRequestHandler, TOperationContext>
     public override async ValueTask ExecuteAsync()
     {
         using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
-        var identifier = RequestHandler.GetStringQueryString("id", required: false);
+        var identifier = RequestHandler.GetStringQueryString("agentId", required: false);
 
-        List<AiAgentConfiguration> agents;
+        List<AiAgentConfiguration> agents = null;
 
         using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext ctx))
         using (ctx.OpenReadTransaction())
@@ -35,17 +33,10 @@ internal class AiAgentProcessorForGetAiAgent<TRequestHandler, TOperationContext>
                 if (record.TryGetAiAgent(identifier, out var configuration) == false)
                     throw new ArgumentException($"AI Agent '{identifier}' doesn't exists");
 
-                using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
-                {
-                    var obj = context.ReadObject(configuration.ToJson(), "get-ai-agent");
-                    writer.WriteObject(obj);
-                }
-
-                return;
+                agents = [configuration];
             }
 
-            agents = record.AiAgents;
+            agents ??= record.AiAgents;
         }
 
         // if name is null or empty - return all agents
@@ -53,7 +44,7 @@ internal class AiAgentProcessorForGetAiAgent<TRequestHandler, TOperationContext>
         await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
         {
             writer.WriteStartObject();
-            writer.WritePropertyName(nameof(RawDatabaseRecord.AiAgents));
+            writer.WritePropertyName(nameof(GetAiAgentsResponse.AiAgents));
             writer.WriteStartArray();
             var first = true;
             foreach (var agent in agents)

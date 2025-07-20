@@ -338,6 +338,8 @@ namespace Raven.Client.Json.Serialization
         public static readonly Func<BlittableJsonReaderObject, GenAi> GetOngoingTaskGenAiResult = GenerateJsonDeserializationRoutine<GenAi>();
 
         public static readonly Func<BlittableJsonReaderObject, AiAgentConfiguration> AiAgentConfiguration = GenerateJsonDeserializationRoutine<AiAgentConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, GetAiAgentsResponse> GetAiAgentsResponse = GenerateJsonDeserializationRoutine<GetAiAgentsResponse>();
         
         public static readonly Func<BlittableJsonReaderObject, AiAgentConfigurationResult> AiAgentConfigurationResult = GenerateJsonDeserializationRoutine<AiAgentConfigurationResult>();
         

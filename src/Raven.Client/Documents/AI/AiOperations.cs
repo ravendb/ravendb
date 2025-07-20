@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations;
@@ -67,6 +68,34 @@ public class AiOperations
         return AsyncHelpers.RunSync(() => CreateAgentAsync<TSchema>(configuration));
     }
     
+    /// <summary>
+    /// Retrieves the AI agent configuration for a specific agent asynchronously.
+    /// </summary>
+    /// <param name="agentId">The ID of the AI agent to retrieve.</param>
+    public async Task<AiAgentConfiguration> GetAgentAsync(string agentId, CancellationToken token = default)
+    {
+        var r = await _executor.SendAsync(new GetAiAgentOperation(agentId), token).ConfigureAwait(false);
+        return r.AiAgents?.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Retrieves all AI agents and their configurations.
+    /// </summary>
+    /// <returns>A response containing all AI agents.</returns>
+    public Task<GetAiAgentsResponse> GetAgentsAsync(CancellationToken token = default) => _executor.SendAsync(new GetAiAgentOperation(), token);
+
+    /// <summary>
+    /// Retrieves the AI agent configuration for a specific agent.
+    /// </summary>
+    /// <param name="agentId">The ID of the AI agent to retrieve.</param>
+    public AiAgentConfiguration GetAgent(string agentId) => AsyncHelpers.RunSync(() => GetAgentAsync(agentId));
+    
+    /// <summary>
+    /// Retrieves all AI agents and their configurations.
+    /// </summary>
+    /// <returns>A response containing all AI agents.</returns>
+    public GetAiAgentsResponse GetAgents() => AsyncHelpers.RunSync(() => GetAgentsAsync());
+
     /// <summary>
     /// Create starts a new conversation with an AI agent using a dictionary of parameters.
     /// </summary>
