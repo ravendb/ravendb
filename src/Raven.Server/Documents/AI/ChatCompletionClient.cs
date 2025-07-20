@@ -27,6 +27,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
+using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Raven.Server.Documents.AI;
@@ -157,7 +158,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return new AiResponse(AiResponseType.Result) { Result = result, Message = msg};
     }
 
-    public async Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, CancellationToken token)
+    public async Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, List<GenAiAttachment> contextOutputAttachments, CancellationToken token)
     {
         if (_forTestingPurposes?.SimulateFailureAsync != null)
             await _forTestingPurposes.SimulateFailureAsync(userPrompt);
@@ -172,7 +173,11 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         var msg2 = new DynamicJsonValue
         {
             [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
-            [Constants.RequestFields.Content] = userPrompt
+            [Constants.RequestFields.Content] = contextOutputAttachments switch
+            {
+                null => userPrompt,
+                _ => CreateContentWithAttachments(userPrompt, contextOutputAttachments)
+            }
         };
 
         var messages = new List<BlittableJsonReaderObject>() { ctx.ReadObject(msg1, "system/msg"), ctx.ReadObject(msg2, "user/msg") };
@@ -182,6 +187,52 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         return (results.Result.ToString(), usage);
     }
+
+
+    private DynamicJsonArray CreateContentWithAttachments(string context, List<GenAiAttachment> attachments)
+    {
+        var content = new DynamicJsonArray
+        {
+            new DynamicJsonValue
+            {
+                ["type"] = "text",
+                ["text"] = context
+            }
+        };
+
+        foreach (var attachment in attachments)
+        {
+            content.Add(attachment.Type switch
+            {
+                "text/plain" => new DynamicJsonValue
+                {
+                    ["type"] = "text",
+                    ["text"] = attachment.Data
+                },
+                "application/pdf" => new DynamicJsonValue
+                {
+                    ["type"] = "file",
+                    ["file"] = new DynamicJsonValue
+                    {
+                        ["filename"] = attachment.Name,
+                        ["file_data"] = "data:application/pdf;base64," + attachment.Data
+                    }
+                },
+                "image/jpeg" or "image/png" or "image/gif" or "image/webp" => new DynamicJsonValue
+                {
+                    ["type"] = "image_url",
+                    ["image_url"] = new DynamicJsonValue
+                    {
+                        ["url"] = "data:" + attachment.Type + ";base64," + attachment.Data
+                    }
+                },
+                _ => throw new InvalidOperationException("Unknown attachment type: " + attachment.Type)
+            });
+        }
+
+        return content;
+    }
+
     public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, string schema) => CreateCompletionRequest(ctx, messages, tools: null, useTools: false, schema);
 
     public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, string schema)

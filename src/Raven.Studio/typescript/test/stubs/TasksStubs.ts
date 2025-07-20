@@ -712,6 +712,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "MWoEsxOgGzl1OZarcxjlIki5ELBagYJjX/uIPHEFcxA=",
+                        Attachments: [], //FIXME
                     },
                     ModelOutput: null,
                 },
@@ -724,6 +725,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "tDRYDLQP/Q7sNmY6ZCRCcMUwwGdD1Lp05/Evybr7C0s=",
+                        Attachments: [], //FIXME
                     },
                     ModelOutput: null,
                 },
@@ -765,6 +767,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "MWoEsxOgGzl1OZarcxjlIki5ELBagYJjX/uIPHEFcxA=",
+                        Attachments: [], //FIXME
                     },
                     ModelOutput: {
                         Usage: {
@@ -788,6 +791,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "tDRYDLQP/Q7sNmY6ZCRCcMUwwGdD1Lp05/Evybr7C0s=",
+                        Attachments: [], //FIXME
                     },
                     ModelOutput: {
                         Usage: {
@@ -849,6 +853,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "MWoEsxOgGzl1OZarcxjlIki5ELBagYJjX/uIPHEFcxA=",
+                        Attachments: [], //FIXME
                     },
                     ModelOutput: {
                         Usage: {
@@ -872,6 +877,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "tDRYDLQP/Q7sNmY6ZCRCcMUwwGdD1Lp05/Evybr7C0s=",
+                        Attachments: [], //FIXME
                     },
                     ModelOutput: {
                         Usage: {

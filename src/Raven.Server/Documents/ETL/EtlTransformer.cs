@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.ETL
 
             DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunction(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslator));
 
-            foreach (var collection in LoadToDestinations)
+            foreach (var collection in LoadToDestinations ?? [])
             {
                 var name = Transformation.LoadTo + collection;
                 DocumentScript.ScriptEngine.SetValue(name, new ClrFunction(DocumentScript.ScriptEngine, name,

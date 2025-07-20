@@ -42,6 +42,8 @@ public class ModelOutput
 public class ContextOutput
 {
     public BlittableJsonReaderObject Context { get; set; }
+    
+    public List<GenAiAttachment> Attachments;
     public bool IsCached { get; set; }
     public string AiHash { get; set; }
 
