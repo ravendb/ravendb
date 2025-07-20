@@ -43,13 +43,12 @@ public class GenAiTestScriptResult : TestEtlScriptResult
         DynamicJsonValue dbg = null;
 
         if (DebugOutput?.Count > 0)
-            dbg = new DynamicJsonValue { ["Output"] = new DynamicJsonArray(DebugOutput ?? []) };
-        
+            dbg = new DynamicJsonValue { [nameof(DebugOutput)] = new DynamicJsonArray(DebugOutput ?? []) };
 
         if (DebugActions != null)
-            (dbg ??= new DynamicJsonValue())["Actions"] = DebugActions;
+            (dbg ??= new DynamicJsonValue())[nameof(DebugActions)] = DebugActions;
         
-        json["Debug"] = dbg;
+        json[nameof(PatchResult.Debug)] = dbg;
 
         return json;
     }
