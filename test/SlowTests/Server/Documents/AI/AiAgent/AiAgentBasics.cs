@@ -53,7 +53,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
-            agent.Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(30) };
+            agent.Persistence = new AiAgentPersistenceConfiguration ("Chats", TimeSpan.FromDays(30));
             agent.Parameters.Add("company");
             agent.Queries =
             [
@@ -91,6 +91,50 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
         [RavenTheory(RavenTestCategory.Ai)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+        public async Task CanGetAiAgent(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore(options);
+
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            using var session = store.OpenAsyncSession();
+
+            var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
+                "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
+            agent.Identifier = "shopping-assistant";
+            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
+            agent.Parameters.Add("company");
+            agent.Queries =
+            [
+                new AiAgentToolQuery
+                {
+                    Name = "ProductSearch",
+                    Description = "semantic search the store product catalog",
+                    Query = "from Products where vector.search(embedding.text(Name), $query)",
+                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+                },
+                new AiAgentToolQuery
+                {
+                    Name = "RecentOrder",
+                    Description = "Get the recent orders of the current user",
+                    Query = "from Orders where Company = $company order by OrderedAt desc limit 10",
+                    ParametersSampleObject = "{}"
+                }
+            ];
+
+            await store.AI.CreateAgentAsync<OutputSchema>(agent);
+            var r = await store.AI.GetAgentsAsync();
+            using (var context = JsonOperationContext.ShortTermSingleUse())
+            {
+                var converter = DocumentConventions.Default.Serialization.DefaultConverter;
+                var original = converter.ToBlittable(r.AiAgents[0], context);
+                var fromGet = converter.ToBlittable(agent, context);
+                Assert.Equal(original, fromGet);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
         public async Task CanResumeConversation(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
@@ -103,7 +147,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
-            agent.Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(30) };
+            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
             agent.Parameters.Add("company");
             agent.Queries =
             [
@@ -137,6 +181,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             await chat.RunAsync(CancellationToken.None);
             Assert.NotNull(chat.Answer);
             Assert.NotNull(chat.Id);
+
+            WaitForUserToContinueTheTest(store);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -150,7 +196,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
-            agent.Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(30) };
+            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
 
             agent.Actions =
             [

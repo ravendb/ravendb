@@ -30,7 +30,10 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         public AiAgentPersistenceConfiguration(string conversationIdPrefix = null, TimeSpan? expires = null)
         {
             ConversationIdPrefix = conversationIdPrefix;
-            Expires = expires;
+            if (expires.HasValue)
+            {
+                ExpiresInSec = (int)expires.Value.TotalSeconds;
+            }
         }
 
         /// <summary>
@@ -44,14 +47,14 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// Optional expiration duration. If provided, chat documents will expire (and be deleted)
         /// automatically after this time has passed since creation.
         /// </summary>
-        public TimeSpan? Expires { get; set; }
+        public int? ExpiresInSec { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(ConversationIdPrefix)] = ConversationIdPrefix, 
-                [nameof(Expires)] = Expires?.TotalMilliseconds
+                [nameof(ExpiresInSec)] = ExpiresInSec
             };
         }
     }

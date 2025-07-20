@@ -62,11 +62,8 @@ public class RavenDB_24407 : RavenTestBase
         var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, systemPrompt);
         agent.Identifier = "shopping-assistant";
         agent.Parameters.Add("company");
-        agent.Persistence = new AiAgentPersistenceConfiguration
-        {
-            ConversationIdPrefix = "Chats",
-            Expires = TimeSpan.FromDays(30)
-        };
+        agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
+
         agent.Queries =
         [
             new AiAgentToolQuery
@@ -212,11 +209,7 @@ public class RavenDB_24407 : RavenTestBase
         if(withHistory)
             agent.ChatTrimming.History = new();
 
-        agent.Persistence = new AiAgentPersistenceConfiguration
-        {
-            ConversationIdPrefix = "Chats",
-            Expires = TimeSpan.FromDays(30)
-        };
+        agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
 
         agent.Actions =
         [

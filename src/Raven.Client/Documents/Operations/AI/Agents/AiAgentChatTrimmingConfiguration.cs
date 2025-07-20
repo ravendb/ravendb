@@ -209,19 +209,36 @@ namespace Raven.Client.Documents.Operations.AI.Agents
     public class AiAgentHistoryConfiguration
     {
         /// <summary>
+        /// Enables history for the AI agents conversations.
+        /// </summary>
+        public AiAgentHistoryConfiguration()
+        {
+            
+        }
+
+        /// <summary>
+        /// Enables history for the AI agents conversations.
+        /// </summary>
+        /// <param name="expiration">The timespan after which history documents expire.</param>
+        public AiAgentHistoryConfiguration(TimeSpan expiration)
+        {
+            HistoryExpirationInSec = (int)expiration.TotalSeconds;
+        }
+
+        /// <summary>
         /// The timespan after which history documents expire.
         /// </summary>
         /// <remarks>
         /// History documents are the retained copies of chat messages that have been summarized or truncated.
         /// This property defines how long those history documents will be kept before they are considered expired and eligible for removal.
         /// </remarks>
-        public TimeSpan? HistoryExpiration { get; set; }
+        public int? HistoryExpirationInSec { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
-                [nameof(HistoryExpiration)] = HistoryExpiration?.TotalMilliseconds
+                [nameof(HistoryExpirationInSec)] = HistoryExpirationInSec
             };
         }
     }

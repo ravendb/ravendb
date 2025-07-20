@@ -29,7 +29,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "You are a tool-calling assistant." +
                 "When you perform a tool call, always include a short explanation to the user in the `content` field about what is about to happen, and then in the `tool_calls` field the parameters for the call.");
 
-            agent.Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(30) };
+            agent.Persistence = new AiAgentPersistenceConfiguration("Chats", TimeSpan.FromDays(30));
 
             agent.Parameters.Add("company");
             agent.Queries =

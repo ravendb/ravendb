@@ -44,7 +44,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 _conversation.HistoryDocuments.Add(putHistoryResult.Id);
             }
 
-            _conversationDoc = _conversation.ToBlittable(context, _configuration, _configuration.Persistence?.Expires);
+            TimeSpan? expiration = _configuration.Persistence?.ExpiresInSec == null ? 
+                null : 
+                TimeSpan.FromSeconds(_configuration.Persistence.ExpiresInSec.Value);
+
+            _conversationDoc = _conversation.ToBlittable(context, _configuration, expiration);
             var putResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _conversationDoc);
             PutResult = (putResult, putHistoryResult);
 

@@ -47,11 +47,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
             "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-        agent.Persistence = new AiAgentPersistenceConfiguration
-        {
-            ConversationIdPrefix = "Chats",
-            Expires = TimeSpan.FromDays(30)
-        };
+        agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
         
         agent.Parameters.Add("company");
         agent.Queries =
@@ -119,11 +115,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
             "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-        agent.Persistence = new AiAgentPersistenceConfiguration
-        {
-            ConversationIdPrefix = "Chats",
-            Expires = TimeSpan.FromDays(30)
-        };
+        agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
 
         var tool1 = new AiAgentToolAction
         {
@@ -193,12 +185,8 @@ public class AiAgentClientApiBasics : RavenTestBase
         var agent = new AiAgentConfiguration("shopping assistant",config.ConnectionStringName,
             "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-        agent.Persistence = new AiAgentPersistenceConfiguration
-        {
-            ConversationIdPrefix = "Chats",
-            Expires = TimeSpan.FromDays(30)
-        };
-        
+        agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
+
         agent.Parameters.Add("company");
         agent.Queries =
         [
@@ -272,11 +260,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         var agent = new AiAgentConfiguration("shopping assistant",config.ConnectionStringName,
             "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-        agent.Persistence = new AiAgentPersistenceConfiguration
-        {
-            ConversationIdPrefix = "Chats",
-            Expires = TimeSpan.FromDays(30)
-        };
+        agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
         
         agent.Parameters.Add("company");
         agent.Queries =

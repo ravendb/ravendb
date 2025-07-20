@@ -88,7 +88,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent0.Identifier = "shopping-assistant";
             agent0.Parameters.Add("company");
-            agent0.Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats/", Expires = TimeSpan.FromDays(30) };
+            agent0.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
             agent0.Queries =
             [
                 new AiAgentToolQuery
@@ -108,7 +108,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             ];
 
             var agent1 = new AiAgentConfiguration("warehouse manager", aiConfig.ConnectionStringName, "You are an AI agent managing a warehouse.");
-            agent1.Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats/", Expires = TimeSpan.FromDays(30) };
+            agent1.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
             agent1.Actions =
             [
                 new AiAgentToolAction

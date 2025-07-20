@@ -50,7 +50,7 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(1) },
+            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -60,8 +60,9 @@ public class AiAgentErrors : RavenTestBase
                     Query = "from 'Customers' where Name == $name",
                     ParametersSampleObject = agentParametersSampleObject
                 }
-            ]
+            ],
         };
+
         var createResult = await store.AI.CreateAgentAsync<CustomerOutputSchema>(agent);
         var chat = store.AI.StartConversation<CustomerOutputSchema>(createResult.Identifier, builder: null);
         chat.SetUserPrompt("How many customers do we have with the name \"Shahar\"?");
@@ -86,7 +87,7 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(1) },
+            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -123,7 +124,7 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(1) },
+            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -183,7 +184,7 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(1) },
+            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -231,7 +232,7 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(1) },
+            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -276,7 +277,7 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(1) },
+            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -314,7 +315,7 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(1) },
+            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -392,7 +393,7 @@ public class AiAgentErrors : RavenTestBase
             "You are an ai agent that answer knowledge questions"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats", Expires = TimeSpan.FromDays(1) },
+            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery

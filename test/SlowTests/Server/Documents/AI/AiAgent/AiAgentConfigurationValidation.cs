@@ -31,11 +31,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-            agent.Persistence = new AiAgentPersistenceConfiguration
-            {
-                ConversationIdPrefix = "Chats",
-                Expires = TimeSpan.FromDays(30)
-            };
+            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
 
             agent.Queries =
             [
@@ -73,11 +69,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-            agent.Persistence = new AiAgentPersistenceConfiguration
-            {
-                ConversationIdPrefix = "Chats",
-                Expires = TimeSpan.FromDays(30)
-            };
+            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
 
             agent.Parameters.Add("company");
             agent.Queries =
@@ -116,12 +108,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-            agent.Persistence = new AiAgentPersistenceConfiguration
-            {
-                ConversationIdPrefix = "Chats",
-                Expires = TimeSpan.FromDays(30)
-            };
-            
+            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
+
             agent.Parameters.Add("company");
             agent.Queries =
             [

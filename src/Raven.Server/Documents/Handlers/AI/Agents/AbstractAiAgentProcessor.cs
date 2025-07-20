@@ -261,6 +261,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 if (reduction == null || document.OpenActionCalls.Count > 0)
                     return null;
 
+                TimeSpan? historyExpiration = reduction.History?.HistoryExpirationInSec == null
+                    ? null
+                    : TimeSpan.FromSeconds(reduction.History.HistoryExpirationInSec.Value);
+
                 if (reduction.Truncate != null)
                 {
                     if (document.Messages.Count > reduction.Truncate.MessagesLengthBeforeTruncate)
@@ -269,7 +273,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                         truncateCount = int.Min(truncateCount, document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
                         if (truncateCount > 0)
                         {
-                            var chatBefore = reduction.History == null ? null : document.ToBlittable(context, configuration, reduction.History.HistoryExpiration);
+                            var chatBefore = reduction.History == null ? null : document.ToBlittable(context, configuration, historyExpiration);
                             document.Messages.RemoveRange(1, truncateCount);
                             return chatBefore;
                         }
@@ -279,7 +283,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 {
                     if (aiUsage.TotalTokens > reduction.Tokens.MaxTokensBeforeSummarization)
                     {
-                        var chatBefore = reduction.History == null ? null : document.ToBlittable(context, configuration, reduction.History.HistoryExpiration);
+                        var chatBefore = reduction.History == null ? null : document.ToBlittable(context, configuration, historyExpiration);
                         await SummarizeAsync(context, client, configuration, document, token);
                         return chatBefore;
                     }
