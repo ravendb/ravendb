@@ -59,7 +59,7 @@ public class ChatCompletionClientTests : RavenTestBase
             var context =
                 "{\"Text\":\"Surefire investment property in caiman islands, win $$$$ for sure, qucik!\",\"Author\":\"homepage\",\"Id\":\"2236672c-b941-4855-999e-5374f41cbddd\"}";
 
-            var res = await client.CompleteAsync(prompt, context, defaultJsonSchema, default);
+            var res = await client.CompleteAsync(prompt, context, defaultJsonSchema, null, default);
             var answer = JsonConvert.DeserializeObject<AiCommentResult>(res.Result); // check if it can be parsed to json, if cannot parse it throws
             Assert.NotNull(answer.Blocked);
             Assert.False(string.IsNullOrEmpty(answer.Reason));
@@ -91,7 +91,7 @@ public class ChatCompletionClientTests : RavenTestBase
             configuration.Connection.OpenAiSettings.ApiKey += "xyz"; // wrong api key
             using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
             {
-                var ex = await Assert.ThrowsAsync<UnsuccessfulRequestException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, default));
+                var ex = await Assert.ThrowsAsync<UnsuccessfulRequestException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, null, default));
                 Assert.Equal(HttpStatusCode.Unauthorized, ex.StatusCode);
             }
             configuration.Connection.OpenAiSettings.ApiKey = 
@@ -103,7 +103,7 @@ public class ChatCompletionClientTests : RavenTestBase
         {
             using var cts = new CancellationTokenSource();
             await cts.CancelAsync();
-            await Assert.ThrowsAsync<TaskCanceledException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, cts.Token));
+            await Assert.ThrowsAsync<TaskCanceledException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, null, cts.Token));
         }
 
         using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
@@ -117,14 +117,14 @@ public class ChatCompletionClientTests : RavenTestBase
                 writer.WriteEndObject();
             };
 
-            var ex = await Assert.ThrowsAsync<UnsuccessfulRequestException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, default));
+            var ex = await Assert.ThrowsAsync<UnsuccessfulRequestException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, null, default));
             Assert.Equal(HttpStatusCode.BadRequest, ex.StatusCode);
         }
 
         SetModel("gpt-4kabcdefg", out var originalModel); // wrong model name
         using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
         {
-            var ex = await Assert.ThrowsAsync<UnsuccessfulRequestException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, default));
+            var ex = await Assert.ThrowsAsync<UnsuccessfulRequestException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, null, default));
             Assert.Equal(HttpStatusCode.NotFound, ex.StatusCode);
         }
         SetModel(originalModel, out _); // back to the original model name
@@ -156,7 +156,7 @@ public class ChatCompletionClientTests : RavenTestBase
                  <p><b>404.</b> <ins>That's an error.</ins>
                  <p>The requested URL <code>/v1/chat/completions</code> was not found on this server.  <ins>That's all we know.</ins>
              */
-            await Assert.ThrowsAsync<InvalidDataException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, default));
+            await Assert.ThrowsAsync<InvalidDataException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, null, default));
         }
 
 
@@ -219,14 +219,14 @@ public class ChatCompletionClientTests : RavenTestBase
             // Should throw at least once
             await Assert.ThrowsAsync<RefusedToAnswerException>(async () =>
             {
-                await client.CompleteAsync(promptA, context1A, jsonSchemaForRefusing, default);
-                await client.CompleteAsync(promptA, context2A, jsonSchemaForRefusing, default);
-                await client.CompleteAsync(prompt0B, contextB, jsonSchemaForRefusing, default);
-                await client.CompleteAsync(prompt1B, contextB, jsonSchemaForRefusing, default);
-                await client.CompleteAsync(prompt2B, contextB, jsonSchemaForRefusing, default);
-                await client.CompleteAsync(prompt3B, contextB, jsonSchemaForRefusing, default);
-                await client.CompleteAsync(prompt4B, contextB, jsonSchemaForRefusing, default);
-                await client.CompleteAsync(prompt5B, contextB, jsonSchemaForRefusing, default);
+                await client.CompleteAsync(promptA, context1A, jsonSchemaForRefusing, null, default);
+                await client.CompleteAsync(promptA, context2A, jsonSchemaForRefusing, null, default);
+                await client.CompleteAsync(prompt0B, contextB, jsonSchemaForRefusing, null, default);
+                await client.CompleteAsync(prompt1B, contextB, jsonSchemaForRefusing, null, default);
+                await client.CompleteAsync(prompt2B, contextB, jsonSchemaForRefusing, null, default);
+                await client.CompleteAsync(prompt3B, contextB, jsonSchemaForRefusing, null, default);
+                await client.CompleteAsync(prompt4B, contextB, jsonSchemaForRefusing, null, default);
+                await client.CompleteAsync(prompt5B, contextB, jsonSchemaForRefusing, null, default);
             });
         }
     }
