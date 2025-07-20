@@ -7,10 +7,6 @@ namespace Raven.Server.Documents.ETL.Providers.AI.GenAi;
 
 public class GenAiResultItem
 {
-    public List<string> DebugOutput { get; set; }
-
-    public DynamicJsonValue DebugActions { get; set; }
-
     public ModelOutput ModelOutput { get; set; }
 
     public ContextOutput ContextOutput { get; set; }
@@ -23,8 +19,6 @@ public class GenAiResultItem
     {
         return new DynamicJsonValue
         {
-            [nameof(DebugOutput)] = DebugOutput == null ? null : new DynamicJsonArray(DebugOutput),
-            [nameof(DebugActions)] = DebugActions,
             [nameof(ContextOutput)] = ContextOutput?.ToJson(),
             [nameof(ModelOutput)] = ModelOutput?.ToJson()
         };

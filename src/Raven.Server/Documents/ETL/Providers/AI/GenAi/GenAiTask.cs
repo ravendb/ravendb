@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
@@ -330,7 +331,9 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
     {
         List<GenAiResultItem> items;
         BlittableJsonReaderObject outputDocument = null;
-
+        DynamicJsonValue debugActions = null;
+        List<string> debugOutput = null;
+        PatchStatus status = PatchStatus.NotModified;
         Document document = null;
 
         switch (testGenAiScript.TestStage)
@@ -430,20 +433,28 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                             patchIfMissing: default,
                             createIfMissing: null,
                             identityPartsSeparator: Database.IdentityPartsSeparator,
-                            isTest: false,
-                            debugMode: false,
+                            isTest: true,
+                            debugMode: true,
                             collectResultsNeeded: true,
                             returnDocument: false,
                             ignoreMaxStepsForScript: false);
 
                         cmd.Execute(context, recordingState: null);
-
-                        item.DebugActions = cmd.DebugActions;
-                        item.DebugOutput = cmd.DebugOutput;
                     }
 
-                    if (lastPatch?.PatchResult?.ModifiedDocument != null)
-                        outputDocument = GenAiBatchPatchCommand.UpdateHashesInMetadata(document.Id, lastPatch.PatchResult.ModifiedDocument, Configuration.Identifier, hashes, context);
+
+                    if (lastPatch != null)
+                    {
+                        status = lastPatch.PatchResult.Status;
+                        debugActions = lastPatch?.DebugActions;
+                        debugOutput = lastPatch?.DebugOutput;
+
+                        if (lastPatch?.PatchResult?.ModifiedDocument != null)
+                        {
+                            outputDocument = GenAiBatchPatchCommand.UpdateHashesInMetadata(document.Id, lastPatch.PatchResult.ModifiedDocument, Configuration.Identifier,
+                                hashes, context);
+                        }
+                    }
 
                     break;
                 }
@@ -451,13 +462,19 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             default:
                 throw new InvalidOperationException("Unknown TestStage type : " + testGenAiScript.TestStage.GetType());
         }
-
+        var originalDoc = document?.Data;
+        var modifiedDoc = outputDocument;
         return new GenAiTestScriptResult
         {
-            InputDocument = document?.Data,
+            Status = status,
+            InputDocument = originalDoc,
+            OriginalDocument = originalDoc,
+            OutputDocument = modifiedDoc,
+            ModifiedDocument = modifiedDoc,
             Results = items,
-            OutputDocument = outputDocument,
-            TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList()
+            DebugActions = debugActions,
+            DebugOutput = debugOutput,
+            TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
         };
     }
 
