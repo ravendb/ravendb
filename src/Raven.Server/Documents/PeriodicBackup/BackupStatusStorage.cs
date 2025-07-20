@@ -182,6 +182,7 @@ namespace Raven.Server.Documents.PeriodicBackup
             {
                 var table = context.Transaction.InnerTransaction.OpenTable(BackupStatusTableSchema, BackupStatusSchema.TableName);
                 table.DeleteByPrimaryKeyPrefix(key);
+                tx.Commit();
             }
         }
 

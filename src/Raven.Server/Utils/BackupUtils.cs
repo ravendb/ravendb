@@ -127,7 +127,7 @@ internal static class BackupUtils
                 // OnParsingError and OnMissingNextBackupInfo are null's - for skipping error messages notification and log
                 Configuration = periodicBackup.Configuration,
                 BackupStatus = status,
-                NodeTag = parameters.ServerStore.NodeTag
+                NodeTag = RachisConsensus.ReadNodeTag(parameters.Context)
             });
             if (nextBackup == null)
                 continue;
@@ -700,7 +700,6 @@ internal static class BackupUtils
     public sealed class BackupInfoParameters
     {
         public ClusterOperationContext Context { get; set; }
-        public ServerStore ServerStore { get; set; }
         public List<PeriodicBackup> PeriodicBackups { get; set; }
         public string DatabaseName { get; set; }
     }

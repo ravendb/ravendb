@@ -2921,7 +2921,7 @@ namespace Raven.Server.ServerWide
             if (licenseLimitsBlittable == null)
                 return;
 
-            var tag = RachisConsensus.ReadNodeTag(context);
+            var tag = _parent.ReadNodeTag(context);
             var licenseLimits = JsonDeserializationServer.LicenseLimits(licenseLimitsBlittable);
 
             if (licenseLimits.NodeLicenseDetails.ContainsKey(tag) && licenseLimits.NodeLicenseDetails.Count == 1)
