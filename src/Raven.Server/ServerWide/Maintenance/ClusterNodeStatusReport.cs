@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Documents.Operations.Backups;
 using Sparrow;
-using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Maintenance
