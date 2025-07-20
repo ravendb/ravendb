@@ -86,6 +86,7 @@ namespace Raven.Server.ServerWide.Maintenance
             // shallow
             LastIndexStats = other.LastIndexStats;
             LastSentEtag = other.LastSentEtag;
+            BackupStatuses = other.BackupStatuses;
 
             LastCompareExchangeIndex = other.LastCompareExchangeIndex;
             LastClusterWideTransactionRaftIndex = other.LastClusterWideTransactionRaftIndex;
