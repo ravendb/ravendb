@@ -50,17 +50,18 @@ namespace Raven.Client.Documents.Operations.Backups
         }
     }
 
-    public class LastRaftIndex
+    public sealed class LastRaftIndex
     {
         public long? LastEtag { get; set; }
 
-        public virtual DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
+        public long? LastFullBackupEtag { get; set; }
+
+        public DynamicJsonValue ToJson() =>
+            new()
             {
-                [nameof(LastEtag)] = LastEtag
+                [nameof(LastEtag)] = LastEtag,
+                [nameof(LastFullBackupEtag)] = LastFullBackupEtag
             };
-        }
     }
 
     public class LocalBackup : BackupStatus

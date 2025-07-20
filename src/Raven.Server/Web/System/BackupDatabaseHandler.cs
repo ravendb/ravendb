@@ -20,7 +20,7 @@ namespace Raven.Server.Web.System
             if (await CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
                 return;
 
-            var taskId = GetLongQueryString("taskId", required: true).Value;
+            var taskId = GetLongQueryString("taskId");
             if (taskId == 0)
                 throw new ArgumentException("Task ID cannot be 0");
 
@@ -41,21 +41,22 @@ namespace Raven.Server.Web.System
         public async Task GetPeriodicBackupStatus()
         {
             var name = GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
-            var type = GetStringQueryString("type", required: false) ?? StatusType.Cluster.ToString();
+            var type = GetStringQueryString("type", required: false) ?? nameof(StatusType.Cluster);
 
             if (await CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
                 return;
 
-            var taskId = GetLongQueryString("taskId", required: true);
+            var taskId = GetLongQueryString("taskId");
 
-            if (StatusType.TryParse(type, ignoreCase: true, out StatusType statusType) == false)
-                throw new ArgumentException($"provided '{nameof(type)}' has to be `{StatusType.Cluster.ToString()}` or '{StatusType.Local.ToString()}'");
+            if (Enum.TryParse(type, ignoreCase: true, out StatusType statusType) == false)
+                throw new ArgumentException($"provided '{nameof(type)}' has to be `{StatusType.Cluster}` or '{StatusType.Local}'");
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
-            using (var statusBlittable = statusType == StatusType.Local ? 
-                       BackupUtils.GetLocalBackupStatusBlittable(ServerStore, context, name, taskId.Value) :
-                       BackupUtils.GetBackupStatusFromClusterBlittable(ServerStore, context, name, taskId.Value))
+            using (var statusBlittable = statusType == StatusType.Local
+                       ? BackupStatusStorage.GetBackupStatusBlittable(context, name, taskId)
+                       : BackupUtils.GetBackupStatusFromClusterBlittable(context, name, taskId))
+
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
             {
                 writer.WriteStartObject();
@@ -63,12 +64,6 @@ namespace Raven.Server.Web.System
                 writer.WriteObject(statusBlittable);
                 writer.WriteEndObject();
             }
-        }
-
-        enum StatusType
-        {
-            Local,
-            Cluster
         }
 
         [RavenAction("/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.Operator)]

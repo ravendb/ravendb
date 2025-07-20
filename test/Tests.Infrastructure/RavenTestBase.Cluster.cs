@@ -239,8 +239,11 @@ public partial class RavenTestBase
             server.ServerStore.Observer.Suspended = true;
         }
 
-        internal async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> RunCompareExchangeTombstoneCleaner(RavenServer leader, bool simulateClusterTransactionIndex = true)
+        internal async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> RunCompareExchangeTombstoneCleaner(List<RavenServer> clusterNodes, bool ignoreClusterTrx = true)
         {
+            var leader = clusterNodes.FirstOrDefault(x => x.ServerStore.CurrentRachisState == RachisState.Leader);
+            Assert.True(leader != null, "There should be a leader in the cluster to run the compare exchange tombstone cleaner.");
+
             ClusterObserver.CompareExchangeTombstonesCleanupState state = ClusterObserver.CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
             leader.ServerStore.ForTestingPurposesOnly().AfterCompareExchangeTombstonesResult = innerState =>
             {
@@ -248,7 +251,7 @@ public partial class RavenTestBase
             };
 
             // if we want the test to be completely organic, set the configuration of the server to MaxClusterTransactionCompareExchangeTombstoneCheckInterval = 0, and this flag to false
-            if (simulateClusterTransactionIndex)
+            if (ignoreClusterTrx)
                 leader.ServerStore.ForTestingPurposesOnly().IgnoreClusterTransactionIndexInCompareExchangeCleaner = true;
 
             leader.ServerStore.Observer._lastTombstonesCleanupTimeInTicks = 0;  // this will trigger the cleaner to run immediately
@@ -257,6 +260,21 @@ public partial class RavenTestBase
             Assert.True(cleanupTimeUpdated);
 
             return state;
+        }
+
+        internal void WaitForFirstCompareExchangeTombstonesClean(RavenServer server)
+        {
+            Assert.True(WaitForValue(() =>
+            {
+                // wait for compare exchange tombstone cleaner run
+                if (server.ServerStore.Observer == null)
+                    return false;
+
+                if (server.ServerStore.Observer._lastTombstonesCleanupTimeInTicks == 0)
+                    return false;
+
+                return true;
+            }, true));
         }
 
         internal async Task<(bool, Dictionary<string, long>)> GetNumberOfCommandsPerNode(long expectedNumberOfCommands, List<RavenServer> servers, string commandType, int timeout = 30_000, int interval = 1_000)

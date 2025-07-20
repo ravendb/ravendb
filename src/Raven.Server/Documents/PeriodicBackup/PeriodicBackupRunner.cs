@@ -75,13 +75,12 @@ namespace Raven.Server.Documents.PeriodicBackup
         public NextBackup GetNextBackupDetails(PeriodicBackupConfiguration configuration, PeriodicBackupStatus backupStatus, out string responsibleNodeTag)
         {
             var taskStatus = GetTaskStatus(configuration, out responsibleNodeTag, disableLog: true);
-            return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, responsibleNodeTag, skipErrorLog: true);
+            return taskStatus == TaskStatus.Disabled ? null : GetNextBackupDetails(configuration, backupStatus, skipErrorLog: true);
         }
 
         private NextBackup GetNextBackupDetails(
             PeriodicBackupConfiguration configuration,
             PeriodicBackupStatus backupStatus,
-            string responsibleNodeTag,
             bool skipErrorLog = false)
         {
             return BackupUtils.GetNextBackupDetails(new BackupUtils.NextBackupDetailsParameters
@@ -89,7 +88,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 OnParsingError = skipErrorLog ? null : OnParsingError,
                 Configuration = configuration,
                 BackupStatus = backupStatus,
-                ResponsibleNodeTag = responsibleNodeTag,
                 DatabaseWakeUpTimeUtc = _databaseWakeUpTimeUtc,
                 NodeTag = _serverStore.NodeTag,
                 OnMissingNextBackupInfo = OnMissingNextBackupInfo
@@ -159,7 +157,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                     return;
                 }
 
-                periodicBackup.UpdateTimer(GetNextBackupDetails(periodicBackup.Configuration, periodicBackup.BackupStatus, _serverStore.NodeTag), lockTaken: false);
+                periodicBackup.UpdateTimer(GetNextBackupDetails(periodicBackup.Configuration, periodicBackup.BackupStatus), lockTaken: false);
             }
             catch (Exception e)
             {
@@ -232,7 +230,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var nextBackup = GetNextBackupDetails(
                     periodicBackup.Value.Configuration, 
                     periodicBackup.Value.BackupStatus,
-                    periodicBackup.Value.Configuration.MentorNode, 
                     skipErrorLog: true);
 
                 var originalBackupTime = delayUntil > nextBackup.DateTime 
@@ -338,7 +335,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     // in the case cluster backup status was overridden by a different node since our last backup,
                     // we fetch the last local backup status to check if we need to continue where we left off or start fresh with a full backup
-
                     var localBackupStatus = periodicBackup.BackupStatus = GetMostUpdatedLocalBackupStatus(periodicBackup.Configuration.TaskId, inMemoryBackupStatus: periodicBackup.BackupStatus);
                     var backupToLocalFolder = BackupConfiguration.CanBackupUsing(periodicBackup.Configuration.LocalSettings);
 
@@ -372,12 +368,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                     var backupTask = BackupUtils.GetBackupTask(_database, backupParameters, periodicBackup.Configuration, _logger, _forTestingPurposes);
                     periodicBackup.CancelToken = backupTask.TaskCancelToken;
-
-                    periodicBackup.RunningTask = new PeriodicBackup.RunningBackupTask
-                    {
-                        Id = operationId,
-                        Task = tcs.Task
-                    };
 
                     var task = _database.Operations.AddOperation(
                         null,
@@ -466,6 +456,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 using (_database.PreventFromUnloadingByIdleOperations())
                 {
+                    periodicBackup.RunningTask = backupTask.ToRunningBackupTask(tcs.Task);
                     backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
 
                     periodicBackup.BackupStatus = runningBackupStatus;
@@ -523,7 +514,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 periodicBackup.RunningBackupStatus = null;
 
                 if (periodicBackup.HasScheduledBackup() && _cancellationToken.IsCancellationRequested == false)
-                    periodicBackup.UpdateTimer(GetNextBackupDetails(periodicBackup.Configuration, periodicBackup.BackupStatus, _serverStore.NodeTag), lockTaken, discardIfDisabled: true);
+                    periodicBackup.UpdateTimer(GetNextBackupDetails(periodicBackup.Configuration, periodicBackup.BackupStatus), lockTaken, discardIfDisabled: true);
             }
             catch (Exception e)
             {
@@ -619,24 +610,15 @@ namespace Raven.Server.Documents.PeriodicBackup
             using (_serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (context.OpenReadTransaction())
             {
-                var backupStatus = BackupUtils.GetBackupStatusFromCluster(_serverStore, context, _database.Name, taskId);
+                var backupStatus = BackupUtils.GetBackupStatusFromCluster(context, _database.Name, taskId);
                 return BackupUtils.ComparePeriodicBackupStatus(taskId, backupStatus, inMemoryBackupStatus);
             }
         }
 
         private PeriodicBackupStatus GetMostUpdatedLocalBackupStatus(long taskId, PeriodicBackupStatus inMemoryBackupStatus)
         {
-            var backupStatus = BackupUtils.GetLocalBackupStatus(_serverStore, _database.Name, taskId);
+            var backupStatus = _serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(_database.Name, taskId);
             return BackupUtils.ComparePeriodicBackupStatus(taskId, backupStatus, inMemoryBackupStatus);
-        }
-
-        private static PeriodicBackupStatus GetBackupStatusFromCluster(ServerStore serverStore, string databaseName, long taskId)
-        {
-            using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                return BackupUtils.GetBackupStatusFromCluster(serverStore, context, databaseName, taskId);
-            }
         }
 
         private long GetMinimalEtagForTombstoneCleanupForBackup(Dictionary<string, LastTombstoneInfo> lastProcessedTombstonesInfo = null, string collection = null)
@@ -651,7 +633,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 {
                     var config = record.GetPeriodicBackupConfiguration(taskId);
 
-                    var localStatus = BackupUtils.GetLocalBackupStatus(_serverStore, context, _database.Name, taskId);
+                    var localStatus = BackupStatusStorage.GetBackupStatus(context, _database.Name, taskId);
                     var responsibleNode = BackupUtils.GetResponsibleNodeTag(_serverStore, _database.Name, taskId);
 
                     if (localStatus == null)
@@ -758,8 +740,8 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _logger.Info($"New backup task '{taskId}' state is '{taskState}', will arrange a new backup timer.");
 
                     var backupStatus = GetMostUpdatedLocalBackupStatus(taskId, inMemoryBackupStatus: null);
-                    var nextbackup = GetNextBackupDetails(newConfiguration, backupStatus, _serverStore.NodeTag);
-                    periodicBackup.UpdateTimer(nextbackup, lockTaken: false);
+                    var nextBackup = GetNextBackupDetails(newConfiguration, backupStatus);
+                    periodicBackup.UpdateTimer(nextBackup, lockTaken: false);
                 }
 
                 return;
@@ -816,7 +798,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                         _logger.Operations($"Backup task '{taskId}' state is '{taskState}', the task has frequency changes or doesn't have scheduled backup, the timer will be rearranged and the task will be executed by current node '{_database.ServerStore.NodeTag}'.");
 
                     var backupStatus = GetMostUpdatedLocalBackupStatus(taskId, inMemoryBackupStatus: null);
-                    var nextBackup = GetNextBackupDetails(newConfiguration, backupStatus, _serverStore.NodeTag);
+                    var nextBackup = GetNextBackupDetails(newConfiguration, backupStatus);
 
                     existingBackupState.UpdateTimer(nextBackup, lockTaken: false);
                     return;
@@ -954,7 +936,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                     new BackupUtils.BackupInfoParameters
                     {
                         Context = context,
-                        ServerStore = _serverStore,
                         PeriodicBackups = _periodicBackups.Values.ToList(),
                         DatabaseName = _database.Name
                     }
@@ -968,7 +949,6 @@ namespace Raven.Server.Documents.PeriodicBackup
                 new BackupUtils.BackupInfoParameters
                 {
                     Context = context,
-                    ServerStore = _serverStore,
                     PeriodicBackups = _periodicBackups.Values.ToList(),
                     DatabaseName = _database.Name
                 }

@@ -1431,7 +1431,6 @@ namespace Raven.Server.ServerWide
                         throw new DatabaseDoesNotExistException($"Cannot set typed value of type {type} for database {updateCommand.DatabaseName}, because it does not exist");
 
                     updateCommand.Execute(context, items, index, databaseRecord, _parent.CurrentState, out result);
-                    updateCommand.AfterExecute(index, databaseRecord, context, _parent.ServerStore);
                 }
             }
             catch (Exception e)
@@ -2446,7 +2445,7 @@ namespace Raven.Server.ServerWide
                         throw new RachisApplyException("Failed to update database record.", e);
                     }
 
-                    updateCommand.AfterDatabaseRecordUpdate(context, items, serverStore, _clusterAuditLog);
+                    updateCommand.AfterDatabaseRecordUpdate(context, items, _clusterAuditLog);
 
                     if (databaseRecord.Topology.Count == 0 && databaseRecord.DeletionInProgress.Count == 0)
                     {

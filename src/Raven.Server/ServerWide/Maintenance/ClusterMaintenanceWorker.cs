@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using Raven.Client;
-using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -160,95 +159,55 @@ namespace Raven.Server.ServerWide.Maintenance
         private Dictionary<string, DatabaseStatusReport> CollectDatabaseInformation(TransactionOperationContext ctx, Dictionary<string, DatabaseStatusReport> prevReport)
         {
             var result = new Dictionary<string, DatabaseStatusReport>();
-            foreach (var dbName in _server.Cluster.GetDatabaseNames(ctx))
+            foreach (var databaseName in _server.Cluster.GetDatabaseNames(ctx))
             {
                 if (_token.IsCancellationRequested)
                     return result;
 
-                var report = new DatabaseStatusReport
+                using var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, databaseName);
+                if (rawRecord?.Topology == null)
+                    continue; // Database does not exist on this server
+
+                if (rawRecord.Topology.RelevantFor(_server.NodeTag) == false)
+                    continue;
+
+                var report = new DatabaseStatusReport { Name = databaseName, NodeName = _server.NodeTag };
+                if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(databaseName, out var dbTask, out var details) == false)
                 {
-                    Name = dbName,
-                    NodeName = _server.NodeTag,
-                    BackupStatuses = new ()
-                };
-
-                prevReport.TryGetValue(dbName, out var prevDatabaseReport);
-
-                List<long> backupTaskIds = null;
-                DatabaseTopology topology;
-                using (var rawRecord = _server.Cluster.ReadRawDatabaseRecord(ctx, dbName))
-                {
-                    if (rawRecord == null)
-                    {
-                        continue; // Database does not exists in this server
-                    }
-
-                    topology = rawRecord.Topology;
-                    backupTaskIds = rawRecord.PeriodicBackupsTaskIds;
-                }
-
-                if (_server.DatabasesLandlord.DatabasesCache.TryGetValue(dbName, out var dbTask, out var details) == false)
-                {
-                    if (topology == null)
-                    {
-                        continue;
-                    }
-
-                    if (topology.RelevantFor(_server.NodeTag) == false)
-                    {
-                        continue;
-                    }
-
                     report.Status = DatabaseStatus.Unloaded;
-
-                    FillBackupStatusInfo(ctx, _server, dbName, backupTaskIds, report);
-
-                    result[dbName] = report;
+                    result[databaseName] = report;
                     continue;
                 }
-                
+
                 report.UpTime = SystemTime.UtcNow - details.InCacheSince;
 
-                FillBackupStatusInfo(ctx, _server, dbName, backupTaskIds, report);
-
-                if (dbTask.IsFaulted)
+                if (dbTask.IsFaulted && DatabasesLandlord.IsLockedDatabase(dbTask.Exception))
                 {
-                    if (DatabasesLandlord.IsLockedDatabase(dbTask.Exception))
-                    {
-                        report.Status = DatabaseStatus.Unloaded;
-                        result[dbName] = report;
-                        continue;
-                    }
+                    report.Status = DatabaseStatus.Unloaded;
+                    result[databaseName] = report;
+                    continue;
                 }
 
                 if (dbTask.IsCanceled || dbTask.IsFaulted)
                 {
                     report.Status = DatabaseStatus.Faulted;
                     report.Error = dbTask.Exception.ToString();
-                    result[dbName] = report;
+                    result[databaseName] = report;
                     continue;
                 }
 
                 if (dbTask.IsCompleted == false)
                 {
                     report.Status = DatabaseStatus.Loading;
-                    result[dbName] = report;
+                    result[databaseName] = report;
                     continue;
                 }
 
                 var dbInstance = dbTask.Result;
-                var currentHash = dbInstance.GetEnvironmentsHash();
-                currentHash = Hashing.Combine(currentHash, report.GetBackupStatusReportHash());
-                report.EnvironmentsHash = currentHash;
-
-
-                var documentsStorage = dbInstance.DocumentsStorage;
-                var indexStorage = dbInstance.IndexStore;
-
                 if (dbInstance.DatabaseShutdown.IsCancellationRequested)
                 {
                     report.Status = DatabaseStatus.Shutdown;
-                    result[dbName] = report;
+                    result[databaseName] = report;
                     continue;
                 }
 
@@ -257,19 +216,33 @@ namespace Raven.Server.ServerWide.Maintenance
                 {
                     var now = dbInstance.Time.GetUtcNow();
                     FillReplicationInfo(dbInstance, report);
-                    FillClusterInfo(ctx, report, dbInstance, dbName);
+                    FillClusterInfo(ctx, report, dbInstance);
 
-                    
+                    var periodicBackupStatuses = _server.DatabaseInfoCache.BackupStatusStorage.GetDatabasePeriodicBackupStatuses(ctx, databaseName, rawRecord.PeriodicBackupsTaskIds);
+
+                    // Calculate the hash based on all relevant components (db state plus backup statuses).
+                    report.EnvironmentsHash = Hashing.Combine(dbInstance.GetEnvironmentsHash(), DatabaseStatusReport.GetPeriodicBackupStatusesHash(periodicBackupStatuses));
+
+                    prevReport.TryGetValue(databaseName, out var prevDatabaseReport);
+
+                    // Check if anything has changed.
                     if (SupportedFeatures.Heartbeats.SendChangesOnly &&
-                        prevDatabaseReport != null && prevDatabaseReport.EnvironmentsHash == currentHash)
+                        prevDatabaseReport != null && prevDatabaseReport.EnvironmentsHash == report.EnvironmentsHash)
                     {
+                        // Nothing changed. Send a lightweight NoChange report.
                         report.Status = DatabaseStatus.NoChange;
-                        result[dbName] = report;
+                        result[databaseName] = report;
                         continue;
                     }
 
+                    // Something has changed. Build and send a full report.
+                    report.BackupStatuses = periodicBackupStatuses;
+
                     using (var context = QueryOperationContext.Allocate(dbInstance, needsServerContext: true))
                     {
+                        var documentsStorage = dbInstance.DocumentsStorage;
+                        var indexStorage = dbInstance.IndexStore;
+
                         FillDocumentsInfo(prevDatabaseReport, dbInstance, report, context.Documents, documentsStorage);
                         
                         if (indexStorage != null)
@@ -277,7 +250,8 @@ namespace Raven.Server.ServerWide.Maintenance
                             foreach (var index in indexStorage.GetIndexes())
                             {
                                 DatabaseStatusReport.ObservedIndexStatus stat = null;
-                                if (prevDatabaseReport?.LastIndexStats.TryGetValue(index.Name, out stat) == true && stat?.LastTransactionId == index.LastTransactionId)
+                                if (prevDatabaseReport?.LastIndexStats.TryGetValue(index.Name, out stat) == true &&
+                                    stat?.LastTransactionId == index.LastTransactionId)
                                 {
                                     report.LastIndexStats[index.Name] = stat;
                                     continue;
@@ -293,20 +267,20 @@ namespace Raven.Server.ServerWide.Maintenance
                 }
                 catch (Exception e)
                 {
-                    report.EnvironmentsHash = 0; // on error we should do the complete report collaction path
+                    report.EnvironmentsHash = 0; // on error, we should do the complete report collection path
                     report.Error = e.ToString();
                 }
 
-                result[dbName] = report;
+                result[databaseName] = report;
             }
 
             return result;
         }
 
-        private void FillClusterInfo(TransactionOperationContext ctx, DatabaseStatusReport report, DocumentDatabase dbInstance, string dbName)
+        private void FillClusterInfo(TransactionOperationContext ctx, DatabaseStatusReport report, DocumentDatabase dbInstance)
         {
             report.LastClusterWideTransactionRaftIndex = dbInstance.ClusterWideTransactionIndexWaiter.LastIndex;
-            report.LastCompareExchangeIndex = _server.Cluster.GetLastCompareExchangeIndexForDatabase(ctx, dbName);
+            report.LastCompareExchangeIndex = _server.Cluster.GetLastCompareExchangeIndexForDatabase(ctx, dbInstance.Name);
             report.LastCompletedClusterTransaction = dbInstance.LastCompletedClusterTransaction;
         }
 
@@ -375,17 +349,6 @@ namespace Raven.Server.ServerWide.Maintenance
             }
         }
 
-        private static void FillBackupStatusInfo(TransactionOperationContext context, ServerStore serverStore, string dbName, List<long> backupTaskIds,
-            DatabaseStatusReport report)
-        {
-            foreach (var taskId in backupTaskIds)
-            {
-                var statusBlittable = BackupUtils.GetLocalBackupStatusBlittable(serverStore, context, dbName, taskId);
-                var backupStatusReport = DatabaseStatusReport.PeriodicBackupStatusReport.Deserialize(statusBlittable);
-                report.BackupStatuses[taskId] = backupStatusReport;
-            }
-        }
-
         public void Dispose()
         {
             _cts.Cancel();
@@ -411,4 +374,3 @@ namespace Raven.Server.ServerWide.Maintenance
         }
     }
 }
-

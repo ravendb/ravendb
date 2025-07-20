@@ -374,6 +374,14 @@ namespace Raven.Server.Rachis
             return readResult == null ? InitialTag : readResult.Reader.ToStringValue();
         }
 
+        public static string ReadNodeTag<T>(TransactionOperationContext<T> context) where T : RavenTransaction
+        {
+            var state = context.Transaction.InnerTransaction.ReadTree(GlobalStateSlice);
+
+            var readResult = state?.Read(TagSlice);
+            return readResult == null ? InitialTag : readResult.Reader.ToStringValue();
+        }
+
         public string ReadPreviousNodeTag(ClusterOperationContext context)
         {
             var state = context.Transaction.InnerTransaction.CreateTree(GlobalStateSlice);

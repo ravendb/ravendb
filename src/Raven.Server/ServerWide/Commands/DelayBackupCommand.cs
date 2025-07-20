@@ -1,10 +1,12 @@
 ﻿using System;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.ServerWide;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Data.Tables;
 
 namespace Raven.Server.ServerWide.Commands;
 
@@ -58,13 +60,15 @@ public class DelayBackupCommand : UpdateValueForDatabaseCommand
         return new UpdatedValue(UpdatedValueActionType.Update, context.ReadObject(status.ToJson(), GetItemId()));
     }
 
-    public override void AfterExecute(long index, RawDatabaseRecord record, ClusterOperationContext context, ServerStore serverStore)
+    public override void Execute(ClusterOperationContext context, Table items, long index, RawDatabaseRecord record, RachisState state, out object result)
     {
+        base.Execute(context, items, index, record, state, out result);
+
         // get the status from local storage and update only relevant fields
-        var status = BackupUtils.GetLocalBackupStatusBlittable(serverStore, context, DatabaseName, TaskId);
-        var updatedStatus =
-            GetUpdatedValue(index, record, context, status);
-        BackupStatusStorage.InsertBackupStatusBlittable(context, updatedStatus.Value, DatabaseName, serverStore._env.Base64Id, TaskId);
+        var status = BackupStatusStorage.GetBackupStatusBlittable(context, DatabaseName, TaskId);
+        var updatedStatus = GetUpdatedValue(index, record, context, status);
+
+        BackupStatusStorage.Insert(context, updatedStatus.Value, DatabaseName, TaskId);
     }
 
     public override object GetState()

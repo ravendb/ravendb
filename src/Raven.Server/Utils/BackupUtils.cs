@@ -28,6 +28,7 @@ using Sparrow.Logging;
 using Sparrow.LowMemory;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
+using Voron;
 using BackupConfiguration = Raven.Client.Documents.Operations.Backups.BackupConfiguration;
 
 namespace Raven.Server.Utils;
@@ -84,7 +85,7 @@ internal static class BackupUtils
 
     internal static BackupInfo GetBackupInfo(BackupInfoParameters parameters)
     {
-        var oneTimeBackupStatus = GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, taskId: 0L);
+        var oneTimeBackupStatus = GetBackupStatusFromCluster(parameters.Context, parameters.DatabaseName, taskId: 0L);
 
         if (parameters.PeriodicBackups.Count == 0 && oneTimeBackupStatus == null)
             return null;
@@ -102,7 +103,7 @@ internal static class BackupUtils
         {
             // status is saved locally before it's saved to cluster, so it's guaranteed to be most up to date status for this node
             var status = ComparePeriodicBackupStatus(periodicBackup.Configuration.TaskId,
-                backupStatus: GetBackupStatusFromCluster(parameters.ServerStore, parameters.Context, parameters.DatabaseName, periodicBackup.Configuration.TaskId),
+                backupStatus: GetBackupStatusFromCluster(parameters.Context, parameters.DatabaseName, periodicBackup.Configuration.TaskId),
                 inMemoryBackupStatus: periodicBackup.BackupStatus);
 
             if (status.LastFullBackup != null && status.LastFullBackup.Value.Ticks > lastBackup)
@@ -122,8 +123,7 @@ internal static class BackupUtils
                 // OnParsingError and OnMissingNextBackupInfo are null's - for skipping error messages notification and log
                 Configuration = periodicBackup.Configuration,
                 BackupStatus = status,
-                ResponsibleNodeTag = parameters.ServerStore.NodeTag,
-                NodeTag = parameters.ServerStore.NodeTag
+                NodeTag = RachisConsensus.ReadNodeTag(parameters.Context)
             });
             if (nextBackup == null)
                 continue;
@@ -134,16 +134,16 @@ internal static class BackupUtils
 
         return new BackupInfo
         {
-            LastBackup = lastBackup == 0L ? (DateTime?)null : new DateTime(lastBackup),
+            LastBackup = lastBackup == 0L ? null : new DateTime(lastBackup),
             IntervalUntilNextBackupInSec = intervalUntilNextBackupInSec == long.MaxValue ? 0 : new TimeSpan(intervalUntilNextBackupInSec).TotalSeconds,
             BackupTaskType = lastBackupStatus?.TaskId == 0 ? BackupTaskType.OneTime : BackupTaskType.Periodic,
             Destinations = AddDestinations(lastBackupStatus)
         };
     }
 
-    internal static PeriodicBackupStatus GetBackupStatusFromCluster<T>(ServerStore serverStore, TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
+    internal static PeriodicBackupStatus GetBackupStatusFromCluster<T>(TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
     {
-        using var statusBlittable = GetBackupStatusFromClusterBlittable(serverStore, context, databaseName, taskId);
+        using var statusBlittable = GetBackupStatusFromClusterBlittable(context, databaseName, taskId);
 
         if (statusBlittable == null)
             return null;
@@ -152,15 +152,22 @@ internal static class BackupUtils
         return periodicBackupStatusJson;
     }
 
-    internal static BlittableJsonReaderObject GetBackupStatusFromClusterBlittable<T>(ServerStore serverStore, TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
+    internal static BlittableJsonReaderObject GetBackupStatusFromClusterBlittable<T>(TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
     {
-        return serverStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(databaseName, taskId));
+        var lowerName = PeriodicBackupStatus.GenerateItemName(databaseName, taskId).ToLowerInvariant();
+        using (Slice.From(context.Allocator, lowerName, out Slice key))
+        {
+            return ClusterStateMachine.ReadInternal(context, out _, key);
+        }
     }
 
-    internal static BlittableJsonReaderObject GetResponsibleNodeInfoFromCluster(ServerStore serverStore, TransactionOperationContext context, string databaseName, long taskId)
+    internal static BlittableJsonReaderObject GetResponsibleNodeInfoFromCluster<T>(TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
     {
-        var responsibleNodeBlittable = serverStore.Cluster.Read(context, ResponsibleNodeInfo.GenerateItemName(databaseName, taskId));
-        return responsibleNodeBlittable;
+        var lowerName = ResponsibleNodeInfo.GenerateItemName(databaseName, taskId).ToLowerInvariant();
+        using (Slice.From(context.Allocator, lowerName, out Slice key))
+        {
+            return ClusterStateMachine.ReadInternal(context, out _, key);
+        }
     }
 
     internal static long GetTasksCountOnNode(ServerStore serverStore, string databaseName, TransactionOperationContext context)
@@ -187,13 +194,18 @@ internal static class BackupUtils
         using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())
         {
-            var blittable = GetResponsibleNodeInfoFromCluster(serverStore, context, databaseName, taskId);
-            if (blittable == null)
-                return null;
-
-            blittable.TryGet(nameof(ResponsibleNodeInfo.ResponsibleNode), out string responsibleNodeTag);
-            return responsibleNodeTag;
+            return GetResponsibleNodeTag(context, databaseName, taskId);
         }
+    }
+
+    internal static string GetResponsibleNodeTag<T>(TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
+    {
+        var blittable = GetResponsibleNodeInfoFromCluster(context, databaseName, taskId);
+        if (blittable == null)
+            return null;
+
+        blittable.TryGet(nameof(ResponsibleNodeInfo.ResponsibleNode), out string responsibleNodeTag);
+        return responsibleNodeTag;
     }
 
     internal static PeriodicBackupStatus ComparePeriodicBackupStatus(long taskId, PeriodicBackupStatus backupStatus, PeriodicBackupStatus inMemoryBackupStatus)
@@ -265,7 +277,7 @@ internal static class BackupUtils
 
         Debug.Assert(parameters.Configuration.TaskId != 0);
 
-        var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup, parameters.ResponsibleNodeTag);
+        var isFullBackup = IsFullBackup(parameters.BackupStatus, parameters.Configuration, nextFullBackup, nextIncrementalBackup);
         var nextBackupTimeLocal = GetNextBackupDateTime(nextFullBackup, nextIncrementalBackup, parameters.BackupStatus?.DelayUntil);
         var nextBackupTimeUtc = nextBackupTimeLocal.ToUniversalTime();
         var timeSpan = nextBackupTimeUtc - nowUtc;
@@ -341,12 +353,9 @@ internal static class BackupUtils
             ? delayUntil.Value.ToLocalTime() : nextBackup.Value;
     }
 
-    private static bool IsFullBackup(PeriodicBackupStatus backupStatus,
-        PeriodicBackupConfiguration configuration,
-        DateTime? nextFullBackup, DateTime? nextIncrementalBackup, string responsibleNodeTag)
+    private static bool IsFullBackup(PeriodicBackupStatus backupStatus, PeriodicBackupConfiguration configuration, DateTime? nextFullBackup, DateTime? nextIncrementalBackup)
     {
-        if (backupStatus == null ||
-            backupStatus?.LastFullBackup == null ||
+        if (backupStatus?.LastFullBackup == null ||
             backupStatus.BackupType != configuration.BackupType ||
             backupStatus.LastEtag == null)
         {
@@ -476,8 +485,8 @@ internal static class BackupUtils
             return null;
         }
         
-        // local node is responsible for the backup
-        PeriodicBackupStatus backupStatus = GetLocalBackupStatus(parameters.ServerStore, parameters.Context, parameters.DatabaseName, parameters.Configuration.TaskId);
+        // the local node is responsible for the backup
+        var backupStatus = BackupStatusStorage.GetBackupStatus(parameters.Context, parameters.DatabaseName, parameters.Configuration.TaskId);
         if (parameters.IsIdle == false)
         {
             if (backupStatus == null)
@@ -498,7 +507,6 @@ internal static class BackupUtils
             OnParsingError = parameters.OnParsingError,
             Configuration = parameters.Configuration,
             BackupStatus = backupStatus,
-            ResponsibleNodeTag = responsibleNodeTag,
             DatabaseWakeUpTimeUtc = parameters.DatabaseWakeUpTimeUtc,
             NodeTag = parameters.ServerStore.NodeTag,
             OnMissingNextBackupInfo = parameters.OnMissingNextBackupInfo
@@ -560,48 +568,6 @@ internal static class BackupUtils
         return new IdleDatabaseActivity(IdleDatabaseActivityType.UpdateBackupStatusOnly, nextBackup.DateTime, parameters.Configuration.TaskId, parameters.LastEtag);
     }
 
-    public static PeriodicBackupStatus GetLocalBackupStatus(ServerStore serverStore, string databaseName, long taskId)
-    {
-        using (serverStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-        using (context.OpenReadTransaction())
-        {
-            return GetLocalBackupStatus(serverStore, context, databaseName, taskId);
-        }
-    }
-
-    public static PeriodicBackupStatus GetLocalBackupStatus<T>(ServerStore serverStore, TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
-    {
-        var localStatus = BackupStatusStorage.GetBackupStatus(databaseName, serverStore._env.Base64Id, taskId, context);
-        if (localStatus != null)
-            return localStatus;
-
-        // backwards compatibility - fallback to cluster status - only if node tag matches
-        var clusterStatus = GetBackupStatusFromCluster(serverStore, context, databaseName, taskId);
-
-        if (clusterStatus == null || clusterStatus.NodeTag != serverStore.NodeTag)
-            return null;
-
-        return clusterStatus;
-    }
-
-    public static BlittableJsonReaderObject GetLocalBackupStatusBlittable<T>(ServerStore serverStore, TransactionOperationContext<T> context, string databaseName, long taskId) where T : RavenTransaction
-    {
-        var localStatus = BackupStatusStorage.GetBackupStatusBlittable(context, databaseName, serverStore._env.Base64Id, taskId);
-        if (localStatus != null)
-            return localStatus;
-
-        // backwards compatibility - fallback to cluster status - only if node tag matches
-        var clusterStatus = GetBackupStatusFromClusterBlittable(serverStore, context, databaseName, taskId);
-
-        if (clusterStatus == null || clusterStatus.TryGet(nameof(PeriodicBackupStatus.NodeTag), out string nodeTag) == false || string.IsNullOrEmpty(nodeTag))
-            return null;
-
-        if (nodeTag == serverStore.NodeTag)
-            return clusterStatus;
-
-        return null;
-    }
-
     public static void SaveBackupStatus(PeriodicBackupStatus status, string databaseName, ServerStore serverStore, Logger logger,
         BackupResult backupResult = default, Action<IOperationProgress> onProgress = default, OperationCancelToken operationCancelToken = default)
     {
@@ -642,13 +608,13 @@ internal static class BackupUtils
             try
             {
                 // if cluster command failed then we save the status locally on our own
-                serverStore.DatabaseInfoCache.BackupStatusStorage.InsertBackupStatus(status, databaseName, serverStore._env.Base64Id, status.TaskId);
+                serverStore.DatabaseInfoCache.BackupStatusStorage.Insert(status, databaseName);
                 message += $"{Environment.NewLine}Saving the local backup status directly succeeded";
             }
-            catch (Exception ex)
+            catch (Exception innerException)
             {
                 message += $"{Environment.NewLine}Attempt at saving the local status directly failed as well";
-                fullException = new AggregateException(e, ex);
+                fullException = new AggregateException(e, innerException);
             }
 
             if (logger.IsOperationsEnabled)
@@ -684,8 +650,6 @@ internal static class BackupUtils
 
         public PeriodicBackupStatus BackupStatus { get; set; }
 
-        public string ResponsibleNodeTag { get; set; }
-
         public DateTime? DatabaseWakeUpTimeUtc { get; set; }
 
         public string NodeTag { get; set; }
@@ -698,7 +662,6 @@ internal static class BackupUtils
     public class BackupInfoParameters
     {
         public TransactionOperationContext Context { get; set; }
-        public ServerStore ServerStore { get; set; }
         public List<PeriodicBackup> PeriodicBackups { get; set; }
         public string DatabaseName { get; set; }
     }

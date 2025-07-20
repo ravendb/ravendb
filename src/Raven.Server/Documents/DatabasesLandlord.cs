@@ -408,8 +408,8 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                // delete the cache info
                 DeleteDatabaseCachedInfo(dbName, throwOnError: true);
+                DeleteLocalBackupStatuses(dbName, throwOnError: true);
             }
             finally
             {
@@ -893,6 +893,23 @@ namespace Raven.Server.Documents
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DeleteLocalBackupStatuses(string databaseName, bool throwOnError)
+        {
+            try
+            {
+                _serverStore.DatabaseInfoCache.BackupStatusStorage.Delete(databaseName);
+            }
+            catch (Exception e)
+            {
+                if (throwOnError)
+                    throw;
+
+                if (_logger.IsInfoEnabled)
+                    _logger.Info($"Failed to delete local backup statuses for '{databaseName}' database.", e);
+            }
+        }
+
         public RavenConfiguration CreateDatabaseConfiguration(StringSegment databaseName, bool ignoreDisabledDatabase = false, bool ignoreBeenDeleted = false, bool ignoreNotRelevant = false)
         {
             if (databaseName.Trim().Length == 0)
@@ -1138,7 +1155,7 @@ namespace Raven.Server.Documents
                     {
                         case IdleDatabaseActivityType.UpdateBackupStatusOnly:
 
-                            PeriodicBackupStatus backupStatus = BackupUtils.GetLocalBackupStatus(_serverStore, databaseName, nextIdleDatabaseActivity.TaskId);
+                            PeriodicBackupStatus backupStatus = _serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(databaseName, nextIdleDatabaseActivity.TaskId);
 
                             backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextIdleDatabaseActivity.DateTime;
                             backupStatus.LocalBackup.LastIncrementalBackup = nextIdleDatabaseActivity.DateTime;

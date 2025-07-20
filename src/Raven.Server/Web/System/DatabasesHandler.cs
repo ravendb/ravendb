@@ -517,7 +517,7 @@ namespace Raven.Server.Web.System
                             periodicBackups.Add(new PeriodicBackup
                             {
                                 Configuration = periodicBackupConfiguration,
-                                BackupStatus = BackupUtils.GetBackupStatusFromCluster(ServerStore, context, databaseName, periodicBackupConfiguration.TaskId)
+                                BackupStatus = BackupUtils.GetBackupStatusFromCluster(context, databaseName, periodicBackupConfiguration.TaskId)
                             });
                         }
 
@@ -532,7 +532,6 @@ namespace Raven.Server.Web.System
                             [nameof(DatabaseInfo.BackupInfo)] = BackupUtils.GetBackupInfo(
                                 new BackupUtils.BackupInfoParameters()
                                 {
-                                    ServerStore = ServerStore,
                                     PeriodicBackups = periodicBackups,
                                     DatabaseName = databaseName,
                                     Context = context

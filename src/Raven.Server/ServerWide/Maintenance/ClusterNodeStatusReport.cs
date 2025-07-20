@@ -62,8 +62,8 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public string DatabaseChangeVector;
 
-        public Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
-        public Dictionary<string, long> LastSentEtag = new Dictionary<string, long>();
+        public Dictionary<string, ObservedIndexStatus> LastIndexStats = new();
+        public Dictionary<string, long> LastSentEtag = new();
         public Dictionary<long, PeriodicBackupStatusReport> BackupStatuses;
 
         public long LastCompareExchangeIndex { get; set; }
@@ -115,90 +115,6 @@ namespace Raven.Server.ServerWide.Maintenance
             public long? LastTransactionId; // this is local, so we don't serialize it
         }
 
-        public class PeriodicBackupStatusReport
-        {
-            public long? TaskId { get; set; }
-            public DateTime? LastFullBackupInternal { get; set; }
-            public DateTime? LastIncrementalBackupInternal { get; set; }
-            public LastRaftIndex LastRaftIndex { get; set; }
-            public bool Error { get; set; }
-
-            public static PeriodicBackupStatusReport Deserialize(BlittableJsonReaderObject backupStatus)
-            {
-                if (backupStatus == null)
-                    return null;
-
-                var statusReport = new PeriodicBackupStatusReport();
-
-                if (backupStatus.TryGet(nameof(TaskId), out long? taskId) && taskId != null)
-                {
-                    statusReport.TaskId = taskId.Value;
-                }
-                Debug.Assert(taskId != null);
-
-                if (backupStatus.TryGet(nameof(LastRaftIndex), out BlittableJsonReaderObject lastRaftIndexBlittable) && lastRaftIndexBlittable != null)
-                {
-                    lastRaftIndexBlittable.TryGet(nameof(LastRaftIndex.LastEtag), out long? lastEtag);
-                    statusReport.LastRaftIndex = new LastRaftIndex() { LastEtag = lastEtag };
-                }
-
-                if (backupStatus.TryGet(nameof(Error), out BlittableJsonReaderObject errorBlittable) && errorBlittable != null)
-                {
-                    statusReport.Error = true;
-                }
-
-                if (backupStatus.TryGet(nameof(LastFullBackupInternal), out DateTime? lastFullBackupInternal))
-                {
-                    statusReport.LastFullBackupInternal = lastFullBackupInternal;
-                }
-
-                if (backupStatus.TryGet(nameof(LastIncrementalBackupInternal), out DateTime? lastIncrementalBackupInternal))
-                {
-                    statusReport.LastIncrementalBackupInternal = lastIncrementalBackupInternal;
-                }
-
-                return statusReport;
-            }
-
-            public DynamicJsonValue ToJson()
-            {
-                return new DynamicJsonValue()
-                {
-                    [nameof(TaskId)] = TaskId,
-                    [nameof(LastFullBackupInternal)] = LastFullBackupInternal,
-                    [nameof(LastIncrementalBackupInternal)] = LastIncrementalBackupInternal,
-                    [nameof(LastRaftIndex)] = LastRaftIndex?.ToJson(),
-                    [nameof(Error)] = Error
-                };
-            }
-
-            public override string ToString()
-            {
-                using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                {
-                    return ctx.ReadObject(ToJson(), "backup-status").ToString();
-                }
-            }
-        }
-        public long GetBackupStatusReportHash()
-        {
-            long hash = 0;
-
-            if (BackupStatuses == null)
-            {
-                Debug.Fail($"{nameof(BackupStatuses)} should not be null");
-                return hash;
-            }
-
-            foreach (var (taskId, status) in BackupStatuses)
-            {
-                hash = Hashing.Combine(hash, taskId);
-                hash = Hashing.Combine(hash, status?.LastRaftIndex?.LastEtag ?? 0);
-            }
-
-            return hash;
-        }
-
         public long LastEtag;
         public long LastTombstoneEtag;
         public long NumberOfConflicts;
@@ -211,6 +127,23 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public long LastTransactionId; // this is local, so we don't serialize it
         public long EnvironmentsHash; // this is local, so we don't serialize it
+
+        internal static long GetPeriodicBackupStatusesHash(Dictionary<long, PeriodicBackupStatusReport> periodicBackupStatusReports)
+        {
+            long hash = 0;
+
+            if (periodicBackupStatusReports == null)
+                return hash;
+
+            foreach ((long taskId, PeriodicBackupStatusReport backupStatusReport) in periodicBackupStatusReports)
+            {
+                hash = Hashing.Combine(hash, taskId);
+                hash = Hashing.Combine(hash, backupStatusReport?.LastRaftIndexEtag ?? 0);
+                hash = Hashing.Combine(hash, backupStatusReport?.IsErrored == true ? 1L : 0L); // If backup failed, we'll have the same RaftIndexEtag, so we need to include this in the hash
+            }
+
+            return hash;
+        }
 
         public DynamicJsonValue ToJson()
         {
@@ -247,19 +180,7 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             dynamicJsonValue[nameof(LastIndexStats)] = indexStats;
-
-            if (BackupStatuses == null)
-                dynamicJsonValue[nameof(BackupStatuses)] = null;
-            else
-            {
-                var backupStatuses = new DynamicJsonValue();
-                foreach (var status in BackupStatuses)
-                {
-                    backupStatuses[status.Key.ToString()] = status.Value?.ToJson();
-                }
-
-                dynamicJsonValue[nameof(BackupStatuses)] = backupStatuses;
-            }
+            dynamicJsonValue[nameof(BackupStatuses)] = DynamicJsonValue.Convert(BackupStatuses);
 
             return dynamicJsonValue;
         }

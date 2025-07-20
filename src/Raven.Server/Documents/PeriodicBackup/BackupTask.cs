@@ -5,6 +5,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -105,12 +106,11 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
-                if (_forTestingPurposes != null && _forTestingPurposes.SimulateFailedBackup)
+
+                _forTestingPurposes?.OnBackupTaskRunHoldBackupExecution?.Task.Wait();
+                if (_forTestingPurposes?.SimulateFailedBackup == true)
                     throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
-                if (_forTestingPurposes != null && _forTestingPurposes.OnBackupTaskRunHoldBackupExecution != null)
-                    _forTestingPurposes.OnBackupTaskRunHoldBackupExecution?.Task.Wait();
-                if (Database.ForTestingPurposes != null && Database.ForTestingPurposes.ActionToCallOnGetTempPath != null)
-                    Database.ForTestingPurposes.ActionToCallOnGetTempPath?.Invoke(_tempBackupPath);
+                Database.ForTestingPurposes?.ActionToCallOnGetTempPath?.Invoke(_tempBackupPath);
 
                 if (runningBackupStatus.LocalBackup == null)
                     runningBackupStatus.LocalBackup = new LocalBackup();
@@ -203,9 +203,14 @@ namespace Raven.Server.Documents.PeriodicBackup
                 runningBackupStatus.FolderName = folderName;
 
                 if (_isFullBackup)
+                {
                     runningBackupStatus.LastFullBackup = _startTimeUtc;
+                    runningBackupStatus.LastRaftIndex.LastFullBackupEtag = internalBackupResult.LastRaftIndex;
+                }
                 else
+                {
                     runningBackupStatus.LastIncrementalBackup = _startTimeUtc;
+                }
 
                 totalSw.Stop();
 
@@ -913,5 +918,7 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             return fileName.Length == LegacyDateTimeFormat.Length ? LegacyDateTimeFormat : DateTimeFormat;
         }
+
+        public PeriodicBackup.RunningBackupTask ToRunningBackupTask(Task task) => new() { Id = _operationId, Task = task };
     }
 }
