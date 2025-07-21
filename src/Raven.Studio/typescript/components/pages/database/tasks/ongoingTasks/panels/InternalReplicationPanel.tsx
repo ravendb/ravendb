@@ -39,7 +39,7 @@ export function InternalReplicationPanel(props: InternalReplicationPanelProps) {
                     <div className="actions">
                         <ButtonGroup>
                             <Button variant="secondary" onClick={toggleDetails} title="Click for details">
-                                <Icon icon="info" margin="m-0" />
+                                <Icon icon={detailsVisible ? "fold" : "unfold"} margin="m-0" />
                             </Button>
                         </ButtonGroup>
                     </div>

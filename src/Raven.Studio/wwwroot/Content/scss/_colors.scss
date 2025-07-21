@@ -532,23 +532,11 @@ $row-even-bg-var: var(--row-even-bg);
 $hover-filter-var: var(--hover-filter);
 
 $task-colors: (
-    "external-replication": $color-5,
-    "pull-replication-hub": $color-5-1,
-    "pull-replication-sink": $color-5-2,
-    "backup": $color-4,
-    "subscription": $color-4-1,
-    "ravendb-etl": $color-1,
-    "elastic-etl": $color-1-1,
-    "kafka-etl": $color-1-2,
-    "sql-etl": $color-1-3,
-    "snowflake-etl": $color-2,
-    "olap-etl": $color-2-1,
-    "rabbitmq-etl": $color-2-2,
-    "azure-queue-storage-etl": $color-2-3,
-    "ai-etl": #5058ff,
-    "amazon-sqs-etl": $color-3,
-    "kafka-sink": $color-3-1,
-    "rabbitmq-sink": $color-3-2,
+    "replication": $link-color,
+    "backups": $color-1-1,
+    "subscriptions": $color-2-1,
+    "etl": $color-4,
+    "sink": $color-3-1,
 ) !default;
 
 $tokens: (

@@ -21,6 +21,7 @@ import { exhaustiveStringTuple } from "components/utils/common";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { useOngoingTasksOperations } from "components/pages/database/tasks/shared/shared";
 import OngoingTaskOperationConfirm from "components/pages/database/tasks/shared/OngoingTaskOperationConfirm";
+import { useAppUrls } from "hooks/useAppUrls";
 
 interface OngoingTasksHeaderProps {
     tasks: OngoingTasksState;
@@ -35,6 +36,7 @@ interface OngoingTasksHeaderProps {
     setSelectedTaskIds: (tasks: number[]) => void;
 }
 export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
+    const { forCurrentDatabase } = useAppUrls();
     const {
         tasks,
         allTasksCount,
@@ -77,7 +79,7 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
                                 />
                             )}
                             <div id="NewTaskButton">
-                                <Button onClick={toggleIsNewTaskModalOpen} variant="primary" className="rounded-pill">
+                                <Button href={forCurrentDatabase.addNewOngoingTaskUrl()} className="rounded-pill">
                                     <Icon icon="ongoing-tasks" addon="plus" />
                                     Add a Database Task
                                 </Button>
@@ -109,30 +111,32 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
                             targetId="about-view"
                         >
                             <div>
-                                <strong>Ongoing-tasks</strong> are work tasks assigned to the database.
-                                <ul className="margin-top-xxs">
+                                <ul>
                                     <li>
-                                        A few examples are: <br />
-                                        Executing a periodic backup of the database, replicating to another RavenDB
-                                        instance, or transferring data to external frameworks such as Kafka, RabbitMQ,
-                                        Azure Queue Storage etc.
+                                        <strong>Ongoing-tasks are work tasks assigned to the database</strong>.
+                                        <br /> A few examples are: Executing a periodic backup of the database,
+                                        replicating to another RavenDB instance, or transferring data to external
+                                        frameworks such as Kafka, RabbitMQ, Azure Queue Storage etc.
                                     </li>
-                                    <li className="margin-top-xxs">
-                                        Click the &quot;Add a Database Task&quot; button to view all available tasks and
-                                        select from the list.
+                                    <li className="mt-1">
+                                        <strong>This view lists all ongoing tasks defined for the database.</strong>
+                                        <br /> Click the &quot;Add a Database Task&quot; button to view all available
+                                        tasks and select from the list.
                                     </li>
-                                </ul>
-                            </div>
-                            <div>
-                                <strong>Running in the background</strong>, each ongoing task is handled by a designated
-                                node from the Database-Group nodes.
-                                <ul className="margin-top-xxs">
-                                    <li>
-                                        For each task, you can specify which node will be responsible for the task and
-                                        whether the cluster may assign a different node when that node is down.
-                                    </li>
-                                    <li className="margin-top-xxs">
-                                        If not specified, the cluster will decide which node will handle the task.
+                                    <li className="mt-1">
+                                        <strong>Running in the background</strong>,<br /> each ongoing task is handled
+                                        by a designated node from the Database-Group nodes:
+                                        <ul className="margin-top-xxs">
+                                            <li>
+                                                For each task, you can specify which node will be responsible for the
+                                                task and whether the cluster may assign a different node when that node
+                                                is down.
+                                            </li>
+                                            <li className="margin-top-xxs">
+                                                If not specified, the cluster will decide which node will handle the
+                                                task.
+                                            </li>
+                                        </ul>
                                     </li>
                                 </ul>
                             </div>
