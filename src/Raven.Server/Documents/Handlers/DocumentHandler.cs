@@ -5,13 +5,28 @@
 // -----------------------------------------------------------------------
 
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.Threading;
 using System.Threading.Tasks;
+using Microsoft.Extensions.Primitives;
+using Raven.Client;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.TimeSeries;
+using Raven.Client.Http;
+using Raven.Client.Util;
 using Raven.Server.Documents.Handlers.Processors.Documents;
+using Raven.Server.Documents.Includes;
+using Raven.Server.Documents.Queries.Revisions;
+using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
@@ -42,10 +57,8 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task Get()
         {
-            using (var processor = new DocumentHandlerProcessorForGet(HttpMethod.Get, this))
-            {
-                await processor.ExecuteAsync().ConfigureAwait(false);
-            }
+            // POC: Direct handler implementation (v5.4 style) for performance regression testing
+            await GetDirect().ConfigureAwait(false);
         }
 
         [RavenAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
@@ -90,6 +103,152 @@ namespace Raven.Server.Documents.Handlers
             using (var processor = new DocumentHandlerProcessorForGenerateClassFromDocument(this))
             {
                 await processor.ExecuteAsync().ConfigureAwait(false);
+            }
+        }
+
+        // POC: Direct handler implementation (v5.4 style) for performance regression testing
+        private async Task GetDirect()
+        {
+            var ids = GetStringValuesQueryString("id", required: false);
+            var metadataOnly = GetBoolValueQueryString("metadataOnly", required: false) ?? false;
+            var includes = GetStringValuesQueryString("include", required: false);
+            var counters = GetStringValuesQueryString("counter", required: false);
+            var timeSeries = GetStringValuesQueryString("timeSeries", required: false);
+            var compareExchange = GetStringValuesQueryString("compareExchange", required: false);
+            var revisions = GetStringValuesQueryString("revisions", required: false);
+
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                if (ids.Count > 0)
+                {
+                    // Handle document GET by ID
+                    await HandleGetByIds(context, ids, metadataOnly, includes, counters, timeSeries, compareExchange, revisions).ConfigureAwait(false);
+                }
+                else
+                {
+                    // Handle bulk document GET operations
+                    await HandleBulkGet(context, metadataOnly).ConfigureAwait(false);
+                }
+            }
+        }
+
+        private async Task HandleGetByIds(DocumentsOperationContext context, StringValues ids, bool metadataOnly, 
+            StringValues includes, StringValues counters, StringValues timeSeries, StringValues compareExchange, StringValues revisions)
+        {
+            var etag = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+            
+            using (context.OpenReadTransaction())
+            {
+                var documents = new List<Document>(ids.Count);
+                var includeDocuments = new List<Document>();
+                var includeDocs = new IncludeDocumentsCommand(Database.DocumentsStorage, context, includes, isProjection: false);
+                
+                foreach (var id in ids)
+                {
+                    if (string.IsNullOrEmpty(id))
+                    {
+                        documents.Add(null);
+                        continue;
+                    }
+
+                    var document = Database.DocumentsStorage.Get(context, id);
+                    
+                    if (document == null && ids.Count == 1)
+                    {
+                        HttpContext.Response.StatusCode = (int)HttpStatusCode.NotFound;
+                        return;
+                    }
+                    
+                    documents.Add(document);
+                    if (document != null)
+                    {
+                        includeDocs.Gather(document);
+                    }
+                }
+
+                // Fill includes
+                includeDocs.Fill(includeDocuments, includeMissingAsNull: false);
+
+                // Compute ETag for caching
+                var actualEtag = ComputeHttpEtags.ComputeEtagForDocuments(documents, includeDocuments, null, null, null);
+                
+                // Handle conditional requests
+                if (etag == actualEtag)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                    return;
+                }
+                
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{actualEtag}\"";
+
+                // Write response - transaction must remain open while writing
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    
+                    // Write Results array
+                    writer.WritePropertyName("Results");
+                    await writer.WriteDocumentsAsync(context, documents, metadataOnly, CancellationToken.None);
+                    
+                    // Always write Includes (even if empty) when includes are requested
+                    if (includes.Count > 0 || includeDocuments.Count > 0)
+                    {
+                        writer.WriteComma();
+                        writer.WritePropertyName("Includes");
+                        await writer.WriteIncludesAsync(context, includeDocuments, CancellationToken.None);
+                    }
+                    
+                    writer.WriteEndObject();
+                }
+            }
+        }
+
+        private async Task HandleBulkGet(DocumentsOperationContext context, bool metadataOnly)
+        {
+            var changeVector = GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+            var etag = GetLongQueryString("etag", required: false);
+            var startsWith = GetStringQueryString("startsWith", required: false);
+            var startAfter = GetStringQueryString("startAfter", required: false);
+            var matches = GetStringQueryString("matches", required: false);
+            var exclude = GetStringQueryString("exclude", required: false);
+            var start = GetStart();
+            var pageSize = GetPageSize();
+
+            using (context.OpenReadTransaction())
+            {
+                var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
+
+                if (changeVector == databaseChangeVector)
+                {
+                    HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
+                    return;
+                }
+
+                IEnumerable<Document> documents;
+                if (etag.HasValue)
+                {
+                    documents = Database.DocumentsStorage.GetDocumentsFrom(context, etag.Value, start, pageSize);
+                }
+                else if (!string.IsNullOrEmpty(startsWith))
+                {
+                    documents = Database.DocumentsStorage.GetDocumentsStartingWith(context, startsWith, matches, exclude, startAfter, start, pageSize);
+                }
+                else
+                {
+                    documents = Database.DocumentsStorage.GetDocumentsInReverseEtagOrder(context, start, pageSize);
+                }
+
+                HttpContext.Response.StatusCode = (int)HttpStatusCode.OK;
+                HttpContext.Response.Headers[Constants.Headers.Etag] = $"\"{databaseChangeVector}\"";
+
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("Results");
+                    await writer.WriteDocumentsAsync(context, documents, metadataOnly, Database.DatabaseShutdown).ConfigureAwait(false);
+                    writer.WriteEndObject();
+                }
             }
         }
 
