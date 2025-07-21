@@ -64,6 +64,9 @@ public class RavenDB_18420 : RavenTestBase
                 Backup.WaitForResponsibleNodeUpdate(server.ServerStore, store.Database, putConfiguration.TaskId);
                 Assert.Equal(1, server.ServerStore.IdleDatabases.Count);
 
+                var idleRemovedSignal = new ManualResetEventSlim(false);
+                server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().AfterDatabaseRemovedFromIdle = idleRemovedSignal;
+
                 // enable backup and this will set wakeup timer
                 await store.Maintenance.Server.SendAsync(new PutServerWideBackupConfigurationOperation(putConfiguration));
 
@@ -72,6 +75,7 @@ public class RavenDB_18420 : RavenTestBase
                 server.ServerStore.DatabasesLandlord._concurrentDatabaseLoadTimeout = old_concurrentDatabaseLoadTimeout;
                 server.ServerStore.DatabasesLandlord._dueTimeOnRetry = old_dueTimeOnRetry;
 
+                Assert.True(idleRemovedSignal.Wait(TimeSpan.FromSeconds(65)));
                 // db should wake up after dueTimeOnRetry is hit
                 Assert.Equal(0, WaitForValue(() => server.ServerStore.IdleDatabases.Count, 0, interval: 333));
 
