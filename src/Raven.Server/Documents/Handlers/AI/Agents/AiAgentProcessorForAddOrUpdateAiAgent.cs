@@ -26,6 +26,8 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
 
     public override async ValueTask ExecuteAsync()
     {
+        RequestHandler.ServerStore.LicenseManager.AssertCanAddAiAgentTask();
+
         using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
         using var _ = ContextPool.AllocateOperationContext(out JsonOperationContext context);
         var options = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai/agent", token.Token);

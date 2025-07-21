@@ -978,9 +978,6 @@ public sealed partial class ClusterStateMachine
 
     private static void AssertAiAgent(DatabaseRecord databaseRecord, LicenseStatus licenseStatus)
     {
-        // TODO: Remove this check when AI Agent will be available for all license types
-        return;
-
         if (licenseStatus.HasAiAgent)
             return;
 

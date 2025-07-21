@@ -240,7 +240,7 @@ namespace Raven.Server.Commercial
 
         public bool HasGenAi => Enabled(LicenseAttribute.GenAi);
 
-        public bool HasAiAgent => Enabled(LicenseAttribute.AiAgent);
+        public bool HasAiAgent => true; //TODO: Enabled(LicenseAttribute.AiAgent);
 
         public bool HasPowerBI => Enabled(LicenseAttribute.PowerBI);
 
@@ -353,6 +353,7 @@ namespace Raven.Server.Commercial
                 [nameof(HasSnowflakeEtl)] = HasSnowflakeEtl,
                 [nameof(HasEmbeddingsGeneration)] = HasEmbeddingsGeneration,
                 [nameof(HasGenAi)] = HasGenAi,
+                [nameof(HasAiAgent)] = HasAiAgent,
                 [nameof(HasPowerBI)] = HasPowerBI,
                 [nameof(HasPostgreSqlIntegration)] = HasPostgreSqlIntegration,
                 [nameof(HasServerWideBackups)] = HasServerWideBackups,
