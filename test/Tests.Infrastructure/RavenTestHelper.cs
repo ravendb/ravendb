@@ -177,6 +177,14 @@ namespace Tests.Infrastructure
             Assert.StartsWith(convertedExpected, convertedActual);
         }
 
+        public static void AssertContainsRespectingNewLines(string expected, string actual)
+        {
+            var convertedExpected = ConvertRespectingNewLines(expected);
+            var convertedActual = ConvertRespectingNewLines(actual);
+
+            Assert.Contains(convertedExpected, convertedActual);
+        }
+
         public static void AreEquivalent<T>(IEnumerable<T> expected, IEnumerable<T> actual)
         {
             var forMonitor = actual.ToList();

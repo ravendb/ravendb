@@ -3,6 +3,7 @@ using System.IO;
 using Raven.Embedded;
 using Raven.Server.Commercial;
 using Raven.Server.Config;
+using Tests.Infrastructure;
 using Xunit;
 
 namespace LicenseTests.Helpers;
@@ -31,21 +32,16 @@ public static class LicenseOptionTestHelper
         return licenseJsonPath;
     }
 
-
-    static string Normalize(string s) => s.Replace("\r\n", "\n");
-
     internal static void AssertLicenseVerificationException(Exception exception, LicenseHelper.LicenseVerificationErrorBuilder expectedMessageBuilder)
     {
-        Assert.True(Normalize(exception.Message).Contains(Normalize(expectedMessageBuilder.ToString())),
-            userMessage: $"Exception message: {exception.Message}{Environment.NewLine}But expected message:{Environment.NewLine}{expectedMessageBuilder}");
+        RavenTestHelper.AssertContainsRespectingNewLines(expectedMessageBuilder.ToString(), exception.Message);
     }
 
     internal static void AssertInnerLicenseVerificationException<T>(Exception exception, LicenseHelper.LicenseVerificationErrorBuilder expectedMessageBuilder) where T:Exception
     {
         Assert.NotNull(exception.InnerException);
         Assert.IsType<T>(exception.InnerException);
-        Assert.True(Normalize(exception.InnerException.Message).Contains(Normalize(expectedMessageBuilder.ToString())),
-            userMessage: $"Exception message: {exception.InnerException.Message}{Environment.NewLine}But expected message:{Environment.NewLine}{expectedMessageBuilder}");
+        RavenTestHelper.AssertContainsRespectingNewLines(expectedMessageBuilder.ToString(), exception.InnerException.Message);
     }
 
     internal static void ProcessLicenseOptions(string license, LicenseSource licenseSource, string configurationKeyToTest, ServerOptions options)
