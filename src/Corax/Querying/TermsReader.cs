@@ -1,13 +1,9 @@
 using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Numerics;
-using System.Runtime.InteropServices;
 using System.Runtime.Intrinsics;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Server.Utils;
-using Sparrow.Server.Utils.VxSort;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
@@ -62,15 +58,22 @@ public unsafe struct TermsReader : IDisposable
     /// - the method modifies 'ids' (change the order) of the buffer (!)
     /// - the order of the terms is based on sorted ids values
     /// </summary>
-    public void GetAllTermsFromSet(Span<long> ids, out Span<UnmanagedSpan> termsSet)
+    public int GetAllTermsFromSet(Span<long> ids, out Span<UnmanagedSpan> termsSet)
     {
-        Sort.Run(ids);
+        const int pageSizeShift = 13;
+        Debug.Assert(1 << pageSizeShift == (long)Voron.Global.Constants.Storage.PageSize);
+        var maxToProcess = Math.Min(ids.Length, 1024);
+        ids = ids[..maxToProcess];
+
+        if (ids.IsEmpty)
+        {
+            termsSet = default;
+            return 0;
+        }
+        
         _termsLocation.ResetAndEnsureCapacity(ids.Length);
         _termsLocation.Count = ids.Length;
         _lookup.GetFor(ids, _termsLocation.ToSpan(), -1L);
-        
-        if (ids.Length < 128)
-            goto SkipPagePrefetching;
         
         var idX = 0;
         _pagesToPrefetch.ResetAndEnsureCapacity(ids.Length);
@@ -84,43 +87,41 @@ public unsafe struct TermsReader : IDisposable
             {
                 var ptr = _pagesToPrefetch.RawItems + idX;
                 var containers = Vector512.Load(ptr);
-                Vector512.Divide(containers, Vector512.Create((long)Voron.Global.Constants.Storage.PageSize)).Store(ptr);
+                Vector512.ShiftRightArithmetic(containers, pageSizeShift).Store(ptr);
             }
         }
-        
-        if (AdvInstructionSet.IsAcceleratedVector256)
+        else if (AdvInstructionSet.IsAcceleratedVector256)
         {
             var N = Vector256<long>.Count;
             for (; idX + N < _pagesToPrefetch.Count; idX += N)
             {
                 var ptr = _pagesToPrefetch.RawItems + idX;
                 var containers = Vector256.Load(ptr);
-                Vector256.Divide(containers, Vector256.Create((long)Voron.Global.Constants.Storage.PageSize)).Store(ptr);
+                Vector256.ShiftRightArithmetic(containers, pageSizeShift).Store(ptr);
             }
         }
-        
-        if (AdvInstructionSet.IsAcceleratedVector128)
+        else if (AdvInstructionSet.IsAcceleratedVector128)
         {
             var N = Vector128<long>.Count;
             for (; idX + N < _pagesToPrefetch.Count; idX += N)
             {
                 var ptr = _pagesToPrefetch.RawItems + idX;
                 var containers = Vector128.Load(ptr);
-                Vector128.Divide(containers, Vector128.Create((long)Voron.Global.Constants.Storage.PageSize)).Store(ptr);
+                Vector128.ShiftRightArithmetic(containers, pageSizeShift).Store(ptr);
             }
         }
 
         for (; idX < _pagesToPrefetch.Count; ++idX)
-            _pagesToPrefetch[idX] /= Voron.Global.Constants.Storage.PageSize;
+            _pagesToPrefetch[idX] >>= pageSizeShift;
         
         _pagesToPrefetch.Count = Sorting.SortAndRemoveDuplicates(_pagesToPrefetch.RawItems, _pagesToPrefetch.Count); 
         _llt.DataPager.MaybePrefetchMemory(_pagesToPrefetch.GetEnumerator());
         
-SkipPagePrefetching:
         _rawTermsContainer.ResetAndEnsureCapacity(ids.Length);
         _rawTermsContainer.Count = ids.Length;
         Container.GetAll(_llt, _termsLocation.ToSpan(), _rawTermsContainer.RawItems, -1L, _llt.PageLocator);
         termsSet = _rawTermsContainer.ToSpan();
+        return maxToProcess;
     }
     
     public bool TryGetRawTermFor(long id, out UnmanagedSpan term)

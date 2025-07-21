@@ -30,6 +30,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server;
+using Sparrow.Server.Utils.VxSort;
 using Voron;
 using Voron.Impl;
 using Constants = Raven.Client.Constants;
@@ -419,10 +420,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 if (_isMap && hasProjection.IsProjection == false)
                 {
+                    Sort.Run(distinctIds);
+                    while (_documentIdReader.GetAllTermsFromSet(distinctIds, out var termsSet) is var read and > 0)
+                    {
+                        foreach (var key in termsSet)
+                            _alreadySeenDocumentKeysInPreviousPage.Add(key);
+
+                        distinctIds = distinctIds[read..];
+                    }
+                    
+                    
                     // Assumptions: we're in Map, so that mean we have ID of the doc saved in the tree. So we want to keep track what we returns
-                    _documentIdReader.GetAllTermsFromSet(distinctIds, out var keys);
-                    foreach (var key in keys)
-                        _alreadySeenDocumentKeysInPreviousPage.Add(key);
+                  //  _documentIdReader.GetAllTermsFromSet(distinctIds, out var keys);
+
                     return limit;
                 }
 
