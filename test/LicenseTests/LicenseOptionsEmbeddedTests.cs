@@ -293,8 +293,8 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
 
     private void StartEmbeddedServerLicenseOptionTest(bool? throwOnInvalidOrMissingLicense, string license, LicenseSource licenseSource, string configurationKeyToTest, out ServerOptions options)
     {
-        var originalLicense = Environment.GetEnvironmentVariable("RAVEN_License");
-        var originalLicensePath = Environment.GetEnvironmentVariable("RAVEN_License.Path");
+        var originalLicense = Environment.GetEnvironmentVariable("RAVEN_LICENSE");
+        var originalLicensePath = Environment.GetEnvironmentVariable("RAVEN_LICENSE_PATH");
 
         options = CopyServerAndCreateOptions();
 
@@ -319,7 +319,7 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
 
     private static void CreateEmbeddedServer(ServerOptions options)
     {
-        RavenServerRunner.ForTestingPurposesOnly().EnvironmentVariablesToCopyToInternalProcess = new List<string> { "RAVEN_License", "RAVEN_License.Path" };
+        RavenServerRunner.ForTestingPurposesOnly().EnvironmentVariablesToCopyToInternalProcess = new List<string> { "RAVEN_LICENSE", "RAVEN_LICENSE_PATH" };
 
         using (var embedded = new EmbeddedServer())
         {
@@ -331,8 +331,8 @@ public class LicenseOptionsEmbeddedTests : EmbeddedTestBase
     {
         RavenServerRunner.ForTestingPurposesOnly().EnvironmentVariablesToCopyToInternalProcess = null;
 
-        Environment.SetEnvironmentVariable("RAVEN_License", originalLicense);
-        Environment.SetEnvironmentVariable("RAVEN_License.Path", originalLicensePath);
+        Environment.SetEnvironmentVariable("RAVEN_LICENSE", originalLicense);
+        Environment.SetEnvironmentVariable("RAVEN_LICENSE_PATH", originalLicensePath);
 
         var path = Path.Combine(options.ServerDirectory, "license.json");
         if (File.Exists(path)) File.Delete(path);

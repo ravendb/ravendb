@@ -31,9 +31,12 @@ public static class LicenseOptionTestHelper
         return licenseJsonPath;
     }
 
+
+    static string Normalize(string s) => s.Replace("\r\n", "\n");
+
     internal static void AssertLicenseVerificationException(Exception exception, LicenseHelper.LicenseVerificationErrorBuilder expectedMessageBuilder)
     {
-        Assert.True(exception.Message.Contains(expectedMessageBuilder.ToString()),
+        Assert.True(Normalize(exception.Message).Contains(Normalize(expectedMessageBuilder.ToString())),
             userMessage: $"Exception message: {exception.Message}{Environment.NewLine}But expected message:{Environment.NewLine}{expectedMessageBuilder}");
     }
 
@@ -41,7 +44,7 @@ public static class LicenseOptionTestHelper
     {
         Assert.NotNull(exception.InnerException);
         Assert.IsType<T>(exception.InnerException);
-        Assert.True(exception.InnerException.Message.Contains(expectedMessageBuilder.ToString()),
+        Assert.True(Normalize(exception.InnerException.Message).Contains(Normalize(expectedMessageBuilder.ToString())),
             userMessage: $"Exception message: {exception.InnerException.Message}{Environment.NewLine}But expected message:{Environment.NewLine}{expectedMessageBuilder}");
     }
 
@@ -62,22 +65,22 @@ public static class LicenseOptionTestHelper
                 Assert.Null(options.Licensing.License);
                 Assert.Null(options.Licensing.LicensePath);
 
-                Environment.SetEnvironmentVariable("RAVEN_License", license);
-                Environment.SetEnvironmentVariable("RAVEN_License.Path", null);
+                Environment.SetEnvironmentVariable("RAVEN_LICENSE", license);
+                Environment.SetEnvironmentVariable("RAVEN_LICENSE_PATH", null);
 
-                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_License"), license);
-                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_License.Path"), null);
+                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_LICENSE"), license);
+                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_LICENSE_PATH"), null);
                 break;
 
             case LicenseSource.ServerOption:
                 options.Licensing.License = license;
                 Assert.Null(options.Licensing.LicensePath);
 
-                Environment.SetEnvironmentVariable("RAVEN_License", null);
-                Environment.SetEnvironmentVariable("RAVEN_License.Path", null);
+                Environment.SetEnvironmentVariable("RAVEN_LICENSE", null);
+                Environment.SetEnvironmentVariable("RAVEN_LICENSE_PATH", null);
 
-                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_License"), null);
-                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_License.Path"), null);
+                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_LICENSE"), null);
+                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_LICENSE_PATH"), null);
                 break;
 
             default:
@@ -95,22 +98,22 @@ public static class LicenseOptionTestHelper
                 Assert.Null(options.Licensing.License);
                 Assert.Null(options.Licensing.LicensePath);
 
-                Environment.SetEnvironmentVariable("RAVEN_License", null);
-                Environment.SetEnvironmentVariable("RAVEN_License.Path", licensePath);
+                Environment.SetEnvironmentVariable("RAVEN_LICENSE", null);
+                Environment.SetEnvironmentVariable("RAVEN_LICENSE_PATH", licensePath);
 
-                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_License"), null);
-                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_License.Path"), licensePath);
+                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_LICENSE"), null);
+                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_LICENSE_PATH"), licensePath);
                 break;
 
             case LicenseSource.ServerOption:
                 options.Licensing.LicensePath = licensePath;
                 Assert.Null(options.Licensing.License);
 
-                Environment.SetEnvironmentVariable("RAVEN_License", null);
-                Environment.SetEnvironmentVariable("RAVEN_License.Path", null);
+                Environment.SetEnvironmentVariable("RAVEN_LICENSE", null);
+                Environment.SetEnvironmentVariable("RAVEN_LICENSE_PATH", null);
 
-                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_License"), null);
-                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_License.Path"), null);
+                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_LICENSE"), null);
+                Assert.Equal(Environment.GetEnvironmentVariable("RAVEN_LICENSE_PATH"), null);
                 break;
 
             default:
