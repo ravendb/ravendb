@@ -1739,14 +1739,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 {
                     await ChangeMentorNodeIfNeededAsync();
 
-                    OngoingTaskBackup onGoingTaskInfo = null;
-                    if (_backupConfiguration.TaskId != 0)
-                    {
-                        onGoingTaskInfo = await _store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(_backupConfiguration.TaskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                        Assert.NotNull(onGoingTaskInfo);
-                        Assert.Null(onGoingTaskInfo.OnGoingBackup); // No backup is in progress when we start waiting for the next execution
-                    }
-
                     _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Starting to wait for the next backup occurrence for task with ID `{_backupConfiguration.TaskId}` on database `{_databaseName}`.");
 
                     if (manualTrigger != null)
@@ -1756,14 +1748,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                         _diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}][Node {_runningOnServer.ServerStore.NodeTag}] Manual trigger for backup operation returned status: {operationStatus}.");
                     }
 
-                    await WaitAndAssertForValueAsync(async () =>
-                        {
-                            onGoingTaskInfo = await _store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(_backupConfiguration.TaskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                            return onGoingTaskInfo?.OnGoingBackup != null;
-                        }, expectedVal: true,
-                        interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds,
-                        timeout: (int)TimeSpan.FromSeconds(60).TotalMilliseconds);
-
+                    var onGoingTaskInfo = await _parent.Backup.WaitForOnGoingBackupNotNullAsync(_store, _backupConfiguration.TaskId);
                     var nextOperationId = database.Operations.GetNextOperationId() - 1;
                     Assert.True(nextOperationId == onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId, $"Expected a new backup task to be started, but the last ongoing task ID is still `{onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId}`." +
                                                                                                       $"{Environment.NewLine}Diagnostic Info: {_diagnosticLogBuilder?.ToString() ?? "N/A"}");

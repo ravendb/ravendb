@@ -13,6 +13,7 @@ using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
 using Raven.Client.ServerWide.Operations;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.OngoingTasks
@@ -415,6 +416,14 @@ namespace Raven.Client.Documents.Operations.OngoingTasks
             json[nameof(IsEncrypted)] = IsEncrypted;
             json[nameof(LastExecutingNodeTag)] = LastExecutingNodeTag;
             return json;
+        }
+
+        public override string ToString()
+        {
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            {
+                return ctx.ReadObject(ToJson(), "ongoing-task-backup").ToString();
+            }
         }
     }
 

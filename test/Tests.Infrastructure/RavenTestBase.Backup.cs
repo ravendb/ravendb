@@ -11,6 +11,7 @@ using NCrontab.Advanced;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
@@ -896,6 +897,43 @@ namespace FastTests
 
                 return;
                 void Log(string message) => diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}] [WaitWindow] {message}");
+            }
+
+            public async Task<OngoingTaskBackup> WaitForOnGoingBackupNotNullAsync(DocumentStore store, long taskId, int timeout = 70_000, int interval = 1_000)
+            {
+                OngoingTaskBackup onGoingTaskInfo = null;
+                Assert.True(await WaitForValueAsync(async () =>
+                        {
+                            onGoingTaskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                            return onGoingTaskInfo?.OnGoingBackup != null;
+                        },
+                        expectedVal: true, timeout, interval),
+                    userMessage: $"The `{nameof(onGoingTaskInfo)}` is {(onGoingTaskInfo != null ? "not null" : "null")}, " +
+                                 $"`{nameof(onGoingTaskInfo)}.{nameof(onGoingTaskInfo.OnGoingBackup)}` is {(onGoingTaskInfo?.OnGoingBackup != null ? "not null" : "null")}");
+
+                Assert.NotNull(onGoingTaskInfo?.OnGoingBackup);
+                return onGoingTaskInfo;
+            }
+
+            public async Task<OngoingTaskBackup> WaitForOngoingBackupIsNullAsync(DocumentStore store, long taskId)
+            {
+                OngoingTaskBackup onGoingTaskInfo = null;
+                Assert.True(await WaitForValueAsync(async () =>
+                        {
+                            onGoingTaskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                            return onGoingTaskInfo is { OnGoingBackup: null };
+                        },
+                        expectedVal: true,
+                        timeout: (int)TimeSpan.FromSeconds(10).TotalMilliseconds,
+                        interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds),
+                    userMessage: $"The `{nameof(onGoingTaskInfo)}` is {(onGoingTaskInfo != null ? "not null" : "null")}, " +
+                                 $"`{nameof(onGoingTaskInfo)}.{nameof(onGoingTaskInfo.OnGoingBackup)}` is {(onGoingTaskInfo?.OnGoingBackup != null ? "not null" : "null")}," +
+                                 $"{nameof(onGoingTaskInfo)}: `{onGoingTaskInfo}`");
+
+                Assert.NotNull(onGoingTaskInfo);
+                Assert.Null(onGoingTaskInfo.OnGoingBackup);
+
+                return onGoingTaskInfo;
             }
         }
     }

@@ -231,9 +231,7 @@ namespace StressTests.Server.Documents.PeriodicBackup
                     var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: fullBackupFrequency);
                     var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
                     // Let's delay the backup task
-                    var taskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                    Assert.NotNull(taskBackupInfo);
-                    Assert.NotNull(taskBackupInfo.OnGoingBackup);
+                    var taskBackupInfo = await Backup.WaitForOnGoingBackupNotNullAsync(store, taskId);
                     Assert.NotNull(taskBackupInfo.OnGoingBackup.StartTime);
 
                     var delayDuration = TimeSpan.FromMinutes(delayDurationInMinutes);
@@ -241,12 +239,8 @@ namespace StressTests.Server.Documents.PeriodicBackup
                     await store.Maintenance.SendAsync(new DelayBackupOperation(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, delayDuration));
 
                     // There should be no OnGoingBackup operation in the OngoingTaskBackup
-                    await WaitForValueAsync(async () =>
-                    {
-                        var afterDelayTaskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                        return afterDelayTaskBackupInfo is { OnGoingBackup: null };
-                    }, true);
 
+                    await Backup.WaitForOngoingBackupIsNullAsync(store, taskId);
                     var backupStatus = (await store.Maintenance.SendAsync(new GetPeriodicBackupStatusOperation(taskId))).Status;
                     Assert.NotNull(backupStatus);
                     Assert.NotNull(backupStatus.DelayUntil);
