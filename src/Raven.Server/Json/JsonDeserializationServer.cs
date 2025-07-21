@@ -88,6 +88,7 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI.AiAssistant;
 using Raven.Server.Documents.AI.AiAssistant.Handlers;
+using Raven.Server.Documents.AI.AiAssistant.Requests;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
 
 namespace Raven.Server.Json

@@ -1,8 +1,8 @@
 ﻿using System;
-using System.Diagnostics;
 using System.IO;
 using JetBrains.Annotations;
 using Raven.Server.Commercial;
+using Raven.Server.Documents.AI.AiAssistant.Requests;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Web;
 using Sparrow;
@@ -19,15 +19,15 @@ internal abstract class AiAssistantHandlerProcessorBase : AbstractHandlerProcess
         _license = ServerStore.LoadLicense();
 
         if (_license is null)
-            throw new InvalidOperationException($"AI Assistant is available only for licenses instances of RavenDB. Please register your license.");
+            throw new InvalidOperationException("AI Assistant is available only for licensed instances of RavenDB. Please register your license.");
 
         _certificateThumbprint = RequestHandler.GetCurrentCertificate()?.Thumbprint;
     }
 
     protected void FulfillRequestMetadata<TRequest>(TRequest request) where TRequest : AiAssistantRequestAuthentication
     {
-        PortableExceptions.ThrowIf<InvalidDataException>(request.License is not null, $"License should be set by the server.");
-        PortableExceptions.ThrowIf<InvalidDataException>(request.CertificateThumbprint is not null, $"Certificate thumbprint should be set by the server.");
+        PortableExceptions.ThrowIf<InvalidDataException>(request.License is not null, "License should be set by the server.");
+        PortableExceptions.ThrowIf<InvalidDataException>(request.CertificateThumbprint is not null, "Certificate thumbprint should be set by the server.");
 
         request.License = _license;
         request.CertificateThumbprint = _certificateThumbprint;

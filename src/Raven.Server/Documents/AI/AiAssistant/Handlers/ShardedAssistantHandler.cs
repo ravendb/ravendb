@@ -14,17 +14,24 @@ public class ShardedAssistantHandler : ShardedDatabaseRequestHandler
             await processor.ExecuteAsync();
     }
     
-    [RavenShardedAction("/databases/*/assistant/consent", "POST")]
-    public async Task SignConsent()
+    [RavenShardedAction("/databases/*/assistant/give-consent", "POST")]
+    public async Task GiveConsent()
     {
-        using (var processor = new AiAssistantConsentProcessor(this))
+        using (var processor = new AiAssistantGiveConsentProcessor(this))
             await processor.ExecuteAsync();
     }
     
-    [RavenShardedAction("/databases/*/assistant/quota", "GET")]
-    public async Task Quota()
+    [RavenShardedAction("/databases/*/assistant/check-consent", "GET")]
+    public async Task CheckConsent()
     {
-        using (var processor = new AiAssistantQuotaProcessor(this))
+        using (var processor = new AiAssistantCheckConsentProcessor(this))
+            await processor.ExecuteAsync();
+    }
+    
+    [RavenShardedAction("/databases/*/assistant/check-usage", "GET")]
+    public async Task CheckUsage()
+    {
+        using (var processor = new AiAssistantCheckUsageProcessor(this))
             await processor.ExecuteAsync();
     }
 }

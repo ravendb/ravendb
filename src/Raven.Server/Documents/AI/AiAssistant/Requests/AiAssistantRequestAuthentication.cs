@@ -1,6 +1,6 @@
 ﻿using Raven.Server.Commercial;
 
-namespace Raven.Server.Documents.AI.AiAssistant;
+namespace Raven.Server.Documents.AI.AiAssistant.Requests;
 
 public class AiAssistantRequestAuthentication
 {

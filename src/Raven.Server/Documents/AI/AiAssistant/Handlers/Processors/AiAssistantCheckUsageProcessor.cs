@@ -1,18 +1,17 @@
-﻿using System;
-using System.Net.Http;
+﻿using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
-using Raven.Client.Http;
 using Raven.Server.Commercial;
+using Raven.Server.Documents.AI.AiAssistant.Requests;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Web;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI.AiAssistant.Handlers.Processors;
 
-internal class AiAssistantConsentProcessor([NotNull] RequestHandler requestHandler) : AiAssistantHandlerProcessorBase(requestHandler)
+internal class AiAssistantCheckUsageProcessor([NotNull] RequestHandler requestHandler) : AiAssistantHandlerProcessorBase(requestHandler)
 {
     public override async ValueTask ExecuteAsync()
     {
@@ -23,22 +22,19 @@ internal class AiAssistantConsentProcessor([NotNull] RequestHandler requestHandl
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
             var response = await ApiHttpClient.PostAsync(
-                    requestUri: "/api/v1/assistant/consent",
+                    requestUri: "/api/v1/ai/check-usage",
                     content: new StringContent(JsonConvert.SerializeObject(requestMetadata), Encoding.UTF8, "application/json"),
                     token: token.Token)
                 .ConfigureAwait(false);
 
-            if (response.IsSuccessStatusCode)
+            if (response.IsSuccessStatusCode == false)
+                HttpContext.Response.StatusCode = (int)response.StatusCode;
+            
+            await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
-                {
-                    await writer.WriteStreamAsync(await response.Content.ReadAsStreamAsync(), token.Token);
-                    await writer.FlushAsync(token.Token);
-                }
+                await writer.WriteStreamAsync(await response.Content.ReadAsStreamAsync(), token.Token);
+                await writer.FlushAsync(token.Token);
             }
-
-            var responseString = await response.Content.ReadAsStringWithZstdSupportAsync().ConfigureAwait(false);
-            throw new InvalidOperationException(responseString);
         }
     }
 }
