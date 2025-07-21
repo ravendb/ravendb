@@ -9,7 +9,7 @@ namespace Raven.Server.Documents.Handlers.Debugging;
 
 public class PagingStatsHandler : ServerRequestHandler
 {
-    [RavenAction("/debug/storage/paging/stats", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+    [RavenAction("/debug/paging-statistics", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
     public async Task PagingStatistics()
     {
         using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
