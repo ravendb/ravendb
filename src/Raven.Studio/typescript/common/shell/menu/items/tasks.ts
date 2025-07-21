@@ -4,6 +4,7 @@ import leafMenuItem = require("common/shell/menu/leafMenuItem");
 import BackupsPage = require("components/pages/database/tasks/backups/BackupsPage");
 import CreateSampleData = require("components/pages/database/tasks/createSampleData/CreateSampleData");
 import OngoingTasksPage = require("components/pages/database/tasks/ongoingTasks/OngoingTasksPage");
+import AddNewOngoingTask = require("components/pages/database/tasks/ongoingTasks/AddNewOngoingTask");
 
 export = getTasksMenuItem;
 
@@ -69,6 +70,16 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
                     { name: "Delete Database Task", alternativeNames: ["Remove Database Task"] },
                 ],
             },
+        }),
+        new leafMenuItem({
+            route: 'databases/tasks/addNewOngoingTasks',
+            moduleId: reactUtils.bridgeToReact(AddNewOngoingTask.default, "nonShardedView"),
+            shardingMode: "allShards",
+            title: 'Add new ongoing task',
+            nav: false,
+            css: "icon-plus",
+            dynamicHash: appUrls.addNewOngoingTaskUrl,
+            itemRouteToHighlight: 'databases/tasks/addNewOngoingTasks',
         }),
         new leafMenuItem({
             route: 'databases/tasks/import*details',

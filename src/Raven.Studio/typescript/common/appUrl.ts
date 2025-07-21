@@ -70,6 +70,7 @@ class appUrl {
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
         backupsUrl: ko.pureComputed(() => appUrl.forBackups(appUrl.currentDatabase())),
         ongoingTasksUrl: ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
+        addNewOngoingTaskUrl: ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase())),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
         editReplicationHubTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase())),
         editReplicationSinkTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationSink(appUrl.currentDatabase())),
@@ -591,6 +592,11 @@ class appUrl {
     static forOngoingTasks(db: database | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/ongoingTasks?" + databasePart;
+    }
+    
+    static forAddNewOngoingTasks(db: database | string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/tasks/addNewOngoingTasks?" + databasePart;
     }
 
     static forEditExternalReplication(db: database | string, taskId?: number): string {

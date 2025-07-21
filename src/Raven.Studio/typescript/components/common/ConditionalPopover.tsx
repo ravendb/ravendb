@@ -13,6 +13,7 @@ interface Condition {
 interface ConditionalPopoverProps extends Required<PropsWithChildren>, ClassNameProps {
     conditions: Condition | Condition[];
     popoverPlacement?: Placement;
+    className?: string;
 }
 
 export function ConditionalPopover(props: ConditionalPopoverProps) {

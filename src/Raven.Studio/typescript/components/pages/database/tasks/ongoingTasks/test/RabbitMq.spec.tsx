@@ -6,7 +6,7 @@ import React from "react";
 
 import { selectors } from "./selectors";
 
-const containerTestId = "rabbitmq-etls";
+const containerTestId = "etls";
 
 describe("RabbitMQ ETL", function () {
     it("can render disabled and not completed", async () => {

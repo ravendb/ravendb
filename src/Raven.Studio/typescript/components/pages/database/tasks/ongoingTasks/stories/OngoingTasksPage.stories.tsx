@@ -7,7 +7,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { commonInit } from "components/pages/database/tasks/ongoingTasks/stories/common";
 
 export default {
-    title: "Pages/Tasks/Ongoing Tasks",
+    title: "Pages/Tasks/Ongoing Tasks/Ongoing Tasks Page",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
     parameters: {
         design: {

@@ -14,7 +14,7 @@ import { OngoingTasksPage } from "components/pages/database/tasks/ongoingTasks/O
 import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
 
 export default {
-    title: "Pages/Database/Tasks/Ongoing tasks/External Replication",
+    title: "Pages/Tasks/Ongoing tasks/External Replication",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 
@@ -68,7 +68,7 @@ export const Default: StoryObj<ExternalReplicationProps> = {
         databaseType: { control: "radio", options: ["sharded", "cluster", "singleNode"] },
     },
     play: async ({ canvas }) => {
-        const container = within(await canvas.findByTestId("external-replications"));
+        const container = within(await canvas.findByTestId("replications"));
         await userEvent.click(await container.findByTitle(/Click for details/));
     },
 };

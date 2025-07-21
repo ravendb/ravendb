@@ -12,7 +12,7 @@ import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/Database/Tasks/Ongoing tasks/Subscription",
+    title: "Pages/Tasks/Ongoing tasks/Subscription",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 
