@@ -1,17 +1,18 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Server;
-using Raven.Server.ServerWide.Context;
-using Raven.Server.ServerWide.Maintenance;
-using SlowTests.Utils;
+using Raven.Server.Config;
+using Raven.Server.Documents.PeriodicBackup;
+using SlowTests.Server.Documents.PeriodicBackup;
+using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_20206 : RavenTestBase
+public class RavenDB_20206 : ClusterTestBase
 {
     public RavenDB_20206(ITestOutputHelper output) : base(output)
     {
@@ -20,84 +21,54 @@ public class RavenDB_20206 : RavenTestBase
     [Fact]
     public async Task Should_Not_Clear_Compare_Exchange_Tombstones_Of_A_Database_With_Identical_Prefix()
     {
-        using (var server = GetNewServer())
-        using (var store1 = GetDocumentStore(new Options { Server = server }))
-        using (var store2 = GetDocumentStore(new Options { Server = server, ModifyDatabaseName = _ => store1.Database + "_123" }))
+        const string databaseName = "RavenDB_20206";
+
+        var backupPath = NewDataPath(suffix: "BackupFolder");
+        var diagnosticLogBuilder = new StringBuilder();
+        var serverCreationOptions = new ServerCreationOptions
         {
-            Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
-            var indexesList1 = new Dictionary<string, long>();
-            var indexesList2 = new Dictionary<string, long>();
-            // create 3 unique values
-            for (int i = 0; i < 3; i++)
-            {
-                var res1 = await store1.Operations.SendAsync(new PutCompareExchangeValueOperation<int>($"{i}", i, 0));
-                var res2 = await store2.Operations.SendAsync(new PutCompareExchangeValueOperation<int>($"{i}", i, 0));
-                indexesList1.Add($"{i}", res1.Index);
-                indexesList2.Add($"{i}", res2.Index);
-            }
+            CustomSettings = new Dictionary<string, string> { { RavenConfiguration.GetKey(x => x.Cluster.CompareExchangeTombstonesCleanupInterval), "100" } }
+        };
 
-            // incremental backup on store2 db so observer ob store2 won't delete its tombstones
-            var config = Backup.CreateBackupConfiguration("backupFolder", incrementalBackupFrequency: "0 0 1 * *");
-            var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store2, isFullBackup: false);
+        using var server = GetNewServer(serverCreationOptions);
+        using var firstStore = GetDocumentStore(new Options { Server = server, ModifyDatabaseName = _ => databaseName });
+        using var secondStore = GetDocumentStore(new Options { Server = server, ModifyDatabaseName = _ => $"{databaseName}_123"});
 
-            // delete 1 unique value
-            var del1 = await store1.Operations.SendAsync(new DeleteCompareExchangeValueOperation<int>("2", indexesList1["2"]));
-            Assert.NotNull(del1.Value);
-            indexesList1.Remove("2");
+        server.ServerStore.Observer.ForTestingPurposesOnly().OnDiagnosticLog += logLine => diagnosticLogBuilder.AppendLine($"[{DateTime.UtcNow:O}] {logLine}");
+        server.ServerStore.ForTestingPurposesOnly().IgnoreClusterTransactionIndexInCompareExchangeCleaner = true;
+        Cluster.WaitForFirstCompareExchangeTombstonesClean(server);
 
-            var del2 = await store2.Operations.SendAsync(new DeleteCompareExchangeValueOperation<int>("2", indexesList2["2"]));
-            Assert.NotNull(del2.Value);
-            indexesList2.Remove("2");
+        // Create compare exchange values and tombstones on the first store
+        await firstStore.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
+        await firstStore.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
+        await RavenDB_11139.CreateCompareExchangeTombstone(firstStore, "cx/3");
 
-            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store1.Database);
-                Assert.Equal(1, numOfCompareExchangeTombstones);
-            }
+        // Create compare exchange values and tombstones on the second store
+        await secondStore.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
+        await secondStore.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
+        await RavenDB_11139.CreateCompareExchangeTombstone(secondStore, "cx/3");
 
-            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store2.Database);
-                Assert.Equal(1, numOfCompareExchangeTombstones);
-            }
+        RavenDB_11139.AssertCompareExchangeCounts(server, firstStore.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "Before compare exchange tombstone cleanup", diagnosticLogBuilder);
+        RavenDB_11139.AssertCompareExchangeCounts(server, secondStore.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "Before compare exchange tombstone cleanup", diagnosticLogBuilder);
 
-            // clean tombstones
-            await Cluster.RunCompareExchangeTombstoneCleaner([server], ignoreClusterTrx: true);
+        var backupConfiguration = Backup.CreateBackupConfiguration(backupPath, name: "FirstBackupConfiguration");
+        var secondDatabaseBackupWaiter = new RavenDB_11139.NextBackupWaiter(clusterTestBase: this)
+            .WithDatabase(secondStore.Database)
+            .WithBackupConfiguration(backupConfiguration)
+            .WithClusterNodes([server])
+            .WithClusterObserverConfirmation()
+            .WithDiagnosticLog(diagnosticLogBuilder)
+            .SetMentorNodeTo(server, secondStore);
 
-            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store1.Database);
-                var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store1.Database);
-                Assert.Equal(0, numOfCompareExchangeTombstones);
-                Assert.Equal(2, numOfCompareExchanges);
+        await secondDatabaseBackupWaiter
+            .TriggerNextOccurenceNowAsync(BackupKind.Full);
 
-                numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store2.Database);
-                numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store2.Database);
-                Assert.Equal(1, numOfCompareExchangeTombstones);
-                Assert.Equal(2, numOfCompareExchanges);
-            }
+        await RavenDB_11139.CreateCompareExchangeTombstone(firstStore, "cx/4");
+        await RavenDB_11139.CreateCompareExchangeTombstone(secondStore, "cx/4");
 
-            await Backup.RunBackupAsync(server, taskId, store2, isFullBackup: false);
-            
-            // clean tombstones
-            await Cluster.RunCompareExchangeTombstoneCleaner([server], ignoreClusterTrx: true);
-            
-            using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                var numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store1.Database);
-                var numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store1.Database);
-                Assert.Equal(0, numOfCompareExchangeTombstones);
-                Assert.Equal(2, numOfCompareExchanges);
-
-                numOfCompareExchangeTombstones = server.ServerStore.Cluster.GetNumberOfCompareExchangeTombstones(context, store2.Database);
-                numOfCompareExchanges = server.ServerStore.Cluster.GetNumberOfCompareExchange(context, store2.Database);
-                Assert.Equal(0, numOfCompareExchangeTombstones);
-                Assert.Equal(2, numOfCompareExchanges);
-            }
-        }
+        // We only did a full backup on the second store, so the first store (without `_123` suffix) still has no backup configuration and can clean up compare exchange tombstones
+        await Cluster.RunCompareExchangeTombstoneCleaner(clusterNodes: [server], ignoreClusterTrx: true);
+        RavenDB_11139.AssertCompareExchangeCounts(server, firstStore.Database, expectedTombstonesNumber: 0, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup after full backup and compare exchange tombstone creation", diagnosticLogBuilder);
+        RavenDB_11139.AssertCompareExchangeCounts(server, secondStore.Database, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2, "After compare exchange tombstone cleanup (no backup configuration) and compare exchange tombstone creation", diagnosticLogBuilder);
     }
 }

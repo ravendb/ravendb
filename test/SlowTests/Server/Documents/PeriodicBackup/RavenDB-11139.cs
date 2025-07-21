@@ -22,7 +22,6 @@ using Raven.Server.Config.Settings;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -1826,13 +1825,13 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        private static async Task CreateCompareExchangeTombstone(DocumentStore documentStore, string key)
+        internal static async Task CreateCompareExchangeTombstone(DocumentStore documentStore, string key)
         {
             var res = await documentStore.Operations.SendAsync(new PutCompareExchangeValueOperation<int>(key, 1, 0));
             await documentStore.Operations.SendAsync(new DeleteCompareExchangeValueOperation<int>(key, res.Index));
         }
 
-        private void AssertCompareExchangeCounts(RavenServer server, string databaseName, long expectedTombstonesNumber, long expectedCompareExchangeNumber, string message = null, StringBuilder diagnosticLogBuilder = null)
+        internal static void AssertCompareExchangeCounts(RavenServer server, string databaseName, long expectedTombstonesNumber, long expectedCompareExchangeNumber, string message = null, StringBuilder diagnosticLogBuilder = null)
         {
             using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
