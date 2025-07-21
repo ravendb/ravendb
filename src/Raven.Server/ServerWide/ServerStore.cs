@@ -2230,6 +2230,8 @@ namespace Raven.Server.ServerWide
 
                         aiIntegration.Initialize(cs);
                         aiIntegration.Validate(out var aiIntegrationErr, validateName: false, validateConnection: true);
+                        AiTaskIdentifierHelper.ValidateIdentifier(aiIntegration.Identifier, out var idErrors);
+                        aiIntegrationErr.AddRange(idErrors);
                         if (ValidateConnectionString(rawRecord, aiIntegration.ConnectionStringName, aiIntegration.EtlType) == false)
                             aiIntegrationErr.Add(
                                 $"Could not find connection string named '{aiIntegration.ConnectionStringName}'. Please supply an existing connection string.");
@@ -2251,6 +2253,8 @@ namespace Raven.Server.ServerWide
 
                         genAi.Initialize(cs);
                         genAi.Validate(out var genAiErr, validateName: false, validateConnection: true);
+                        AiTaskIdentifierHelper.ValidateIdentifier(genAi.Identifier,  out var idErrors);
+                        genAiErr.AddRange(idErrors);
                         if (ValidateConnectionString(rawRecord, genAi.ConnectionStringName, genAi.EtlType) == false)
                             genAiErr.Add($"Could not find connection string named '{genAi.ConnectionStringName}'. Please supply an existing connection string.");
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, genAiErr);
@@ -2565,6 +2569,9 @@ namespace Raven.Server.ServerWide
                         raftRequestId);
                     break;
                 case ConnectionStringType.Ai:
+                    connectionString.TryGetMember(nameof(AiConnectionString.Identifier), out var identifier);
+                    if (AiTaskIdentifierHelper.ValidateIdentifier(identifier.ToString(), out var errors) == false)
+                        ThrowInvalidConfigurationIfNecessary(connectionString, errors);
                     command = new PutAiConnectionStringCommand(JsonDeserializationCluster.AiConnectionString(connectionString), databaseName, raftRequestId);
                     break;
                 default:
