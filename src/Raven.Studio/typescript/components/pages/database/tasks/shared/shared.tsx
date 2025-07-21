@@ -5,7 +5,7 @@
     OngoingTaskSharedInfo,
 } from "components/models/tasks";
 import useBoolean from "hooks/useBoolean";
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useReducer, useState } from "react";
 import router from "plugins/router";
 import { RichPanelDetailItem, RichPanelName } from "components/common/RichPanel";
 import Spinner from "react-bootstrap/Spinner";
@@ -21,6 +21,17 @@ import { useAppSelector } from "components/store";
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import ModifyOngoingTaskResult = Raven.Client.Documents.Operations.OngoingTasks.ModifyOngoingTaskResult;
+import { InputItem } from "components/models/common";
+import {
+    ongoingTasksReducer,
+    ongoingTasksReducerInitializer,
+} from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksReducer";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { getLicenseLimitReachStatus } from "components/utils/licenseLimitsUtils";
+import { useAppUrls } from "hooks/useAppUrls";
+import { CounterBadge } from "components/common/CounterBadge";
+import IconName from "../../../../../../typings/server/icons";
+import { TaskItemProps } from "components/pages/database/tasks/ongoingTasks/AddNewOngoingTask";
 
 export interface BaseOngoingTaskPanelProps<T extends OngoingTaskInfo> {
     data: T;
@@ -158,20 +169,21 @@ export function OngoingTaskStatus(props: OngoingTaskStatusProps) {
 interface OngoingTaskActionsProps {
     canEdit: boolean;
     task: OngoingTaskInfo;
-    toggleDetails: () => void;
+    toggleDetails?: () => void;
     onEdit: () => void;
     onTaskOperation: (type: OngoingTaskOperationConfirmType, taskSharedInfos: OngoingTaskSharedInfo[]) => void;
     isDeleting: boolean;
+    isDetailsOpen?: boolean;
 }
 
 export function OngoingTaskActions(props: OngoingTaskActionsProps) {
-    const { canEdit, task, onEdit, toggleDetails, onTaskOperation, isDeleting } = props;
+    const { canEdit, task, onEdit, toggleDetails, onTaskOperation, isDeleting, isDetailsOpen } = props;
 
     return (
         <div className="actions">
             <ButtonGroup>
                 <Button variant="secondary" onClick={toggleDetails} title="Click for details">
-                    <Icon icon="info" margin="m-0" />
+                    <Icon icon={isDetailsOpen ? "fold" : "unfold"} margin="m-0" />
                 </Button>
                 {!task.shared.serverWide && (
                     <Button variant="secondary" onClick={onEdit} title="Edit task">
@@ -371,5 +383,319 @@ export function useOngoingTasksOperations(reload: () => void) {
         isTogglingState: (id: number) => togglingTaskIds.includes(id),
         isDeletingAny: deletingTaskIds.length > 0,
         isTogglingStateAny: togglingTaskIds.length > 0,
+    };
+}
+
+interface OngoingTasksCategory {
+    categoryName: string;
+    categoryIcon: IconName;
+    tasks: TaskItemProps[];
+}
+
+export function useNewOngoingTasks() {
+    const db = useAppSelector(databaseSelectors.activeDatabase);
+    const isSharded = db.isSharded;
+    const [tasks] = useReducer(ongoingTasksReducer, db, ongoingTasksReducerInitializer);
+
+    const subscriptionsServerCount = useAppSelector(licenseSelectors.limitsUsage).NumberOfSubscriptionsInCluster;
+    const isProfessionalOrAbove = useAppSelector(licenseSelectors.isProfessionalOrAbove);
+    const hasExternalReplication = useAppSelector(licenseSelectors.statusValue("HasExternalReplication"));
+    const hasReplicationHub = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsHub"));
+    const hasReplicationSink = useAppSelector(licenseSelectors.statusValue("HasPullReplicationAsSink"));
+    const hasRavenDbEtl = useAppSelector(licenseSelectors.statusValue("HasRavenEtl"));
+    const hasElasticSearchEtl = useAppSelector(licenseSelectors.statusValue("HasElasticSearchEtl"));
+    const hasKafkaEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const hasSqlEtl = useAppSelector(licenseSelectors.statusValue("HasSqlEtl"));
+    const hasOlapEtl = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));
+    const hasRabbitMqEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const hasAzureQueueStorageEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const hasKafkaSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
+    const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
+    const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
+    const subscriptionsServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerCluster"));
+    const subscriptionsDatabaseLimit = useAppSelector(
+        licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerDatabase")
+    );
+
+    const subscriptionsServerLimitStatus = getLicenseLimitReachStatus(
+        subscriptionsServerCount,
+        subscriptionsServerLimit
+    );
+
+    const subscriptionsDatabaseLimitStatus = getLicenseLimitReachStatus(
+        tasks.subscriptions.length,
+        subscriptionsDatabaseLimit
+    );
+
+    const isSubscriptionDisabled =
+        !isProfessionalOrAbove &&
+        (subscriptionsServerLimitStatus === "limitReached" || subscriptionsDatabaseLimitStatus === "limitReached");
+
+    const getSubscriptionDisableReason = (): string => {
+        if (!isSubscriptionDisabled) {
+            return null;
+        }
+
+        const limitReachedReason = subscriptionsServerLimitStatus === "limitReached" ? "Cluster" : "Database";
+
+        return `${limitReachedReason} has reached the maximum number of subscriptions allowed per ${limitReachedReason.toLowerCase()}.`;
+    };
+
+    const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+    const [searchText, setSearchText] = useState<string>("");
+    const { forCurrentDatabase } = useAppUrls();
+
+    const disableReasonForShardedDb = isSharded ? "Not supported in sharded databases" : null;
+
+    const ongoingTasks: OngoingTasksCategory[] = [
+        {
+            categoryName: "Replication",
+            categoryIcon: "replication",
+            tasks: [
+                {
+                    title: "External Replication",
+                    description:
+                        "Create a live replica of your database in another RavenDB database in another cluster.",
+                    iconName: "external-replication",
+                    variant: "Replication",
+                    target: "ExternalReplication",
+                    licenseBadge: "Professional +",
+                    showLicenseBadge: !hasExternalReplication,
+                    link: forCurrentDatabase.editExternalReplicationTaskUrl(),
+                },
+                {
+                    title: "Replication Hub",
+                    description:
+                        "Replicate documents to and/or from multiple Replication Sink tasks in other RavenDB databases across different clusters.",
+                    disableReason: disableReasonForShardedDb,
+                    iconName: "pull-replication-hub",
+                    variant: "Replication",
+                    licenseBadge: "Enterprise",
+                    target: "ReplicationHub",
+                    showLicenseBadge: !hasReplicationHub,
+                    link: forCurrentDatabase.editReplicationHubTaskUrl(),
+                },
+                {
+                    title: "Replication Sink",
+                    description:
+                        "Connect to a central Replication Hub in another RavenDB cluster to receive documents, and optionally replicate back.",
+                    iconName: "pull-replication-agent",
+                    disableReason: disableReasonForShardedDb,
+                    variant: "Replication",
+                    target: "ReplicationSink",
+                    licenseBadge: "Professional +",
+                    showLicenseBadge: !hasReplicationSink,
+                    link: forCurrentDatabase.editReplicationSinkTaskUrl(),
+                },
+            ],
+        },
+        {
+            categoryName: "Backups",
+            categoryIcon: "backup",
+            tasks: [
+                {
+                    title: "Periodic Backup",
+                    description: "Create periodic backups or snapshots of the database on a defined schedule.",
+                    iconName: "periodic-backup",
+                    variant: "Backups",
+                    licenseBadge: "Professional +",
+                    showLicenseBadge: !hasPeriodicBackups,
+                    target: "PeriodicBackup",
+                    link: forCurrentDatabase.editPeriodicBackupTask("OngoingTasks", false)(),
+                },
+            ],
+        },
+        {
+            categoryName: "Subscriptions",
+            categoryIcon: "subscriptions",
+            tasks: [
+                {
+                    title: "Subscription",
+                    disableReason: getSubscriptionDisableReason(),
+                    description: "Send batches of documents that match a pre-defined query to a client for processing.",
+                    iconName: "subscriptions",
+                    variant: "Subscriptions",
+                    target: "Subscription",
+                    link: forCurrentDatabase.editSubscriptionTaskUrl(),
+                    counterBadge: isProfessionalOrAbove ? null : (
+                        <CounterBadge
+                            count={tasks.subscriptions.length}
+                            limit={subscriptionsDatabaseLimit}
+                            hideNotReached
+                        />
+                    ),
+                },
+            ],
+        },
+        {
+            categoryName: "ETL (RavenDB ⇛ TARGET)",
+            categoryIcon: "etl",
+            tasks: [
+                {
+                    title: "RavenDB ETL",
+                    description:
+                        "Extract and transform selected database documents and write them to another RavenDB database.",
+                    iconName: "ravendb-etl",
+                    variant: "ETL",
+                    target: "RavenETL",
+                    licenseBadge: "Professional +",
+                    showLicenseBadge: !hasRavenDbEtl,
+                    link: forCurrentDatabase.editRavenEtlTaskUrl(),
+                },
+                {
+                    title: "Elasticsearch ETL",
+                    description:
+                        "Extract and transform data from selected documents and transfer it to an Elasticsearch destination.",
+                    iconName: "elastic-search-etl",
+                    variant: "ETL",
+                    target: "ElasticSearchETL",
+                    licenseBadge: "Enterprise",
+                    showLicenseBadge: !hasElasticSearchEtl,
+                    link: forCurrentDatabase.editElasticSearchEtlTaskUrl(),
+                },
+                {
+                    title: "Kafka ETL",
+                    description: "Extract and transform data from selected documents and send it to Kafka topics.",
+                    iconName: "kafka-etl",
+                    variant: "ETL",
+                    target: "KafkaETL",
+                    disableReason: disableReasonForShardedDb,
+                    licenseBadge: "Enterprise",
+                    showLicenseBadge: !hasKafkaEtl,
+                    link: forCurrentDatabase.editKafkaEtlTaskUrl(),
+                },
+                {
+                    title: "SQL ETL",
+                    description:
+                        "Extract and transform data from selected documents and write it to a relational database.",
+                    iconName: "sql-etl",
+                    variant: "ETL",
+                    target: "SqlETL",
+                    licenseBadge: "Professional +",
+                    showLicenseBadge: !hasSqlEtl,
+                    link: forCurrentDatabase.editSqlEtlTaskUrl(),
+                },
+                {
+                    title: "OLAP ETL",
+                    description:
+                        "Extract and transform data from selected documents and export it as Parquet files to the specified destination.",
+                    iconName: "olap-etl",
+                    variant: "ETL",
+                    target: "OlapETL",
+                    link: forCurrentDatabase.editOlapEtlTaskUrl(),
+                    licenseBadge: "Enterprise",
+                    showLicenseBadge: !hasOlapEtl,
+                },
+                {
+                    title: "RabbitMQ ETL",
+                    description:
+                        "Extract and transform data from selected documents and send it to a RabbitMQ exchange.",
+                    iconName: "rabbitmq-etl",
+                    variant: "ETL",
+                    target: "RabbitMqETL",
+                    disableReason: disableReasonForShardedDb,
+                    licenseBadge: "Enterprise",
+                    showLicenseBadge: !hasRabbitMqEtl,
+                    link: forCurrentDatabase.editRabbitMqEtlTaskUrl(),
+                },
+                {
+                    title: "Azure Queue Storage ETL",
+                    description:
+                        "Extract and transform data from selected documents and send it to Azure Queue Storage.",
+                    iconName: "azure-queue-storage-etl",
+                    variant: "ETL",
+                    target: "AzureQueueStorageETL",
+                    disableReason: disableReasonForShardedDb,
+                    licenseBadge: "Enterprise",
+                    showLicenseBadge: !hasAzureQueueStorageEtl,
+                    link: forCurrentDatabase.editAzureQueueStorageEtlTaskUrl(),
+                },
+            ],
+        },
+        {
+            categoryName: "SINK (SOURCE ⇛ RavenDB)",
+            categoryIcon: "hub-sink-replication",
+            tasks: [
+                {
+                    title: "Kafka Sink",
+                    description:
+                        "Consume and process incoming JSON messages from Kafka topics to create or delete documents.",
+                    iconName: "kafka-sink",
+                    variant: "Sink",
+                    target: "KafkaSink",
+                    licenseBadge: "Enterprise",
+                    disableReason: disableReasonForShardedDb,
+                    showLicenseBadge: !hasKafkaSink,
+                    link: forCurrentDatabase.editKafkaSinkTaskUrl(),
+                },
+                {
+                    title: "RabbitMQ Sink",
+                    description:
+                        "Consume and process incoming JSON messages from RabbitMQ queues to create or delete documents.",
+                    iconName: "rabbitmq-sink",
+                    target: "RabbitMqSink",
+                    variant: "Sink",
+                    licenseBadge: "Enterprise",
+                    disableReason: disableReasonForShardedDb,
+                    showLicenseBadge: !hasRabbitMqSink,
+                    link: forCurrentDatabase.editRabbitMqSinkTaskUrl(),
+                },
+            ],
+        },
+    ];
+
+    function getCategoryCount(category: OngoingTasksCategory["categoryName"]) {
+        return ongoingTasks.find((x) => x.categoryName === category)?.tasks.length ?? 0;
+    }
+
+    const filteredTasks = ongoingTasks
+        .filter((category) => {
+            const categoryName = category.categoryName.toLowerCase();
+            const categoryMatches =
+                selectedCategories.length === 0 ||
+                selectedCategories.some((selected) => selected.toLowerCase() === categoryName);
+
+            if (!searchText || !categoryMatches) {
+                return categoryMatches;
+            }
+
+            const matchingTasks = category.tasks.filter(
+                (task) =>
+                    task.title.toLowerCase().includes(searchText.trim().toLowerCase()) ||
+                    task.description.toLowerCase().includes(searchText.trim().toLowerCase())
+            );
+
+            return matchingTasks.length > 0;
+        })
+        .map((category) => {
+            if (!searchText) {
+                return category;
+            }
+
+            return {
+                ...category,
+                tasks: category.tasks.filter(
+                    (task) =>
+                        task.title.toLowerCase().includes(searchText.trim().toLowerCase()) ||
+                        task.description.toLowerCase().includes(searchText.trim().toLowerCase())
+                ),
+            };
+        });
+
+    const categoryList: InputItem[] = [
+        { value: "Replication", label: "Replication", count: getCategoryCount("Replication") },
+        { value: "Backups", label: "Backups", count: getCategoryCount("Backups") },
+        { value: "Subscriptions", label: "Subscriptions", count: getCategoryCount("Subscriptions") },
+        { value: "ETL (RavenDB ⇛ TARGET)", label: "ETL", count: getCategoryCount("ETL (RavenDB ⇛ TARGET)") },
+        { value: "SINK (SOURCE ⇛ RavenDB)", label: "Sink", count: getCategoryCount("SINK (SOURCE ⇛ RavenDB)") },
+    ];
+
+    return {
+        filteredTasks,
+        categoryList,
+        searchText,
+        selectedCategories,
+        setSearchText,
+        setSelectedCategories,
     };
 }

@@ -14,7 +14,7 @@ import { MockedValue } from "test/mocks/services/AutoMockService";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 
 export default {
-    title: "Pages/Database/Tasks/Ongoing tasks/Replication Hub",
+    title: "Pages/Tasks/Ongoing tasks/Replication Hub",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 
@@ -78,7 +78,7 @@ export const Default: StoryObj<ReplicationHubProps> = {
         databaseType: { control: "radio", options: ["sharded", "cluster", "singleNode"] },
     },
     play: async ({ canvas }) => {
-        const container = within(await canvas.findByTestId("replication-hubs"));
+        const container = within(await canvas.findByTestId("replications"));
         await userEvent.click(await container.findByTitle(/Click for details/));
     },
 };

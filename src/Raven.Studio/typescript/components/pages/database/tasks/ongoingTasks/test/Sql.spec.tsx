@@ -6,7 +6,7 @@ import React from "react";
 
 import { selectors } from "./selectors";
 
-const containerTestId = "sql-etls";
+const containerTestId = "etls";
 
 describe("SQL", function () {
     it("can render disabled and not completed", async () => {

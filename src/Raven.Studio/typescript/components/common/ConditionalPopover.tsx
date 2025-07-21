@@ -2,6 +2,7 @@ import { ReactNode, PropsWithChildren, useState } from "react";
 import { Placement } from "react-bootstrap/types";
 import { PopoverWithHover } from "./PopoverWithHover";
 import Popover from "react-bootstrap/Popover";
+import classNames from "classnames";
 
 interface Condition {
     isActive: boolean;
@@ -11,10 +12,11 @@ interface Condition {
 interface ConditionalPopoverProps extends Required<PropsWithChildren> {
     conditions: Condition | Condition[];
     popoverPlacement?: Placement;
+    className?: string;
 }
 
 export function ConditionalPopover(props: ConditionalPopoverProps) {
-    const { children, popoverPlacement } = props;
+    const { children, popoverPlacement, className } = props;
 
     const [target, setTarget] = useState<HTMLElement>();
 
@@ -23,7 +25,7 @@ export function ConditionalPopover(props: ConditionalPopoverProps) {
 
     return (
         <>
-            <div ref={setTarget} className="d-flex w-fit-content">
+            <div ref={setTarget} className={classNames("d-flex w-fit-content", className)}>
                 {children}
             </div>
             {message != null && (

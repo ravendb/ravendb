@@ -6,7 +6,7 @@ import React from "react";
 
 import { selectors } from "./selectors";
 
-const containerTestId = "elastic-search-etls";
+const containerTestId = "etls";
 
 describe("ElasticSearch", function () {
     it("can render disabled and not completed", async () => {

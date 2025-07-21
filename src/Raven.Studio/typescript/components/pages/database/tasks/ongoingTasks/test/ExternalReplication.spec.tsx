@@ -10,8 +10,9 @@ describe("External Replication", function () {
         const Story = composeStory(externalReplicationStories.Default, externalReplicationStories.default);
 
         const { screen, fireClick } = rtlRender(<Story />);
-        const container = within(await screen.findByTestId("external-replications"));
-        expect(await container.findByRole("heading", { name: /External Replication/ })).toBeInTheDocument();
+        const container = within(await screen.findByTestId("replications"));
+        expect(await container.findByRole("heading", { name: "Replication", level: 5 })).toBeInTheDocument();
+        expect(await container.findByText(/External Replication/)).toBeInTheDocument();
         expect(await container.findByText(/Enabled/)).toBeInTheDocument();
         expect(container.queryByText(/Disabled/)).not.toBeInTheDocument();
 
@@ -36,7 +37,7 @@ describe("External Replication", function () {
         const Story = composeStory(externalReplicationStories.ServerWide, externalReplicationStories.default);
 
         const { screen, fireClick } = rtlRender(<Story />);
-        const container = within(await screen.findByTestId("external-replications"));
+        const container = within(await screen.findByTestId("replications"));
         const detailsBtn = await container.findByTitle(/Click for details/);
 
         await fireClick(detailsBtn);

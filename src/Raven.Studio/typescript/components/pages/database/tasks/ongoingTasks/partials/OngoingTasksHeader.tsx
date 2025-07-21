@@ -3,13 +3,10 @@ import { Icon } from "components/common/Icon";
 import { FlexGrow } from "components/common/FlexGrow";
 import AboutViewFloating, { AccordionItemWrapper } from "components/common/AboutView";
 import { StickyHeader } from "components/common/StickyHeader";
-import React from "react";
-import OngoingTaskAddModal from "./OngoingTaskAddModal";
 import { useRavenLink } from "hooks/useRavenLink";
 import OngoingTaskSelectActions from "./OngoingTaskSelectActions";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
-import useBoolean from "hooks/useBoolean";
 import { OngoingTasksState } from "components/pages/database/tasks/ongoingTasks/partials/OngoingTasksReducer";
 import appUrl from "common/appUrl";
 import OngoingTasksFilter, {
@@ -21,25 +18,26 @@ import { exhaustiveStringTuple } from "components/utils/common";
 import assertUnreachable from "components/utils/assertUnreachable";
 import { useOngoingTasksOperations } from "components/pages/database/tasks/shared/shared";
 import OngoingTaskOperationConfirm from "components/pages/database/tasks/shared/OngoingTaskOperationConfirm";
+import { useAppUrls } from "hooks/useAppUrls";
 
 interface OngoingTasksHeaderProps {
     tasks: OngoingTasksState;
     hasInternalReplication: boolean;
     allTasksCount: number;
     selectedTaskIds: number[];
-    subscriptionsDatabaseCount: number;
     filter: OngoingTasksFilterCriteria;
     setFilter: (x: OngoingTasksFilterCriteria) => void;
     reload: () => void;
     filteredDatabaseTaskIds: number[];
     setSelectedTaskIds: (tasks: number[]) => void;
 }
+
 export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
+    const { forCurrentDatabase } = useAppUrls();
     const {
         tasks,
         allTasksCount,
         selectedTaskIds,
-        subscriptionsDatabaseCount,
         setFilter,
         filter,
         hasInternalReplication,
@@ -52,7 +50,6 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
     const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
-    const { value: isNewTaskModalOpen, toggle: toggleIsNewTaskModalOpen } = useBoolean(false);
 
     const serverWideTasksUrl = appUrl.forServerWideTasks();
 
@@ -69,20 +66,12 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
             <StickyHeader>
                 <div className="hstack gap-3 flex-wrap">
                     {hasDatabaseWriteAccess && (
-                        <>
-                            {isNewTaskModalOpen && (
-                                <OngoingTaskAddModal
-                                    toggle={toggleIsNewTaskModalOpen}
-                                    subscriptionsDatabaseCount={subscriptionsDatabaseCount}
-                                />
-                            )}
-                            <div id="NewTaskButton">
-                                <Button onClick={toggleIsNewTaskModalOpen} variant="primary" className="rounded-pill">
-                                    <Icon icon="ongoing-tasks" addon="plus" />
-                                    Add a Database Task
-                                </Button>
-                            </div>
-                        </>
+                        <div id="NewTaskButton">
+                            <Button href={forCurrentDatabase.addNewOngoingTaskUrl()} className="rounded-pill">
+                                <Icon icon="ongoing-tasks" addon="plus" />
+                                Add a Database Task
+                            </Button>
+                        </div>
                     )}
 
                     <FlexGrow />
@@ -109,30 +98,32 @@ export function OngoingTasksHeader(props: OngoingTasksHeaderProps) {
                             targetId="about-view"
                         >
                             <div>
-                                <strong>Ongoing-tasks</strong> are work tasks assigned to the database.
-                                <ul className="margin-top-xxs">
+                                <ul>
                                     <li>
-                                        A few examples are: <br />
-                                        Executing a periodic backup of the database, replicating to another RavenDB
-                                        instance, or transferring data to external frameworks such as Kafka, RabbitMQ,
-                                        Azure Queue Storage etc.
+                                        <strong>Ongoing-tasks are work tasks assigned to the database</strong>.
+                                        <br /> A few examples are: Executing a periodic backup of the database,
+                                        replicating to another RavenDB instance, or transferring data to external
+                                        frameworks such as Kafka, RabbitMQ, Azure Queue Storage etc.
                                     </li>
-                                    <li className="margin-top-xxs">
-                                        Click the &quot;Add a Database Task&quot; button to view all available tasks and
-                                        select from the list.
+                                    <li className="mt-1">
+                                        <strong>This view lists all ongoing tasks defined for the database.</strong>
+                                        <br /> Click the &quot;Add a Database Task&quot; button to view all available
+                                        tasks and select from the list.
                                     </li>
-                                </ul>
-                            </div>
-                            <div>
-                                <strong>Running in the background</strong>, each ongoing task is handled by a designated
-                                node from the Database-Group nodes.
-                                <ul className="margin-top-xxs">
-                                    <li>
-                                        For each task, you can specify which node will be responsible for the task and
-                                        whether the cluster may assign a different node when that node is down.
-                                    </li>
-                                    <li className="margin-top-xxs">
-                                        If not specified, the cluster will decide which node will handle the task.
+                                    <li className="mt-1">
+                                        <strong>Running in the background</strong>,<br /> each ongoing task is handled
+                                        by a designated node from the Database-Group nodes:
+                                        <ul className="margin-top-xxs">
+                                            <li>
+                                                For each task, you can specify which node will be responsible for the
+                                                task and whether the cluster may assign a different node when that node
+                                                is down.
+                                            </li>
+                                            <li className="margin-top-xxs">
+                                                If not specified, the cluster will decide which node will handle the
+                                                task.
+                                            </li>
+                                        </ul>
                                     </li>
                                 </ul>
                             </div>

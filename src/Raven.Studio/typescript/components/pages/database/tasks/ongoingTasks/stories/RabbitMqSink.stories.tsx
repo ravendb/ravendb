@@ -11,7 +11,7 @@ import { MockedValue } from "test/mocks/services/AutoMockService";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 
 export default {
-    title: "Pages/Database/Tasks/Ongoing tasks/RabbitMQ Sink",
+    title: "Pages/Tasks/Ongoing tasks/RabbitMQ Sink",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 
@@ -54,7 +54,7 @@ export const Default: StoryObj<RabbitMqSinkProps> = {
         databaseType: { control: "radio", options: ["sharded", "cluster", "singleNode"] },
     },
     play: async ({ canvas }) => {
-        const container = within(await canvas.findByTestId("rabbitmq-sinks"));
+        const container = within(await canvas.findByTestId("sinks"));
         await userEvent.click(await container.findByTitle(/Click for details/));
     },
 };

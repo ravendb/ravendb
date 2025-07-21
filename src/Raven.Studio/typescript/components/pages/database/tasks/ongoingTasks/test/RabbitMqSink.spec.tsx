@@ -4,7 +4,7 @@ import { rtlRender } from "test/rtlTestUtils";
 import { within } from "@testing-library/dom";
 import React from "react";
 
-const containerTestId = "rabbitmq-sinks";
+const containerTestId = "sinks";
 
 describe("RabbitMq Sink", function () {
     it("can render enabled", async () => {
@@ -12,7 +12,7 @@ describe("RabbitMq Sink", function () {
 
         const { screen, fireClick } = rtlRender(<Story />);
         const container = within(await screen.findByTestId(containerTestId));
-        expect(await container.findByText(/RABBITMQ SINK/)).toBeInTheDocument();
+        expect(await container.findByText(/RABBITMQ SINK/i)).toBeInTheDocument();
         expect(await container.findByText(/Enabled/)).toBeInTheDocument();
         expect(container.queryByText(/Disabled/)).not.toBeInTheDocument();
 

@@ -10,6 +10,7 @@ import {
 } from "components/common/RichPanel";
 import { OngoingTaskName, OngoingTaskResponsibleNode } from "../../shared/shared";
 import { ExternalReplicationTaskDistribution } from "../partials/ExternalReplicationTaskDistribution";
+import { Icon } from "components/common/Icon";
 
 interface ReplicationHubConnectedSinkPanelProps {
     data: OngoingTaskReplicationHubInfo;
@@ -25,6 +26,10 @@ export function ReplicationHubConnectedSinkPanel(props: ReplicationHubConnectedS
                     <OngoingTaskName task={data} canEdit={false} editUrl={undefined} />
                 </RichPanelInfo>
                 <RichPanelActions>
+                    <span>
+                        <Icon icon="pull-replication-agent" />
+                        Replication Sink
+                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                 </RichPanelActions>
             </RichPanelHeader>
