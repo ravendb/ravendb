@@ -32,7 +32,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents
             ConversationIdPrefix = conversationIdPrefix;
             if (expires.HasValue)
             {
-                ExpiresInSec = (int)expires.Value.TotalSeconds;
+                ConversationExpirationInSec = (int)expires.Value.TotalSeconds;
             }
         }
 
@@ -47,14 +47,14 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// Optional expiration duration. If provided, chat documents will expire (and be deleted)
         /// automatically after this time has passed since creation.
         /// </summary>
-        public int? ExpiresInSec { get; set; }
+        public int? ConversationExpirationInSec { get; set; }
 
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue
             {
                 [nameof(ConversationIdPrefix)] = ConversationIdPrefix, 
-                [nameof(ExpiresInSec)] = ExpiresInSec
+                [nameof(ConversationExpirationInSec)] = ConversationExpirationInSec
             };
         }
     }

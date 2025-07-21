@@ -4,6 +4,7 @@ using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
+using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
@@ -18,6 +19,7 @@ public sealed class GetAiAgentOperation : IMaintenanceOperation<GetAiAgentsRespo
 
     public GetAiAgentOperation(string agentId)
     {
+        ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
         _agentId = agentId;
     }
 
@@ -25,6 +27,7 @@ public sealed class GetAiAgentOperation : IMaintenanceOperation<GetAiAgentsRespo
     {
         return new GetAiAgentOperationCommand(_agentId);
     }
+
     private sealed class GetAiAgentOperationCommand : RavenCommand<GetAiAgentsResponse>
     {
         private readonly string _agentId;
