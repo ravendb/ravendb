@@ -108,7 +108,7 @@ public partial class IndexWriter
         {
             bool termFound = postingListId != Constants.IndexSearcher.InvalidId;
             Debug.Assert(termFound || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
-            _writer._entriesToTermsTracker.InsertEntries(entries);
+            _writer._entriesToTermsTracker.InsertEntries(entries, key.ToLong());
 
             if (entries.HasChanges)
             {
@@ -149,8 +149,6 @@ public partial class IndexWriter
                             throw new ArgumentOutOfRangeException(entriesToTermResult.ToString());
                     }
                 }
-                
-                _writer._entriesToTermsTracker.ProcessCurrentEntriesForTerm(key.ToLong());
             }
         }
         

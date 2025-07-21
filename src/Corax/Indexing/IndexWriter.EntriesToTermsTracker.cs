@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using Sparrow.Server.Utils.VxSort;
 using Voron;
@@ -21,9 +22,11 @@ public partial class IndexWriter
         private NativeList<long> _entriesForTermsAdditionsBufferTermId;
         private readonly List<long> _additionsForTerm, _removalsForTerm;
         private readonly HashSet<long> _entriesAlreadyAdded;
+        private long _termContainerId;
         
         public EntriesToTermsTracker(IndexWriter writer)
         {
+            _termContainerId = Constants.IndexWriter.InvalidPageId;
             _writer = writer;
             _entriesForTermsRemovalsBuffer = new(writer._entriesAllocator);
             _entriesForTermsAdditionsBufferEntryId.Initialize(_writer._entriesAllocator);
@@ -36,11 +39,15 @@ public partial class IndexWriter
         /// <summary>
         /// Gathers all entry IDs to be processed with the term.
         /// </summary>
-        public void InsertEntries(in EntriesModifications entries)
+        public void InsertEntries(in EntriesModifications entries, long termContainerId)
         {
+            Debug.Assert(_termContainerId == Constants.IndexWriter.InvalidPageId);
+            _termContainerId = termContainerId;
+
             SetRange(_additionsForTerm, entries.Additions);
             SetRange(_removalsForTerm, entries.Removals);
-         
+            ProcessCurrentEntries();
+            
             void SetRange(List<long> list, in NativeList<TermInEntryModification> span)
             {
                 list.Clear();
@@ -66,7 +73,7 @@ public partial class IndexWriter
         /// Prepares unique dataset for entriesToTerms tree.
         /// </summary>
         /// <param name="term">The term associated with entry IDs currently stored in _additionsForTerm and _removalsForTerm</param>
-        public void ProcessCurrentEntriesForTerm(long term)
+        private void ProcessCurrentEntries()
         {
             _entriesForTermsRemovalsBuffer.EnsureCapacityFor(_removalsForTerm.Count + _entriesForTermsRemovalsBuffer.Count);
             foreach (long removal in CollectionsMarshal.AsSpan(_removalsForTerm))
@@ -89,8 +96,10 @@ public partial class IndexWriter
                     continue;
                 
                 _entriesForTermsAdditionsBufferEntryId.AddUnsafe(addition);
-                _entriesForTermsAdditionsBufferTermId.AddUnsafe(term);
+                _entriesForTermsAdditionsBufferTermId.AddUnsafe(_termContainerId);
             }
+
+            _termContainerId = Constants.IndexWriter.InvalidPageId;
         }
         
         /// <summary>

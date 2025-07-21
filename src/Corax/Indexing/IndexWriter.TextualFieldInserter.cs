@@ -178,7 +178,7 @@ public unsafe partial class IndexWriter
         {
             UpdateEntriesForTerm(ref _entriesForTerm, in entries);
             if (_indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
-                _writer._entriesToTermsTracker.InsertEntries(entries);
+                _writer._entriesToTermsTracker.InsertEntries(entries, termContainerId);
 
             bool found = postListId != Constants.IndexSearcher.InvalidId;
             Debug.Assert(found || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
@@ -242,13 +242,6 @@ public unsafe partial class IndexWriter
                 Debug.Assert(_virtualTermIdToTermContainerId[storageLocation] == Constants.IndexedField.Invalid,
                     "virtualMapping[entries.StorageLocation] == Constants.IndexedField.Invalid, Term was already set! Persisted: {_virtualTermIdToTermContainerId[storageLocation]}, new: {termContainerId}");
                 _virtualTermIdToTermContainerId[storageLocation] = termContainerId;
-            }
-
-
-            if (_indexedField.Spatial == null)
-            {
-                Debug.Assert(termContainerId > 0);
-                _writer._entriesToTermsTracker.ProcessCurrentEntriesForTerm(termContainerId);
             }
 
             return totalLengthOfTerm;
