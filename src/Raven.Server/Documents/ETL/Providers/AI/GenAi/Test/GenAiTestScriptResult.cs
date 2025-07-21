@@ -26,7 +26,7 @@ public class GenAiTestScriptResult : TestEtlScriptResult
     public override DynamicJsonValue ToJson(JsonOperationContext context)
     {
         var json = base.ToJson(context);
-        
+
         json[nameof(Status)] = Status;
 
         if (ModifiedDocument != null)
@@ -40,14 +40,12 @@ public class GenAiTestScriptResult : TestEtlScriptResult
         if (Results != null)
             json[nameof(Results)] = new DynamicJsonArray(Results.Select(x => x.ToJson()));
 
-        DynamicJsonValue dbg = null;
+        DynamicJsonValue dbg = new()
+        {
+            [nameof(DebugOutput)] = new DynamicJsonArray(DebugOutput),
+            [nameof(DebugActions)] = DebugActions
+        };
 
-        if (DebugOutput?.Count > 0)
-            dbg = new DynamicJsonValue { [nameof(DebugOutput)] = new DynamicJsonArray(DebugOutput ?? []) };
-
-        if (DebugActions != null)
-            (dbg ??= new DynamicJsonValue())[nameof(DebugActions)] = DebugActions;
-        
         json[nameof(PatchResult.Debug)] = dbg;
 
         return json;

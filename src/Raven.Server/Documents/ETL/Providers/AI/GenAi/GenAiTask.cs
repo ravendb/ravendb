@@ -433,7 +433,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                             patchIfMissing: default,
                             createIfMissing: null,
                             identityPartsSeparator: Database.IdentityPartsSeparator,
-                            isTest: true,
+                            isTest: false,
                             debugMode: true,
                             collectResultsNeeded: true,
                             returnDocument: false,
