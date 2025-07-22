@@ -77,9 +77,9 @@ export const Summary: StoryObj = {
 };
 
 async function navigateToStep(canvas: Canvas, step: EditGenAiTaskStepId) {
-    await userEvent.type(await canvas.findByLabelText("Task Name"), "some-name");
+    await userEvent.type(await canvas.findByLabelText("Task Name"), "ai-name-gen-ai");
     await userEvent.click(canvas.getByText("Select..."));
-    await userEvent.click(canvas.getByText("ai-name"));
+    await userEvent.click(canvas.getByText("ai-name-gen-ai"));
 
     if (step === "basic") {
         return;
