@@ -74,7 +74,6 @@ export default function IndexFilter(props: IndexFilterProps) {
         );
     };
 
-    console.log("@@filetrs", filter);
     return (
         <div className="hstack flex-wrap align-items-end gap-3 my-3 justify-content-end">
             <div className="flex-grow">
