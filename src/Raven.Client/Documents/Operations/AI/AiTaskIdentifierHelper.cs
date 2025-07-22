@@ -9,7 +9,6 @@ namespace Raven.Client.Documents.Operations.AI;
 
 internal static class AiTaskIdentifierHelper
 {
-
     internal static bool ValidateIdentifier(string identifier, out List<string> errors)
     {
         errors = [];

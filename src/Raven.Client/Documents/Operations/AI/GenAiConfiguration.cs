@@ -61,12 +61,15 @@ public class GenAiConfiguration : AbstractAiIntegrationConfiguration
         }
     }
 
-    public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
+    public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true)
     {
         if (validateConnection && Initialized == false)
             throw new InvalidOperationException("GenAi configuration must be initialized");
 
         errors = [];
+
+        if (validateIdentifier && AiTaskIdentifierHelper.ValidateIdentifier(Identifier, out var idErrors) == false)
+            errors.AddRange(idErrors);
 
         if (validateName && string.IsNullOrEmpty(Name))
             errors.Add($"{nameof(Name)} of GenAi configuration cannot be empty");

@@ -230,7 +230,7 @@ for(const comment of this.Comments)
 this.Comments[idx].LegitComment = $output.Blocked == false;
 ";
         config.UpdateScript = newUpdateScript;
-
+        config.Identifier = AiTaskIdentifierHelper.GenerateIdentifier(config.Name);
         store.Maintenance.Send(new UpdateGenAiOperation(taskId, config));
 
         op = new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi);

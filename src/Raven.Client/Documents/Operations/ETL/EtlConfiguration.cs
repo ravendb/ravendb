@@ -49,7 +49,7 @@ namespace Raven.Client.Documents.Operations.ETL
 
         public bool Disabled { get; set; }
 
-        public virtual bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
+        public virtual bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true)
         {
             if (validateConnection && Initialized == false)
                 throw new InvalidOperationException("ETL configuration must be initialized");

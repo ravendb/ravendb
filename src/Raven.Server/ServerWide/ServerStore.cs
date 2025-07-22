@@ -2229,9 +2229,10 @@ namespace Raven.Server.ServerWide
                         }
 
                         aiIntegration.Initialize(cs);
+                        if (string.IsNullOrWhiteSpace(aiIntegration.Identifier))
+                            aiIntegration.Identifier = AiTaskIdentifierHelper.GenerateIdentifier(aiIntegration.Name);
+
                         aiIntegration.Validate(out var aiIntegrationErr, validateName: false, validateConnection: true);
-                        AiTaskIdentifierHelper.ValidateIdentifier(aiIntegration.Identifier, out var idErrors);
-                        aiIntegrationErr.AddRange(idErrors);
                         if (ValidateConnectionString(rawRecord, aiIntegration.ConnectionStringName, aiIntegration.EtlType) == false)
                             aiIntegrationErr.Add(
                                 $"Could not find connection string named '{aiIntegration.ConnectionStringName}'. Please supply an existing connection string.");
@@ -2252,9 +2253,10 @@ namespace Raven.Server.ServerWide
                         }
 
                         genAi.Initialize(cs);
+                        if (string.IsNullOrWhiteSpace(genAi.Identifier))
+                            genAi.Identifier = AiTaskIdentifierHelper.GenerateIdentifier(genAi.Name);
+
                         genAi.Validate(out var genAiErr, validateName: false, validateConnection: true);
-                        AiTaskIdentifierHelper.ValidateIdentifier(genAi.Identifier,  out var idErrors);
-                        genAiErr.AddRange(idErrors);
                         if (ValidateConnectionString(rawRecord, genAi.ConnectionStringName, genAi.EtlType) == false)
                             genAiErr.Add($"Could not find connection string named '{genAi.ConnectionStringName}'. Please supply an existing connection string.");
                         ThrowInvalidConfigurationIfNecessary(etlConfiguration, genAiErr);
@@ -2478,6 +2480,7 @@ namespace Raven.Server.ServerWide
 
                     case EtlType.EmbeddingsGeneration:
                         var aiIntegration = JsonDeserializationCluster.EmbeddingsGenerationConfiguration(etlConfiguration);
+
                         aiIntegration.Validate(out var aiIntegrationErr, validateName: false, validateConnection: false);
                         if (ValidateConnectionString(rawRecord, aiIntegration.ConnectionStringName, aiIntegration.EtlType) == false)
                             aiIntegrationErr.Add($"Could not find AI connection string named '{aiIntegration.ConnectionStringName}'. Please supply an existing connection string.");
@@ -2488,6 +2491,7 @@ namespace Raven.Server.ServerWide
                         break;
                     case EtlType.GenAi:
                         var genAi = JsonDeserializationCluster.GenAiConfiguration(etlConfiguration);
+
                         genAi.Validate(out var genAiErr, validateName: false, validateConnection: false);
                         if (ValidateConnectionString(rawRecord, genAi.ConnectionStringName, genAi.EtlType) == false)
                             genAiErr.Add($"Could not find AI connection string named '{genAi.ConnectionStringName}'. Please supply an existing connection string.");
@@ -2569,10 +2573,12 @@ namespace Raven.Server.ServerWide
                         raftRequestId);
                     break;
                 case ConnectionStringType.Ai:
-                    connectionString.TryGetMember(nameof(AiConnectionString.Identifier), out var identifier);
-                    if (AiTaskIdentifierHelper.ValidateIdentifier(identifier.ToString(), out var errors) == false)
-                        ThrowInvalidConfigurationIfNecessary(connectionString, errors);
-                    command = new PutAiConnectionStringCommand(JsonDeserializationCluster.AiConnectionString(connectionString), databaseName, raftRequestId);
+                    var aiCs = JsonDeserializationCluster.AiConnectionString(connectionString);
+                    if (string.IsNullOrWhiteSpace(aiCs.Identifier))
+                        aiCs.Identifier = AiTaskIdentifierHelper.GenerateIdentifier(aiCs.Name);
+                    if (AiTaskIdentifierHelper.ValidateIdentifier(aiCs.Identifier, out var idErrors) == false)
+                        ThrowInvalidConfigurationIfNecessary(connectionString, idErrors);
+                    command = new PutAiConnectionStringCommand(aiCs, databaseName, raftRequestId);
                     break;
                 default:
                     throw new NotSupportedException($"Unknown connection string type: {connectionStringType}");
