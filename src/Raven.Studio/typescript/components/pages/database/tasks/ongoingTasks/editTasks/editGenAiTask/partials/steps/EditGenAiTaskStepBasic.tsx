@@ -113,7 +113,7 @@ export function EditGenAiTaskStepBasicFooter() {
     );
 }
 
-const getConnectorType = (
+export const getConnectorType = (
     connection: Raven.Client.Documents.Operations.AI.AiConnectionString
 ): Raven.Client.Documents.Operations.AI.AiConnectorType => {
     if (connection.AzureOpenAiSettings) {
