@@ -27,7 +27,8 @@ export default function AiAgents() {
             return [];
         }
 
-        return await aiAgentService.getAiAgents(db.name);
+        const result = await aiAgentService.getAiAgents(db.name);
+        return result.AiAgents;
     }, [db.name]);
 
     const [nameFilter, setNameFilter] = useState("");

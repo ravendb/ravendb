@@ -1,4 +1,3 @@
-import genUtils from "common/generalUtils";
 import { AiAgentTrimmingMethod, EditAiAgentFormData } from "./editAiAgentValidation";
 import { TimeInSeconds } from "common/constants/timeInSeconds";
 
@@ -51,7 +50,7 @@ function mapFromDto(
         outputSchema: dto.OutputSchema,
         isEnableDocumentExpiration: !isDocumentExpirationEnabled,
         persistenceConversationIdPrefix: dto.Persistence.ConversationIdPrefix,
-        persistenceExpiresInSeconds: dto.Persistence.Expires ? Number(dto.Persistence.Expires) / 1000 : null,
+        persistenceExpiresInSeconds: dto.Persistence.ConversationExpirationInSec,
         parameterInput: "",
         parameters:
             dto.Parameters?.map((x) => ({
@@ -80,9 +79,7 @@ function mapFromDto(
         maxModelIterationsPerCall: dto.MaxModelIterationsPerCall,
         trimming: {
             method: getTrimmingMethod(dto),
-            historyExpirationInSeconds: dto.ChatTrimming?.History?.HistoryExpiration
-                ? Number(dto.ChatTrimming.History.HistoryExpiration) / 1000
-                : null,
+            historyExpirationInSeconds: dto.ChatTrimming?.History?.HistoryExpirationInSec,
             messagesLengthBeforeTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthBeforeTruncate,
             messagesLengthAfterTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthAfterTruncate,
             maxTokensBeforeSummarization: dto.ChatTrimming?.Tokens?.MaxTokensBeforeSummarization,
@@ -127,9 +124,9 @@ function mapToDto(
         SampleObject: formData.sampleObject,
         Persistence: {
             ConversationIdPrefix: formData.persistenceConversationIdPrefix,
-            Expires:
+            ConversationExpirationInSec:
                 isDocumentExpirationEnabled || formData.isEnableDocumentExpiration
-                    ? genUtils.formatAsTimeSpan(formData.persistenceExpiresInSeconds * 1000)
+                    ? formData.persistenceExpiresInSeconds
                     : null,
         },
         Parameters: formData.parameters?.map((x) => x.name) ?? [],
@@ -154,9 +151,7 @@ function mapToDto(
                 ? {
                       History: formData.trimming.historyExpirationInSeconds
                           ? {
-                                HistoryExpiration: genUtils.formatAsTimeSpan(
-                                    formData.trimming.historyExpirationInSeconds * 1000
-                                ),
+                                HistoryExpirationInSec: formData.trimming.historyExpirationInSeconds,
                             }
                           : null,
                       Tokens:

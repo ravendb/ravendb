@@ -91,7 +91,7 @@ const getConfig = createAsyncThunk(
         id: string;
     }): Promise<Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration> => {
         const agents = await services.aiAgentService.getAiAgents(payload.databaseName, payload.id);
-        return agents[0];
+        return agents.AiAgents[0];
     }
 );
 

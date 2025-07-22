@@ -51,7 +51,11 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
             if (queryParams?.id) {
                 const agents = await aiAgentService.getAiAgents(databaseName, queryParams.id);
-                return editAiAgentUtils.mapFromDto(agents[0], queryParams.isClone, isDocumentExpirationEnabled);
+                return editAiAgentUtils.mapFromDto(
+                    agents.AiAgents[0],
+                    queryParams.isClone,
+                    isDocumentExpirationEnabled
+                );
             } else {
                 return editAiAgentUtils.mapFromDto(null, false, isDocumentExpirationEnabled);
             }
