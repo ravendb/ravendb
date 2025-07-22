@@ -14,9 +14,14 @@ import Row from "react-bootstrap/Row";
 import { useState } from "react";
 import FeatureNotAvailable from "components/common/FeatureNotAvailable";
 import AiAgentCard from "./partials/AiAgentCard";
+import { ConditionalPopover } from "components/common/ConditionalPopover";
+import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import classNames from "classnames";
 
 export default function AiAgents() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
+    const hasAiAgent = useAppSelector(licenseSelectors.statusValue("HasAiAgent"));
 
     const { appUrl } = useAppUrls();
 
@@ -50,10 +55,22 @@ export default function AiAgents() {
                 <AboutViewHeading title="AI Agents" icon="ai-agents" marginBottom={4} />
                 <AiAgentsInfoHub />
             </div>
-            <a href={appUrl.forEditAiAgent(db.name)} className="btn btn-primary rounded-pill">
-                <Icon icon="plus" />
-                Add new
-            </a>
+            <ConditionalPopover
+                conditions={{
+                    isActive: !hasAiAgent,
+                    message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                }}
+            >
+                <a
+                    href={appUrl.forEditAiAgent(db.name)}
+                    className={classNames("btn btn-primary rounded-pill", {
+                        disabled: !hasAiAgent,
+                    })}
+                >
+                    <Icon icon="plus" />
+                    Add new
+                </a>
+            </ConditionalPopover>
             <div className="d-flex flex-column flex-grow mt-4">
                 <div className="small-label ms-1 mb-1">Filter by name</div>
                 <div className="clearable-input">
