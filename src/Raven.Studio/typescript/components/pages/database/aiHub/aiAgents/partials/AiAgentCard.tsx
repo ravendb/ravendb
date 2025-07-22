@@ -8,19 +8,23 @@ import { Icon } from "components/common/Icon";
 import { useAsyncCallback } from "react-async-hook";
 import Col from "react-bootstrap/Col";
 import Dropdown from "react-bootstrap/Dropdown";
+import Spinner from "react-bootstrap/Spinner";
 
 interface AiAgentCardProps {
     config: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
+    reloadAiAgents: () => void;
 }
 
-export default function AiAgentCard({ config }: AiAgentCardProps) {
+export default function AiAgentCard({ config, reloadAiAgents }: AiAgentCardProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { aiAgentService } = useServices();
     const confirm = useConfirm();
 
     const { appUrl } = useAppUrls();
 
-    const asyncDeleteAiAgent = useAsyncCallback(() => aiAgentService.deleteAiAgent(databaseName, config.Identifier));
+    const asyncDeleteAiAgent = useAsyncCallback(() => aiAgentService.deleteAiAgent(databaseName, config.Identifier), {
+        onSuccess: reloadAiAgents,
+    });
 
     const handleDelete = async () => {
         const isConfirmed = await confirm({
@@ -74,7 +78,12 @@ export default function AiAgentCard({ config }: AiAgentCardProps) {
                                 onClick={handleDelete}
                                 disabled={asyncDeleteAiAgent.loading}
                             >
-                                <Icon icon="trash" /> Delete agent
+                                {asyncDeleteAiAgent.loading ? (
+                                    <Spinner size="sm" className="me-1" />
+                                ) : (
+                                    <Icon icon="trash" />
+                                )}
+                                Delete agent
                             </Dropdown.Item>
                         </Dropdown.Menu>
                     </Dropdown>

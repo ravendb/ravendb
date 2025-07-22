@@ -87,7 +87,11 @@ export default function AiAgents() {
                         .filter((config) => config.Name.toLowerCase().includes(nameFilter.trim().toLowerCase()))
                         .sort((a, b) => a.Name.localeCompare(b.Name))
                         .map((config) => (
-                            <AiAgentCard key={config.Identifier} config={config} />
+                            <AiAgentCard
+                                key={config.Identifier}
+                                config={config}
+                                reloadAiAgents={asyncGetAiAgents.execute}
+                            />
                         ))}
                 </Row>
             )}
