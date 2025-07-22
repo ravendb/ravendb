@@ -8,17 +8,20 @@ import { Switch } from "components/common/Checkbox";
 import { SortDropdown, SortDropdownRadioList, sortItem } from "components/common/SortDropdown";
 import Button from "react-bootstrap/Button";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType;
 
 interface IndexFilterProps {
     filter: IndexFilterCriteria;
     setFilter: (x: IndexFilterCriteria) => void;
     filterByStatusOptions: InputItem<IndexStatus>[];
     filterByTypeOptions: InputItem<IndexType>[];
+    filterByEngineOptions: InputItem<SearchEngineType>[];
     indexesCount: number;
 }
 
 export default function IndexFilter(props: IndexFilterProps) {
-    const { filter, setFilter, filterByStatusOptions, filterByTypeOptions, indexesCount } = props;
+    const { filter, setFilter, filterByStatusOptions, filterByTypeOptions, filterByEngineOptions, indexesCount } =
+        props;
 
     // TODO sharding
 
@@ -71,6 +74,7 @@ export default function IndexFilter(props: IndexFilterProps) {
         );
     };
 
+    console.log("@@filetrs", filter);
     return (
         <div className="hstack flex-wrap align-items-end gap-3 my-3 justify-content-end">
             <div className="flex-grow">
@@ -109,6 +113,13 @@ export default function IndexFilter(props: IndexFilterProps) {
                 label="Filter by type"
                 selectedItems={filter.types}
                 setSelectedItems={(x) => onFilterValueChange("types", x)}
+                selectAllCount={indexesCount}
+            />
+            <MultiCheckboxToggle
+                inputItems={filterByEngineOptions}
+                label="Filter by engines"
+                selectedItems={filter.searchEngine}
+                setSelectedItems={(x) => onFilterValueChange("searchEngine", x)}
                 selectAllCount={indexesCount}
             />
             <div>

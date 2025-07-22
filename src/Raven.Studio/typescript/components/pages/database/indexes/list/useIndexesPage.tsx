@@ -43,6 +43,7 @@ import { databaseSelectors } from "components/common/shell/databaseSliceSelector
 import useBoolean from "components/hooks/useBoolean";
 import router from "plugins/router";
 import RichAlert from "components/common/RichAlert";
+import SearchEngineType = Raven.Client.Documents.Indexes.SearchEngineType;
 
 type IndexEvent =
     | Raven.Client.Documents.Changes.IndexChange
@@ -748,6 +749,16 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         ] satisfies InputItem<IndexType>[];
     }, [autoDatabaseLimit, staticDatabaseLimit, stats.indexes]);
 
+    const filterByEngineOptions: InputItem<SearchEngineType>[] = useMemo(() => {
+        const luceneCount = stats.indexes.filter((x) => x.searchEngine === "Lucene").length;
+        const coraxCount = stats.indexes.filter((x) => x.searchEngine === "Corax").length;
+
+        return [
+            { value: "Lucene", label: "Lucene", count: luceneCount },
+            { value: "Corax", label: "Corax", count: coraxCount },
+        ];
+    }, [stats.indexes]);
+
     const filterByStatusOptions: InputItem<IndexStatus>[] = useMemo(() => {
         let normal = 0,
             errorOrFaulty = 0,
@@ -800,6 +811,7 @@ export function useIndexesPage(stale: boolean, isImportOpen: boolean) {
         setFilter,
         filterByStatusOptions,
         filterByTypeOptions,
+        filterByEngineOptions,
         regularIndexes,
         groups,
         replacements,
@@ -845,6 +857,7 @@ export const defaultFilterCriteria: IndexFilterCriteria = {
     showOnlyIndexesWithIndexingErrors: false,
     searchText: "",
     sortBy: "name",
+    searchEngine: [],
     sortDirection: "asc",
     groupBy: "Collection",
 };
@@ -980,6 +993,14 @@ function matchesIndexType(index: IndexSharedInfo, types: IndexType[]) {
     );
 }
 
+function matchesIndexEngine(index: IndexSharedInfo, searchEngines: SearchEngineType[]): boolean {
+    if (!searchEngines || searchEngines.length === 0) {
+        return true;
+    }
+
+    return searchEngines.includes(index.searchEngine);
+}
+
 function indexMatchesFilter(
     index: IndexSharedInfo,
     filter: IndexFilterCriteria,
@@ -990,10 +1011,11 @@ function indexMatchesFilter(
     const indexingErrorsMatch =
         !filter.showOnlyIndexesWithIndexingErrors ||
         (filter.showOnlyIndexesWithIndexingErrors && index.nodesInfo.some((x) => x.details?.errorCount > 0));
+    const engineMatch = matchesIndexEngine(index, filter.searchEngine);
 
     const typeMatch = matchesIndexType(index, filter.types);
 
-    return nameMatch && statusMatch && indexingErrorsMatch && typeMatch;
+    return nameMatch && statusMatch && indexingErrorsMatch && typeMatch && engineMatch;
 }
 
 function getIndexInfoForDelete(indexes: IndexSharedInfo[]): DeleteIndexesConfirmBodyProps {
