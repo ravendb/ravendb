@@ -27,6 +27,7 @@ import EditAiAgentToolsSection from "./partials/EditAiAgentToolsSection";
 import EditAiAgentTrimmingSection from "./partials/EditAiAgentTrimmingSection";
 import EditAiAgentToolsAdvancedSection from "./partials/EditAiAgentToolsAdvancedSection";
 import { LoadingView } from "components/common/LoadingView";
+import { connectionStringsActions } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 
 interface QueryParams {
     id: string;
@@ -65,6 +66,11 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const { handleSubmit, formState, reset } = form;
     const { setIsDirty } = useDirtyFlag(formState.isDirty);
+
+    // Set connection strings view context
+    useEffect(() => {
+        dispatch(connectionStringsActions.viewContextSet("aiConnectionStrings"));
+    }, []);
 
     const testAreaResizable = useResizableWidth({
         initialWidth: 500,

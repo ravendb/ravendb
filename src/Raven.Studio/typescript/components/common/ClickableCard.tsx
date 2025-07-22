@@ -8,6 +8,7 @@ interface ClickableCardProps {
     description: string;
     isSelected: boolean;
     className?: string;
+    isDisabled?: boolean;
     onClick: () => void;
 }
 
@@ -18,6 +19,7 @@ export default function ClickableCard({
     title,
     isSelected,
     className,
+    isDisabled,
 }: ClickableCardProps) {
     return (
         <div
@@ -29,9 +31,12 @@ export default function ClickableCard({
                 {
                     "border-secondary": !isSelected,
                 },
+                {
+                    "opacity-50 cursor-not-allowed": isDisabled,
+                },
                 className
             )}
-            onClick={onClick}
+            onClick={isDisabled ? undefined : onClick}
         >
             <div className="text-emphasis hstack gap-2">
                 <div>

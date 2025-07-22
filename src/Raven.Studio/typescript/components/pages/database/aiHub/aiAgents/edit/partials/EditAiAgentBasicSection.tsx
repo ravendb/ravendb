@@ -130,7 +130,7 @@ export default function EditAiAgentBasicSection() {
                         </InputGroup.Text>
                         {isNewConnectionStringOpen && (
                             <EditConnectionStrings
-                                initialConnection={{ type: "Ai" }}
+                                initialConnection={{ type: "Ai", modelType: "Chat" }}
                                 afterSave={handleConnectionStringSave}
                                 afterClose={toggleIsNewConnectionStringOpen}
                             />

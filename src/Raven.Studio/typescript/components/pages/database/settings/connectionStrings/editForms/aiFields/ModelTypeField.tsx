@@ -7,13 +7,22 @@ import {
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
 import { FormLabel } from "components/common/Form";
 import ClickableCard from "components/common/ClickableCard";
+import { useAppSelector } from "components/store";
+import { connectionStringSelectors } from "../../store/connectionStringsSlice";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function ModelTypeField() {
+interface ModelTypeFieldProps {
+    initialModelType: FormData["modelType"];
+}
+
+export default function ModelTypeField({ initialModelType }: ModelTypeFieldProps) {
     const { control, setValue } = useFormContext<FormData>();
 
     const formValues = useWatch({ control });
+
+    const viewContext = useAppSelector(connectionStringSelectors.viewContext);
+    const isDisabled = viewContext === "aiConnectionStrings" && !!initialModelType;
 
     return (
         <div className="mb-2">
@@ -31,6 +40,7 @@ export default function ModelTypeField() {
                     className="w-50"
                     isSelected={formValues.modelType === "Chat"}
                     onClick={() => setValue("modelType", "Chat")}
+                    isDisabled={isDisabled}
                 />
                 <ClickableCard
                     icon="document2"
@@ -39,6 +49,7 @@ export default function ModelTypeField() {
                     className="w-50"
                     isSelected={formValues.modelType === "TextEmbeddings"}
                     onClick={() => setValue("modelType", "TextEmbeddings")}
+                    isDisabled={isDisabled}
                 />
             </div>
         </div>

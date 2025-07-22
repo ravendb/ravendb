@@ -127,7 +127,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         }
                     />
                 </div>
-                <ModelTypeField />
+                <ModelTypeField initialModelType={initialConnection.modelType} />
                 <div className="mb-2">
                     <FormLabel>Connector</FormLabel>
                     <FormSelect
