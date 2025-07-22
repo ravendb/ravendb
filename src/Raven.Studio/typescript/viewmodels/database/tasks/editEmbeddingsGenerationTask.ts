@@ -226,9 +226,11 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         return new getConnectionStringsCommand(this.db)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-                this.aiConnectionStrings(Object.values(result.AiConnectionStrings));
+                this.aiConnectionStrings(Object.values(result.AiConnectionStrings).filter(x => x.ModelType === "TextEmbeddings"));
 
-                const connectionStringsNames = Object.keys(result.AiConnectionStrings);
+                const connectionStringsNames = Object.keys(result.AiConnectionStrings).filter(key =>
+                    result.AiConnectionStrings[key].ModelType === "TextEmbeddings",
+                );
                 this.connectionStringsNames(typeUtils.sortBy(connectionStringsNames, x => x.toUpperCase()));
             });
     }

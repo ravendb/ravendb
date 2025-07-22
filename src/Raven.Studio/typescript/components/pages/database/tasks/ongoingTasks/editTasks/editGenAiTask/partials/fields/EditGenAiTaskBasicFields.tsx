@@ -41,7 +41,7 @@ export default function EditGenAiTaskBasicFields() {
 
         dispatch(editGenAiTaskActions.aiConnectionStringsSet(result.AiConnectionStrings));
 
-        const connectionStrings = Object.values(result.AiConnectionStrings).map((x) => x.Name);
+        const connectionStrings = Object.values(result.AiConnectionStrings).filter(x => x.ModelType === "Chat").map((x) => x.Name);
 
         return sortBy(connectionStrings, (x) => x.toUpperCase()).map(
             (x) => ({ value: x, label: x }) satisfies SelectOption
