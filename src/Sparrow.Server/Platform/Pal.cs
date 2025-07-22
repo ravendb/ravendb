@@ -39,6 +39,17 @@ namespace Sparrow.Server.Platform
                         $"{LIBRVNPAL} version '{cfg.pal_version}' mismatches this RavenDB instance version (set to '{PAL_VER}'). Did you forget to set new value in 'rvn_get_pal_ver()'");
                 }
 
+                if (PalConfiguration.WriteMode == RvnWriteMode.Auto)
+                {
+                    // set the actual write mode
+                    PalConfiguration.WriteMode = cfg.write_mode;
+                }
+
+                if (PalConfiguration.WriteMode != cfg.write_mode)
+                {
+                    throw new InvalidOperationException($"Requested write mode '{PalConfiguration.WriteMode}', actual write mode was set to '{cfg.write_mode}'");
+                }
+                
                 rc = rvn_get_system_information(out sysInfo, out errorCode);
             }
             catch (Exception ex)

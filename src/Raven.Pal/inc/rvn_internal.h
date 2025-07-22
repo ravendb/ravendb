@@ -10,6 +10,9 @@ uint64_t nextPowerOf2(uint64_t n);
 int32_t
 rvn_one_time_init(int32_t *detailed_error_code);
 
+int32_t
+rvn_io_ring_init(int32_t* detailed_error_code);
+
 EXPORT int32_t rvn_get_pal_ver();
 
 PRIVATE

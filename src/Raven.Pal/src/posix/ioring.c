@@ -537,11 +537,44 @@ int32_t rvn_write_io_ring(
 }
 
 PRIVATE int32_t
-rvn_one_time_init(int32_t *detailed_error_code)
+rvn_one_time_init(int32_t* detailed_error_code)
+{
+    switch (g_cfg.write_mode)
+    {
+        case rvn_write_mode_io_ring:
+            return rvn_io_ring_init(detailed_error_code);
+
+        case rvn_mode_default:
+            if (rvn_io_ring_init(detailed_error_code) == SUCCESS)
+            {
+                g_cfg.write_mode = rvn_write_mode_io_ring;
+                return SUCCESS;
+            }
+            // no break here, we want to fall through
+        case rvn_write_mode_vectored_file_io:
+            g_cfg.write_mode = rvn_write_mode_vectored_file_io;
+            return SUCCESS;
+
+        case rvn_write_mode_file_io:
+            g_cfg.write_mode = rvn_write_mode_file_io;
+            return SUCCESS;
+
+        default:
+            *detailed_error_code = ENOTSUP;
+            return FAIL_INVALID_CONFIGURATION;
+    }
+}
+
+
+PRIVATE int32_t
+rvn_io_ring_init(int32_t *detailed_error_code)
 {
     if (g_cfg.io_ring_queue_size < 0 ||
         !_io_ring_supported())
-        return SUCCESS; // not supported or disabled, that is fine...
+    {
+        *detailed_error_code = ENOTSUP;
+        return FAIL_CREATE_IO_RING; // not supported or disabled, that is fine...
+    }
 
     if (g_cfg.io_ring_queue_size < 3)
     {
@@ -555,16 +588,9 @@ rvn_one_time_init(int32_t *detailed_error_code)
     int rc = io_uring_queue_init_params(g_cfg.io_ring_queue_size, &g_worker.ring, &params);
     if (rc)
     {
-        // if we were expclitly asked to use io ring, we fail
-        if (g_cfg.write_mode == rvn_write_mode_io_ring)
-        {
-            *detailed_error_code = -rc;
-            return FAIL_CREATE_IO_RING;
-        }
-        // we tried, but failed, so we'll use vectored I/O instead
-        g_cfg.write_mode = rvn_write_mode_vectored_file_io;
-        g_worker = (struct worker){.eventfd = -1, .ring = {.ring_fd = -1}};
-        return SUCCESS;
+        *detailed_error_code = -rc;
+        rc = FAIL_CREATE_IO_RING;
+        goto error;
     }
     g_worker.eventfd = eventfd(0, EFD_CLOEXEC);
     if (g_worker.eventfd == -1)

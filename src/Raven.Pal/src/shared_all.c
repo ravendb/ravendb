@@ -33,7 +33,10 @@ int32_t rvn_startup_configure(struct rvn_configuration *cfg, int32_t *detailed_e
         g_cfg.memoryLockCallback = noop_void;
     if (!g_cfg.recoveryMemoryLockFailureCallback)
         g_cfg.recoveryMemoryLockFailureCallback = noop_bool;
-    return rvn_one_time_init(detailed_error_code);
+
+    int32_t rc = rvn_one_time_init(detailed_error_code);
+    cfg->write_mode = g_cfg.write_mode;
+    return rc;
 }
 
 EXPORT int32_t

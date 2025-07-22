@@ -333,27 +333,48 @@ exit:
 }
 
 PRIVATE int32_t
-rvn_one_time_init(int32_t *detailed_error_code)
+rvn_one_time_init(int32_t* detailed_error_code)
 {
-    if (g_cfg.io_ring_queue_size < 0 || !FillIoRingFunctions(&IoRing))
-        return SUCCESS; // not supported  or disabled, that is fine...
+    switch(g_cfg.write_mode)
+    {
+        case rvn_write_mode_io_ring:
+            return rvn_io_ring_init(detailed_error_code);
+       
+        case rvn_mode_default:
+            if (rvn_io_ring_init(detailed_error_code) == SUCCESS)
+            {
+                g_cfg.write_mode = rvn_write_mode_io_ring;
+                return SUCCESS;
+            }
+            // no break here, we want to fall through
+        case rvn_write_mode_file_io:
+            g_cfg.write_mode = rvn_write_mode_file_io;
+            return SUCCESS;
 
+        default:
+            *detailed_error_code = ERROR_NOT_SUPPORTED;
+            return FAIL_INVALID_CONFIGURATION;
+    }
+}
+
+PRIVATE int32_t
+rvn_io_ring_init(int32_t *detailed_error_code)
+{
+    if (g_cfg.io_ring_queue_size < 0 || !FillIoRingFunctions(&IoRing)) 
+    {
+        *detailed_error_code = ERROR_NOT_SUPPORTED;
+        return FAIL_CREATE_IO_RING; // not supported  or disabled, that is fine...
+    }
+    
+    int rc = SUCCESS;
     IORING_CREATE_FLAGS flags = {0};
     HRESULT hr = IoRing.CreateIoRing(IORING_VERSION_3, flags, g_cfg.io_ring_queue_size, g_cfg.io_ring_queue_size * 2, &IoRing.io_ring);
     if (FAILED(hr))
     {
-        // if we were expclitly asked to use io ring, we fail
-        if (g_cfg.write_mode == rvn_write_mode_io_ring)
-        {
-            *detailed_error_code = hr;
-            return FAIL_CREATE_IO_RING;
-        }
-        // we tried, but failed, so we'll use vectored I/O instead
-        g_cfg.write_mode = rvn_write_mode_file_io;
-        IoRing.io_ring = NULL;
-        return SUCCESS;
+        *detailed_error_code = GetLastError();
+        rc = FAIL_CREATE_IO_RING;
+        goto error;
     }
-    int rc = SUCCESS;
     IoRing.event = CreateEvent(NULL, TRUE, FALSE, NULL);
     if (IoRing.event == NULL)
     {

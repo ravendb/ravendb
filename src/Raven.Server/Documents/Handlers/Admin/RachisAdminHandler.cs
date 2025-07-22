@@ -32,6 +32,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Logging;
+using Sparrow.Server.Platform;
 
 namespace Raven.Server.Documents.Handlers.Admin
 {
@@ -200,6 +201,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                 var nodeInfo = ServerStore.GetNodeInfo();
                 var json = nodeInfo.ToJson();
                 json[nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason();
+                json[nameof(PalConfiguration.WriteMode)] = PalConfiguration.WriteMode;
 
                 context.Write(writer, json);
             }
