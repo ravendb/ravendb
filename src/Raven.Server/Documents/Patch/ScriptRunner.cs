@@ -907,6 +907,11 @@ namespace Raven.Server.Documents.Patch
                     {
                         [Constants.Documents.Metadata.ArchiveAt] = args[1].ToString()
                     };
+                    
+                    // add @archive-at field to args[0] for correct test patch results
+                    var obj = args[0].AsObject();
+                    var meta = obj.Get(Constants.Documents.Metadata.Key).AsObject();
+                    meta.Set(Constants.Documents.Metadata.ArchiveAt, args[1].ToString());
 
                     using (var updated = _docsCtx.ReadObject(doc.Data, archivedDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                     {

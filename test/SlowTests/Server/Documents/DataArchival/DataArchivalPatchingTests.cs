@@ -12,6 +12,7 @@ using Raven.Client.Documents.Queries;
 using Raven.Client.Util;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -279,6 +280,37 @@ public class DataArchivalPatchingTests : RavenTestBase
                 // Make sure that the company is skipped while indexing
                 var companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
                 Assert.Equal(0, companies.Count);
+            }
+        }
+    }
+
+    [RavenFact(RavenTestCategory.Patching)]
+    public void CanTestPatches()
+    {
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(new Post { Title = "Post 1", Comments = new Post[] { } });
+
+                session.SaveChanges();
+            }
+
+            using (var commands = store.Commands())
+            {
+                var command = new PatchOperation.PatchCommand(store.Conventions,
+                    commands.Context,
+                    "posts/1-A",
+                    null,
+                    new PatchRequest { Script = "archived.archiveAt(this, \"2025-06-08T10:21:00.0000000Z\");"},
+                    patchIfMissing: null,
+                    skipPatchIfChangeVectorMismatch: false,
+                    returnDebugInformation: false,
+                    test: true);
+
+                commands.RequestExecutor.Execute(command, commands.Context);
+                var metadata = command.Result.ModifiedDocument[Constants.Documents.Metadata.Key] as BlittableJsonReaderObject;
+                Assert.True(metadata.TryGet(Constants.Documents.Metadata.ArchiveAt, out object _));
             }
         }
     }
