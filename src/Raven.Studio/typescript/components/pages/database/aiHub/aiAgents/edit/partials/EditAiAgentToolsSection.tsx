@@ -160,7 +160,7 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
     });
 
     const handleSave = async () => {
-        const isValid = await trigger([`queries.${index}.query`]);
+        const isValid = await trigger([`queries.${index}`]);
         if (!isValid) {
             return;
         }
@@ -266,7 +266,7 @@ function ActionField({ index, remove, save, edit, cancelEdit }: ActionFieldProps
     });
 
     const handleSave = async () => {
-        const isValid = await trigger([`actions.${index}.parametersSchema`]);
+        const isValid = await trigger([`actions.${index}`]);
         if (!isValid) {
             return;
         }
