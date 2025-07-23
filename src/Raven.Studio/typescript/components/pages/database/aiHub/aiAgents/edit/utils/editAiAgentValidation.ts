@@ -37,7 +37,10 @@ const schema = yup.object({
     isToolsAdvancedSettings: yup.boolean(),
     queries: yup.array().of(
         yup.object({
-            name: yup.string().required(),
+            name: yup
+                .string()
+                .required()
+                .matches(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens"),
             description: yup.string().required(),
             query: yup.string().required(),
             parametersSampleObject: yup.string(),
@@ -56,7 +59,10 @@ const schema = yup.object({
     ),
     actions: yup.array().of(
         yup.object({
-            name: yup.string().required(),
+            name: yup
+                .string()
+                .required()
+                .matches(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens"),
             description: yup.string().required(),
             parametersSampleObject: yup.string(),
             parametersSchema: yup
