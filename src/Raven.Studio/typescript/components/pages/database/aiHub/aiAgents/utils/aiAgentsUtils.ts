@@ -2,7 +2,7 @@ import moment from "moment";
 import { AiAgentDocMessage, AiAgentMessage } from "./aiAgentsTypes";
 
 function getContentFromDoc(docMessage: AiAgentDocMessage): string {
-    if (docMessage.content && (docMessage.role === "assistant" || docMessage.role === "tool")) {
+    if (docMessage.content && docMessage.content.startsWith("{") && docMessage.content.endsWith("}")) {
         return JSON.stringify(JSON.parse(docMessage.content), null, 2);
     }
     return docMessage.content;

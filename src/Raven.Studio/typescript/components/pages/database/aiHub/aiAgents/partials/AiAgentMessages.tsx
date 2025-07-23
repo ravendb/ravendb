@@ -148,8 +148,6 @@ function ToolMessage({ message, type }: ToolMessageProps) {
                     readOnly
                     mode="json"
                     height="150px"
-                    wrapEnabled
-                    setOptions={{ indentedSoftWrap: false }}
                     actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
                 />
             )}
@@ -470,10 +468,12 @@ function getAgentAceEditorHeight(content: string): `${number}px` {
     }
 
     const lineHeight = 26;
-    const lineCount = content.split("\n").length + 1;
+    const minimumLineCount = 3;
+    const lineCount = content.split("\n").length + minimumLineCount;
 
     if (lineCount <= 12) {
-        return `${lineCount * lineHeight}px`;
+        const halfLineHeight = lineHeight / 2; // to show that there is more content
+        return `${lineCount * lineHeight + halfLineHeight}px`;
     }
 
     return "320px";
