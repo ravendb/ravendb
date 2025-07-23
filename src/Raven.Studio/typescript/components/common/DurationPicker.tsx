@@ -2,7 +2,7 @@ import classNames from "classnames";
 import React, { ChangeEvent, useEffect, useState } from "react";
 import Form from "react-bootstrap/Form";
 import FormGroup from "react-bootstrap/FormGroup";
-import FormLabel from "react-bootstrap/FormLabel";
+import InputGroup from "react-bootstrap/InputGroup";
 
 interface Duration {
     days: number;
@@ -54,50 +54,58 @@ export default function DurationPicker(props: DurationPickerProps) {
         <div className={classNames("d-flex gap-1", { "flex-grow-1": isFlexGrow })}>
             {showDays && (
                 <FormGroup controlId="days" className={classNames({ "flex-grow-1": isFlexGrow })}>
-                    <FormLabel className="small-label">Days</FormLabel>
-                    <Form.Control
-                        type="number"
-                        min={0}
-                        value={days ?? ""}
-                        placeholder={placeholder?.days}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setDays(getInputValue(e))}
-                        disabled={disabled}
-                    />
+                    <InputGroup>
+                        <Form.Control
+                            type="number"
+                            min={0}
+                            value={days ?? ""}
+                            placeholder={placeholder?.days}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setDays(getInputValue(e))}
+                            disabled={disabled}
+                        />
+                        <InputGroup.Text>Days</InputGroup.Text>
+                    </InputGroup>
                 </FormGroup>
             )}
             <FormGroup controlId="hours" className={classNames({ "flex-grow-1": isFlexGrow })}>
-                <FormLabel className="small-label">Hours</FormLabel>
-                <Form.Control
-                    type="number"
-                    min={0}
-                    value={hours ?? ""}
-                    placeholder={placeholder?.hours}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setHours(getInputValue(e))}
-                    disabled={disabled}
-                />
-            </FormGroup>
-            <FormGroup controlId="minutes" className={classNames({ "flex-grow-1": isFlexGrow })}>
-                <FormLabel className="small-label">Minutes</FormLabel>
-                <Form.Control
-                    type="number"
-                    min={0}
-                    value={minutes ?? ""}
-                    placeholder={placeholder?.minutes}
-                    onChange={(e: ChangeEvent<HTMLInputElement>) => setMinutes(getInputValue(e))}
-                    disabled={disabled}
-                />
-            </FormGroup>
-            {showSeconds && (
-                <FormGroup controlId="seconds" className={classNames({ "flex-grow-1": isFlexGrow })}>
-                    <FormLabel className="small-label">Seconds</FormLabel>
+                <InputGroup>
                     <Form.Control
                         type="number"
                         min={0}
-                        value={seconds ?? ""}
-                        placeholder={placeholder?.seconds}
-                        onChange={(e: ChangeEvent<HTMLInputElement>) => setSeconds(getInputValue(e))}
+                        value={hours ?? ""}
+                        placeholder={placeholder?.hours}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setHours(getInputValue(e))}
                         disabled={disabled}
                     />
+                    <InputGroup.Text>Hours</InputGroup.Text>
+                </InputGroup>
+            </FormGroup>
+            <FormGroup controlId="minutes" className={classNames({ "flex-grow-1": isFlexGrow })}>
+                <InputGroup>
+                    <Form.Control
+                        type="number"
+                        min={0}
+                        value={minutes ?? ""}
+                        placeholder={placeholder?.minutes}
+                        onChange={(e: ChangeEvent<HTMLInputElement>) => setMinutes(getInputValue(e))}
+                        disabled={disabled}
+                    />
+                    <InputGroup.Text>Minutes</InputGroup.Text>
+                </InputGroup>
+            </FormGroup>
+            {showSeconds && (
+                <FormGroup controlId="seconds" className={classNames({ "flex-grow-1": isFlexGrow })}>
+                    <InputGroup>
+                        <Form.Control
+                            type="number"
+                            min={0}
+                            value={seconds ?? ""}
+                            placeholder={placeholder?.seconds}
+                            onChange={(e: ChangeEvent<HTMLInputElement>) => setSeconds(getInputValue(e))}
+                            disabled={disabled}
+                        />
+                        <InputGroup.Text>Seconds</InputGroup.Text>
+                    </InputGroup>
                 </FormGroup>
             )}
         </div>

@@ -20,6 +20,7 @@ const schema = yup.object({
             }
         ),
     isEnableDocumentExpiration: yup.boolean(),
+    isDocumentExpireInCustomizeEnabled: yup.boolean(),
     persistenceConversationIdPrefix: yup.string().required(),
     persistenceExpiresInSeconds: yup.number().nullable().positive().integer(),
     parameterInput: yup.string().test("unique-parameter", "Parameter name must be unique", function (value) {

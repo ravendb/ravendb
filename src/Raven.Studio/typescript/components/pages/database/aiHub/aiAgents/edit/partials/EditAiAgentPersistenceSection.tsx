@@ -43,10 +43,20 @@ export default function EditAiAgentPersistenceSection() {
                 )}
                 {(formValues.isEnableDocumentExpiration || isDocumentExpirationEnabled.data) && (
                     <FormGroup>
-                        <FormLabel>
-                            Expire in <OptionalLabel />
-                        </FormLabel>
-                        <FormDurationPicker control={control} name="persistenceExpiresInSeconds" showDays isFlexGrow />
+                        <div className="d-flex mb-3 gap-2 align-items-center">
+                            <FormSwitch name="isDocumentExpireInCustomizeEnabled" control={control} />
+                            <FormLabel className="mb-0">
+                                Expire in <OptionalLabel />
+                            </FormLabel>
+                        </div>
+                        {formValues.isDocumentExpireInCustomizeEnabled && (
+                            <FormDurationPicker
+                                control={control}
+                                name="persistenceExpiresInSeconds"
+                                showDays
+                                isFlexGrow
+                            />
+                        )}
                     </FormGroup>
                 )}
             </div>

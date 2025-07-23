@@ -15,6 +15,7 @@ function mapFromDto(
             sampleObject: "",
             outputSchema: "",
             isEnableDocumentExpiration: !isDocumentExpirationEnabled,
+            isDocumentExpireInCustomizeEnabled: false,
             persistenceConversationIdPrefix: "",
             persistenceExpiresInSeconds: TimeInSeconds.Day * 30,
             parameterInput: "",
@@ -49,6 +50,7 @@ function mapFromDto(
         sampleObject: dto.SampleObject,
         outputSchema: dto.OutputSchema,
         isEnableDocumentExpiration: !isDocumentExpirationEnabled,
+        isDocumentExpireInCustomizeEnabled: !!dto.Persistence.ConversationExpirationInSec,
         persistenceConversationIdPrefix: dto.Persistence.ConversationIdPrefix,
         persistenceExpiresInSeconds: dto.Persistence.ConversationExpirationInSec,
         parameterInput: "",
@@ -125,7 +127,8 @@ function mapToDto(
         Persistence: {
             ConversationIdPrefix: formData.persistenceConversationIdPrefix,
             ConversationExpirationInSec:
-                isDocumentExpirationEnabled || formData.isEnableDocumentExpiration
+                (isDocumentExpirationEnabled || formData.isEnableDocumentExpiration) &&
+                formData.isDocumentExpireInCustomizeEnabled
                     ? formData.persistenceExpiresInSeconds
                     : null,
         },
