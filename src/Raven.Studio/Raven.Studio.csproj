@@ -27,7 +27,7 @@
     <Compile Include="..\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <Target Name="PrepublishScript" BeforeTargets="PrepareForPublish">
-    <Exec Command="npm install" />
+    <Exec Command="npm ci" />
     <Exec Command="dotnet bundle" />
   </Target>
   <ItemGroup>

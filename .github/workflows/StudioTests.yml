@@ -30,7 +30,7 @@ jobs:
       run: dotnet build
 
     - name: Install npm dependencies
-      run: npm install
+      run: npm ci
       working-directory: ./src/Raven.Studio
   
     - name: Restore Studio
