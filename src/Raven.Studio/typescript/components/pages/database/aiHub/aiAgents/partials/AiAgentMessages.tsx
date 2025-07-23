@@ -16,6 +16,7 @@ import { getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable 
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import document from "models/database/documents/document";
 import Badge from "react-bootstrap/Badge";
+import AccordionCollapse from "react-bootstrap/AccordionCollapse";
 
 type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
 type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
@@ -412,9 +413,11 @@ function ToolCall({ toolCall, toolQueries, toolActions }: ToolCallProps) {
                         <div className="text-truncate">Tool call: {toolCall.name}</div>
                     </div>
                 </Accordion.Header>
-                <Accordion.Body className="panel-bg-3 rounded-2">
-                    <ToolCallBody tool={toolQuery ?? toolAction} toolCall={toolCall} />
-                </Accordion.Body>
+                <AccordionCollapse eventKey={id} mountOnEnter unmountOnExit>
+                    <Accordion.Body className="panel-bg-3 rounded-2">
+                        <ToolCallBody tool={toolQuery ?? toolAction} toolCall={toolCall} />
+                    </Accordion.Body>
+                </AccordionCollapse>
             </Accordion.Item>
         </Accordion>
     );
