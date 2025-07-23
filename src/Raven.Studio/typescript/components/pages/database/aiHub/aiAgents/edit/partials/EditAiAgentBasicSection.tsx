@@ -20,7 +20,11 @@ import { useAsync } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import InputGroup from "react-bootstrap/InputGroup";
 
-export default function EditAiAgentBasicSection() {
+interface EditAiAgentBasicSectionProps {
+    isEditAiAgent: boolean;
+}
+
+export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBasicSectionProps) {
     const { control, setValue } = useFormContext<EditAiAgentFormData>();
 
     const formValues = useWatch({
@@ -95,12 +99,14 @@ export default function EditAiAgentBasicSection() {
                         name="identifier"
                         type="text"
                         placeholder="e.g. customer-service-agent"
+                        disabled={isEditAiAgent}
                         addon={
                             <Button
                                 variant="link"
                                 className="text-reset px-0"
                                 onClick={handleGenerateIdentifier}
                                 title="Click to generate the identifier from the task name"
+                                disabled={isEditAiAgent}
                             >
                                 <Icon icon="refresh" />
                                 Regenerate

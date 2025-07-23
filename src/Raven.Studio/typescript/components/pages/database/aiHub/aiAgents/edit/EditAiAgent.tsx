@@ -44,6 +44,8 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const isTestOpen = useAppSelector(editAiAgentSelectors.isTestOpen);
     const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
 
+    const isEditAiAgent = !!queryParams?.id && !queryParams.isClone;
+
     const form = useForm<EditAiAgentFormData>({
         defaultValues: async () => {
             const isDocumentExpirationEnabled = await dispatch(
@@ -129,7 +131,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                         <LoadingView />
                                     ) : (
                                         <>
-                                            <EditAiAgentBasicSection />
+                                            <EditAiAgentBasicSection isEditAiAgent={isEditAiAgent} />
                                             <EditAiAgentPersistenceSection />
                                             <EditAiAgentParametersSection />
                                             <EditAiAgentToolsSection />
