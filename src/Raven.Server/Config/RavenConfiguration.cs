@@ -452,9 +452,9 @@ namespace Raven.Server.Config
         /// <summary>
         /// This method should only be used for testing purposes
         /// </summary>
-        internal static RavenConfiguration CreateForTesting(string name, ResourceType resourceType, string customConfigPath = null)
+        internal static RavenConfiguration CreateForTesting(string name, ResourceType resourceType, string customConfigPath = null, bool skipEnvironmentVariables = true)
         {
-            return new RavenConfiguration(name, resourceType, customConfigPath, skipEnvironmentVariables: true);
+            return new RavenConfiguration(name, resourceType, customConfigPath, skipEnvironmentVariables);
         }
 
         private static string GenerateDefaultDataDirectory(string template, ResourceType type, string name)

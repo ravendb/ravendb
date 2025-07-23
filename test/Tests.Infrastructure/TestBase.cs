@@ -189,11 +189,15 @@ namespace FastTests
                 AllocationsLoggingCount = RavenConfiguration.Default.DebugConfiguration.AllocationsLoggingCount
             });
 
-            var configuration = RavenConfiguration.CreateForTesting("Tests", ResourceType.Server);
+            var configuration = RavenConfiguration.CreateForTesting("Tests", ResourceType.Server, skipEnvironmentVariables: false);
             configuration.Initialize();
             configuration.Logs.MinLevel = LogLevel.Off;
 
             RavenLogManager.Instance.ConfigureLogging(configuration);
+            
+            PalConfiguration.LowPriorityIo = configuration.Storage.LowPriorityFlushAndSync;
+            PalConfiguration.WriteMode = configuration.Storage.WriteMode;
+            PalConfiguration.IoRingQueueSize = configuration.Storage.IoRingQueueSize;
 
             TrafficWatchToLog.Instance.UpdateConfiguration(RavenConfiguration.Default.TrafficWatch);
             EventListenerToLog.Instance.UpdateConfiguration(new EventListenerToLog.EventListenerConfiguration
