@@ -2,7 +2,7 @@
 
 public class AiAssistResponseBase
 {
-    public AiResponseStatus ResponseStatus { get; set; }
+    public AiAssistantResponseStatus ResponseStatus { get; set; }
     public int InputTokenCount { get; set; }
     public int OutputTokenCount { get; set; }
 }

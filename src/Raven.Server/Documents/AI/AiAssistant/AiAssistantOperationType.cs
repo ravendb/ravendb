@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.AI.AiAssistant;
 
-public enum AiOperationType
+public enum AiAssistantOperationType
 {
     RefineText,
 }

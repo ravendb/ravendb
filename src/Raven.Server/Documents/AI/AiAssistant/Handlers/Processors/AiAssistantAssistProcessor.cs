@@ -21,16 +21,16 @@ internal class AiAssistantAssistProcessor([NotNull] RequestHandler requestHandle
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
             var requestBody = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "assist request");
-            var operationTypeFound = requestBody.TryGetMember(nameof(AiOperationType), out var operationTypeObject);
-            PortableExceptions.ThrowIf<InvalidOperationException>(operationTypeFound == false || operationTypeObject is not LazyStringValue, $"AiAssistant request requires '{nameof(AiOperationType)}', which wasn't provided.");
+            var operationTypeFound = requestBody.TryGetMember(nameof(AiAssistantOperationType), out var operationTypeObject);
+            PortableExceptions.ThrowIf<InvalidOperationException>(operationTypeFound == false || operationTypeObject is not LazyStringValue, $"AiAssistant request requires '{nameof(AiAssistantOperationType)}', which wasn't provided.");
 
-            if (operationTypeObject is not LazyStringValue operationTypeLsv || Enum.TryParse(operationTypeLsv, out AiOperationType operationType) == false)
-                throw new InvalidOperationException($"Couldn't parse {operationTypeObject} as '{nameof(AiOperationType)}'.");
+            if (operationTypeObject is not LazyStringValue operationTypeLsv || Enum.TryParse(operationTypeLsv, out AiAssistantOperationType operationType) == false)
+                throw new InvalidOperationException($"Couldn't parse {operationTypeObject} as '{nameof(AiAssistantOperationType)}'.");
             
             var request = operationType switch
             {
-                AiOperationType.RefineText => GetRefineTextGenAiRequestBody(requestBody),
-                _ => throw new NotSupportedException($"Unsupported {nameof(AiOperationType)} - '{operationType}'")
+                AiAssistantOperationType.RefineText => GetRefineTextGenAiRequestBody(requestBody),
+                _ => throw new NotSupportedException($"Unsupported {nameof(AiAssistantOperationType)} - '{operationType}'")
             };
             
             using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
@@ -54,7 +54,7 @@ internal class AiAssistantAssistProcessor([NotNull] RequestHandler requestHandle
     
     private string GetRefineTextGenAiRequestBody(BlittableJsonReaderObject requestBody)
     {
-        RefineTextRequest request = JsonDeserializationServer.RefineTextGenAi(requestBody);
+        RefineTextRequest request = JsonDeserializationServer.RefineTextRequest(requestBody);
         FulfillRequestMetadata(request);
         
         return JsonConvert.SerializeObject(request);

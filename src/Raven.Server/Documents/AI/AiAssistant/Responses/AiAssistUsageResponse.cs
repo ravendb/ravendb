@@ -5,5 +5,5 @@ public class AiAssistUsageResponse
     /// <summary>
     /// The percentage of used tokens.
     /// </summary>
-    public int UsagePercent { get; set; }
+    public int UsagePercentage { get; set; }
 }

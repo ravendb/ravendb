@@ -1,6 +1,6 @@
 ﻿namespace Raven.Server.Documents.AI.AiAssistant.Responses;
 
-public enum AiResponseStatus
+public enum AiAssistantResponseStatus
 {
     Success,
     InvalidCredentials,
