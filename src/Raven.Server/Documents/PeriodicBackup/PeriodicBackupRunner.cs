@@ -467,8 +467,7 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 using (_database.PreventFromUnloadingByIdleOperations())
                 {
-                    periodicBackup.RunningTask = backupTask.ToRunningBackupTask(tcs.Task);
-                    backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
+                    backupResult = backupTask.RunPeriodicBackup(onProgress, periodicBackup, tcs.Task, ref runningBackupStatus);
 
                     periodicBackup.BackupStatus = runningBackupStatus;
                     ScheduleNextBackup(periodicBackup, backupResult?.Elapsed, lockTaken: false);

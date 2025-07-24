@@ -59,8 +59,7 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
 
                             using (RequestHandler.Database.PreventFromUnloadingByIdleOperations())
                             {
-                                var runningBackupStatus = new PeriodicBackupStatus { TaskId = 0, BackupType = backupConfiguration.BackupType };
-                                var backupResult = backupTask.RunPeriodicBackup(onProgress, ref runningBackupStatus);
+                                var backupResult = backupTask.RunBackupDatabaseOnce(onProgress, backupConfiguration.BackupType, out var runningBackupStatus);
                                 BackupUtils.SaveBackupStatus(runningBackupStatus, RequestHandler.DatabaseName, RequestHandler.Database.ServerStore, Logger, backupResult);
                                 tcs.SetResult(backupResult);
                             }

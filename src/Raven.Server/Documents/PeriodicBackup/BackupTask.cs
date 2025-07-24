@@ -91,7 +91,18 @@ namespace Raven.Server.Documents.PeriodicBackup
             };
         }
 
-        public BackupResult RunPeriodicBackup(Action<IOperationProgress> onProgress, ref PeriodicBackupStatus runningBackupStatus)
+        public BackupResult RunBackupDatabaseOnce(Action<IOperationProgress> onProgress, BackupType backupType, out PeriodicBackupStatus runningBackupStatus)
+        {
+            runningBackupStatus = new PeriodicBackupStatus { TaskId = 0, BackupType = backupType };
+            return Run(onProgress, periodicBackup: null, task: null, ref runningBackupStatus);
+        }
+
+        public BackupResult RunPeriodicBackup(Action<IOperationProgress> onProgress, PeriodicBackup periodicBackup, Task task, ref PeriodicBackupStatus runningBackupStatus)
+        {
+            return Run(onProgress, periodicBackup, task, ref runningBackupStatus);
+        }
+
+        private BackupResult Run(Action<IOperationProgress> onProgress, PeriodicBackup periodicBackup, Task task, ref PeriodicBackupStatus runningBackupStatus)
         {
             _onProgress = onProgress;
             AddInfo($"Started task: '{_taskName}'");
@@ -101,6 +112,14 @@ namespace Raven.Server.Documents.PeriodicBackup
 
             try
             {
+                runningBackupStatus.IsFull = _isFullBackup;
+
+                // The PeriodicBackupRunner.OnGoingBackup method checks that RunningTask is not null and then returns RunningBackup,
+                // which contains the backup process's start time and whether it's a full backup or not.
+                // Therefore, it's crucial to assign RunningTask only after those fields in runningBackupStatus have been populated.
+                if (periodicBackup != null && task != null)
+                    periodicBackup.RunningTask = new PeriodicBackup.RunningBackupTask { Id = _operationId, Task = task };
+
                 _forTestingPurposes?.OnBackupTaskRunHoldBackupExecution?.Task.Wait();
                 if (_forTestingPurposes?.SimulateFailedBackup == true)
                     throw new Exception(nameof(_forTestingPurposes.SimulateFailedBackup));
@@ -108,8 +127,6 @@ namespace Raven.Server.Documents.PeriodicBackup
 
                 runningBackupStatus.LocalBackup ??= new LocalBackup();
                 runningBackupStatus.LastRaftIndex ??= new LastRaftIndex();
-
-                runningBackupStatus.IsFull = _isFullBackup;
 
                 if (_logger.IsInfoEnabled)
                 {
@@ -911,7 +928,5 @@ namespace Raven.Server.Documents.PeriodicBackup
         {
             return fileName.Length == LegacyDateTimeFormat.Length ? LegacyDateTimeFormat : DateTimeFormat;
         }
-
-        public PeriodicBackup.RunningBackupTask ToRunningBackupTask(Task task) => new() { Id = _operationId, Task = task };
     }
 }

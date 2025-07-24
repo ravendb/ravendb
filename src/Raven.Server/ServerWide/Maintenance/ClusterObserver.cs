@@ -687,7 +687,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     }
 
                     // Step 1: Find the MOST RECENT full backup for this task to use as our anchor
-                    var allHistoricalFullBackups = new List<(DateTime Time, long Etag)>();
+                    var allHistoricalFullBackups = new List<(DateTime Time, long RaftIndex)>();
                     foreach (var databaseState in mergedState.States.Values)
                     {
                         foreach (var nodeTag in databaseState.DatabaseTopology.AllNodes)
@@ -705,12 +705,12 @@ namespace Raven.Server.ServerWide.Maintenance
                     {
                         onDiagnosticLog?.Invoke($"[Task {backupConfig.TaskId}] No historical full backups found for this task. Tombstone cleanup is not constrained by current backup task.");
 
-                        allHistoricalFullBackups.Add((Time: utcNow, Etag: long.MaxValue));
+                        allHistoricalFullBackups.Add((Time: utcNow, RaftIndex: long.MaxValue));
                     }
 
                     var latestFullBackup = allHistoricalFullBackups.OrderByDescending(b => b.Time).First();
 
-                    onDiagnosticLog?.Invoke($"[Task {backupConfig.TaskId}] Anchor backup identified: Time=`{latestFullBackup.Time:O}`, Etag=`{latestFullBackup.Etag}`. This backup defines the relevant cycle.");
+                    onDiagnosticLog?.Invoke($"[Task {backupConfig.TaskId}] Anchor backup identified: Time=`{latestFullBackup.Time:O}`, Etag=`{latestFullBackup.RaftIndex}`. This backup defines the relevant cycle.");
 
                     // Step 2: Based on the anchor, determine the start of its cycle
                     var schedule = CrontabSchedule.Parse(backupConfig.FullBackupFrequency);
@@ -721,7 +721,7 @@ namespace Raven.Server.ServerWide.Maintenance
                     // Step 3: Find all full backups that fall within THIS evidence-based cycle
                     var etagsInCycle = allHistoricalFullBackups
                         .Where(b => b.Time >= cycleStartTime)
-                        .Select(b => b.Etag)
+                        .Select(b => b.RaftIndex)
                         .ToList();
 
                     Debug.Assert(etagsInCycle.Count > 0, "The anchor backup must be present in its own cycle.");
