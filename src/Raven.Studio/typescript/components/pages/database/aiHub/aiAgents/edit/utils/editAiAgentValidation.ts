@@ -4,6 +4,7 @@ import * as yup from "yup";
 export type AiAgentTrimmingMethod = "Tokens" | "Truncate";
 
 const schema = yup.object({
+    // Basic
     name: yup.string().required(),
     identifier: yup.string().required(),
     connectionStringName: yup.string().required(),
@@ -19,10 +20,14 @@ const schema = yup.object({
                 return !!parent.sampleObject || !!parent.outputSchema;
             }
         ),
+
+    // Persistence
     isEnableDocumentExpiration: yup.boolean(),
     isDocumentExpireInCustomizeEnabled: yup.boolean(),
     persistenceConversationIdPrefix: yup.string().required(),
     persistenceExpiresInSeconds: yup.number().nullable().positive().integer(),
+
+    // Parameters
     parameterInput: yup.string().test("unique-parameter", "Parameter name must be unique", function (value) {
         if (!value) {
             return true;
@@ -35,7 +40,8 @@ const schema = yup.object({
             name: yup.string(),
         })
     ),
-    isToolsAdvancedSettings: yup.boolean(),
+
+    // Tools
     queries: yup.array().of(
         yup.object({
             name: yup
@@ -79,16 +85,26 @@ const schema = yup.object({
             isEditing: yup.boolean(),
         })
     ),
+
+    // Advanced
+    isToolsAdvancedSettings: yup.boolean(),
     maxModelIterationsPerCall: yup.number().nullable().positive().integer(),
 
+    // Trimming
     trimming: yup
         .object({
             method: yup.string<"Tokens" | "Truncate">().nullable(),
+
+            // History
             isEnableHistory: yup.boolean(),
             isSetHistoryExpiration: yup.boolean(),
             historyExpirationInSeconds: yup.number().nullable().positive().integer(),
+
+            // Truncate
             messagesLengthBeforeTruncate: yup.number().nullable().positive().integer(),
             messagesLengthAfterTruncate: yup.number().nullable().positive().integer(),
+
+            // Tokens
             maxTokensBeforeSummarization: yup.number().nullable().positive().integer(),
             maxTokensAfterSummarization: yup.number().nullable().positive().integer(),
             resultPrefix: yup.string().nullable(),
@@ -97,6 +113,7 @@ const schema = yup.object({
         })
         .nullable(),
 
+    // Test
     test: yup.object({
         prompt: yup.string().nullable(),
         parameters: yup.array().of(
