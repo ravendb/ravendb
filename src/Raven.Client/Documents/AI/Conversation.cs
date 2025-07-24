@@ -69,9 +69,9 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
     private T _answer;
     public T Answer => _answer ?? throw new InvalidOperationException($"You have to call {nameof(Run)}/{nameof(RunAsync)} first");
     public string Id => _conversationId ?? throw new InvalidOperationException($"This is a new conversation, the ID wasn't set yet, you have to call {nameof(Run)}/{nameof(RunAsync)}");
-    public bool Run() => AsyncHelpers.RunSync(() => RunAsync());
+    public ConversationResult Run() => AsyncHelpers.RunSync(() => RunAsync());
 
-    public async Task<bool> RunAsync(CancellationToken token = default)
+    public async Task<ConversationResult> RunAsync(CancellationToken token = default)
     {
         IMaintenanceOperation<ConversationResult<T>> op;
         if (string.IsNullOrWhiteSpace(_conversationId))
@@ -83,7 +83,7 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
             // we allow to run the conversation only if it is the first run with no user prompt or tool requests
             // this way we can fetch the pending actions
             if (_actionRequests != null && string.IsNullOrEmpty(_userPrompt) && _actionResponses.Count == 0)
-                return false;
+                return ConversationResult.Done;
 
             op = new RunConversationOperation<T>(_conversationId, _userPrompt, _actionResponses, _changeVector);
         }
@@ -108,6 +108,6 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
             _actionResponses.Clear();
         }
 
-        return _actionRequests.Count > 0;
+        return _actionRequests.Count > 0 ? ConversationResult.ActionRequired : ConversationResult.Done;
     }
 }

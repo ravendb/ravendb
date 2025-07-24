@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -85,20 +86,20 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         chat.SetUserPrompt("what goes well with my cheese?");
         var r = await chat.RunAsync(CancellationToken.None);
-        Assert.False(r);
+        Assert.Equal(ConversationResult.Done, r);
         
         Assert.NotNull(chat.Answer);
         Assert.NotNull(chat.Id);
 
         chat.SetUserPrompt("what goes well with my cheese?");
         r = await chat.RunAsync(CancellationToken.None);
-        Assert.False(r);
+        Assert.Equal(ConversationResult.Done, r);
 
         Assert.NotNull(chat.Answer);
 
         chat.SetUserPrompt("what cheese goes well with italian food?");
         r = await chat.RunAsync(CancellationToken.None);
-        Assert.False(r);
+        Assert.Equal(ConversationResult.Done, r);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -149,7 +150,7 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         var r = await chat.RunAsync(CancellationToken.None);
 
-        Assert.True(r);
+        Assert.Equal(ConversationResult.ActionRequired, r);
         Assert.NotNull(chat.Id);
 
         foreach (var request in chat.RequiredActions())
@@ -159,17 +160,17 @@ public class AiAgentClientApiBasics : RavenTestBase
        
         r = await chat.RunAsync(CancellationToken.None);
 
-        if (r)
+        if (r == ConversationResult.ActionRequired)
         {
             // agent could ask for action tools again
             Assert.True(chat.RequiredActions().Any());
-            Assert.NotNull(chat.Id);
         }
         else
         {
-            Assert.True(chat.Answer != null);
-            Assert.NotNull(chat.Id);
+            Assert.NotNull(chat.Answer);
         }
+
+        Assert.NotNull(chat.Id);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -224,13 +225,13 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         chat.SetUserPrompt("what goes well with my cheese?");
         var r = await chat.RunAsync(CancellationToken.None);
-        Assert.False(r);
+        Assert.Equal(ConversationResult.Done, r);
         
         Assert.NotNull(chat.Answer);
         Assert.NotNull(chat.Id);
 
         r = await chat.RunAsync(CancellationToken.None);
-        Assert.False(r);
+        Assert.Equal(ConversationResult.Done, r);
         Assert.Equal(0, chat.RequiredActions().ToList().Count);
 
         chat.AddActionResponse("foo","bar");
@@ -244,7 +245,7 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         chat.SetUserPrompt("what cheese goes well with italian food?");
         r = await chat.RunAsync(CancellationToken.None);
-        Assert.False(r);
+        Assert.Equal(ConversationResult.Done, r);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -288,7 +289,7 @@ public class AiAgentClientApiBasics : RavenTestBase
             p => p.AddParameter("company", "companies/90-A"));
         chat.SetUserPrompt("what goes well with my cheese?");
         var r = await chat.RunAsync(CancellationToken.None);
-        Assert.False(r);
+        Assert.Equal(ConversationResult.Done, r);
 
         chat = store.AI.ResumeConversation<OutputSchema>(chat.Id, "foo");
         chat.SetUserPrompt("Can you give me some alternatives?");
@@ -297,12 +298,12 @@ public class AiAgentClientApiBasics : RavenTestBase
 
         chat.SetUserPrompt("Can you give me some alternatives?");
         r = await chat.RunAsync(CancellationToken.None);
-        Assert.False(r);
+        Assert.Equal(ConversationResult.Done, r);
         Assert.NotNull(chat.ChangeVector);
 
         chat.SetUserPrompt("even better choice?");
         r = await chat.RunAsync(CancellationToken.None);
-        Assert.False(r);
+        Assert.Equal(ConversationResult.Done, r);
         Assert.NotNull(chat.ChangeVector);
     }
 }

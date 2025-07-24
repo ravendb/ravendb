@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -233,10 +234,8 @@ public class RavenDB_24407 : RavenTestBase
             agent.Identifier,
             builder: null);
         chat.SetUserPrompt("what goes well with my cheese for recent orders?");
-        var hasMore = await chat.RunAsync(CancellationToken.None);
-
-        Assert.True(hasMore);
-
+        var r = await chat.RunAsync(CancellationToken.None);
+        Assert.Equal(ConversationResult.ActionRequired, r);
 
         foreach (var req in chat.RequiredActions())
         {
@@ -249,11 +248,11 @@ public class RavenDB_24407 : RavenTestBase
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
         Assert.Equal(0, chatDoc.HistoryDocuments.Count);
 
-        hasMore = await chat.RunAsync(CancellationToken.None);
+        r = await chat.RunAsync(CancellationToken.None);
 
         // can be answer *OR* another tool call
         chatDoc = await GetChat(store, chat.Id);
-        if (hasMore)
+        if (r == ConversationResult.ActionRequired)
         {
             // if it is 'Tool Requests' is shouldn't be summarized
             Assert.True(2 < chatDoc.Messages.Count);
@@ -267,6 +266,8 @@ public class RavenDB_24407 : RavenTestBase
             Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
             Assert.Equal(withHistory ? 1 : 0, chatDoc.HistoryDocuments.Count);
         }
+
+        WaitForUserToContinueTheTest(store);
     }
 
     private async Task<Chat> GetChat(DocumentStore store, string chatId)

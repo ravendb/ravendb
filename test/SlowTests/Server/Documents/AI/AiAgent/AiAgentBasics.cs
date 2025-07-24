@@ -5,6 +5,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
@@ -79,9 +80,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 builder: p => p.AddParameter("company", "companies/90-A"));
 
             chat.SetUserPrompt("what goes well with my cheese?");
-            var hasMore = await chat.RunAsync(CancellationToken.None);
+            var r = await chat.RunAsync(CancellationToken.None);
 
-            Assert.False(hasMore);
+            Assert.Equal(ConversationResult.Done, r);
             Assert.NotNull(chat.Answer);
             Assert.NotNull(chat.Id);
 

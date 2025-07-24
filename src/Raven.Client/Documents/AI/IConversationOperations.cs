@@ -61,29 +61,33 @@ public interface IConversationOperations<out T> where T : new()
 
     /// <summary>
     /// Asynchronously executes one “turn” of the conversation:  
-    /// sends the current prompt, processes any required actions  
+    /// sends the current prompt, processes any required actions,  
     /// and awaits the agent’s reply.
     /// </summary>
     /// <param name="token">
-    /// A <see cref="CancellationToken"/> to cancel the operation.
+    /// A <see cref="CancellationToken"/> used to cancel the operation.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{Boolean}"/> that yields  
-    /// <c>true</c> if the agent requires further interaction  
-    /// (for example, there are pending tool requests);  
-    /// or <c>false</c> if the conversation has completed and a final answer is available.
+    /// A <see cref="Task{ConversationResult}"/> containing a <see cref="ConversationResult"/>  
+    /// indicating the outcome of the turn:
+    /// <list type="bullet">
+    /// <item><see cref="ConversationResult.ActionRequired"/> if the agent requires further interaction (e.g., pending tool requests).</item>
+    /// <item><see cref="ConversationResult.Done"/> if the conversation has completed and a final answer is available.</item>
+    /// </list>
     /// </returns>
-    Task<bool> RunAsync(CancellationToken token = default);
+    Task<ConversationResult> RunAsync(CancellationToken token = default);
 
     /// <summary>
     /// Synchronously executes one turn of the conversation.
     /// </summary>
     /// <returns>
-    /// <c>true</c> if more interaction is needed;
-    /// (for example, there are pending tool requests);  
-    /// <c>false</c> if the conversation has completed and a final answer is available.
+    /// A <see cref="ConversationResult"/> indicating the outcome of the turn:
+    /// <list type="bullet">
+    /// <item><see cref="ConversationResult.ActionRequired"/> if more interaction is needed (e.g., pending tool requests).</item>
+    /// <item><see cref="ConversationResult.Done"/> if the conversation has completed and a final answer is available.</item>
+    /// </list>
     /// </returns>
-    bool Run();
+    ConversationResult Run();
 
     /// <summary>
     /// Sets the next user prompt to send to the AI agent.

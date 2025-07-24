@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -412,26 +413,26 @@ public class AiAgentErrors : RavenTestBase
             builder: null);
 
         chat.SetUserPrompt("Can you answer Aviv questions?");
-        var more = await chat.RunAsync(CancellationToken.None);
+        var r = await chat.RunAsync(CancellationToken.None);
 
         var aviv = chat.Answer;
-        Assert.False(more);
+        Assert.Equal(ConversationResult.Done, r);
         Assert.NotNull(aviv.Answer);
         Assert.False(aviv.RefusedToAnswer);
 
         chat.SetUserPrompt("Can you answer Karmel questions?");
-        more = await chat.RunAsync(CancellationToken.None);
+        r = await chat.RunAsync(CancellationToken.None);
 
         var karmel = chat.Answer;
-        Assert.False(more);
+        Assert.Equal(ConversationResult.Done, r);
         Assert.NotNull(karmel.Answer);
         Assert.False(karmel.RefusedToAnswer);
 
         chat.SetUserPrompt("Can you answer Shahar questions?");
-        more = await chat.RunAsync(CancellationToken.None);
+        r = await chat.RunAsync(CancellationToken.None);
 
         var shahar = chat.Answer;
-        Assert.False(more);
+        Assert.Equal(ConversationResult.Done, r);
         Assert.NotNull(shahar.Answer);
         Assert.True(shahar.RefusedToAnswer);
     }
