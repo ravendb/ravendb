@@ -84,26 +84,16 @@ const schema = yup.object({
     trimming: yup
         .object({
             method: yup.string<"Tokens" | "Truncate">().nullable(),
+            isEnableHistory: yup.boolean(),
+            isSetHistoryExpiration: yup.boolean(),
             historyExpirationInSeconds: yup.number().nullable().positive().integer(),
             messagesLengthBeforeTruncate: yup.number().nullable().positive().integer(),
             messagesLengthAfterTruncate: yup.number().nullable().positive().integer(),
             maxTokensBeforeSummarization: yup.number().nullable().positive().integer(),
             maxTokensAfterSummarization: yup.number().nullable().positive().integer(),
             resultPrefix: yup.string().nullable(),
-            summarizationTaskBeginningPrompt: yup
-                .string()
-                .nullable()
-                .when("method", {
-                    is: "Tokens",
-                    then: (schema) => schema.required(),
-                }),
-            summarizationTaskEndPrompt: yup
-                .string()
-                .nullable()
-                .when("method", {
-                    is: "Tokens",
-                    then: (schema) => schema.required(),
-                }),
+            summarizationTaskBeginningPrompt: yup.string().nullable(),
+            summarizationTaskEndPrompt: yup.string().nullable(),
         })
         .nullable(),
 

@@ -1,26 +1,12 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
-.parameters-table {
-    background-color: colors.$panel-bg-2-var;
-    padding: sizes.$gutter-xxs;
-    border-radius: sizes.$gutter-xs;
-
-    thead {
-        background-color: colors.$panel-bg-2-var;
-    }
-
-    tbody {
-        border-radius: sizes.$gutter-xxs;
-        background-color: colors.$row-bg-var;
-
-        tr {
-            background-color: colors.$row-even-bg-var;
-
-            td {
-                border-right: 1px solid colors.$border-color-light-var;
-                background-color: colors.$row-even-bg-var;
-            }
+.edit-ai-agent {
+    .trimming-advanced {
+        .accordion-button {
+            border-radius: sizes.$gutter-sm !important;
+            padding: sizes.$gutter-sm !important;
+            background-color: colors.$panel-bg-2 !important;
         }
     }
 }

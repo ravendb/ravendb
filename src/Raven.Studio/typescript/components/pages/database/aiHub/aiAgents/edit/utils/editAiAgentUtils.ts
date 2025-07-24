@@ -26,6 +26,8 @@ function mapFromDto(
             maxModelIterationsPerCall: null,
             trimming: {
                 method: null,
+                isEnableHistory: false,
+                isSetHistoryExpiration: false,
                 historyExpirationInSeconds: null,
                 messagesLengthBeforeTruncate: null,
                 messagesLengthAfterTruncate: null,
@@ -81,6 +83,8 @@ function mapFromDto(
         maxModelIterationsPerCall: dto.MaxModelIterationsPerCall,
         trimming: {
             method: getTrimmingMethod(dto),
+            isEnableHistory: !!dto.ChatTrimming?.History,
+            isSetHistoryExpiration: !!dto.ChatTrimming?.History?.HistoryExpirationInSec,
             historyExpirationInSeconds: dto.ChatTrimming?.History?.HistoryExpirationInSec,
             messagesLengthBeforeTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthBeforeTruncate,
             messagesLengthAfterTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthAfterTruncate,
@@ -148,13 +152,15 @@ function mapToDto(
                 ParametersSampleObject: x.parametersSampleObject || null,
                 ParametersSchema: x.parametersSchema || null,
             })) ?? [],
-        MaxModelIterationsPerCall: formData.maxModelIterationsPerCall,
+        MaxModelIterationsPerCall: formData.isToolsAdvancedSettings ? formData.maxModelIterationsPerCall : null,
         ChatTrimming:
             formData.trimming?.method != null
                 ? {
-                      History: formData.trimming.historyExpirationInSeconds
+                      History: formData.trimming.isEnableHistory
                           ? {
-                                HistoryExpirationInSec: formData.trimming.historyExpirationInSeconds,
+                                HistoryExpirationInSec: formData.trimming.isSetHistoryExpiration
+                                    ? formData.trimming.historyExpirationInSeconds
+                                    : null,
                             }
                           : null,
                       Tokens:

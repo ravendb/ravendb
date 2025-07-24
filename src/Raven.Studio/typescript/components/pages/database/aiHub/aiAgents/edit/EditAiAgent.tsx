@@ -114,7 +114,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     return (
         <FormProvider {...form}>
-            <form onSubmit={handleSubmit(saveAgent)} className="h-100">
+            <form onSubmit={handleSubmit(saveAgent)} className="h-100 edit-ai-agent">
                 <SizeGetter
                     render={({ width }) => (
                         <div className="hstack h-100">

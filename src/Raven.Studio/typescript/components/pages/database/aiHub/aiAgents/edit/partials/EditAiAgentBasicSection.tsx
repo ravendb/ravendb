@@ -1,6 +1,5 @@
-import AceEditor from "components/common/ace/AceEditor";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { FormAceEditor, FormGroup, FormInput, FormLabel, FormSelect } from "components/common/Form";
+import { FormGroup, FormInput, FormLabel, FormSelect } from "components/common/Form";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import EditConnectionStrings from "components/pages/database/settings/connectionStrings/EditConnectionStrings";
@@ -14,8 +13,6 @@ import { useServices } from "components/hooks/useServices";
 import { useAppSelector } from "components/store";
 import TaskUtils from "components/utils/TaskUtils";
 import { sortBy } from "lodash";
-import { useRef } from "react";
-import ReactAce from "react-ace";
 import { useAsync } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import InputGroup from "react-bootstrap/InputGroup";
@@ -30,8 +27,6 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
     const formValues = useWatch({
         control,
     });
-
-    const systemPromptRef = useRef<ReactAce>(null);
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
@@ -145,17 +140,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                 </FormGroup>
                 <FormGroup>
                     <FormLabel>Agent description prompt</FormLabel>
-                    <FormAceEditor
-                        aceRef={systemPromptRef}
-                        control={control}
-                        name="systemPrompt"
-                        mode="text"
-                        actions={[{ component: <AceEditor.FullScreenAction /> }]}
-                        wrapEnabled
-                        setOptions={{
-                            indentedSoftWrap: false,
-                        }}
-                    />
+                    <FormInput type="textarea" as="textarea" control={control} name="systemPrompt" rows={4} />
                 </FormGroup>
                 <SampleObjectAndSchemaFields
                     control={control}

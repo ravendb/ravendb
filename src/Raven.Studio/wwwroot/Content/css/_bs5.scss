@@ -105,11 +105,6 @@ body {
     }
 }
 
-// bs3 textarea fix
-textarea.form-control {
-    height: auto !important;
-}
-
 //Move to scss ace styles after PR merge
 .ace_editor.disabled {
     filter: saturate(0.2);

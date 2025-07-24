@@ -1,11 +1,10 @@
-import { FormAceEditor, FormDurationPicker, FormGroup, FormInput, FormLabel } from "components/common/Form";
+import { FormDurationPicker, FormGroup, FormInput, FormLabel, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import ClickableCard from "components/common/ClickableCard";
 import OptionalLabel from "components/common/OptionalLabel";
-import ReactAce from "react-ace/lib/ace";
-import { useRef } from "react";
-import AceEditor from "components/common/ace/AceEditor";
+import Accordion from "react-bootstrap/Accordion";
+import useUniqueId from "components/hooks/useUniqueId";
 
 export default function EditAiAgentTrimmingSection() {
     const { control, setValue } = useFormContext<EditAiAgentFormData>();
@@ -62,50 +61,20 @@ export default function EditAiAgentTrimmingSection() {
 function TokensFields() {
     const { control } = useFormContext<EditAiAgentFormData>();
 
-    const summarizationTaskBeginningPromptRef = useRef<ReactAce>(null);
-    const summarizationTaskEndPromptRef = useRef<ReactAce>(null);
+    const formValues = useWatch({
+        control,
+    });
+
+    const advancedSettingsId = useUniqueId("tokens-advanced");
+
+    const isAdvancedOpen =
+        formValues.trimming.isEnableHistory ||
+        formValues.trimming.summarizationTaskBeginningPrompt ||
+        formValues.trimming.summarizationTaskEndPrompt ||
+        formValues.trimming.resultPrefix;
 
     return (
         <>
-            <FormGroup>
-                <FormLabel>Summarization task beginning prompt</FormLabel>
-                <FormAceEditor
-                    aceRef={summarizationTaskBeginningPromptRef}
-                    mode="text"
-                    control={control}
-                    name="trimming.summarizationTaskBeginningPrompt"
-                    wrapEnabled
-                    setOptions={{
-                        indentedSoftWrap: false,
-                    }}
-                    actions={[{ component: <AceEditor.FullScreenAction /> }]}
-                />
-            </FormGroup>
-            <FormGroup>
-                <FormLabel>Summarization task end prompt</FormLabel>
-                <FormAceEditor
-                    aceRef={summarizationTaskEndPromptRef}
-                    mode="text"
-                    control={control}
-                    name="trimming.summarizationTaskEndPrompt"
-                    wrapEnabled
-                    setOptions={{
-                        indentedSoftWrap: false,
-                    }}
-                    actions={[{ component: <AceEditor.FullScreenAction /> }]}
-                />
-            </FormGroup>
-            <FormGroup>
-                <FormLabel>
-                    Result prefix <OptionalLabel />
-                </FormLabel>
-                <FormInput
-                    type="text"
-                    control={control}
-                    name="trimming.resultPrefix"
-                    placeholder={`Default ("Summary of previous conversation: ")`}
-                />
-            </FormGroup>
             <FormGroup>
                 <FormLabel>
                     Max tokens before summarization <OptionalLabel />
@@ -128,18 +97,69 @@ function TokensFields() {
                     placeholder={`Default (${defaultMaxTokensAfterSummarization})`}
                 />
             </FormGroup>
-            <FormGroup>
-                <FormLabel>
-                    History duration <OptionalLabel />
-                </FormLabel>
-                <FormDurationPicker control={control} name="trimming.historyExpirationInSeconds" showDays isFlexGrow />
-            </FormGroup>
+            <Accordion
+                className="trimming-advanced border border-secondary rounded-2 panel-bg-2"
+                defaultActiveKey={isAdvancedOpen ? advancedSettingsId : undefined}
+            >
+                <Accordion.Item eventKey={advancedSettingsId} className="panel-bg-2">
+                    <Accordion.Header>Advanced settings</Accordion.Header>
+                    <Accordion.Collapse eventKey={advancedSettingsId} mountOnEnter unmountOnExit>
+                        <Accordion.Body className="panel-bg-2 rounded-2 py-0">
+                            <hr className="mt-0 mb-2" />
+                            <FormGroup>
+                                <FormLabel>
+                                    Summarization task beginning prompt <OptionalLabel />
+                                </FormLabel>
+                                <FormInput
+                                    type="textarea"
+                                    as="textarea"
+                                    control={control}
+                                    name="trimming.summarizationTaskBeginningPrompt"
+                                    rows={4}
+                                />
+                            </FormGroup>
+                            <FormGroup>
+                                <FormLabel>
+                                    Summarization task end prompt <OptionalLabel />
+                                </FormLabel>
+                                <FormInput
+                                    type="textarea"
+                                    as="textarea"
+                                    control={control}
+                                    name="trimming.summarizationTaskEndPrompt"
+                                    rows={4}
+                                />
+                            </FormGroup>
+                            <FormGroup>
+                                <FormLabel>
+                                    Result prefix <OptionalLabel />
+                                </FormLabel>
+                                <FormInput
+                                    type="text"
+                                    control={control}
+                                    name="trimming.resultPrefix"
+                                    placeholder={`Default ("Summary of previous conversation: ")`}
+                                />
+                            </FormGroup>
+                            <HistoryFields />
+                        </Accordion.Body>
+                    </Accordion.Collapse>
+                </Accordion.Item>
+            </Accordion>
         </>
     );
 }
 
 function TruncateFields() {
     const { control } = useFormContext<EditAiAgentFormData>();
+
+    const formValues = useWatch({
+        control,
+    });
+
+    const isAdvancedOpen = formValues.trimming.isEnableHistory;
+
+    const advancedSettingsId = useUniqueId("truncate-advanced");
 
     return (
         <>
@@ -165,12 +185,53 @@ function TruncateFields() {
                     placeholder={`Default (${defaultMessagesLengthAfterTruncate})`}
                 />
             </FormGroup>
+            <Accordion
+                className="trimming-advanced border border-secondary rounded-2 panel-bg-2"
+                defaultActiveKey={isAdvancedOpen ? advancedSettingsId : undefined}
+            >
+                <Accordion.Item eventKey={advancedSettingsId} className="panel-bg-2">
+                    <Accordion.Header>Advanced settings</Accordion.Header>
+                    <Accordion.Collapse eventKey={advancedSettingsId} mountOnEnter unmountOnExit>
+                        <Accordion.Body className="panel-bg-2 rounded-2 py-0">
+                            <hr className="mt-0 mb-2" />
+                            <HistoryFields />
+                        </Accordion.Body>
+                    </Accordion.Collapse>
+                </Accordion.Item>
+            </Accordion>
+        </>
+    );
+}
+
+function HistoryFields() {
+    const { control } = useFormContext<EditAiAgentFormData>();
+
+    const formValues = useWatch({
+        control,
+    });
+
+    return (
+        <>
             <FormGroup>
-                <FormLabel>
-                    History duration <OptionalLabel />
-                </FormLabel>
-                <FormDurationPicker control={control} name="trimming.historyExpirationInSeconds" showDays isFlexGrow />
+                <FormSwitch control={control} name="trimming.isEnableHistory">
+                    Enable history
+                </FormSwitch>
             </FormGroup>
+            {formValues.trimming.isEnableHistory && (
+                <FormGroup>
+                    <FormSwitch control={control} name="trimming.isSetHistoryExpiration">
+                        Set history expiration
+                    </FormSwitch>
+                    {formValues.trimming.isSetHistoryExpiration && (
+                        <FormDurationPicker
+                            control={control}
+                            name="trimming.historyExpirationInSeconds"
+                            showDays
+                            isFlexGrow
+                        />
+                    )}
+                </FormGroup>
+            )}
         </>
     );
 }
