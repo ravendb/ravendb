@@ -2,7 +2,7 @@ import "./AiAgentMessages.scss";
 import AceEditor from "components/common/ace/AceEditor";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
-import { Fragment, useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import ReactAce from "react-ace";
 import useUniqueId from "components/hooks/useUniqueId";
 import Accordion from "react-bootstrap/Accordion";
@@ -16,7 +16,6 @@ import { getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable 
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import document from "models/database/documents/document";
 import Badge from "react-bootstrap/Badge";
-import AccordionCollapse from "react-bootstrap/AccordionCollapse";
 
 type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
 type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
@@ -411,11 +410,11 @@ function ToolCall({ toolCall, toolQueries, toolActions }: ToolCallProps) {
                         <div className="text-truncate">Tool call: {toolCall.name}</div>
                     </div>
                 </Accordion.Header>
-                <AccordionCollapse eventKey={id} mountOnEnter unmountOnExit>
+                <Accordion.Collapse eventKey={id} mountOnEnter unmountOnExit>
                     <Accordion.Body className="panel-bg-3 rounded-2">
                         <ToolCallBody tool={toolQuery ?? toolAction} toolCall={toolCall} />
                     </Accordion.Body>
-                </AccordionCollapse>
+                </Accordion.Collapse>
             </Accordion.Item>
         </Accordion>
     );
