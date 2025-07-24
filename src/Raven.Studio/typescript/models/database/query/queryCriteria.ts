@@ -11,7 +11,7 @@ class queryCriteria {
     ignoreIndexQueryLimit = ko.observable<boolean>(false);
     
     queryText = ko.observable<string>("");
-    queryParameters = ko.observable<string>("");
+    queryParameters = ko.observable<Record<string, string>>({});
     metadataOnly = ko.observable<boolean>(false);
     recentQuery = ko.observable<boolean>(false);
     graphOutput = ko.observable<boolean>(false);
@@ -56,12 +56,9 @@ class queryCriteria {
             }
         });
 
-        /* parameters should be in JSON format.
-        e.g. {"query": ["term or phrase to search in the catalog"]}
-        */
         this.queryParameters.subscribe(queryParameters => {
             if (queryParameters) {
-                this.queryText(this.queryText() + "\r\n\r\n" + queryParameters);
+                this.queryText(this.formatQueryParameters(queryParameters) + "\r\n\r\n" + this.queryText());
             }
         })
 
@@ -72,6 +69,11 @@ class queryCriteria {
                 this.ignoreIndexQueryLimit(false);
             }
         })
+    }
+    
+    private formatQueryParameters(params: Record<string, string>): string {
+        return Object.entries(params).map(([key, value]) => `${key} = "${value}"`)
+            .join("\n")
     }
 
     updateUsing(storedQuery: storedQueryDto): void {

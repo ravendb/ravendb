@@ -197,10 +197,15 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
 
     const linkToQuery = () => {
         const query = queryCriteria.empty();
+        const queryText = queryItem.query;
 
-        query.queryText(queryItem.query);
-        query.queryParameters(queryItem.parametersSampleObject);
-        query.name(queryItem.query);
+        const regexToFind$: RegExp = /\$\w+/g;
+        const matches = queryText.match(regexToFind$) || [];
+        const parameters: Record<string, string> = Object.fromEntries(matches.map((match) => [match, "undefined"]));
+
+        query.queryText(queryText);
+        query.queryParameters(parameters);
+        query.name(queryText);
         query.recentQuery(true);
         const queryDto = query.toStorageDto();
         savedQueriesStorage.saveAndNavigate(dbName, queryDto, {
@@ -245,7 +250,7 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
                 <div className="d-flex mb-1 justify-content-between">
                     <FormLabel className="mb-0">Query</FormLabel>
                     <Button variant="link" className="m-0 p-0" onClick={linkToQuery}>
-                        Query page link
+                        Test query
                     </Button>
                 </div>
                 <FormAceEditor
