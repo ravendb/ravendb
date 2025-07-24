@@ -235,7 +235,7 @@ function AgentMessage({
                 agentMessage.toolCalls?.map((x) => ({
                     id: x.id,
                     name: x.name,
-                    arguments: x.arguments,
+                    arguments: "",
                 })) ?? [],
         },
     });
@@ -252,7 +252,7 @@ function AgentMessage({
                 agentMessage.toolCalls?.map((x) => ({
                     id: x.id,
                     name: x.name,
-                    arguments: x.arguments,
+                    arguments: "",
                 })) ?? [],
         });
     }, [agentMessage.toolCalls?.length]);
