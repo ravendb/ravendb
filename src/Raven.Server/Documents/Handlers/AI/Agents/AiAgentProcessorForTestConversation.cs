@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Json;
+using Raven.Server.ServerWide.Commands.AI;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
@@ -23,6 +24,9 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         var options = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token.Token);
         
         var body = JsonDeserializationServer.AiAgentTestRequest(options);
+
+        AiAgentHelpers.AddDefaultValues(body.Configuration, RequestHandler.Configuration.Ai);
+        AddOrUpdateAiAgentCommand.ValidateConfiguration(context, body.Configuration);
 
         ConversationDocument conversation = null;
         if (body.Document != null)

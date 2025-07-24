@@ -1,11 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.ServerWide;
+using Raven.Server.Documents.AI;
+using Raven.Server.Documents.Queries;
+using Raven.Server.Documents.Queries.AST;
 using Raven.Server.Rachis;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.ServerWide.Commands.AI
 {
@@ -22,6 +29,19 @@ namespace Raven.Server.ServerWide.Commands.AI
         {
             Configuration = configuration ?? throw new ArgumentNullException(nameof(configuration)); 
         }
+
+        public override void Initialize(ServerStore serverStore, ClusterOperationContext context)
+        {
+            try
+            {
+                ValidateConfiguration(context, Configuration);
+            }
+            catch (Exception e)
+            {
+                throw new RachisApplyException($"Failed to validate AI Agent configuration for '{Configuration.Name}' with identifier '{Configuration.Identifier}'", e);
+            }
+        }
+
         public override void UpdateDatabaseRecord(DatabaseRecord record, long etag)
         {
             if (string.IsNullOrEmpty(Configuration.Identifier))
@@ -73,6 +93,89 @@ namespace Raven.Server.ServerWide.Commands.AI
         public override void FillJson(DynamicJsonValue json)
         {
             json[nameof(Configuration)] = Configuration.ToJson();
+        }
+
+        private static readonly Regex ToolNameChecker = new("^[a-zA-Z0-9_-]+$", RegexOptions.Compiled);
+
+        public static void ValidateConfiguration(JsonOperationContext context, AiAgentConfiguration configuration)
+        {
+            var reduction = configuration.ChatTrimming;
+            if (reduction != null)
+            {
+                if ((reduction.Tokens != null) == (reduction.Truncate != null))
+                {
+                    throw new InvalidOperationException($"{nameof(configuration.ChatTrimming)} requires exactly one strategy: " +
+                                                        $"either {nameof(reduction.Tokens)} or {nameof(reduction.Truncate)}, " +
+                                                        "but not both or neither.");
+                }
+
+                if (reduction.Truncate != null)
+                {
+                    var after = reduction.Truncate.MessagesLengthAfterTruncate;
+                    var before = reduction.Truncate.MessagesLengthBeforeTruncate;
+                    if (after > before)
+                        throw new InvalidOperationException(
+                            $"{nameof(reduction.Truncate.MessagesLengthAfterTruncate)} ({after}) must be less of equal then {nameof(reduction.Truncate.MessagesLengthBeforeTruncate)} ({before})");
+
+                    if (after <= 0)
+                        throw new InvalidOperationException(
+                            $"{nameof(reduction.Truncate.MessagesLengthAfterTruncate)} ({after}) must be greater then 0");
+
+                    if (before <= 0)
+                        throw new InvalidOperationException(
+                            $"{nameof(reduction.Truncate.MessagesLengthBeforeTruncate)} ({before}) must be greater then 0");
+                }
+
+                if (reduction.Tokens != null)
+                {
+                    if (string.IsNullOrEmpty(reduction.Tokens.SummarizationTaskBeginningPrompt))
+                        throw new InvalidOperationException(
+                            $"{nameof(reduction.Tokens.SummarizationTaskBeginningPrompt)} cannot be empty when {nameof(reduction.Tokens)} is used");
+
+                    if (string.IsNullOrEmpty(reduction.Tokens.SummarizationTaskEndPrompt))
+                        throw new InvalidOperationException(
+                            $"{nameof(reduction.Tokens.SummarizationTaskEndPrompt)} cannot be empty when {nameof(reduction.Tokens)} is used");
+
+                    if (string.IsNullOrEmpty(reduction.Tokens.ResultPrefix))
+                        throw new InvalidOperationException(
+                            $"{nameof(reduction.Tokens.ResultPrefix)} cannot be empty when {nameof(reduction.Tokens)} is used");
+                }
+            }
+
+            var scopeParams = configuration.Parameters;
+            foreach (var tool in configuration.Queries)
+            {
+                if (ToolNameChecker.IsMatch(tool.Name) == false)
+                    throw new InvalidOperationException($"Query name '{tool.Name}' is invalid. It must match the pattern: {ToolNameChecker}");
+
+                var q = QueryMetadata.ParseQuery(tool.Query, QueryType.Select);
+                var queryParams = new HashSet<string>(q.Parameters.Select(x => x.Value));
+                queryParams.ExceptWith(scopeParams);
+
+                string paramsSchema = ChatCompletionClient.GetSchemaForTool(tool.ParametersSchema, tool.ParametersSampleObject);
+                var schema = context.Sync.ReadForMemory(paramsSchema, "tool-schema");
+                if (schema.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Required, out BlittableJsonReaderArray required))
+                {
+                    foreach (var arg in required)
+                    {
+                        string queryArg = arg.ToString();
+                        if (scopeParams.Contains(queryArg))
+                            throw new InvalidOperationException($"Parameter {queryArg} is defined on both the agent level and the query level for {tool.Name}");
+
+                        queryParams.Remove(queryArg);
+                    }
+                }
+
+                if (queryParams.Count > 0)
+                    throw new InvalidOperationException(
+                        $"Tool query '{tool.Name}' contains parameters that are not defined in the agent configuration: '{string.Join(", ", queryParams)}'");
+            }
+
+            foreach (var action in configuration.Actions)
+            {
+                if (ToolNameChecker.IsMatch(action.Name) == false)
+                    throw new InvalidOperationException($"Action name '{action.Name}' is invalid. It must match the pattern: {ToolNameChecker}");
+            }
         }
     }
 }
