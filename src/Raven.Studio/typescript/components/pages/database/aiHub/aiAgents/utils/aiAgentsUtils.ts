@@ -2,10 +2,15 @@ import moment from "moment";
 import { AiAgentDocMessage, AiAgentMessage } from "./aiAgentsTypes";
 
 function getContentFromDoc(docMessage: AiAgentDocMessage): string {
-    if (docMessage.content && docMessage.content.startsWith("{") && docMessage.content.endsWith("}")) {
-        return JSON.stringify(JSON.parse(docMessage.content), null, 2);
+    if (!docMessage || docMessage.content == null) {
+        return null;
     }
-    return docMessage.content;
+
+    try {
+        return JSON.stringify(JSON.parse(docMessage.content), null, 2);
+    } catch {
+        return docMessage.content;
+    }
 }
 
 function mapMessageFromDoc(docMessage: AiAgentDocMessage): AiAgentMessage {
