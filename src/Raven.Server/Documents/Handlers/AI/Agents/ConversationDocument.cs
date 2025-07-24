@@ -22,6 +22,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
     public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
     public string ChangeVector;
+    public string Id;
     public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration, string userPrompt)
     {
         if (Messages.Count > 0)
@@ -61,6 +62,28 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
         var conversation = ToJson();
         conversation[Constants.Documents.Metadata.Key] = metadata;
             
+        return context.ReadObject(conversation, "create-conversion");
+    }
+
+    public BlittableJsonReaderObject ToHistoryBlittable(JsonOperationContext context, AiAgentConfiguration configuration, TimeSpan? expiration = null)
+    {
+        var metadata = new DynamicJsonValue
+        {
+            [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.AiAgentConversationHistoryCollection,
+        };
+        
+        if (expiration.HasValue)
+        {
+            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expiration.Value);
+        }
+
+        var conversation = ToJson();
+
+        conversation[Constants.Documents.Metadata.Key] = metadata;
+        conversation[nameof(HistoryDocuments)] = new DynamicJsonArray
+        {
+            Id
+        };
         return context.ReadObject(conversation, "create-conversion");
     }
 
@@ -115,6 +138,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
 
         return new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
+            Id = id,
             Messages = messages.Items.Select(m=>((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
             HistoryDocuments = historyDocs.Items.Select(s => s.ToString()).ToList(),
             TotalUsage = JsonDeserializationClient.AiUsage(usage),

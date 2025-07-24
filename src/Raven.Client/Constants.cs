@@ -331,6 +331,8 @@ namespace Raven.Client
                 public const string EmbeddingsCacheCollection = "@embeddings-cache";
 
                 public const string AiAgentConversationCollection = "@conversations";
+
+                public const string AiAgentConversationHistoryCollection = "@conversations-history";
             }
 
             internal sealed class Ai

@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         private AiAgentConfiguration _configuration;
         public (PutOperationResults Conversation, PutOperationResults History) PutResult;
 
-        private const string AiAgentConversationHistoryIdAddition = "History";
+        private const string AiAgentConversationHistoryIdPrefix = "History";
 
         public PutChatCommand(string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history, LazyStringValue changeVector, AiAgentConfiguration configuration, DocumentDatabase database)
         {
@@ -38,8 +38,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             PutOperationResults putHistoryResult = default;
             if (_historyDoc != null)
             {
-                var historyId = $"{_id}{_database.IdentityPartsSeparator}{AiAgentConversationHistoryIdAddition}{_database.IdentityPartsSeparator}";
-                historyId = _database.DocumentsStorage.DocumentPut.BuildDocumentId(historyId, _database.DocumentsStorage.GenerateNextEtag(), out _);
+                var historyId = _database.DocumentsStorage.DocumentPut.BuildDocumentId($"{AiAgentConversationHistoryIdPrefix}{_database.IdentityPartsSeparator}", _database.DocumentsStorage.GenerateNextEtag(), out _);
+                historyId = $"{historyId}${_id}";
+                
                 putHistoryResult = _database.DocumentsStorage.Put(context, historyId, null, _historyDoc);
                 _conversation.HistoryDocuments.Add(putHistoryResult.Id);
             }

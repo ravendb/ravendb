@@ -273,7 +273,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                         truncateCount = int.Min(truncateCount, document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
                         if (truncateCount > 0)
                         {
-                            var chatBefore = reduction.History == null ? null : document.ToBlittable(context, configuration, historyExpiration);
+                            var chatBefore = reduction.History == null ? null : document.ToHistoryBlittable(context, configuration, historyExpiration);
                             document.Messages.RemoveRange(1, truncateCount);
                             return chatBefore;
                         }
@@ -283,7 +283,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 {
                     if (aiUsage.TotalTokens > reduction.Tokens.MaxTokensBeforeSummarization)
                     {
-                        var chatBefore = reduction.History == null ? null : document.ToBlittable(context, configuration, historyExpiration);
+                        var chatBefore = reduction.History == null ? null : document.ToHistoryBlittable(context, configuration, historyExpiration);
                         await SummarizeAsync(context, client, configuration, document, token);
                         return chatBefore;
                     }
