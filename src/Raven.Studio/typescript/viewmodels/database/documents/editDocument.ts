@@ -700,6 +700,10 @@ class editDocument extends shardViewModelBase {
         });
 
         this.continueAiAgentConversationUrl = ko.pureComputed(() => {
+            if (this.isCreatingNewDocument()) {
+                return null;
+            }
+
             const agentName = this.document().getValue("Agent");
             const collection = this.document().__metadata.collection;
             const isHistory = this.document().getId().includes("/History/");
