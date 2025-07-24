@@ -75,7 +75,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
     internal ChatCompletionClient(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, bool? think = null, DocumentConventions conventions = null)
     {
-        _model = model ?? throw new ArgumentNullException(nameof(model));
+        _model = model;
         _organizationId = organizationId;
         _projectId = projectId;
         _think = think;
@@ -192,6 +192,9 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
     public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, string schema)
     {
+        if (_model is null)
+            throw new ArgumentNullException(nameof(_model));
+
         var content = new BlittableJsonContent(async stream =>
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(ctx, stream))
