@@ -38,7 +38,7 @@ export default function AiAgentParametersField<
                             type="text"
                             control={control}
                             name={`${name}.${idx}.value` as TName}
-                            placeholder="e.g. companies/90-A"
+                            placeholder={`<${x.name} id>`}
                         />
                     </div>
                     {idx !== value.length - 1 && <hr className="my-1" />}
