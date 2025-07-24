@@ -111,5 +111,9 @@ body {
     opacity: 0.7;
 }
 
+input::placeholder {
+    opacity: 0.5 !important;
+}
+
 // Custom Utilities
 @import "../scss/layout-tools.scss";
