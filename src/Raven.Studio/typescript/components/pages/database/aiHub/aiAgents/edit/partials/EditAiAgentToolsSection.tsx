@@ -9,6 +9,10 @@ import useRqlLanguageService from "components/hooks/useRqlLanguageService";
 import { useRef } from "react";
 import ReactAce from "react-ace";
 import { FormGroup, FormLabel } from "components/common/Form";
+import queryCriteria from "models/database/query/queryCriteria";
+import savedQueriesStorage from "common/storage/savedQueriesStorage";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 export default function EditAiAgentToolsSection() {
     const { control } = useFormContext<EditAiAgentFormData>();
@@ -152,6 +156,7 @@ interface QueryFieldProps {
 
 function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) {
     const { control, setValue, trigger } = useFormContext<EditAiAgentFormData>();
+    const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     const queryAceRef = useRef<ReactAce>(null);
 
@@ -190,6 +195,19 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
         );
     }
 
+    const linkToQuery = () => {
+        const query = queryCriteria.empty();
+
+        query.queryText(queryItem.query);
+        query.queryParameters(queryItem.parametersSampleObject);
+        query.name(queryItem.query);
+        query.recentQuery(true);
+        const queryDto = query.toStorageDto();
+        savedQueriesStorage.saveAndNavigate(dbName, queryDto, {
+            newWindow: true,
+        });
+    };
+
     return (
         <div className="well p-2 rounded-2 border border-secondary mt-2">
             <div className="hstack justify-content-between">
@@ -224,7 +242,12 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
                 />
             </FormGroup>
             <FormGroup>
-                <FormLabel>Query</FormLabel>
+                <div className="d-flex mb-1 justify-content-between">
+                    <FormLabel className="mb-0">Query</FormLabel>
+                    <Button variant="link" className="m-0 p-0" onClick={linkToQuery}>
+                        Query page link
+                    </Button>
+                </div>
                 <FormAceEditor
                     aceRef={queryAceRef}
                     control={control}
