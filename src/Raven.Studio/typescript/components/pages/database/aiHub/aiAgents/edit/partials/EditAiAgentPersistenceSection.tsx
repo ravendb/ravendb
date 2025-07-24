@@ -1,6 +1,4 @@
-import { FormDurationPicker, FormGroup, FormLabel, FormSelectAutocomplete, FormSwitch } from "components/common/Form";
-import { SelectOption } from "components/common/select/Select";
-import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
+import { FormDurationPicker, FormGroup, FormInput, FormLabel, FormSwitch } from "components/common/Form";
 import { useAppSelector } from "components/store";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
@@ -16,11 +14,6 @@ export default function EditAiAgentPersistenceSection() {
 
     const isDocumentExpirationEnabled = useAppSelector(editAiAgentSelectors.isDocumentExpirationEnabled);
 
-    const collectionOptions: SelectOption[] = useAppSelector(collectionsTrackerSelectors.collectionNames).map((x) => ({
-        value: x,
-        label: x,
-    }));
-
     return (
         <>
             <h3 className="m-0 mt-3">Set chat persistence</h3>
@@ -28,10 +21,11 @@ export default function EditAiAgentPersistenceSection() {
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>
                     <FormLabel>Conversation ID prefix</FormLabel>
-                    <FormSelectAutocomplete
+                    <FormInput
                         control={control}
                         name="persistenceConversationIdPrefix"
-                        options={collectionOptions}
+                        type="text"
+                        placeholder="e.g. Chats/"
                     />
                 </FormGroup>
                 {isDocumentExpirationEnabled.status === "success" && !isDocumentExpirationEnabled.data && (
