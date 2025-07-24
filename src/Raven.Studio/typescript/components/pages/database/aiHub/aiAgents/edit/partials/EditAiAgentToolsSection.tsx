@@ -217,10 +217,12 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
             <FormGroup>
                 <FormLabel>Description</FormLabel>
                 <FormInput
-                    type="text"
+                    type="textarea"
+                    as="textarea"
                     control={control}
                     name={`queries.${index}.description`}
                     placeholder="e.g. Get details about a customer by ID"
+                    rows={4}
                 />
             </FormGroup>
             <FormGroup>
@@ -321,10 +323,12 @@ function ActionField({ index, remove, save, edit, cancelEdit }: ActionFieldProps
             <FormGroup>
                 <FormLabel>Description</FormLabel>
                 <FormInput
-                    type="text"
+                    type="textarea"
+                    as="textarea"
                     control={control}
                     name={`actions.${index}.description`}
                     placeholder="e.g. Get details about a customer by ID"
+                    rows={4}
                 />
             </FormGroup>
             <SampleObjectAndSchemaFields
