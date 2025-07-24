@@ -28,6 +28,8 @@ import EditAiAgentTrimmingSection from "./partials/EditAiAgentTrimmingSection";
 import EditAiAgentToolsAdvancedSection from "./partials/EditAiAgentToolsAdvancedSection";
 import { LoadingView } from "components/common/LoadingView";
 import { connectionStringsActions } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
+import { useAsyncCallback } from "react-async-hook";
+import { LoadError } from "components/common/LoadError";
 
 interface QueryParams {
     id: string;
@@ -46,28 +48,31 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const isEditAiAgent = !!queryParams?.id && !queryParams.isClone;
 
-    const form = useForm<EditAiAgentFormData>({
-        defaultValues: async () => {
-            const isDocumentExpirationEnabled = await dispatch(
-                editAiAgentActions.getIsDocumentExpirationEnabled(databaseName)
-            ).unwrap();
+    const asyncGetDefaultValues = useAsyncCallback(async () => {
+        const isDocumentExpirationEnabled = await dispatch(
+            editAiAgentActions.getIsDocumentExpirationEnabled(databaseName)
+        ).unwrap();
 
-            if (queryParams?.id) {
-                const agents = await aiAgentService.getAiAgents(databaseName, queryParams.id);
-                return editAiAgentUtils.mapFromDto(
-                    agents.AiAgents[0],
-                    queryParams.isClone,
-                    isDocumentExpirationEnabled
-                );
-            } else {
-                return editAiAgentUtils.mapFromDto(null, false, isDocumentExpirationEnabled);
-            }
-        },
+        if (queryParams?.id) {
+            const agents = await aiAgentService.getAiAgents(databaseName, queryParams.id);
+            return editAiAgentUtils.mapFromDto(agents.AiAgents[0], queryParams.isClone, isDocumentExpirationEnabled);
+        } else {
+            return editAiAgentUtils.mapFromDto(null, false, isDocumentExpirationEnabled);
+        }
+    });
+
+    const form = useForm<EditAiAgentFormData>({
+        defaultValues: asyncGetDefaultValues.execute,
         resolver: editAiAgentYupResolver,
     });
 
     const { handleSubmit, formState, reset } = form;
     const { setIsDirty } = useDirtyFlag(formState.isDirty);
+
+    const reloadForm = async () => {
+        const result = await asyncGetDefaultValues.execute();
+        reset(result);
+    };
 
     // Set connection strings view context
     useEffect(() => {
@@ -127,9 +132,11 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                     className="px-4 pb-4 flex-grow-1 overflow-scroll h-100"
                                     style={{ opacity: isTestOpen ? 0.2 : 1 }}
                                 >
-                                    {formState.isLoading ? (
-                                        <LoadingView />
-                                    ) : (
+                                    {asyncGetDefaultValues.loading && <LoadingView />}
+                                    {asyncGetDefaultValues.error && (
+                                        <LoadError error="Unable to load configuration" refresh={reloadForm} />
+                                    )}
+                                    {asyncGetDefaultValues.result && (
                                         <>
                                             <EditAiAgentBasicSection isEditAiAgent={isEditAiAgent} />
                                             <EditAiAgentPersistenceSection />

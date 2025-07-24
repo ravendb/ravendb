@@ -80,6 +80,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                                 handleGenerateIdentifier();
                             }
                         }}
+                        disabled={isEditAiAgent}
                     />
                 </FormGroup>
                 <FormGroup>
