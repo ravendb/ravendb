@@ -5,7 +5,6 @@ import { useAppSelector } from "components/store";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import { editAiAgentSelectors } from "../store/editAiAgentSlice";
-import OptionalLabel from "components/common/OptionalLabel";
 
 export default function EditAiAgentPersistenceSection() {
     const { control } = useFormContext<EditAiAgentFormData>();
@@ -43,12 +42,9 @@ export default function EditAiAgentPersistenceSection() {
                 )}
                 {(formValues.isEnableDocumentExpiration || isDocumentExpirationEnabled.data) && (
                     <FormGroup>
-                        <div className="d-flex mb-3 gap-2 align-items-center">
-                            <FormSwitch name="isDocumentExpireInCustomizeEnabled" control={control} />
-                            <FormLabel className="mb-0">
-                                Expire in <OptionalLabel />
-                            </FormLabel>
-                        </div>
+                        <FormSwitch name="isDocumentExpireInCustomizeEnabled" control={control}>
+                            Set expiration
+                        </FormSwitch>
                         {formValues.isDocumentExpireInCustomizeEnabled && (
                             <FormDurationPicker
                                 control={control}
