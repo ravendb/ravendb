@@ -102,7 +102,7 @@ public class AiOperations
     /// <typeparam name="TSchema">The schema type for the conversation response.</typeparam>
     /// <param name="agentId">The ID of the AI agent to conversation with.</param>
     /// <param name="parameters">Required conversation parameters.</param>
-    public IConversationOperations<TSchema> StartConversation<TSchema>(string agentId, Dictionary<string, object> parameters) where TSchema : new() => new Conversation<TSchema>(this, agentId, parameters);
+    public IAiConversationOperations<TSchema> StartConversation<TSchema>(string agentId, Dictionary<string, object> parameters) where TSchema : new() => new AiConversation<TSchema>(this, agentId, parameters);
     
     /// <summary>
     /// Create a new conversation with an AI agent using a dictionary of parameters.
@@ -110,7 +110,7 @@ public class AiOperations
     /// <typeparam name="TSchema">The schema type for the conversation response.</typeparam>
     /// <param name="agentId">The ID of the AI agent to conversation with.</param>
     /// <param name="builder">A builder to define the required conversation parameters.</param>
-    public IConversationOperations<TSchema> StartConversation<TSchema>(string agentId, Action<IAiAgentParametersBuilder> builder) where TSchema : new()
+    public IAiConversationOperations<TSchema> StartConversation<TSchema>(string agentId, Action<IAiAgentParametersBuilder> builder) where TSchema : new()
     {
         var aiAgentParameters = new AiAgentParametersBuilder();
         builder?.Invoke(aiAgentParameters);
@@ -124,5 +124,5 @@ public class AiOperations
     /// <typeparam name="TSchema">The schema type for the conversation response.</typeparam>
     /// <param name="conversationId">The ID of the existing conversation.</param>
     /// <param name="changeVector">Optional parameter to control concurrency.</param>
-    public IConversationOperations<TSchema> ResumeConversation<TSchema>(string conversationId, string changeVector = null) where TSchema : new() => new Conversation<TSchema>(this, conversationId, changeVector);
+    public IAiConversationOperations<TSchema> ResumeConversation<TSchema>(string conversationId, string changeVector = null) where TSchema : new() => new AiConversation<TSchema>(this, conversationId, changeVector);
 }

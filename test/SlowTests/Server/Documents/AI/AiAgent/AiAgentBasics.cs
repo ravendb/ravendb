@@ -82,7 +82,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             chat.SetUserPrompt("what goes well with my cheese?");
             var r = await chat.RunAsync(CancellationToken.None);
 
-            Assert.Equal(ConversationResult.Done, r);
+            Assert.Equal(AiConversationResult.Done, r);
             Assert.NotNull(chat.Answer);
             Assert.NotNull(chat.Id);
 

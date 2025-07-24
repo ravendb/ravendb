@@ -416,7 +416,7 @@ public class AiAgentErrors : RavenTestBase
         var r = await chat.RunAsync(CancellationToken.None);
 
         var aviv = chat.Answer;
-        Assert.Equal(ConversationResult.Done, r);
+        Assert.Equal(AiConversationResult.Done, r);
         Assert.NotNull(aviv.Answer);
         Assert.False(aviv.RefusedToAnswer);
 
@@ -424,7 +424,7 @@ public class AiAgentErrors : RavenTestBase
         r = await chat.RunAsync(CancellationToken.None);
 
         var karmel = chat.Answer;
-        Assert.Equal(ConversationResult.Done, r);
+        Assert.Equal(AiConversationResult.Done, r);
         Assert.NotNull(karmel.Answer);
         Assert.False(karmel.RefusedToAnswer);
 
@@ -432,7 +432,7 @@ public class AiAgentErrors : RavenTestBase
         r = await chat.RunAsync(CancellationToken.None);
 
         var shahar = chat.Answer;
-        Assert.Equal(ConversationResult.Done, r);
+        Assert.Equal(AiConversationResult.Done, r);
         Assert.NotNull(shahar.Answer);
         Assert.True(shahar.RefusedToAnswer);
     }

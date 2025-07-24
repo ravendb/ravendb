@@ -5,7 +5,7 @@ using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.Client.Documents.AI;
 
-public interface IConversationOperations<out T> where T : new()
+public interface IAiConversationOperations<out T> where T : new()
 {
     /// <summary>
     /// The identifier of this conversation.
@@ -68,26 +68,26 @@ public interface IConversationOperations<out T> where T : new()
     /// A <see cref="CancellationToken"/> used to cancel the operation.
     /// </param>
     /// <returns>
-    /// A <see cref="Task{ConversationResult}"/> containing a <see cref="ConversationResult"/>  
+    /// A <see cref="Task{ConversationResult}"/> containing a <see cref="AiConversationResult"/>  
     /// indicating the outcome of the turn:
     /// <list type="bullet">
-    /// <item><see cref="ConversationResult.ActionRequired"/> if the agent requires further interaction (e.g., pending tool requests).</item>
-    /// <item><see cref="ConversationResult.Done"/> if the conversation has completed and a final answer is available.</item>
+    /// <item><see cref="AiConversationResult.ActionRequired"/> if the agent requires further interaction (e.g., pending tool requests).</item>
+    /// <item><see cref="AiConversationResult.Done"/> if the conversation has completed and a final answer is available.</item>
     /// </list>
     /// </returns>
-    Task<ConversationResult> RunAsync(CancellationToken token = default);
+    Task<AiConversationResult> RunAsync(CancellationToken token = default);
 
     /// <summary>
     /// Synchronously executes one turn of the conversation.
     /// </summary>
     /// <returns>
-    /// A <see cref="ConversationResult"/> indicating the outcome of the turn:
+    /// A <see cref="AiConversationResult"/> indicating the outcome of the turn:
     /// <list type="bullet">
-    /// <item><see cref="ConversationResult.ActionRequired"/> if more interaction is needed (e.g., pending tool requests).</item>
-    /// <item><see cref="ConversationResult.Done"/> if the conversation has completed and a final answer is available.</item>
+    /// <item><see cref="AiConversationResult.ActionRequired"/> if more interaction is needed (e.g., pending tool requests).</item>
+    /// <item><see cref="AiConversationResult.Done"/> if the conversation has completed and a final answer is available.</item>
     /// </list>
     /// </returns>
-    ConversationResult Run();
+    AiConversationResult Run();
 
     /// <summary>
     /// Sets the next user prompt to send to the AI agent.

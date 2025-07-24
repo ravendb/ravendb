@@ -3,7 +3,7 @@
 /// <summary>
 /// Represents the result of a single conversation turn.
 /// </summary>
-public enum ConversationResult
+public enum AiConversationResult
 {
     /// <summary>
     /// The conversation has completed and a final answer is available.

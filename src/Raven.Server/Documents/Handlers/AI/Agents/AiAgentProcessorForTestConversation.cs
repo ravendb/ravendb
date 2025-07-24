@@ -5,9 +5,9 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands.AI;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 

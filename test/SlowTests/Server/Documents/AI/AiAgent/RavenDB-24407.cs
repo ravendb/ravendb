@@ -235,7 +235,7 @@ public class RavenDB_24407 : RavenTestBase
             builder: null);
         chat.SetUserPrompt("what goes well with my cheese for recent orders?");
         var r = await chat.RunAsync(CancellationToken.None);
-        Assert.Equal(ConversationResult.ActionRequired, r);
+        Assert.Equal(AiConversationResult.ActionRequired, r);
 
         foreach (var req in chat.RequiredActions())
         {
@@ -252,7 +252,7 @@ public class RavenDB_24407 : RavenTestBase
 
         // can be answer *OR* another tool call
         chatDoc = await GetChat(store, chat.Id);
-        if (r == ConversationResult.ActionRequired)
+        if (r == AiConversationResult.ActionRequired)
         {
             // if it is 'Tool Requests' is shouldn't be summarized
             Assert.True(2 < chatDoc.Messages.Count);

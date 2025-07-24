@@ -19,7 +19,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         private AiAgentConfiguration _configuration;
         public (PutOperationResults Conversation, PutOperationResults History) PutResult;
 
-        private const string AiAgentConversationHistoryIdPrefix = "History";
+        private const string AiAgentConversationHistoryIdPrefix = "ChatHistory";
 
         public PutChatCommand(string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history, LazyStringValue changeVector, AiAgentConfiguration configuration, DocumentDatabase database)
         {

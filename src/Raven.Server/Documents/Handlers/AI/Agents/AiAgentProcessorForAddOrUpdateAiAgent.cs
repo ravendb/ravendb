@@ -4,9 +4,9 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
-using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.ServerWide.Commands.AI;
+using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -55,23 +55,4 @@ internal class AiAgentProcessorForAddOrUpdateAiAgent<TRequestHandler, TOperation
             context.Write(writer, json);
         }
     }
-}
-
-public static class AiAgentHelpers
-{
-    public static void AddDefaultValues(AiAgentConfiguration configuration, AiConfiguration aiConfig)
-    {
-        var reduction = configuration.ChatTrimming;
-        if (reduction?.Tokens != null)
-        {
-            if (string.IsNullOrEmpty(reduction.Tokens.SummarizationTaskBeginningPrompt))
-                reduction.Tokens.SummarizationTaskBeginningPrompt = aiConfig.SummarizationTaskBeginningPrompt;
-
-            if (string.IsNullOrEmpty(reduction.Tokens.SummarizationTaskEndPrompt))
-                reduction.Tokens.SummarizationTaskEndPrompt = aiConfig.SummarizationTaskEndPrompt;
-
-            if (string.IsNullOrEmpty(reduction.Tokens.ResultPrefix))
-                reduction.Tokens.ResultPrefix = aiConfig.SummarizationResultPrefix;
-        }
-    }   
 }

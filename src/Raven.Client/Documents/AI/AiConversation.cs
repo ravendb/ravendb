@@ -8,7 +8,7 @@ using Raven.Client.Exceptions;
 using Raven.Client.Util;
 
 namespace Raven.Client.Documents.AI;
-internal class Conversation<T> : IConversationOperations<T> where T : new()
+internal class AiConversation<T> : IAiConversationOperations<T> where T : new()
 {
     private readonly AiOperations _aiOperations;
     private readonly string _agentId;
@@ -21,7 +21,7 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
     private string _changeVector;
     public string ChangeVector => _changeVector;
 
-    public Conversation(AiOperations aiOperations, string agentId, Dictionary<string, object> parameters)
+    public AiConversation(AiOperations aiOperations, string agentId, Dictionary<string, object> parameters)
     {
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
 
@@ -30,7 +30,7 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
         _parameters = parameters;
     }
 
-    public Conversation(AiOperations aiOperations, string conversationId, string changeVector)
+    public AiConversation(AiOperations aiOperations, string conversationId, string changeVector)
     {
         ValidationMethods.AssertNotNullOrEmpty(conversationId, nameof(conversationId));
 
@@ -69,9 +69,9 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
     private T _answer;
     public T Answer => _answer ?? throw new InvalidOperationException($"You have to call {nameof(Run)}/{nameof(RunAsync)} first");
     public string Id => _conversationId ?? throw new InvalidOperationException($"This is a new conversation, the ID wasn't set yet, you have to call {nameof(Run)}/{nameof(RunAsync)}");
-    public ConversationResult Run() => AsyncHelpers.RunSync(() => RunAsync());
+    public AiConversationResult Run() => AsyncHelpers.RunSync(() => RunAsync());
 
-    public async Task<ConversationResult> RunAsync(CancellationToken token = default)
+    public async Task<AiConversationResult> RunAsync(CancellationToken token = default)
     {
         IMaintenanceOperation<ConversationResult<T>> op;
         if (string.IsNullOrWhiteSpace(_conversationId))
@@ -83,7 +83,7 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
             // we allow to run the conversation only if it is the first run with no user prompt or tool requests
             // this way we can fetch the pending actions
             if (_actionRequests != null && string.IsNullOrEmpty(_userPrompt) && _actionResponses.Count == 0)
-                return ConversationResult.Done;
+                return AiConversationResult.Done;
 
             op = new RunConversationOperation<T>(_conversationId, _userPrompt, _actionResponses, _changeVector);
         }
@@ -108,6 +108,6 @@ internal class Conversation<T> : IConversationOperations<T> where T : new()
             _actionResponses.Clear();
         }
 
-        return _actionRequests.Count > 0 ? ConversationResult.ActionRequired : ConversationResult.Done;
+        return _actionRequests.Count > 0 ? AiConversationResult.ActionRequired : AiConversationResult.Done;
     }
 }
