@@ -16,6 +16,7 @@ import { getCoreRowModel, getFilteredRowModel, getSortedRowModel, useReactTable 
 import VirtualTable from "components/common/virtualTable/VirtualTable";
 import document from "models/database/documents/document";
 import Badge from "react-bootstrap/Badge";
+import { aiAgentsUtils } from "../utils/aiAgentsUtils";
 
 type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
 type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
@@ -132,7 +133,7 @@ function ToolMessage({ message, type }: ToolMessageProps) {
             {type === "action" && toolName && (
                 <div className="hstack justify-content-between mb-1">
                     <div>
-                        Tool: <strong>{toolName}</strong>
+                        Tool response for <strong>{toolName}</strong>
                     </div>
                     <Badge bg="primary" pill>
                         <Icon icon="check" /> Submitted
@@ -267,7 +268,7 @@ function AgentMessage({
     const isRequireParameters =
         isLastItem && isToolAction && agentMessage.toolCalls?.length > 0 && !formState.isSubmitted;
 
-    const contentMode = agentMessage.content?.includes("{") ? "json" : "text";
+    const contentMode = getAceEditorMode(agentMessage.content);
 
     return (
         <div>
@@ -426,6 +427,9 @@ interface ToolCallBodyProps {
 }
 
 function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
+    const prettifiedArguments = aiAgentsUtils.getPrettifiedContent(toolCall?.arguments);
+    const argumentsMode = getAceEditorMode(prettifiedArguments);
+
     return (
         <div className="vstack gap-2">
             {tool && (
@@ -453,12 +457,15 @@ function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
                     )}
                 </>
             )}
-            {toolCall?.arguments && (
-                <div>
-                    <small className="text-muted">Arguments</small>
-                    <AceEditor value={toolCall.arguments} readOnly mode="text" height="100px" />
-                </div>
-            )}
+            <div>
+                <small className="text-muted">Arguments</small>
+                <AceEditor
+                    value={prettifiedArguments}
+                    readOnly
+                    mode={argumentsMode}
+                    height={getAgentAceEditorHeight(prettifiedArguments)}
+                />
+            </div>
             {toolCall?.queryToolResult && <ToolMessage message={toolCall.queryToolResult} type="query" />}
         </div>
     );
@@ -470,13 +477,22 @@ function getAgentAceEditorHeight(content: string): `${number}px` {
     }
 
     const lineHeight = 26;
-    const minimumLineCount = 3;
-    const lineCount = content.split("\n").length + minimumLineCount;
+    const minimumLineCount = 4;
+    const lineCount = content.split("\n").length;
+    const effectiveLineCount = Math.max(lineCount, minimumLineCount);
 
-    if (lineCount <= 12) {
+    if (effectiveLineCount <= 12) {
         const halfLineHeight = lineHeight / 2; // to show that there is more content
-        return `${lineCount * lineHeight + halfLineHeight}px`;
+        return `${effectiveLineCount * lineHeight + halfLineHeight}px`;
     }
 
     return "320px";
+}
+
+function getAceEditorMode(content: string): "json" | "text" {
+    if (content?.startsWith("{") && content?.endsWith("}")) {
+        return "json";
+    }
+
+    return "text";
 }

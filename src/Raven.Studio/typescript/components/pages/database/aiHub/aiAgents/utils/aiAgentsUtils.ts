@@ -1,16 +1,24 @@
 import moment from "moment";
 import { AiAgentDocMessage, AiAgentMessage } from "./aiAgentsTypes";
 
-function getContentFromDoc(docMessage: AiAgentDocMessage): string {
-    if (!docMessage || docMessage.content == null) {
+function getPrettifiedContent(content: string): string {
+    if (content == null) {
         return null;
     }
 
     try {
-        return JSON.stringify(JSON.parse(docMessage.content), null, 2);
+        return JSON.stringify(JSON.parse(content), null, 2);
     } catch {
-        return docMessage.content;
+        return content;
     }
+}
+
+function getContentFromDoc(docMessage: AiAgentDocMessage): string {
+    if (!docMessage) {
+        return null;
+    }
+
+    return getPrettifiedContent(docMessage.content);
 }
 
 function mapMessageFromDoc(docMessage: AiAgentDocMessage): AiAgentMessage {
@@ -54,4 +62,5 @@ export const aiAgentsUtils = {
     mapMessageFromDoc,
     messageDateFormat: "HH:mm A",
     mergeToolResults,
+    getPrettifiedContent,
 };
