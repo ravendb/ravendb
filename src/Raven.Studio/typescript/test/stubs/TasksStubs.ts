@@ -680,6 +680,10 @@ namespace Orders
 
     static testGenAiResults_context(): Raven.Server.Documents.ETL.Providers.AI.GenAi.Test.GenAiTestScriptResult {
         return {
+            DebugActions: null,
+            ModifiedDocument: null,
+            OriginalDocument: null,
+            Status: null,
             TransformationErrors: [],
             DebugOutput: [],
             InputDocument: {
@@ -700,8 +704,6 @@ namespace Orders
             OutputDocument: null,
             Results: [
                 {
-                    DebugOutput: [],
-                    DebugActions: null,
                     ContextOutput: {
                         Context: {
                             Text: "This is spam",
@@ -714,8 +716,6 @@ namespace Orders
                     ModelOutput: null,
                 },
                 {
-                    DebugOutput: [],
-                    DebugActions: null,
                     ContextOutput: {
                         Context: {
                             Text: "This is not spam",
@@ -733,6 +733,10 @@ namespace Orders
 
     static testGenAiResults_model(): Raven.Server.Documents.ETL.Providers.AI.GenAi.Test.GenAiTestScriptResult {
         return {
+            DebugActions: null,
+            ModifiedDocument: null,
+            OriginalDocument: null,
+            Status: null,
             TransformationErrors: [],
             DebugOutput: [],
             InputDocument: {
@@ -753,8 +757,6 @@ namespace Orders
             OutputDocument: null,
             Results: [
                 {
-                    DebugOutput: [],
-                    DebugActions: null,
                     ContextOutput: {
                         Context: {
                             Text: "This is spam",
@@ -778,8 +780,6 @@ namespace Orders
                     },
                 },
                 {
-                    DebugOutput: [],
-                    DebugActions: null,
                     ContextOutput: {
                         Context: {
                             Text: "This is not spam",
@@ -808,6 +808,7 @@ namespace Orders
 
     static testGenAiResults_update(): Raven.Server.Documents.ETL.Providers.AI.GenAi.Test.GenAiTestScriptResult {
         return {
+            DebugActions: null, ModifiedDocument: null, OriginalDocument: null, Status: null,
             TransformationErrors: [],
             DebugOutput: [],
             InputDocument: {
@@ -837,8 +838,6 @@ namespace Orders
             },
             Results: [
                 {
-                    DebugOutput: [],
-                    DebugActions: null,
                     ContextOutput: {
                         Context: {
                             Text: "This is spam",
@@ -862,8 +861,6 @@ namespace Orders
                     },
                 },
                 {
-                    DebugOutput: [],
-                    DebugActions: null,
                     ContextOutput: {
                         Context: {
                             Text: "This is not spam",
