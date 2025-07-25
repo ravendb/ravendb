@@ -26,7 +26,6 @@ using Raven.Server.Documents.DataArchival;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
 using Sparrow;
-using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -263,24 +262,15 @@ namespace SlowTests.Server.Documents.DataArchival
         [RavenTheory(RavenTestCategory.ExpirationRefresh)]
         [InlineData(false)]
         [InlineData(true)]
-        public async Task ShouldNotApplyArchivedMetadataForNewDocuments(bool archivedValue)      
+        public void ShouldNotApplyArchivedMetadataForNewDocuments(bool archivedValue)      
         {
             using (var store = GetDocumentStore())
             {
                 using (var session = store.OpenSession())
                 {
-                    var metadataPropNameToTest = "@archived";
-                    var executor = store.GetRequestExecutor();
-                    using var dis = executor.ContextPool.AllocateOperationContext(out var context);
-                    var p = context.ReadObject(new DynamicJsonValue
-                        {
-                            [Constants.Documents.Metadata.Key] = new DynamicJsonValue
-                            {
-                                [metadataPropNameToTest] = archivedValue
-
-                            }
-                        }, $"{nameof(metadataPropNameToTest)} {metadataPropNameToTest}");
-                    session.Store(p, null, "archived/1");
+                    session.Store(new User(), null, "archived/1");
+                    var metadata = session.Advanced.GetMetadataFor(session.Load<User>("archived/1"));
+                    metadata[Constants.Documents.Metadata.Archived] = archivedValue;
                     session.SaveChanges();
                 }
 
@@ -288,12 +278,12 @@ namespace SlowTests.Server.Documents.DataArchival
                 // ===============================================
                 using (var session = store.OpenSession())
                 {
-                    var archivedUser = session.Load<DynamicJsonValue>("archived/1");
+                    var archivedUser = session.Load<User>("archived/1");
                     var archivedUserMetadata = session.Advanced.GetMetadataFor(archivedUser);
                     Assert.False(archivedUserMetadata.ContainsKey("@archived"));
                     if (archivedUserMetadata.TryGetValue("@flags", out object flagsValue))
                     {
-                        Assert.False(flagsValue.ToString().Contains("Archived"));
+                        Assert.DoesNotContain(flagsValue.ToString(), "Archived");
                     }
                 }
             }
@@ -302,7 +292,7 @@ namespace SlowTests.Server.Documents.DataArchival
         [RavenTheory(RavenTestCategory.ExpirationRefresh)]
         [InlineData(false)]
         [InlineData(true)]
-        public async Task ShouldNotApplyArchivedMetadataForUnarchivedDocsUpdates(bool archivedValue)
+        public void ShouldNotApplyArchivedMetadataForUnarchivedDocsUpdates(bool archivedValue)
         {
             using (var store = GetDocumentStore())
             {
@@ -328,7 +318,7 @@ namespace SlowTests.Server.Documents.DataArchival
                     Assert.False(archivedUserMetadata.ContainsKey("@archived"));
                     if (archivedUserMetadata.TryGetValue("@flags", out object flagsValue))
                     {
-                        Assert.False(flagsValue.ToString().Contains("Archived"));
+                        Assert.DoesNotContain(flagsValue.ToString(), "Archived");
                     }
                 }
             }
@@ -372,7 +362,7 @@ namespace SlowTests.Server.Documents.DataArchival
                     var archivedUserMetadata = session.Advanced.GetMetadataFor(archivedUser);
                     
                     var flagsValue = archivedUserMetadata["@flags"];
-                    Assert.True(flagsValue.ToString().Contains("Archived"));
+                    Assert.Contains(flagsValue.ToString(), "Archived");
                     
                     archivedUserMetadata.Remove(Constants.Documents.Metadata.Archived);
                     session.SaveChanges();
@@ -445,7 +435,7 @@ namespace SlowTests.Server.Documents.DataArchival
                     var archivedUserMetadata = session.Advanced.GetMetadataFor(archivedUser);
                     
                     Assert.True(archivedUserMetadata.TryGetValue("@flags", out object flagsValue));
-                    Assert.True(flagsValue.ToString().Contains("Archived"));
+                    Assert.Contains(flagsValue.ToString(), "Archived");
                     
                     Assert.True(archivedUserMetadata.TryGetValue("@archived", out object archivedValue));
                     Assert.Equal("True", archivedValue.ToString());
