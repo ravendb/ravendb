@@ -197,8 +197,8 @@ namespace Raven.Server.Documents.Patch
                     {
                         try
                         {
-                            compareResult = DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDoc,
-                                DocumentCompare.DocumentCompareOptions.MergeMetadataAndThrowOnAttachmentModification);
+                            compareResult = DocumentCompare.IsEqualTo(originalDocument.Data, modifiedDoc, 
+                                DocumentCompare.DocumentCompareOptions.MergeMetadataAndThrowOnAttachmentModificationCompareDataArchivalMetadata);
                         }
                         catch (InvalidOperationException ioe)
                         {
