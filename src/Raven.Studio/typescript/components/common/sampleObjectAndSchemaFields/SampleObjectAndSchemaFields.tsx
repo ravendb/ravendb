@@ -4,10 +4,11 @@ import AceEditor from "../ace/AceEditor";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import { FormAceEditor, FormGroup, FormLabel } from "../Form";
 import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
-import { Control, FieldPath, FieldValues, UseFormSetValue } from "react-hook-form";
+import { Control, FieldPath, FieldValues, useFormContext, UseFormSetValue } from "react-hook-form";
 import ReactAce from "react-ace";
-import { ReactNode, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { useServices } from "components/hooks/useServices";
+import { EditAiAgentFormData } from "components/pages/database/aiHub/aiAgents/edit/utils/editAiAgentValidation";
 import { useAsyncCallback } from "react-async-hook";
 
 interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> {
@@ -41,6 +42,7 @@ export default function SampleObjectAndSchemaFields<
     const sampleObjectRef = useRef<ReactAce>(null);
     const jsonSchemaRef = useRef<ReactAce>(null);
 
+    const { setError, clearErrors } = useFormContext<EditAiAgentFormData>();
     const { tasksService } = useServices();
 
     const [lastSampleObjectForGenerate, setLastSampleObjectForGenerate] = useState<string>("");
@@ -52,6 +54,18 @@ export default function SampleObjectAndSchemaFields<
     });
 
     const canRegenerateSchema = !!sampleObject && !!jsonSchema && lastSampleObjectForGenerate !== sampleObject;
+
+    useEffect(() => {
+        if (canRegenerateSchema) {
+            setError(jsonSchemaName as TFieldValues[TName], {
+                type: "value",
+                message:
+                    "The sample object has been modified. Please regenerate the JSON schema to ensure it matches the new sample object structure.",
+            });
+        } else {
+            clearErrors([jsonSchemaName as TFieldValues[TName]])
+        }
+    }, [sampleObject, jsonSchema, canRegenerateSchema]);
 
     return (
         <div>
@@ -180,7 +194,7 @@ export default function SampleObjectAndSchemaFields<
                                 <ButtonWithSpinner
                                     className="rounded-pill position-absolute z-1"
                                     style={{
-                                        bottom: "20px",
+                                        top: "150px",
                                         right: "54px",
                                     }}
                                     variant="primary"
