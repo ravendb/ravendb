@@ -309,7 +309,7 @@ namespace SlowTests.Server.Documents.ETL
             }
         }
 
-        [RavenFact(RavenTestCategory.Logging)]
+        [RavenFact(RavenTestCategory.Logging, Requires = RavenServiceRequirement.MsSql)]
         public void ConnectionStringsAuditJsonDoesntIncludeCredentials()
         {
             var sqlConnectionString = new SqlConnectionString

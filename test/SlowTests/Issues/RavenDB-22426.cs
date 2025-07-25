@@ -29,7 +29,7 @@ public class RavenDB_22426 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Etl)]
+    [RavenFact(RavenTestCategory.Etl, Requires = RavenServiceRequirement.MsSql)]
     public void TestOldFactoryName()
     {
         using (var store = GetDocumentStore())
