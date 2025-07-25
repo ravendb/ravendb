@@ -949,7 +949,7 @@ namespace Raven.Server.Documents.Patch
         
                     using (var updated = _docsCtx.ReadObject(doc.Data, archivedDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
                     {
-                         _database.DocumentsStorage.Put(_docsCtx, archivedDocId, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
+                         _database.DocumentsStorage.Put(_docsCtx, archivedDocId, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction), nonPersistentFlags: NonPersistentDocumentFlags.UnarchiveFromPatch);
                     }
                 }
 

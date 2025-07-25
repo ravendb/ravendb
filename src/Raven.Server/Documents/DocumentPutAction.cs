@@ -180,16 +180,9 @@ namespace Raven.Server.Documents
                     newFlags = _documentsStorage.GetFlagsFromOldDocumentForPut(newFlags, oldFlags, nonPersistentFlags);
                     
                     // if doc was Archived and isn't currently unarchived, leave the Archived flag
-                    if (oldFlags.Contain(DocumentFlags.Archived))
+                    if (oldFlags.Contain(DocumentFlags.Archived) && nonPersistentFlags.Contain(NonPersistentDocumentFlags.UnarchiveFromPatch) == false)
                     {
-                        if (document.TryGetMetadata(out BlittableJsonReaderObject newDocMetadata))
-                        {
-                            newDocMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool isStillArchived);
-                            if (isStillArchived)
-                            {
-                                newFlags |= DocumentFlags.Archived;
-                            }
-                        }
+                        newFlags |= DocumentFlags.Archived;
                     }
                 }
 
@@ -242,22 +235,35 @@ namespace Raven.Server.Documents
 
                 if (document.TryGetMetadata(out BlittableJsonReaderObject docMetadata))
                 {
-                    // drop the @archived: true metadata field for new documents (happens often by cloning archived documents from Studio)
-                    if (oldValue.Pointer == null && newFlags.Contain(DocumentFlags.Archived) == false)
+                    bool shouldRebuildDocument = false;
+                    if (newFlags.Contain(DocumentFlags.Archived))
                     {
-                        if (docMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool isArchivedInMetadata))
+                        // If document has archived flag, but @archived is dropped, rebuild it
+                        // If document has archived flag, but @archived is set to false, revert it to true
+                        if (docMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool isArchived) == false || isArchived == false)
                         {
-                            if (isArchivedInMetadata)
-                            {
-                                docMetadata.Modifications = new DynamicJsonValue(docMetadata);
-                                docMetadata.Modifications.Remove(Constants.Documents.Metadata.Archived);
-                            }
-
-                            document.Modifications = new DynamicJsonValue(document);
-                            document.Modifications[Constants.Documents.Metadata.Key] = docMetadata;
-                            document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
-                            ValidateDocument(id, document, ref documentDebugHash);
+                            docMetadata.Modifications = new DynamicJsonValue(docMetadata);
+                            docMetadata.Modifications[Constants.Documents.Metadata.Archived] = true;
+                            shouldRebuildDocument = true;
                         }
+                    }
+                    else
+                    {
+                        // If document has no archived flag, but @archived is in metadata, drop the metadata entry
+                        if (docMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool _))
+                        {
+                            docMetadata.Modifications = new DynamicJsonValue(docMetadata);
+                            docMetadata.Modifications.Remove(Constants.Documents.Metadata.Archived);
+                            shouldRebuildDocument = true;
+                        }
+                    }
+
+                    if (shouldRebuildDocument)
+                    {
+                        document.Modifications = new DynamicJsonValue(document);
+                        document.Modifications[Constants.Documents.Metadata.Key] = docMetadata;
+                        document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        ValidateDocument(id, document, ref documentDebugHash);
                     }
                 }
 
