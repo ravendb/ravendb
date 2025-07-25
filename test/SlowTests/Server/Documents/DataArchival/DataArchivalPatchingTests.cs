@@ -285,7 +285,7 @@ public class DataArchivalPatchingTests : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Patching)]
-    public void CanTestPatches()
+    public void ArchiveAtPatchTestResultShouldContainArchiveAtFlag()
     {
         using (var store = GetDocumentStore())
         {
