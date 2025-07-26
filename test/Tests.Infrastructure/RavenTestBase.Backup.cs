@@ -29,7 +29,6 @@ using Raven.Tests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Sparrow.Json;
 using Xunit;
-using Xunit.Abstractions;
 
 namespace FastTests
 {

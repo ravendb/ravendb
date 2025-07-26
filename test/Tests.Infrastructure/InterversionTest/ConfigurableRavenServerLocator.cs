@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System.Collections.Generic;
+using System.IO;
 using System.Threading;
 using Sparrow.Platform;
 
@@ -13,7 +14,7 @@ namespace Tests.Infrastructure.InterversionTest
         private static int _port = 8080;
         private static int Port => Interlocked.Increment(ref _port) - 1;
 
-        public ConfigurableRavenServerLocator(string serverDirPath, string version, string dataDir = null, string url = null)
+        public ConfigurableRavenServerLocator(string serverDirPath, string version, string dataDir = null, string url = null, Dictionary<string, string> customSettings = null)
         {
             _serverDirPath = serverDirPath;
             _dataDir = dataDir;
@@ -25,6 +26,12 @@ namespace Tests.Infrastructure.InterversionTest
             if (version.StartsWith("4.0") == false)
             {
                 _commandsArg += " --Features.Availability=Experimental";
+            }
+
+            if (customSettings != null)
+            {
+                foreach (var customSetting in customSettings)
+                    _commandsArg += $" --{customSetting.Key}={customSetting.Value}";
             }
         }
 

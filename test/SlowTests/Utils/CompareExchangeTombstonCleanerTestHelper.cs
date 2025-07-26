@@ -4,7 +4,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using FastTests;
-using GeoAPI.DataStructures;
 using Raven.Client.ServerWide;
 using Raven.Server;
 using Raven.Server.ServerWide.Commands;

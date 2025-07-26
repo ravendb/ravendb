@@ -11,7 +11,6 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Session;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Http;
@@ -1811,7 +1810,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        private static async Task CreateCompareExchangeTombstone(DocumentStore documentStore, string key)
+        internal static async Task CreateCompareExchangeTombstone(DocumentStore documentStore, string key)
         {
             var res = await documentStore.Operations.SendAsync(new PutCompareExchangeValueOperation<int>(key, 1, 0));
             await documentStore.Operations.SendAsync(new DeleteCompareExchangeValueOperation<int>(key, res.Index));

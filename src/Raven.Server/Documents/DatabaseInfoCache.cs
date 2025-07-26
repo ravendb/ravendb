@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Runtime.CompilerServices;
-using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -136,8 +135,6 @@ namespace Raven.Server.Documents
             }
         }
 
-
-
         public static class DatabaseInfoSchema
         {
             public const string DatabaseInfoTree = "DatabaseInfo";
@@ -150,7 +147,5 @@ namespace Raven.Server.Documents
 #pragma warning restore 169
             }
         }
-
-
     }
 }

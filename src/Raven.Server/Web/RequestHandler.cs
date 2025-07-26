@@ -340,7 +340,7 @@ namespace Raven.Server.Web
 
         internal long GetLongQueryString(string name)
         {
-            return GetLongQueryString(name, true).Value;
+            return GetLongQueryString(name, required: true)!.Value;
         }
 
         internal long? GetLongQueryString(string name, bool required)
