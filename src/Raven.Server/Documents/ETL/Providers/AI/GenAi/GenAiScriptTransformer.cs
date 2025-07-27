@@ -179,12 +179,8 @@ var ai = new AI();
                 
                 var attachmentObj = current.AsObject();
                 var data = attachmentObj.GetOwnProperty("data").Value;
-                if (data.IsNull())
-                    attachmentsHashes.Add(string.Empty);
-                else
-                {
+                if (data.IsNull() == false)
                     attachmentsHashes.Add(_attachments?.TryGetValue(data, out var attachment) is true ? attachment?.Base64Hash.ToString() : data.AsString());
-                }
 
                 attachmentsHashes.Add(attachmentObj.GetOwnProperty("type").Value.AsString());
             }
@@ -217,8 +213,7 @@ var ai = new AI();
                             filename = attachment.Name.ToString(CultureInfo.InvariantCulture);
                             if (reference.IsNull())
                             {
-                                data = $"File '{filename}' (of type '{type}') could not be loaded: file not found";
-                                filename = "file.not.found";
+                                data = $"File '{filename}' (of type '{type}') could not be loaded: attachment not found";
                                 type = "text/plain";
                             }
                             else
