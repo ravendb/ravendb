@@ -180,7 +180,7 @@ namespace Raven.Server.Documents
                     newFlags = _documentsStorage.GetFlagsFromOldDocumentForPut(newFlags, oldFlags, nonPersistentFlags);
                     
                     // if doc was Archived and isn't currently unarchived, leave the Archived flag
-                    if (oldFlags.Contain(DocumentFlags.Archived) && nonPersistentFlags.Contain(NonPersistentDocumentFlags.UnarchiveFromPatch) == false)
+                    if (oldFlags.Contain(DocumentFlags.Archived) && nonPersistentFlags.Contain(NonPersistentDocumentFlags.Unarchive) == false)
                     {
                         newFlags |= DocumentFlags.Archived;
                     }
@@ -235,7 +235,6 @@ namespace Raven.Server.Documents
 
                 if (document.TryGetMetadata(out BlittableJsonReaderObject docMetadata))
                 {
-                    bool shouldRebuildDocument = false;
                     if (newFlags.Contain(DocumentFlags.Archived))
                     {
                         // If document has archived flag, but @archived is dropped, rebuild it
@@ -244,7 +243,6 @@ namespace Raven.Server.Documents
                         {
                             docMetadata.Modifications = new DynamicJsonValue(docMetadata);
                             docMetadata.Modifications[Constants.Documents.Metadata.Archived] = true;
-                            shouldRebuildDocument = true;
                         }
                     }
                     else
@@ -254,11 +252,10 @@ namespace Raven.Server.Documents
                         {
                             docMetadata.Modifications = new DynamicJsonValue(docMetadata);
                             docMetadata.Modifications.Remove(Constants.Documents.Metadata.Archived);
-                            shouldRebuildDocument = true;
                         }
                     }
 
-                    if (shouldRebuildDocument)
+                    if (docMetadata.Modifications != null)
                     {
                         document.Modifications = new DynamicJsonValue(document);
                         document.Modifications[Constants.Documents.Metadata.Key] = docMetadata;

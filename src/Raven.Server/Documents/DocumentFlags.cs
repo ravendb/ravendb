@@ -61,7 +61,7 @@ namespace Raven.Server.Documents
         ForceRevisionCreation = 0x10000,
         AllowDataAsNull = 0x20000,
         FromResharding = 0x40000,
-        UnarchiveFromPatch = 0x80000,
+        Unarchive = 0x80000,
     }
 
     public static class EnumExtensions
