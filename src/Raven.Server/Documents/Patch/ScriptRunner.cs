@@ -891,36 +891,23 @@ namespace Raven.Server.Documents.Patch
                 GetDateArg(args[1].ToString(), "archiveAt(doc, utcDateTimeString)", "utcDateTimeString");
                 
                 var archivedDocId = GetIdFromArg(args[0], _unarchiveSignature);
-                using (var doc = _database.DocumentsStorage.Get(_docsCtx, archivedDocId, DocumentFields.Data, throwOnConflict: true))
+                var boi = (BlittableObjectInstance)args[0].AsObject();
+                
+                if(boi.DocumentFlags != null && boi.DocumentFlags.Value.HasFlag(DocumentFlags.Archived))
                 {
-                    if (doc.TryGetMetadata(out var metadata) == false)
-                    {
-                        throw new InvalidOperationException($"Failed to fetch the metadata of document '{archivedDocId}'");
-                    }
-                    
-                    if(doc.Flags.HasFlag(DocumentFlags.Archived))
-                    {
-                        return JsValue.Undefined; // no-op, document already archived
-                    }
-                    // add @archive-at field
-                    metadata.Modifications = new DynamicJsonValue(metadata)
-                    {
-                        [Constants.Documents.Metadata.ArchiveAt] = args[1].ToString()
-                    };
-                    
-                    // add @archive-at field to args[0] for correct test patch results
-                    var obj = args[0].AsObject();
-                    var meta = obj.Get(Constants.Documents.Metadata.Key).AsObject();
-                    meta.Set(Constants.Documents.Metadata.ArchiveAt, args[1].ToString());
-
-                    using (var updated = _docsCtx.ReadObject(doc.Data, archivedDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                    {
-                         _database.DocumentsStorage.Put(_docsCtx, archivedDocId, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
-                    }
+                    return JsValue.Undefined; // no-op, document already archived
                 }
                 
+                if(boi.TryGetValue(Constants.Documents.Metadata.Key, out var metadataJs) == false)
+                {
+                    throw new InvalidOperationException($"Failed to fetch the metadata of document '{archivedDocId}'");
+                }
+                
+                // add @archive-at field
+                var metadata = metadataJs.AsObject();
+                metadata.Set(Constants.Documents.Metadata.ArchiveAt, args[1].ToString());
+                
                 return JsValue.Undefined;
-
             }
 
             private JsValue UnarchiveDoc(JsValue self, JsValue[] args)
