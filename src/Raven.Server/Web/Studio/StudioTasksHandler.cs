@@ -347,11 +347,24 @@ namespace Raven.Server.Web.Studio
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
+                var type = GetEnumQueryString<SchemaType>("type", required: false);
                 var sampleObj = await context.ReadForMemoryAsync(RequestBodyStream(), "convert-to-json-schema");
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var schema = ChatCompletionClient.GetSchemaFromSampleObject(sampleObj.ToString());
+                    string schema;
+                    switch (type)
+                    {
+                        case SchemaType.Default:
+                        case SchemaType.StructureOutput:
+                            schema = ChatCompletionClient.GetSchemaForRequest(schema: null, sampleObj.ToString());
+                            break;
+                        case SchemaType.ToolParameters:
+                            schema = ChatCompletionClient.GetSchemaForTool(schema: null, sampleObj.ToString());
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException($"The type '{type}' is missing");
+                    }
 
                     writer.WriteStartObject();
                     writer.WritePropertyName("Result");
@@ -383,6 +396,13 @@ namespace Raven.Server.Web.Studio
             Database,
             Script,
             ElasticSearchIndex
+        }
+
+        public enum SchemaType
+        {
+            Default,
+            StructureOutput,
+            ToolParameters,
         }
     }
 }

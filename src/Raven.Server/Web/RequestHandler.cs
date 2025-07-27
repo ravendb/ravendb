@@ -387,11 +387,16 @@ namespace Raven.Server.Web
             return value[0];
         }
 
-        internal T GetEnumQueryString<T>(string name) where T : struct
+        internal T GetEnumQueryString<T>(string name, bool required = true) where T : struct
         {
             var val = HttpContext.Request.Query[name];
             if (val.Count == 0 || string.IsNullOrWhiteSpace(val[0]))
-                ThrowRequiredMember(name);
+            {
+                if (required)
+                    ThrowRequiredMember(name);
+
+                return default;
+            }
 
             var value = val[0];
             if (Enum.TryParse(typeof(T), value, true, out var result) == false)
