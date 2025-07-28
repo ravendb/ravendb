@@ -25,7 +25,6 @@ import EditAiAgentParametersSection from "./partials/EditAiAgentParametersSectio
 import EditAiAgentPersistenceSection from "./partials/EditAiAgentPersistenceSection";
 import EditAiAgentToolsSection from "./partials/EditAiAgentToolsSection";
 import EditAiAgentTrimmingSection from "./partials/EditAiAgentTrimmingSection";
-import EditAiAgentToolsAdvancedSection from "./partials/EditAiAgentToolsAdvancedSection";
 import { LoadingView } from "components/common/LoadingView";
 import { connectionStringsActions } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { useAsyncCallback } from "react-async-hook";
@@ -142,7 +141,6 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                             <EditAiAgentPersistenceSection />
                                             <EditAiAgentParametersSection />
                                             <EditAiAgentToolsSection />
-                                            <EditAiAgentToolsAdvancedSection />
                                             <EditAiAgentTrimmingSection />
                                         </>
                                     )}

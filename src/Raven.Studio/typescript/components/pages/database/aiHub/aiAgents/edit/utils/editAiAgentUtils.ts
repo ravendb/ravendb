@@ -20,10 +20,8 @@ function mapFromDto(
             persistenceExpiresInSeconds: TimeInSeconds.Day * 30,
             parameterInput: "",
             parameters: [],
-            isToolsAdvancedSettings: false,
             queries: [],
             actions: [],
-            maxModelIterationsPerCall: null,
             trimming: {
                 method: null,
                 isEnableHistory: false,
@@ -33,9 +31,6 @@ function mapFromDto(
                 messagesLengthAfterTruncate: null,
                 maxTokensBeforeSummarization: null,
                 maxTokensAfterSummarization: null,
-                resultPrefix: "",
-                summarizationTaskBeginningPrompt: "",
-                summarizationTaskEndPrompt: "",
             },
             test: {
                 prompt: "",
@@ -60,7 +55,6 @@ function mapFromDto(
             dto.Parameters?.map((x) => ({
                 name: x,
             })) ?? [],
-        isToolsAdvancedSettings: dto.MaxModelIterationsPerCall != null,
         queries:
             dto.Queries?.map((x) => ({
                 name: x.Name,
@@ -80,7 +74,6 @@ function mapFromDto(
                 isSaved: true,
                 isEditing: false,
             })) ?? [],
-        maxModelIterationsPerCall: dto.MaxModelIterationsPerCall,
         trimming: {
             method: getTrimmingMethod(dto),
             isEnableHistory: !!dto.ChatTrimming?.History,
@@ -90,9 +83,6 @@ function mapFromDto(
             messagesLengthAfterTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthAfterTruncate,
             maxTokensBeforeSummarization: dto.ChatTrimming?.Tokens?.MaxTokensBeforeSummarization,
             maxTokensAfterSummarization: dto.ChatTrimming?.Tokens?.MaxTokensAfterSummarization,
-            resultPrefix: dto.ChatTrimming?.Tokens?.ResultPrefix,
-            summarizationTaskBeginningPrompt: dto.ChatTrimming?.Tokens?.SummarizationTaskBeginningPrompt,
-            summarizationTaskEndPrompt: dto.ChatTrimming?.Tokens?.SummarizationTaskEndPrompt,
         },
         test: {
             prompt: "",
@@ -152,7 +142,7 @@ function mapToDto(
                 ParametersSampleObject: x.parametersSampleObject || null,
                 ParametersSchema: x.parametersSchema || null,
             })) ?? [],
-        MaxModelIterationsPerCall: formData.isToolsAdvancedSettings ? formData.maxModelIterationsPerCall : null,
+        MaxModelIterationsPerCall: null,
         ChatTrimming:
             formData.trimming?.method != null
                 ? {
@@ -168,10 +158,9 @@ function mapToDto(
                               ? {
                                     MaxTokensBeforeSummarization: formData.trimming.maxTokensBeforeSummarization,
                                     MaxTokensAfterSummarization: formData.trimming.maxTokensAfterSummarization,
-                                    ResultPrefix: formData.trimming.resultPrefix,
-                                    SummarizationTaskBeginningPrompt:
-                                        formData.trimming.summarizationTaskBeginningPrompt,
-                                    SummarizationTaskEndPrompt: formData.trimming.summarizationTaskEndPrompt,
+                                    ResultPrefix: null,
+                                    SummarizationTaskBeginningPrompt: null,
+                                    SummarizationTaskEndPrompt: null,
                                 }
                               : null,
                       Truncate:

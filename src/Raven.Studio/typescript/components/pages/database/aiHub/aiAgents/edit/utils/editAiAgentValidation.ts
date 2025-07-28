@@ -86,10 +86,6 @@ const schema = yup.object({
         })
     ),
 
-    // Advanced
-    isToolsAdvancedSettings: yup.boolean(),
-    maxModelIterationsPerCall: yup.number().nullable().positive().integer(),
-
     // Trimming
     trimming: yup
         .object({
@@ -107,9 +103,6 @@ const schema = yup.object({
             // Tokens
             maxTokensBeforeSummarization: yup.number().nullable().positive().integer(),
             maxTokensAfterSummarization: yup.number().nullable().positive().integer(),
-            resultPrefix: yup.string().nullable(),
-            summarizationTaskBeginningPrompt: yup.string().nullable(),
-            summarizationTaskEndPrompt: yup.string().nullable(),
         })
         .nullable(),
 
