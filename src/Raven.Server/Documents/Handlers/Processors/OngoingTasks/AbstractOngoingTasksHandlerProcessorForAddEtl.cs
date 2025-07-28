@@ -31,6 +31,40 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
         {
             AssertCanAddOrUpdateEtl(ref configuration);
+
+            switch (EtlConfiguration<ConnectionString>.GetEtlType(configuration))
+            {
+                case EtlType.EmbeddingsGeneration:
+                {
+                    if (configuration.TryGet(nameof(EmbeddingsGenerationConfiguration.Identifier), out string id) == false || string.IsNullOrEmpty(id))
+                    {
+                        configuration.TryGet(nameof(EmbeddingsGenerationConfiguration.Name), out string name);
+                        var identifier = AiTaskIdentifierHelper.GenerateIdentifier(name);
+                        configuration.Modifications = new DynamicJsonValue(configuration)
+                        {
+                            [nameof(EmbeddingsGenerationConfiguration.Identifier)] = identifier
+                        };
+                    }
+
+                    configuration = context.ReadObject(configuration, "EmbeddingsGenerationConfig");
+                }
+                    break;
+                case EtlType.GenAi:
+                {
+                    if (configuration.TryGet(nameof(GenAiConfiguration.Identifier), out string id) == false || string.IsNullOrEmpty(id))
+                    {
+                        configuration.TryGet(nameof(GenAiConfiguration.Name), out string name);
+                        var identifier = AiTaskIdentifierHelper.GenerateIdentifier(name);
+                        configuration.Modifications = new DynamicJsonValue(configuration)
+                        {
+                            [nameof(GenAiConfiguration.Identifier)] = identifier
+                        };
+                    }
+
+                    configuration = context.ReadObject(configuration, "GenAiConfig");
+                    }
+                    break;
+            }
         }
 
         protected override async ValueTask OnAfterUpdateConfiguration(TransactionOperationContext _, BlittableJsonReaderObject configuration, string raftRequestId)

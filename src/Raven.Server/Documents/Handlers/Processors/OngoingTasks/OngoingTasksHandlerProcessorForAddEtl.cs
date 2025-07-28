@@ -3,6 +3,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -22,7 +23,13 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
             switch (EtlConfiguration<ConnectionString>.GetEtlType(configuration))
             {
                 case EtlType.GenAi:
+                    var genAiCfg = JsonDeserializationCluster.GenAiConfiguration(configuration);
                     responseJson[nameof(GenAi.ChangeVector)] = GetChangeVector();
+                    responseJson[nameof(AddEtlOperationResult.Identifier)] = genAiCfg.Identifier;
+                    break;
+                case EtlType.EmbeddingsGeneration:
+                    var embCfg = JsonDeserializationCluster.EmbeddingsGenerationConfiguration(configuration);
+                    responseJson[nameof(AddEtlOperationResult.Identifier)] = embCfg.Identifier;
                     break;
                 default:
                     return;

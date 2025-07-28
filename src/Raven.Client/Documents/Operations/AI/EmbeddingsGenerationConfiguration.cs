@@ -151,16 +151,11 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
 
     internal bool ValidateIdentifier(out List<string> errors)
     {
-        return ValidateIdentifier(Identifier, out errors);
+        return AiTaskIdentifierHelper.ValidateIdentifier(Identifier, out errors);
     }
 
     internal static string GenerateIdentifier(string input)
     {
        return AiTaskIdentifierHelper.GenerateIdentifier(input);
-    }
-
-    internal static bool ValidateIdentifier(string identifier, out List<string> errors)
-    {
-        return AiTaskIdentifierHelper.ValidateIdentifier(identifier, out errors);
     }
 }

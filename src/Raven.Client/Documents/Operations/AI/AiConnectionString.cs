@@ -63,7 +63,7 @@ public sealed class AiConnectionString : ConnectionString
 
     internal bool ValidateIdentifier(out List<string> errors)
     {
-        return EmbeddingsGenerationConfiguration.ValidateIdentifier(Identifier, out errors);
+        return AiTaskIdentifierHelper.ValidateIdentifier(Identifier, out errors);
     }
 
     public AiSettingsCompareDifferences Compare(AiConnectionString newConnectionString)

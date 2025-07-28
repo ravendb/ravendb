@@ -220,7 +220,7 @@ for(const comment of this.Comments)
 "
         };
 
-        store.Maintenance.Send(new AddGenAiOperation(config));
+        var res = store.Maintenance.Send(new AddGenAiOperation(config));
 
         var op = new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi);
         var taskInfo = await store.Maintenance.SendAsync(op);
@@ -230,7 +230,7 @@ for(const comment of this.Comments)
 this.Comments[idx].LegitComment = $output.Blocked == false;
 ";
         config.UpdateScript = newUpdateScript;
-        config.Identifier = AiTaskIdentifierHelper.GenerateIdentifier(config.Name);
+        config.Identifier = res.Identifier;
         store.Maintenance.Send(new UpdateGenAiOperation(taskId, config));
 
         op = new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi);
