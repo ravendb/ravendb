@@ -878,6 +878,16 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 enterpriseAi: { value: true },
                 fieldInLicense: "HasGenAi",
             },
+            {
+                name: "AI Agent",
+                agpl: { value: false },
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: false },
+                developer: { value: true },
+                enterpriseAi: { value: true },
+                fieldInLicense: "HasAiAgent",
+            },
         ],
     },
     {
