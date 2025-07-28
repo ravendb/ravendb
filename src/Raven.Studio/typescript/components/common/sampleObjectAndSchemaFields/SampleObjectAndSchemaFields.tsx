@@ -65,7 +65,7 @@ export default function SampleObjectAndSchemaFields<
                     "The sample object has been modified. Please regenerate the JSON schema to ensure it matches the new sample object structure.",
             });
         } else {
-            clearErrors([jsonSchemaName as TFieldValues[TName]])
+            clearErrors([jsonSchemaName as TFieldValues[TName]]);
         }
     }, [sampleObject, jsonSchema, canRegenerateSchema]);
 

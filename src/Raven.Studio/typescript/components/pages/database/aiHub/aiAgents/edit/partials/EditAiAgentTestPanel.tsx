@@ -35,6 +35,8 @@ export default function EditAiAgentTestPanel() {
     const runTestState = useAppSelector(editAiAgentSelectors.runTestState);
     const isWaitingForActionToolSubmit = useAppSelector(editAiAgentSelectors.isWaitingForActionToolSubmit);
 
+    const isLoading = runTestState === "loading" || isWaitingForActionToolSubmit;
+
     const runTest = async (toolCallParameters?: AiAgentToolCall[]) => {
         await dispatch(editAiAgentActions.runTest({ databaseName, formValues, toolCallParameters })).unwrap();
         setValue("test.prompt", "");
@@ -164,7 +166,7 @@ export default function EditAiAgentTestPanel() {
                                 rows={3}
                                 className="rounded-2"
                                 style={{ resize: "none" }}
-                                disabled={runTestState === "loading" || isWaitingForActionToolSubmit}
+                                disabled={isLoading}
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" && !e.shiftKey) {
                                         e.preventDefault();
@@ -177,7 +179,7 @@ export default function EditAiAgentTestPanel() {
                                     variant="secondary"
                                     icon="arrow-up"
                                     onClick={() => runTest()}
-                                    isSpinning={runTestState === "loading" || isWaitingForActionToolSubmit}
+                                    isSpinning={isLoading}
                                     className="position-absolute rounded-pill"
                                     style={{ right: "10px", bottom: "10px", zIndex: 5 }}
                                 />
