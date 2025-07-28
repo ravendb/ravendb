@@ -21,6 +21,7 @@ interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TNa
     jsonSchemaLabel?: ReactNode;
     jsonSchema: string;
     jsonSchemaSyntaxHelp: React.ReactNode;
+    schemaType?: Raven.Server.Web.Studio.StudioTasksHandler.SchemaType;
 }
 
 export default function SampleObjectAndSchemaFields<
@@ -37,6 +38,7 @@ export default function SampleObjectAndSchemaFields<
     jsonSchemaLabel = "JSON schema",
     jsonSchema,
     jsonSchemaSyntaxHelp,
+    schemaType,
 }: SampleObjectAndSchemaFieldsProps<TFieldValues, TName>) {
     const sampleObjectRef = useRef<ReactAce>(null);
     const jsonSchemaRef = useRef<ReactAce>(null);
@@ -46,7 +48,7 @@ export default function SampleObjectAndSchemaFields<
     const [lastSampleObjectForGenerate, setLastSampleObjectForGenerate] = useState<string>("");
 
     const asyncGenerateSchema = useAsyncCallback(async () => {
-        const result = await tasksService.getJsonSchemaFromSampleObject(JSON.parse(sampleObject));
+        const result = await tasksService.getJsonSchemaFromSampleObject(JSON.parse(sampleObject), schemaType);
         setValue(jsonSchemaName, result.Result as TFieldValues[TName], { shouldValidate: true });
         setLastSampleObjectForGenerate(sampleObject);
     });

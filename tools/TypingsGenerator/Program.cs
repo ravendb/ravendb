@@ -486,6 +486,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(NodeId));
             scripter.AddType(typeof(ModifyOngoingTaskResult));
             scripter.AddType(typeof(Transformation));
+            scripter.AddType(typeof(SchemaType));
 
             // ongoing tasks - replication
             scripter.AddType(typeof(OngoingTaskReplication));
