@@ -109,6 +109,7 @@ function ToolMessage({ message, type }: ToolMessageProps) {
         () => (isTable ? JSON.parse(message.content).map((x: any) => new document(x)) : []),
         [message.content, isTable]
     );
+    const contentMode = getAceEditorMode(message.content);
 
     const { columnDefs } = useDocumentColumnsProvider({
         documents: tableData,
@@ -147,7 +148,7 @@ function ToolMessage({ message, type }: ToolMessageProps) {
                     aceRef={aceRef}
                     value={message.content}
                     readOnly
-                    mode="json"
+                    mode={contentMode}
                     height="150px"
                     actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
                 />
@@ -320,11 +321,14 @@ function AgentMessage({
                                 value={agentMessage.content}
                                 readOnly
                                 mode={contentMode}
-                                actions={[{ component: <AceEditor.FullScreenAction /> }]}
+                                actions={[
+                                    { component: <AceEditor.FullScreenAction /> },
+                                    { component: <AceEditor.FormatAction /> },
+                                ]}
                                 height={getAgentAceEditorHeight(agentMessage.content)}
-                                wrapEnabled
+                                wrapEnabled={contentMode === "text" ? true : false}
                                 setOptions={{
-                                    indentedSoftWrap: false,
+                                    indentedSoftWrap: contentMode === "text" ? true : false,
                                 }}
                             />
                         </div>
@@ -378,7 +382,7 @@ function ParameterField({ idx, name, control }: ParameterFieldProps) {
                 aceRef={aceRef}
                 control={control}
                 name={`parameters.${idx}.arguments`}
-                mode="json"
+                mode="text"
                 height="150px"
                 actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
             />
