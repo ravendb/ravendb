@@ -149,7 +149,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             _ = choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal) || msg.TryGet(Constants.ResponseFields.Refusal, out refusal);
 
             //TODO: full output if we get here?
-            throw new RefusedToAnswerException("The request was refused by the model")
+            throw new RefusedToAnswerException($"The request was refused by the model: '{refusal}'")
             {
                 Refusal = refusal, FinishReason = finishReason, RequestId = GetRequestId(response.Headers)
             };
