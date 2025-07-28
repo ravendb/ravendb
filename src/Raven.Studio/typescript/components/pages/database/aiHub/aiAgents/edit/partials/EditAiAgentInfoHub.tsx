@@ -10,7 +10,44 @@ export default function EditAiAgentInfoHub() {
                 description="Get additional info on this feature"
                 targetId="about-view"
             >
-                TODO
+                <div>
+                    In this view, you can define an AI Agent - <br /> a natural language{" "}
+                    <strong>conversational assistant</strong> powered by an LLM.
+                    <br />
+                    <br />
+                    The agent lets you chat with an LLM about your data. It can retrieve information from your database
+                    to answer prompts, and trigger specific actions when needed.
+                    <br />
+                    <br />
+                    The configuration includes:
+                    <ul className="mt-1">
+                        <li>
+                            <strong>Connection string</strong> - Specifies the AI provider and the LLM of your choice.
+                        </li>
+                        <li>
+                            <strong>Response structure</strong> - Define the expected format of the agent’s replies.{" "}
+                        </li>
+                        <li>
+                            <strong>Chat storage</strong> - Define where chat conversations are stored and how long
+                            they’re retained.
+                        </li>
+                        <li>
+                            <strong>Tools</strong> -{" "}
+                            <ul>
+                                <li className="mt-1">
+                                    <strong>Query tools</strong>: <br /> Define queries the agent can run on your
+                                    database when requested by the LLM.
+                                    <br /> You can scope access by setting agent parameters - ensuring the LLM receives
+                                    only the data its allowed to access.
+                                </li>
+                                <li className="mt-1">
+                                    <strong>Action tools</strong>: <br /> Define tasks that the agent can trigger when
+                                    instructed by the LLM in response to user prompts.
+                                </li>
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
             </AccordionItemWrapper>
         </AboutViewFloating>
     );

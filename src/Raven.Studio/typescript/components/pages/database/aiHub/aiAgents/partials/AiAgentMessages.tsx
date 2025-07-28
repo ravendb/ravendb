@@ -407,7 +407,7 @@ function ToolCall({ toolCall, toolQueries, toolActions }: ToolCallProps) {
     const toolAction = toolActions?.find((x) => x.Name === toolCall.name);
 
     const icon: IconName = toolQuery ? "query" : "force";
-    const label = toolQuery ? "Query tool called:" : "Action tool called:";
+    const label = toolQuery ? "Query tool:" : "Action tool:";
 
     return (
         <Accordion className="transcript-tool border border-secondary rounded-2 panel-bg-3">

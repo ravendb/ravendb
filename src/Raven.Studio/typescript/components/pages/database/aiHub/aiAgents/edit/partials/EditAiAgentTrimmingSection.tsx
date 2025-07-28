@@ -32,6 +32,9 @@ export default function EditAiAgentTrimmingSection() {
                 <br />
                 If you &quot;enable history&quot;, the original chat content prior to trimming will be stored in
                 dedicated documents in the <code>@conversations-history</code> collection.
+                <br />
+                Note: if there are any open action tools that have not yet received a response, trimming will be delayed
+                until those actions are completed.
             </div>
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>
@@ -176,8 +179,8 @@ function HistoryFields() {
                     <PopoverWithHoverWrapper
                         message={
                             <>
-                                Toggle on to keep the chat content that is removed during summarization in a dedicated
-                                document in the <code>@conversations-history</code> collection.
+                                Toggle on to keep the original chat content before trimming in a dedicated document in
+                                the <code>@conversations-history</code> collection.
                             </>
                         }
                     >

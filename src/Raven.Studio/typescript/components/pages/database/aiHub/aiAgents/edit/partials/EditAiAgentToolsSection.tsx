@@ -57,7 +57,7 @@ export default function EditAiAgentToolsSection() {
                                         retrieve data.
                                         <br />
                                         <br />
-                                        The LLM can will the agent to run these queries as needed to answer user
+                                        The LLM can instruct the agent to run these queries as needed to answer user
                                         questions.
                                         <br />
                                         <br />
@@ -514,8 +514,7 @@ function ActionField({ index, remove, save, edit, cancelEdit }: ActionFieldProps
 }
 
 const actionFieldDescriptionPlaceholder = `In this description, explain to the LLM under which conditions it should trigger this action.
-E.g., trigger this action tool when the customer reports a problem and a support ticket needs to be created."
-E.g., trigger this action tool when you identify the customer has a problem with an order`;
+E.g., Trigger this action tool when you identify the customer has a problem with an order.`;
 
 const actionFieldSampleObjectPlaceholder = `{
     // "FieldName": "Instruction to the LLM",
@@ -542,8 +541,8 @@ function ActionFieldSampleObjectTooltip() {
             This object is not sent to the model directly - RavenDB uses it to generate a JSON schema, which is sent to
             the model.
             <br />
-            This object is optional. Providing an empty object `{}` is also valid if you don&apos;t need any data from
-            the LLM.
+            This object is optional. Providing an empty object <code>{"{}"}</code> is also valid if you don&apos;t need
+            any data from the LLM.
         </>
     );
 }

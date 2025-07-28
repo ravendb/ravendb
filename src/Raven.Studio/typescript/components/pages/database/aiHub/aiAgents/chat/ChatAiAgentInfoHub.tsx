@@ -10,7 +10,27 @@ export default function ChatAiAgentInfoHub() {
                 description="Get additional info on this feature"
                 targetId="about-view"
             >
-                TODO
+                <div>
+                    <ul>
+                        <li>
+                            This chat view allows you to interact with the agent by sending user prompts that are
+                            forwarded to the LLM and receiving responses.
+                        </li>
+                        <li className="mt-1">
+                            When appropriate, the LLM can instruct the agent to invoke predefined tools - either to run
+                            queries and fetch data from the database, or to perform specific actions.
+                        </li>
+                        <li className="mt-1">
+                            You can view the full interaction between the agent and the LLM, including tool calls
+                            triggered during the conversation. Switch between the chat display and raw data format to
+                            inspect how each user request is handled.
+                        </li>
+                        <li className="mt-1">
+                            The chat session is saved in a dedicated document in the <code>@conversations</code>{" "}
+                            collection.
+                        </li>
+                    </ul>
+                </div>
             </AccordionItemWrapper>
         </AboutViewFloating>
     );

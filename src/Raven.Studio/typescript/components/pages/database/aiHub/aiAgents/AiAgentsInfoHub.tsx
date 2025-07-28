@@ -28,7 +28,27 @@ export default function AiAgentsInfoHub() {
                 description="Get additional info on this feature"
                 targetId="about-view"
             >
-                TODO
+                <div>
+                    <ul>
+                        <li>
+                            An AI Agent is a natural language <strong>conversational assistant</strong> powered by an
+                            LLM.
+                        </li>
+                        <li className="mt-1">
+                            The agent acts as a bridge between the LLM and your data, allowing the model to retrieve
+                            information from your database and respond to user prompts. It can also invoke specific
+                            actions when the LLM determines an action is needed.
+                        </li>
+                        <li className="mt-1">
+                            This view displays all defined AI Agents.
+                            <br /> You can add new agents, edit, delete, or clone an existing one as a starting point.
+                        </li>
+                        <li className="mt-1">
+                            To interact with an agent,
+                            <br /> click "Start new chat" and begin a conversation directly from the Studio.
+                        </li>
+                    </ul>
+                </div>
             </AccordionItemWrapper>
             <FeatureAvailabilitySummaryWrapper isUnlimited={hasAiAgent} data={featureAvailability} />
         </AboutViewFloating>
