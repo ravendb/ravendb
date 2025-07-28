@@ -1780,7 +1780,7 @@ namespace Raven.Server.Smuggler.Documents
 
                             var attachment = await ProcessAttachmentStreamAsync(context, data, actions);
                             attachments.Add(attachment);
-                            hashBySize.TryAdd(attachment.Base64Hash.ToString(), attachment.Size);
+                            hashBySize.TryAdd(attachment.Base64Hash.ToString(), attachment.SizeInBytes);
                             continue;
                         }
                     }
@@ -2218,7 +2218,7 @@ namespace Raven.Server.Smuggler.Documents
             var attachment = new DocumentItem.AttachmentStream
             {
                 Data = data,
-                Size = size,
+                SizeInBytes = size,
             };
 
             attachment.Base64HashDispose = Slice.External(_allocator, hash, out attachment.Base64Hash);

@@ -9,9 +9,10 @@ namespace Raven.Client.Documents.Operations.Attachments;
 public class StoreAttachmentParameters : IStoreAttachmentParameters
 {
     /// <inheritdoc />
-    public string Name { get; set; }
+    public string Name { get; }
+
     /// <inheritdoc />
-    public Stream Stream { get; set; }
+    public Stream Stream { get; }
 
     /// <inheritdoc />
     public string ChangeVector { get; set; }

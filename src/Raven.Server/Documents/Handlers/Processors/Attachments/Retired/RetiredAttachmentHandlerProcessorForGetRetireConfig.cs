@@ -13,7 +13,7 @@ internal sealed class RetiredAttachmentHandlerProcessorForGetRetireConfig : Abst
     {
     }
 
-    protected override ValueTask<RetiredAttachmentsConfiguration> GetAttachmentRetireConfiguration()
+    protected override ValueTask<RetiredAttachmentsConfiguration> GetAttachmentRetireConfigurationAsync()
     {
         using (RequestHandler.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         using (context.OpenReadTransaction())

@@ -2,7 +2,6 @@
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
-using Raven.Server.Documents.Commands.Attachments;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -16,11 +15,11 @@ internal abstract class AbstractRetiredAttachmentHandlerProcessorForGetRetireCon
     {
     }
 
-    protected abstract ValueTask<RetiredAttachmentsConfiguration> GetAttachmentRetireConfiguration();
+    protected abstract ValueTask<RetiredAttachmentsConfiguration> GetAttachmentRetireConfigurationAsync();
 
     public override async ValueTask ExecuteAsync()
     {
-        var expirationConfig = await GetAttachmentRetireConfiguration();
+        var expirationConfig = await GetAttachmentRetireConfigurationAsync();
 
         using (RequestHandler.Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {

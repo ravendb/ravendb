@@ -7,12 +7,12 @@ public interface IStoreAttachmentParameters
     /// <summary>
     /// The name of the attachment.
     /// </summary>
-    string Name { get; set; }
+    string Name { get; }
 
     /// <summary>
     /// The stream of the attachment.
     /// </summary>
-    Stream Stream { get; set; }
+    Stream Stream { get; }
 
     /// <summary>
     /// The change vector of the attachment for concurrency control.
