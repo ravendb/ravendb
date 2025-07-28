@@ -159,6 +159,7 @@ export default function SampleObjectAndSchemaFields<
                                                 If you don&apos;t provide a schema, RavenDB will generate one
                                                 automatically based on the sample response object.
                                                 <br />
+                                                <br />
                                                 If you provide both a sample object and a schema, the schema takes
                                                 precedence and will be sent to the model.
                                             </>

@@ -180,6 +180,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                             Provide a JSON object that defines the structure of the responses you expect to receive from
                             the LLM via the agent in the conversation.
                             <br />
+                            <br />
                             This object is not sent to the model directly - RavenDB uses it to generate a JSON schema,
                             which is sent to the model.
                         </>
@@ -198,6 +199,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                             <br />
                             If you don&apos;t provide a schema, RavenDB will generate one automatically based on the
                             sample response object.
+                            <br />
                             <br />
                             If you provide both a sample object and a schema, the schema takes precedence.
                         </>

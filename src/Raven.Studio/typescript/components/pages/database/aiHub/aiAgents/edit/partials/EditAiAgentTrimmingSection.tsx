@@ -31,7 +31,7 @@ export default function EditAiAgentTrimmingSection() {
                 You can configure trimming of long conversations either by summarizing or truncating older messages.
                 <br />
                 If you &quot;enable history&quot;, the original chat content prior to trimming will be stored in
-                dedicated documents in the `@conversations-history` collection.
+                dedicated documents in the <code>@conversations-history</code> collection.
             </div>
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>
