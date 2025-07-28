@@ -16,6 +16,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Raven.Server.Documents;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
@@ -1077,7 +1078,7 @@ namespace Raven.Server.Smuggler.Documents
 
                         foreach (var toRemove in attachmentsToRemoveNames)
                         {
-                            if (toRemove.RetireParameters == null || toRemove.RetireParameters.Flags == RetiredAttachmentFlags.None)
+                            if (toRemove.RetireParameters.IsLocalAttachment())
                             {
                                 //TODO: egor this method is same as below
                                 _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove.Name, null, collectionName: out _, updateDocument: false, extractCollectionName: false);

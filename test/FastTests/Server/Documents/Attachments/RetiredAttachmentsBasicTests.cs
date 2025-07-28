@@ -3,8 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Documents.Indexes.Static.Attachments;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -348,6 +350,19 @@ namespace FastTests.Server.Documents.Attachments
                     RetireFrequencyInSec = 1,
                 })));
                 Assert.Contains("Only one uploader for RetiredAttachmentsConfiguration can be configured.", e.Message);
+            }
+        }
+
+        [RavenFact(RavenTestCategory.Attachments)]
+        public void All_IAttachmentObject_properties_exist_in_IAttachmentIndexObject()
+        {
+            var attObjProps = typeof(IAttachmentObject).GetProperties();
+            var attObjIndexProps = typeof(IAttachmentIndexObject).GetProperties();
+            var attObjIndexPropNames = new HashSet<string>(attObjIndexProps.Select(p => p.Name));
+
+            foreach (var prop in attObjProps)
+            {
+                Assert.True(attObjIndexPropNames.Contains(prop.Name), $"Property '{prop.Name}' is missing in {nameof(IAttachmentIndexObject)}");
             }
         }
     }

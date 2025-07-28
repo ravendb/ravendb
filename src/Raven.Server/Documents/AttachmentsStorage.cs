@@ -11,6 +11,7 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.Exceptions.Documents.Attachments;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
@@ -97,7 +98,7 @@ namespace Raven.Server.Documents
                 var attachment = TableValueToAttachment(context, ref result.Reader);
 
                 var stream = GetAttachmentStream(context, attachment.Base64Hash);
-                if (stream == null && attachment.IsRetired() == false)
+                if (stream == null && attachment.RetireParameters.IsRetiredAttachment() == false)
                 {
                     ThrowMissingAttachment(context, attachment.Key);
                 }
@@ -804,7 +805,7 @@ namespace Raven.Server.Documents
                 if (attachment == null)
                     continue;
 
-                if (attachment.IsRetired())
+                if (attachment.RetireParameters.IsRetiredAttachment())
                 {
                     yield return attachment;
                 }
@@ -937,7 +938,7 @@ namespace Raven.Server.Documents
                 return null;
             }
 
-            if (attachment.IsRetired())
+            if (attachment.RetireParameters.IsRetiredAttachment())
             {
                 return attachment;
             }
@@ -1090,7 +1091,7 @@ namespace Raven.Server.Documents
                 Size = TableValueToLong((int)AttachmentsTable.Size, ref tvr),
             };
 
-            result.RetireParameters = Attachment.GetRetireAttachmentParameters(
+            result.RetireParameters = RetireAttachmentExtensions.GetRetireAttachmentParameters(
                 TableValueToString(context, (int)AttachmentsTable.Identifier, ref tvr),
                 TableValueToNullableDateTime((int)AttachmentsTable.RetireAt, ref tvr),
                 TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref tvr));
@@ -1171,7 +1172,7 @@ namespace Raven.Server.Documents
                 AttachmentDoesNotExistException.ThrowFor(sourceDocumentId, sourceName);
 
             var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Size, attachment.RetireParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
-            Debug.Assert(attachment.RetireParameters == null || attachment.RetireParameters.Flags == RetiredAttachmentFlags.None, "attachment.RetireParameters == null || attachment.RetireParameters.Flags == AttachmentFlags.None");
+            Debug.Assert(attachment.RetireParameters.IsLocalAttachment(), "attachment.RetireParameters.IsLocalAttachment()");
             DeleteAttachment(context, sourceDocumentId, sourceName, changeVector, out var sourceCollectionName, updateDocument, hash, contentType, usePartialKey, extractCollectionName: extractCollectionName);
 
             return new MoveAttachmentDetailsServer()

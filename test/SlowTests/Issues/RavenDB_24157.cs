@@ -1,4 +1,5 @@
-﻿using FastTests;
+﻿using System.Collections.Generic;
+using FastTests;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
@@ -35,15 +36,26 @@ namespace SlowTests.Issues
         {
             using (var store = GetDocumentStore(options))
             {
-                var cfg = new RetiredAttachmentsConfiguration
+                var id = "does-not-exist-identifier";
+                var cfg = new RetiredAttachmentsConfiguration()
                 {
-                    RetireFrequencyInSec = 123,
-                    Disabled = true,
-                    S3Settings = new S3Settings
+                    Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
                     {
-                        BucketName = "test-bucket-does-not-exist", AwsRegionName = "us-west-2", AwsAccessKey = "AKIAFAKEKEY", AwsSecretKey = "FAKESECRET"
-                    }
+                        {
+                            id, new RetiredAttachmentsDestinationConfiguration()
+                            {
+                                S3Settings = new S3Settings
+                                {
+                                    BucketName = "test-bucket-does-not-exist", AwsRegionName = "us-west-2", AwsAccessKey = "AKIAFAKEKEY", AwsSecretKey = "FAKESECRET"
+                                },
+                                Disabled = true,
+                                Identifier = id
+                            }
+                        }
+                    },
+                    RetireFrequencyInSec = 123
                 };
+
                 var e = Assert.Throws<NotSupportedInShardingException>(() =>
                 {
                     store.Maintenance.Send(new ConfigureRetiredAttachmentsOperation(cfg));

@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
 using Raven.Server.ServerWide;
@@ -50,7 +51,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                             continue;
 
                         IBulkPostAttachmentStrategy strategy;
-                        if (attachment.IsRetired())
+                        if (attachment.RetireParameters.IsRetiredAttachment())
                         {
                             strategy = new RetiredBulkPostAttachmentStrategyProcessor(RequestHandler);
                             downloader ??= strategy.GetAttachmentsDownloader(tcs);

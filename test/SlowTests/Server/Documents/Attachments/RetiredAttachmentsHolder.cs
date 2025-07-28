@@ -1,20 +1,17 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Threading;
 using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
 using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
-using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
@@ -24,11 +21,10 @@ using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server;
 using Raven.Server.Documents;
-using Raven.Server.Documents.PeriodicBackup.Restore;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.ServerWide.Context;
-using SlowTests.Client.Attachments;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -56,7 +52,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         {
             var t = Attachments.FirstOrDefault(x =>
                 x.DocumentId.ToLowerInvariant() == docId && x.Name == attachment.Name &&
-                (x.RetireParameters == null || x.RetireParameters.Flags == RetiredAttachmentFlags.None) &&
+                (x.RetireParameters.IsLocalAttachment()) &&
                 x.Hash == attachment.Base64Hash.ToString());
             Assert.NotNull(t);
             Attachments.Remove(t);
@@ -1164,6 +1160,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             public RetiredAttachmentFlags AttachmentFlags { get; set; }
             public DateTime? AttachmentRetiredAt { get; set; }
             public Stream AttachmentStream { get; set; }
+            public string RetireIdentifier { get; set; }
         }
         public MultipleAttachmentsIndex()
         {
@@ -1177,8 +1174,9 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     AttachmentContentType = attachment.ContentType,
                     AttachmentHash = attachment.Hash,
                     AttachmentSize = attachment.Size,
-                    AttachmentFlags = attachment.Flags,
-                    AttachmentRetiredAt = attachment.RetireAt
+                    AttachmentFlags = attachment.RetireFlags,
+                    AttachmentRetiredAt = attachment.RetireAt,
+                    RetireIdentifier = attachment.RetireIdentifier
                 };
         }
     }

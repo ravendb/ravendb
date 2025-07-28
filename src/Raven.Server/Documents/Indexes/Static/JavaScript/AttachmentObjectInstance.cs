@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
 
         private JsValue GetContentAsString(JsValue self, JsValue[] args)
         {
-            if (_attachment.Flags == AttachmentFlags.Retired)
+            if (_attachment.RetireFlags == RetiredAttachmentFlags.Retired)
                 throw new RetiredAttachmentIndexingException($"Attempted to '{nameof(GetContentAsString)}' on retired attachment named '{_attachment.Name}' which is no longer available locally.");
 
             var encoding = Encoding.UTF8;
@@ -87,10 +87,14 @@ namespace Raven.Server.Documents.Indexes.Static.JavaScript
                     value = new PropertyDescriptor(new JsString(_attachment.Hash), writable: false, enumerable: false, configurable: false);
                 else if (property == nameof(IAttachmentObject.Size))
                     value = new PropertyDescriptor(_attachment.Size, writable: false, enumerable: false, configurable: false);
-                else if (property == nameof(IAttachmentObject.Flags))
-                    value = new PropertyDescriptor(new JsString(_attachment.Flags.ToString()), writable: false, enumerable: false, configurable: false);
+                else if (property == nameof(IAttachmentObject.RetireFlags))
+                    value = new PropertyDescriptor(new JsString(_attachment.RetireFlags.ToString()), writable: false, enumerable: false, configurable: false);
                 else if (property == nameof(IAttachmentObject.RetireAt))
                     value = _attachment.RetireAt is DateTime dt ? new PropertyDescriptor(new JsDate(_engine, dt), writable: false, enumerable: false, configurable: false) : null;
+                else if (property == nameof(IAttachmentObject.RetireIdentifier))
+                    value = string.IsNullOrEmpty(_attachment.RetireIdentifier)
+                        ? null
+                        : new PropertyDescriptor(new JsString(_attachment.RetireIdentifier), writable: false, enumerable: false, configurable: false);
                 else if (property == GetContentAsStringMethodName)
                     value = new PropertyDescriptor(new ClrFunction(Engine, GetContentAsStringMethodName, GetContentAsString), writable: false, enumerable: false, configurable: false);
                 if (value != null)

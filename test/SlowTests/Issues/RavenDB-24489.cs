@@ -283,7 +283,7 @@ namespace SlowTests.Issues
                     select new Result
                     {
                         Name = att.Name,
-                        Retired = att.Flags,
+                        Retired = att.RetireFlags,
                         RetiredAt = att.RetireAt,
                     };
                 StoreAllFields(FieldStorage.Yes);

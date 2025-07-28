@@ -3,7 +3,8 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
@@ -22,7 +23,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
 
         public override string CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
         {
-            if (attachment.IsRetired())
+            if (attachment.RetireParameters.IsRetiredAttachment())
             {
                 throw new InvalidOperationException($"Cannot get attachment '{name}' on document '{documentId}' because it is retired. Please use dedicated API.");
             }

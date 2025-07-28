@@ -17,6 +17,7 @@ using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Util;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
@@ -789,7 +790,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (attachmentInfo.TryGet(nameof(AttachmentName.Name), out string name))
                 {
                     var attachmentData = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, item.DocumentId, name, AttachmentType.Document, null);
-                    if (attachmentData.IsRetired())
+                    if (attachmentData.RetireParameters.IsRetiredAttachment())
                     {
                         using Stream stream = AsyncHelpers.RunSync(() =>
                             Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(_downloader.Value,

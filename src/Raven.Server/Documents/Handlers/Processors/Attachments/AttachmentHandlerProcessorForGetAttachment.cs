@@ -6,6 +6,8 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Extensions;
@@ -30,7 +32,7 @@ internal class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHa
                 return;
             }
 
-            IGetAttachmentStrategy strategy = attachment.IsRetired()
+            IGetAttachmentStrategy strategy = attachment.RetireParameters.IsRetiredAttachment()
                   ? new RetiredGetAttachmentStrategyProcessor(RequestHandler)
                   : new RegularGetAttachmentStrategyProcessor(RequestHandler);
 

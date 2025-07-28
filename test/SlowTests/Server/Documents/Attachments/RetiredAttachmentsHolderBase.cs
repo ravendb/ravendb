@@ -8,6 +8,7 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Retired;
+using Raven.Server.Documents.Attachments;
 using SlowTests.Client.Attachments;
 using Tests.Infrastructure;
 using Xunit;
@@ -88,7 +89,7 @@ public abstract class RetiredAttachmentsHolderBase : ReplicationTestBase
         if (flags == RetiredAttachmentFlags.None)
         {
             //TODO: egor this will change after we drop unwrapped attachments
-            Assert.True(retired.RetireParameters == null || retired.RetireParameters.Flags == RetiredAttachmentFlags.None);
+            Assert.True(retired.RetireParameters.IsLocalAttachment());
         }
         else
         {

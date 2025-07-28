@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments;
@@ -16,7 +18,7 @@ internal class AttachmentHandlerProcessorForHeadAttachment : AbstractAttachmentH
 
     public virtual string CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
     {
-        if (attachment.IsRetired())
+        if (attachment.RetireParameters.IsRetiredAttachment())
         {
             throw new InvalidOperationException($"Cannot get attachment '{name}' on document '{documentId}' because it is retired. Please use dedicated API.");
         }

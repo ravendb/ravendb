@@ -2,6 +2,8 @@
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
@@ -14,7 +16,7 @@ public interface IGetAttachmentStrategy
 
     public static string CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(DocumentsOperationContext context, DocumentDatabase database, Attachment attachment, string documentId, string name, string method)
     {
-        if (attachment.IsRetired() == false)
+        if (attachment.RetireParameters.IsRetiredAttachment() == false)
         {
             throw new InvalidOperationException($"Cannot {method} retired attachment '{name}' on document '{documentId}' because it is not retired. Please use dedicated API.");
         }

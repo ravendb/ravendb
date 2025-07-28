@@ -31,8 +31,8 @@ namespace SlowTests.Issues
             await using(var holder = CreateCloudSettings())
             {
                 using var store = GetDocumentStore();
-                await SetupRetiredAttachmentsConfiguration(Settings, store);
-                await CreateDocumentsWithVariousRetirementTimes(store);
+                var identifier = await SetupRetiredAttachmentsConfiguration(Settings, store);
+                await CreateDocumentsWithVariousRetirementTimes(store, identifier);
 
                 await AssertRetiredAttachmentIndexingException(new RetiredAttachmentIndexString(), store);
             }
@@ -45,15 +45,15 @@ namespace SlowTests.Issues
             {
                 {
                     using var store = GetDocumentStore();
-                    await SetupRetiredAttachmentsConfiguration(Settings, store);
-                    DateTime baseline = await CreateDocumentsWithVariousRetirementTimes(store);
+                    var identifier = await SetupRetiredAttachmentsConfiguration(Settings, store);
+                    DateTime baseline = await CreateDocumentsWithVariousRetirementTimes(store, identifier);
 
-                    await TestRetiredAndRetiredAtIndexing(store, baseline);
+                    await TestRetiredAndRetiredAtIndexing(store, baseline, identifier);
                 }
             }
         }
 
-        private async Task TestRetiredAndRetiredAtIndexing(DocumentStore store, DateTime baseline)
+        private async Task TestRetiredAndRetiredAtIndexing(DocumentStore store, DateTime baseline, string identifier)
         {
             var index = new RetiredAttachmentIndexLoadAttachment();
             await index.ExecuteAsync(store);
@@ -68,10 +68,11 @@ namespace SlowTests.Issues
                 Assert.NotNull(resultLoadAtt);
                 Assert.Equal(2, resultLoadAtt.Count);
                 
-                var resultLoadAttByFlag = session.Query<RetiredAttachmentIndexLoadAttachment.Result, RetiredAttachmentIndexLoadAttachment>().Where(x => x.Flags == AttachmentFlags.Retired)
+                var resultLoadAttByFlag = session.Query<RetiredAttachmentIndexLoadAttachment.Result, RetiredAttachmentIndexLoadAttachment>().Where(x => x.Flags == RetiredAttachmentFlags.Retired)
                     .ProjectInto<RetiredAttachmentIndexLoadAttachment.Result>().ToList();
                 
-                Assert.Equal(AttachmentFlags.Retired, resultLoadAttByFlag[0].Flags);
+                Assert.Equal(RetiredAttachmentFlags.Retired, resultLoadAttByFlag[0].Flags);
+                Assert.Equal(identifier, resultLoadAttByFlag[0].Identifier);
                 if (resultLoadAttByFlag[0].RetiredAt != null)
                     Assert.Equal(baseline.AddMinutes(1), resultLoadAttByFlag[0].RetiredAt.Value, TimeSpan.FromMilliseconds(1));
                 Assert.NotNull(resultLoadAttByFlag);
@@ -80,16 +81,18 @@ namespace SlowTests.Issues
                 var resultAttFor = session.Query<RetiredAttachmentIndexAttachmentsFor.Result, RetiredAttachmentIndexAttachmentsFor>()
                     .Where(x => (x.RetiredAt != null && x.RetiredAt > baseline.AddDays(7))).ProjectInto<RetiredAttachmentIndexAttachmentsFor.Result>().ToList();
 
-                Assert.Equal(AttachmentFlags.None, resultAttFor[0].Flags);
-                if (resultAttFor[0].RetiredAt != null) 
+                Assert.Equal(RetiredAttachmentFlags.None, resultAttFor[0].Flags);
+                Assert.Equal(identifier, resultAttFor[0].Identifier);
+                if (resultAttFor[0].RetiredAt != null)
                     Assert.Equal(baseline.AddDays(365), resultAttFor[0].RetiredAt.Value, TimeSpan.FromMilliseconds(1));
                 Assert.NotNull(resultAttFor);
                 Assert.Equal(1, resultAttFor.Count);
 
-                var resultAttForByFlag = session.Query<RetiredAttachmentIndexAttachmentsFor.Result, RetiredAttachmentIndexAttachmentsFor>().Where(x => x.Flags == AttachmentFlags.Retired)
+                var resultAttForByFlag = session.Query<RetiredAttachmentIndexAttachmentsFor.Result, RetiredAttachmentIndexAttachmentsFor>().Where(x => x.Flags == RetiredAttachmentFlags.Retired)
                     .ProjectInto<RetiredAttachmentIndexAttachmentsFor.Result>().ToList();
 
-                Assert.Equal(AttachmentFlags.Retired, resultAttForByFlag[0].Flags);
+                Assert.Equal(RetiredAttachmentFlags.Retired, resultAttForByFlag[0].Flags);
+                Assert.Equal(identifier, resultAttForByFlag[0].Identifier);
                 if (resultAttForByFlag[0].RetiredAt != null) 
                     Assert.Equal(baseline.AddMinutes(1), resultAttForByFlag[0].RetiredAt.Value, TimeSpan.FromMilliseconds(1));
                 Assert.NotNull(resultAttForByFlag);
@@ -97,7 +100,7 @@ namespace SlowTests.Issues
             }
         }
 
-        private async Task<DateTime> CreateDocumentsWithVariousRetirementTimes(DocumentStore store)
+        private async Task<DateTime> CreateDocumentsWithVariousRetirementTimes(DocumentStore store, string identifier)
         {
             using (var session = store.OpenAsyncSession())
             {
@@ -114,15 +117,15 @@ namespace SlowTests.Issues
 
             using (var ms = new MemoryStream(Encoding.UTF8.GetBytes("hello")))
             {
-                var parameters1 = new StoreAttachmentParameters("greeting1.txt", ms) { RetireAt = retireAt1 };
+                var parameters1 = new StoreAttachmentParameters("greeting1.txt", ms) { RetireParameters = new RetireAttachmentParameters(identifier, retireAt1)};
                 var putOp1 = new PutAttachmentOperation("users/1", parameters1);
                 await store.Operations.SendAsync(putOp1);
                 ms.Position = 0;
-                var parameters2 = new StoreAttachmentParameters("greeting2.txt", ms) { RetireAt = retireAt2 };
+                var parameters2 = new StoreAttachmentParameters("greeting2.txt", ms) { RetireParameters = new RetireAttachmentParameters(identifier, retireAt2) };
                 var putOp2 = new PutAttachmentOperation("users/2", parameters2);
                 await store.Operations.SendAsync(putOp2);
                 ms.Position = 0;
-                var parameters4 = new StoreAttachmentParameters("greeting3.txt", ms) { RetireAt = retireAt3 };
+                var parameters4 = new StoreAttachmentParameters("greeting3.txt", ms) { RetireParameters = new RetireAttachmentParameters(identifier, retireAt3) };
                 var putOp4 = new PutAttachmentOperation("users/3", parameters4);
                 await store.Operations.SendAsync(putOp4);
             }
@@ -139,10 +142,27 @@ namespace SlowTests.Issues
             return baseline;
         }
 
-        private static async Task SetupRetiredAttachmentsConfiguration(S3Settings s3Settings, DocumentStore store)
+        private static async Task<string> SetupRetiredAttachmentsConfiguration(S3Settings s3Settings, DocumentStore store)
         {
-            var conf = new RetiredAttachmentsConfiguration { Disabled = false, RetireFrequencyInSec = 1, S3Settings = s3Settings };
+            var id = "conf-identifier-s3";
+            var conf = new RetiredAttachmentsConfiguration
+            {
+                Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+                {
+                    {
+                        id, new RetiredAttachmentsDestinationConfiguration()
+                        {
+                            Disabled = false, 
+                            S3Settings = s3Settings,
+                            Identifier = id
+                        }
+                    }
+                },
+                RetireFrequencyInSec = 1
+            };
             await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRetiredAttachmentsOperation(conf));
+
+            return id;
         }
 
         private async Task AssertRetiredAttachmentIndexingException(AbstractJavaScriptIndexCreationTask index, IDocumentStore store)
@@ -178,8 +198,9 @@ namespace SlowTests.Issues
             {
                 public string Id { get; set; }
                 public string Name { get; set; }
-                public AttachmentFlags Flags { get; set; }
+                public RetiredAttachmentFlags Flags { get; set; }
                 public DateTime? RetiredAt { get; set; }
+                public string Identifier { get; set; }
             }
 
             public RetiredAttachmentIndexAttachmentsFor()
@@ -192,8 +213,9 @@ namespace SlowTests.Issues
                     return att.map(a => {
                         return {
                         Name: a.Name,
-                        Flags: a.Flags,
-                        RetiredAt: a.RetireAt
+                        Flags: a.RetireFlags,
+                        RetiredAt: a.RetireAt,
+                        Identifier: a.RetireIdentifier
                         };
                     });
             })
@@ -209,8 +231,9 @@ namespace SlowTests.Issues
             {
                 public string Id { get; set; }
                 public string Name { get; set; }
-                public AttachmentFlags Flags { get; set; }
+                public RetiredAttachmentFlags Flags { get; set; }
                 public DateTime? RetiredAt { get; set; }
+                public string Identifier { get; set; }
             }
 
             public RetiredAttachmentIndexLoadAttachment()
@@ -223,8 +246,9 @@ namespace SlowTests.Issues
                 var att = loadAttachment(u, u.AttName);
                 return {
                     Name : att.Name,
-                    Flags : att.Flags,         
-                    RetiredAt: att.RetireAt      
+                    Flags : att.RetireFlags,         
+                    RetiredAt: att.RetireAt,
+                    Identifier: att.RetireIdentifier
                 };
             })
             "

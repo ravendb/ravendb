@@ -8,6 +8,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Replication;
 using Raven.Server.ServerWide.Context;
 using Tests.Infrastructure;
@@ -335,7 +336,7 @@ namespace SlowTests.Server.Documents.Attachments
                             {
                                 var newAttachment = Attachments.FirstOrDefault(x =>
                                 x.DocumentId.ToLowerInvariant() == docId && x.Name == attachment.Name &&
-                                (x.RetireParameters == null || x.RetireParameters.Flags == RetiredAttachmentFlags.None) &&
+                                (x.RetireParameters.IsLocalAttachment()) &&
                                  x.Hash == attachment.Base64Hash.ToString());
 
                                 Assert.NotNull(newAttachment);

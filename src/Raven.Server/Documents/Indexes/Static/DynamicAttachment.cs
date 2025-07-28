@@ -2,6 +2,8 @@
 using System.IO;
 using System.Text;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.Documents.Operations.Attachments;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Indexes.Static.Attachments;
 using Raven.Server.Exceptions;
 
@@ -69,7 +71,7 @@ namespace Raven.Server.Documents.Indexes.Static
         {
             get
             {
-                if (_attachment.IsRetired() == false)
+                if (_attachment.RetireParameters == null)
                 {
                     return DynamicNullObject.ExplicitNull;
                 }
@@ -78,16 +80,29 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public RetiredAttachmentFlags Flags
+        public RetiredAttachmentFlags RetireFlags
         {
             get
             {
-                if (_attachment.IsRetired() == false)
+                if (_attachment.RetireParameters == null)
                 {
                     return RetiredAttachmentFlags.None;
                 }
 
                 return _attachment.RetireParameters.Flags;
+            }
+        }
+
+        public string RetireIdentifier
+        {
+            get
+            {
+                if (_attachment.RetireParameters == null)
+                {
+                    return DynamicNullObject.ExplicitNull;
+                }
+
+                return _attachment.RetireParameters.Identifier;
             }
         }
 
@@ -98,7 +113,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public string GetContentAsString(Encoding encoding)
         {
-            if (_attachment.IsRetired())
+            if (_attachment.RetireParameters.IsRetiredAttachment())
                 ThrowRetiredAttachmentException(nameof(GetContentAsString));
 
             if (_contentAsString == null)
@@ -114,7 +129,7 @@ namespace Raven.Server.Documents.Indexes.Static
 
         public Stream GetContentAsStream()
         {
-            if (_attachment.IsRetired())
+            if (_attachment.RetireParameters.IsRetiredAttachment())
                 ThrowRetiredAttachmentException(nameof(GetContentAsStream));
 
             _attachment.Stream.Position = 0;

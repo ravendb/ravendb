@@ -1,7 +1,4 @@
-using System;
-using System.Globalization;
 using System.IO;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
 using Sparrow.Json;
 using Voron;
@@ -21,31 +18,5 @@ namespace Raven.Server.Documents
         public short TransactionMarker;
         public long Size;
         public RetireAttachmentParameters RetireParameters;
-
-        public static RetireAttachmentParameters GetRetireAttachmentParameters(string identifier, DateTime? retireAt, RetiredAttachmentFlags flags)
-        {
-            RetireAttachmentParameters retireParameters = null;
-            if (retireAt.HasValue)
-            {
-                retireParameters = new RetireAttachmentParameters(identifier, retireAt.Value) { Flags = flags };
-            }
-
-            return retireParameters;
-        }
-
-        public static RetireAttachmentParameters GetRetireAttachmentParameters(LazyStringValue identifier, DateTime? retireAt, RetiredAttachmentFlags flags)
-        {
-            return GetRetireAttachmentParameters(identifier.ToString(), retireAt, flags);
-        }
-
-        public bool IsRetired()
-        {
-            if (RetireParameters == null)
-            {
-                return false;
-            }
-
-            return RetireParameters.Flags != RetiredAttachmentFlags.None;
-        }
     }
 }

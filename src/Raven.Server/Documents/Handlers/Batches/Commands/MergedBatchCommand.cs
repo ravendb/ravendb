@@ -11,6 +11,7 @@ using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.Documents.TimeSeries;
@@ -170,7 +171,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     AttachmentStream attachmentStream = GetAttachmentStream(attachmentIterator, out Stream stream);
                     AttachmentDetailsServer attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, attachmentStream.Hash, stream.Length, cmd.RetireParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
 
-                    Debug.Assert(cmd.RetireParameters == null  || cmd.RetireParameters.Flags == RetiredAttachmentFlags.None, "cmd.RetireParameters == null  || cmd.RetireParameters.Flags == AttachmentFlags.None");
+                    Debug.Assert(cmd.RetireParameters.IsLocalAttachment(), "cmd.RetireParameters.IsLocalAttachment()");
 
                     LastChangeVector = attachmentPutResult.ChangeVector;
 

@@ -9,7 +9,9 @@ namespace Raven.Client.Documents.Indexes
     {
         public DateTime? RetireAt { get; }
 
-        public RetiredAttachmentFlags Flags { get; }
+        public RetiredAttachmentFlags RetireFlags { get; }
+
+        public string RetireIdentifier { get; }
     }
 
     public interface IAttachmentObjectBase
