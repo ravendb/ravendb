@@ -29,7 +29,7 @@ public sealed class ShardedCoraxIndexReadOperation : CoraxIndexReadOperation
     {
     }
 
-    protected override QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct> tracker, Document document,
+    protected override QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct, THasProjection> tracker, Document document,
         IndexQueryServerSide query,
         DocumentsOperationContext documentsContext, ref EntryTermsReader entryReader, FieldsToFetch highlightingFields, OrderMetadata[] orderByFields, 
         ref THighlighting highlightings, Reference<long> skippedResults,

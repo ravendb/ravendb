@@ -1,10 +1,11 @@
-﻿using System;
+using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Threading;
+using Corax;
 using Corax.Querying;
 using Corax.Mappings;
 using Corax.Querying.Matches;
@@ -368,7 +369,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         // Even if there are no distinct statements we have to be sure that we are not including
         // documents that we have already included during this request. 
-        protected struct IdentityTracker<TDistinct> where TDistinct : struct, IHasDistinct
+        protected struct IdentityTracker<TDistinct, THasProjection>
+            where THasProjection : struct, IHasProjection
+            where TDistinct : struct, IHasDistinct
         {
             private Index _index;
             private IndexQueryServerSide _query;
@@ -379,10 +382,12 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             private bool _isMap;
 
             private GrowableHashSet<UnmanagedSpan> _alreadySeenDocumentKeysInPreviousPage;
+            private GrowableHashSet<long> _alreadySeenDocumentEntriesIdsInPreviousPage;
             private GrowableHashSet<ulong> _alreadySeenProjections;
             public long QueryStart;
             private TermsReader _documentIdReader;
-
+            private bool _canPerformPaginationBasedOnEntriesIds;
+            
             public void Initialize(Index index, IndexQueryServerSide query, IndexSearcher searcher, TermsReader documentIdReader, IndexFieldsMapping fieldsMapping, IQueryResultRetriever retriever)
             {
                 _index = index;
@@ -391,11 +396,19 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                
                 _fieldsMapping = fieldsMapping;
                 _retriever = retriever;
-                _documentIdReader = documentIdReader; 
-                _alreadySeenDocumentKeysInPreviousPage = new(UnmanagedSpanComparer.Instance);
+                _documentIdReader = documentIdReader;
+
                 QueryStart = _query.Start;
                 _isMap = index.Type.IsMap();
-               
+                
+                _canPerformPaginationBasedOnEntriesIds = searcher.EntryIdPaginationSupportStatus == EntryIdPaginationSupportStatus.Supported
+                                                        && typeof(THasProjection) == typeof(NoProjection)
+                                                        && query.Metadata.OrderBy is null;
+
+                if (_canPerformPaginationBasedOnEntriesIds)
+                    _alreadySeenDocumentEntriesIdsInPreviousPage = new();
+                else
+                    _alreadySeenDocumentKeysInPreviousPage = new(UnmanagedSpanComparer.Instance);
             }
 
             public long RegisterDuplicates<TProjection>(ref TProjection hasProjection, long currentIdx, Span<long> ids, CancellationToken token)
@@ -418,20 +431,24 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 var distinctIds = ids.Slice(0, (int)limit);
 
-                if (_isMap && hasProjection.IsProjection == false)
+                if (hasProjection.IsProjection == false)
                 {
-                    Sort.Run(distinctIds);
-                    while (_documentIdReader.GetAllTermsFromSet(distinctIds, out var termsSet) is var read and > 0)
+                    var isSorting = _query.Metadata.OrderBy is not null;
+                    if (isSorting || _canPerformPaginationBasedOnEntriesIds == false)
                     {
-                        foreach (var key in termsSet)
-                            _alreadySeenDocumentKeysInPreviousPage.Add(key);
-
-                        distinctIds = distinctIds[read..];
+                        Sort.Run(distinctIds);
+                        while (_documentIdReader.GetAllTermsFromSet(distinctIds, out var termsSet) is var read and > 0)
+                        {
+                            foreach (var key in termsSet)
+                                _alreadySeenDocumentKeysInPreviousPage.Add(key);
+                            distinctIds = distinctIds[read..];
+                        }
                     }
-                    
-                    
-                    // Assumptions: we're in Map, so that mean we have ID of the doc saved in the tree. So we want to keep track what we returns
-                  //  _documentIdReader.GetAllTermsFromSet(distinctIds, out var keys);
+                    else
+                    {
+                        foreach (var id in distinctIds)
+                            _alreadySeenDocumentEntriesIdsInPreviousPage.Add(id);
+                    }
 
                     return limit;
                 }
@@ -475,10 +492,16 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 return limit;
             }
 
-            public bool ShouldIncludeIdentity<TProjection>(ref TProjection hasProjection, UnmanagedSpan identity)
+            public bool ShouldIncludeIdentity<TProjection>(ref TProjection hasProjection, UnmanagedSpan identity, long indexEntryId)
                 where TProjection : struct, IHasProjection
             {
-                return hasProjection.IsProjection || _alreadySeenDocumentKeysInPreviousPage.Add(identity);
+                if (hasProjection.IsProjection)
+                    return true;
+
+                return 
+                    _canPerformPaginationBasedOnEntriesIds 
+                        ? _alreadySeenDocumentEntriesIdsInPreviousPage.Add(indexEntryId)
+                        : _alreadySeenDocumentKeysInPreviousPage.Add(identity);
             }
 
             public bool ShouldIncludeDocument<TProjection>(ref TProjection hasProjection, Document doc)
@@ -569,7 +592,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             // distinct.
 
 
-            var identityTracker = new IdentityTracker<TDistinct>();
+            var identityTracker = new IdentityTracker<TDistinct, THasProjection>();
             identityTracker.Initialize(_index, query, IndexSearcher, _documentIdReader, _fieldMappings, retriever);
 
             long pageSize = query.PageSize;
@@ -700,7 +723,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         var identityExists = retriever.TryGetKeyCorax(_documentIdReader, indexEntryId, out var rawIdentity);
 
                         // If we have figured out that this document identity has already been seen, we are skipping it.
-                        if (identityExists && identityTracker.ShouldIncludeIdentity(ref hasProjections, rawIdentity) == false)
+                        if (identityExists && identityTracker.ShouldIncludeIdentity(ref hasProjections, rawIdentity, indexEntryId) == false)
                         {
                             docsToLoad++;
                             skippedResults.Value++;
@@ -839,7 +862,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        protected virtual QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct> tracker, Document document,
+        protected virtual QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct, THasProjection> tracker, Document document,
             IndexQueryServerSide query, DocumentsOperationContext documentsContext, ref EntryTermsReader entryReader, FieldsToFetch highlightingFields, OrderMetadata[] orderByFields, ref THighlighting highlightings,
             Reference<long> skippedResults,
             ref THasProjection hasProjections, ref bool markedAsSkipped)
@@ -872,192 +895,53 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             Reference<long> scannedDocuments, IQueryResultRetriever retriever, DocumentsOperationContext documentsContext, Func<string, SpatialField> getSpatialField,
             CancellationToken token)
         {
-            if (query.Metadata.HasHighlightings)
-            {
-                if (query.Metadata.FilterScript is null)
+            // We've a chain-like builder here.
+            return BuildHighlightings();
+
+            IEnumerable<QueryResult> BuildHighlightings() => query.Metadata.HasHighlightings switch
                 {
-                    if (fieldsToFetch.IsProjection)
-                    {
-                        if (query.Metadata.IsDistinct)
-                        {
-                            return QueryInternal<HasHighlighting, NoQueryFilter, HasProjection, HasDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                        else
-                        {
-                            return QueryInternal<HasHighlighting, NoQueryFilter, HasProjection, NoDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                    }
-                    else
-                    {
-                        if (query.Metadata.IsDistinct)
-                        {
-                            return QueryInternal<HasHighlighting, NoQueryFilter, NoProjection, HasDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                        else
-                        {
-                            return QueryInternal<HasHighlighting, NoQueryFilter, NoProjection, NoDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                    }
-                }
-                else
+                    true => BuildFilterScript<HasHighlighting>(),
+                    _ => BuildFilterScript<NoHighlighting>()
+                };
+
+            IEnumerable<QueryResult> BuildFilterScript<THighlighting>()
+                where THighlighting : struct, ISupportsHighlighting
+                => (query.Metadata.FilterScript is null) switch
                 {
-                    if (fieldsToFetch.IsProjection)
-                    {
-                        if (query.Metadata.IsDistinct)
-                        {
-                            return QueryInternal<HasHighlighting, HasQueryFilter, HasProjection, HasDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                        else
-                        {
-                            return QueryInternal<HasHighlighting, HasQueryFilter, HasProjection, NoDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                    }
-                    else
-                    {
-                        if (query.Metadata.IsDistinct)
-                        {
-                            return QueryInternal<HasHighlighting, HasQueryFilter, NoProjection, HasDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                        else
-                        {
-                            return QueryInternal<HasHighlighting, HasQueryFilter, NoProjection, NoDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                if (query.Metadata.FilterScript is null)
+                    true => BuildProjection<THighlighting, NoQueryFilter>(),
+                    _ => BuildProjection<THighlighting, HasQueryFilter>()
+                };
+
+            IEnumerable<QueryResult> BuildProjection<THighlighting, TQueryFilter>()
+                where THighlighting : struct, ISupportsHighlighting
+                where TQueryFilter : struct, ISupportsQueryFilter
+                => fieldsToFetch.IsProjection switch
                 {
-                    if (fieldsToFetch.IsProjection)
-                    {
-                        if (query.Metadata.IsDistinct)
-                        {
-                            return QueryInternal<NoHighlighting, NoQueryFilter, HasProjection, HasDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                        else
-                        {
-                            return QueryInternal<NoHighlighting, NoQueryFilter, HasProjection, NoDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                    }
-                    else
-                    {
-                        if (query.Metadata.IsDistinct)
-                        {
-                            return QueryInternal<NoHighlighting, NoQueryFilter, NoProjection, HasDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                        else
-                        {
-                            return QueryInternal<NoHighlighting, NoQueryFilter, NoProjection, NoDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                    }
-                }
-                else
+                    true => BuildDistinct<THighlighting, TQueryFilter, HasProjection>(),
+                    _ => BuildDistinct<THighlighting, TQueryFilter, NoProjection>()
+                };
+
+            IEnumerable<QueryResult> BuildDistinct<THighlighting, TQueryFilter, THasProjection>()
+                where THighlighting : struct, ISupportsHighlighting
+                where TQueryFilter : struct, ISupportsQueryFilter
+                where THasProjection : struct, IHasProjection
+                => query.Metadata.IsDistinct switch
                 {
-                    if (fieldsToFetch.IsProjection)
-                    {
-                        if (query.Metadata.IsDistinct)
-                        {
-                            return QueryInternal<NoHighlighting, HasQueryFilter, HasProjection, HasDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                        else
-                        {
-                            return QueryInternal<NoHighlighting, HasQueryFilter, HasProjection, NoDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                    }
-                    else
-                    {
-                        if (query.Metadata.IsDistinct)
-                        {
-                            return QueryInternal<NoHighlighting, HasQueryFilter, NoProjection, HasDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                        else
-                        {
-                            return QueryInternal<NoHighlighting, HasQueryFilter, NoProjection, NoDistinct>(
-                                query, queryTimings, fieldsToFetch,
-                                totalResults, skippedResults, scannedDocuments,
-                                retriever, documentsContext,
-                                getSpatialField,
-                                token);
-                        }
-                    }
-                }
-            }
+                    true => BuildInternalQuery<THighlighting, TQueryFilter, THasProjection, HasDistinct>(),
+                    _ => BuildInternalQuery<THighlighting, TQueryFilter, THasProjection, NoDistinct>()
+                };
+            
+            IEnumerable<QueryResult> BuildInternalQuery<THighlighting, TQueryFilter, THasProjection, TDistinct>()
+                where THighlighting : struct, ISupportsHighlighting
+                where TQueryFilter : struct, ISupportsQueryFilter
+                where THasProjection : struct, IHasProjection
+                where TDistinct : struct, IHasDistinct
+                => QueryInternal<THighlighting, TQueryFilter, THasProjection, TDistinct>(
+                    query, queryTimings, fieldsToFetch,
+                    totalResults, skippedResults, scannedDocuments,
+                    retriever, documentsContext,
+                    getSpatialField,
+                    token);
         }
 
         private static int ProcessHighlightings(HighlightingField current, CoraxHighlightingTermIndex highlightingTerm, ReadOnlySpan<char> fieldFragment, List<string> fragments, int maxFragmentCount)

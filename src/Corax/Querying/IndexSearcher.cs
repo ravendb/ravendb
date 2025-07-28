@@ -53,7 +53,26 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     public bool IsAccelerated => Vector256.IsHardwareAccelerated && !ForceNonAccelerated;
 
     public long NumberOfEntries => _numberOfEntries ??= _metadataTree?.ReadInt64(Constants.IndexWriter.NumberOfEntriesSlice) ?? 0;
-    
+
+    private EntryIdPaginationSupportStatus? _entryIdPaginationSupportStatus;
+
+    public EntryIdPaginationSupportStatus EntryIdPaginationSupportStatus
+    {
+        get
+        {
+            if (_entryIdPaginationSupportStatus is null)
+            {
+
+                var persistedConfiguration = _metadataTree?.ReadInt64(Constants.IndexWriter.PaginationBasedOnEntryIdSupportStatus);
+                _entryIdPaginationSupportStatus = persistedConfiguration.HasValue
+                    ? (EntryIdPaginationSupportStatus)persistedConfiguration.Value
+                    : EntryIdPaginationSupportStatus.Unknown;
+            }
+
+            return _entryIdPaginationSupportStatus.Value;
+        }
+    }
+
     public ByteStringContext Allocator => _transaction.Allocator;
 
     internal Transaction Transaction => _transaction;
