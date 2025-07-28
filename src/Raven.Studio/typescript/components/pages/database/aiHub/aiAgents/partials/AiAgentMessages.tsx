@@ -430,32 +430,53 @@ function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
     const prettifiedArguments = aiAgentsUtils.getPrettifiedContent(toolCall?.arguments);
     const argumentsMode = getAceEditorMode(prettifiedArguments);
 
+    const id = useUniqueId("tool-call-details");
+
     return (
         <div className="vstack gap-2">
             {tool && (
-                <>
-                    <small className="text-muted">Description</small>
-                    <div>{tool.Description}</div>
-                    <hr className="my-1" />
-                    {tool.ParametersSampleObject && (
-                        <div>
-                            <small className="text-muted">Parameters</small>
-                            <AceEditor value={tool.ParametersSampleObject} readOnly mode="json" height="100px" />
-                        </div>
-                    )}
-                    {tool.ParametersSchema && (
-                        <div>
-                            <small className="text-muted">Parameters schema</small>
-                            <AceEditor value={tool.ParametersSchema} readOnly mode="json" height="100px" />
-                        </div>
-                    )}
-                    {"Query" in tool && tool.Query && (
-                        <div>
-                            <small className="text-muted">Query</small>
-                            <AceEditor value={tool.Query} readOnly mode="text" height="100px" />
-                        </div>
-                    )}
-                </>
+                <Accordion className="tool-call-details border border-secondary rounded-2 panel-bg-2">
+                    <Accordion.Item eventKey={id} className="panel-bg-2">
+                        <Accordion.Header className="p-2">
+                            <Icon icon="settings" />
+                            See details
+                        </Accordion.Header>
+                        <Accordion.Collapse eventKey={id} mountOnEnter unmountOnExit>
+                            <Accordion.Body className="panel-bg-2 rounded-2">
+                                {tool.Description && (
+                                    <div>
+                                        <small className="text-muted">Description</small>
+                                        <div>{tool.Description}</div>
+                                        <hr className="my-1" />
+                                    </div>
+                                )}
+                                {tool.ParametersSampleObject && (
+                                    <div>
+                                        <small className="text-muted">Parameters</small>
+                                        <AceEditor
+                                            value={tool.ParametersSampleObject}
+                                            readOnly
+                                            mode="json"
+                                            height="100px"
+                                        />
+                                    </div>
+                                )}
+                                {tool.ParametersSchema && (
+                                    <div>
+                                        <small className="text-muted">Parameters schema</small>
+                                        <AceEditor value={tool.ParametersSchema} readOnly mode="json" height="100px" />
+                                    </div>
+                                )}
+                                {"Query" in tool && tool.Query && (
+                                    <div>
+                                        <small className="text-muted">Query</small>
+                                        <AceEditor value={tool.Query} readOnly mode="text" height="100px" />
+                                    </div>
+                                )}
+                            </Accordion.Body>
+                        </Accordion.Collapse>
+                    </Accordion.Item>
+                </Accordion>
             )}
             <div>
                 <small className="text-muted">Arguments</small>
