@@ -32,38 +32,45 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
         {
             AssertCanAddOrUpdateEtl(ref configuration);
 
+            string identifierProp = null;
+            string debugTag = null;
+
             switch (EtlConfiguration<ConnectionString>.GetEtlType(configuration))
             {
                 case EtlType.EmbeddingsGeneration:
                 {
-                    if (configuration.TryGet(nameof(EmbeddingsGenerationConfiguration.Identifier), out string id) == false || string.IsNullOrEmpty(id))
-                    {
-                        configuration.TryGet(nameof(EmbeddingsGenerationConfiguration.Name), out string name);
-                        var identifier = AiTaskIdentifierHelper.GenerateIdentifier(name);
-                        configuration.Modifications = new DynamicJsonValue(configuration)
-                        {
-                            [nameof(EmbeddingsGenerationConfiguration.Identifier)] = identifier
-                        };
-                    }
-
-                    configuration = context.ReadObject(configuration, "EmbeddingsGenerationConfig");
-                }
+                    identifierProp = nameof(EmbeddingsGenerationConfiguration.Identifier);
+                    debugTag = "EmbeddingsGenerationConfig";
                     break;
+                }
+                
                 case EtlType.GenAi:
                 {
-                    if (configuration.TryGet(nameof(GenAiConfiguration.Identifier), out string id) == false || string.IsNullOrEmpty(id))
-                    {
-                        configuration.TryGet(nameof(GenAiConfiguration.Name), out string name);
-                        var identifier = AiTaskIdentifierHelper.GenerateIdentifier(name);
-                        configuration.Modifications = new DynamicJsonValue(configuration)
-                        {
-                            [nameof(GenAiConfiguration.Identifier)] = identifier
-                        };
-                    }
-
-                    configuration = context.ReadObject(configuration, "GenAiConfig");
-                    }
+                    identifierProp = nameof(GenAiConfiguration.Identifier);
+                    debugTag = "GenAiConfig";
                     break;
+                }
+
+                default:
+                {
+                    return;
+                }
+            }
+
+            if (configuration.TryGet(identifierProp, out string id) == false || string.IsNullOrEmpty(id))
+            {
+                configuration.TryGet(nameof(AbstractAiIntegrationConfiguration.Name), out string name);
+                var identifier = AiTaskIdentifierHelper.GenerateIdentifier(name);
+
+                configuration.Modifications = new DynamicJsonValue(configuration)
+                {
+                    [identifierProp] = identifier
+                };
+            }
+
+            if (configuration.Modifications !=  null)
+            {
+                configuration = context.ReadObject(configuration, debugTag);
             }
         }
 

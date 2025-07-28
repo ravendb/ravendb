@@ -226,6 +226,10 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, PullReplicationDefinition> PullReplicationDefinition = GenerateJsonDeserializationRoutine<PullReplicationDefinition>();
         
         internal static readonly Func<BlittableJsonReaderObject, AddEtlOperationResult> AddEtlOperationResult = GenerateJsonDeserializationRoutine<AddEtlOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, AddEmbeddingsGenerationOperationResult> AddEmbeddingsGenerationOperationResult = GenerateJsonDeserializationRoutine<AddEmbeddingsGenerationOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, AddGenAiOperationResult> AddGenAiOperationResult = GenerateJsonDeserializationRoutine<AddGenAiOperationResult>();
         
         internal static readonly Func<BlittableJsonReaderObject, AddQueueSinkOperationResult> AddQueueSinkOperationResult = GenerateJsonDeserializationRoutine<AddQueueSinkOperationResult>();
         

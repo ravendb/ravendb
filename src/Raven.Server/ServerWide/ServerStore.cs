@@ -94,6 +94,7 @@ using Sparrow.Threading;
 using Sparrow.Utils;
 using Voron;
 using Voron.Exceptions;
+using AddEmbeddingsGenerationCommand = Raven.Server.ServerWide.Commands.AI.AddEmbeddingsGenerationCommand;
 using Constants = Raven.Client.Constants;
 using DeleteSubscriptionCommand = Raven.Server.ServerWide.Commands.Subscriptions.DeleteSubscriptionCommand;
 using MemoryCache = Raven.Server.Utils.Imports.Memory.MemoryCache;

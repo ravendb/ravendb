@@ -27,6 +27,7 @@ using Sparrow.Json;
 using Sparrow.Server;
 using Voron;
 using Voron.Data.Tables;
+using AddEmbeddingsGenerationCommand = Raven.Server.ServerWide.Commands.AI.AddEmbeddingsGenerationCommand;
 
 namespace Raven.Server.ServerWide;
 

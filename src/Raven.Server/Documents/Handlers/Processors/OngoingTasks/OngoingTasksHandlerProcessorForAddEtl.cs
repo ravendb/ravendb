@@ -1,5 +1,6 @@
 ﻿using JetBrains.Annotations;
 using Raven.Client.Documents;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.OngoingTasks;
@@ -25,11 +26,11 @@ namespace Raven.Server.Documents.Handlers.Processors.OngoingTasks
                 case EtlType.GenAi:
                     var genAiCfg = JsonDeserializationCluster.GenAiConfiguration(configuration);
                     responseJson[nameof(GenAi.ChangeVector)] = GetChangeVector();
-                    responseJson[nameof(AddEtlOperationResult.Identifier)] = genAiCfg.Identifier;
+                    responseJson[nameof(AddGenAiOperationResult.Identifier)] = genAiCfg.Identifier;
                     break;
                 case EtlType.EmbeddingsGeneration:
                     var embCfg = JsonDeserializationCluster.EmbeddingsGenerationConfiguration(configuration);
-                    responseJson[nameof(AddEtlOperationResult.Identifier)] = embCfg.Identifier;
+                    responseJson[nameof(AddEmbeddingsGenerationOperationResult.Identifier)] = embCfg.Identifier;
                     break;
                 default:
                     return;

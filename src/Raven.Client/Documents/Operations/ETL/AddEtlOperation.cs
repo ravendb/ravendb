@@ -68,12 +68,10 @@ namespace Raven.Client.Documents.Operations.ETL
         }
     }
 
-    public sealed class AddEtlOperationResult
+    public class AddEtlOperationResult
     {
         public long RaftCommandIndex { get; set; }
 
         public long TaskId { get; set; }
-
-        public string Identifier { get; set; }
     }
 }
