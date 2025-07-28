@@ -129,7 +129,7 @@ namespace Raven.Server.Documents.Handlers
                 RetireAttachmentParameters retireParameters = null;
                 if (RetireAt.HasValue)
                 {
-                    retireParameters = new RetireAttachmentParameters(RetireIdentifier, RetireAt.Value) {  Flags = AttachmentFlags.None };
+                    retireParameters = new RetireAttachmentParameters(RetireIdentifier, RetireAt.Value) {  Flags = RetiredAttachmentFlags.None };
                 }
 
                 Result = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, DocumentId, Name, ContentType, Hash, Stream.Length, retireParameters, ExpectedChangeVector, Stream);

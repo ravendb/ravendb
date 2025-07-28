@@ -63,7 +63,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var res2 = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test2.png", AttachmentType.Document, null));
                     Assert.Equal("test2.png", res2.Details.Name);
 
-                    Assert.Equal(AttachmentFlags.None, res2.Details.RetireParameters.Flags);
+                    Assert.Equal(RetiredAttachmentFlags.None, res2.Details.RetireParameters.Flags);
                     Assert.NotNull(res2.Details.RetireParameters.At);
 
                     var res3 = await store.Operations.SendAsync(new GetAttachmentOperation(id, "test.png", AttachmentType.Document, null));
@@ -82,7 +82,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                         var res4 = await store.Operations.SendAsync(new GetAttachmentOperation(res3.Details.DocumentId, res3.Details.Name, AttachmentType.Document, null));
                         Assert.Equal("test.png", res4.Details.Name);
-                        Assert.Equal(AttachmentFlags.Retired, res4.Details.RetireParameters.Flags);
+                        Assert.Equal(RetiredAttachmentFlags.Retired, res4.Details.RetireParameters.Flags);
                         Assert.NotNull(res4.Details.RetireParameters.At);
                     }
                     else
@@ -612,14 +612,14 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.Equal(attachmentBytes, ms1.ToArray());
                     Assert.Equal($"shared_0.png", retired1.Details.Name);
                     Assert.Equal(contentType, retired1.Details.ContentType);
-                    Assert.Equal(AttachmentFlags.Retired, retired1.Details.RetireParameters.Flags);
+                    Assert.Equal(RetiredAttachmentFlags.Retired, retired1.Details.RetireParameters.Flags);
                     for (int i = 1; i < count; i++)
                     {
                         var retired2 = await store.Operations.SendAsync(new GetAttachmentOperation($"Orders/{i}", $"shared_{i}.png", AttachmentType.Document, null));
 
                         Assert.Equal($"shared_{i}.png", retired2.Details.Name);
                         Assert.Equal(contentType, retired2.Details.ContentType);
-                        Assert.Equal(AttachmentFlags.Retired, retired2.Details.RetireParameters.Flags);
+                        Assert.Equal(RetiredAttachmentFlags.Retired, retired2.Details.RetireParameters.Flags);
 
                         ms1.Position = 0;
 
@@ -817,7 +817,7 @@ namespace SlowTests.Server.Documents.Attachments
                         Assert.Equal(retired.ContentType, attachment.Details.ContentType);
                         Assert.Equal(retired.Name, attachment.Details.Name);
                         Assert.Equal(size, attachment.Details.Size);
-                        Assert.Equal(AttachmentFlags.None, attachment.Details.RetireParameters.Flags);
+                        Assert.Equal(RetiredAttachmentFlags.None, attachment.Details.RetireParameters.Flags);
                         Assert.NotNull(attachment.Details.RetireParameters.At);
                         using var retiredStream = new MemoryStream();
                         await attachment.Stream.CopyToAsync(retiredStream);
@@ -879,7 +879,7 @@ namespace SlowTests.Server.Documents.Attachments
                         {
                             var attachments = database1.DocumentsStorage.AttachmentsStorage.GetAllAttachments(context).ToList();
                             Assert.Equal(attachmentsCount, attachments.Count);
-                            Assert.All(attachments, attachment => Assert.True(attachment.RetireParameters.Flags == AttachmentFlags.None));
+                            Assert.All(attachments, attachment => Assert.True(attachment.RetireParameters.Flags == RetiredAttachmentFlags.None));
                         }
 
                         // replicate retired attachments to source
@@ -894,14 +894,14 @@ namespace SlowTests.Server.Documents.Attachments
 
                             await Assert.AllAsync(attachments, async attachment =>
                             {
-                                Assert.True(attachment.RetireParameters.Flags == AttachmentFlags.None);
+                                Assert.True(attachment.RetireParameters.Flags == RetiredAttachmentFlags.None);
                                 // we cannot receive it using source retired attachment configuration
                                 var a = Attachments.FirstOrDefault(x => x.Key == attachment.Key);
                                 Assert.NotNull(a);
                                 attachment.Stream = a.Stream;
 
                                 // this sends GetAttachmentOperation and compares the result
-                                await GetAndCompareRetiredAttachment(store1, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size, identifier1, AttachmentFlags.None);
+                                await GetAndCompareRetiredAttachment(store1, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType, (MemoryStream)attachment.Stream, size, identifier1, RetiredAttachmentFlags.None);
                             });
 
                             // update the retired attachments configuration to be same as destination
@@ -1023,7 +1023,7 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.Equal(attachmentsCount, val4);
                     var identifier2 = await PutRetireAttachmentsConfiguration(replica, Settings);
 
-                    await AssertGetRetiredAttachmentsInBulk(replica, size, identifier2, AttachmentFlags.None);
+                    await AssertGetRetiredAttachmentsInBulk(replica, size, identifier2, RetiredAttachmentFlags.None);
 
                     if (retireOnReplica)
                     {
@@ -1122,7 +1122,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                         await Assert.AllAsync(attachments, async attachment =>
                         {
-                            Assert.True(attachment.RetireParameters.Flags == AttachmentFlags.None);
+                            Assert.True(attachment.RetireParameters.Flags == RetiredAttachmentFlags.None);
                             // we cannot receive it using source retired attachment configuration
                             var a = Attachments.FirstOrDefault(x => x.Key == attachment.Key);
                             Assert.NotNull(a);
@@ -1130,7 +1130,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                             // this sends GetAttachmentOperation and compares the result
                             await GetAndCompareRetiredAttachment(store2, a.DocumentId, attachment.Name, attachment.Base64Hash.ToString(), attachment.ContentType,
-                                (MemoryStream)attachment.Stream, size, identifier, AttachmentFlags.None);
+                                (MemoryStream)attachment.Stream, size, identifier, RetiredAttachmentFlags.None);
                         });
                     }
 

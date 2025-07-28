@@ -132,7 +132,7 @@ namespace SlowTests.Issues
                         Assert.StartsWith("greeting", x.Name);
                     });
 
-                    var resultByFlag = session.Query<RetiredAttachmentIndex.Result, RetiredAttachmentIndex>().Where(x => x.Retired == AttachmentFlags.Retired)
+                    var resultByFlag = session.Query<RetiredAttachmentIndex.Result, RetiredAttachmentIndex>().Where(x => x.Retired == RetiredAttachmentFlags.Retired)
                         .ProjectInto<RetiredAttachmentIndex.Result>().ToList();
 
                     Assert.NotNull(resultByFlag);
@@ -228,7 +228,7 @@ namespace SlowTests.Issues
                     Assert.NotNull(result);
                     Assert.True(result.Count == 2);
 
-                    var resultByFlag = session.Query<RetiredAttachmentIndex.Result, RetiredAttachmentIndex>().Where(x => x.Retired == AttachmentFlags.Retired)
+                    var resultByFlag = session.Query<RetiredAttachmentIndex.Result, RetiredAttachmentIndex>().Where(x => x.Retired == RetiredAttachmentFlags.Retired)
                         .ProjectInto<RetiredAttachmentIndex.Result>().ToList();
 
                     Assert.NotNull(resultByFlag);
@@ -247,7 +247,7 @@ namespace SlowTests.Issues
             {
                 public string Id { get; set; }
                 public string Name { get; set; }
-                public AttachmentFlags Retired { get; set; }
+                public RetiredAttachmentFlags Retired { get; set; }
                 public DateTime? RetiredAt { get; set; }
                 public string RetiredIdentifier { get; set; }
             }
@@ -258,7 +258,7 @@ namespace SlowTests.Issues
                     from att in AttachmentsFor(u)
                     select new Result { 
                         Name = att.Name,
-                        Retired = att.RetireParameters == null ? AttachmentFlags.None : att.RetireParameters.Flags,
+                        Retired = att.RetireParameters == null ? RetiredAttachmentFlags.None : att.RetireParameters.Flags,
                         RetiredAt = att.RetireParameters == null ? null : att.RetireParameters.At,
                         RetiredIdentifier = att.RetireParameters == null ? null : att.RetireParameters.Identifier,
                     };
@@ -272,7 +272,7 @@ namespace SlowTests.Issues
             {
                 public string Id { get; set; }
                 public string Name { get; set; }
-                public AttachmentFlags Retired { get; set; }
+                public RetiredAttachmentFlags Retired { get; set; }
                 public DateTime? RetiredAt { get; set; }
             }
         

@@ -1077,7 +1077,7 @@ namespace Raven.Server.Smuggler.Documents
 
                         foreach (var toRemove in attachmentsToRemoveNames)
                         {
-                            if (toRemove.RetireParameters == null || toRemove.RetireParameters.Flags == AttachmentFlags.None)
+                            if (toRemove.RetireParameters == null || toRemove.RetireParameters.Flags == RetiredAttachmentFlags.None)
                             {
                                 //TODO: egor this method is same as below
                                 _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove.Name, null, collectionName: out _, updateDocument: false, extractCollectionName: false);

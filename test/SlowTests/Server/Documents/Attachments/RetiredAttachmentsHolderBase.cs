@@ -70,13 +70,13 @@ public abstract class RetiredAttachmentsHolderBase : ReplicationTestBase
         Assert.Equal(collections.Count, ids.GroupBy(x => x.Item2).Count());
     }
 
-    public static async Task GetAndCompareRetiredAttachment(IDocumentStore store, string id, string attachmentName, string hash, string contentType, MemoryStream stream, int streamSize, string identifier, AttachmentFlags flags = AttachmentFlags.Retired)
+    public static async Task GetAndCompareRetiredAttachment(IDocumentStore store, string id, string attachmentName, string hash, string contentType, MemoryStream stream, int streamSize, string identifier, RetiredAttachmentFlags flags = RetiredAttachmentFlags.Retired)
     {
         var retired = await store.Operations.SendAsync(new GetAttachmentOperation(id, attachmentName, AttachmentType.Document, null));
         await CompareAttachment(attachmentName, hash, contentType, stream, streamSize, identifier, flags, retired.Details, retired.Stream);
     }
 
-    internal static async Task CompareAttachment(string attachmentName, string hash, string contentType, MemoryStream stream, long streamSize, string identifier, AttachmentFlags flags,
+    internal static async Task CompareAttachment(string attachmentName, string hash, string contentType, MemoryStream stream, long streamSize, string identifier, RetiredAttachmentFlags flags,
         AttachmentDetails retired, Stream stream1)
     {
         Assert.NotNull(retired);
@@ -85,10 +85,10 @@ public abstract class RetiredAttachmentsHolderBase : ReplicationTestBase
         Assert.Equal(attachmentName, retired.Name);
         Assert.Equal(streamSize, retired.Size);
 
-        if (flags == AttachmentFlags.None)
+        if (flags == RetiredAttachmentFlags.None)
         {
             //TODO: egor this will change after we drop unwrapped attachments
-            Assert.True(retired.RetireParameters == null || retired.RetireParameters.Flags == AttachmentFlags.None);
+            Assert.True(retired.RetireParameters == null || retired.RetireParameters.Flags == RetiredAttachmentFlags.None);
         }
         else
         {

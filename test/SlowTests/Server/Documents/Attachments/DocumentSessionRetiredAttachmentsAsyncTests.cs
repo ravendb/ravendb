@@ -152,7 +152,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                         Assert.NotNull(attachment);
                         Assert.Equal("test.png", attachment.Details.Name);
-                        Assert.Equal(AttachmentFlags.None, attachment.Details.RetireParameters.Flags);
+                        Assert.Equal(RetiredAttachmentFlags.None, attachment.Details.RetireParameters.Flags);
                         Assert.Equal(retireAtDate, attachment.Details.RetireParameters.At);
                         Assert.Equal("image/png", attachment.Details.ContentType);
                     }
@@ -191,7 +191,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = session.Advanced.Attachments.Get(id, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
+                    Assert.Equal(RetiredAttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
                 }
             }
         }
@@ -228,7 +228,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = session.Advanced.Attachments.Get(order, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
+                    Assert.Equal(RetiredAttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
                 }
             }
         }
@@ -262,7 +262,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = attachments.Current;
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
+                    Assert.Equal(RetiredAttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
                 }
             }
         }
@@ -520,7 +520,7 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
                     Assert.NotNull(attachment.Details.RetireParameters);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
+                    Assert.Equal(RetiredAttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
                 }
             }
         }
@@ -558,7 +558,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = await session.Advanced.Attachments.GetAsync(order, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
+                    Assert.Equal(RetiredAttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
                 }
             }
         }
@@ -596,7 +596,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = attachments.Current;
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
+                    Assert.Equal(RetiredAttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
                 }
             }
         }
@@ -832,7 +832,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var attachment = session.Advanced.Attachments.Get(id, "test.png");
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
-                    Assert.Equal(AttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
+                    Assert.Equal(RetiredAttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
 
                     // compare streams
                     using var ms = new MemoryStream();

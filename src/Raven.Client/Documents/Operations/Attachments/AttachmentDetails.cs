@@ -70,6 +70,11 @@ namespace Raven.Client.Documents.Operations.Attachments
         RetireAttachmentParameters RetireParameters { get; set; }
     }
 
+    public static class AttachmentExtentions
+    {
+
+    }
+
     public class RetireAttachmentParameters : IDynamicJson
     {
         public RetireAttachmentParameters()
@@ -89,7 +94,7 @@ namespace Raven.Client.Documents.Operations.Attachments
 
         public DateTime At { get; set; }
         public string Identifier { get; set; }
-        public AttachmentFlags Flags { get; set; }
+        public RetiredAttachmentFlags Flags { get; set; }
 
         public DynamicJsonValue ToJson()
         {

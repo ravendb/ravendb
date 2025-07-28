@@ -142,15 +142,15 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                     }
                     else
                     {
-                        if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out AttachmentFlags flags) == false)
+                        if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out RetiredAttachmentFlags flags) == false)
                             throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
 
-                        if (flags == AttachmentFlags.Retired)
+                        if (flags == RetiredAttachmentFlags.Retired)
                         {
                             hasRetired = true;
                             retireParameters.Modifications = new DynamicJsonValue(retireParameters)
                             {
-                                [nameof(RetireAttachmentParameters.Flags)] = AttachmentFlags.None
+                                [nameof(RetireAttachmentParameters.Flags)] = RetiredAttachmentFlags.None
                             };
                             attachment.Modifications = new DynamicJsonValue(attachment)
                             {
@@ -241,7 +241,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             var (documentId, name) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(item.AttachmentTombstone.Key);
 
-            _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null, fromEtl: true, AttachmentFlags.None));
+            _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null, fromEtl: true, RetiredAttachmentFlags.None));
         }
 
         public void AddCounter(JsValue instance, JsValue counterReference)

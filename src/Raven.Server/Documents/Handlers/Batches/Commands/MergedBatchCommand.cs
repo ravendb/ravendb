@@ -170,7 +170,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     AttachmentStream attachmentStream = GetAttachmentStream(attachmentIterator, out Stream stream);
                     AttachmentDetailsServer attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, attachmentStream.Hash, stream.Length, cmd.RetireParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
 
-                    Debug.Assert(cmd.RetireParameters == null  || cmd.RetireParameters.Flags == AttachmentFlags.None, "cmd.RetireParameters == null  || cmd.RetireParameters.Flags == AttachmentFlags.None");
+                    Debug.Assert(cmd.RetireParameters == null  || cmd.RetireParameters.Flags == RetiredAttachmentFlags.None, "cmd.RetireParameters == null  || cmd.RetireParameters.Flags == AttachmentFlags.None");
 
                     LastChangeVector = attachmentPutResult.ChangeVector;
 

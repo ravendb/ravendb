@@ -40,7 +40,7 @@ namespace Raven.Client.Documents.Commands.Batches
 
         public static bool TryValidateStream(Stream stream, RetireAttachmentParameters parameters)
         {
-            if (parameters is { Flags: AttachmentFlags.Retired })
+            if (parameters is { Flags: RetiredAttachmentFlags.Retired })
             {
                 Debug.Assert(stream == null, "stream == null");
                 return false;

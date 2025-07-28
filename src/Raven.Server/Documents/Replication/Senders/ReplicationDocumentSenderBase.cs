@@ -492,7 +492,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
             if (item is AttachmentReplicationItem attachment)
             {
-                if (attachment.Flags != AttachmentFlags.Retired)
+                if (attachment.Flags != RetiredAttachmentFlags.Retired)
                 {
                     if (ShouldSendAttachmentStream(attachment))
                         _replicaAttachmentStreams[attachment.Base64Hash] = attachment;

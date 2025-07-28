@@ -358,7 +358,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         if (retireParameters.TryGet(nameof(RetireAttachmentParameters.At), out DateTime at) == false)
                             throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.At)}' property on '{nameof(RetireAttachmentParameters)}'");
 
-                        if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out AttachmentFlags flag) == false)
+                        if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out RetiredAttachmentFlags flag) == false)
                             throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.Flags)}' property on '{nameof(RetireAttachmentParameters)}'");
 
                         if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Identifier), out string identifier) == false)
@@ -940,42 +940,6 @@ namespace Raven.Server.Documents.Handlers.Batches
             }
 
             return 0;
-        }
-
-        private static unsafe AttachmentFlags GetAttachmentFlag(JsonParserState state, JsonOperationContext ctx)
-        {
-            // here we confirm that the value is matching our expectation, in order to save CPU instructions
-            // we compare directly against the precomputed values
-            switch (state.StringSize)
-            {
-                case 4:
-                    if ("None"u8.IsEqualConstant(state.StringBuffer))
-                        return AttachmentFlags.None;
-
-                    ThrowInvalidProperty(state, ctx);
-                    break;
-
-                case 7:
-
-                    if ("Retired"u8.IsEqualConstant(state.StringBuffer))
-                        return AttachmentFlags.Retired;
-
-                    ThrowInvalidProperty(state, ctx);
-                    break;
-
-                case 10:
-                    if ("Compressed"u8.IsEqualConstant(state.StringBuffer))
-                        return AttachmentFlags.Compressed;
-
-                    ThrowInvalidProperty(state, ctx);
-                    break;
-
-                default:
-                    ThrowInvalidProperty(state, ctx);
-                    break;
-            }
-
-            return AttachmentFlags.None;
         }
 
         private static unsafe AttachmentType GetAttachmentType(JsonParserState state, JsonOperationContext ctx)

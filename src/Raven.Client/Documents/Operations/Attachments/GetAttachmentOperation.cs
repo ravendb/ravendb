@@ -167,7 +167,7 @@ namespace Raven.Client.Documents.Operations.Attachments
                         ThrowOnMissingHeader(Constants.Headers.AttachmentRetireParametersAt);
                     }
 
-                    AttachmentFlags attachmentFlags = default;
+                    RetiredAttachmentFlags attachmentFlags = default;
                     if (response.Headers.TryGetValues(Constants.Headers.AttachmentRetireParametersFlags, out IEnumerable<string> flagsVal) == false || Enum.TryParse(flagsVal.First(), out attachmentFlags) == false)
                     {
                         ThrowOnMissingHeader(Constants.Headers.AttachmentRetireParametersFlags);

@@ -7,5 +7,5 @@ public interface IAttachmentIndexObject : IAttachmentObjectBase
 {
     public dynamic RetireAt { get; }
 
-    public AttachmentFlags Flags { get; }
+    public RetiredAttachmentFlags Flags { get; }
 }

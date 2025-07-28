@@ -56,7 +56,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         {
             var t = Attachments.FirstOrDefault(x =>
                 x.DocumentId.ToLowerInvariant() == docId && x.Name == attachment.Name &&
-                (x.RetireParameters == null || x.RetireParameters.Flags == AttachmentFlags.None) &&
+                (x.RetireParameters == null || x.RetireParameters.Flags == RetiredAttachmentFlags.None) &&
                 x.Hash == attachment.Base64Hash.ToString());
             Assert.NotNull(t);
             Attachments.Remove(t);
@@ -255,7 +255,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             }
         }
     }
-    protected async Task AssertGetRetiredAttachmentsInBulk(DocumentStore store, long size, string identifier, AttachmentFlags flags = AttachmentFlags.Retired)
+    protected async Task AssertGetRetiredAttachmentsInBulk(DocumentStore store, long size, string identifier, RetiredAttachmentFlags flags = RetiredAttachmentFlags.Retired)
     {
         var attachmentRequests = new List<AttachmentRequest>();
         foreach (var attachment in Attachments)
@@ -358,7 +358,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     }
                 }, attachmentsCount, 30_000);
                 Assert.Equal(attachmentsCount, val3);
-                await AssertGetRetiredAttachmentsInBulk(replica, size, identifier, AttachmentFlags.None);
+                await AssertGetRetiredAttachmentsInBulk(replica, size, identifier, RetiredAttachmentFlags.None);
             }
         }
     }
@@ -1161,7 +1161,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             public string AttachmentHash { get; set; }
             public long AttachmentSize { get; set; }
             public string AttachmentContent { get; set; }
-            public AttachmentFlags AttachmentFlags { get; set; }
+            public RetiredAttachmentFlags AttachmentFlags { get; set; }
             public DateTime? AttachmentRetiredAt { get; set; }
             public Stream AttachmentStream { get; set; }
         }

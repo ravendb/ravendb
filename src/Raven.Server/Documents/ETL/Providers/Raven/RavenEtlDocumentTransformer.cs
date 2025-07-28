@@ -800,7 +800,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                         attachmentData.Stream = memStream;
                         attachmentData.RetireParameters = new RetireAttachmentParameters(attachmentData.RetireParameters.Identifier, attachmentData.RetireParameters.At)
                         {
-                            Flags = AttachmentFlags.None // we are loading retired attachment, so we need to reset the flag
+                            Flags = RetiredAttachmentFlags.None // we are loading retired attachment, so we need to reset the flag
                         };
 
                     }

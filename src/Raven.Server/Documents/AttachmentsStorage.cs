@@ -153,8 +153,8 @@ namespace Raven.Server.Documents
             Memory.Copy(keyMem.Ptr + sizeof(int) + 1, hash.Content.Ptr, hash.Size);
 
             Slice slice;
-            var retiredHashes = GetHashesCount(AttachmentFlags.Retired);
-            var regularHashes = GetHashesCount(AttachmentFlags.None);
+            var retiredHashes = GetHashesCount(RetiredAttachmentFlags.Retired);
+            var regularHashes = GetHashesCount(RetiredAttachmentFlags.None);
 
             return new AttachmentHashesCount
             {
@@ -163,7 +163,7 @@ namespace Raven.Server.Documents
                 TotalHashes = regularHashes + retiredHashes
             };
 
-            long GetHashesCount(AttachmentFlags flag)
+            long GetHashesCount(RetiredAttachmentFlags flag)
             {
                 *(int*)(keyMem.Ptr) = Bits.SwapBytes((int)flag);
                 slice = new Slice(SliceOptions.Key, keyMem);
@@ -224,7 +224,7 @@ namespace Raven.Server.Documents
                     tvb.Add(context.GetTransactionMarker());
                     tvb.Add(changeVectorSlice);
                     tvb.Add(size);
-                    tvb.Add(Bits.SwapBytes((int)AttachmentFlags.Retired)); // add Retired flag
+                    tvb.Add(Bits.SwapBytes((int)RetiredAttachmentFlags.Retired)); // add Retired flag
                     tvb.Add(retireAt);
                     tvb.Add(identifierSlice);
                     table.Update(attachmentTvr.Id, tvb);
@@ -241,7 +241,7 @@ namespace Raven.Server.Documents
             string hash, long size, RetireAttachmentParameters retireParams, string expectedChangeVector = null, Stream stream = null,
             bool updateDocument = true, bool extractCollectionName = false, bool fromSmuggler = false, bool fromEtl = false)
         {
-            (AttachmentFlags flags, DateTime? retireAtDt, string identifier) = GetInfoFromRetiredParameters(retireParams);
+            (RetiredAttachmentFlags flags, DateTime? retireAtDt, string identifier) = GetInfoFromRetiredParameters(retireParams);
 
             if (context.Transaction == null)
             {
@@ -311,11 +311,11 @@ namespace Raven.Server.Documents
                     }
 
                     var keyExists = false;
-                    AttachmentFlags? existingFlags = null;
+                    RetiredAttachmentFlags? existingFlags = null;
                     if (table.ReadByKey(keySlice, out TableValueReader oldValue))
                     {
                         existingFlags = TableValueToAttachmentFlags((int)AttachmentsTable.Flags, ref oldValue);
-                        if (existingFlags == AttachmentFlags.None)
+                        if (existingFlags == RetiredAttachmentFlags.None)
                         {
                             keyExists = true;
                         }
@@ -378,7 +378,7 @@ namespace Raven.Server.Documents
                                 // Delete the attachment stream only if we have a different hash
                                 using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref partialTvr, out Slice existingHash))
                                 {
-                                    putStream = (existingHash.Content.Match(base64Hash.Content) == false) || existingFlags is AttachmentFlags.Retired;
+                                    putStream = (existingHash.Content.Match(base64Hash.Content) == false) || existingFlags is RetiredAttachmentFlags.Retired;
                                     if (putStream)
                                     {
                                         using (TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
@@ -403,7 +403,7 @@ namespace Raven.Server.Documents
 
                         if (putStream && fromSmuggler == false)
                         {
-                            if (fromEtl == false || flags != AttachmentFlags.Retired)
+                            if (fromEtl == false || flags != RetiredAttachmentFlags.Retired)
                             {
                                 PutAttachmentStream(context, keySlice, base64Hash, stream);
                             }
@@ -411,13 +411,13 @@ namespace Raven.Server.Documents
 
                         if (fromSmuggler == false)
                         {
-                            if (fromEtl && flags == AttachmentFlags.Retired)
+                            if (fromEtl && flags == RetiredAttachmentFlags.Retired)
                             {
                                 retireAt = retireAtDt.HasValue == false ? -1L : retireAtDt.Value.Ticks;
                             }
                             else
                             {
-                                Debug.Assert(flags == AttachmentFlags.None, "flags == AttachmentFlags.None");
+                                Debug.Assert(flags == RetiredAttachmentFlags.None, "flags == AttachmentFlags.None");
                                 retireAt = TryUpdateRetiredAttachment(context, retireAtDt, currentDt: -1L, identifier, currentIdentifier: null, keySlice);
                             }
                         }
@@ -528,12 +528,12 @@ namespace Raven.Server.Documents
                 tvb.Add(changeVectorSlice.Content.Ptr, changeVectorSlice.Size);
                 tvb.Add(size);
 
-                (AttachmentFlags flags, DateTime? retireAt, _) = WriteRetiredParameters(context, retireParams, tvb, table);
+                (RetiredAttachmentFlags flags, DateTime? retireAt, _) = WriteRetiredParameters(context, retireParams, tvb, table);
 
                 if (isRevision == false)
                 {
                     // this works similar to expiration, we populate the tree even if we don't have a configuration for attachments retirement
-                    if (flags != AttachmentFlags.Retired && retireAt.HasValue)
+                    if (flags != RetiredAttachmentFlags.Retired && retireAt.HasValue)
                         RetiredAttachmentsStorage.Put(context, key, retireAt.Value.GetDefaultRavenFormat());
                 }
             }
@@ -710,9 +710,9 @@ namespace Raven.Server.Documents
             }
         }
 
-        private static (AttachmentFlags Flags, DateTime? RetireAt, string Identifier) WriteRetiredParameters(DocumentsOperationContext context, RetireAttachmentParameters retireParameters, TableValueBuilder tvb, Table table)
+        private static (RetiredAttachmentFlags Flags, DateTime? RetireAt, string Identifier) WriteRetiredParameters(DocumentsOperationContext context, RetireAttachmentParameters retireParameters, TableValueBuilder tvb, Table table)
         {
-            (AttachmentFlags flags, DateTime? retireAt, string identifier) = GetInfoFromRetiredParameters(retireParameters);
+            (RetiredAttachmentFlags flags, DateTime? retireAt, string identifier) = GetInfoFromRetiredParameters(retireParameters);
 
             tvb.Add(Bits.SwapBytes((int)flags));
 
@@ -1171,7 +1171,7 @@ namespace Raven.Server.Documents
                 AttachmentDoesNotExistException.ThrowFor(sourceDocumentId, sourceName);
 
             var result = PutAttachment(context, destinationDocumentId, destinationName, attachment.ContentType, attachment.Base64Hash.ToString(), attachment.Size, attachment.RetireParameters, string.Empty, attachment.Stream, extractCollectionName: extractCollectionName);
-            Debug.Assert(attachment.RetireParameters == null || attachment.RetireParameters.Flags == AttachmentFlags.None, "attachment.RetireParameters == null || attachment.RetireParameters.Flags == AttachmentFlags.None");
+            Debug.Assert(attachment.RetireParameters == null || attachment.RetireParameters.Flags == RetiredAttachmentFlags.None, "attachment.RetireParameters == null || attachment.RetireParameters.Flags == AttachmentFlags.None");
             DeleteAttachment(context, sourceDocumentId, sourceName, changeVector, out var sourceCollectionName, updateDocument, hash, contentType, usePartialKey, extractCollectionName: extractCollectionName);
 
             return new MoveAttachmentDetailsServer()
@@ -1348,7 +1348,7 @@ namespace Raven.Server.Documents
             {
                 var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
 
-                if (retiredParams is { Flags: AttachmentFlags.Retired })
+                if (retiredParams is { Flags: RetiredAttachmentFlags.Retired })
                 {
                     DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
                 }
@@ -1642,14 +1642,14 @@ namespace Raven.Server.Documents
                                   + 1; // sep
         }
 
-        public long GetNumberOfAttachmentsForFlag(DocumentsOperationContext context, AttachmentFlags flag)
+        public long GetNumberOfAttachmentsForFlag(DocumentsOperationContext context, RetiredAttachmentFlags flag)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
             using var scope = SliceFromAttachmentFlagAndSeparator(context, flag, out var slice);
             return table.GetCountOfMatchesForPrefix(AttachmentsSchema.DynamicKeyIndexes[AttachmentsFlagAndHashSlice], slice);
         }
 
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope SliceFromAttachmentFlagAndSeparator(DocumentsOperationContext context, AttachmentFlags flag, out Slice slice)
+        private static ByteStringContext<ByteStringMemoryCache>.InternalScope SliceFromAttachmentFlagAndSeparator(DocumentsOperationContext context, RetiredAttachmentFlags flag, out Slice slice)
         {
             var scope = context.Allocator.Allocate(sizeof(int) + 1, out ByteString keyMem);
             *(int*)(keyMem.Ptr) = Bits.SwapBytes((int)flag);
@@ -1659,9 +1659,9 @@ namespace Raven.Server.Documents
             return scope;
         }
 
-        internal static (AttachmentFlags Flags, DateTime? RetireAtDt, string Identifier) GetInfoFromRetiredParameters(RetireAttachmentParameters retireParams)
+        internal static (RetiredAttachmentFlags Flags, DateTime? RetireAtDt, string Identifier) GetInfoFromRetiredParameters(RetireAttachmentParameters retireParams)
         {
-            AttachmentFlags flags = retireParams?.Flags ?? Client.Documents.Attachments.AttachmentFlags.None;
+            RetiredAttachmentFlags flags = retireParams?.Flags ?? Client.Documents.Attachments.RetiredAttachmentFlags.None;
             DateTime? retireAtDt = retireParams?.At;
             string identifier = retireParams?.Identifier;
             return (flags, retireAtDt, identifier);

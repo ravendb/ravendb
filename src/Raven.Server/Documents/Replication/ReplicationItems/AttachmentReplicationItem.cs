@@ -21,7 +21,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public Slice Base64Hash;
         public Stream Stream;
         public long AttachmentSize;
-        public AttachmentFlags Flags;
+        public RetiredAttachmentFlags Flags;
         public DateTime? RetireAtUtc;
         public Slice RetireIdentifier;
 
@@ -90,7 +90,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             }
             else
             {
-                item.Flags = AttachmentFlags.None;
+                item.Flags = RetiredAttachmentFlags.None;
                 item.RetireAtUtc = null;
                 item.RetireIdentifier = Slices.Empty;
             }
@@ -143,8 +143,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                     tempBufferPos += sizeof(long);
                 }
 
-                *(AttachmentFlags*)(pTemp + tempBufferPos) = Flags;
-                tempBufferPos += sizeof(AttachmentFlags);
+                *(RetiredAttachmentFlags*)(pTemp + tempBufferPos) = Flags;
+                tempBufferPos += sizeof(RetiredAttachmentFlags);
 
                 *(int*)(pTemp + tempBufferPos) = RetireIdentifier.Size;
                 tempBufferPos += sizeof(int);
@@ -177,7 +177,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 if (ticks != -1)
                     RetireAtUtc = new DateTime(ticks, DateTimeKind.Utc);
 
-                Flags = *(AttachmentFlags*)Reader.ReadExactly(sizeof(AttachmentFlags)) | AttachmentFlags.None;
+                Flags = *(RetiredAttachmentFlags*)Reader.ReadExactly(sizeof(RetiredAttachmentFlags)) | RetiredAttachmentFlags.None;
                 size = *(int*)Reader.ReadExactly(sizeof(int));
 
                 if (size == 0)

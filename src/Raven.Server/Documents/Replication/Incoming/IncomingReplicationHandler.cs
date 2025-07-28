@@ -323,9 +323,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                     switch (item)
                     {
                         case AttachmentReplicationItem attachmentReplicationItem:
-                            if (attachmentReplicationItem.Flags == AttachmentFlags.Retired)
+                            if (attachmentReplicationItem.Flags == RetiredAttachmentFlags.Retired)
                             {
-                                attachmentReplicationItem.Flags = AttachmentFlags.None;
+                                attachmentReplicationItem.Flags = RetiredAttachmentFlags.None;
                             }
                             break;
 

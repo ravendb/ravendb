@@ -37,7 +37,6 @@ namespace Raven.Server.Documents
         private readonly TimeSpan _retirePeriod;
         private  UploaderSettings _uploaderSettings;
         private readonly OperationCancelToken _token;
-        private RetireAttachmentsStatsScope _uploadScope;
         private bool _allHalted =>  Configuration == null || Configuration.Destinations.Count == 0 || Configuration.Destinations.All(x => x.Value.Disabled == true);
 
         public RetiredAttachmentsConfiguration Configuration { get; }

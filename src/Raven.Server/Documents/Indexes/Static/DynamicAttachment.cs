@@ -78,13 +78,13 @@ namespace Raven.Server.Documents.Indexes.Static
             }
         }
 
-        public AttachmentFlags Flags
+        public RetiredAttachmentFlags Flags
         {
             get
             {
                 if (_attachment.IsRetired() == false)
                 {
-                    return AttachmentFlags.None;
+                    return RetiredAttachmentFlags.None;
                 }
 
                 return _attachment.RetireParameters.Flags;

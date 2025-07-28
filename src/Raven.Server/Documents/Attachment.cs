@@ -22,7 +22,7 @@ namespace Raven.Server.Documents
         public long Size;
         public RetireAttachmentParameters RetireParameters;
 
-        public static RetireAttachmentParameters GetRetireAttachmentParameters(string identifier, DateTime? retireAt, AttachmentFlags flags)
+        public static RetireAttachmentParameters GetRetireAttachmentParameters(string identifier, DateTime? retireAt, RetiredAttachmentFlags flags)
         {
             RetireAttachmentParameters retireParameters = null;
             if (retireAt.HasValue)
@@ -33,9 +33,9 @@ namespace Raven.Server.Documents
             return retireParameters;
         }
 
-        public static RetireAttachmentParameters GetRetireAttachmentParameters(LazyStringValue identifier, DateTime? retireAt, AttachmentFlags flags)
+        public static RetireAttachmentParameters GetRetireAttachmentParameters(LazyStringValue identifier, DateTime? retireAt, RetiredAttachmentFlags flags)
         {
-            return GetRetireAttachmentParameters(identifier.ToString(CultureInfo.CurrentCulture), retireAt, flags);
+            return GetRetireAttachmentParameters(identifier.ToString(), retireAt, flags);
         }
 
         public bool IsRetired()
@@ -45,7 +45,7 @@ namespace Raven.Server.Documents
                 return false;
             }
 
-            return RetireParameters.Flags != AttachmentFlags.None;
+            return RetireParameters.Flags != RetiredAttachmentFlags.None;
         }
     }
 }

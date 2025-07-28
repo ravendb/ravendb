@@ -10,11 +10,11 @@ namespace Raven.Client.Documents.Commands.Batches
     public sealed class DeleteAttachmentCommandData : ICommandData
     {
         public DeleteAttachmentCommandData(string documentId, string name, string changeVector)
-            : this(documentId, name, changeVector, fromEtl: false, AttachmentFlags.None)
+            : this(documentId, name, changeVector, fromEtl: false, RetiredAttachmentFlags.None)
         {
         }
 
-        internal DeleteAttachmentCommandData(string documentId, string name, string changeVector, bool fromEtl, AttachmentFlags flags)
+        internal DeleteAttachmentCommandData(string documentId, string name, string changeVector, bool fromEtl, RetiredAttachmentFlags flags)
         {
             if (string.IsNullOrWhiteSpace(documentId))
                 throw new ArgumentNullException(nameof(documentId));
@@ -33,7 +33,7 @@ namespace Raven.Client.Documents.Commands.Batches
         public string ChangeVector { get; }
         public CommandType Type { get => CommandType.AttachmentDELETE; }
         internal bool FromEtl { get; }
-        internal AttachmentFlags Flags { get; }
+        internal RetiredAttachmentFlags Flags { get; }
 
         public DynamicJsonValue ToJson(DocumentConventions conventions, JsonOperationContext context)
         {
