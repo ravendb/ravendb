@@ -51,6 +51,12 @@ $pre-bg: colors.$well-bg-var;
     .ace_autocomplete {
         line-height: 2;
     }
+
+    .ace_placeholder {
+        color: colors.$text-muted-var !important;
+        white-space: pre;
+        opacity: 0.5;
+    }
 }
 
 .ace-raven {

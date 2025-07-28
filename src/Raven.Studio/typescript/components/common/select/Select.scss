@@ -13,6 +13,11 @@
     border-radius: bs5variables.$input-border-radius;
     flex: 1 1 auto;
 
+    .react-select__placeholder {
+        color: colors.$text-muted-var !important;
+        opacity: 0.5;
+    }
+
     .react-select__control {
         border: none;
         background-color: colors.$input-bg-var;

@@ -16,6 +16,7 @@ import { sortBy } from "lodash";
 import { useAsync } from "react-async-hook";
 import Button from "react-bootstrap/Button";
 import InputGroup from "react-bootstrap/InputGroup";
+import Code from "components/common/Code";
 
 interface EditAiAgentBasicSectionProps {
     isEditAiAgent: boolean;
@@ -64,12 +65,11 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
         <>
             <h3 className="m-0">Configure basic settings</h3>
             <div className="mb-1">
-                Setup basic information about your agent - give it a specific task, database it will connect to and
-                format in which agent will respond.
+                Define your agent&apos;s purpose, its AI provider connection, and the structure of its responses.
             </div>
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>
-                    <FormLabel>Name</FormLabel>
+                    <FormLabel>Agent name</FormLabel>
                     <FormInput
                         type="text"
                         control={control}
@@ -86,8 +86,16 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                 <FormGroup>
                     <FormLabel>
                         Identifier
-                        <PopoverWithHoverWrapper message="A unique identifier for the agent">
-                            <Icon icon="info" color="info" margin="ms-1" id="identifier" />
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    A unique identifier for the agent.
+                                    <br />
+                                    If not specified, it will be auto-generated from the agent name.
+                                </>
+                            }
+                        >
+                            <Icon icon="info" color="info" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </FormLabel>
                     <FormInput
@@ -101,7 +109,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                                 variant="link"
                                 className="text-reset px-0"
                                 onClick={handleGenerateIdentifier}
-                                title="Click to generate the identifier from the task name"
+                                title="Click to generate the identifier from the agent name."
                                 disabled={isEditAiAgent}
                             >
                                 <Icon icon="refresh" />
@@ -111,7 +119,12 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                     />
                 </FormGroup>
                 <FormGroup>
-                    <FormLabel>Connection String</FormLabel>
+                    <FormLabel>
+                        Connection String
+                        <PopoverWithHoverWrapper message="The selected connection string determines which LLM the agent will interact with.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
                     <InputGroup>
                         <FormSelect
                             control={control}
@@ -140,22 +153,122 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                     </InputGroup>
                 </FormGroup>
                 <FormGroup>
-                    <FormLabel>Agent description prompt</FormLabel>
-                    <FormInput type="textarea" as="textarea" control={control} name="systemPrompt" rows={4} />
+                    <FormLabel>
+                        Agent description
+                        <PopoverWithHoverWrapper message="This system prompt provides general context about the agent's role and capabilities to help guide the LLM's responses.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
+                    <FormInput
+                        type="textarea"
+                        as="textarea"
+                        control={control}
+                        name="systemPrompt"
+                        rows={4}
+                        placeholder={agentDescriptionPlaceholder}
+                    />
                 </FormGroup>
                 <SampleObjectAndSchemaFields
                     control={control}
                     setValue={setValue}
                     sampleObjectName="sampleObject"
-                    sampleObjectLabel="Sample object"
+                    sampleObjectLabel="Sample response object"
                     sampleObject={formValues.sampleObject}
-                    sampleObjectSyntaxHelp={<div>TODO</div>}
+                    sampleObjectSyntaxHelp={<SampleObjectSyntaxHelp />}
+                    sampleObjectTooltip={
+                        <>
+                            Provide a JSON object that defines the structure of the responses you expect to receive from
+                            the LLM via the agent in the conversation.
+                            <br />
+                            This object is not sent to the model directly - RavenDB uses it to generate a JSON schema,
+                            which is sent to the model.
+                        </>
+                    }
+                    sampleObjectPlaceholder={sampleObjectPlaceholder}
                     jsonSchemaName="outputSchema"
-                    jsonSchemaLabel="Output JSON schema"
+                    jsonSchemaLabel="Response JSON schema"
                     jsonSchema={formValues.outputSchema}
-                    jsonSchemaSyntaxHelp={<div>TODO</div>}
+                    jsonSchemaSyntaxHelp={<JsonSchemaSyntaxHelp />}
+                    jsonSchemaTooltip={
+                        <>
+                            This JSON schema defines the structure of the response you expect the LLM to reply with.
+                            <br />
+                            It is included in the request sent to the model.
+                            <br />
+                            <br />
+                            If you don&apos;t provide a schema, RavenDB will generate one automatically based on the
+                            sample response object.
+                            <br />
+                            If you provide both a sample object and a schema, the schema takes precedence.
+                        </>
+                    }
+                    helpActionTooltipTitle="Syntax example"
                 />
             </div>
         </>
     );
 }
+
+const agentDescriptionPlaceholder = `Describe the agent's purpose and capabilities. 
+E.g.: You are a customer support assistant for an e-commerce platform, capable of answering questions about products and orders.
+You can also assist with returns, refunds, and order issues by triggering the appropriate action to escalate to the support team.`;
+
+const sampleObjectPlaceholder = `{
+    // "ResponseField: "Instruction to the LLM",
+    // ...
+    // "ResponseField" is a custom field name that you want the LLM to include in its response.
+    // The value ("Instruction to the LLM") is a natural-language instruction that tells the LLM what content to return in this field.
+} 
+Open the (?) icon to view an example.`;
+
+const SampleObjectSyntaxHelp = () => {
+    const code = `{
+    "Request": "Summarize the customer's request.",
+    "Response": "Provide your response.",
+    "CustomerId": "Provide the customer ID."
+}`;
+
+    return (
+        <div>
+            <div>Example of a sample object that defines the expected response structure:</div>
+            <Code code={code} elementToCopy={code} language="json" />
+        </div>
+    );
+};
+
+const JsonSchemaSyntaxHelp = () => {
+    const code = `{
+    "name": "MEJIa2ZlclQvQ3VZYlIvTENUQmVHa3JGUXlONzcxZ2dBK2pwYnUybDh0OD0",
+    "strict": true,
+    "schema": {
+        "type": "object",
+        "properties": {
+            "Request": {
+                "type": "string",
+                "description": "Summarize the customer's request."
+            },
+            "Response": {
+                "type": "string",
+                "description": "Provide your response."
+            },
+            "CustomerId": {
+                "type": "string",
+                "description": "Provide the customer ID."
+            }
+        },
+        "required": [
+            "Request",
+            "Response",
+            "CustomerId"
+        ],
+        "additionalProperties": false
+    }
+}`;
+
+    return (
+        <div>
+            <div>Example of a JSON schema that defines the expected response structure:</div>
+            <Code code={code} elementToCopy={code} language="json" />
+        </div>
+    );
+};

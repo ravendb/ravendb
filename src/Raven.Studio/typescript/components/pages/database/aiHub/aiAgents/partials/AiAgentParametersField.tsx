@@ -1,5 +1,6 @@
 import { FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import Badge from "react-bootstrap/Badge";
 import { Control, FieldPath, FieldValues } from "react-hook-form";
 
@@ -20,7 +21,12 @@ export default function AiAgentParametersField<
     return (
         <div className="text-center w-100 overflow-auto py-2">
             <Icon icon="metrics" color="primary" size="lg" />
-            <h3 className="mt-1">To start a new chat select a chosen parameters.</h3>
+            <h3 className="mt-1">
+                Provide values for the agent parameters before starting the chat.
+                <PopoverWithHoverWrapper message="When a query tool is used, the agent will insert these values into the query definition before executing it against the database, filtering the data and ensuring the query only retrieves data within the allowed scope.">
+                    <Icon icon="info" color="info" margin="ms-1" />
+                </PopoverWithHoverWrapper>
+            </h3>
 
             {value.map((x, idx) => (
                 <div key={x.name} className="w-100 p-2">

@@ -134,7 +134,7 @@ function ToolMessage({ message, type }: ToolMessageProps) {
             {type === "action" && toolName && (
                 <div className="hstack justify-content-between mb-1">
                     <div>
-                        Tool response for <strong>{toolName}</strong>
+                        Response from action tool: <strong>{toolName}</strong>
                     </div>
                     <Badge bg="primary" pill>
                         <Icon icon="check" /> Submitted
@@ -168,7 +168,7 @@ function SystemMessage({ message }: SystemMessageProps) {
             <div className="mt-2 p-2 border-start border-secondary">
                 <div>
                     <Icon icon="system" size="xs" />
-                    System message
+                    Agent description
                 </div>
                 <div className="mt-2 overflow-auto" style={{ maxHeight: "200px" }}>
                     {message.content}
@@ -300,7 +300,7 @@ function AgentMessage({
                                     </div>
                                     <hr className="my-1" />
                                     <div className="hstack justify-content-between gap-3">
-                                        <span>Tokens usage</span>
+                                        <span>Total tokens used</span>
                                         <span>{agentMessage.usage.TotalTokens}</span>
                                     </div>
                                 </div>
@@ -308,7 +308,7 @@ function AgentMessage({
                         >
                             <Icon icon="info" />
                         </PopoverWithHoverWrapper>
-                        Tokens usage: {agentMessage.usage.TotalTokens}
+                        Tokens used: {agentMessage.usage.TotalTokens}
                     </div>
                 )}
             </div>
@@ -376,7 +376,7 @@ function ParameterField({ idx, name, control }: ParameterFieldProps) {
     return (
         <FormGroup>
             <FormLabel>
-                Define parameters for <strong>{name}</strong> tool call
+                Enter a response after completing action for <strong>{name}</strong>
             </FormLabel>
             <FormAceEditor
                 aceRef={aceRef}
@@ -385,10 +385,14 @@ function ParameterField({ idx, name, control }: ParameterFieldProps) {
                 mode="text"
                 height="150px"
                 actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.FormatAction /> }]}
+                placeholder={idx === 0 ? parameterFieldPlaceholder : ""}
             />
         </FormGroup>
     );
 }
+
+const parameterFieldPlaceholder = `Provide a free-text response to the LLM after completing the requested action, e.g.:
+The issue has been forwarded to the support team.`;
 
 interface ToolCallProps {
     toolCall: AiAgentToolCall;
@@ -403,6 +407,7 @@ function ToolCall({ toolCall, toolQueries, toolActions }: ToolCallProps) {
     const toolAction = toolActions?.find((x) => x.Name === toolCall.name);
 
     const icon: IconName = toolQuery ? "query" : "force";
+    const label = toolQuery ? "Query tool called:" : "Action tool called:";
 
     return (
         <Accordion className="transcript-tool border border-secondary rounded-2 panel-bg-3">
@@ -412,7 +417,9 @@ function ToolCall({ toolCall, toolQueries, toolActions }: ToolCallProps) {
                         <div className="p-1 rounded-2 bg-faded-primary border border-primary">
                             <Icon icon={icon} color="primary" margin="m-0" />
                         </div>
-                        <div className="text-truncate">Tool call: {toolCall.name}</div>
+                        <div className="text-truncate">
+                            {label} {toolCall.name}
+                        </div>
                     </div>
                 </Accordion.Header>
                 <Accordion.Collapse eventKey={id} mountOnEnter unmountOnExit>
@@ -456,7 +463,7 @@ function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
                                 )}
                                 {tool.ParametersSampleObject && (
                                     <div>
-                                        <small className="text-muted">Parameters</small>
+                                        <small className="text-muted">Sample parameters object</small>
                                         <AceEditor
                                             value={tool.ParametersSampleObject}
                                             readOnly
@@ -483,7 +490,7 @@ function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
                 </Accordion>
             )}
             <div>
-                <small className="text-muted">Arguments</small>
+                <small className="text-muted">Parameters filled by LLM</small>
                 <AceEditor
                     value={prettifiedArguments}
                     readOnly

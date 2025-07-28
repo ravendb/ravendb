@@ -4,6 +4,8 @@ import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import ClickableCard from "components/common/ClickableCard";
 import OptionalLabel from "components/common/OptionalLabel";
 import Button from "react-bootstrap/Button";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { Icon } from "components/common/Icon";
 
 export default function EditAiAgentTrimmingSection() {
     const { control, setValue } = useFormContext<EditAiAgentFormData>();
@@ -22,16 +24,19 @@ export default function EditAiAgentTrimmingSection() {
 
     return (
         <>
-            <h3 className="m-0 mt-3">Configure chat trimming</h3>
+            <h3 className="m-0 mt-3">
+                Configure chat trimming <OptionalLabel />
+            </h3>
             <div className="mb-1">
-                Define configuration options for reducing the size of the AI agents chat history.
+                You can configure trimming of long conversations either by summarizing or truncating older messages.
+                <br />
+                If you &quot;enable history&quot;, the original chat content prior to trimming will be stored in
+                dedicated documents in the `@conversations-history` collection.
             </div>
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>
                     <FormLabel className="hstack justify-content-between">
-                        <div>
-                            Trimming method <OptionalLabel />
-                        </div>
+                        <div>Trimming method</div>
                         {formValues.trimming.method != null && (
                             <Button variant="link" size="sm" onClick={() => setValue("trimming.method", null)}>
                                 Clear selection
@@ -41,8 +46,8 @@ export default function EditAiAgentTrimmingSection() {
                     <div className="d-flex gap-2">
                         <ClickableCard
                             icon="tasks-list"
-                            title="Summarization by tokens"
-                            description="Summarizes chat messages into a compact prompt when token count exceeds a threshold."
+                            title="Summarize chat"
+                            description="Summarize the chat conversation into a compact prompt when the total number of tokens used exceeds the configured threshold."
                             className="w-50"
                             isSelected={formValues.trimming.method === "Tokens"}
                             onClick={() => handleSetTrimmingMethod("Tokens")}
@@ -50,7 +55,7 @@ export default function EditAiAgentTrimmingSection() {
                         <ClickableCard
                             icon="collapse-vertical"
                             title="Truncate chat"
-                            description="Truncates older chat messages when the number of messages exceeds a maximum length."
+                            description="Remove older messages when the number of chat messages exceeds the configured maximum."
                             className="w-50"
                             isSelected={formValues.trimming.method === "Truncate"}
                             onClick={() => handleSetTrimmingMethod("Truncate")}
@@ -71,7 +76,10 @@ function TokensFields() {
         <>
             <FormGroup>
                 <FormLabel>
-                    Max tokens before summarization <OptionalLabel />
+                    Max tokens before summarization
+                    <PopoverWithHoverWrapper message="Summarization will be triggered when the total number of tokens used in the conversation exceeds this limit.">
+                        <Icon icon="info" color="info" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
                 </FormLabel>
                 <FormInput
                     type="number"
@@ -82,7 +90,18 @@ function TokensFields() {
             </FormGroup>
             <FormGroup>
                 <FormLabel>
-                    Max tokens after summarization <OptionalLabel />
+                    Max tokens after summarization
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                The maximum number of tokens to retain in the conversation after summarization.
+                                <br />
+                                Messages exceeding this limit will be removed, starting from the oldest.
+                            </>
+                        }
+                    >
+                        <Icon icon="info" color="info" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
                 </FormLabel>
                 <FormInput
                     type="number"
@@ -103,7 +122,10 @@ function TruncateFields() {
         <>
             <FormGroup>
                 <FormLabel>
-                    Messages length before truncate <OptionalLabel />
+                    Messages length before truncate
+                    <PopoverWithHoverWrapper message="Truncation is triggered when this number of messages is exceeded.">
+                        <Icon icon="info" color="info" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
                 </FormLabel>
                 <FormInput
                     type="number"
@@ -114,7 +136,18 @@ function TruncateFields() {
             </FormGroup>
             <FormGroup>
                 <FormLabel>
-                    Messages length after truncate <OptionalLabel />
+                    Messages length after truncate
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                The number of most recent messages to keep after truncation.
+                                <br />
+                                Older messages beyond this number will be discarded.
+                            </>
+                        }
+                    >
+                        <Icon icon="info" color="info" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
                 </FormLabel>
                 <FormInput
                     type="number"
@@ -140,12 +173,25 @@ function HistoryFields() {
             <FormGroup>
                 <FormSwitch control={control} name="trimming.isEnableHistory">
                     Enable history
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                Toggle on to keep the chat content that is removed during summarization in a dedicated
+                                document in the <code>@conversations-history</code> collection.
+                            </>
+                        }
+                    >
+                        <Icon icon="info" color="info" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
                 </FormSwitch>
             </FormGroup>
             {formValues.trimming.isEnableHistory && (
                 <FormGroup>
                     <FormSwitch control={control} name="trimming.isSetHistoryExpiration">
                         Set history expiration
+                        <PopoverWithHoverWrapper message="Toggle on to set how long history documents are retained.">
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
                     </FormSwitch>
                     {formValues.trimming.isSetHistoryExpiration && (
                         <FormDurationPicker

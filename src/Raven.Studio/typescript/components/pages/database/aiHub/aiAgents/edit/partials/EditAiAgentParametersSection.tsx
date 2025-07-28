@@ -33,7 +33,10 @@ export default function EditAiAgentParametersSection() {
         <>
             <h3 className="m-0 mt-3">Set agent parameters</h3>
             <div className="mb-1">
-                Create parameters to control and restrict data that you want your agent to have access to.
+                Define query parameters that the agent will replace with fixed values before executing a query tool
+                against the database, ensuring the query executes only within the allowed data scope.
+                <br />
+                You will need to provide values for these parameters when starting a new chat with the agent.
             </div>
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>
@@ -67,6 +70,7 @@ export default function EditAiAgentParametersSection() {
                                         className="p-0"
                                         onClick={() => parametersFieldArray.remove(index)}
                                         size="xs"
+                                        title="Delete this parameter"
                                     >
                                         <Icon icon="trash" margin="m-0" color="light" />
                                     </Button>

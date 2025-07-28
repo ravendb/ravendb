@@ -6,6 +6,7 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 export default function EditAiAgentFooter() {
     const dispatch = useAppDispatch();
@@ -41,10 +42,12 @@ export default function EditAiAgentFooter() {
                 Cancel
             </a>
             <div className="hstack gap-2">
-                <Button variant="info" className="rounded-pill" onClick={handleOpenTest}>
-                    <Icon icon="test" />
-                    Test
-                </Button>
+                <PopoverWithHoverWrapper message="Click to test the agent in the test area.">
+                    <Button variant="info" className="rounded-pill" onClick={handleOpenTest}>
+                        <Icon icon="test" />
+                        Test
+                    </Button>
+                </PopoverWithHoverWrapper>
 
                 <ButtonWithSpinner
                     type="submit"

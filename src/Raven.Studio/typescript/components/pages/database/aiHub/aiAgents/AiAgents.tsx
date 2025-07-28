@@ -68,7 +68,7 @@ export default function AiAgents() {
                     })}
                 >
                     <Icon icon="plus" />
-                    Add new
+                    Add new agent
                 </a>
             </ConditionalPopover>
             <div className="d-flex flex-column flex-grow mt-4">

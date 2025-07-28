@@ -128,7 +128,7 @@ function ModelUsage() {
                         </div>
                         <hr className="my-1" />
                         <div className="hstack justify-content-between gap-3">
-                            <span>Tokens usage</span>
+                            <span>Total tokens used</span>
                             <span>{modelUsage.data.totalTokens}</span>
                         </div>
                     </div>
@@ -136,7 +136,7 @@ function ModelUsage() {
             >
                 <Badge bg="info">
                     <Icon icon="info" />
-                    Tokens usage: {modelUsage.data.totalTokens}
+                    Tokens used: {modelUsage.data.totalTokens}
                 </Badge>
             </PopoverWithHoverWrapper>
         </div>

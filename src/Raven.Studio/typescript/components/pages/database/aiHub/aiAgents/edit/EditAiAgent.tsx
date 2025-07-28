@@ -123,7 +123,11 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                         <div className="hstack h-100">
                             <div className="vstack h-100" style={{ width: `${width - testAreaResizable.width}px` }}>
                                 <div className="hstack justify-content-between align-items-start p-4">
-                                    <AboutViewHeading title="Create AI Agent" icon="ai-agents" marginBottom={0} />
+                                    <AboutViewHeading
+                                        title={`${isEditAiAgent ? "Edit" : "Create"} AI Agent`}
+                                        icon="ai-agents"
+                                        marginBottom={0}
+                                    />
                                     <EditAiAgentInfoHub />
                                 </div>
                                 <div className="px-4 pb-4 flex-grow-1 overflow-scroll h-100">

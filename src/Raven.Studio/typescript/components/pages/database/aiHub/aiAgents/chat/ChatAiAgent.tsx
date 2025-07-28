@@ -127,7 +127,12 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
             </div>
             <div className="hstack mb-2 justify-content-between">
                 <div className="hstack gap-2">
-                    <Button variant="primary" className="rounded-pill" onClick={handleNewChat}>
+                    <Button
+                        variant="primary"
+                        className="rounded-pill"
+                        onClick={handleNewChat}
+                        title="Click to start a new chat with the LLM using this agent"
+                    >
                         <Icon icon="plus" /> New chat
                     </Button>
                     <a className="btn btn-secondary rounded-pill" href={appUrl.forAiAgents(databaseName)}>
@@ -138,6 +143,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                     color="primary"
                     selected={isRawData}
                     toggleSelection={() => dispatch(chatAiAgentActions.isRawDataSet(!isRawData))}
+                    title="Toggle on to view the chat communication in raw data format"
                 >
                     Raw data
                 </Switch>
@@ -192,7 +198,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                         as="textarea"
                                         control={control}
                                         name="prompt"
-                                        placeholder="Message an agent"
+                                        placeholder="Ask the agent anything"
                                         rows={3}
                                         className="rounded-2"
                                         style={{ resize: "none" }}

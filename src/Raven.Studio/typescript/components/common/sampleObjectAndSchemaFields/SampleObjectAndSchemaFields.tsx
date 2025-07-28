@@ -18,11 +18,15 @@ interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TNa
     sampleObjectLabel?: ReactNode;
     sampleObject: string;
     sampleObjectSyntaxHelp: React.ReactNode;
+    sampleObjectTooltip?: ReactNode;
+    sampleObjectPlaceholder?: string;
     jsonSchemaName: TName;
     jsonSchemaLabel?: ReactNode;
     jsonSchema: string;
     jsonSchemaSyntaxHelp: React.ReactNode;
+    jsonSchemaTooltip?: ReactNode;
     schemaType?: Raven.Server.Web.Studio.StudioTasksHandler.SchemaType;
+    helpActionTooltipTitle?: string;
 }
 
 export default function SampleObjectAndSchemaFields<
@@ -35,11 +39,15 @@ export default function SampleObjectAndSchemaFields<
     sampleObjectLabel = "Sample response object",
     sampleObject,
     sampleObjectSyntaxHelp,
+    sampleObjectTooltip,
+    sampleObjectPlaceholder,
     jsonSchemaName,
     jsonSchemaLabel = "JSON schema",
     jsonSchema,
     jsonSchemaSyntaxHelp,
+    jsonSchemaTooltip,
     schemaType,
+    helpActionTooltipTitle,
 }: SampleObjectAndSchemaFieldsProps<TFieldValues, TName>) {
     const sampleObjectRef = useRef<ReactAce>(null);
     const jsonSchemaRef = useRef<ReactAce>(null);
@@ -65,7 +73,7 @@ export default function SampleObjectAndSchemaFields<
                     "The sample object has been modified. Please regenerate the JSON schema to ensure it matches the new sample object structure.",
             });
         } else {
-            clearErrors([jsonSchemaName as TFieldValues[TName]])
+            clearErrors([jsonSchemaName as TFieldValues[TName]]);
         }
     }, [sampleObject, jsonSchema, canRegenerateSchema]);
 
@@ -79,13 +87,15 @@ export default function SampleObjectAndSchemaFields<
                                 {sampleObjectLabel}
                                 <PopoverWithHoverWrapper
                                     message={
-                                        <>
-                                            This object defines the structure of the output you expect from the model.
-                                            It is not sent to the model.
-                                            <br />
-                                            RavenDB will use it to generate a <strong>JSON schema</strong>, which will
-                                            be included in the request to the model.
-                                        </>
+                                        sampleObjectTooltip ?? (
+                                            <>
+                                                This object defines the structure of the output you expect from the
+                                                model. It is not sent to the model.
+                                                <br />
+                                                RavenDB will use it to generate a <strong>JSON schema</strong>, which
+                                                will be included in the request to the model.
+                                            </>
+                                        )
                                     }
                                 >
                                     <Icon icon="info" color="info" margin="ms-1" />
@@ -102,6 +112,7 @@ export default function SampleObjectAndSchemaFields<
                             control={control}
                             name={sampleObjectName}
                             mode="json"
+                            placeholder={sampleObjectPlaceholder}
                             actions={[
                                 { component: <AceEditor.FullScreenAction /> },
                                 { component: <AceEditor.FormatAction /> },
@@ -117,7 +128,12 @@ export default function SampleObjectAndSchemaFields<
                                     ),
                                 },
                                 {
-                                    component: <AceEditor.HelpAction message={sampleObjectSyntaxHelp} />,
+                                    component: (
+                                        <AceEditor.HelpAction
+                                            message={sampleObjectSyntaxHelp}
+                                            tooltipTitle={helpActionTooltipTitle}
+                                        />
+                                    ),
                                     position: "bottom",
                                 },
                             ]}
@@ -131,19 +147,21 @@ export default function SampleObjectAndSchemaFields<
                                 {jsonSchemaLabel}
                                 <PopoverWithHoverWrapper
                                     message={
-                                        <>
-                                            The JSON schema defines the structure and types of the output you expect
-                                            from the model.
-                                            <br />
-                                            This schema is included in the request to the model.
-                                            <br />
-                                            <br />
-                                            If you don&apos;t provide a schema, RavenDB will generate one automatically
-                                            based on the sample response object.
-                                            <br />
-                                            If you provide both a sample object and a schema, the schema takes
-                                            precedence and will be sent to the model.
-                                        </>
+                                        jsonSchemaTooltip ?? (
+                                            <>
+                                                The JSON schema defines the structure and types of the output you expect
+                                                from the model.
+                                                <br />
+                                                This schema is included in the request to the model.
+                                                <br />
+                                                <br />
+                                                If you don&apos;t provide a schema, RavenDB will generate one
+                                                automatically based on the sample response object.
+                                                <br />
+                                                If you provide both a sample object and a schema, the schema takes
+                                                precedence and will be sent to the model.
+                                            </>
+                                        )
                                     }
                                 >
                                     <Icon icon="info" color="info" margin="ms-1" />

@@ -64,12 +64,18 @@ export default function EditAiAgentTestPanel() {
             <div className="panel-bg-2 p-3 border-bottom border-secondary hstack justify-content-between">
                 <h3 className="m-0">
                     <Icon icon="test" color="primary" />
-                    Test results
+                    Test agent
                 </h3>
                 {isTestOpen && (
                     <div className="hstack gap-2">
                         {messages.length > 0 && (
-                            <Button variant="primary" size="sm" onClick={handleNewChat} className="rounded-pill">
+                            <Button
+                                variant="primary"
+                                size="sm"
+                                onClick={handleNewChat}
+                                className="rounded-pill"
+                                title="Clear the current conversation and start a new chat"
+                            >
                                 New chat
                             </Button>
                         )}
@@ -79,6 +85,7 @@ export default function EditAiAgentTestPanel() {
                                 size="sm"
                                 onClick={() => dispatch(editAiAgentActions.isRawDataSet(!isRawData))}
                                 className="rounded-pill"
+                                title="Switch between chat and raw data display"
                             >
                                 <Icon icon={isRawData ? "ai-agents" : "json"} margin="m-0" />
                             </Button>
@@ -98,9 +105,11 @@ export default function EditAiAgentTestPanel() {
                 <div className="p-3 flex-grow-1 vstack justify-content-center align-items-center">
                     <Icon icon="test" color="primary" className="fs-1" />
                     <p className="mt-2 text-center">
-                        This is a testing environment for your AI Agent.
+                        This is a test area where you can try out your agent configuration and chat with the LLM.
                         <br />
-                        Once everything is configured, click the &quot;Test&quot; button to see the results.
+                        The conversation will not be saved in the database.
+                        <br />
+                        Click the &quot;Test&quot; button to start chatting.
                     </p>
                 </div>
             )}
@@ -155,7 +164,7 @@ export default function EditAiAgentTestPanel() {
                                 as="textarea"
                                 control={control}
                                 name="test.prompt"
-                                placeholder="Message an agent"
+                                placeholder="Ask the agent anything"
                                 rows={3}
                                 className="rounded-2"
                                 style={{ resize: "none" }}
