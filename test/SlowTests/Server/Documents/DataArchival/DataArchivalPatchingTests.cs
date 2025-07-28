@@ -233,6 +233,65 @@ public class DataArchivalPatchingTests : RavenTestBase
             }
         }
     }
+    
+    [RavenFact(RavenTestCategory.Patching)]
+    public async Task UnarchivePatchTestResultShouldntContainArchivedFlag()
+    {
+        using (var store = GetDocumentStore())
+        {
+            // Insert document with archive time before activating the archival
+            var company = new Company { Name = "Company Name" };
+            var retires = SystemTime.UtcNow.AddMinutes(5);
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(company);
+                var metadata = session.Advanced.GetMetadataFor(company);
+                metadata[Constants.Documents.Metadata.ArchiveAt] = retires.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                await session.SaveChangesAsync();
+            }
+
+            // Activate the archival
+            await SetupDataArchival(store);
+
+            var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+            database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+            var documentsArchiver = database.DataArchivist;
+            await documentsArchiver.ArchiveDocs();
+
+            await Indexes.WaitForIndexingAsync(store);
+
+            using (var session = store.OpenAsyncSession())
+            {
+                var archivedCompany = await session.LoadAsync<Company>(company.Id);
+                var metadata = session.Advanced.GetMetadataFor(archivedCompany);
+                Assert.DoesNotContain(Constants.Documents.Metadata.ArchiveAt, metadata.Keys);
+                Assert.Contains(Constants.Documents.Metadata.Collection, metadata.Keys);
+                Assert.Contains(Constants.Documents.Metadata.Archived, metadata.Keys);
+                Assert.Equal(true, metadata[Constants.Documents.Metadata.Archived]);
+
+                // Make sure that the company is skipped while indexing (auto map index)
+                var companies = await session.Query<Company>().Where(x => x.Name == "Company Name").ToListAsync();
+                Assert.Equal(0, companies.Count);
+            }
+
+            using (var commands = store.Commands())
+            {
+                var command = new PatchOperation.PatchCommand(store.Conventions,
+                    commands.Context,
+                    "companies/1-A",
+                    null,
+                    new PatchRequest { Script = "archived.unarchive(this)"},
+                    patchIfMissing: null,
+                    skipPatchIfChangeVectorMismatch: false,
+                    returnDebugInformation: false,
+                    test: true);
+
+                commands.RequestExecutor.Execute(command, commands.Context);
+                var metadata = command.Result.ModifiedDocument[Constants.Documents.Metadata.Key] as BlittableJsonReaderObject;
+                Assert.False(metadata.TryGet(Constants.Documents.Metadata.Archived, out object _));
+            }
+        }
+    }
 
 
     [RavenFact(RavenTestCategory.Patching)]

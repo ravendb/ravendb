@@ -120,6 +120,17 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException("Illegal modifications of '@attachments' detected");
         }
 
+        private static bool ShouldIgnoreMetadataProperty(string property, in DocumentCompareOptions options)
+        {
+            // ignore the change unless it's collection, expiration, or refresh metadata
+            // ignore the change unless it's archived metadata, but only if CompareDataArchivalMetadata is set `true`
+            return property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false &&
+                   property.Equals(Constants.Documents.Metadata.Expires, StringComparison.OrdinalIgnoreCase) == false &&
+                   property.Equals(Constants.Documents.Metadata.Refresh, StringComparison.OrdinalIgnoreCase) == false &&
+                   (options.CompareDataArchivalMetadata && (property.Equals(Constants.Documents.Metadata.ArchiveAt, StringComparison.OrdinalIgnoreCase) ||
+                                                            property.Equals(Constants.Documents.Metadata.Archived, StringComparison.OrdinalIgnoreCase))) == false;
+        }
+
         private static DocumentCompareResult ComparePropertiesExceptStartingWithAt(
             BlittableJsonReaderObject current,
             BlittableJsonReaderObject modified,
@@ -197,10 +208,7 @@ namespace Raven.Server.Documents
                                 continue;
                             }
                         }
-                        else if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false &&
-                                 property.Equals(Constants.Documents.Metadata.Expires, StringComparison.OrdinalIgnoreCase) == false &&
-                                 property.Equals(Constants.Documents.Metadata.Refresh, StringComparison.OrdinalIgnoreCase) == false &&
-                                 (options.CompareDataArchivalMetadata && property.Equals(Constants.Documents.Metadata.ArchiveAt, StringComparison.OrdinalIgnoreCase)) == false)
+                        else if (ShouldIgnoreMetadataProperty(property, options))
                             continue;
                     }
                     else if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))

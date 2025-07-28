@@ -209,6 +209,13 @@ namespace Raven.Server.Documents.Patch
                     if (shouldUpdateMetadata || compareResult != DocumentCompareResult.Equal)
                     {
                         Debug.Assert(originalDocument != null);
+                        
+                        if (run.UnarchiveCalled)
+                        {
+                            originalDocument.Flags &= ~DocumentFlags.Archived;
+                            nonPersistentFlags |= NonPersistentDocumentFlags.Unarchive;
+                        }
+                        
                         if (_isTest == false || run.PutOrDeleteCalled)
                         {
                             putResult = _database.DocumentsStorage.Put(
