@@ -19,8 +19,9 @@ export default function EditAiAgentPersistenceSection() {
         <>
             <h3 className="m-0 mt-3">Set chat persistence</h3>
             <div className="mb-1">
-                Configure the documents that will store chat conversations, and whether they should be expired after a
-                set period of time.
+                Chat conversations are stored as documents in the <code>@conversations</code> collection.
+                <br /> Configure the document ID prefix and whether these documents should expire after a set period of
+                time.
             </div>
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>
