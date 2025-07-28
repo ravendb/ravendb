@@ -43,7 +43,6 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const isDocumentExpirationEnabled = useAppSelector(editAiAgentSelectors.isDocumentExpirationEnabled);
-    const isTestOpen = useAppSelector(editAiAgentSelectors.isTestOpen);
     const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
 
     const isEditAiAgent = !!queryParams?.id && !queryParams.isClone;
@@ -128,10 +127,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                     <AboutViewHeading title="Create AI Agent" icon="ai-agents" marginBottom={0} />
                                     <EditAiAgentInfoHub />
                                 </div>
-                                <div
-                                    className="px-4 pb-4 flex-grow-1 overflow-scroll h-100"
-                                    style={{ opacity: isTestOpen ? 0.2 : 1 }}
-                                >
+                                <div className="px-4 pb-4 flex-grow-1 overflow-scroll h-100">
                                     {asyncGetDefaultValues.loading && <LoadingView />}
                                     {asyncGetDefaultValues.error && (
                                         <LoadError error="Unable to load configuration" refresh={reloadForm} />
