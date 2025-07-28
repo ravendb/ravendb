@@ -141,8 +141,10 @@ namespace SlowTests.Issues
                     DeletePrevious = false, RunInMemory = false, DataDirectory = result.DataDirectory, CustomSettings = settings
                 });
                 nodes.Add(server);
-                var val = await WaitForValueAsync(async () => await GetMembersCount(store), clusterSize);
-                Assert.Equal(clusterSize, val);
+
+                await WaitAndAssertForValueAsync(async () => await GetClusterSize(store), clusterSize);
+                await WaitAndAssertForValueAsync(async () => await GetRehabCount(store), 0);
+                await WaitAndAssertForValueAsync(async () => await GetMembersCount(store), clusterSize);
 
                 await WaitForValueAsync(async () =>
                 {
@@ -223,6 +225,7 @@ namespace SlowTests.Issues
                     DeletePrevious = false, RunInMemory = false, DataDirectory = result.DataDirectory, CustomSettings = settings
                 });
                 nodes.Add(server);
+
                 var val = await WaitForValueAsync(async () => await GetMembersCount(store), clusterSize);
                 Assert.Equal(clusterSize, val);
 
@@ -369,6 +372,25 @@ namespace SlowTests.Issues
                 return -1;
             }
             return res.Topology.Members.Count;
+        }
+        protected static async Task<int> GetRehabCount(IDocumentStore store, string databaseName = null)
+        {
+            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName ?? store.Database));
+            if (res == null)
+            {
+                return -1;
+            }
+            return res.Topology.Rehabs.Count;
+        }
+
+        protected static async Task<int> GetClusterSize(IDocumentStore store, string databaseName = null)
+        {
+            var res = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName ?? store.Database));
+            if (res == null)
+            {
+                return -1;
+            }
+            return res.Topology.Count;
         }
 
         private static void CheckDecisionLog(RavenServer leaderServer, string reasonForDecisionLog, string info = "")
