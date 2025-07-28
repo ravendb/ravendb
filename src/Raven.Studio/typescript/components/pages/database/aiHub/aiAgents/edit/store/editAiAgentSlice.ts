@@ -16,6 +16,7 @@ interface EditAiAgentState {
     testDocument: documentDto;
     isDocumentExpirationEnabled: loadableData<boolean>;
     runTestState: loadStatus;
+    isWaitingForActionToolSubmit: boolean;
 }
 
 const initialState: EditAiAgentState = {
@@ -26,6 +27,7 @@ const initialState: EditAiAgentState = {
     testDocument: null,
     isDocumentExpirationEnabled: createIdleState(),
     runTestState: "idle",
+    isWaitingForActionToolSubmit: false,
 };
 
 export const editAiAgentSlice = createSlice({
@@ -46,6 +48,9 @@ export const editAiAgentSlice = createSlice({
         },
         testDocumentSet: (state, action: PayloadAction<any>) => {
             state.testDocument = action.payload;
+        },
+        isWaitingForActionToolSubmitSet: (state, action: PayloadAction<boolean>) => {
+            state.isWaitingForActionToolSubmit = action.payload;
         },
         reset: () => initialState,
     },
@@ -127,4 +132,5 @@ export const editAiAgentSelectors = {
     testDocument: (state: RootState) => state.editAiAgent.testDocument,
     isDocumentExpirationEnabled: (state: RootState) => state.editAiAgent.isDocumentExpirationEnabled,
     runTestState: (state: RootState) => state.editAiAgent.runTestState,
+    isWaitingForActionToolSubmit: (state: RootState) => state.editAiAgent.isWaitingForActionToolSubmit,
 };

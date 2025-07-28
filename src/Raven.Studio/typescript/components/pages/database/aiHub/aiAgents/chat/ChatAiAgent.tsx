@@ -37,6 +37,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const document = useAppSelector(chatAiAgentSelectors.document);
     const runChatState = useAppSelector(chatAiAgentSelectors.runChatState);
     const isLoading = useAppSelector(chatAiAgentSelectors.isLoading);
+    const isWaitingForActionToolSubmit = useAppSelector(chatAiAgentSelectors.isWaitingForActionToolSubmit);
 
     // Get data on load
     useEffect(() => {
@@ -109,6 +110,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         dispatch(chatAiAgentActions.conversationIdSet(null));
         dispatch(chatAiAgentActions.messagesSet([]));
         dispatch(chatAiAgentActions.documentSet(null));
+        dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(false));
         setValue("prompt", "");
     };
 
@@ -169,6 +171,9 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                         toolQueries={config.data?.Queries}
                                         toolActions={config.data?.Actions}
                                         handleSaveParameters={(toolCallParameters) => runChat(toolCallParameters)}
+                                        setIsWaitingForActionToolSubmit={(value: boolean) =>
+                                            dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(value))
+                                        }
                                     />
                                 )}
                                 {isRawData && document.data && (
@@ -202,7 +207,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                                 handleSubmit(handleSend)();
                                             }
                                         }}
-                                        disabled={isLoading}
+                                        disabled={isLoading || isWaitingForActionToolSubmit}
                                     />
                                     {formValues.prompt && (
                                         <ButtonWithSpinner
@@ -210,7 +215,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                             variant="secondary"
                                             icon="arrow-up"
                                             isSpinning={runChatState === "loading"}
-                                            disabled={isLoading}
+                                            disabled={isLoading || isWaitingForActionToolSubmit}
                                             className="position-absolute rounded-pill"
                                             style={{ right: "10px", bottom: "10px", zIndex: 5 }}
                                         />

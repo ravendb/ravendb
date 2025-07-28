@@ -33,6 +33,7 @@ export default function EditAiAgentTestPanel() {
     const isRawData = useAppSelector(editAiAgentSelectors.isRawData);
     const messages = useAppSelector(editAiAgentSelectors.testMessages);
     const runTestState = useAppSelector(editAiAgentSelectors.runTestState);
+    const isWaitingForActionToolSubmit = useAppSelector(editAiAgentSelectors.isWaitingForActionToolSubmit);
 
     const runTest = async (toolCallParameters?: AiAgentToolCall[]) => {
         await dispatch(editAiAgentActions.runTest({ databaseName, formValues, toolCallParameters })).unwrap();
@@ -56,6 +57,7 @@ export default function EditAiAgentTestPanel() {
     const handleNewChat = () => {
         dispatch(editAiAgentActions.testDocumentSet(null));
         dispatch(editAiAgentActions.testMessagesSet([]));
+        dispatch(editAiAgentActions.isWaitingForActionToolSubmitSet(false));
         setValue("test.prompt", "");
     };
 
@@ -125,6 +127,9 @@ export default function EditAiAgentTestPanel() {
                                 toolQueries={Queries}
                                 toolActions={Actions}
                                 handleSaveParameters={(toolCallParameters) => runTest(toolCallParameters)}
+                                setIsWaitingForActionToolSubmit={(value: boolean) =>
+                                    dispatch(editAiAgentActions.isWaitingForActionToolSubmitSet(value))
+                                }
                             />
                         )}
                         {isRawData && testDocument && (
@@ -159,7 +164,7 @@ export default function EditAiAgentTestPanel() {
                                 rows={3}
                                 className="rounded-2"
                                 style={{ resize: "none" }}
-                                disabled={runTestState === "loading"}
+                                disabled={runTestState === "loading" || isWaitingForActionToolSubmit}
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" && !e.shiftKey) {
                                         e.preventDefault();
@@ -172,7 +177,7 @@ export default function EditAiAgentTestPanel() {
                                     variant="secondary"
                                     icon="arrow-up"
                                     onClick={() => runTest()}
-                                    isSpinning={runTestState === "loading"}
+                                    isSpinning={runTestState === "loading" || isWaitingForActionToolSubmit}
                                     className="position-absolute rounded-pill"
                                     style={{ right: "10px", bottom: "10px", zIndex: 5 }}
                                 />

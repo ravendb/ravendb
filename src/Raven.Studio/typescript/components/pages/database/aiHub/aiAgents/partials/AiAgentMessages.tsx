@@ -26,6 +26,7 @@ interface AiAgentMessagesProps {
     toolQueries: ToolQuery[];
     toolActions: ToolAction[];
     handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
+    setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
 }
 
 export default function AiAgentMessages({
@@ -33,6 +34,7 @@ export default function AiAgentMessages({
     toolQueries,
     toolActions,
     handleSaveParameters,
+    setIsWaitingForActionToolSubmit,
 }: AiAgentMessagesProps) {
     return (
         <div className="w-100 vstack gap-2 ai-agent-messages">
@@ -45,6 +47,7 @@ export default function AiAgentMessages({
                     toolQueries={toolQueries}
                     toolActions={toolActions}
                     handleSaveParameters={handleSaveParameters}
+                    setIsWaitingForActionToolSubmit={setIsWaitingForActionToolSubmit}
                 />
             ))}
         </div>
@@ -58,6 +61,7 @@ interface AiAgentMessageProps {
     toolQueries: ToolQuery[];
     toolActions: ToolAction[];
     handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
+    setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
 }
 
 function AiAgentMessage({
@@ -67,6 +71,7 @@ function AiAgentMessage({
     toolQueries,
     toolActions,
     handleSaveParameters,
+    setIsWaitingForActionToolSubmit,
 }: AiAgentMessageProps) {
     const toolName = allMessages
         .find((x) => x.toolCalls?.some((y) => y.id === message.toolCallId))
@@ -88,6 +93,7 @@ function AiAgentMessage({
                     toolQueries={toolQueries}
                     toolActions={toolActions}
                     handleSaveParameters={handleSaveParameters}
+                    setIsWaitingForActionToolSubmit={setIsWaitingForActionToolSubmit}
                 />
             )}
         </div>
@@ -219,6 +225,7 @@ interface AgentMessageProps {
     toolQueries: ToolQuery[];
     toolActions: ToolAction[];
     handleSaveParameters?: (parameters: AiAgentToolCall[]) => void;
+    setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
 }
 
 function AgentMessage({
@@ -227,10 +234,11 @@ function AgentMessage({
     toolQueries,
     toolActions,
     handleSaveParameters,
+    setIsWaitingForActionToolSubmit,
 }: AgentMessageProps) {
     const aceRef = useRef<ReactAce>(null);
 
-    const { control, handleSubmit, reset, formState } = useForm<{ parameters: AiAgentToolCall[] }>({
+    const { control, handleSubmit, formState } = useForm<{ parameters: AiAgentToolCall[] }>({
         defaultValues: {
             parameters:
                 agentMessage.toolCalls?.map((x) => ({
@@ -246,18 +254,6 @@ function AgentMessage({
         name: "parameters",
     });
 
-    // Reset the form when the tool calls change
-    useEffect(() => {
-        reset({
-            parameters:
-                agentMessage.toolCalls?.map((x) => ({
-                    id: x.id,
-                    name: x.name,
-                    arguments: "",
-                })) ?? [],
-        });
-    }, [agentMessage.toolCalls?.length]);
-
     const handleSave: SubmitHandler<{ parameters: AiAgentToolCall[] }> = (formData) => {
         handleSaveParameters?.(formData.parameters);
     };
@@ -268,6 +264,10 @@ function AgentMessage({
 
     const isRequireParameters =
         isLastItem && isToolAction && agentMessage.toolCalls?.length > 0 && !formState.isSubmitted;
+
+    useEffect(() => {
+        setIsWaitingForActionToolSubmit(isRequireParameters);
+    }, [isRequireParameters]);
 
     const contentMode = getAceEditorMode(agentMessage.content);
 

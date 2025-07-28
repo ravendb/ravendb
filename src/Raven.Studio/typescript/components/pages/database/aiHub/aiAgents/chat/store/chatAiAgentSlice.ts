@@ -14,6 +14,7 @@ interface EditAiAgentState {
     conversationId: string;
     messages: AiAgentMessage[];
     isRawData: boolean;
+    isWaitingForActionToolSubmit: boolean;
 }
 
 const initialState: EditAiAgentState = {
@@ -23,6 +24,7 @@ const initialState: EditAiAgentState = {
     conversationId: "",
     messages: [],
     isRawData: false,
+    isWaitingForActionToolSubmit: false,
 };
 
 export const chatAiAgentSlice = createSlice({
@@ -40,6 +42,9 @@ export const chatAiAgentSlice = createSlice({
         },
         isRawDataSet: (state, action: PayloadAction<boolean>) => {
             state.isRawData = action.payload;
+        },
+        isWaitingForActionToolSubmitSet: (state, action: PayloadAction<boolean>) => {
+            state.isWaitingForActionToolSubmit = action.payload;
         },
         reset: () => initialState,
     },
@@ -161,4 +166,5 @@ export const chatAiAgentSelectors = {
         state.chatAiAgent.runChatState === "loading" ||
         state.chatAiAgent.config.status === "loading" ||
         state.chatAiAgent.document.status === "loading",
+    isWaitingForActionToolSubmit: (state: RootState) => state.chatAiAgent.isWaitingForActionToolSubmit,
 };
