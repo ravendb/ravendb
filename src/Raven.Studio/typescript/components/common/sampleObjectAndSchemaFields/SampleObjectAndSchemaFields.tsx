@@ -4,7 +4,7 @@ import AceEditor from "../ace/AceEditor";
 import ButtonWithSpinner from "../ButtonWithSpinner";
 import { FormAceEditor, FormGroup, FormLabel } from "../Form";
 import PopoverWithHoverWrapper from "../PopoverWithHoverWrapper";
-import { Control, FieldPath, FieldValues, useFormContext, UseFormSetValue } from "react-hook-form";
+import { Control, FieldPath, FieldValues, useFormContext, UseFormSetValue, useWatch } from "react-hook-form";
 import ReactAce from "react-ace";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useServices } from "components/hooks/useServices";
@@ -54,8 +54,9 @@ export default function SampleObjectAndSchemaFields<
 
     const { setError, clearErrors } = useFormContext<EditAiAgentFormData>();
     const { tasksService } = useServices();
+    const sampleObjectValue = useWatch({ control, name: sampleObjectName });
 
-    const [lastSampleObjectForGenerate, setLastSampleObjectForGenerate] = useState<string>("");
+    const [lastSampleObjectForGenerate, setLastSampleObjectForGenerate] = useState<string>(sampleObjectValue);
 
     const asyncGenerateSchema = useAsyncCallback(async () => {
         const result = await tasksService.getJsonSchemaFromSampleObject(JSON.parse(sampleObject), schemaType);
