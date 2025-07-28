@@ -808,7 +808,10 @@ namespace Orders
 
     static testGenAiResults_update(): Raven.Server.Documents.ETL.Providers.AI.GenAi.Test.GenAiTestScriptResult {
         return {
-            DebugActions: null, ModifiedDocument: null, OriginalDocument: null, Status: null,
+            DebugActions: null,
+            ModifiedDocument: null,
+            OriginalDocument: null,
+            Status: null,
             TransformationErrors: [],
             DebugOutput: [],
             InputDocument: {
