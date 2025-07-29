@@ -105,99 +105,81 @@ export default function EditAiAgentTestPanel() {
                     </div>
                 )}
             </div>
-            {!isTestOpen && (
-                <div className="p-3 flex-grow-1 vstack justify-content-center align-items-center">
-                    <Icon icon="test" color="primary" className="fs-1" />
-                    <p className="mt-2 text-center">
-                        This is a test area where you can try out your agent configuration and chat with the LLM.
-                        <br />
-                        <br />
-                        The test conversation will not be saved in the database.
-                        <br />
-                        Click the &quot;Test&quot; button to start chatting.
-                    </p>
-                </div>
-            )}
-            {isTestOpen && (
-                <div className="w-100 flex-grow-1 vstack justify-content-center align-items-center overflow-auto">
-                    <div
-                        className="flex-grow-1 vstack w-100 overflow-auto p-2 position-relative"
-                        ref={messagesPanelRef}
-                    >
-                        {messages.length === 0 && (
-                            <div className="h-100 vstack justify-content-center">
-                                <AiAgentParametersField
-                                    control={control}
-                                    name="test.parameters"
-                                    value={formValues.test.parameters}
-                                />
-                            </div>
-                        )}
-                        {!isRawData && messages.length > 0 && (
-                            <AiAgentMessages
-                                messages={messages}
-                                toolQueries={Queries}
-                                toolActions={Actions}
-                                handleSaveParameters={(toolCallParameters) => runTest(toolCallParameters)}
-                                setIsWaitingForActionToolSubmit={(value: boolean) =>
-                                    dispatch(editAiAgentActions.isWaitingForActionToolSubmitSet(value))
-                                }
-                            />
-                        )}
-                        {isRawData && testDocument && (
-                            <SizeGetter
-                                isHeighRequired
-                                render={({ height }) => (
-                                    <AceEditor
-                                        aceRef={rawDataRef}
-                                        mode="json"
-                                        value={JSON.stringify(testDocument, null, 2)}
-                                        height={`${height}px`}
-                                        readOnly
-                                        actions={[{ component: <AceEditor.FullScreenAction /> }]}
-                                    />
-                                )}
-                            />
-                        )}
-                        {runTestState === "loading" && (
-                            <div className="position-absolute top-50 start-50 translate-middle">
-                                <Spinner animation="border" />
-                            </div>
-                        )}
-                    </div>
-                    <div className="w-100 p-2 panel-bg-2 border-top border-secondary">
-                        <div className="position-relative">
-                            <FormInput
-                                type="textarea"
-                                as="textarea"
+            <div className="w-100 flex-grow-1 vstack justify-content-center align-items-center overflow-auto">
+                <div className="flex-grow-1 vstack w-100 overflow-auto p-2 position-relative" ref={messagesPanelRef}>
+                    {messages.length === 0 && (
+                        <div className="h-100 vstack justify-content-center">
+                            <AiAgentParametersField
                                 control={control}
-                                name="test.prompt"
-                                placeholder="Ask the agent anything"
-                                rows={3}
-                                className="rounded-2"
-                                style={{ resize: "none" }}
-                                disabled={isLoading}
-                                onKeyDown={(e) => {
-                                    if (e.key === "Enter" && !e.shiftKey) {
-                                        e.preventDefault();
-                                        runTest();
-                                    }
-                                }}
+                                name="test.parameters"
+                                value={formValues.test.parameters}
                             />
-                            {formValues.test.prompt && (
-                                <ButtonWithSpinner
-                                    variant="secondary"
-                                    icon="arrow-up"
-                                    onClick={() => runTest()}
-                                    isSpinning={isLoading}
-                                    className="position-absolute rounded-pill"
-                                    style={{ right: "10px", bottom: "10px", zIndex: 5 }}
+                        </div>
+                    )}
+                    {!isRawData && messages.length > 0 && (
+                        <AiAgentMessages
+                            messages={messages}
+                            toolQueries={Queries}
+                            toolActions={Actions}
+                            handleSaveParameters={(toolCallParameters) => runTest(toolCallParameters)}
+                            setIsWaitingForActionToolSubmit={(value: boolean) =>
+                                dispatch(editAiAgentActions.isWaitingForActionToolSubmitSet(value))
+                            }
+                        />
+                    )}
+                    {isRawData && testDocument && (
+                        <SizeGetter
+                            isHeighRequired
+                            render={({ height }) => (
+                                <AceEditor
+                                    aceRef={rawDataRef}
+                                    mode="json"
+                                    value={JSON.stringify(testDocument, null, 2)}
+                                    height={`${height}px`}
+                                    readOnly
+                                    actions={[{ component: <AceEditor.FullScreenAction /> }]}
                                 />
                             )}
+                        />
+                    )}
+                    {runTestState === "loading" && (
+                        <div className="position-absolute top-50 start-50 translate-middle">
+                            <Spinner animation="border" />
                         </div>
+                    )}
+                </div>
+                <div className="w-100 p-2 panel-bg-2 border-top border-secondary">
+                    <div className="position-relative">
+                        <FormInput
+                            type="textarea"
+                            as="textarea"
+                            control={control}
+                            name="test.prompt"
+                            placeholder="Ask the agent anything"
+                            rows={3}
+                            className="rounded-2"
+                            style={{ resize: "none" }}
+                            disabled={isLoading}
+                            onKeyDown={(e) => {
+                                if (e.key === "Enter" && !e.shiftKey) {
+                                    e.preventDefault();
+                                    runTest();
+                                }
+                            }}
+                        />
+                        {formValues.test.prompt && (
+                            <ButtonWithSpinner
+                                variant="secondary"
+                                icon="arrow-up"
+                                onClick={() => runTest()}
+                                isSpinning={isLoading}
+                                className="position-absolute rounded-pill"
+                                style={{ right: "10px", bottom: "10px", zIndex: 5 }}
+                            />
+                        )}
                     </div>
                 </div>
-            )}
+            </div>
         </>
     );
 }

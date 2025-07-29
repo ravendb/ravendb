@@ -43,6 +43,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const isDocumentExpirationEnabled = useAppSelector(editAiAgentSelectors.isDocumentExpirationEnabled);
     const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
+    const isTestOpen = useAppSelector(editAiAgentSelectors.isTestOpen);
 
     const isEditAiAgent = !!queryParams?.id && !queryParams.isClone;
 
@@ -121,7 +122,10 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                 <SizeGetter
                     render={({ width }) => (
                         <div className="hstack h-100">
-                            <div className="vstack h-100" style={{ width: `${width - testAreaResizable.width}px` }}>
+                            <div
+                                className="vstack h-100"
+                                style={{ width: isTestOpen ? `${width - testAreaResizable.width}px` : "100%" }}
+                            >
                                 <div className="hstack justify-content-between align-items-start p-4">
                                     <AboutViewHeading
                                         title={`${isEditAiAgent ? "Edit" : "Create"} AI Agent`}
@@ -149,17 +153,19 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                     <EditAiAgentFooter />
                                 </div>
                             </div>
-                            <div
-                                style={{
-                                    width: `${testAreaResizable.width}px`,
-                                    position: "relative",
-                                    borderLeft: `1px solid ${testAreaResizable.isDragging ? "#ccc" : "#4c4c63"}`,
-                                }}
-                                className="panel-bg-1 h-100 vstack"
-                            >
-                                <ColumnResize handleMouseDown={testAreaResizable.handleMouseDown} />
-                                <EditAiAgentTestPanel />
-                            </div>
+                            {isTestOpen && (
+                                <div
+                                    style={{
+                                        width: `${testAreaResizable.width}px`,
+                                        position: "relative",
+                                        borderLeft: `1px solid ${testAreaResizable.isDragging ? "#ccc" : "#4c4c63"}`,
+                                    }}
+                                    className="panel-bg-1 h-100 vstack"
+                                >
+                                    <ColumnResize handleMouseDown={testAreaResizable.handleMouseDown} />
+                                    <EditAiAgentTestPanel />
+                                </div>
+                            )}
                         </div>
                     )}
                 />
