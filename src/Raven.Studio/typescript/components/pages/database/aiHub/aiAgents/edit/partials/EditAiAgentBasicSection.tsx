@@ -154,8 +154,17 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                 </FormGroup>
                 <FormGroup>
                     <FormLabel>
-                        Agent description
-                        <PopoverWithHoverWrapper message="This system prompt provides general context about the agent's role and capabilities to help guide the LLM's responses.">
+                        System prompt
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    This prompt defines the agent&apos;s role and capabilities.
+                                    <br />
+                                    It provides general context to guide the LLM&apos;s responses throughout the
+                                    conversation.
+                                </>
+                            }
+                        >
                             <Icon icon="info" color="info" margin="ms-1" />
                         </PopoverWithHoverWrapper>
                     </FormLabel>

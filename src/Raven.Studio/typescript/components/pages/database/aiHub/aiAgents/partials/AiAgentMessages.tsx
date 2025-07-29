@@ -175,7 +175,7 @@ function SystemMessage({ message }: SystemMessageProps) {
             <div className="mt-2 p-2 border-start border-secondary">
                 <div>
                     <Icon icon="system" size="xs" />
-                    Agent description
+                    System prompt
                 </div>
                 <div className="mt-2 overflow-auto" style={{ maxHeight: "200px" }}>
                     {message.content}
