@@ -3186,6 +3186,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster | RavenTestCategory.ChangesApi)]
         public async Task StartingBackupOnNonResponsibleNodeShouldRedirectToResponsibleNode()
         {
+            DoNotReuseServer();
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3216,20 +3217,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 // responsible node will be nodes[2]
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: nodes[2].ServerStore.NodeTag);
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 * * * *", mentorNode: nodes[2].ServerStore.NodeTag);
                 var taskId = await Backup.UpdateConfigAsync(nodes[1], config, responsibleStore);
 
-                var responsibleNode = Raven.Server.Utils.BackupUtils.GetResponsibleNodeTag(nodes[1].ServerStore, databaseName, taskId);
+                var responsibleNode = GetResponsibleNodeTag(nodes[1].ServerStore, databaseName, taskId);
                 Assert.Equal(responsibleNode, nodes[2].ServerStore.NodeTag);
 
+                var newOrder = new List<string>() { nodes[1].ServerStore.NodeTag, nodes[0].ServerStore.NodeTag, nodes[2].ServerStore.NodeTag };
+                var record = await otherStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                bool sequenceEqual = await WaitForValueAsync(() => record.Topology.Members.SequenceEqual(newOrder), false);
+                Assert.False(sequenceEqual, $"The current record.Topology.Members: {string.Join(", ", record.Topology.Members)} is equal to the expected newOrder.");
+
                 // we are going to send the next backup operation to the non-responsible node
-                await otherStore.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(databaseName,
-                    new List<string>() { nodes[1].ServerStore.NodeTag, nodes[0].ServerStore.NodeTag, nodes[2].ServerStore.NodeTag }));
+                await otherStore.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(databaseName, newOrder));
 
                 var re = otherStore.GetRequestExecutor();
                 var updated = await re.UpdateTopologyAsync(
                     new RequestExecutor.UpdateTopologyParameters(new ServerNode() { ClusterTag = nodes[1].ServerStore.NodeTag, Url = nodes[1].WebUrl, Database = databaseName}));
                 Assert.True(updated);
+
+                record = await otherStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                sequenceEqual = await WaitForValueAsync(() => record.Topology.Members.SequenceEqual(newOrder), true);
+
+                Assert.True(sequenceEqual, $"The record.Topology.Members: {string.Join(", ", record.Topology.Members)} is not equal to the expected newOrder: {string.Join(", ", newOrder)}.");
 
                 // wait for the preferred node be non-responsible node
                 var res = await WaitForValueAsync(async () =>
