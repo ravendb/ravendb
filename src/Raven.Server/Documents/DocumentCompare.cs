@@ -119,16 +119,25 @@ namespace Raven.Server.Documents
         {
             throw new InvalidOperationException("Illegal modifications of '@attachments' detected");
         }
-
-        private static bool PatchResultMetadataPropertyDoesntContainImpactfulChange(string property, in DocumentCompareOptions options)
+        
+        private static bool IsSignificantMetadataProperty(string property, in DocumentCompareOptions options)
         {
-            // Don't ignore collection, expiration, or refresh metadata
-            // Don't ignore archived metadata only when DocumentCompareOptions.CompareDataArchivalMetadata equals `true`
-            return property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false &&
-                   property.Equals(Constants.Documents.Metadata.Expires, StringComparison.OrdinalIgnoreCase) == false &&
-                   property.Equals(Constants.Documents.Metadata.Refresh, StringComparison.OrdinalIgnoreCase) == false &&
-                   (options.CompareDataArchivalMetadata && (property.Equals(Constants.Documents.Metadata.ArchiveAt, StringComparison.OrdinalIgnoreCase) ||
-                                                            property.Equals(Constants.Documents.Metadata.Archived, StringComparison.OrdinalIgnoreCase))) == false;
+            if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) ||
+                property.Equals(Constants.Documents.Metadata.Expires, StringComparison.OrdinalIgnoreCase) ||
+                property.Equals(Constants.Documents.Metadata.Refresh, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Archival properties are significant only when the option is enabled
+            if (options.CompareDataArchivalMetadata &&
+                (property.Equals(Constants.Documents.Metadata.ArchiveAt, StringComparison.OrdinalIgnoreCase) ||
+                 property.Equals(Constants.Documents.Metadata.Archived, StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private static DocumentCompareResult ComparePropertiesExceptStartingWithAt(
@@ -208,7 +217,7 @@ namespace Raven.Server.Documents
                                 continue;
                             }
                         }
-                        else if (PatchResultMetadataPropertyDoesntContainImpactfulChange(property, options))
+                        else if (IsSignificantMetadataProperty(property, options) == false)
                             continue;
                     }
                     else if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
