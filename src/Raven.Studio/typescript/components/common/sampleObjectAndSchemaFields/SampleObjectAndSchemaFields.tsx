@@ -80,158 +80,152 @@ export default function SampleObjectAndSchemaFields<
 
     return (
         <div>
-            <div className="hstack gap-1">
-                <div className="vstack w-50">
-                    <FormGroup className="vstack">
-                        <FormLabel className="hstack justify-content-between align-items-start">
-                            <div>
-                                {sampleObjectLabel}
-                                <PopoverWithHoverWrapper
-                                    message={
-                                        sampleObjectTooltip ?? (
-                                            <>
-                                                This object defines the structure of the output you expect from the
-                                                model. It is not sent to the model.
-                                                <br />
-                                                RavenDB will use it to generate a <strong>JSON schema</strong>, which
-                                                will be included in the request to the model.
-                                            </>
-                                        )
+            <FormGroup className="vstack">
+                <FormLabel className="hstack justify-content-between align-items-start">
+                    <div>
+                        {sampleObjectLabel}
+                        <PopoverWithHoverWrapper
+                            message={
+                                sampleObjectTooltip ?? (
+                                    <>
+                                        This object defines the structure of the output you expect from the model. It is
+                                        not sent to the model.
+                                        <br />
+                                        RavenDB will use it to generate a <strong>JSON schema</strong>, which will be
+                                        included in the request to the model.
+                                    </>
+                                )
+                            }
+                        >
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </div>
+                    {!!sampleObject && !jsonSchema && (
+                        <Badge pill bg="info" style={{ whiteSpace: "normal" }}>
+                            The server will auto-generate a schema from this object
+                        </Badge>
+                    )}
+                </FormLabel>
+                <FormAceEditor
+                    aceRef={sampleObjectRef}
+                    control={control}
+                    name={sampleObjectName}
+                    mode="json"
+                    placeholder={sampleObjectPlaceholder}
+                    actions={[
+                        { component: <AceEditor.FullScreenAction /> },
+                        { component: <AceEditor.FormatAction /> },
+                        {
+                            component: (
+                                <AceEditor.LoadFileAction
+                                    onLoad={(value) =>
+                                        setValue(sampleObjectName, value as TFieldValues[TName], {
+                                            shouldValidate: true,
+                                        })
                                     }
-                                >
-                                    <Icon icon="info" color="info" margin="ms-1" />
-                                </PopoverWithHoverWrapper>
-                            </div>
-                            {!!sampleObject && !jsonSchema && (
-                                <Badge pill bg="info" style={{ whiteSpace: "normal" }}>
-                                    The server will auto-generate a schema from this object
-                                </Badge>
-                            )}
-                        </FormLabel>
-                        <FormAceEditor
-                            aceRef={sampleObjectRef}
-                            control={control}
-                            name={sampleObjectName}
-                            mode="json"
-                            placeholder={sampleObjectPlaceholder}
-                            actions={[
-                                { component: <AceEditor.FullScreenAction /> },
-                                { component: <AceEditor.FormatAction /> },
-                                {
-                                    component: (
-                                        <AceEditor.LoadFileAction
-                                            onLoad={(value) =>
-                                                setValue(sampleObjectName, value as TFieldValues[TName], {
-                                                    shouldValidate: true,
-                                                })
-                                            }
-                                        />
-                                    ),
-                                },
-                                {
-                                    component: (
-                                        <AceEditor.HelpAction
-                                            message={sampleObjectSyntaxHelp}
-                                            tooltipTitle={helpActionTooltipTitle}
-                                        />
-                                    ),
-                                    position: "bottom",
-                                },
-                            ]}
-                        />
-                    </FormGroup>
+                                />
+                            ),
+                        },
+                        {
+                            component: (
+                                <AceEditor.HelpAction
+                                    message={sampleObjectSyntaxHelp}
+                                    tooltipTitle={helpActionTooltipTitle}
+                                />
+                            ),
+                            position: "bottom",
+                        },
+                    ]}
+                />
+            </FormGroup>
+            <FormGroup className="vstack">
+                <FormLabel className="flex-grow-1 hstack justify-content-between align-items-start">
+                    <div>
+                        {jsonSchemaLabel}
+                        <PopoverWithHoverWrapper
+                            message={
+                                jsonSchemaTooltip ?? (
+                                    <>
+                                        The JSON schema defines the structure and types of the output you expect from
+                                        the model.
+                                        <br />
+                                        This schema is included in the request to the model.
+                                        <br />
+                                        <br />
+                                        If you don&apos;t provide a schema, RavenDB will generate one automatically
+                                        based on the sample response object.
+                                        <br />
+                                        <br />
+                                        If you provide both a sample object and a schema, the schema takes precedence
+                                        and will be sent to the model.
+                                    </>
+                                )
+                            }
+                        >
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </div>
+                    {!!jsonSchema && (
+                        <Badge pill bg="info" style={{ whiteSpace: "normal" }}>
+                            This schema will be sent to the model
+                        </Badge>
+                    )}
+                </FormLabel>
+                <div className="position-relative">
+                    <FormAceEditor
+                        aceRef={jsonSchemaRef}
+                        control={control}
+                        name={jsonSchemaName}
+                        mode="json"
+                        actions={[
+                            { component: <AceEditor.FullScreenAction /> },
+                            { component: <AceEditor.FormatAction /> },
+                            {
+                                component: (
+                                    <AceEditor.LoadFileAction
+                                        onLoad={(value) =>
+                                            setValue(jsonSchemaName, value as TFieldValues[TName], {
+                                                shouldValidate: true,
+                                            })
+                                        }
+                                    />
+                                ),
+                            },
+                            {
+                                component: <AceEditor.HelpAction message={jsonSchemaSyntaxHelp} />,
+                                position: "bottom",
+                            },
+                        ]}
+                    />
+                    {!!sampleObject && !jsonSchema && (
+                        <ButtonWithSpinner
+                            className="rounded-pill position-absolute top-50 start-50 translate-middle"
+                            variant="primary"
+                            onClick={asyncGenerateSchema.execute}
+                            isSpinning={asyncGenerateSchema.loading}
+                            title="Click to view and edit the schema generated by the server"
+                        >
+                            View schema
+                        </ButtonWithSpinner>
+                    )}
+                    {canRegenerateSchema && (
+                        <ButtonWithSpinner
+                            className="rounded-pill position-absolute z-1"
+                            style={{
+                                top: "150px",
+                                right: "54px",
+                            }}
+                            variant="primary"
+                            onClick={asyncGenerateSchema.execute}
+                            isSpinning={asyncGenerateSchema.loading}
+                            icon="refresh"
+                            title="Regenerate the schema from the sample response object"
+                        >
+                            Regenerate schema
+                        </ButtonWithSpinner>
+                    )}
                 </div>
-                <div className="vstack w-50">
-                    <FormGroup className="vstack">
-                        <FormLabel className="flex-grow-1 hstack justify-content-between align-items-start">
-                            <div>
-                                {jsonSchemaLabel}
-                                <PopoverWithHoverWrapper
-                                    message={
-                                        jsonSchemaTooltip ?? (
-                                            <>
-                                                The JSON schema defines the structure and types of the output you expect
-                                                from the model.
-                                                <br />
-                                                This schema is included in the request to the model.
-                                                <br />
-                                                <br />
-                                                If you don&apos;t provide a schema, RavenDB will generate one
-                                                automatically based on the sample response object.
-                                                <br />
-                                                <br />
-                                                If you provide both a sample object and a schema, the schema takes
-                                                precedence and will be sent to the model.
-                                            </>
-                                        )
-                                    }
-                                >
-                                    <Icon icon="info" color="info" margin="ms-1" />
-                                </PopoverWithHoverWrapper>
-                            </div>
-                            {!!jsonSchema && (
-                                <Badge pill bg="info" style={{ whiteSpace: "normal" }}>
-                                    This schema will be sent to the model
-                                </Badge>
-                            )}
-                        </FormLabel>
-                        <div className="position-relative">
-                            <FormAceEditor
-                                aceRef={jsonSchemaRef}
-                                control={control}
-                                name={jsonSchemaName}
-                                mode="json"
-                                actions={[
-                                    { component: <AceEditor.FullScreenAction /> },
-                                    { component: <AceEditor.FormatAction /> },
-                                    {
-                                        component: (
-                                            <AceEditor.LoadFileAction
-                                                onLoad={(value) =>
-                                                    setValue(jsonSchemaName, value as TFieldValues[TName], {
-                                                        shouldValidate: true,
-                                                    })
-                                                }
-                                            />
-                                        ),
-                                    },
-                                    {
-                                        component: <AceEditor.HelpAction message={jsonSchemaSyntaxHelp} />,
-                                        position: "bottom",
-                                    },
-                                ]}
-                            />
-                            {!!sampleObject && !jsonSchema && (
-                                <ButtonWithSpinner
-                                    className="rounded-pill position-absolute top-50 start-50 translate-middle"
-                                    variant="primary"
-                                    onClick={asyncGenerateSchema.execute}
-                                    isSpinning={asyncGenerateSchema.loading}
-                                    title="Click to view and edit the schema generated by the server"
-                                >
-                                    View schema
-                                </ButtonWithSpinner>
-                            )}
-                            {canRegenerateSchema && (
-                                <ButtonWithSpinner
-                                    className="rounded-pill position-absolute z-1"
-                                    style={{
-                                        top: "150px",
-                                        right: "54px",
-                                    }}
-                                    variant="primary"
-                                    onClick={asyncGenerateSchema.execute}
-                                    isSpinning={asyncGenerateSchema.loading}
-                                    icon="refresh"
-                                    title="Regenerate the schema from the sample response object"
-                                >
-                                    Regenerate schema
-                                </ButtonWithSpinner>
-                            )}
-                        </div>
-                    </FormGroup>
-                </div>
-            </div>
+            </FormGroup>
         </div>
     );
 }
