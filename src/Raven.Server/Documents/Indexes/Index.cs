@@ -59,6 +59,7 @@ using Raven.Server.ServerWide.Memory;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
 using Raven.Server.Utils;
+using Raven.Server.Utils.Debugging;
 using Raven.Server.Utils.Enumerators;
 using Raven.Server.Utils.Metrics;
 using Sparrow;
@@ -2435,6 +2436,7 @@ namespace Raven.Server.Documents.Indexes
 
             bool mightBeMore = false;
 
+            using (CreateBatchRunningFileMarkerIfDebuggingEnabled())
             using (DocumentDatabase.PreventFromUnloadingByIdleOperations())
             using (CultureHelper.EnsureInvariantCulture())
             using (var context = QueryOperationContext.Allocate(DocumentDatabase, this))
@@ -5486,6 +5488,21 @@ namespace Raven.Server.Documents.Indexes
 
                 return files.Length;
             }
+        }
+
+        private IDisposable CreateBatchRunningFileMarkerIfDebuggingEnabled()
+        {
+            if (RavenDebugVariables.Indexing.ShouldPutBatchRunningFileMarker(SearchEngineType) == false)
+                return null;
+
+            var batchRunningMarkerFile = _environment.Options.BasePath.Combine("indexing-batch.marker").FullPath;
+
+            if (File.Exists(batchRunningMarkerFile))
+                File.Delete(batchRunningMarkerFile);
+
+            File.Create(batchRunningMarkerFile!).Dispose();
+
+            return new DisposableAction(() => File.Delete(batchRunningMarkerFile));
         }
 
         internal TestingStuff _forTestingPurposes;
