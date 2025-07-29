@@ -2194,7 +2194,7 @@ namespace Raven.Server.Documents.Patch
                 DocumentCountersToUpdate?.Clear();
                 DocumentTimeSeriesToUpdate?.Clear();
                 PutOrDeleteCalled = false;
-                UnarchiveCalled= false;
+                UnarchiveCalled = false;
                 OriginalDocumentId = null;
                 RefreshOriginalDocument = false;
                 ScriptEngine.Advanced.ResetCallStack();

@@ -120,10 +120,10 @@ namespace Raven.Server.Documents
             throw new InvalidOperationException("Illegal modifications of '@attachments' detected");
         }
 
-        private static bool ShouldIgnoreMetadataProperty(string property, in DocumentCompareOptions options)
+        private static bool PatchResultMetadataPropertyDoesntContainImpactfulChange(string property, in DocumentCompareOptions options)
         {
-            // ignore the change unless it's collection, expiration, or refresh metadata
-            // ignore the change unless it's archived metadata, but only if CompareDataArchivalMetadata is set `true`
+            // Don't ignore collection, expiration, or refresh metadata
+            // Don't ignore archived metadata only when DocumentCompareOptions.CompareDataArchivalMetadata equals `true`
             return property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false &&
                    property.Equals(Constants.Documents.Metadata.Expires, StringComparison.OrdinalIgnoreCase) == false &&
                    property.Equals(Constants.Documents.Metadata.Refresh, StringComparison.OrdinalIgnoreCase) == false &&
@@ -208,7 +208,7 @@ namespace Raven.Server.Documents
                                 continue;
                             }
                         }
-                        else if (ShouldIgnoreMetadataProperty(property, options))
+                        else if (PatchResultMetadataPropertyDoesntContainImpactfulChange(property, options))
                             continue;
                     }
                     else if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))
