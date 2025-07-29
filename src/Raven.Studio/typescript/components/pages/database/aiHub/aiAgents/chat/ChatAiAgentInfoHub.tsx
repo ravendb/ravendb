@@ -13,12 +13,12 @@ export default function ChatAiAgentInfoHub() {
                 <div>
                     <ul>
                         <li>
-                            This chat view allows you to interact with the agent by sending user prompts that are
-                            forwarded to the LLM and receiving responses.
+                            This chat view lets you interact with the agent by sending user prompts that are forwarded
+                            to the LLM and receiving its responses.
                         </li>
                         <li className="mt-1">
                             When appropriate, the LLM can instruct the agent to invoke predefined tools - either to run
-                            queries and fetch data from the database, or to perform specific actions.
+                            queries and retrieve data from the database, or to perform specific actions.
                         </li>
                         <li className="mt-1">
                             You can view the full interaction between the agent and the LLM, including tool calls

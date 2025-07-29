@@ -35,9 +35,8 @@ export default function AiAgentsInfoHub() {
                             LLM.
                         </li>
                         <li className="mt-1">
-                            The agent acts as a bridge between the LLM and your data, allowing the model to retrieve
-                            information from your database and respond to user prompts. It can also invoke specific
-                            actions when the LLM determines an action is needed.
+                            The agent enables conversations with an LLM about your data. It can retrieve information
+                            from your database to answer prompts and trigger specific actions when needed.
                         </li>
                         <li className="mt-1">
                             This view displays all defined AI Agents.
