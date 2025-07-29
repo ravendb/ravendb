@@ -39,7 +39,6 @@ export default function BackupSourceGoogleCloud() {
                     <FormInput
                         type="textarea"
                         as="textarea"
-                        rows="18"
                         control={control}
                         name="sourceStep.sourceData.googleCloud.credentialsJson"
                         placeholder={credentialsPlaceholder}

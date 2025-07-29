@@ -111,7 +111,7 @@ export function FeedbackFormContent({ goBack }: FeedbackFormProps) {
                     <FormInput placeholder="Your email" type="email" control={control} name="email" />
                 </FormGroup>
                 <FormGroup marginClass="m-0">
-                    <FormInput placeholder="Message" type="textarea" rows={8} control={control} name="message" />
+                    <FormInput placeholder="Message" type="textarea" control={control} name="message" />
                 </FormGroup>
                 <FormGroup marginClass="m-0">
                     <FormCheckbox control={control} name="isFeatureSpecific">

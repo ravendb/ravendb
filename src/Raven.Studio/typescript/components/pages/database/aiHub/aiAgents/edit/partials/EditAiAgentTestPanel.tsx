@@ -156,7 +156,6 @@ export default function EditAiAgentTestPanel() {
                             control={control}
                             name="test.prompt"
                             placeholder="Ask the agent anything"
-                            rows={3}
                             className="rounded-2"
                             style={{ resize: "none" }}
                             disabled={isLoading}

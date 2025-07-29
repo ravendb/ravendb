@@ -125,7 +125,6 @@ export default function GoogleCloud({ isForNewConnection }: GoogleCloudProps) {
                                         type="textarea"
                                         as="textarea"
                                         autoComplete="off"
-                                        rows={15}
                                         className={classNames({ "d-none": !isCredentialsJsonVisible })}
                                     />
                                 </div>

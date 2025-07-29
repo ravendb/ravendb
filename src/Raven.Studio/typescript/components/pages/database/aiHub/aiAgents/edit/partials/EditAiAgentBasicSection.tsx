@@ -173,7 +173,6 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                         as="textarea"
                         control={control}
                         name="systemPrompt"
-                        rows={4}
                         placeholder={agentDescriptionPlaceholder}
                     />
                 </FormGroup>

@@ -97,7 +97,6 @@ export default function SnowflakeConnectionString({
                     name="connectionString"
                     type="textarea"
                     placeholder="Enter connection string"
-                    rows={3}
                     autoComplete="off"
                 />
                 <div className="d-flex mt-4">

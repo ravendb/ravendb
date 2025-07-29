@@ -138,7 +138,6 @@ export default function SqlConnectionString({
                     type="textarea"
                     as="textarea"
                     placeholder={getConnectionStringPlaceholder(formValues.factoryName)}
-                    rows={3}
                     autoComplete="off"
                 />
                 <div className="d-flex mt-4">

@@ -204,7 +204,6 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                         control={control}
                                         name="prompt"
                                         placeholder="Ask the agent anything"
-                                        rows={3}
                                         className="rounded-2"
                                         style={{ resize: "none" }}
                                         onKeyDown={(e) => {

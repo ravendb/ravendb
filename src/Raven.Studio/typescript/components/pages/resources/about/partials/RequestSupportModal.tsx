@@ -62,7 +62,7 @@ export function RequestSupportModal(props: RequestSupportModalProps) {
                         <FormLabel htmlFor="messageText">
                             Message <span className="text-muted">(optional)</span>
                         </FormLabel>
-                        <Form.Control as="textarea" name="text" id="messageText" rows={10} />
+                        <Form.Control as="textarea" name="text" id="messageText" />
                     </FormGroup>
                     <div className="well p-3 rounded-2">
                         <Checkbox size="lg" selected={includeDebugPackage} toggleSelection={toggleIncludeDebugPackage}>

@@ -288,7 +288,6 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
                     control={control}
                     name={`queries.${index}.description`}
                     placeholder={queryFieldDescriptionPlaceholder}
-                    rows={4}
                 />
             </FormGroup>
             <FormGroup>
@@ -492,7 +491,6 @@ function ActionField({ index, remove, save, edit, cancelEdit }: ActionFieldProps
                     control={control}
                     name={`actions.${index}.description`}
                     placeholder={actionFieldDescriptionPlaceholder}
-                    rows={4}
                 />
             </FormGroup>
             <SampleObjectAndSchemaFields

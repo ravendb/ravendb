@@ -116,5 +116,12 @@ textarea::placeholder {
     opacity: 0.5 !important;
 }
 
+textarea {
+    field-sizing: content !important;
+    min-height: 100px !important;
+    max-height: 250px !important;
+    resize: none !important;
+}
+
 // Custom Utilities
 @import "../scss/layout-tools.scss";
