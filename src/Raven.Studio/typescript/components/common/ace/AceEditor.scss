@@ -31,7 +31,7 @@ $pre-bg: colors.$well-bg-var;
             bottom: sizes.$gutter;
             right: sizes.$gutter-md;
             height: 0;
-            opacity: 0.3;
+            opacity: 0.2;
             color: colors.$text-color-var;
         }
 
@@ -56,6 +56,8 @@ $pre-bg: colors.$well-bg-var;
         color: colors.$text-muted-var !important;
         white-space: pre;
         opacity: 0.5;
+        position: unset !important;
+        overflow: auto;
     }
 }
 
