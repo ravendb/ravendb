@@ -1,6 +1,7 @@
 #pragma warning disable SKEXP0070
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -30,7 +31,7 @@ public static class GenerateEmbeddings
     // Dimensions (buffer size) from internals of SmartComponents.
     public const int F32Size = 1536;
 
-    private static SessionOptions OnnxSessionOptions;
+    private static Lazy<SessionOptions> OnnxSessionOptions = new(() => null);
 
     internal static readonly Lazy<IEmbeddingGenerator<string, Embedding<float>>> Embedder = new(() => CreateTextEmbeddingGenerationService());
 
@@ -42,6 +43,33 @@ public static class GenerateEmbeddings
             throw new InvalidOperationException($"Could not find constructor for {typeof(BertOnnxTextEmbeddingGenerationService)}.");
 #pragma warning restore CS0618 // Type or member is obsolete
     }
+    
+    private static bool RunningOnCortexA53()
+    {
+        // Only Linux exposes MIDR registers through sysfs
+        if (PlatformDetails.RunningOnLinux == false)
+            return false;
+
+        const string midrPath =
+            "/sys/devices/system/cpu/cpu0/regs/identification/midr_el1";
+
+        try
+        {
+            string text = File.ReadAllText(midrPath).Trim();   // e.g. "410fd034"
+            if (ulong.TryParse(text, NumberStyles.HexNumber,
+                    CultureInfo.InvariantCulture, out ulong midr))
+            {
+                // ARM implementer 0x41 (A), part 0xD03 ⇒ Cortex‑A53
+                return (midr & 0xFFF000u) == 0x41D030u;
+            }
+        }
+        catch (Exception)  // file missing, permission, etc.
+        {
+            /* ignore – fall through and report false */
+        }
+
+        return false;
+    }
 
     public static void Configure(RavenConfiguration configuration)
     {
@@ -50,7 +78,13 @@ public static class GenerateEmbeddings
 
         try
         {
-            OnnxSessionOptions = new SessionOptions { IntraOpNumThreads = configuration.Indexing.MaxNumberOfThreadsForLocalEmbeddingsGeneration };
+            OnnxSessionOptions = new Lazy<SessionOptions>(valueFactory: () =>
+            {
+                if (RunningOnCortexA53())
+                    throw new IncorrectDllException("Could not initialize 'ONNX Runtime'. Cortex A53 is not supported by ONNX Runtime.");
+                
+                return new SessionOptions { IntraOpNumThreads = configuration.Indexing.MaxNumberOfThreadsForLocalEmbeddingsGeneration };
+            });
         }
         catch (TypeInitializationException e) when (PlatformDetails.RunningOnWindows)
         {
@@ -270,7 +304,7 @@ public static class GenerateEmbeddings
             var modelBytes = new MemoryStream();
             onnxModelStream.CopyTo(modelBytes);
 
-            var onnxSession = new InferenceSession(modelBytes.Length == modelBytes.GetBuffer().Length ? modelBytes.GetBuffer() : modelBytes.ToArray(), OnnxSessionOptions ?? new SessionOptions());
+            var onnxSession = new InferenceSession(modelBytes.Length == modelBytes.GetBuffer().Length ? modelBytes.GetBuffer() : modelBytes.ToArray(), OnnxSessionOptions.Value ?? new SessionOptions());
             dimensions ??= onnxSession.OutputMetadata.First().Value.Dimensions.Last();
 
             var tokenizer = new BertTokenizer();
