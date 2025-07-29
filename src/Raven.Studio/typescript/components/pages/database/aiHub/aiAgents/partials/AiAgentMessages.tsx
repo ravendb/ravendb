@@ -17,6 +17,7 @@ import VirtualTable from "components/common/virtualTable/VirtualTable";
 import document from "models/database/documents/document";
 import Badge from "react-bootstrap/Badge";
 import { aiAgentsUtils } from "../utils/aiAgentsUtils";
+import useRqlLanguageService from "components/hooks/useRqlLanguageService";
 
 type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
 type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
@@ -441,6 +442,8 @@ function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
     const prettifiedArguments = aiAgentsUtils.getPrettifiedContent(toolCall?.arguments);
     const argumentsMode = getAceEditorMode(prettifiedArguments);
 
+    const rqlLanguageService = useRqlLanguageService();
+
     const id = useUniqueId("tool-call-details");
 
     return (
@@ -481,7 +484,13 @@ function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
                                 {"Query" in tool && tool.Query && (
                                     <div>
                                         <small className="text-muted">Query</small>
-                                        <AceEditor value={tool.Query} readOnly mode="text" height="100px" />
+                                        <AceEditor
+                                            value={tool.Query}
+                                            readOnly
+                                            mode="rql"
+                                            height="100px"
+                                            languageService={rqlLanguageService}
+                                        />
                                     </div>
                                 )}
                             </Accordion.Body>
