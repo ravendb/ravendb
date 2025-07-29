@@ -142,9 +142,9 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                     {asyncGetDefaultValues.result && (
                                         <>
                                             <EditAiAgentBasicSection isEditAiAgent={isEditAiAgent} />
-                                            <EditAiAgentPersistenceSection />
                                             <EditAiAgentParametersSection />
                                             <EditAiAgentToolsSection />
+                                            <EditAiAgentPersistenceSection />
                                             <EditAiAgentTrimmingSection />
                                         </>
                                     )}
