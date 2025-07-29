@@ -177,7 +177,7 @@ function SystemMessage({ message }: SystemMessageProps) {
                     <Icon icon="system" size="xs" />
                     System prompt
                 </div>
-                <div className="mt-2 overflow-auto" style={{ maxHeight: "200px" }}>
+                <div className="mt-2 overflow-auto" style={{ maxHeight: "200px", whiteSpace: "pre-wrap" }}>
                     {message.content}
                 </div>
             </div>
