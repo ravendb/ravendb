@@ -5,16 +5,16 @@ namespace Raven.Client.Documents.Operations.AI
     /// <summary>
     /// Common result for AI ETL “add” operations.
     /// </summary>
-    public abstract class AddAiEtlOperationResult : AddEtlOperationResult
+    public abstract class AddAiTaskOperationResult : AddEtlOperationResult
     {
         public string Identifier { get; set; }
     }
 
-    public sealed class AddGenAiOperationResult : AddAiEtlOperationResult
+    public sealed class AddGenAiOperationResult : AddAiTaskOperationResult
     {
     }
 
-    public sealed class AddEmbeddingsGenerationOperationResult : AddAiEtlOperationResult
+    public sealed class AddEmbeddingsGenerationOperationResult : AddAiTaskOperationResult
     {
     }
 }

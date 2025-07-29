@@ -15,43 +15,43 @@ public class AddEmbeddingsGenerationOperation(EmbeddingsGenerationConfiguration 
     {
         return new AddEmbeddingsGenerationCommand(conventions, configuration);
     }
-}
 
-internal class AddEmbeddingsGenerationCommand : RavenCommand<AddEmbeddingsGenerationOperationResult>, IRaftCommand
-{
-    private readonly DocumentConventions _conventions;
-    private readonly EmbeddingsGenerationConfiguration _configuration;
-
-    public AddEmbeddingsGenerationCommand(DocumentConventions conventions, EmbeddingsGenerationConfiguration configuration)
+    internal class AddEmbeddingsGenerationCommand : RavenCommand<AddEmbeddingsGenerationOperationResult>, IRaftCommand
     {
-        _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
-        _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
-    }
+        private readonly DocumentConventions _conventions;
+        private readonly EmbeddingsGenerationConfiguration _configuration;
 
-    public override bool IsReadRequest => false;
-
-    public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-    {
-        url = $"{node.Url}/databases/{node.Database}/admin/etl";
-
-        var request = new HttpRequestMessage
+        public AddEmbeddingsGenerationCommand(DocumentConventions conventions, EmbeddingsGenerationConfiguration configuration)
         {
-            Method = HttpMethod.Put,
-            Content = new BlittableJsonContent(
-                async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx))
-                    .ConfigureAwait(false), _conventions)
-        };
+            _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
+            _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
+        }
 
-        return request;
+        public override bool IsReadRequest => false;
+
+        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+        {
+            url = $"{node.Url}/databases/{node.Database}/admin/etl";
+
+            var request = new HttpRequestMessage
+            {
+                Method = HttpMethod.Put,
+                Content = new BlittableJsonContent(
+                    async stream => await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx))
+                        .ConfigureAwait(false), _conventions)
+            };
+
+            return request;
+        }
+
+        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+        {
+            if (response == null)
+                ThrowInvalidResponse();
+
+            Result = JsonDeserializationClient.AddEmbeddingsGenerationOperationResult(response);
+        }
+
+        public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
     }
-
-    public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-    {
-        if (response == null)
-            ThrowInvalidResponse();
-
-        Result = JsonDeserializationClient.AddEmbeddingsGenerationOperationResult(response);
-    }
-
-    public string RaftUniqueRequestId { get; } = RaftIdGenerator.NewId();
 }
