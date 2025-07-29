@@ -19,7 +19,15 @@ const schema = yup.object({
             function (_, { parent }) {
                 return !!parent.sampleObject || !!parent.outputSchema;
             }
+        )
+        .test(
+            "schemaRegenerationRequired",
+            "The sample object has been modified. Please regenerate the JSON schema to ensure it matches the new sample object structure",
+            function (_, { parent }) {
+                return !parent.canRegenerateSchema;
+            }
         ),
+    canRegenerateSchema: yup.boolean(),
 
     // Persistence
     isEnableDocumentExpiration: yup.boolean(),
@@ -59,7 +67,15 @@ const schema = yup.object({
                     function (_, { parent }) {
                         return !!parent.parametersSampleObject || !!parent.parametersSchema;
                     }
+                )
+                .test(
+                    "schemaRegenerationRequired",
+                    "The sample object has been modified. Please regenerate the JSON schema to ensure it matches the new sample object structure",
+                    function (_, { parent }) {
+                        return !parent.canRegenerateSchema;
+                    }
                 ),
+            canRegenerateSchema: yup.boolean(),
             isSaved: yup.boolean(),
             isEditing: yup.boolean(),
         })
@@ -80,7 +96,15 @@ const schema = yup.object({
                     function (_, { parent }) {
                         return !!parent.parametersSampleObject || !!parent.parametersSchema;
                     }
+                )
+                .test(
+                    "schemaRegenerationRequired",
+                    "The sample object has been modified. Please regenerate the JSON schema to ensure it matches the new sample object structure",
+                    function (_, { parent }) {
+                        return !parent.canRegenerateSchema;
+                    }
                 ),
+            canRegenerateSchema: yup.boolean(),
             isSaved: yup.boolean(),
             isEditing: yup.boolean(),
         })

@@ -8,7 +8,6 @@ import { Control, FieldPath, FieldValues, useFormContext, UseFormSetValue, useWa
 import ReactAce from "react-ace";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useServices } from "components/hooks/useServices";
-import { EditAiAgentFormData } from "components/pages/database/aiHub/aiAgents/edit/utils/editAiAgentValidation";
 import { useAsyncCallback } from "react-async-hook";
 
 interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> {
@@ -27,6 +26,7 @@ interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TNa
     jsonSchemaTooltip?: ReactNode;
     schemaType?: Raven.Server.Web.Studio.StudioTasksHandler.SchemaType;
     helpActionTooltipTitle?: string;
+    canRegenerateSchemaName: TName;
 }
 
 export default function SampleObjectAndSchemaFields<
@@ -48,13 +48,14 @@ export default function SampleObjectAndSchemaFields<
     jsonSchemaTooltip,
     schemaType,
     helpActionTooltipTitle,
+    canRegenerateSchemaName,
 }: SampleObjectAndSchemaFieldsProps<TFieldValues, TName>) {
     const sampleObjectRef = useRef<ReactAce>(null);
     const jsonSchemaRef = useRef<ReactAce>(null);
 
-    const { setError, clearErrors } = useFormContext<EditAiAgentFormData>();
     const { tasksService } = useServices();
     const sampleObjectValue = useWatch({ control, name: sampleObjectName });
+    const { trigger, formState } = useFormContext();
 
     const [lastSampleObjectForGenerate, setLastSampleObjectForGenerate] = useState<string>(sampleObjectValue);
 
@@ -67,16 +68,13 @@ export default function SampleObjectAndSchemaFields<
     const canRegenerateSchema = !!sampleObject && !!jsonSchema && lastSampleObjectForGenerate !== sampleObject;
 
     useEffect(() => {
-        if (canRegenerateSchema) {
-            setError(jsonSchemaName as TFieldValues[TName], {
-                type: "value",
-                message:
-                    "The sample object has been modified. Please regenerate the JSON schema to ensure it matches the new sample object structure.",
+        if (formState.dirtyFields[sampleObjectName]) {
+            setValue(canRegenerateSchemaName, canRegenerateSchema as TFieldValues[TName], {
+                shouldValidate: true,
             });
-        } else {
-            clearErrors([jsonSchemaName as TFieldValues[TName]]);
+            trigger(jsonSchemaName);
         }
-    }, [sampleObject, jsonSchema, canRegenerateSchema]);
+    }, [canRegenerateSchema]);
 
     return (
         <div>

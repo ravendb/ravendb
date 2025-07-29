@@ -328,6 +328,7 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
                 jsonSchemaSyntaxHelp={<QueryFieldJsonSchemaSyntaxHelp />}
                 schemaType="ToolParameters"
                 helpActionTooltipTitle="Syntax example"
+                canRegenerateSchemaName={`queries.${index}.canRegenerateSchema`}
             />
         </div>
     );
@@ -509,6 +510,7 @@ function ActionField({ index, remove, save, edit, cancelEdit }: ActionFieldProps
                 jsonSchemaSyntaxHelp={<ActionFieldJsonSchemaSyntaxHelp />}
                 schemaType="ToolParameters"
                 helpActionTooltipTitle="Syntax example"
+                canRegenerateSchemaName={`actions.${index}.canRegenerateSchema`}
             />
         </div>
     );

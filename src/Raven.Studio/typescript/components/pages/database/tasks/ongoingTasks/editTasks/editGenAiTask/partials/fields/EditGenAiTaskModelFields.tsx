@@ -59,6 +59,7 @@ export default function EditGenAiTaskModelFields() {
                 jsonSchemaName="jsonSchema"
                 jsonSchema={formValues.jsonSchema}
                 jsonSchemaSyntaxHelp={<JsonSchemaSyntaxHelp />}
+                canRegenerateSchemaName="canRegenerateSchema"
             />
         </>
     );

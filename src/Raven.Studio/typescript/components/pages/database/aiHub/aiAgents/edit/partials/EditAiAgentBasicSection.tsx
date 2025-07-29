@@ -205,6 +205,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                         </>
                     }
                     helpActionTooltipTitle="Syntax example"
+                    canRegenerateSchemaName="canRegenerateSchema"
                 />
             </div>
         </>
