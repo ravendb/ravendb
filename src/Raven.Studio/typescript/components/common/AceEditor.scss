@@ -47,7 +47,7 @@ $pre-bg: colors.$well-bg-var;
 
     .ace_gutter {
         background: colors.$ace-gutter-bg-var;
-        color: colors.$text-muted-var;
+        color: color-contrast(colors.$ace-gutter-bg-var);
         border-right: 1px solid colors.$border-color-light-var;
     }
 
@@ -62,7 +62,7 @@ $pre-bg: colors.$well-bg-var;
     }
 
     .ace_cursor {
-        color: colors.$base-text-color;
+        color: color-contrast(colors.$pre-bg-var);
     }
 
     .ace_marker-layer .ace_selection {
@@ -103,6 +103,13 @@ $pre-bg: colors.$well-bg-var;
 
     .ace_gutter-active-line {
         background: rgba(var(--bs-primary-rgb), 0.15);
+    }
+
+    .ace_gutter-cell {
+        display: flex;
+        justify-content: end;
+        position: relative;
+        align-items: center;
     }
 
     .ace_gutter-cell.ace_removed {
@@ -195,6 +202,34 @@ $pre-bg: colors.$well-bg-var;
             align-items: center;
             height: 24px;
             width: 24px;
+        }
+    }
+
+    .ace_fold-widget {
+        width: 12px !important;
+        height: 12px !important;
+        display: inline-block;
+        background: none !important;
+        position: absolute;
+
+        &:before {
+            content: "";
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 0;
+            height: 0;
+            border-left: 3px solid transparent;
+            border-right: 3px solid transparent;
+            border-top: 4px solid;
+            border-top-color: color-contrast(colors.$ace-gutter-bg-var);
+        }
+
+        &.ace_closed:before {
+            border-top: none;
+            border-bottom: 4px solid;
+            border-bottom-color: color-contrast(colors.$ace-gutter-bg-var);
         }
     }
 
