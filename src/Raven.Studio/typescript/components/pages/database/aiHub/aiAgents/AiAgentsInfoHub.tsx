@@ -45,7 +45,7 @@ export default function AiAgentsInfoHub() {
                         </li>
                         <li className="mt-1">
                             To interact with an agent,
-                            <br /> click "Start new chat" and begin a conversation directly from the Studio.
+                            <br /> click &quot;Start new chat&quot; and begin a conversation directly from the Studio.
                         </li>
                     </ul>
                 </div>
