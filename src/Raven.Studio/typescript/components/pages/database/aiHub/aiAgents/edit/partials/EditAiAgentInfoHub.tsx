@@ -32,7 +32,7 @@ export default function EditAiAgentInfoHub() {
                             <br /> You can optionally enable trimming or summarization of their content.
                         </li>
                         <li>
-                            <strong>Tools</strong> -{" "}
+                            <strong>Tools</strong> - Tools are a controlled way to pass context to the LLM:
                             <ul>
                                 <li className="mt-1">
                                     <strong>Query tools</strong>: <br /> Define queries the agent can run against your

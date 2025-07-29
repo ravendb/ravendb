@@ -37,7 +37,8 @@ export default function EditAiAgentToolsSection() {
         <>
             <h3 className="m-0 mt-3">Define agent tools</h3>
             <div className="mb-1">
-                Configure the tools that the LLM can instruct the agent to trigger in response to user prompts.
+                Tools are a controlled way to pass context to the LLM. Configure the tools that the LLM can instruct the
+                agent to trigger in response to user prompts.
                 <br />
                 These include query tools (to retrieve data from the database) and action tools (to initiate tasks that
                 are expected to be carried out by the client or user).
