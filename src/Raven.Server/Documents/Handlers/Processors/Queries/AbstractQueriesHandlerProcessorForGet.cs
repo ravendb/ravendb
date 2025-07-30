@@ -175,7 +175,7 @@ internal abstract class AbstractQueriesHandlerProcessorForGet<TRequestHandler, T
 
                             (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentQueryResultAsync(context, result, parameters.MetadataOnly,
                                 WriteAdditionalData(indexQuery, parameters.IncludeServerSideQuery), token.Token);
-                            await writer.MaybeOuterFlushAsync();
+                            await writer.MaybeFlushAsync(token.Token);
                         }
 
 

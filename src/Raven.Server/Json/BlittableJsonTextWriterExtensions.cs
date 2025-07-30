@@ -2030,7 +2030,7 @@ namespace Raven.Server.Json
                 else
                     writer.WriteObject(includeDoc);
 
-                await writer.MaybeOuterFlushAsync();
+                await writer.MaybeFlushAsync(token);
             }
 
             writer.WriteEndObject();
