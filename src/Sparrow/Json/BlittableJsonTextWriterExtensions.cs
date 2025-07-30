@@ -182,7 +182,7 @@ namespace Sparrow.Json
                 first = false;
 
                 writer.WriteObject(item);
-                await writer.MaybeOuterFlushAsync().ConfigureAwait(false);
+                await writer.MaybeFlushAsync().ConfigureAwait(false);
             }
             writer.WriteEndArray();
         }
@@ -201,7 +201,7 @@ namespace Sparrow.Json
                 first = false;
 
                 writer.WriteObject(item);
-                await writer.MaybeOuterFlushAsync().ConfigureAwait(false);
+                await writer.MaybeFlushAsync().ConfigureAwait(false);
             }
             writer.WriteEndArray();
         }
