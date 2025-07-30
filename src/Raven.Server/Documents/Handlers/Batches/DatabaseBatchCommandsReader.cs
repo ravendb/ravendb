@@ -33,13 +33,13 @@ public sealed class DatabaseBatchCommandsReader : AbstractBatchCommandsReader<Me
             Stream = AttachmentStreamsTempFile.StartNewStream()
         };
         attachmentStream.Hash = await AttachmentsStorageHelper.CopyStreamToFileAndCalculateHash(context, input, attachmentStream.Stream, token);
-        await attachmentStream.Stream.FlushAsync(token).ConfigureAwait(false);
+        await attachmentStream.Stream.FlushAsync(token);
         AttachmentStreams.Add(attachmentStream);
     }
 
     public override async ValueTask<MergedBatchCommand> GetCommandAsync(DocumentsOperationContext context)
     {
-        await ExecuteGetIdentitiesAsync().ConfigureAwait(false);
+        await ExecuteGetIdentitiesAsync();
 
         return new MergedBatchCommand(_database)
         {

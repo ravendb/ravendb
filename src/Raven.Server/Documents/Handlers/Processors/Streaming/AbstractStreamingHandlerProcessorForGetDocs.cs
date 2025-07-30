@@ -23,8 +23,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
             {
                 await GetDocumentsAndWriteAsync(context, RequestHandler.GetStart(), RequestHandler.GetPageSize(), RequestHandler.GetStringQueryString("startsWith", required: false),
                     RequestHandler.GetStringQueryString("excludes", required: false), RequestHandler.GetStringQueryString("matches", required: false),
-                    RequestHandler.GetStringQueryString("startAfter", required: false), RequestHandler.GetStringQueryString("format", required: false), token)
-                    .ConfigureAwait(false);
+                    RequestHandler.GetStringQueryString("startAfter", required: false), RequestHandler.GetStringQueryString("format", required: false), token);
             }
         }
     }

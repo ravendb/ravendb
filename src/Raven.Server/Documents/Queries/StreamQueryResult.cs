@@ -103,7 +103,7 @@ namespace Raven.Server.Documents.Queries
             _anyExceptions = true;
 
             _writer.EndResults();
-            await _writer.WriteErrorAsync(e).ConfigureAwait(false);
+            await _writer.WriteErrorAsync(e);
 
             throw e;
         }
