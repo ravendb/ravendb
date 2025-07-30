@@ -213,8 +213,7 @@ namespace Voron
                 // the reference to storage environment won't be copied to the state-machine produced by await TimeoutManager.WaitFor() call
                 // otherwise the reference is hold and that prevents from running the finalizer of the environment
 
-                var result = await IdleFlushTimerInternal(weakRef)
-                                            .ConfigureAwait(false);
+                var result = await IdleFlushTimerInternal(weakRef);
                 switch (result)
                 {
                     case true:
@@ -222,8 +221,7 @@ namespace Voron
                     case false:
                         return;
                     case null:
-                        await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(1000), token)
-                                            .ConfigureAwait(false);
+                        await TimeoutManager.WaitFor(TimeSpan.FromMilliseconds(1000), token);
                         break;
                 }
             }
@@ -239,9 +237,7 @@ namespace Voron
 
                 try
                 {
-                    var result = await env._writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(env.Options.IdleFlushTimeout))
-                                                                       .ConfigureAwait(false);     
-                    if (result == false)
+                    if (await env._writeTransactionRunning.WaitAsync(TimeSpan.FromMilliseconds(env.Options.IdleFlushTimeout)) == false)
                     {
                         if (env.Journal.Applicator.ShouldFlush)
                             GlobalFlushingBehavior.GlobalFlusher.Value.MaybeFlushEnvironment(env);

@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -91,7 +91,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -105,8 +105,7 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    await GetRunner(query).ExecuteStreamQuery(query, queryContext, response, writer, token)
-                                          .ConfigureAwait(false);
+                    await GetRunner(query).ExecuteStreamQuery(query, queryContext, response, writer, token);
                     return;
                 }
                 catch (ObjectDisposedException e)
@@ -116,7 +115,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -128,7 +127,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -144,8 +143,7 @@ namespace Raven.Server.Documents.Queries
                 try
                 {
                     queryContext.CloseTransaction();
-                    await GetRunner(query).ExecuteStreamIndexEntriesQuery(query, queryContext, response, writer, ignoreLimit, token)
-                                          .ConfigureAwait(false);
+                    await GetRunner(query).ExecuteStreamIndexEntriesQuery(query, queryContext, response, writer, ignoreLimit, token);
                     return;
                 }
                 catch (ObjectDisposedException e)
@@ -155,7 +153,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -167,7 +165,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -194,7 +192,7 @@ namespace Raven.Server.Documents.Queries
                         if (scope == null)
                             sw = Stopwatch.StartNew();
 
-                        result = await _static.ExecuteFacetedQuery(query, existingResultEtag, queryContext, token).ConfigureAwait(false);
+                        result = await _static.ExecuteFacetedQuery(query, existingResultEtag, queryContext, token);
                     }
 
                     result.DurationInMs = sw != null ? (long)sw.Elapsed.TotalMilliseconds : (long)scope.Duration.TotalMilliseconds;
@@ -208,7 +206,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -220,7 +218,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -285,8 +283,7 @@ namespace Raven.Server.Documents.Queries
                         if (scope == null)
                             sw = Stopwatch.StartNew();
 
-                        result = await GetRunner(query).ExecuteSuggestionQuery(query, queryContext, existingResultEtag, token)
-                                                       .ConfigureAwait(false);
+                        result = await GetRunner(query).ExecuteSuggestionQuery(query, queryContext, existingResultEtag, token);
                     }
 
                     result.DurationInMs = sw != null ? (long)sw.Elapsed.TotalMilliseconds : (long)scope.Duration.TotalMilliseconds;
@@ -300,7 +297,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -312,7 +309,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -326,8 +323,7 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    return await GetRunner(query).ExecuteIndexEntriesQuery(query, queryContext, ignoreLimit, existingResultEtag, token)
-                                                 .ConfigureAwait(false);
+                    return await GetRunner(query).ExecuteIndexEntriesQuery(query, queryContext, ignoreLimit, existingResultEtag, token);
                 }
                 catch (ObjectDisposedException e)
                 {
@@ -336,7 +332,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -348,7 +344,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -362,8 +358,7 @@ namespace Raven.Server.Documents.Queries
             {
                 try
                 {
-                    return await GetRunner(query).ExecuteDeleteQuery(query, options, queryContext, onProgress, token)
-                                                 .ConfigureAwait(false);
+                    return await GetRunner(query).ExecuteDeleteQuery(query, options, queryContext, onProgress, token);
                 }
                 catch (ObjectDisposedException e)
                 {
@@ -372,7 +367,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -384,7 +379,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 
@@ -401,8 +396,7 @@ namespace Raven.Server.Documents.Queries
                     if (Database.ForTestingPurposes?.DelayQueryByPatch != null)
                         await Database.ForTestingPurposes.DelayQueryByPatch.WaitAsync(token.Token);
 
-                    return await GetRunner(query).ExecutePatchQuery(query, options, patch, patchArgs, queryContext, onProgress, token)
-                                                 .ConfigureAwait(false);
+                    return await GetRunner(query).ExecutePatchQuery(query, options, patch, patchArgs, queryContext, onProgress, token);
                 }
                 catch (ObjectDisposedException e)
                 {
@@ -411,7 +405,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
                 catch (OperationCanceledException e)
                 {
@@ -423,7 +417,7 @@ namespace Raven.Server.Documents.Queries
 
                     lastException = e;
 
-                    await WaitForIndexBeingLikelyReplacedDuringQuery().ConfigureAwait(false);
+                    await WaitForIndexBeingLikelyReplacedDuringQuery();
                 }
             }
 

@@ -81,7 +81,7 @@ namespace Raven.Server.Documents
 
                 // let it propagate the exception to the client first and do
                 // the internal failure handling e.g. Index.HandleIndexCorruption
-                await Task.Delay(TimeToWaitBeforeUnloadingDatabase).ConfigureAwait(false);
+                await Task.Delay(TimeToWaitBeforeUnloadingDatabase); 
 
                 stats.NumberOfUnloads++;
                 stats.LastUnloadTime = DateTime.UtcNow;
