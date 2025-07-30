@@ -40,10 +40,14 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
             conversation.Initialize(context, body.Configuration);
         }
 
-        // ensure we don't persist the chat in test mode
-        body.Configuration.Persistence = null;
-
         await HandleRequest(context, body.Configuration, "test", conversation, body.RequestBody, token.Token);
+    }
+
+    public override Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation,
+        BlittableJsonReaderObject history)
+    {
+        // In test mode, we don't persist the conversation document
+        return Task.FromResult("test");
     }
 
     public override async Task WriteResponseAsync(JsonOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)

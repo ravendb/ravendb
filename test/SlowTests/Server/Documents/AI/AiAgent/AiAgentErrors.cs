@@ -25,6 +25,8 @@ public class AiAgentErrors : RavenTestBase
 
     private class CustomerOutputSchema
     {
+        public static CustomerOutputSchema Instance = new();
+
         public string Answer = "Answer to the user question";
 
         public List<string> RelevantCustomersIds = ["The customers ids relevant to the query or response"];
@@ -51,7 +53,6 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -64,14 +65,14 @@ public class AiAgentErrors : RavenTestBase
             ],
         };
 
-        var createResult = await store.AI.CreateAgentAsync<CustomerOutputSchema>(agent);
-        var chat = store.AI.StartConversation<CustomerOutputSchema>(createResult.Identifier, builder: null);
+        var createResult = await store.AI.CreateAgentAsync(agent, CustomerOutputSchema.Instance);
+        var chat = store.AI.Conversation(createResult.Identifier, "chats/", creationOptions: null);
         chat.SetUserPrompt("How many customers do we have with the name \"Shahar\"?");
 
         // Raven.Client.Exceptions.InvalidQueryException: Parameter value '["Shahar"]' of type Sparrow.Json.BlittableJsonReaderArray is not supported
         // Query: from 'Customers' where Name == $name
         // Parameters: {"name":["Shahar"]}
-        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
+        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
 
         Assert.Contains("Parameter value '[\"Shahar\"]' of type Sparrow.Json.BlittableJsonReaderArray is not supported", e.Message);
     }
@@ -88,7 +89,6 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -103,7 +103,7 @@ public class AiAgentErrors : RavenTestBase
 
         //Raven.Client.Exceptions.RavenException: Raven.Server.Documents.Queries.Parser.QueryParser+ParseException: 1:1 Expected FROM clause but got: blablabla
         // Query: blablabla $name
-        var e = await Assert.ThrowsAsync<RavenException>(() => store.AI.CreateAgentAsync<CustomerOutputSchema>(agent));
+        var e = await Assert.ThrowsAsync<RavenException>(() => store.AI.CreateAgentAsync(agent, CustomerOutputSchema.Instance));
 
         Assert.Contains("1:1 Expected FROM clause but got: blablabla", e.Message);
     }
@@ -125,7 +125,6 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -138,13 +137,13 @@ public class AiAgentErrors : RavenTestBase
             ]
         };
 
-        var createResult = await store.AI.CreateAgentAsync<CustomerOutputSchema>(agent);
-        var chat = store.AI.StartConversation<CustomerOutputSchema>(createResult.Identifier, builder: null);
+        var createResult = await store.AI.CreateAgentAsync(agent, CustomerOutputSchema.Instance);
+        var chat = store.AI.Conversation(createResult.Identifier, "chats/", creationOptions: null);
         chat.SetUserPrompt("How many customers do we have with the name \"Shahar\"?");
 
         // Raven.Client.Exceptions.RavenException: System.ArgumentException: The field 'Name1' is not indexed in 'Customers/ByName',
 
-        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
+        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
 
         Assert.Contains("The field 'Name1' is not indexed in 'Customers/ByName'", e.Message);
     }
@@ -164,62 +163,6 @@ public class AiAgentErrors : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
-    public async Task BadChatId(Options options, GenAiConfiguration config)
-    {
-        using var store = GetDocumentStore(options);
-        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
-
-        using (var session = store.OpenAsyncSession())
-        {
-            await session.StoreAsync(new Customer { Id = "Customers/1", Name = "Shahar" });
-            await session.StoreAsync(new Customer { Id = "Customers/2", Name = "Karmel" });
-            await session.StoreAsync(new Customer { Id = "Customers/3", Name = "Aviv" });
-            await session.StoreAsync(new Customer { Id = "Customers/4", Name = "Shahar", NumberOfOrders = 9 });
-            await session.StoreAsync(new Customer { Id = "Customers/5", Name = "Aviv" });
-            await session.StoreAsync(new Customer { Id = "Customers/6", Name = "Shahar", NumberOfOrders = 8 });
-            await session.SaveChangesAsync();
-        }
-
-        var agent = new AiAgentConfiguration("customers-agent",
-            config.ConnectionStringName,
-            "You are customer manager"
-        )
-        {
-            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
-            Queries =
-            [
-                new AiAgentToolQuery
-                {
-                    Name = "CustomersSearchByName",
-                    Description = "search customers by name",
-                    Query = "from 'Customers' where Name == $name",
-                    ParametersSampleObject = "{\"name\": \"the name you search by\"}"
-                }
-            ]
-        };
-
-        var createResult = await store.AI.CreateAgentAsync<CustomerOutputSchema>(agent);
-        var chat = store.AI.StartConversation<CustomerOutputSchema>(createResult.Identifier, builder: null);
-
-        chat.SetUserPrompt("How many customers do we have with the name \"Shahar\"?");
-        await chat.RunAsync(CancellationToken.None);
-
-        Assert.NotNull(chat.Answer);
-        Assert.NotNull(chat.Id);
-
-        //Raven.Client.Exceptions.Documents.DocumentDoesNotExistException: Document 'Raven.Client.Exceptions.Documents.DocumentDoesNotExistException:
-        //Document 'Chats/0000000000000000007-ABAD_CHAT_ID' does not exist.
-        var badChatId = chat.Id + "BAD_CHAT_ID";
-
-        var badChat = store.AI.ResumeConversation<CustomerOutputSchema>(badChatId, changeVector: null);
-        badChat.SetUserPrompt("How many of them have more then 1 orders?");
-        var e = await Assert.ThrowsAsync<DocumentDoesNotExistException>(() => badChat.RunAsync(CancellationToken.None));
-
-        Assert.Contains("BAD_CHAT_ID' does not exist", e.Message);
-    }
-
-    [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
     public async Task BadApiKey(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -233,7 +176,6 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -246,12 +188,12 @@ public class AiAgentErrors : RavenTestBase
             ]
         };
 
-        var createResult = await store.AI.CreateAgentAsync<CustomerOutputSchema>(agent);
-        var chat = store.AI.StartConversation<CustomerOutputSchema>(createResult.Identifier, builder: null);
+        var createResult = await store.AI.CreateAgentAsync(agent, CustomerOutputSchema.Instance);
+        var chat = store.AI.Conversation(createResult.Identifier, "chats/", creationOptions: null);
         chat.SetUserPrompt("How many customers do we have with the name \"Shahar\"?");
 
         // Raven.Client.Exceptions.RavenException: Raven.Server.Documents.AI.UnsuccessfulRequestException: Incorrect API key provided
-        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
+        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
         Assert.Contains("Incorrect API key provided", e.Message);
     }
 
@@ -278,7 +220,6 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -291,12 +232,12 @@ public class AiAgentErrors : RavenTestBase
             ]
         };
 
-        var createResult = await store.AI.CreateAgentAsync<CustomerOutputSchema>(agent);
-        var chat = store.AI.StartConversation<CustomerOutputSchema>(createResult.Identifier, builder: null);
+        var createResult = await store.AI.CreateAgentAsync(agent, CustomerOutputSchema.Instance);
+        var chat = store.AI.Conversation(createResult.Identifier, "chats/", creationOptions: null);
         chat.SetUserPrompt("How many customers do we have with the name \"Shahar\"?");
 
         // Raven.Client.Exceptions.RavenException: Raven.Server.Documents.AI.UnsuccessfulRequestException: The model `gpt-4oxyz` does not exist or you do not have access to it
-        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
+        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
         Assert.Contains("The model `gpt-4oxyz` does not exist or you do not have access to it", e.Message);
     }
 
@@ -316,7 +257,6 @@ public class AiAgentErrors : RavenTestBase
             "You are customer manager"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -329,13 +269,13 @@ public class AiAgentErrors : RavenTestBase
             ]
         };
 
-        var createResult = await store.AI.CreateAgentAsync<CustomerOutputSchema>(agent);
-        var chat = store.AI.StartConversation<CustomerOutputSchema>(createResult.Identifier, builder: null);
+        var createResult = await store.AI.CreateAgentAsync(agent, CustomerOutputSchema.Instance);
+        var chat = store.AI.Conversation(createResult.Identifier, "chats/", creationOptions: null);
 
         chat.SetUserPrompt("How many customers do we have with the name \"Shahar\"?");
 
         // Raven.Client.Exceptions.RavenException: System.IO.InvalidDataException:  Cannot have a '<' in this position at  (1,2) ...
-        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
+        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
         Assert.Contains("Cannot have a '<' in this position at", e.Message);
 
         Assert.Contains("Cannot have a '<' in this position at", e.Message);
@@ -344,6 +284,8 @@ public class AiAgentErrors : RavenTestBase
 
     private class QuestionOutputSchema
     {
+        public static QuestionOutputSchema Instance = new();
+
         public string Answer = "Combined answer of the answers for the questions ";
 
         public bool RefusedToAnswer = false;
@@ -394,7 +336,6 @@ public class AiAgentErrors : RavenTestBase
             "You are an ai agent that answer knowledge questions"
         )
         {
-            Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30)),
             Queries =
             [
                 new AiAgentToolQuery
@@ -407,32 +348,33 @@ public class AiAgentErrors : RavenTestBase
             ]
         };
 
-        var createResult = await store.AI.CreateAgentAsync<QuestionOutputSchema>(agent);
-        var chat = store.AI.StartConversation<QuestionOutputSchema>(
+        var createResult = await store.AI.CreateAgentAsync<QuestionOutputSchema>(agent, QuestionOutputSchema.Instance);
+        var chat = store.AI.Conversation(
             createResult.Identifier,
-            builder: null);
+            "chats/",
+            creationOptions: null);
 
         chat.SetUserPrompt("Can you answer Aviv questions?");
-        var r = await chat.RunAsync(CancellationToken.None);
+        var r = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
 
-        var aviv = chat.Answer;
-        Assert.Equal(AiConversationResult.Done, r);
+        var aviv = r.Answer;
+        Assert.Equal(AiConversationResult.Done, r.Status);
         Assert.NotNull(aviv.Answer);
         Assert.False(aviv.RefusedToAnswer);
 
         chat.SetUserPrompt("Can you answer Karmel questions?");
-        r = await chat.RunAsync(CancellationToken.None);
+        r = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
 
-        var karmel = chat.Answer;
-        Assert.Equal(AiConversationResult.Done, r);
+        var karmel = r.Answer;
+        Assert.Equal(AiConversationResult.Done, r.Status);
         Assert.NotNull(karmel.Answer);
         Assert.False(karmel.RefusedToAnswer);
 
         chat.SetUserPrompt("Can you answer Shahar questions?");
-        r = await chat.RunAsync(CancellationToken.None);
+        r = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
 
-        var shahar = chat.Answer;
-        Assert.Equal(AiConversationResult.Done, r);
+        var shahar = r.Answer;
+        Assert.Equal(AiConversationResult.Done, r.Status);
         Assert.NotNull(shahar.Answer);
         Assert.True(shahar.RefusedToAnswer);
     }

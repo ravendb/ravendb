@@ -5,7 +5,6 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
@@ -21,6 +20,7 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using Newtonsoft.Json;
+using Raven.Client.Documents.AI;
 using ChatConstants = Raven.Server.Documents.AI.ChatCompletionClient.Constants;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
@@ -103,70 +103,75 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         public override async ValueTask ExecuteAsync()
         {
             using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
-            var conversationId = RequestHandler.GetStringQueryString("conversationId", required: false);
-            var agentId = RequestHandler.GetStringQueryString("agentId", required: false);
+            var conversationId = RequestHandler.GetStringQueryString("conversationId");
+            var agentId = RequestHandler.GetStringQueryString("agentId");
             var changeVector = RequestHandler.GetStringQueryString("changeVector", required: false);
-
-            if (string.IsNullOrEmpty(conversationId) && string.IsNullOrEmpty(agentId))
-                throw new ArgumentException("conversation ID or agent name must be provided.");
-
-            if (string.IsNullOrEmpty(conversationId) == false && string.IsNullOrEmpty(agentId) == false)
-                throw new ArgumentException($"conversation '{conversationId}' and agent '{agentId}' can't be provided together.");
 
             using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
             var body = await ReadRequestBodyAsync(context, token.Token);
 
             ConversationDocument conversationDocument = null;
             AiAgentConfiguration configuration = null;
-
-            if (string.IsNullOrEmpty(conversationId) == false)
+            
+            using(context.OpenReadTransaction())
             {
-                using var __ = context.OpenReadTransaction();
                 var conversation = RequestHandler.Database.DocumentsStorage.Get(context, conversationId);
                 if (conversation == null)
-                    throw new DocumentDoesNotExistException(conversationId);
-
-                conversationDocument = ConversationDocument.ToDocument(conversationId, conversation.Data);
-
-                if (changeVector != null)
                 {
-                    if (conversation.ChangeVector != changeVector)
+                    if (string.IsNullOrEmpty(changeVector) == false)
+                    {
                         throw new ConcurrencyException(
-                            $"The conversation '{conversationId}' was updated and doesn't match the expected change vector. Reload the conversation and try again.")
+                            $"The conversation '{conversationId}' doesn't exists.")
                         {
                             ExpectedChangeVector = changeVector, 
-                            ActualChangeVector = conversation.ChangeVector, 
+                            ActualChangeVector = string.Empty, 
                             Id = conversationId
                         };
+                    }
 
-                    conversationDocument.ChangeVector = conversation.ChangeVector;
+                    if (string.IsNullOrEmpty(body.UserPrompt))
+                    {
+                        throw new InvalidOperationException(
+                            $"Cannot start a new conversation '{conversationId}' without a user prompt.");
+                    }
+
+                    conversationDocument = new ConversationDocument(agentId, body.Parameters);
+                    configuration = GetAiAgentConfiguration(agentId);
+
+                    if (body.Options.ConversationExpirationInSec.HasValue)
+                    {
+                        conversationDocument.Expires = TimeSpan.FromSeconds(body.Options.ConversationExpirationInSec.Value);
+                    }
+                
+                    conversationDocument.Initialize(context, configuration);
                 }
-               
-                configuration = GetAiAgentConfiguration(conversationDocument.Agent);
-            }
+                else
+                {
+                    conversationDocument = ConversationDocument.ToDocument(conversationId, conversation.Data);
+                    if (conversationDocument.Agent != agentId)
+                        throw new InvalidOperationException(
+                            $"The conversation '{conversationId}' is assigned to agent '{conversationDocument.Agent}', " +
+                            $"but the request is for agent '{agentId}'.");
 
-            if (string.IsNullOrEmpty(agentId) == false)
-            {
-                configuration = GetAiAgentConfiguration(agentId);
-                conversationDocument = new ConversationDocument(agentId, body.Parameters);
-                conversationDocument.Initialize(context, configuration);
-                conversationId = BuildId(configuration);
+                    configuration = GetAiAgentConfiguration(conversationDocument.Agent);
+
+                    if (changeVector != null)
+                    {
+                        if (conversation.ChangeVector != changeVector)
+                            throw new ConcurrencyException(
+                                $"The conversation '{conversationId}' was updated and doesn't match the expected change vector. Reload the conversation and try again.")
+                            {
+                                ExpectedChangeVector = changeVector, 
+                                ActualChangeVector = conversation.ChangeVector, 
+                                Id = conversationId
+                            };
+
+                        conversationDocument.ChangeVector = conversation.ChangeVector;
+                    }
+                }
             }
 
             await HandleRequest(context, configuration, conversationId, conversationDocument, body, token.Token);
-        }
-
-        private string BuildId(AiAgentConfiguration configuration)
-        {
-            if (configuration.Persistence?.ConversationIdPrefix != null)
-            {
-                if (configuration.Persistence.ConversationIdPrefix.EndsWith(RequestHandler.IdentityPartsSeparator) == false)
-                    return $"{configuration.Persistence.ConversationIdPrefix}{RequestHandler.IdentityPartsSeparator}";
-
-                return configuration.Persistence.ConversationIdPrefix;
-            }
-
-            return $"{Constants.Documents.Ai.AiAgentIdPrefix}{RequestHandler.IdentityPartsSeparator}";
         }
 
         public async Task<RequestBody> ReadRequestBodyAsync(JsonOperationContext context, CancellationToken token)
@@ -175,12 +180,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             body.TryGet(nameof(ConversionRequestBody.ActionResponses), out BlittableJsonReaderArray actionResponses);
             body.TryGet(nameof(ConversionRequestBody.UserPrompt), out string userPrompt);
             body.TryGet(nameof(ConversionRequestBody.Parameters), out BlittableJsonReaderObject parameters);
+            body.TryGet(nameof(ConversionRequestBody.Options), out BlittableJsonReaderObject options);
 
             return new RequestBody
             {
                 ActionResponses = actionResponses, 
                 UserPrompt = userPrompt, 
-                Parameters = parameters
+                Parameters = parameters,
+                Options = options != null ? JsonDeserializationClient.ConversationCreationOptions(options) : new AiConversationCreationOptions()
             };
         }
 
@@ -189,6 +196,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             public BlittableJsonReaderObject Parameters { get; set; }
             public string UserPrompt { get; set; }
             public BlittableJsonReaderArray ActionResponses { get; set; }
+            public AiConversationCreationOptions Options { get; set; }
 
             public void ValidateForStart()
             {
@@ -383,7 +391,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 [nameof(ConversationResult<object>.ChangeVector)] = document.ChangeVector,
                 [nameof(ConversationResult<object>.Response)] = response,
                 [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(document.OpenActionCalls.Select(t => t.Value.ToJson())),
-                [nameof(ConversationResult<object>.Usage)] = document.TotalUsage.ToJson()
+                [nameof(ConversationResult<object>.TotalUsage)] = document.TotalUsage.ToJson()
             };
 
             await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
@@ -495,19 +503,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
         }
 
-        public async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history)
+        public virtual async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history)
         {
             var changeVectorLsv = context.GetLazyString(conversation.ChangeVector);
 
-            if (configuration.Persistence is not null)
-            {
-                var cmd = new PutChatCommand(conversationId, conversation, history, changeVectorLsv, configuration, RequestHandler.Database);
-                await RequestHandler.Database.TxMerger.Enqueue(cmd);
-                conversation.ChangeVector = cmd.PutResult.Conversation.ChangeVector;
-                return cmd.PutResult.Conversation.Id;
-            }
-
-            return null;
+            var cmd = new PutChatCommand(conversationId, conversation, history, changeVectorLsv, configuration, RequestHandler.Database);
+            await RequestHandler.Database.TxMerger.Enqueue(cmd);
+            conversation.ChangeVector = cmd.PutResult.Conversation.ChangeVector;
+            return cmd.PutResult.Conversation.Id;
         }
 
         private static readonly string SummarizationOutputSchema = ChatCompletionClient.GetSchemaFromSampleObject(JsonConvert.SerializeObject(new SummarizationSampleObject()));

@@ -31,8 +31,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
 
-            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
-
             agent.Queries =
             [
                 new AiAgentToolQuery
@@ -52,7 +50,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            var e = await Assert.ThrowsAsync<RavenException>(() => store.AI.CreateAgentAsync<AiAgentBasics.OutputSchema>(agent));
+            var e = await Assert.ThrowsAsync<RavenException>(() => store.AI.CreateAgentAsync(agent, AiAgentBasics.OutputSchema.Instance));
             Assert.Contains("Tool query 'RecentOrder' contains parameters that are not defined in the agent configuration: 'company'", e.Message);
         }
 
@@ -72,7 +70,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             agent.Parameters.Add(new AiAgentParameter("company","good company"));
             agent.Parameters.Add(new AiAgentParameter("company"));
 
-            var e = await Assert.ThrowsAsync<RavenException>(() => store.AI.CreateAgentAsync<AiAgentBasics.OutputSchema>(agent));
+            var e = await Assert.ThrowsAsync<RavenException>(() => store.AI.CreateAgentAsync(agent, AiAgentBasics.OutputSchema.Instance));
             Assert.Contains("Duplicate parameter names found in agent configuration: company", e.Message);
         }
 
@@ -88,8 +86,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
-
-            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
 
             agent.Parameters.Add(new AiAgentParameter("company"));
             agent.Queries =
@@ -111,7 +107,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            var e = await Assert.ThrowsAsync<RavenException>(() => store.AI.CreateAgentAsync<AiAgentBasics.OutputSchema>(agent));
+            var e = await Assert.ThrowsAsync<RavenException>(() => store.AI.CreateAgentAsync(agent, AiAgentBasics.OutputSchema.Instance));
             Assert.Contains("Parameter company is defined on both the agent level and the query level for ProductSearch", e.Message);
         }
 
@@ -127,8 +123,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
-
-            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
 
             agent.Parameters.Add(new AiAgentParameter("company"));
             agent.Queries =
@@ -150,10 +144,10 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            var identifier = (await store.AI.CreateAgentAsync<AiAgentBasics.OutputSchema>(agent)).Identifier;
-            var chat = store.AI.StartConversation<AiAgentBasics.OutputSchema>(identifier, builder: null);
+            var identifier = (await store.AI.CreateAgentAsync(agent, AiAgentBasics.OutputSchema.Instance)).Identifier;
+            var chat = store.AI.Conversation(identifier, "chats/", creationOptions: null);
             chat.SetUserPrompt("what goes well with my cheese for recent orders?");
-            var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
+            var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<AiAgentBasics.OutputSchema>(CancellationToken.None));
             Assert.Contains($"Parameter 'company' is missing", e.Message);
         }
     }

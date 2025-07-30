@@ -9,25 +9,34 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.AI.Agents
 {
-    public class AddOrUpdateAiAgentOperation : AddOrUpdateAiAgentOperation<object>
-    {
-        public AddOrUpdateAiAgentOperation(AiAgentConfiguration configuration) : base(configuration)
-        {
-            if (string.IsNullOrWhiteSpace(configuration.OutputSchema) && string.IsNullOrWhiteSpace(configuration.SampleObject))
-                throw new ArgumentException($"Please provide a non-empty value for either {configuration.OutputSchema} or {nameof(configuration.SampleObject)} is required.");
-        }
-    }
-
-    public class AddOrUpdateAiAgentOperation<TSchema> : IMaintenanceOperation<AiAgentConfigurationResult> where TSchema : new()
+    public class AddOrUpdateAiAgentOperation : IMaintenanceOperation<AiAgentConfigurationResult>
     {
         private readonly AiAgentConfiguration _configuration;
-        private static readonly TSchema Instance = new();
 
         public AddOrUpdateAiAgentOperation(AiAgentConfiguration configuration)
         {
             ValidationMethods.AssertNotNullOrEmpty(configuration, nameof(configuration));
+            
+            if (HasNoSampleObjectOrSchema(configuration))
+                throw new ArgumentException($"Please provide a non-empty value for either {configuration.OutputSchema} or {nameof(configuration.SampleObject)} is required.");
 
             _configuration = configuration;
+        }
+
+        private static bool HasNoSampleObjectOrSchema(AiAgentConfiguration configuration) => 
+            string.IsNullOrWhiteSpace(configuration.OutputSchema) && string.IsNullOrWhiteSpace(configuration.SampleObject);
+
+        public static AddOrUpdateAiAgentOperation Create<T>(AiAgentConfiguration configuration, T outputType)
+        {
+            if (HasNoSampleObjectOrSchema(configuration))
+            {
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                {
+                    configuration.SampleObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(outputType, ctx).ToString();
+                }
+            }
+
+            return new AddOrUpdateAiAgentOperation(configuration);
         }
 
         public RavenCommand<AiAgentConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -55,7 +64,6 @@ namespace Raven.Client.Documents.Operations.AI.Agents
                     Method = HttpMethod.Put,
                     Content = new BlittableJsonContent(async stream =>
                     {
-                        _configuration.SampleObject ??= DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(Instance, ctx).ToString();
                         await ctx.WriteAsync(stream, DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(_configuration, ctx)).ConfigureAwait(false);
                     }, _conventions)
                 };

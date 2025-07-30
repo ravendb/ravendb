@@ -38,14 +38,14 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             agents[0].Identifier = "agent0-identifier";
             agents[1].Identifier = agents[0].Identifier;
 
-            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agents[0]));
+            await store.Maintenance.SendAsync(AddOrUpdateAiAgentOperation.Create(agents[0], AiAgentBasics.OutputSchema.Instance));
 
-            var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agents[1])));
+            var e = await Assert.ThrowsAsync<RavenException>(() => store.Maintenance.SendAsync(AddOrUpdateAiAgentOperation.Create(agents[1], AiAgentBasics.OutputSchema.Instance)));
             Assert.Contains("Can't update AI Agent config: 'agent1 name'. The identifier 'agent0-identifier' is already used by AI Agent config 'agent0 name'",
                 e.Message);
 
             agents[1].Identifier = "agent1-identifier";
-            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agents[1]));
+            await store.Maintenance.SendAsync(AddOrUpdateAiAgentOperation.Create(agents[1], AiAgentBasics.OutputSchema.Instance));
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -59,12 +59,12 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             using var session = store.OpenAsyncSession();
 
             var agents = GetAgents(config);
-            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agents[0]));
+            await store.Maintenance.SendAsync(AddOrUpdateAiAgentOperation.Create(agents[0], AiAgentBasics.OutputSchema.Instance));
             await AssertAgentInRecordAsync(store, agents[0]);
 
             agents[1].Identifier = agents[0].Identifier;
             agents[1].Name = agents[0].Name;
-            await store.Maintenance.SendAsync(new AddOrUpdateAiAgentOperation<AiAgentBasics.OutputSchema>(agents[1]));
+            await store.Maintenance.SendAsync(AddOrUpdateAiAgentOperation.Create(agents[1], AiAgentBasics.OutputSchema.Instance));
             await AssertAgentInRecordAsync(store, agents[1]);
         }
 
@@ -88,7 +88,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent0.Identifier = "shopping-assistant";
             agent0.Parameters.Add(new AiAgentParameter("company"));
-            agent0.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
             agent0.Queries =
             [
                 new AiAgentToolQuery
@@ -108,7 +107,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             ];
             agent0.ChatTrimming = null;
             var agent1 = new AiAgentConfiguration("warehouse manager", aiConfig.ConnectionStringName, "You are an AI agent managing a warehouse.");
-            agent1.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
             agent1.Actions =
             [
                 new AiAgentToolAction

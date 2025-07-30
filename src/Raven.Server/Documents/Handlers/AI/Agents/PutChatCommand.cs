@@ -45,11 +45,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 _conversation.LinkedConversations.Add(putHistoryResult.Id);
             }
 
-            TimeSpan? expiration = _configuration.Persistence?.ConversationExpirationInSec == null ? 
-                null : 
-                TimeSpan.FromSeconds(_configuration.Persistence.ConversationExpirationInSec.Value);
-
-            _conversationDoc = _conversation.ToBlittable(context, _configuration, expiration);
+            _conversationDoc = _conversation.ToBlittable(context, _configuration);
             var putResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _conversationDoc);
             PutResult = (putResult, putHistoryResult);
 

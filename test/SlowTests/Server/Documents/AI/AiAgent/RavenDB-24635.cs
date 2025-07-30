@@ -2,6 +2,7 @@
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -29,8 +30,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "You are a tool-calling assistant." +
                 "When you perform a tool call, always include a short explanation to the user in the `content` field about what is about to happen, and then in the `tool_calls` field the parameters for the call.");
 
-            agent.Persistence = new AiAgentPersistenceConfiguration("Chats", TimeSpan.FromDays(30));
-
             agent.Parameters.Add(new AiAgentParameter("company"));
             agent.Queries =
             [
@@ -50,15 +49,15 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            var identifier = (await store.AI.CreateAgentAsync<AiAgentBasics.OutputSchema>(agent)).Identifier;
+            var identifier = (await store.AI.CreateAgentAsync(agent, AiAgentBasics.OutputSchema.Instance)).Identifier;
 
-            var chat = store.AI.StartConversation<AiAgentBasics.OutputSchema>(identifier,
-                p => p.AddParameter("company", "companies/90-A"));
+            var chat = store.AI.Conversation(identifier, "chats/",
+                new AiConversationCreationOptions(p => p.AddParameter("company", "companies/90-A")));
 
             chat.SetUserPrompt("run tool 'RecentOrder'");
-            await chat.RunAsync(CancellationToken.None);
+            await chat.RunAsync<AiAgentBasics.OutputSchema>(CancellationToken.None);
             chat.SetUserPrompt("run tool 'RecentOrder'");
-            await chat.RunAsync(CancellationToken.None); // Fail
+            await chat.RunAsync<AiAgentBasics.OutputSchema>(CancellationToken.None); 
         }
     }
 }

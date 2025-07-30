@@ -27,6 +27,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
 
     public DateTime LastMessageAt;
     public DateTime CreatedAt = DateTime.UtcNow;
+    public TimeSpan? Expires;
     public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration)
     {
         if (Messages.Count > 0)
@@ -81,16 +82,16 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
             throw new InvalidOperationException("conversation document is not initialized. Call Initialize() first.");
     }
 
-    public BlittableJsonReaderObject ToBlittable(JsonOperationContext context, AiAgentConfiguration configuration, TimeSpan? expiration = null)
+    public BlittableJsonReaderObject ToBlittable(JsonOperationContext context, AiAgentConfiguration configuration)
     {
         var metadata = new DynamicJsonValue
         {
             [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.AiAgentConversationCollection,
         };
         
-        if (expiration.HasValue)
+        if (Expires.HasValue)
         {
-            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expiration.Value);
+            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(Expires.Value);
         }
 
         var conversation = ToJson();
@@ -133,6 +134,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
             [nameof(OpenActionCalls)] = DynamicJsonValue.Convert(OpenActionCalls),
             [nameof(LastMessageAt)] = LastMessageAt,
             [nameof(CreatedAt)] = CreatedAt,
+            [nameof(Expires)] = Expires,
         };
     }
     
@@ -168,6 +170,8 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
             throw new ArgumentException($"Missing LastMessageAt in '{id}' conversation document");
         if (document.TryGet(nameof(CreatedAt), out DateTime createAt) == false)
             throw new ArgumentException($"Missing CreatedAt in '{id}' conversation document");
+        if (document.TryGet(nameof(Expires), out TimeSpan? expires) == false)
+            throw new ArgumentException($"Missing Expires in '{id}' conversation document");
 
         var openTools = new Dictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
@@ -187,6 +191,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
             OpenActionCalls = openTools,
             LastMessageAt = lastMessageAt,
             CreatedAt = createAt,
+            Expires = expires,
         };
     }
 

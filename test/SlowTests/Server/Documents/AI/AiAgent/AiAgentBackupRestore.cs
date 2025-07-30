@@ -39,7 +39,7 @@ public class AiAgentBackupRestore : ReplicationTestBase
             var agents = GetAgents(aiConfig);
             foreach (var agentConfig in agents)
             {
-                await source.AI.CreateAgentAsync<AiAgentBasics.OutputSchema>(agentConfig);
+                await source.AI.CreateAgentAsync(agentConfig, AiAgentBasics.OutputSchema.Instance);
             }
 
             var backupOperation = await source.Maintenance.SendAsync(new BackupOperation(new BackupConfiguration
@@ -86,7 +86,6 @@ public class AiAgentBackupRestore : ReplicationTestBase
         var agent0 = new AiAgentConfiguration("shopping assistant", aiConfig.ConnectionStringName,
             "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
         agent0.Identifier = "shopping-assistant";
-        agent0.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
         agent0.Parameters.Add(new AiAgentParameter("company"));
         agent0.ChatTrimming = null;
         agent0.Queries =
@@ -110,7 +109,6 @@ public class AiAgentBackupRestore : ReplicationTestBase
 
         var agent1 = new AiAgentConfiguration("warehouse manager", aiConfig.ConnectionStringName, "You are an AI agent managing a warehouse.");
         agent1.Identifier = "warehouse-manager";
-        agent1.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
         agent1.Actions =
         [
             new AiAgentToolAction

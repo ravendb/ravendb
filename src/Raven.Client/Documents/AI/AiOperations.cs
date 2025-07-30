@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -52,10 +51,31 @@ public class AiOperations
     /// <typeparam name="TSchema">The schema type the AI agent should use.</typeparam>
     /// <param name="configuration">The configuration to assign to the agent.</param>
     /// <returns>The result of the creation or update operation.</returns>
-    public async Task<AiAgentConfigurationResult> CreateAgentAsync<TSchema>(AiAgentConfiguration configuration, CancellationToken token = default) where TSchema : new()
+    public async Task<AiAgentConfigurationResult> CreateAgentAsync<TSchema>(AiAgentConfiguration configuration, TSchema schema, CancellationToken token = default) where TSchema : new()
     {
-        return await _executor.SendAsync(new AddOrUpdateAiAgentOperation<TSchema>(configuration), token).ConfigureAwait(false);
+        return await _executor.SendAsync(AddOrUpdateAiAgentOperation.Create(configuration, schema), token).ConfigureAwait(false);
     }
+
+    /// <summary>
+    /// Creates or updates an AI agent configuration (with the given schema) on the database.
+    /// </summary>
+    /// <param name="configuration">The configuration to assign to the agent.</param>
+    /// <returns>The result of the creation or update operation.</returns>
+    public AiAgentConfigurationResult CreateAgent(AiAgentConfiguration configuration)
+    {
+        return AsyncHelpers.RunSync(() => CreateAgentAsync(configuration));
+    }
+    
+    /// <summary>
+    /// Asynchronously creates or updates an AI agent configuration (with the given schema) on the database.
+    /// </summary>
+    /// <param name="configuration">The configuration to assign to the agent.</param>
+    /// <returns>The result of the creation or update operation.</returns>
+    public async Task<AiAgentConfigurationResult> CreateAgentAsync(AiAgentConfiguration configuration, CancellationToken token = default)
+    {
+        return await _executor.SendAsync(new AddOrUpdateAiAgentOperation(configuration), token).ConfigureAwait(false);
+    }
+    
 
     /// <summary>
     /// Creates or updates an AI agent configuration (with the given schema) on the database.
@@ -63,11 +83,11 @@ public class AiOperations
     /// <typeparam name="TSchema">The schema type the AI agent should use.</typeparam>
     /// <param name="configuration">The configuration to assign to the agent.</param>
     /// <returns>The result of the creation or update operation.</returns>
-    public AiAgentConfigurationResult CreateAgent<TSchema>(AiAgentConfiguration configuration) where TSchema : new()
+    public AiAgentConfigurationResult CreateAgent<TSchema>(AiAgentConfiguration configuration, TSchema schema) where TSchema : new()
     {
-        return AsyncHelpers.RunSync(() => CreateAgentAsync<TSchema>(configuration));
+        return AsyncHelpers.RunSync(() => CreateAgentAsync(configuration, schema));
     }
-    
+
     /// <summary>
     /// Retrieves the AI agent configuration for a specific agent asynchronously.
     /// </summary>
@@ -97,32 +117,12 @@ public class AiOperations
     public GetAiAgentsResponse GetAgents() => AsyncHelpers.RunSync(() => GetAgentsAsync());
 
     /// <summary>
-    /// Create starts a new conversation with an AI agent using a dictionary of parameters.
+    /// Opens a conversation with an AI agent.
     /// </summary>
-    /// <typeparam name="TSchema">The schema type for the conversation response.</typeparam>
-    /// <param name="agentId">The ID of the AI agent to conversation with.</param>
-    /// <param name="parameters">Required conversation parameters.</param>
-    public IAiConversationOperations<TSchema> StartConversation<TSchema>(string agentId, Dictionary<string, object> parameters) where TSchema : new() => new AiConversation<TSchema>(this, agentId, parameters);
-    
-    /// <summary>
-    /// Create a new conversation with an AI agent using a dictionary of parameters.
-    /// </summary>
-    /// <typeparam name="TSchema">The schema type for the conversation response.</typeparam>
-    /// <param name="agentId">The ID of the AI agent to conversation with.</param>
-    /// <param name="builder">A builder to define the required conversation parameters.</param>
-    public IAiConversationOperations<TSchema> StartConversation<TSchema>(string agentId, Action<IAiAgentParametersBuilder> builder) where TSchema : new()
-    {
-        var aiAgentParameters = new AiAgentParametersBuilder();
-        builder?.Invoke(aiAgentParameters);
-        return StartConversation<TSchema>(agentId, aiAgentParameters.GetParameters());
-    }
-
-    /// <summary>
-    /// Continues a conversation using a fluent parameter builder.
-    /// Allow to update the conversation with the new prompt or tool responses.
-    /// </summary>
-    /// <typeparam name="TSchema">The schema type for the conversation response.</typeparam>
-    /// <param name="conversationId">The ID of the existing conversation.</param>
-    /// <param name="changeVector">Optional parameter to control concurrency.</param>
-    public IAiConversationOperations<TSchema> ResumeConversation<TSchema>(string conversationId, string changeVector = null) where TSchema : new() => new AiConversation<TSchema>(this, conversationId, changeVector);
+    /// <param name="agentId">The ID of the AI agent to start a conversation with.</param>
+    /// <param name="conversationId">The unique identifier for the conversation.</param>
+    /// <param name="creationOptions">Options for creating the conversation.</param>
+    /// <param name="changeVector">An optional change vector for concurrency control.</param>
+    public IAiConversationOperations Conversation(string agentId, string conversationId, AiConversationCreationOptions creationOptions, string changeVector = null) => 
+        new AiConversation(this, agentId, conversationId, creationOptions, changeVector);
 }

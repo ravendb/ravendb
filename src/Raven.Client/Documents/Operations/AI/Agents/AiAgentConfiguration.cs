@@ -84,11 +84,6 @@ public class AiAgentConfiguration : IDynamicJson
     public List<AiAgentToolAction> Actions { get; set; } = [];
 
     /// <summary>
-    /// Controls persistence behavior of chats - whether the chat history will be persistent or not
-    /// </summary>
-    public AiAgentPersistenceConfiguration Persistence { get; set; }
-
-    /// <summary>
     /// The required parameters that are used in the agent's queries and actions.
     /// Which has to be provided by the user each time we start a new chat.
     /// </summary>
@@ -149,7 +144,6 @@ public class AiAgentConfiguration : IDynamicJson
             [nameof(SampleObject)] = SampleObject,
             [nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null,
             [nameof(Actions)] = Actions != null ? new DynamicJsonArray(Actions) : null,
-            [nameof(Persistence)] = Persistence?.ToJson(),
             [nameof(Parameters)] = new DynamicJsonArray(Parameters),
             [nameof(ChatTrimming)] = ChatTrimming?.ToJson(),
             [nameof(MaxModelIterationsPerCall)] = MaxModelIterationsPerCall

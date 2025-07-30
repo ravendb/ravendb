@@ -29,13 +29,13 @@ namespace SlowTests.Issues
 
             var agent = CreateShoppingAssistant(config.ConnectionStringName);
 
-            var agentId = (await store.AI.CreateAgentAsync<OutputSchema>(agent)).Identifier;
+            var agentId = (await store.AI.CreateAgentAsync(agent, OutputSchema.Instance)).Identifier;
 
-            var chat = store.AI.StartConversation<OutputSchema>(agentId, p => p.AddParameter("Company", "companies/90-A"));
+            var chat = store.AI.Conversation(agentId, "chats/",new AiConversationCreationOptions(p => p.AddParameter("Company", "companies/90-A")));
 
             chat.SetUserPrompt("what are my recent orders?");
 
-            var ex = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
+            var ex = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<OutputSchema>(CancellationToken.None));
             Assert.Contains("AiAgentParameter' is missing", ex.Message, StringComparison.OrdinalIgnoreCase);
         }
 
@@ -49,20 +49,18 @@ namespace SlowTests.Issues
             var agent = new AiAgentConfiguration("chef assistant", config.ConnectionStringName,
                 "You are a chef that know to recommend customers what to eat.");
 
-            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
-
             agent.Actions =
             [
                 new AiAgentToolAction { Name = "RecentOrder", Description = "Get the recent orders of the current user", ParametersSampleObject = "{}" }
             ];
 
-            var agentId = (await store.AI.CreateAgentAsync<ChefOutputSchema>(agent)).Identifier;
+            var agentId = (await store.AI.CreateAgentAsync(agent, ChefOutputSchema.Instance)).Identifier;
 
-            var chat = store.AI.StartConversation<ChefOutputSchema>(agentId, builder: null);
+            var chat = store.AI.Conversation(agentId, "chats/", creationOptions: null);
             chat.SetUserPrompt("recommend me what to eat for launch, based on my recent orders and tell me where to but it from based on the restaurant I have ordered from");
-            var result = await chat.RunAsync(CancellationToken.None);
+            var result = await chat.RunAsync<ChefOutputSchema>(CancellationToken.None);
 
-            if (result == AiConversationResult.ActionRequired)
+            if (result.Status == AiConversationResult.ActionRequired)
             {
                 
                 foreach (var request in chat.RequiredActions())
@@ -79,11 +77,11 @@ namespace SlowTests.Issues
                         }
                     });
                 }
-                result = await chat.RunAsync(CancellationToken.None);
+                result = await chat.RunAsync<ChefOutputSchema>(CancellationToken.None);
             }
 
-            Assert.Equal(AiConversationResult.Done, result);
-            Assert.NotNull(chat.Answer);
+            Assert.Equal(AiConversationResult.Done, result.Status);
+            Assert.NotNull(result.Answer);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -100,9 +98,9 @@ namespace SlowTests.Issues
                 await session.SaveChangesAsync();
             }
 
-            var chat = store.AI.StartConversation<OutputSchema>(docId, builder: null);
+            var chat = store.AI.Conversation(docId, "chats/", creationOptions: null);
             chat.SetUserPrompt("hello");
-            var ex = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync(CancellationToken.None));
+            var ex = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<ChefOutputSchema>(CancellationToken.None));
             Assert.IsType<ArgumentException>(ex.InnerException);
             Assert.Contains("'orders/1-A' doesn't exists", ex.InnerException?.Message);
         }
@@ -116,37 +114,37 @@ namespace SlowTests.Issues
                 new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
             var agent = CreateShoppingAssistant(config.ConnectionStringName);
-            var agentId = (await store.AI.CreateAgentAsync<OutputSchema>(agent)).Identifier;
+            var agentId = (await store.AI.CreateAgentAsync(agent, OutputSchema.Instance)).Identifier;
 
-            var initial = store.AI.StartConversation<OutputSchema>(
-                agentId, p => p.AddParameter("company", "companies/90-A"));
+            var initial = store.AI.Conversation(
+                agentId, "chats/",new AiConversationCreationOptions(p => p.AddParameter("company", "companies/90-A")));
             initial.SetUserPrompt("What goes well with my cheese?");
-            var done1 = await initial.RunAsync(CancellationToken.None);
-            Assert.Equal(AiConversationResult.Done, done1);
+            var done1 = await initial.RunAsync<OutputSchema>(CancellationToken.None);
+            Assert.Equal(AiConversationResult.Done, done1.Status);
 
             var convId = initial.Id;
             var originalCv = initial.ChangeVector;
             Assert.NotNull(originalCv);
 
-            var resume1 = store.AI.ResumeConversation<OutputSchema>(convId, originalCv);
+            var resume1 = store.AI.Conversation(agentId, convId, creationOptions: null, originalCv);
             resume1.SetUserPrompt("Can you suggest an alternative?");
-            var done2 = await resume1.RunAsync(CancellationToken.None);
-            Assert.Equal(AiConversationResult.Done, done2);
+            var done2 = await resume1.RunAsync<OutputSchema>(CancellationToken.None);
+            Assert.Equal(AiConversationResult.Done, done2.Status);
 
             var freshCv = resume1.ChangeVector;
             Assert.NotNull(freshCv);
             Assert.NotEqual(originalCv, freshCv);
 
-            var resume2 = store.AI.ResumeConversation<OutputSchema>(convId, originalCv);
+            var resume2 = store.AI.Conversation(agentId, convId, creationOptions: null, originalCv);
             resume2.SetUserPrompt("One more suggestion?");
             var ex = await Assert.ThrowsAsync<ConcurrencyException>(
-                () => resume2.RunAsync(CancellationToken.None));
+                () => resume2.RunAsync<OutputSchema>(CancellationToken.None));
             Assert.NotNull(resume2.ChangeVector);
 
             resume2.SetUserPrompt("Retry after collision");
-            var done3 = await resume2.RunAsync(CancellationToken.None);
-            Assert.Equal(AiConversationResult.Done, done3);
-            Assert.NotNull(resume2.Answer);
+            var done3 = await resume2.RunAsync<OutputSchema>(CancellationToken.None);
+            Assert.Equal(AiConversationResult.Done, done3.Status);
+            Assert.NotNull(done3.Answer);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -158,14 +156,14 @@ namespace SlowTests.Issues
                 new PutConnectionStringOperation<AiConnectionString>(cfg.Connection));
 
             var agent = CreateShoppingAssistant(cfg.ConnectionStringName, withActions: true);
-            var agentId = (await store.AI.CreateAgentAsync<OutputSchema>(agent)).Identifier;
+            var agentId = (await store.AI.CreateAgentAsync(agent, OutputSchema.Instance)).Identifier;
 
-            var starter = store.AI.StartConversation<OutputSchema>(agentId, builder: null);
+            var starter = store.AI.Conversation(agentId, "chats/", creationOptions: null);
             starter.SetUserPrompt(
                 "Please use ProductSearch to find the top 5 cheeses, " +
                 "then use RecentOrder to fetch my last 10 orders and answer.");
-            var firstRun = await starter.RunAsync(CancellationToken.None);
-            Assert.Equal(AiConversationResult.ActionRequired, firstRun);
+            var firstRun = await starter.RunAsync<OutputSchema>(CancellationToken.None);
+            Assert.Equal(AiConversationResult.ActionRequired, firstRun.Status);
 
             var actions = starter.RequiredActions().ToList();
             Assert.Equal(2, actions.Count);
@@ -173,41 +171,39 @@ namespace SlowTests.Issues
             var staleCv = starter.ChangeVector;
             Assert.NotNull(staleCv);
 
-            var resume1 = store.AI.ResumeConversation<OutputSchema>(starter.Id, staleCv);
+            var resume1 = store.AI.Conversation(agentId, starter.Id, creationOptions: null, staleCv);
             resume1.AddActionResponse(
                 actions[0].ToolId,
                 new { });
-            var afterFirst = await resume1.RunAsync(CancellationToken.None);
+            var afterFirst = await resume1.RunAsync<OutputSchema>(CancellationToken.None);
 
-            Assert.Equal(AiConversationResult.ActionRequired, afterFirst);
+            Assert.Equal(AiConversationResult.ActionRequired, afterFirst.Status);
 
             var cvAfterFirst = resume1.ChangeVector;
             Assert.NotEqual(staleCv, cvAfterFirst);
 
-            var resume2 = store.AI.ResumeConversation<OutputSchema>(starter.Id, staleCv);
+            var resume2 = store.AI.Conversation(agentId, starter.Id, creationOptions: null, staleCv);
             resume2.AddActionResponse(
                 actions[1].ToolId,
                 new { });
 
             await Assert.ThrowsAsync<ConcurrencyException>(
-                () => resume2.RunAsync(CancellationToken.None));
+                () => resume2.RunAsync<OutputSchema>(CancellationToken.None));
 
             Assert.NotNull(resume2.ChangeVector);
 
             resume2.AddActionResponse(
                 actions[1].ToolId,
                 new { });
-            var finalResult = await resume2.RunAsync(CancellationToken.None);
-            Assert.Equal(AiConversationResult.Done, finalResult);
-            Assert.NotNull(resume2.Answer);
+            var finalResult = await resume2.RunAsync<OutputSchema>(CancellationToken.None);
+            Assert.Equal(AiConversationResult.Done, finalResult.Status);
+            Assert.NotNull(finalResult.Answer);
         }
 
         private static AiAgentConfiguration CreateShoppingAssistant(string connectionStringName, bool withActions = false)
         {
             var agent = new AiAgentConfiguration("shopping assistant", connectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
-
-            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
 
             if (withActions == false)
                 agent.Parameters.Add(new AiAgentParameter("company"));
@@ -259,12 +255,14 @@ namespace SlowTests.Issues
 
         public class OutputSchema
         {
+            public static OutputSchema Instance = new OutputSchema();
             public string Answer = "the answer to the user question";
             public bool Relevant = true;
             public List<string> RelevantOrdersId = ["what are the relevant orders?"];
         }
         public class ChefOutputSchema
         {
+            public static ChefOutputSchema Instance = new ChefOutputSchema();
             public string Answer = "what should the customer eat";
             public List<string> PreviousMeals = ["list of previous meals"];
         }

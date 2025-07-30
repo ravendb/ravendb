@@ -28,6 +28,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
         public class OutputSchema
         {
+            public static OutputSchema Instance = new();
+
             public string Answer = "Answer to the user question";
 
             public bool Relevant = true;
@@ -54,7 +56,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
-            agent.Persistence = new AiAgentPersistenceConfiguration ("Chats", TimeSpan.FromDays(30));
             agent.Parameters.Add(new AiAgentParameter("company", "The company ID"));
             agent.Queries =
             [
@@ -74,16 +75,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            var createResult = await store.AI.CreateAgentAsync<OutputSchema>(agent);
-            var chat = store.AI.StartConversation<OutputSchema>(
+            var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
+            var chat = store.AI.Conversation(
                 createResult.Identifier,
-                builder: p => p.AddParameter("company", "companies/90-A"));
+                "chats/",
+                new AiConversationCreationOptions(builder: p => p.AddParameter("company", "companies/90-A")));
 
             chat.SetUserPrompt("what goes well with my cheese?");
-            var r = await chat.RunAsync(CancellationToken.None);
+            var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
 
-            Assert.Equal(AiConversationResult.Done, r);
-            Assert.NotNull(chat.Answer);
+            Assert.Equal(AiConversationResult.Done, r.Status);
+            Assert.NotNull(r.Answer);
             Assert.NotNull(chat.Id);
 
             var chat1 = await session.LoadAsync<dynamic>(chat.Id);
@@ -103,7 +105,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
-            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
             agent.Parameters.Add(new AiAgentParameter("company"));
             agent.Queries =
             [
@@ -123,7 +124,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
             agent.ChatTrimming = null;
-            await store.AI.CreateAgentAsync<OutputSchema>(agent);
+            await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
             var r = await store.AI.GetAgentsAsync();
             using (var context = JsonOperationContext.ShortTermSingleUse())
             {
@@ -148,7 +149,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
-            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
             agent.Parameters.Add(new AiAgentParameter("company"));
             agent.Queries =
             [
@@ -168,22 +168,21 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 }
             ];
 
-            var createResult = await store.AI.CreateAgentAsync<OutputSchema>(agent);
-            var chat = store.AI.StartConversation<OutputSchema>(
+            var createResult = await store.AI.CreateAgentAsync(agent, OutputSchema.Instance);
+            var chat = store.AI.Conversation(
                 createResult.Identifier,
-                builder: p => p.AddParameter("company", "companies/90-A"));
+                "chats/",
+                new AiConversationCreationOptions(builder: p => p.AddParameter("company", "companies/90-A")));
 
             chat.SetUserPrompt("what goes well with my cheese for recent orders?");
-            await chat.RunAsync(CancellationToken.None);
-            Assert.NotNull(chat.Answer);
+            var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+            Assert.NotNull(r.Answer);
             Assert.NotNull(chat.Id);
 
             chat.SetUserPrompt("can you give me a cheaper alternative?");
-            await chat.RunAsync(CancellationToken.None);
-            Assert.NotNull(chat.Answer);
+            r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+            Assert.NotNull(r.Answer);
             Assert.NotNull(chat.Id);
-
-            WaitForUserToContinueTheTest(store);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
@@ -197,7 +196,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = new AiAgentConfiguration("shopping-assistant", config.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
-            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
 
             agent.Actions =
             [

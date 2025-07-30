@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
@@ -11,39 +12,38 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
-public class RunConversationOperation<TSchema> : IMaintenanceOperation<ConversationResult<TSchema>> where TSchema : new()
+public class RunConversationOperation<TSchema> : IMaintenanceOperation<ConversationResult<TSchema>>
 {
     private readonly string _agentId;
     private readonly string _userPrompt;
-    private readonly Dictionary<string, object> _parameters;
+    private readonly AiConversationCreationOptions _options;
 
     private readonly string _conversationId;
     private readonly List<AiAgentActionResponse> _actionResponses;
     private readonly string _changeVector;
 
-    public RunConversationOperation(string agentId, string userPrompt, Dictionary<string, object> parameters)
+    public RunConversationOperation(
+        string agentId, 
+        string conversationId, 
+        string userPrompt, 
+        List<AiAgentActionResponse> actionResponses,
+        AiConversationCreationOptions options, 
+        string changeVector)
     {
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
-        ValidationMethods.AssertNotNullOrEmpty(userPrompt, nameof(userPrompt));
+        ValidationMethods.AssertNotNullOrEmpty(conversationId, nameof(conversationId));
 
         _agentId = agentId;
-        _userPrompt = userPrompt;
-        _parameters = parameters;
-    }
-
-    public RunConversationOperation(string conversationId, string userPrompt = null, List<AiAgentActionResponse> actionResponses = null, string changeVector = null)
-    {
-        ValidationMethods.AssertNotNullOrEmpty(conversationId, nameof(conversationId));
-     
         _conversationId = conversationId;
         _userPrompt = userPrompt;
-        _actionResponses = actionResponses;
         _changeVector = changeVector;
+        _actionResponses = actionResponses;
+        _options = options;
     }
 
     public RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
-        return new RunConversationOperationCommand(_conversationId, _agentId, _userPrompt, _parameters, _actionResponses, _changeVector, conventions);
+        return new RunConversationOperationCommand(_conversationId, _agentId, _userPrompt, _actionResponses, _options, _changeVector, conventions);
     }
 
     internal sealed class RunConversationOperationCommand : RavenCommand<ConversationResult<TSchema>>
@@ -51,44 +51,37 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         private readonly string _conversationId;
         private readonly string _agentId;
         private readonly string _prompt;
-        private readonly Dictionary<string, object> _parameters;
         private readonly List<AiAgentActionResponse> _actionResponses;
         private readonly string _changeVector;
+        private readonly AiConversationCreationOptions _options;
         private readonly DocumentConventions _conventions;
 
-        public RunConversationOperationCommand(string conversationId, string agentId, string prompt, Dictionary<string, object> parameters,
-            List<AiAgentActionResponse> actionResponses, string changeVector, DocumentConventions conventions)
+        public RunConversationOperationCommand(string conversationId, string agentId, string prompt,
+            List<AiAgentActionResponse> actionResponses, AiConversationCreationOptions options, string changeVector, DocumentConventions conventions)
         {
             _conversationId = conversationId;
             _agentId = agentId;
             _prompt = prompt;
-            _parameters = parameters;
             _actionResponses = actionResponses;
             _changeVector = changeVector;
+            _options = options;
             _conventions = conventions;
         }
         public override bool IsReadRequest => false;
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
-            url = $"{node.Url}/databases/{node.Database}/ai/agent";
-            if (string.IsNullOrEmpty(_agentId) == false)
-            {
-                url += $"?agentId={Uri.EscapeDataString(_agentId)}";
-
-            }
-            if (string.IsNullOrEmpty(_conversationId) == false)
-            {
-                url += $"?conversationId={Uri.EscapeDataString(_conversationId)}";
-            }
-
+            url = $"{node.Url}/databases/{node.Database}/ai/agent" +
+                  $"?conversationId={Uri.EscapeDataString(_conversationId)}&agentId={Uri.EscapeDataString(_agentId)}";
+            
             if (_changeVector != null)
                 url += $"&changeVector={Uri.EscapeDataString(_changeVector)}";
 
             var body = new ConversionRequestBody
             {
-                Parameters = _parameters ?? new Dictionary<string, object>(),
+                Parameters = _options?.Parameters ?? new Dictionary<string, object>(),
                 ActionResponses = _actionResponses,
-                UserPrompt = _prompt
+                UserPrompt = _prompt,
+                Options = _options
             };
 
             var request = new HttpRequestMessage
@@ -118,6 +111,7 @@ internal class ConversionRequestBody : IDynamicJson
     public Dictionary<string, object> Parameters { get; set; }
     public List<AiAgentActionResponse> ActionResponses { get; set; }
     public string UserPrompt { get; set; }
+    public AiConversationCreationOptions Options { get; set; }
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
@@ -125,6 +119,7 @@ internal class ConversionRequestBody : IDynamicJson
             [nameof(Parameters)] = DynamicJsonValue.Convert(Parameters),
             [nameof(ActionResponses)] = ActionResponses == null ? null : new DynamicJsonArray(ActionResponses.Select(r => r.ToJson())), 
             [nameof(UserPrompt)] = UserPrompt,
+            [nameof(Options)] = Options?.ToJson()
         };
     }
 }
@@ -134,12 +129,12 @@ public class ConversationResult<TSchema>
     public string ConversationId { get; set; }
     public string ChangeVector { get; set; }
     public TSchema Response { get; set; }
-    public AiUsage Usage { get; set; }
+    public AiUsage TotalUsage { get; set; }
     public List<AiAgentActionRequest> ActionRequests { get; set; }
 
     internal static ConversationResult<TSchema> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
     {
-        response.TryGet(nameof(Usage), out BlittableJsonReaderObject usage);
+        response.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject usage);
         response.TryGet(nameof(Response), out BlittableJsonReaderObject result);
         response.TryGet(nameof(ConversationId), out string conversationId);
         response.TryGet(nameof(ChangeVector), out string changeVector);
@@ -160,7 +155,7 @@ public class ConversationResult<TSchema>
             ConversationId = conversationId,
             ChangeVector = changeVector,
             ActionRequests = requests,
-            Usage = JsonDeserializationClient.AiUsage(usage),
+            TotalUsage = JsonDeserializationClient.AiUsage(usage),
             Response = result == null ? default : conventions.Serialization.DefaultConverter.FromBlittable<TSchema>(result, conversationId)
         };
     }
