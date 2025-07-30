@@ -176,7 +176,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                         messages={messages}
                                         toolQueries={config.data?.Queries}
                                         toolActions={config.data?.Actions}
-                                        handleSaveParameters={(toolCallParameters) => runChat(toolCallParameters)}
+                                        handleSaveParameters={runChat}
                                         setIsWaitingForActionToolSubmit={(value: boolean) =>
                                             dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(value))
                                         }

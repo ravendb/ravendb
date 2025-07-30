@@ -3,7 +3,7 @@ import * as yup from "yup";
 
 export type AiAgentTrimmingMethod = "Tokens" | "Truncate";
 
-const schema = yup.object({
+const editSchema = yup.object({
     // Basic
     name: yup.string().required(),
     identifier: yup.string().required(),
@@ -129,18 +129,20 @@ const schema = yup.object({
             maxTokensAfterSummarization: yup.number().nullable().positive().integer(),
         })
         .nullable(),
-
-    // Test
-    test: yup.object({
-        prompt: yup.string().nullable(),
-        parameters: yup.array().of(
-            yup.object({
-                name: yup.string().nullable(),
-                value: yup.string().nullable(),
-            })
-        ),
-    }),
 });
 
-export const editAiAgentYupResolver = yupResolver(schema);
-export type EditAiAgentFormData = yup.InferType<typeof schema>;
+const testSchema = yup.object({
+    prompt: yup.string().nullable().required(),
+    parameters: yup.array().of(
+        yup.object({
+            name: yup.string().nullable(),
+            value: yup.string().nullable().required(),
+        })
+    ),
+});
+
+export const editAiAgentYupResolver = yupResolver(editSchema);
+export type EditAiAgentFormData = yup.InferType<typeof editSchema>;
+
+export const testAiAgentYupResolver = yupResolver(testSchema);
+export type TestAiAgentFormData = yup.InferType<typeof testSchema>;

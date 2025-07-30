@@ -3,31 +3,41 @@ import Button from "react-bootstrap/Button";
 import { useAppDispatch } from "components/store";
 import { editAiAgentActions } from "../store/editAiAgentSlice";
 import { useAppUrls } from "components/hooks/useAppUrls";
-import { useFormContext, useWatch } from "react-hook-form";
-import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
+import { UseFormReturn, useWatch } from "react-hook-form";
+import { EditAiAgentFormData, TestAiAgentFormData } from "../utils/editAiAgentValidation";
 import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
-export default function EditAiAgentFooter() {
+interface EditAiAgentFooterProps {
+    testForm: UseFormReturn<TestAiAgentFormData>;
+    editForm: UseFormReturn<EditAiAgentFormData>;
+}
+
+export default function EditAiAgentFooter({ testForm, editForm }: EditAiAgentFooterProps) {
     const dispatch = useAppDispatch();
 
-    const { control, setValue, formState, trigger } = useFormContext<EditAiAgentFormData>();
+    const editFormValues = useWatch({
+        control: editForm.control,
+    });
 
-    const formValues = useWatch({
-        control,
+    const testFormValues = useWatch({
+        control: testForm.control,
     });
 
     const { forCurrentDatabase } = useAppUrls();
 
     const handleOpenTest = async () => {
-        const isValid = await trigger();
+        const isValid = await editForm.trigger();
         if (!isValid) {
             return;
         }
 
-        setValue(
-            "test.parameters",
-            formValues.parameters.map((x) => ({ name: x.name, value: "" }))
+        testForm.setValue(
+            "parameters",
+            editFormValues.parameters.map((x) => ({
+                name: x.name,
+                value: testFormValues.parameters.find((y) => y.name === x.name)?.value ?? "",
+            }))
         );
         dispatch(editAiAgentActions.isTestOpenSet(true));
     };
@@ -54,7 +64,7 @@ export default function EditAiAgentFooter() {
                     variant="primary"
                     className="rounded-pill"
                     icon="save"
-                    isSpinning={formState.isSubmitting}
+                    isSpinning={editForm.formState.isSubmitting}
                 >
                     Save
                 </ButtonWithSpinner>

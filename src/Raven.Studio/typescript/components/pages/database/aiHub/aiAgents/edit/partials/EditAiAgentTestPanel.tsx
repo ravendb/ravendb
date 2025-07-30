@@ -1,6 +1,6 @@
 import { Icon } from "components/common/Icon";
-import { useFormContext, useWatch } from "react-hook-form";
-import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
+import { UseFormReturn, useWatch } from "react-hook-form";
+import { EditAiAgentFormData, TestAiAgentFormData } from "../utils/editAiAgentValidation";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { editAiAgentActions, editAiAgentSelectors } from "../store/editAiAgentSlice";
 import { FormInput } from "components/common/Form";
@@ -11,35 +11,82 @@ import _ from "lodash";
 import AiAgentMessages from "../../partials/AiAgentMessages";
 import AiAgentParametersField from "../../partials/AiAgentParametersField";
 import { editAiAgentUtils } from "../utils/editAiAgentUtils";
-import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import Button from "react-bootstrap/Button";
 import Spinner from "react-bootstrap/Spinner";
 import SizeGetter from "components/common/SizeGetter";
 import AceEditor from "components/common/ace/AceEditor";
 import ReactAce from "react-ace";
+import { tryHandleSubmit } from "components/utils/common";
+import messagePublisher from "common/messagePublisher";
+import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { compareSets } from "common/typeUtils";
 
-export default function EditAiAgentTestPanel() {
+interface EditAiAgentTestPanelProps {
+    testForm: UseFormReturn<TestAiAgentFormData>;
+    editForm: UseFormReturn<EditAiAgentFormData>;
+    allQueriesNames: string[];
+}
+
+export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNames }: EditAiAgentTestPanelProps) {
     const dispatch = useAppDispatch();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const { control, setValue } = useFormContext<EditAiAgentFormData>();
     const rawDataRef = useRef<ReactAce>(null);
 
-    const formValues = useWatch({
-        control,
+    const testFormValues = useWatch({
+        control: testForm.control,
+    });
+    const editFormValues = useWatch({
+        control: editForm.control,
     });
 
-    const isTestOpen = useAppSelector(editAiAgentSelectors.isTestOpen);
     const testDocument = useAppSelector(editAiAgentSelectors.testDocument);
     const isRawData = useAppSelector(editAiAgentSelectors.isRawData);
     const messages = useAppSelector(editAiAgentSelectors.testMessages);
     const runTestState = useAppSelector(editAiAgentSelectors.runTestState);
     const isWaitingForActionToolSubmit = useAppSelector(editAiAgentSelectors.isWaitingForActionToolSubmit);
 
+    const hasLatestParameters = compareSets(
+        editFormValues.parameters?.map((x) => x.name) ?? [],
+        testFormValues.parameters?.map((x) => x.name) ?? []
+    );
+
+    const hasMissingParameters = messages.length > 0 && testFormValues.parameters.some((x) => !x.value);
+
     const isLoading = runTestState === "loading" || isWaitingForActionToolSubmit;
+    const isTestDisabled = !hasLatestParameters || hasMissingParameters || isLoading;
+
+    const configuration = editAiAgentUtils.mapToDto(editFormValues);
 
     const runTest = async (toolCallParameters?: AiAgentToolCall[]) => {
-        await dispatch(editAiAgentActions.runTest({ databaseName, formValues, toolCallParameters })).unwrap();
-        setValue("test.prompt", "");
+        return tryHandleSubmit(async () => {
+            await dispatch(
+                editAiAgentActions.runTest({
+                    databaseName,
+                    configuration,
+                    testFormValues,
+                    toolCallParameters,
+                    allQueriesNames,
+                })
+            ).unwrap();
+
+            testForm.setValue("prompt", "");
+        });
+    };
+
+    const handleSend = async () => {
+        return tryHandleSubmit(async () => {
+            runTest();
+        });
+    };
+
+    const handleSaveParameters = async (toolCallParameters?: AiAgentToolCall[]) => {
+        if (!hasLatestParameters) {
+            messagePublisher.reportError(parametersNotUpToDateText);
+            throw new Error(parametersNotUpToDateText);
+        }
+
+        runTest(toolCallParameters);
     };
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);
@@ -54,13 +101,18 @@ export default function EditAiAgentTestPanel() {
         }
     }, [messages.length]);
 
-    const { Actions, Queries } = editAiAgentUtils.mapToDto(formValues);
-
     const handleNewChat = () => {
         dispatch(editAiAgentActions.testDocumentSet(null));
         dispatch(editAiAgentActions.testMessagesSet([]));
         dispatch(editAiAgentActions.isWaitingForActionToolSubmitSet(false));
-        setValue("test.prompt", "");
+        testForm.setValue("prompt", "");
+        testForm.setValue(
+            "parameters",
+            editFormValues.parameters.map((x) => ({
+                name: x.name,
+                value: testFormValues.parameters.find((y) => y.name === x.name)?.value ?? "",
+            }))
+        );
     };
 
     return (
@@ -69,59 +121,60 @@ export default function EditAiAgentTestPanel() {
                 <h3 className="m-0">
                     <Icon icon="test" color="primary" />
                     Test agent
+                    {(!hasLatestParameters || hasMissingParameters) && (
+                        <PopoverWithHoverWrapper message={parametersNotUpToDateText}>
+                            <Icon icon="warning" color="danger" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    )}
                 </h3>
-                {isTestOpen && (
-                    <div className="hstack gap-2">
-                        {messages.length > 0 && (
-                            <Button
-                                variant="primary"
-                                size="sm"
-                                onClick={handleNewChat}
-                                className="rounded-pill"
-                                title="Clear the current conversation and start a new chat"
-                            >
-                                New chat
-                            </Button>
-                        )}
-                        {testDocument && messages.length > 0 && (
-                            <Button
-                                variant="secondary"
-                                size="sm"
-                                onClick={() => dispatch(editAiAgentActions.isRawDataSet(!isRawData))}
-                                className="rounded-pill"
-                                title="Switch between chat and raw data display"
-                            >
-                                <Icon icon={isRawData ? "ai-agents" : "json"} margin="m-0" />
-                            </Button>
-                        )}
+                <div className="hstack gap-2">
+                    <Button
+                        variant="primary"
+                        size="sm"
+                        onClick={handleNewChat}
+                        className="rounded-pill"
+                        title="Clear the current conversation and start a new chat"
+                    >
+                        New chat
+                    </Button>
+                    {testDocument && messages.length > 0 && (
                         <Button
                             variant="secondary"
                             size="sm"
-                            onClick={() => dispatch(editAiAgentActions.isTestOpenSet(false))}
+                            onClick={() => dispatch(editAiAgentActions.isRawDataSet(!isRawData))}
                             className="rounded-pill"
+                            title="Switch between chat and raw data display"
                         >
-                            <Icon icon="close" /> Close
+                            <Icon icon={isRawData ? "ai-agents" : "json"} margin="m-0" />
                         </Button>
-                    </div>
-                )}
+                    )}
+                    <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => dispatch(editAiAgentActions.isTestOpenSet(false))}
+                        className="rounded-pill"
+                    >
+                        <Icon icon="close" /> Close
+                    </Button>
+                </div>
             </div>
             <div className="w-100 flex-grow-1 vstack justify-content-center align-items-center overflow-auto">
                 <div className="flex-grow-1 vstack w-100 overflow-auto p-2 position-relative" ref={messagesPanelRef}>
                     {messages.length === 0 && (
                         <div className="h-100 vstack justify-content-center">
                             <AiAgentParametersField
-                                control={control}
-                                name="test.parameters"
-                                value={formValues.test.parameters}
+                                control={testForm.control}
+                                name="parameters"
+                                value={testFormValues.parameters}
                             />
                         </div>
                     )}
                     {!isRawData && messages.length > 0 && (
                         <AiAgentMessages
                             messages={messages}
-                            toolQueries={Queries}
-                            toolActions={Actions}
-                            handleSaveParameters={(toolCallParameters) => runTest(toolCallParameters)}
+                            toolQueries={configuration.Queries}
+                            toolActions={configuration.Actions}
+                            handleSaveParameters={handleSaveParameters}
                             setIsWaitingForActionToolSubmit={(value: boolean) =>
                                 dispatch(editAiAgentActions.isWaitingForActionToolSubmitSet(value))
                             }
@@ -153,25 +206,25 @@ export default function EditAiAgentTestPanel() {
                         <FormInput
                             type="textarea"
                             as="textarea"
-                            control={control}
-                            name="test.prompt"
+                            control={testForm.control}
+                            name="prompt"
                             placeholder="Ask the agent anything"
                             className="rounded-2"
                             style={{ resize: "none" }}
-                            disabled={isLoading}
+                            disabled={isTestDisabled}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" && !e.shiftKey) {
                                     e.preventDefault();
-                                    runTest();
+                                    testForm.handleSubmit(handleSend)();
                                 }
                             }}
                         />
-                        {formValues.test.prompt && (
+                        {testFormValues.prompt && (
                             <ButtonWithSpinner
                                 variant="secondary"
                                 icon="arrow-up"
-                                onClick={() => runTest()}
-                                isSpinning={isLoading}
+                                onClick={testForm.handleSubmit(handleSend)}
+                                isSpinning={isTestDisabled}
                                 className="position-absolute rounded-pill"
                                 style={{ right: "10px", bottom: "10px", zIndex: 5 }}
                             />
@@ -182,3 +235,5 @@ export default function EditAiAgentTestPanel() {
         </>
     );
 }
+
+const parametersNotUpToDateText = "The parameters are not up to date. Please start a new chat.";

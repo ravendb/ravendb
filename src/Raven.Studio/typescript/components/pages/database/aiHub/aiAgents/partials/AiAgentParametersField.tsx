@@ -40,12 +40,14 @@ export default function AiAgentParametersField<
                         >
                             {x.name}
                         </Badge>
-                        <FormInput
-                            type="text"
-                            control={control}
-                            name={`${name}.${idx}.value` as TName}
-                            placeholder={`Enter a value for <${x.name}>`}
-                        />
+                        <div className="flex-grow-1">
+                            <FormInput
+                                type="text"
+                                control={control}
+                                name={`${name}.${idx}.value` as TName}
+                                placeholder={`Enter a value for <${x.name}>`}
+                            />
+                        </div>
                     </div>
                     {idx !== value.length - 1 && <hr className="my-1" />}
                 </div>

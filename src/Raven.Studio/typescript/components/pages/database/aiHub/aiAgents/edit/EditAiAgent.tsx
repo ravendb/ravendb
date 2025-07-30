@@ -1,8 +1,13 @@
 import "./EditAiAgent.scss";
 import { AboutViewHeading } from "components/common/AboutView";
 import useResizableWidth from "components/hooks/useResizableWidth";
-import { FormProvider, SubmitHandler, useForm } from "react-hook-form";
-import { EditAiAgentFormData, editAiAgentYupResolver } from "./utils/editAiAgentValidation";
+import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form";
+import {
+    EditAiAgentFormData,
+    editAiAgentYupResolver,
+    TestAiAgentFormData,
+    testAiAgentYupResolver,
+} from "./utils/editAiAgentValidation";
 import EditAiAgentFooter from "./partials/EditAiAgentFooter";
 import EditAiAgentTestPanel from "./partials/EditAiAgentTestPanel";
 import { tryHandleSubmit } from "components/utils/common";
@@ -60,17 +65,30 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
         }
     });
 
-    const form = useForm<EditAiAgentFormData>({
+    const editForm = useForm<EditAiAgentFormData>({
         defaultValues: asyncGetDefaultValues.execute,
         resolver: editAiAgentYupResolver,
     });
 
-    const { handleSubmit, formState, reset } = form;
-    const { setIsDirty } = useDirtyFlag(formState.isDirty);
+    const editFormValues = useWatch({
+        control: editForm.control,
+    });
+
+    const allQueriesNames = editFormValues.queries?.map((x) => x.name) ?? [];
+
+    const testForm = useForm<TestAiAgentFormData>({
+        defaultValues: {
+            prompt: "",
+            parameters: [],
+        },
+        resolver: testAiAgentYupResolver,
+    });
+
+    const { setIsDirty } = useDirtyFlag(editForm.formState.isDirty);
 
     const reloadForm = async () => {
         const result = await asyncGetDefaultValues.execute();
-        reset(result);
+        editForm.reset(result);
     };
 
     // Set connection strings view context
@@ -103,7 +121,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                 editAiAgentUtils.mapToDto(formData, isDocumentExpirationEnabled.data)
             );
 
-            reset(formData);
+            editForm.reset(formData);
             setIsDirty(false);
             router.navigate(appUrl.forAiAgents(databaseName));
         });
@@ -117,8 +135,8 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
     }, []);
 
     return (
-        <FormProvider {...form}>
-            <form onSubmit={handleSubmit(saveAgent)} className="h-100 edit-ai-agent">
+        <FormProvider {...editForm}>
+            <form onSubmit={editForm.handleSubmit(saveAgent)} className="h-100 edit-ai-agent">
                 <SizeGetter
                     render={({ width }) => (
                         <div className="hstack h-100">
@@ -150,7 +168,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                     )}
                                 </div>
                                 <div className="p-3 border-top border-secondary">
-                                    <EditAiAgentFooter />
+                                    <EditAiAgentFooter testForm={testForm} editForm={editForm} />
                                 </div>
                             </div>
                             {isTestOpen && (
@@ -163,7 +181,11 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                     className="panel-bg-1 h-100 vstack"
                                 >
                                     <ColumnResize handleMouseDown={testAreaResizable.handleMouseDown} />
-                                    <EditAiAgentTestPanel />
+                                    <EditAiAgentTestPanel
+                                        testForm={testForm}
+                                        editForm={editForm}
+                                        allQueriesNames={allQueriesNames}
+                                    />
                                 </div>
                             )}
                         </div>

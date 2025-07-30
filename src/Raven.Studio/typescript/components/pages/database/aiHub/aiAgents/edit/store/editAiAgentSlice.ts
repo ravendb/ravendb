@@ -4,8 +4,7 @@ import { AiAgentMessage, AiAgentRunResult, AiAgentToolCall } from "../../utils/a
 import { services } from "components/hooks/useServices";
 import { loadableData, loadStatus } from "components/models/common";
 import { createFailureState, createIdleState, createSuccessState } from "components/utils/common";
-import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
-import { editAiAgentUtils } from "../utils/editAiAgentUtils";
+import { TestAiAgentFormData } from "../utils/editAiAgentValidation";
 import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
 
 interface EditAiAgentState {
@@ -95,18 +94,24 @@ const getIsDocumentExpirationEnabled = createAsyncThunk(
 const runTest = createAsyncThunk(
     editAiAgentSlice.name + "/runTest",
     async (
-        payload: { databaseName: string; formValues: EditAiAgentFormData; toolCallParameters?: AiAgentToolCall[] },
+        payload: {
+            databaseName: string;
+            configuration: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
+            testFormValues: TestAiAgentFormData;
+            toolCallParameters?: AiAgentToolCall[];
+            allQueriesNames: string[];
+        },
         { getState }
     ): Promise<{ result: AiAgentRunResult; allQueriesNames: string[] }> => {
-        const { databaseName, formValues, toolCallParameters } = payload;
+        const { databaseName, configuration, testFormValues, toolCallParameters, allQueriesNames } = payload;
 
         const state = getState() as RootState;
         const testDocument = state.editAiAgent.testDocument;
 
         const result = await services.aiAgentService.testAiAgent(databaseName, {
-            Configuration: editAiAgentUtils.mapToDto(formValues),
-            UserPrompt: toolCallParameters?.length > 0 ? null : formValues.test.prompt,
-            Parameters: Object.fromEntries(formValues.test.parameters.map((item) => [item.name, item.value])),
+            Configuration: configuration,
+            UserPrompt: toolCallParameters?.length > 0 ? null : testFormValues.prompt,
+            Parameters: Object.fromEntries(testFormValues.parameters.map((item) => [item.name, item.value])),
             ActionResponses: toolCallParameters?.map((x) => ({
                 ToolId: x.id,
                 Content: x.arguments,
@@ -115,7 +120,7 @@ const runTest = createAsyncThunk(
             RequestBody: undefined,
         });
 
-        return { result, allQueriesNames: formValues.queries.map((x) => x.name) };
+        return { result, allQueriesNames };
     }
 );
 export const editAiAgentActions = {

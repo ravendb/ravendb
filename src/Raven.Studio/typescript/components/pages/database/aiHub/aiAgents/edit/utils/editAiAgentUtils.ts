@@ -32,10 +32,6 @@ function mapFromDto(
                 maxTokensBeforeSummarization: null,
                 maxTokensAfterSummarization: null,
             },
-            test: {
-                prompt: "",
-                parameters: [],
-            },
         };
     }
 
@@ -83,14 +79,6 @@ function mapFromDto(
             messagesLengthAfterTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthAfterTruncate,
             maxTokensBeforeSummarization: dto.ChatTrimming?.Tokens?.MaxTokensBeforeSummarization,
             maxTokensAfterSummarization: dto.ChatTrimming?.Tokens?.MaxTokensAfterSummarization,
-        },
-        test: {
-            prompt: "",
-            parameters:
-                dto.Parameters?.map((x) => ({
-                    name: x,
-                    value: "",
-                })) ?? [],
         },
     };
 }
