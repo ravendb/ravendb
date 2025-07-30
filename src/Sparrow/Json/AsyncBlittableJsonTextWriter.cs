@@ -17,35 +17,6 @@ namespace Sparrow.Json
             _cancellationToken = cancellationToken;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ValueTask<int> MaybeOuterFlushAsync()
-        {
-            var innerStream = _stream as MemoryStream;
-            if (innerStream == null)
-                ThrowInvalidTypeException(_stream?.GetType());
-            if (innerStream.Length * 2 <= innerStream.Capacity)
-                return new ValueTask<int>(0);
-
-            FlushInternal();
-            return new ValueTask<int>(OuterFlushAsync());
-        }
-
-        public async Task<int> OuterFlushAsync()
-        {
-            var innerStream = _stream as MemoryStream;
-            if (innerStream == null)
-                ThrowInvalidTypeException(_stream?.GetType());
-
-            FlushInternal();
-            innerStream.TryGetBuffer(out var bytes);
-            var bytesCount = bytes.Count;
-            if (bytesCount == 0)
-                return 0;
-            await _outputStream.WriteAsync(bytes.Array, bytes.Offset, bytesCount, _cancellationToken).ConfigureAwait(false);
-            innerStream.SetLength(0);
-            return bytesCount;
-        }
-
         public async ValueTask WriteStreamAsync(Stream stream, CancellationToken token = default)
         {
             await FlushAsync(token).ConfigureAwait(false);
