@@ -1315,8 +1315,7 @@ namespace Raven.Server
                         // to nudge all the nodes in the cluster to check the replacement state.
                         // If a node confirmed but failed with the actual replacement (e.g. file permissions)
                         // this will make sure it will try again in the next round (1 hour).
-                        await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand())
-                            .ConfigureAwait(false);
+                        await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateCommand());
                         return null;
                     }
 
@@ -1327,8 +1326,7 @@ namespace Raven.Server
                     {
                         // This is for the case where all nodes confirmed they received the replacement cert but
                         // not all nodes have made the actual change yet.
-                        await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateReplacementCommand())
-                                         .ConfigureAwait(false);
+                        await ServerStore.SendToLeaderAsync(new RecheckStatusOfServerCertificateReplacementCommand());
                     }
 
                     return null;
@@ -1522,7 +1520,7 @@ namespace Raven.Server
                 });
                 var content = new StringContent(licensePayload, Encoding.UTF8, "application/json");
 
-                response = await ApiHttpClient.PostAsync("/api/v1/dns-n-cert/user-domains", content).ConfigureAwait(false);
+                response = await ApiHttpClient.PostAsync("/api/v1/dns-n-cert/user-domains", content);
 
                 response.EnsureSuccessStatusCode();
             }
@@ -2023,8 +2021,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    await ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef, RaftIdGenerator.NewId()))
-                        .ConfigureAwait(false);
+                    await ServerStore.SendToLeaderAsync(new PutCertificateWithSamePinningHashCommand(certificate.Thumbprint, newCertDef, RaftIdGenerator.NewId()));
                 }
                 catch (Exception e)
                 {
@@ -2245,7 +2242,7 @@ namespace Raven.Server
         {
             Task.Factory.StartNew(async () =>
             {
-                var tcpClient = await AcceptTcpClientAsync(listener).ConfigureAwait(false);
+                var tcpClient = await AcceptTcpClientAsync(listener);
                 if (tcpClient == null)
                     return;
 
@@ -2253,8 +2250,7 @@ namespace Raven.Server
                 ListenToNewTcpConnection(listener);
 
                 if (ServerStore.Initialized == false)
-                    await ServerStore.InitializationCompleted.WaitAsync()
-                                                             .ConfigureAwait(false);
+                    await ServerStore.InitializationCompleted.WaitAsync();
 
                 EndPoint remoteEndPoint = null;
                 X509Certificate2 cert = null;
@@ -2278,7 +2274,7 @@ namespace Raven.Server
 
                     try
                     {
-                        (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream).ConfigureAwait(false);
+                        (stream, cert) = await AuthenticateAsServerIfSslNeeded(stream);
                     }
                     catch (Exception e)
                     {
@@ -2310,7 +2306,7 @@ namespace Raven.Server
 
                             try
                             {
-                                header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp).ConfigureAwait(false);
+                                header = await NegotiateOperationVersion(stream, buffer, tcpClient, tcpAuditLog, cert, tcp);
                             }
                             catch (Exception e)
                             {
@@ -2331,7 +2327,7 @@ namespace Raven.Server
                                 tcp.Stream = stream;
                             }
 
-                            await DispatchTcpConnection(header, tcp, buffer, cert).ConfigureAwait(false);
+                            await DispatchTcpConnection(header, tcp, buffer, cert);
 
                             if (TrafficWatchManager.HasRegisteredClients)
                                 DispatchTcpMessageToTrafficWatch(remoteEndPoint, header, cert);
@@ -2344,7 +2340,7 @@ namespace Raven.Server
                             if (_tcpLogger.IsInfoEnabled)
                                 _tcpLogger.Info("Failed to process TCP connection run", e);
 
-                            await SendErrorIfPossible(tcp, e).ConfigureAwait(false);
+                            await SendErrorIfPossible(tcp, e);
                             try
                             {
                                 tcp?.Dispose();
@@ -2393,13 +2389,13 @@ namespace Raven.Server
                 return;
             }
 
-            if (await DispatchServerWideTcpConnection(tcp, header, buffer).ConfigureAwait(false))
+            if (await DispatchServerWideTcpConnection(tcp, header, buffer))
             {
                 tcp = null; //do not keep reference -> tcp will be disposed by server-wide connection handlers
                 return;
             }
 
-            await DispatchDatabaseTcpConnection(tcp, header, buffer, certificate).ConfigureAwait(false);
+            await DispatchDatabaseTcpConnection(tcp, header, buffer, certificate);
         }
 
         private async Task<TcpConnectionHeaderMessage> NegotiateOperationVersion(
@@ -2428,7 +2424,7 @@ namespace Raven.Server
                         // we don't want to allow external (and anonymous) users to send us unlimited data
                         // a maximum of 2 KB for the header is big enough to include any valid header that
                         // we can currently think of
-                        maxSize: 1024 * 2).ConfigureAwait(false))
+                        maxSize: 1024 * 2))
                     {
                         if (count++ > maxRetries)
                         {
@@ -2486,7 +2482,7 @@ namespace Raven.Server
                             $"Didn't agree on {header.Operation} protocol version: {header.OperationVersion} will request to use version: {supported}.");
                     }
 
-                    await RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch, supported).ConfigureAwait(false);
+                    await RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch, supported);
                 }
 
                 bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err, out TcpConnectionStatus statusResult);
@@ -2500,7 +2496,7 @@ namespace Raven.Server
 
                 await RespondToTcpConnection(stream, context, err,
                     authSuccessful ? TcpConnectionStatus.Ok : statusResult,
-                    supported, licensedFeatures: header.LicensedFeatures).ConfigureAwait(false);
+                    supported, licensedFeatures: header.LicensedFeatures);
 
                 tcp.ProtocolVersion = supported;
 
@@ -2540,7 +2536,7 @@ namespace Raven.Server
             {
                 try
                 {
-                    return await listener.AcceptTcpClientAsync().ConfigureAwait(false);
+                    return await listener.AcceptTcpClientAsync();
                 }
                 catch (ObjectDisposedException)
                 {
@@ -2570,7 +2566,7 @@ namespace Raven.Server
 
                     try
                     {
-                        await Task.Delay(TimeSpan.FromSeconds(backoffSecondsDelay), ServerStore.ServerShutdown).ConfigureAwait(false);
+                        await Task.Delay(TimeSpan.FromSeconds(backoffSecondsDelay), ServerStore.ServerShutdown);
                     }
                     catch (OperationCanceledException)
                     {
@@ -2647,7 +2643,7 @@ namespace Raven.Server
                         ["Message"] = e.Message
                     });
 
-                    await errorWriter.FlushAsync().ConfigureAwait(false);
+                    await errorWriter.FlushAsync();
                 }
 
             }
@@ -2693,8 +2689,7 @@ namespace Raven.Server
             if (tcp.Operation == TcpConnectionHeaderMessage.OperationTypes.Cluster)
             {
                 var tcpClient = tcp.TcpClient.Client;
-                await ServerStore.ClusterAcceptNewConnectionAsync(tcp, header, tcp.Dispose, tcpClient.RemoteEndPoint)
-                                 .ConfigureAwait(false);
+                await ServerStore.ClusterAcceptNewConnectionAsync(tcp, header, tcp.Dispose, tcpClient.RemoteEndPoint);
                 return true;
             }
 
@@ -2707,7 +2702,7 @@ namespace Raven.Server
                     "maintenance-heartbeat-header",
                     BlittableJsonDocumentBuilder.UsageMode.None,
                     buffer
-                ).ConfigureAwait(false))
+                ))
                 {
                     var maintenanceHeader = JsonDeserializationRachis<ClusterMaintenanceSupervisor.ClusterMaintenanceConnectionHeader>.Deserialize(headerJson);
 
@@ -2800,7 +2795,7 @@ namespace Raven.Server
                     {
                         var shardedReplicationLoader = tcp.DatabaseContext.Replication;
 
-                        await shardedReplicationLoader.AcceptIncomingConnectionAsync(tcp, header, bufferToCopy).ConfigureAwait(false);
+                        await shardedReplicationLoader.AcceptIncomingConnectionAsync(tcp, header, bufferToCopy);
                         break;
                     }
 
@@ -3013,8 +3008,7 @@ namespace Raven.Server
                     await ServerStore.SendToLeaderAsync(new RegisterReplicationHubAccessCommand(database, hub, access, certificate, RaftIdGenerator.NewId())
                     {
                         RegisteringSamePublicKeyPinningHash = true
-                    })
-                        .ConfigureAwait(false);
+                    });
                 }
                 catch (Exception e)
                 {

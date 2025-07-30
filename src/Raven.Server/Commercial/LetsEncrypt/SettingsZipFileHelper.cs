@@ -52,18 +52,16 @@ public static class SettingsZipFileHelper
                     {
                         var export = parameters.CompleteClusterConfigurationResult.ClientCert.Export(X509ContentType.Pfx);
                         if (parameters.Token != CancellationToken.None)
-                            await entryStream.WriteAsync(export, parameters.Token)
-                                             .ConfigureAwait(false);
+                            await entryStream.WriteAsync(export, parameters.Token);
                         else
-                            await entryStream.WriteAsync(export, CancellationToken.None)
-                                             .ConfigureAwait(false);
+                            await entryStream.WriteAsync(export, CancellationToken.None);
                     }
 
                     await LetsEncryptCertificateUtil.WriteCertificateAsPemToZipArchiveAsync(
                         $"admin.client.certificate.{parameters.CompleteClusterConfigurationResult.Domain}",
                         parameters.CompleteClusterConfigurationResult.CertBytes,
-                        null, archive)
-                        .ConfigureAwait(false);
+                        null,
+                        archive);
                 }
                 catch (Exception e)
                 {
@@ -76,8 +74,7 @@ public static class SettingsZipFileHelper
                     string settingsPath = parameters.OnSettingsPath.Invoke();
                     await using (var fs = SafeFileStream.Create(settingsPath, FileMode.Open, FileAccess.Read))
                     {
-                        settingsJson = await context.ReadForMemoryAsync(fs, "settings-json")
-                                                    .ConfigureAwait(false);
+                        settingsJson = await context.ReadForMemoryAsync(fs, "settings-json");
                     }
                 }
                 else
@@ -87,8 +84,7 @@ public static class SettingsZipFileHelper
                         ms2.WriteByte((byte)'{');
                         ms2.WriteByte((byte)'}');
                         ms2.Position = 0;
-                        settingsJson = await context.ReadForMemoryAsync(ms2, "settings-json")
-                                                    .ConfigureAwait(false);
+                        settingsJson = await context.ReadForMemoryAsync(ms2, "settings-json");
                     }
                 }
 
@@ -108,8 +104,7 @@ public static class SettingsZipFileHelper
                         await using (var entryStream = entry.Open())
                         await using (var writer = new StreamWriter(entryStream))
                         {
-                            await writer.WriteAsync(licenseString)
-                                        .ConfigureAwait(false);
+                            await writer.WriteAsync(licenseString);
                         }
                     }
                     catch (Exception e)
@@ -128,8 +123,7 @@ public static class SettingsZipFileHelper
                 if (parameters.SetupInfo.Environment != StudioConfiguration.StudioEnvironment.None)
                 {
                     if (parameters.OnPutServerWideStudioConfigurationValues != null && parameters.ZipOnly == false)
-                        await parameters.OnPutServerWideStudioConfigurationValues(parameters.SetupInfo.Environment)
-                                        .ConfigureAwait(false);
+                        await parameters.OnPutServerWideStudioConfigurationValues(parameters.SetupInfo.Environment);
                 }
 
                 var certificateFileName = $"cluster.server.certificate.{parameters.CompleteClusterConfigurationResult.Domain}.pfx";
@@ -140,8 +134,7 @@ public static class SettingsZipFileHelper
                 {
                     await using (var certFile = SafeFileStream.Create(certPath, FileMode.Create))
                     {
-                        await certFile.WriteAsync(parameters.CompleteClusterConfigurationResult.ServerCertBytes, parameters.Token)
-                                      .ConfigureAwait(false);
+                        await certFile.WriteAsync(parameters.CompleteClusterConfigurationResult.ServerCertBytes, parameters.Token);
                     } // we'll be flushing the directory when we'll write the settings.json
 
                     if (PlatformDetails.RunningOnPosix)
