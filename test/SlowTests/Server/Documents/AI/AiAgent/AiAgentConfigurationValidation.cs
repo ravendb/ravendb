@@ -58,6 +58,26 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
         [RavenTheory(RavenTestCategory.Ai)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+        public async Task ThrowOnDuplicateAgentParameter(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore(options);
+
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            using var session = store.OpenAsyncSession();
+
+            var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
+                "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
+
+            agent.Parameters.Add(new AiAgentParameter("company","good company"));
+            agent.Parameters.Add(new AiAgentParameter("company"));
+
+            var e = await Assert.ThrowsAsync<RavenException>(() => store.AI.CreateAgentAsync<AiAgentBasics.OutputSchema>(agent));
+            Assert.Contains("Duplicate parameter names found in agent configuration: company", e.Message);
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
         public async Task ThrowOnDuplicateToolParameterUsage(Options options, GenAiConfiguration config)
         {
             using var store = GetDocumentStore(options);
@@ -71,7 +91,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
 
-            agent.Parameters.Add("company");
+            agent.Parameters.Add(new AiAgentParameter("company"));
             agent.Queries =
             [
                 new AiAgentToolQuery
@@ -110,7 +130,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
 
-            agent.Parameters.Add("company");
+            agent.Parameters.Add(new AiAgentParameter("company"));
             agent.Queries =
             [
                 new AiAgentToolQuery

@@ -30,7 +30,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
 
         foreach (var parameter in configuration.Parameters)
         {
-            if (Parameters == null || Parameters.TryGet(parameter, out object _) == false)
+            if (Parameters == null || Parameters.TryGet(parameter.Name, out object _) == false)
                 throw new ArgumentException($"Parameter '{parameter}' is missing.");
         }
 

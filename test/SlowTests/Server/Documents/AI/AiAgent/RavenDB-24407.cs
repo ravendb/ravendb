@@ -62,7 +62,7 @@ public class RavenDB_24407 : RavenTestBase
         const string systemPrompt = "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.";
         var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName, systemPrompt);
         agent.Identifier = "shopping-assistant";
-        agent.Parameters.Add("company");
+        agent.Parameters.Add(new AiAgentParameter("company"));
         agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
 
         agent.Queries =

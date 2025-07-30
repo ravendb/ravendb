@@ -31,7 +31,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             agent.Persistence = new AiAgentPersistenceConfiguration("Chats", TimeSpan.FromDays(30));
 
-            agent.Parameters.Add("company");
+            agent.Parameters.Add(new AiAgentParameter("company"));
             agent.Queries =
             [
                 new AiAgentToolQuery

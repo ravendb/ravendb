@@ -89,10 +89,10 @@ public class AiAgentConfiguration : IDynamicJson
     public AiAgentPersistenceConfiguration Persistence { get; set; }
 
     /// <summary>
-    /// Names of the required parameters that are used in the agent's queries and actions.
+    /// The required parameters that are used in the agent's queries and actions.
     /// Which has to be provided by the user each time we start a new chat.
     /// </summary>
-    public HashSet<string> Parameters { get; set; } = new ();
+    public List<AiAgentParameter> Parameters { get; set; } = new ();
 
     /// <summary>
     /// Configuration for reducing the chat messages list of the AI agent.

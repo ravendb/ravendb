@@ -87,7 +87,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent0 = new AiAgentConfiguration("shopping assistant", aiConfig.ConnectionStringName,
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent0.Identifier = "shopping-assistant";
-            agent0.Parameters.Add("company");
+            agent0.Parameters.Add(new AiAgentParameter("company"));
             agent0.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
             agent0.Queries =
             [

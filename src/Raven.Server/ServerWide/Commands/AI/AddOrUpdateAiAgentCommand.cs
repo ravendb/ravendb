@@ -142,7 +142,16 @@ namespace Raven.Server.ServerWide.Commands.AI
                 }
             }
 
-            var scopeParams = configuration.Parameters;
+            var duplicateNames = configuration.Parameters
+                .GroupBy(p => p.Name)
+                .Where(g => g.Count() > 1)
+                .Select(g => g.Key)
+                .ToList();
+
+            if (duplicateNames.Count > 0)
+                throw new InvalidOperationException($"Duplicate parameter names found in agent configuration: {string.Join(", ", duplicateNames)}");
+
+            var scopeParams = configuration.Parameters.Select(x => x.Name).ToHashSet();
             foreach (var tool in configuration.Queries)
             {
                 if (ToolNameChecker.IsMatch(tool.Name) == false)

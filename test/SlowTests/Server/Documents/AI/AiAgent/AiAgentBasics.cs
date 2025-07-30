@@ -55,7 +55,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
             agent.Persistence = new AiAgentPersistenceConfiguration ("Chats", TimeSpan.FromDays(30));
-            agent.Parameters.Add("company");
+            agent.Parameters.Add(new AiAgentParameter("company", "The company ID"));
             agent.Queries =
             [
                 new AiAgentToolQuery
@@ -104,7 +104,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
             agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
-            agent.Parameters.Add("company");
+            agent.Parameters.Add(new AiAgentParameter("company"));
             agent.Queries =
             [
                 new AiAgentToolQuery
@@ -149,7 +149,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
             agent.Identifier = "shopping-assistant";
             agent.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
-            agent.Parameters.Add("company");
+            agent.Parameters.Add(new AiAgentParameter("company"));
             agent.Queries =
             [
                 new AiAgentToolQuery
