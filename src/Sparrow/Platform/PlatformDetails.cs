@@ -98,14 +98,19 @@ namespace Sparrow.Platform
             try
             {
                 string text = File.ReadAllText(midrPath).Trim(); // e.g. "410fd034"
-                if (ulong.TryParse(text, NumberStyles.HexNumber,
-                        CultureInfo.InvariantCulture, out ulong midr))
+                if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                    text = text.Substring(2);
+
+                if (ulong.TryParse(text, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong midr))
                 {
+                    ulong implementer = (midr >> 24) & 0xFF;
+                    ulong partNumber = (midr >> 4) & 0xFFF;
+
                     // ARM implementer 0x41 (A), part 0xD03 ⇒ Cortex‑A53
-                    return (midr & 0xFFF000u) == 0x41D030u;
+                    return implementer == 0x41 && partNumber == 0xD03;
                 }
             }
-            catch (Exception) // file missing, permission, etc.
+            catch (Exception)
             {
                 // ignore – fall through and report false
             }
