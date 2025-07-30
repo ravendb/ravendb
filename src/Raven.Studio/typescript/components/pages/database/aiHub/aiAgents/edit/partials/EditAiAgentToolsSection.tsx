@@ -293,14 +293,16 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
             <FormGroup>
                 <div className="d-flex mb-1 justify-content-between">
                     <FormLabel className="mb-0">Query</FormLabel>
-                    <Button
-                        variant="link"
-                        className="m-0 p-0"
-                        onClick={linkToQuery}
-                        title="Click to test this query in the Studio's Query View"
-                    >
-                        Test query
-                    </Button>
+                    {queryItem.query && (
+                        <Button
+                            variant="link"
+                            className="m-0 p-0"
+                            onClick={linkToQuery}
+                            title="Click to test this query in the Studio's Query View"
+                        >
+                            Test query
+                        </Button>
+                    )}
                 </div>
                 <FormAceEditor
                     aceRef={queryAceRef}
