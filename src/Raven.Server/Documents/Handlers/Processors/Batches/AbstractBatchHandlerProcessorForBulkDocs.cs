@@ -74,12 +74,12 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 if (contentType == null ||
                     contentType.StartsWith("application/json", StringComparison.OrdinalIgnoreCase))
                 {
-                    await commandsReader.BuildCommandsAsync(context, RequestHandler.RequestBodyStream(), GetIdentityPartsSeparator(), token.Token).ConfigureAwait(false);
+                    await commandsReader.BuildCommandsAsync(context, RequestHandler.RequestBodyStream(), GetIdentityPartsSeparator(), token.Token);
                 }
                 else if (contentType.StartsWith("multipart/mixed", StringComparison.OrdinalIgnoreCase) ||
                          contentType.StartsWith("multipart/form-data", StringComparison.OrdinalIgnoreCase))
                 {
-                    await commandsReader.ParseMultipart(context, RequestHandler.RequestBodyStream(), HttpContext.Request.ContentType, GetIdentityPartsSeparator(), token.Token).ConfigureAwait(false);
+                    await commandsReader.ParseMultipart(context, RequestHandler.RequestBodyStream(), HttpContext.Request.ContentType, GetIdentityPartsSeparator(), token.Token);
                 }
                 else
                     ThrowNotSupportedType(contentType);
@@ -94,16 +94,16 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 }
             }
 
-            using (var command = await commandsReader.GetCommandAsync(context).ConfigureAwait(false))
+            using (var command = await commandsReader.GetCommandAsync(context))
             {
                 if (command.IsClusterTransaction)
                 {
                     var processor = GetClusterTransactionRequestProcessor();
-                    var result = await processor.ProcessAsync(context, command, token.Token).ConfigureAwait(false);
+                    var result = await processor.ProcessAsync(context, command, token.Token);
 
                     RequestHandler.HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                    await using (AsyncBlittableJsonTextWriter.Create(context, RequestHandler.ResponseBodyStream(), out var writer))
+                    await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
                     {
                         context.Write(writer, new DynamicJsonValue
                         {
@@ -121,21 +121,21 @@ internal abstract class AbstractBatchHandlerProcessorForBulkDocs<TBatchCommand, 
                 if (parameters.NoReply.HasValue)
                     command.IncludeReply = parameters.NoReply.Value == false;
 
-                var results = await HandleTransactionAsync(context, command, indexBatchOptions, replicationBatchOptions).ConfigureAwait(false);
+                var results = await HandleTransactionAsync(context, command, indexBatchOptions, replicationBatchOptions);
 
                 if (replicationBatchOptions != null)
                 {
-                    await WaitForReplicationAsync(context, replicationBatchOptions, command.LastChangeVector).ConfigureAwait(false);
+                    await WaitForReplicationAsync(context, replicationBatchOptions, command.LastChangeVector);
                 }
 
                 if (indexBatchOptions != null)
                 {
-                    await WaitForIndexesAsync(indexBatchOptions, command.LastChangeVector, command.LastTombstoneEtag, command.ModifiedCollections).ConfigureAwait(false);
+                    await WaitForIndexesAsync(indexBatchOptions, command.LastChangeVector, command.LastTombstoneEtag, command.ModifiedCollections);
                 }
 
                 HttpContext.Response.StatusCode = (int)HttpStatusCode.Created;
 
-                await using (AsyncBlittableJsonTextWriter.Create(context, RequestHandler.ResponseBodyStream(), out var writer))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), token.Token))
                 {
                     context.Write(writer, new DynamicJsonValue
                     {

@@ -195,8 +195,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         QueryStringParameters parameters, RevisionIncludeField revisions, HashSet<AbstractTimeSeriesRange> timeSeries, string etag)
     {
         var clusterWideTx = parameters.TxMode == TransactionMode.ClusterWide;
-        var result = await GetDocumentsByIdImplAsync(context, parameters.Ids, parameters.IncludePaths, revisions, parameters.Counters, timeSeries, parameters.CompareExchange, parameters.MetadataOnly, clusterWideTx, etag)
-                                .AsTask();
+        var result = await GetDocumentsByIdImplAsync(context, parameters.Ids, parameters.IncludePaths, revisions, parameters.Counters, timeSeries, parameters.CompareExchange, parameters.MetadataOnly, clusterWideTx, etag);
 
         if (result.StatusCode == HttpStatusCode.NotFound)
         {
@@ -217,8 +216,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + result.Etag + "\"";
 
-        return await WriteDocumentsByIdResultAsync(context, parameters.MetadataOnly, clusterWideTx, result)
-                        .AsTask();
+        return await WriteDocumentsByIdResultAsync(context, parameters.MetadataOnly, clusterWideTx, result);
     }
 
     private async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsByIdResultAsync(
@@ -226,7 +224,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
     {
         long numberOfResults;
         long totalDocumentsSizeInBytes;
-        await using (AsyncBlittableJsonTextWriter.Create(context, RequestHandler.ResponseBodyStream(), out var writer))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), CancellationToken))
         {
             writer.WriteStartObject();
 
@@ -236,23 +234,20 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
             writer.WriteComma();
 
-            await WriteIncludesAsync(writer, context, nameof(GetDocumentsResult.Includes), result.Includes, CancellationToken)
-                    .ConfigureAwait(false);
+            await WriteIncludesAsync(writer, context, nameof(GetDocumentsResult.Includes), result.Includes, CancellationToken);
 
             if (result.CounterIncludes?.Count > 0)
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.CounterIncludes));
-                await result.CounterIncludes.WriteIncludesAsync(writer, context, CancellationToken)
-                                            .ConfigureAwait(false);
+                await result.CounterIncludes.WriteIncludesAsync(writer, context, CancellationToken);
             }
 
             if (result.TimeSeriesIncludes?.Count > 0)
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.TimeSeriesIncludes));
-                await result.TimeSeriesIncludes.WriteIncludesAsync(writer, context, CancellationToken)
-                                               .ConfigureAwait(false);
+                await result.TimeSeriesIncludes.WriteIncludesAsync(writer, context, CancellationToken);
             }
 
             if (result.RevisionIncludes?.Count > 0)
@@ -260,8 +255,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludes));
                 writer.WriteStartArray();
-                await result.RevisionIncludes.WriteIncludesAsync(writer, context, CancellationToken)
-                                             .ConfigureAwait(false);
+                await result.RevisionIncludes.WriteIncludesAsync(writer, context, CancellationToken);
                 writer.WriteEndArray();
             }
 
@@ -269,8 +263,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.CompareExchangeValueIncludes));
-                await writer.WriteCompareExchangeValuesAsync(result.CompareExchangeIncludes, CancellationToken)
-                                .ConfigureAwait(false);
+                await writer.WriteCompareExchangeValuesAsync(result.CompareExchangeIncludes, CancellationToken);
             }
 
             writer.WriteEndObject();
@@ -317,20 +310,18 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         long numberOfResults;
         long totalDocumentsSizeInBytes;
 
-        await using (AsyncBlittableJsonTextWriter.Create(context, RequestHandler.ResponseBodyStream(), out var writer))
+        await using (var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream(), CancellationToken))
         {
             writer.WriteStartObject();
             writer.WritePropertyName("Results");
 
             if (result.DocumentsAsync != null)
             {
-                (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, result.DocumentsAsync, metadataOnly, CancellationToken)
-                                                                         .ConfigureAwait(false);
+                (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, result.DocumentsAsync, metadataOnly, CancellationToken);
             }
             else
             {
-                (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, result.Documents, metadataOnly, CancellationToken)
-                                                                        .ConfigureAwait(false);
+                (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, result.Documents, metadataOnly, CancellationToken);
             }
 
             if (result.ContinuationToken != null)

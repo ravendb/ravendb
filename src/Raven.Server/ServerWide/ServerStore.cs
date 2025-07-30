@@ -1150,13 +1150,13 @@ namespace Raven.Server.ServerWide
             }
             while (tasks.Count != 0)
             {
-                var completedTask = await Task.WhenAny(tasks.Values).ConfigureAwait(false);
+                var completedTask = await Task.WhenAny(tasks.Values);
                 var name = tasks.Single(t => t.Value == completedTask).Key;
                 tasks.Remove(name);
                 try
                 {
-                    var database = await completedTask.ConfigureAwait(false);
-                    await database.RefreshFeaturesAsync().ConfigureAwait(false);
+                    var database = await completedTask;
+                    await database.RefreshFeaturesAsync();
                 }
                 catch (OperationCanceledException)
                 {

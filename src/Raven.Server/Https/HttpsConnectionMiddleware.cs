@@ -79,12 +79,12 @@ namespace Raven.Server.Https
         public async Task OnConnectionAsync(ConnectionContext context, Func<Task> next)
         {
             if (_server.ServerStore.Initialized == false)
-                await _server.ServerStore.InitializationCompleted.WaitAsync().ConfigureAwait(false);
+                await _server.ServerStore.InitializationCompleted.WaitAsync();
 
             var tlsConnectionFeature = context.Features.Get<ITlsConnectionFeature>();
             X509Certificate2 certificate = null;
             if (tlsConnectionFeature != null)
-                certificate = await tlsConnectionFeature.GetClientCertificateAsync(context.ConnectionClosed).ConfigureAwait(false);
+                certificate = await tlsConnectionFeature.GetClientCertificateAsync(context.ConnectionClosed);
 
             var httpConnectionFeature = context.Features.Get<IHttpConnectionFeature>();
             var authenticationStatus = _server.AuthenticateConnectionCertificate(certificate, httpConnectionFeature);
@@ -92,7 +92,7 @@ namespace Raven.Server.Https
             // build the token
             context.Features.Set<IHttpAuthenticationFeature>(authenticationStatus);
 
-            await next().ConfigureAwait(false);
+            await next();
         }
 
         internal static X509Certificate2 ConvertToX509Certificate2(X509Certificate certificate)

@@ -166,7 +166,7 @@ namespace Raven.Server.Documents
                             , rateGate, token,
                             batchSize: OperationBatchSize);
 
-                        await Database.TxMerger.Enqueue(command).ConfigureAwait(false);
+                        await Database.TxMerger.Enqueue(command);
 
                         progress.Processed += command.Processed;
 
