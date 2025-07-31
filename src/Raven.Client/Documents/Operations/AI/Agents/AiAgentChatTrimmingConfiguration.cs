@@ -53,7 +53,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// Only one trimming strategy may be active at a time. Do not use this constructor in conjunction
         /// with the summarization-based constructor.
         /// </remarks>
-        public AiAgentChatTrimmingConfiguration(AiAgentTruncateChat truncateConfig, AiAgentHistoryConfiguration historyConfig = null)
+        internal AiAgentChatTrimmingConfiguration(AiAgentTruncateChat truncateConfig, AiAgentHistoryConfiguration historyConfig = null)
         {
             Truncate = truncateConfig;
             History = historyConfig;
@@ -69,7 +69,8 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// Truncates older chat messages when the number of messages exceeds a maximum length.
         /// Cannot be used together with <see cref="Tokens"/>.
         /// </summary>
-        public AiAgentTruncateChat Truncate { get; set; }
+        [ForceJsonSerialization]
+        internal AiAgentTruncateChat Truncate { get; set; }
 
         /// <summary>
         /// Configuration settings for storing AI agent conversation history.
