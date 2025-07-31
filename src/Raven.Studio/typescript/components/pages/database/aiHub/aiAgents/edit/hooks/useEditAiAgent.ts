@@ -40,7 +40,7 @@ export default function useEditAiAgent(queryParams: QueryParams) {
 
     const isEditAiAgent = !!queryParams?.id && !queryParams.isClone;
 
-    // Set connection strings view context and reset store on unmount
+    // Set connection strings view context on mount and reset store on unmount
     useEffect(() => {
         dispatch(connectionStringsActions.viewContextSet("aiConnectionStrings"));
 
