@@ -9,6 +9,8 @@ import { useAsyncCallback } from "react-async-hook";
 import Col from "react-bootstrap/Col";
 import Dropdown from "react-bootstrap/Dropdown";
 import Spinner from "react-bootstrap/Spinner";
+import copyToClipboard from "common/copyToClipboard";
+import Button from "react-bootstrap/Button";
 
 interface AiAgentCardProps {
     config: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
@@ -53,7 +55,23 @@ export default function AiAgentCard({ config, reloadAiAgents }: AiAgentCardProps
     return (
         <Col className="p-1" sm={12} xl={6} xxl={4}>
             <div className="panel-bg-1 p-2 rounded-2 border border-secondary">
-                <h4 className="m-0">{config.Name}</h4>
+                <h4 className="m-0 text-truncate" title="AI Agent name">
+                    {config.Name}
+                </h4>
+                <div className="d-flex">
+                    <div className="text-truncate text-muted fs-5" title="AI Agent identifier">
+                        {config.Identifier}
+                    </div>
+                    <Button
+                        onClick={() => copyToClipboard.copy(config.Identifier, "Copied agent identifier to clipboard.")}
+                        size="xs"
+                        title="Copy to clipboard"
+                        variant="link"
+                        className="p-0"
+                    >
+                        <Icon icon="copy-to-clipboard" margin="ms-1" />
+                    </Button>
+                </div>
                 <div className="mt-2 text-truncate" title={config.SystemPrompt}>
                     {config.SystemPrompt}
                 </div>
