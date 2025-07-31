@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 historyId = $"{historyId}${_id}";
                 
                 putHistoryResult = _database.DocumentsStorage.Put(context, historyId, null, _historyDoc);
-                _conversation.HistoryDocuments.Add(putHistoryResult.Id);
+                _conversation.LinkedConversations.Add(putHistoryResult.Id);
             }
 
             TimeSpan? expiration = _configuration.Persistence?.ConversationExpirationInSec == null ? 

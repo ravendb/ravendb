@@ -35,7 +35,7 @@ public class RavenDB_24407 : RavenTestBase
     private class Chat
     {
         public List<Message> Messages { get; set; }
-        public List<string> HistoryDocuments { get; set; }
+        public List<string> LinkedConversations { get; set; }
     }
 
     private class Message
@@ -104,7 +104,7 @@ public class RavenDB_24407 : RavenTestBase
         var chatDoc = await GetChat(store, chat.Id);
         Assert.True(chatDoc.Messages.Count > 2, "messages count: " + chatDoc.Messages.Count);
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
-        Assert.Equal(0, chatDoc.HistoryDocuments.Count);
+        Assert.Equal(0, chatDoc.LinkedConversations.Count);
 
         // resume - with summarization
         if (summarization)
@@ -141,7 +141,7 @@ public class RavenDB_24407 : RavenTestBase
         chatDoc = await GetChat(store, chat.Id);
         Assert.Equal(2, chatDoc.Messages.Count);
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
-        Assert.Equal(withHistory ? 1 : 0, chatDoc.HistoryDocuments.Count);
+        Assert.Equal(withHistory ? 1 : 0, chatDoc.LinkedConversations.Count);
 
         // resume - still with summarization
 
@@ -153,7 +153,7 @@ public class RavenDB_24407 : RavenTestBase
         chatDoc = await GetChat(store, chat.Id);
         Assert.Equal(2, chatDoc.Messages.Count);
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
-        Assert.Equal(withHistory ? 2 : 0, chatDoc.HistoryDocuments.Count);
+        Assert.Equal(withHistory ? 2 : 0, chatDoc.LinkedConversations.Count);
 
         // resume
         agent.ChatTrimming = null;
@@ -166,7 +166,7 @@ public class RavenDB_24407 : RavenTestBase
 
         chatDoc = await GetChat(store, chat.Id);
         Assert.True(chatDoc.Messages.Count > 2, "messages count: " + chatDoc.Messages.Count);
-        Assert.Equal(withHistory ? 2 : 0, chatDoc.HistoryDocuments.Count);
+        Assert.Equal(withHistory ? 2 : 0, chatDoc.LinkedConversations.Count);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
@@ -246,7 +246,7 @@ public class RavenDB_24407 : RavenTestBase
         var chatDoc = await GetChat(store, chat.Id);
         Assert.True(chatDoc.Messages.Count > 2, "messages count: " + chatDoc.Messages.Count);
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
-        Assert.Equal(0, chatDoc.HistoryDocuments.Count);
+        Assert.Equal(0, chatDoc.LinkedConversations.Count);
 
         r = await chat.RunAsync(CancellationToken.None);
 
@@ -257,17 +257,15 @@ public class RavenDB_24407 : RavenTestBase
             // if it is 'Tool Requests' is shouldn't be summarized
             Assert.True(2 < chatDoc.Messages.Count);
             Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
-            Assert.Equal(0, chatDoc.HistoryDocuments.Count);
+            Assert.Equal(0, chatDoc.LinkedConversations.Count);
         }
         else
         {
             // if it is 'Answer' is should be summarized
             Assert.Equal(2, chatDoc.Messages.Count);
             Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
-            Assert.Equal(withHistory ? 1 : 0, chatDoc.HistoryDocuments.Count);
+            Assert.Equal(withHistory ? 1 : 0, chatDoc.LinkedConversations.Count);
         }
-
-        WaitForUserToContinueTheTest(store);
     }
 
     private async Task<Chat> GetChat(DocumentStore store, string chatId)

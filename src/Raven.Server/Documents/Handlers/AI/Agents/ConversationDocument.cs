@@ -18,12 +18,14 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
     
     public BlittableJsonReaderObject Parameters = parameters;
     public List<BlittableJsonReaderObject> Messages = [];
-    public List<string> HistoryDocuments = [];
+    public List<string> LinkedConversations = [];
     public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
     public string ChangeVector;
     public string Id;
-    public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration, string userPrompt)
+
+    public DateTime LastMessageAt;
+    public DateTime CreatedAt = DateTime.UtcNow;
     {
         if (Messages.Count > 0)
             throw new InvalidOperationException("conversation document is already initialized. Cannot re-initialize.");
@@ -80,7 +82,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
         var conversation = ToJson();
 
         conversation[Constants.Documents.Metadata.Key] = metadata;
-        conversation[nameof(HistoryDocuments)] = new DynamicJsonArray
+        conversation[nameof(LinkedConversations)] = new DynamicJsonArray
         {
             Id
         };
@@ -94,9 +96,11 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
             [nameof(Agent)] = Agent,
             [nameof(Parameters)] = Parameters,
             [nameof(Messages)] = Messages,
-            [nameof(HistoryDocuments)] = HistoryDocuments,
+            [nameof(LinkedConversations)] = LinkedConversations,
             [nameof(TotalUsage)] = TotalUsage.ToJson(),
             [nameof(OpenActionCalls)] = DynamicJsonValue.Convert(OpenActionCalls),
+            [nameof(LastMessageAt)] = LastMessageAt,
+            [nameof(CreatedAt)] = CreatedAt,
         };
     }
     
@@ -105,11 +109,13 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
 
     public void AddMessage(JsonOperationContext context, BlittableJsonReaderObject msg, AiUsage usage)
     {
+        var currentDate = DateTime.UtcNow;
         msg.Modifications ??= new DynamicJsonValue(msg);
-        msg.Modifications[DateProperty] = DateTime.UtcNow;
+        msg.Modifications[DateProperty] = currentDate;
         if (usage != null)
             msg.Modifications[UsageProperty] = usage.ToJson();
         Messages.Add(msg);
+        LastMessageAt = currentDate;
     }
 
     public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document)
@@ -120,12 +126,16 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
             throw new ArgumentException($"Missing Parameters in '{id}' conversation document");
         if (document.TryGet(nameof(Messages), out BlittableJsonReaderArray messages) == false)
             throw new ArgumentException($"Missing Messages in '{id}' conversation document");
-        if (document.TryGet(nameof(HistoryDocuments), out BlittableJsonReaderArray historyDocs) == false)
+        if (document.TryGet(nameof(LinkedConversations), out BlittableJsonReaderArray historyDocs) == false)
             throw new ArgumentException($"Missing HistoryDocuments in '{id}' conversation document");
         if (document.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject usage) == false)
             throw new ArgumentException($"AI Usage in '{id}' conversation document");
         if (document.TryGet(nameof(OpenActionCalls), out BlittableJsonReaderObject openToolCalls) == false)
             throw new ArgumentException($"Missing Open Tool Calls in '{id}' conversation document");
+        if (document.TryGet(nameof(LastMessageAt), out DateTime lastMessageAt) == false)
+            throw new ArgumentException($"Missing LastMessageAt in '{id}' conversation document");
+        if (document.TryGet(nameof(CreatedAt), out DateTime createAt) == false)
+            throw new ArgumentException($"Missing CreatedAt in '{id}' conversation document");
 
         var openTools = new Dictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
@@ -140,9 +150,11 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
         {
             Id = id,
             Messages = messages.Items.Select(m=>((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
-            HistoryDocuments = historyDocs.Items.Select(s => s.ToString()).ToList(),
+            LinkedConversations = historyDocs.Items.Select(s => s.ToString()).ToList(),
             TotalUsage = JsonDeserializationClient.AiUsage(usage),
-            OpenActionCalls = openTools
+            OpenActionCalls = openTools,
+            LastMessageAt = lastMessageAt,
+            CreatedAt = createAt,
         };
     }
 
