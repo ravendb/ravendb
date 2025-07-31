@@ -210,6 +210,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         }
 
         private const int DefaultMaxModelIterationsPerCall = 16;
+        private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
+        private const int DefaultMaxTokensAfterSummarization = 1024;
 
         public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration,
             ConversationDocument document, CancellationToken token)
@@ -281,6 +283,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 }
                 else if (reduction.Tokens != null)
                 {
+                    reduction.Tokens.MaxTokensBeforeSummarization = configuration.ChatTrimming.Tokens.MaxTokensBeforeSummarization ?? 
+                                                                    DefaultMaxTokensBeforeSummarization;
+                    reduction.Tokens.MaxTokensAfterSummarization = configuration.ChatTrimming.Tokens.MaxTokensAfterSummarization ?? 
+                                                                   DefaultMaxTokensAfterSummarization;
+
                     if (aiUsage.TotalTokens > reduction.Tokens.MaxTokensBeforeSummarization)
                     {
                         var chatBefore = reduction.History == null ? null : document.ToHistoryBlittable(context, configuration, historyExpiration);

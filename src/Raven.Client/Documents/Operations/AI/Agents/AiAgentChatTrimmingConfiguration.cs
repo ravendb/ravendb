@@ -1,4 +1,5 @@
 ﻿using System;
+using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents
@@ -101,8 +102,6 @@ namespace Raven.Client.Documents.Operations.AI.Agents
     /// </remarks>
     public class AiAgentSummarizationByTokens
     {
-        private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
-
         /// <summary>
         /// Instruction text prepended to the serialized conversation when requesting a summary.
         /// </summary>
@@ -145,7 +144,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// The maximum number of tokens allowed before summarization is triggered.
         /// When the token count of the conversation exceeds this limit, the content will be summarized.
         /// </summary>
-        public long MaxTokensBeforeSummarization { get; set; } = DefaultMaxTokensBeforeSummarization;
+        public long? MaxTokensBeforeSummarization { get; set; }
 
         /// <summary>
         /// Maximum number of tokens allowed in the generated summary.
@@ -153,7 +152,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// <value>
         /// The upper bound on the summary’s length, measured in tokens( default is <c>1024</c>).
         /// </value>
-        public long MaxTokensAfterSummarization { get; set; } = 1024;
+        public long? MaxTokensAfterSummarization { get; set; }
 
         public DynamicJsonValue ToJson()
         {
