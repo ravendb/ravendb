@@ -50,7 +50,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
             setValue(
                 "parameters",
-                config.Parameters.map((x: string) => ({ name: x, value: "" }))
+                config.Parameters.map((x) => ({ name: x.Name, value: "" }))
             );
 
             if (queryParams?.conversationId) {

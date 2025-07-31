@@ -36,16 +36,10 @@ const editSchema = yup.object({
     persistenceExpiresInSeconds: yup.number().nullable().positive().integer(),
 
     // Parameters
-    parameterInput: yup.string().test("unique-parameter", "Parameter name must be unique", function (value) {
-        if (!value) {
-            return true;
-        }
-        const parameters = this.parent.parameters || [];
-        return !parameters.some((param: { name: string }) => param.name === value);
-    }),
     parameters: yup.array().of(
         yup.object({
             name: yup.string(),
+            description: yup.string().nullable(),
         })
     ),
 
@@ -131,6 +125,19 @@ const editSchema = yup.object({
         .nullable(),
 });
 
+const parameterSchema = yup.object({
+    nameInput: yup
+        .string()
+        .nullable()
+        .required()
+        .trim()
+        .test("unique-parameter", "Parameter name must be unique", function (value, ctx) {
+            const allParameterNames = ctx.options.context.allParameterNames || [];
+            return !allParameterNames.some((name: string) => name === value);
+        }),
+    descriptionInput: yup.string().nullable(),
+});
+
 const testSchema = yup.object({
     prompt: yup.string().nullable().required(),
     parameters: yup.array().of(
@@ -143,6 +150,9 @@ const testSchema = yup.object({
 
 export const editAiAgentYupResolver = yupResolver(editSchema);
 export type EditAiAgentFormData = yup.InferType<typeof editSchema>;
+
+export const parameterAiAgentYupResolver = yupResolver(parameterSchema);
+export type ParameterAiAgentFormData = yup.InferType<typeof parameterSchema>;
 
 export const testAiAgentYupResolver = yupResolver(testSchema);
 export type TestAiAgentFormData = yup.InferType<typeof testSchema>;

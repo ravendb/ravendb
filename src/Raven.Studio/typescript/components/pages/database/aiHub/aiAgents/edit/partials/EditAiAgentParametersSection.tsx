@@ -1,32 +1,42 @@
 import { EmptySet } from "components/common/EmptySet";
 import { FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
-import { useFormContext, useFieldArray, useWatch } from "react-hook-form";
-import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
+import { useFormContext, useFieldArray, useForm, SubmitHandler } from "react-hook-form";
+import {
+    EditAiAgentFormData,
+    ParameterAiAgentFormData,
+    parameterAiAgentYupResolver,
+} from "../utils/editAiAgentValidation";
 import { FormLabel, FormGroup } from "components/common/Form";
 import Button from "react-bootstrap/Button";
-import Badge from "react-bootstrap/Badge";
+import Table from "react-bootstrap/Table";
+import OptionalLabel from "components/common/OptionalLabel";
 
 export default function EditAiAgentParametersSection() {
-    const { control, setValue, trigger } = useFormContext<EditAiAgentFormData>();
+    const editAiAgentForm = useFormContext<EditAiAgentFormData>();
 
     const parametersFieldArray = useFieldArray({
         name: "parameters",
-        control,
+        control: editAiAgentForm.control,
     });
 
-    const formValues = useWatch({
-        control,
+    const parameterForm = useForm<ParameterAiAgentFormData>({
+        defaultValues: {
+            nameInput: "",
+            descriptionInput: null,
+        },
+        resolver: parameterAiAgentYupResolver,
+        context: {
+            allParameterNames: parametersFieldArray.fields.map((field) => field.name),
+        },
     });
 
-    const handleAddParameter = async () => {
-        const isValid = await trigger("parameterInput");
-        if (!isValid || !formValues.parameterInput) {
-            return;
-        }
-
-        parametersFieldArray.append({ name: formValues.parameterInput });
-        setValue("parameterInput", "");
+    const handleAddParameter: SubmitHandler<ParameterAiAgentFormData> = async (formData) => {
+        parametersFieldArray.append({
+            name: formData.nameInput,
+            description: formData.descriptionInput,
+        });
+        parameterForm.reset();
     };
 
     return (
@@ -39,42 +49,85 @@ export default function EditAiAgentParametersSection() {
             </div>
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>
-                    <FormLabel>Define a parameter</FormLabel>
-                    <FormInput
-                        type="text"
-                        control={control}
-                        name="parameterInput"
-                        placeholder="e.g. company"
-                        addon={
-                            <Button variant="link" className="text-reset" onClick={handleAddParameter}>
-                                <Icon icon="plus" />
-                                Add parameter
-                            </Button>
-                        }
-                    />
+                    <div className="d-flex gap-2">
+                        <FormGroup className="w-25">
+                            <FormLabel>Name</FormLabel>
+                            <FormInput
+                                type="text"
+                                control={parameterForm.control}
+                                name="nameInput"
+                                placeholder="e.g. company"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                        e.preventDefault();
+                                        parameterForm.handleSubmit(handleAddParameter)();
+                                    }
+                                }}
+                            />
+                        </FormGroup>
+                        <FormGroup className="w-75">
+                            <FormLabel>
+                                Description <OptionalLabel />
+                            </FormLabel>
+                            <FormInput
+                                type="text"
+                                control={parameterForm.control}
+                                name="descriptionInput"
+                                placeholder="e.g. The company name ID"
+                                onKeyDown={(e) => {
+                                    if (e.key === "Enter" && !e.shiftKey) {
+                                        e.preventDefault();
+                                        parameterForm.handleSubmit(handleAddParameter)();
+                                    }
+                                }}
+                            />
+                        </FormGroup>
+                    </div>
+                    <div className="d-flex justify-content-end">
+                        <Button variant="info" onClick={parameterForm.handleSubmit(handleAddParameter)}>
+                            <Icon icon="plus" />
+                            Add parameter
+                        </Button>
+                    </div>
                 </FormGroup>
                 <FormGroup>
-                    <FormLabel>List of parameters</FormLabel>
+                    <FormLabel>Parameters</FormLabel>
                     {parametersFieldArray.fields.length === 0 ? (
                         <EmptySet compact className="text-muted">
                             No parameters have been defined yet
                         </EmptySet>
                     ) : (
-                        <div className="d-flex gap-2 flex-wrap">
-                            {parametersFieldArray.fields.map((field, index) => (
-                                <Badge key={field.id} bg="primary" pill>
-                                    {field.name}
-                                    <Button
-                                        variant="link"
-                                        className="p-0"
-                                        onClick={() => parametersFieldArray.remove(index)}
-                                        size="xs"
-                                        title="Delete this parameter"
-                                    >
-                                        <Icon icon="trash" margin="m-0" color="light" />
-                                    </Button>
-                                </Badge>
-                            ))}
+                        <div className="overflow-y-auto" style={{ maxHeight: "220px" }}>
+                            <Table striped>
+                                <thead>
+                                    <tr>
+                                        <th>Name</th>
+                                        <th>Description</th>
+                                        <th style={{ width: "50px" }}></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {parametersFieldArray.fields.map((field, index) => (
+                                        <tr key={field.id}>
+                                            <td>{field.name}</td>
+                                            <td className="text-truncate" style={{ maxWidth: "300px" }}>
+                                                {field.description || "-"}
+                                            </td>
+                                            <td>
+                                                <Button
+                                                    variant="link"
+                                                    className="text-danger"
+                                                    size="sm"
+                                                    onClick={() => parametersFieldArray.remove(index)}
+                                                    title="Delete this parameter"
+                                                >
+                                                    <Icon icon="trash" margin="m-0" />
+                                                </Button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </Table>
                         </div>
                     )}
                 </FormGroup>

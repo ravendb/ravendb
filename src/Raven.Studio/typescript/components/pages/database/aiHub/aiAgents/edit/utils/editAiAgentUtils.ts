@@ -18,7 +18,6 @@ function mapFromDto(
             isDocumentExpireInCustomizeEnabled: false,
             persistenceConversationIdPrefix: "",
             persistenceExpiresInSeconds: TimeInSeconds.Day * 30,
-            parameterInput: "",
             parameters: [],
             queries: [],
             actions: [],
@@ -46,10 +45,10 @@ function mapFromDto(
         isDocumentExpireInCustomizeEnabled: !!dto.Persistence.ConversationExpirationInSec,
         persistenceConversationIdPrefix: dto.Persistence.ConversationIdPrefix,
         persistenceExpiresInSeconds: dto.Persistence.ConversationExpirationInSec,
-        parameterInput: "",
         parameters:
             dto.Parameters?.map((x) => ({
-                name: x,
+                name: x.Name,
+                description: x.Description,
             })) ?? [],
         queries:
             dto.Queries?.map((x) => ({
@@ -114,7 +113,11 @@ function mapToDto(
                     ? formData.persistenceExpiresInSeconds
                     : null,
         },
-        Parameters: formData.parameters?.map((x) => x.name) ?? [],
+        Parameters:
+            formData.parameters?.map((x) => ({
+                Name: x.name,
+                Description: x.description,
+            })) ?? [],
         Queries:
             formData.queries?.map((x) => ({
                 Name: x.name,
