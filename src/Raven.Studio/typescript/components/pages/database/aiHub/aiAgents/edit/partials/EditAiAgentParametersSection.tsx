@@ -1,44 +1,24 @@
 import { EmptySet } from "components/common/EmptySet";
 import { FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
-import { useFormContext, useFieldArray, useForm, SubmitHandler } from "react-hook-form";
-import {
-    EditAiAgentFormData,
-    ParameterAiAgentFormData,
-    parameterAiAgentYupResolver,
-} from "../utils/editAiAgentValidation";
+import { UseFieldArrayReturn, Control } from "react-hook-form";
+import { EditAiAgentFormData, ParameterAiAgentFormData } from "../utils/editAiAgentValidation";
 import { FormLabel, FormGroup } from "components/common/Form";
 import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
 import OptionalLabel from "components/common/OptionalLabel";
 
-export default function EditAiAgentParametersSection() {
-    const editAiAgentForm = useFormContext<EditAiAgentFormData>();
+interface EditAiAgentParametersSectionProps {
+    control: Control<ParameterAiAgentFormData>;
+    handleSubmit: () => void;
+    parametersFieldArray: UseFieldArrayReturn<EditAiAgentFormData, "parameters", "id">;
+}
 
-    const parametersFieldArray = useFieldArray({
-        name: "parameters",
-        control: editAiAgentForm.control,
-    });
-
-    const parameterForm = useForm<ParameterAiAgentFormData>({
-        defaultValues: {
-            nameInput: "",
-            descriptionInput: null,
-        },
-        resolver: parameterAiAgentYupResolver,
-        context: {
-            allParameterNames: parametersFieldArray.fields.map((field) => field.name),
-        },
-    });
-
-    const handleAddParameter: SubmitHandler<ParameterAiAgentFormData> = async (formData) => {
-        parametersFieldArray.append({
-            name: formData.nameInput,
-            description: formData.descriptionInput,
-        });
-        parameterForm.reset();
-    };
-
+export default function EditAiAgentParametersSection({
+    control,
+    parametersFieldArray,
+    handleSubmit,
+}: EditAiAgentParametersSectionProps) {
     return (
         <>
             <h3 className="m-0 mt-3">Set agent parameters</h3>
@@ -54,13 +34,13 @@ export default function EditAiAgentParametersSection() {
                             <FormLabel>Name</FormLabel>
                             <FormInput
                                 type="text"
-                                control={parameterForm.control}
+                                control={control}
                                 name="nameInput"
                                 placeholder="e.g. company"
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" && !e.shiftKey) {
                                         e.preventDefault();
-                                        parameterForm.handleSubmit(handleAddParameter)();
+                                        handleSubmit();
                                     }
                                 }}
                             />
@@ -71,20 +51,20 @@ export default function EditAiAgentParametersSection() {
                             </FormLabel>
                             <FormInput
                                 type="text"
-                                control={parameterForm.control}
+                                control={control}
                                 name="descriptionInput"
-                                placeholder="e.g. The company name ID"
+                                placeholder="e.g. The company ID"
                                 onKeyDown={(e) => {
                                     if (e.key === "Enter" && !e.shiftKey) {
                                         e.preventDefault();
-                                        parameterForm.handleSubmit(handleAddParameter)();
+                                        handleSubmit();
                                     }
                                 }}
                             />
                         </FormGroup>
                     </div>
                     <div className="d-flex justify-content-end">
-                        <Button variant="info" onClick={parameterForm.handleSubmit(handleAddParameter)}>
+                        <Button variant="info" onClick={handleSubmit}>
                             <Icon icon="plus" />
                             Add parameter
                         </Button>
