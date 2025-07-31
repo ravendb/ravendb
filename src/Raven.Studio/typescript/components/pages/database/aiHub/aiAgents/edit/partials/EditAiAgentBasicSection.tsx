@@ -237,7 +237,8 @@ const SampleObjectSyntaxHelp = () => {
     const code = `{
     "Request": "Summarize the customer's request.",
     "Response": "Provide your response.",
-    "CustomerId": "Provide the customer ID."
+    "CustomerId": "Provide the customer ID.",
+    "RelatedProducts": ["list of the related products"]
 }`;
 
     return (
