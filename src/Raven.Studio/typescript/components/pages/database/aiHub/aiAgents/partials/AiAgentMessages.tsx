@@ -38,7 +38,7 @@ export default function AiAgentMessages({
     setIsWaitingForActionToolSubmit,
 }: AiAgentMessagesProps) {
     return (
-        <div className="w-100 vstack gap-2 ai-agent-messages">
+        <div className="w-100 vstack gap-2 ai-agent-messages pb-1">
             {messages.map((message, idx) => (
                 <AiAgentMessage
                     key={message.id}
