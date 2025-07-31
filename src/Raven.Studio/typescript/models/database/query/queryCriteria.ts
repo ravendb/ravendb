@@ -73,7 +73,7 @@ class queryCriteria {
     }
     
     private formatQueryParameters(params: Record<string, string>): string {
-        return Object.entries(params).map(([key, value]) => `${key} = "${value}"`)
+        return Object.entries(params).map(([key, value]) => `${key} = ${value}`)
             .join("\n")
     }
 

@@ -244,7 +244,7 @@ function QueryField({ index, remove, save, edit, cancelEdit }: QueryFieldProps) 
 
         const regexToFind$: RegExp = /\$\w+/g;
         const matches = queryText.match(regexToFind$) || [];
-        const parameters: Record<string, string> = Object.fromEntries(matches.map((match) => [match, "undefined"]));
+        const parameters: Record<string, null> = Object.fromEntries(matches.map((match) => [match, null]));
 
         query.queryText(queryText);
         query.queryParameters(parameters);
