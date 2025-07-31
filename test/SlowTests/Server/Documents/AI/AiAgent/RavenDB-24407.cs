@@ -71,7 +71,7 @@ public class RavenDB_24407 : RavenTestBase
                 {
                     Name = "ProductSearch",
                     Description =  "semantic search the store product catalog",
-                    Query = "from Products where vector.search(embedding.text(Name), $query)",
+                    Query = "from Products where vector.search(embedding.text(Name), $query) limit 5",
                     ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
                 }
                 ,
@@ -79,7 +79,7 @@ public class RavenDB_24407 : RavenTestBase
                 {
                     Name = "RecentOrder",
                     Description = "Get the recent orders of the current user",
-                    Query = "from Orders where Company = $company order by OrderedAt desc limit 10",
+                    Query = "from Orders where Company = $company order by OrderedAt desc limit 3",
                     ParametersSampleObject = "{}"
                 }
         ];
@@ -139,7 +139,7 @@ public class RavenDB_24407 : RavenTestBase
         Assert.NotNull(chat.Answer);
 
         chatDoc = await GetChat(store, chat.Id);
-        Assert.Equal(2, chatDoc.Messages.Count);
+        Assert.Equal(summarization ? 3 : 2, chatDoc.Messages.Count);
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
         Assert.Equal(withHistory ? 1 : 0, chatDoc.LinkedConversations.Count);
 
@@ -151,7 +151,7 @@ public class RavenDB_24407 : RavenTestBase
         Assert.NotNull(chat.Answer);
 
         chatDoc = await GetChat(store, chat.Id);
-        Assert.Equal(2, chatDoc.Messages.Count);
+        Assert.Equal(summarization ? 3 : 2, chatDoc.Messages.Count);
         Assert.Equal(systemPrompt, chatDoc.Messages[0].Content);
         Assert.Equal(withHistory ? 2 : 0, chatDoc.LinkedConversations.Count);
 

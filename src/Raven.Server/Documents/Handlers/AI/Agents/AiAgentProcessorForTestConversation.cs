@@ -37,7 +37,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         if (conversation == null)
         {
             conversation = new ConversationDocument("test", body.Parameters);
-            conversation.Initialize(context, body.Configuration, body.UserPrompt);
+            conversation.Initialize(context, body.Configuration);
         }
 
         // ensure we don't persist the chat in test mode

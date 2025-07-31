@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
@@ -26,6 +27,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
 
     public DateTime LastMessageAt;
     public DateTime CreatedAt = DateTime.UtcNow;
+    public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration)
     {
         if (Messages.Count > 0)
             throw new InvalidOperationException("conversation document is already initialized. Cannot re-initialize.");
@@ -33,14 +35,44 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
         foreach (var parameter in configuration.Parameters)
         {
             if (Parameters == null || Parameters.TryGet(parameter.Name, out object _) == false)
-                throw new ArgumentException($"Parameter '{parameter}' is missing.");
+                throw new ArgumentException($"Parameter '{parameter.Name}' is missing.");
         }
 
         AddMessage(context, context.ReadObject(new DynamicJsonValue
         {
-            ["role"] = "system",
-            ["content"] = configuration.SystemPrompt
+            [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleSystemValue,
+            [ChatCompletionClient.Constants.RequestFields.Content] = configuration.SystemPrompt
         }, "system/msg"), usage: null);
+
+        if (TryCreateParameterDescriptionMessage(configuration, out string message))
+        {
+            AddMessage(context, context.ReadObject(new DynamicJsonValue
+            {
+                [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleSystemValue,
+                [ChatCompletionClient.Constants.RequestFields.Content] = message
+            }, "system/msg"), usage: null);
+        }
+
+        if (configuration.Parameters.Count > 0)
+        {
+            AddMessage(context, context.ReadObject(new DynamicJsonValue
+            {
+                [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
+                [ChatCompletionClient.Constants.RequestFields.Content] = ParametersToString(configuration)
+            }, "system/msg"), usage: null);
+        }
+    }
+
+    private string ParametersToString(AiAgentConfiguration configuration)
+    {
+        var sb = new StringBuilder();
+        foreach (var parameter in configuration.Parameters)
+        {
+           var value = Parameters[parameter.Name];
+           sb.AppendLine($"the value of the '{parameter.Name}' parameter is: {value.ToString()}");
+        }
+
+        return sb.ToString();
     }
 
     public void EnsureInitialized()
@@ -158,7 +190,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
         };
     }
 
-    public List<BlittableJsonReaderObject> GenerateTools(JsonOperationContext context, AiAgentConfiguration configuration)
+    public static List<BlittableJsonReaderObject> GenerateTools(JsonOperationContext context, AiAgentConfiguration configuration)
     {
         List<BlittableJsonReaderObject> tools = [];
         foreach (var q in configuration.Queries ?? [])
@@ -195,6 +227,24 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
         }
 
         return tools;
+    }
+
+    private static bool TryCreateParameterDescriptionMessage(AiAgentConfiguration configuration, out string message)
+    {
+        var hasDescription = false;
+        var sb = new StringBuilder();
+        sb.AppendLine("Take into account that this conversation has the following parameters defined as following:");
+        foreach (var parameter in configuration.Parameters)
+        {
+            if (string.IsNullOrEmpty(parameter.Description))
+                continue;
+
+            hasDescription = true;
+            sb.AppendLine($"{parameter.Name} - {parameter.Description}");
+        }
+
+        message = sb.ToString();
+        return hasDescription;
     }
 
     public void UpdateUsage(AiUsage usage)

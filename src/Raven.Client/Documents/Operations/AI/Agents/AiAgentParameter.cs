@@ -5,7 +5,7 @@ namespace Raven.Client.Documents.Operations.AI.Agents;
 
 public class AiAgentParameter : IDynamicJson
 {
-    internal AiAgentParameter()
+    public AiAgentParameter()
     {
         // for deserialization    
     }

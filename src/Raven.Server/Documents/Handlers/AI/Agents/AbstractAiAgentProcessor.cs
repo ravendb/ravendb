@@ -149,7 +149,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             {
                 configuration = GetAiAgentConfiguration(agentId);
                 conversationDocument = new ConversationDocument(agentId, body.Parameters);
-                conversationDocument.Initialize(context, configuration, body.UserPrompt);
+                conversationDocument.Initialize(context, configuration);
                 conversationId = BuildId(configuration);
             }
 
@@ -222,13 +222,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             var schema = ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
 
-            var tools = document.GenerateTools(context, configuration);
+            var tools = ConversationDocument.GenerateTools(context, configuration);
 
             AiResponse aiResponse;
             AiUsage aiUsage;
             using var client = ChatCompletionClient.CreateChatCompletionClient(ContextPool, conStr);
             var count = configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
-
+            
             while (true)
             {
                 aiUsage = new();
@@ -339,14 +339,16 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
 
             var usage = new AiUsage();
-            var tools = oldChat.GenerateTools(context, configuration);
+            var tools = ConversationDocument.GenerateTools(context, configuration);
             using var request = client.CreateCompletionRequest(context, messages, tools, useTools: false, SummarizationOutputSchema);
             var result = await client.CompleteAsync(context, request, usage, token);
 
             if (result.Result.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)
                 throw new UnexpectedResponseException($"Unable to get a summary from response of agent '{oldChat.Agent}'.") { RequestId = null };
 
-            oldChat.Messages.RemoveRange(1, oldChat.Messages.Count - 1);
+            oldChat.Messages.Clear();
+
+            oldChat.Initialize(context, configuration);
             oldChat.AddMessage(context,
                 context.ReadObject(
                     new DynamicJsonValue

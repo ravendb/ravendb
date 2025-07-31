@@ -156,14 +156,14 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 {
                     Name = "ProductSearch",
                     Description = "semantic search the store product catalog",
-                    Query = "from Products where vector.search(embedding.text(Name), $query)",
+                    Query = "from Products where vector.search(embedding.text(Name), $query) limit 3",
                     ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
                 },
                 new AiAgentToolQuery
                 {
                     Name = "RecentOrder",
                     Description = "Get the recent orders of the current user",
-                    Query = "from Orders where Company = $company order by OrderedAt desc limit 10",
+                    Query = "from Orders where Company = $company order by OrderedAt desc limit 5",
                     ParametersSampleObject = "{}"
                 }
             ];
