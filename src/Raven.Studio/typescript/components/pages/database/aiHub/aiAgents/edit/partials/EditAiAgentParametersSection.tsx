@@ -47,32 +47,30 @@ export default function EditAiAgentParametersSection({
             </div>
             <InnerForm onSubmit={handleSubmit}>
                 <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
-                    <FormGroup>
-                        <div className="d-flex gap-2">
-                            <FormGroup className="w-25">
-                                <FormLabel>Name</FormLabel>
-                                <FormInput type="text" control={control} name="nameInput" placeholder="e.g. company" />
-                            </FormGroup>
-                            <FormGroup className="w-75">
-                                <FormLabel>
-                                    Description <OptionalLabel />
-                                </FormLabel>
-                                <FormInput
-                                    type="text"
-                                    control={control}
-                                    name="descriptionInput"
-                                    placeholder="e.g. The company ID"
-                                />
-                            </FormGroup>
-                        </div>
-                        <div className="d-flex justify-content-end">
-                            <Button variant="info" onClick={handleSubmit}>
-                                <Icon icon="plus" />
-                                Add parameter
-                            </Button>
-                        </div>
-                    </FormGroup>
-                    <FormGroup>
+                    <div className="d-flex gap-2">
+                        <FormGroup className="w-25">
+                            <FormLabel>Name</FormLabel>
+                            <FormInput type="text" control={control} name="nameInput" placeholder="e.g. company" />
+                        </FormGroup>
+                        <FormGroup className="w-75">
+                            <FormLabel>
+                                Description <OptionalLabel />
+                            </FormLabel>
+                            <FormInput
+                                type="text"
+                                control={control}
+                                name="descriptionInput"
+                                placeholder="e.g. The company ID"
+                            />
+                        </FormGroup>
+                    </div>
+                    <div className="d-flex justify-content-end">
+                        <Button variant="info" onClick={handleSubmit}>
+                            <Icon icon="plus" />
+                            Add parameter
+                        </Button>
+                    </div>
+                    <div>
                         <FormLabel>Parameters</FormLabel>
                         {parametersFieldArray.fields.length === 0 ? (
                             <EmptySet compact className="text-muted">
@@ -112,7 +110,7 @@ export default function EditAiAgentParametersSection({
                                 </Table>
                             </div>
                         )}
-                    </FormGroup>
+                    </div>
                 </div>
             </InnerForm>
         </>
