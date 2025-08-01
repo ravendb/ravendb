@@ -69,7 +69,6 @@ export default function EditAiAgentToolsSection() {
                             remove={() => toolsEditor.handleRemoveQuery(index)}
                             save={() => toolsEditor.handleSaveQuery(index)}
                             edit={() => toolsEditor.handleEditQuery(index)}
-                            cancelEdit={() => toolsEditor.handleCancelEditQuery(index)}
                         />
                     ))}
                 </div>
@@ -112,7 +111,6 @@ export default function EditAiAgentToolsSection() {
                             remove={() => toolsEditor.handleRemoveAction(index)}
                             save={() => toolsEditor.handleSaveAction(index)}
                             edit={() => toolsEditor.handleEditAction(index)}
-                            cancelEdit={() => toolsEditor.handleCancelEditAction(index)}
                         />
                     ))}
                 </div>

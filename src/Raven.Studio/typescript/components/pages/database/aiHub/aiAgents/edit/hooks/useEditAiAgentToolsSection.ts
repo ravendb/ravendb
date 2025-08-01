@@ -24,7 +24,6 @@ export default function useEditAiAgentToolsSection() {
             description: "",
             query: "",
             parametersSchema: "",
-            isSaved: false,
             isEditing: true,
         });
     };
@@ -32,7 +31,6 @@ export default function useEditAiAgentToolsSection() {
     const handleSaveQuery = (index: number) => {
         queriesFieldArray.update(index, {
             ...formValues.queries[index],
-            isSaved: true,
             isEditing: false,
         });
     };
@@ -41,17 +39,7 @@ export default function useEditAiAgentToolsSection() {
         queriesFieldArray.update(index, {
             ...formValues.queries[index],
             isEditing: true,
-            prevValue: formValues.queries[index],
         });
-    };
-
-    const handleCancelEditQuery = (index: number) => {
-        if (formValues.queries[index].isSaved) {
-            queriesFieldArray.update(index, {
-                ...formValues.queries[index].prevValue,
-                isEditing: false,
-            });
-        }
     };
 
     const handleRemoveQuery = (index: number) => {
@@ -63,7 +51,6 @@ export default function useEditAiAgentToolsSection() {
             name: "",
             description: "",
             parametersSchema: "",
-            isSaved: false,
             isEditing: true,
         });
     };
@@ -71,7 +58,6 @@ export default function useEditAiAgentToolsSection() {
     const handleSaveAction = (index: number) => {
         actionsFieldArray.update(index, {
             ...formValues.actions[index],
-            isSaved: true,
             isEditing: false,
         });
     };
@@ -80,17 +66,7 @@ export default function useEditAiAgentToolsSection() {
         actionsFieldArray.update(index, {
             ...formValues.actions[index],
             isEditing: true,
-            prevValue: formValues.actions[index],
         });
-    };
-
-    const handleCancelEditAction = (index: number) => {
-        if (formValues.actions[index].isSaved) {
-            actionsFieldArray.update(index, {
-                ...formValues.actions[index].prevValue,
-                isEditing: false,
-            });
-        }
     };
 
     const handleRemoveAction = (index: number) => {
@@ -104,11 +80,9 @@ export default function useEditAiAgentToolsSection() {
         handleRemoveQuery,
         handleSaveQuery,
         handleEditQuery,
-        handleCancelEditQuery,
         handleAddAction,
         handleRemoveAction,
         handleSaveAction,
         handleEditAction,
-        handleCancelEditAction,
     };
 }

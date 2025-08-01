@@ -1,10 +1,8 @@
 import Code from "components/common/Code";
-import { FormInput } from "components/common/Form";
+import { FormInput, FormGroup, FormLabel } from "components/common/Form";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
-import FormGroup from "react-bootstrap/FormGroup";
-import FormLabel from "react-bootstrap/FormLabel";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 
@@ -13,16 +11,9 @@ interface EditAiAgentActionToolItemProps {
     remove: () => void;
     save: () => void;
     edit: () => void;
-    cancelEdit: () => void;
 }
 
-export default function EditAiAgentActionToolItem({
-    index,
-    remove,
-    save,
-    edit,
-    cancelEdit,
-}: EditAiAgentActionToolItemProps) {
+export default function EditAiAgentActionToolItem({ index, remove, save, edit }: EditAiAgentActionToolItemProps) {
     const { control, setValue, trigger } = useFormContext<EditAiAgentFormData>();
 
     const formValues = useWatch({
@@ -47,11 +38,11 @@ export default function EditAiAgentActionToolItem({
                     <small>{actionItem.description}</small>
                 </div>
                 <div className="hstack gap-2">
-                    <Button variant="secondary" onClick={edit}>
-                        <Icon icon="edit" margin="m-0" />
-                    </Button>
                     <Button variant="danger" onClick={remove}>
                         <Icon icon="trash" margin="m-0" />
+                    </Button>
+                    <Button variant="secondary" onClick={edit}>
+                        <Icon icon="chevron-down" margin="m-0" />
                     </Button>
                 </div>
             </div>
@@ -61,14 +52,13 @@ export default function EditAiAgentActionToolItem({
     return (
         <div className="well p-2 rounded-2 border border-secondary mt-2">
             <div className="hstack justify-content-between">
-                <h4 className="m-0">Add new action tool</h4>
+                <h4 className="m-0">Configure action tool</h4>
                 <div className="hstack gap-2">
-                    <Button variant="outline-secondary" onClick={cancelEdit}>
-                        Cancel
+                    <Button variant="danger" onClick={remove}>
+                        <Icon icon="trash" margin="m-0" />
                     </Button>
-                    <Button variant="success" onClick={handleSave}>
-                        <Icon icon="save" />
-                        Save
+                    <Button variant="secondary" onClick={handleSave}>
+                        <Icon icon="chevron-up" margin="m-0" />
                     </Button>
                 </div>
             </div>

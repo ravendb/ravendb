@@ -1,7 +1,7 @@
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import AceEditor from "components/common/ace/AceEditor";
 import Code from "components/common/Code";
-import { FormInput, FormAceEditor } from "components/common/Form";
+import { FormInput, FormAceEditor, FormGroup, FormLabel } from "components/common/Form";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useRqlLanguageService from "components/hooks/useRqlLanguageService";
@@ -11,8 +11,6 @@ import queryCriteria from "models/database/query/queryCriteria";
 import { useRef } from "react";
 import ReactAce from "react-ace";
 import Button from "react-bootstrap/Button";
-import FormGroup from "react-bootstrap/FormGroup";
-import FormLabel from "react-bootstrap/FormLabel";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 
@@ -21,16 +19,9 @@ interface EditAiAgentQueryToolItemProps {
     remove: () => void;
     save: () => void;
     edit: () => void;
-    cancelEdit: () => void;
 }
 
-export default function EditAiAgentQueryToolItem({
-    index,
-    remove,
-    save,
-    edit,
-    cancelEdit,
-}: EditAiAgentQueryToolItemProps) {
+export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: EditAiAgentQueryToolItemProps) {
     const { control, setValue, trigger } = useFormContext<EditAiAgentFormData>();
     const dbName = useAppSelector(databaseSelectors.activeDatabaseName);
 
@@ -60,11 +51,11 @@ export default function EditAiAgentQueryToolItem({
                     <small>{queryItem.description}</small>
                 </div>
                 <div className="hstack gap-2">
-                    <Button variant="secondary" onClick={edit}>
-                        <Icon icon="edit" margin="m-0" />
-                    </Button>
                     <Button variant="danger" onClick={remove}>
                         <Icon icon="trash" margin="m-0" />
+                    </Button>
+                    <Button variant="secondary" onClick={edit}>
+                        <Icon icon="chevron-down" margin="m-0" />
                     </Button>
                 </div>
             </div>
@@ -92,14 +83,13 @@ export default function EditAiAgentQueryToolItem({
     return (
         <div className="well p-2 rounded-2 border border-secondary mt-2">
             <div className="hstack justify-content-between">
-                <h4 className="m-0">Add new query tool</h4>
+                <h4 className="m-0">Configure query tool</h4>
                 <div className="hstack gap-2">
-                    <Button variant="outline-secondary" onClick={cancelEdit}>
-                        Cancel
+                    <Button variant="danger" onClick={remove}>
+                        <Icon icon="trash" margin="m-0" />
                     </Button>
-                    <Button variant="success" onClick={handleSave}>
-                        <Icon icon="save" />
-                        Save
+                    <Button variant="secondary" onClick={handleSave}>
+                        <Icon icon="chevron-up" margin="m-0" />
                     </Button>
                 </div>
             </div>

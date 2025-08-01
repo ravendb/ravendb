@@ -64,9 +64,7 @@ const editSchema = yup.object({
                     }
                 ),
             canRegenerateSchema: yup.boolean(),
-            isSaved: yup.boolean(),
             isEditing: yup.boolean(),
-            prevValue: yup.object().nullable(),
         })
     ),
     actions: yup.array().of(
@@ -94,9 +92,7 @@ const editSchema = yup.object({
                     }
                 ),
             canRegenerateSchema: yup.boolean(),
-            isSaved: yup.boolean(),
             isEditing: yup.boolean(),
-            prevValue: yup.object().nullable(),
         })
     ),
 
