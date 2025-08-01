@@ -10,14 +10,12 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import { tryHandleSubmit } from "components/utils/common";
 import { useEffect } from "react";
 import { useAsyncCallback } from "react-async-hook";
-import { useForm, useWatch, useFieldArray, SubmitHandler } from "react-hook-form";
+import { useForm, useWatch, SubmitHandler } from "react-hook-form";
 import { editAiAgentSelectors, editAiAgentActions } from "../store/editAiAgentSlice";
 import { editAiAgentUtils } from "../utils/editAiAgentUtils";
 import {
     EditAiAgentFormData,
     editAiAgentYupResolver,
-    ParameterAiAgentFormData,
-    parameterAiAgentYupResolver,
     TestAiAgentFormData,
     testAiAgentYupResolver,
 } from "../utils/editAiAgentValidation";
@@ -64,40 +62,19 @@ export default function useEditAiAgent(queryParams: QueryParams) {
 
     const editForm = useForm<EditAiAgentFormData>({
         defaultValues: asyncGetEditDefaultValues.execute,
-        resolver: editAiAgentYupResolver,
+        resolver: (data, _, options) =>
+            editAiAgentYupResolver(
+                data,
+                {
+                    allParameterNames: data.parameters?.map((x) => x.name) ?? [],
+                },
+                options
+            ),
     });
 
     const editFormValues = useWatch({
         control: editForm.control,
     });
-
-    const parameterForm = useForm<ParameterAiAgentFormData>({
-        defaultValues: {
-            nameInput: "",
-            descriptionInput: null,
-        },
-        resolver: parameterAiAgentYupResolver,
-        context: {
-            allParameterNames: editFormValues.parameters?.map((x) => x.name) ?? [],
-        },
-    });
-
-    const parameterFormValues = useWatch({
-        control: parameterForm.control,
-    });
-
-    const parametersFieldArray = useFieldArray({
-        name: "parameters",
-        control: editForm.control,
-    });
-
-    const handleAddParameter: SubmitHandler<ParameterAiAgentFormData> = async (formData) => {
-        parametersFieldArray.append({
-            name: formData.nameInput,
-            description: formData.descriptionInput,
-        });
-        parameterForm.reset();
-    };
 
     const allQueriesNames = editFormValues.queries?.map((x) => x.name) ?? [];
 
@@ -147,28 +124,15 @@ export default function useEditAiAgent(queryParams: QueryParams) {
         });
     };
 
-    const saveFieldsAndSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault();
-
-        if (parameterFormValues.nameInput) {
-            await parameterForm.handleSubmit(handleAddParameter)();
-        }
-
-        await editForm.handleSubmit(saveAgent)();
-    };
-
     return {
         editForm,
-        parameterForm,
         testForm,
         reloadEditForm,
         asyncGetEditDefaultValues,
         allQueriesNames,
-        saveFieldsAndSubmit,
+        handleSubmit: editForm.handleSubmit(saveAgent),
         testAreaResizable,
         isEditAiAgent,
-        handleSubmitParameter: parameterForm.handleSubmit(handleAddParameter),
-        parametersFieldArray,
     };
 }
 

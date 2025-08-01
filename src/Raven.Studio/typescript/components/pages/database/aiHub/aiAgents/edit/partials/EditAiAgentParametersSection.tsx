@@ -1,28 +1,24 @@
 import { EmptySet } from "components/common/EmptySet";
 import { FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
-import { UseFieldArrayReturn, Control } from "react-hook-form";
-import { EditAiAgentFormData, ParameterAiAgentFormData } from "../utils/editAiAgentValidation";
-import { FormLabel, FormGroup } from "components/common/Form";
+import { useFormContext, useFieldArray } from "react-hook-form";
+import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
+import { FormLabel } from "components/common/Form";
 import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
-import OptionalLabel from "components/common/OptionalLabel";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
-import InnerForm from "components/common/InnerForm";
+import OptionalLabel from "components/common/OptionalLabel";
 
-interface EditAiAgentParametersSectionProps {
-    control: Control<ParameterAiAgentFormData>;
-    handleSubmit: () => void;
-    parametersFieldArray: UseFieldArrayReturn<EditAiAgentFormData, "parameters", "id">;
-}
+export default function EditAiAgentParametersSection() {
+    const { control } = useFormContext<EditAiAgentFormData>();
 
-export default function EditAiAgentParametersSection({
-    control,
-    parametersFieldArray,
-    handleSubmit,
-}: EditAiAgentParametersSectionProps) {
+    const parametersFieldArray = useFieldArray({
+        control,
+        name: "parameters",
+    });
+
     return (
-        <>
+        <div className="edit-ai-agent-parameters-section">
             <h3 className="m-0 mt-3">
                 Set agent parameters
                 <PopoverWithHoverWrapper
@@ -45,74 +41,77 @@ export default function EditAiAgentParametersSection({
                 Define query parameters that the agent will replace with fixed values before executing a query tool
                 against the database.
             </div>
-            <InnerForm onSubmit={handleSubmit}>
-                <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
-                    <div className="d-flex gap-2">
-                        <FormGroup className="w-25">
-                            <FormLabel>Name</FormLabel>
-                            <FormInput type="text" control={control} name="nameInput" placeholder="e.g. company" />
-                        </FormGroup>
-                        <FormGroup className="w-75">
-                            <FormLabel>
-                                Description <OptionalLabel />
-                            </FormLabel>
-                            <FormInput
-                                type="text"
-                                control={control}
-                                name="descriptionInput"
-                                placeholder="e.g. The company ID"
-                            />
-                        </FormGroup>
-                    </div>
-                    <div className="d-flex justify-content-end">
-                        <Button variant="info" onClick={handleSubmit}>
-                            <Icon icon="plus" />
-                            Add parameter
-                        </Button>
-                    </div>
-                    <div>
-                        <FormLabel>Parameters</FormLabel>
-                        {parametersFieldArray.fields.length === 0 ? (
+            <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
+                <div className="d-flex justify-content-end">
+                    <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => parametersFieldArray.append({ name: "", description: null })}
+                    >
+                        <Icon icon="plus" />
+                        Add new parameter
+                    </Button>
+                </div>
+                <div>
+                    <FormLabel>Parameters</FormLabel>
+                    {parametersFieldArray.fields.length === 0 ? (
+                        <div className="panel-bg-2 d-flex justify-content-center align-items-center rounded-2 border border-secondary p-2">
                             <EmptySet compact className="text-muted">
                                 No parameters have been defined yet
                             </EmptySet>
-                        ) : (
-                            <div className="overflow-y-auto" style={{ maxHeight: "220px" }}>
-                                <Table striped>
-                                    <thead>
-                                        <tr>
-                                            <th>Name</th>
-                                            <th>Description</th>
-                                            <th style={{ width: "50px" }}></th>
+                        </div>
+                    ) : (
+                        <div className="overflow-y-auto" style={{ maxHeight: "220px" }}>
+                            <Table bordered>
+                                <thead className="panel-bg-2">
+                                    <tr>
+                                        <th>Parameter</th>
+                                        <th className="w-75">
+                                            Description <OptionalLabel />
+                                        </th>
+                                        <th style={{ width: "50px" }}></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {parametersFieldArray.fields.map((field, index) => (
+                                        <tr key={field.id}>
+                                            <td className="p-0">
+                                                <FormInput
+                                                    type="text"
+                                                    control={control}
+                                                    name={`parameters.${index}.name`}
+                                                    placeholder="e.g. company"
+                                                    className="rounded-0 border-0"
+                                                />
+                                            </td>
+                                            <td className="w-75 p-0">
+                                                <FormInput
+                                                    type="text"
+                                                    control={control}
+                                                    name={`parameters.${index}.description`}
+                                                    placeholder="e.g. The company ID"
+                                                    className="rounded-0 border-0"
+                                                />
+                                            </td>
+                                            <td className="align-middle">
+                                                <Button
+                                                    variant="link"
+                                                    className="text-danger"
+                                                    size="sm"
+                                                    onClick={() => parametersFieldArray.remove(index)}
+                                                    title="Delete this parameter"
+                                                >
+                                                    <Icon icon="trash" margin="m-0" />
+                                                </Button>
+                                            </td>
                                         </tr>
-                                    </thead>
-                                    <tbody>
-                                        {parametersFieldArray.fields.map((field, index) => (
-                                            <tr key={field.id}>
-                                                <td>{field.name}</td>
-                                                <td className="text-truncate" style={{ maxWidth: "300px" }}>
-                                                    {field.description || "-"}
-                                                </td>
-                                                <td>
-                                                    <Button
-                                                        variant="link"
-                                                        className="text-danger"
-                                                        size="sm"
-                                                        onClick={() => parametersFieldArray.remove(index)}
-                                                        title="Delete this parameter"
-                                                    >
-                                                        <Icon icon="trash" margin="m-0" />
-                                                    </Button>
-                                                </td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                </Table>
-                            </div>
-                        )}
-                    </div>
+                                    ))}
+                                </tbody>
+                            </Table>
+                        </div>
+                    )}
                 </div>
-            </InnerForm>
-        </>
+            </div>
+        </div>
     );
 }

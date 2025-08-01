@@ -26,7 +26,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     return (
         <FormProvider {...aiAgentEditor.editForm}>
-            <form onSubmit={aiAgentEditor.saveFieldsAndSubmit} className="h-100 edit-ai-agent">
+            <form onSubmit={aiAgentEditor.handleSubmit} className="h-100 edit-ai-agent">
                 <SizeGetter
                     render={({ width }) => (
                         <div className="hstack h-100">
@@ -55,11 +55,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                     {aiAgentEditor.asyncGetEditDefaultValues.result && (
                                         <>
                                             <EditAiAgentBasicSection isEditAiAgent={aiAgentEditor.isEditAiAgent} />
-                                            <EditAiAgentParametersSection
-                                                control={aiAgentEditor.parameterForm.control}
-                                                parametersFieldArray={aiAgentEditor.parametersFieldArray}
-                                                handleSubmit={aiAgentEditor.handleSubmitParameter}
-                                            />
+                                            <EditAiAgentParametersSection />
                                             <EditAiAgentToolsSection />
                                             <EditAiAgentTrimmingSection />
                                         </>
