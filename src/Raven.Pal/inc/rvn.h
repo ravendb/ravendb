@@ -23,7 +23,7 @@ typedef int32_t bool;
 
 #define ALLOCATION_GRANULARITY (64*1024)
 
-typedef struct SYSTEM_INFORMATION
+EXPORT struct SYSTEM_INFORMATION
 {
     int32_t page_size;
     int32_t prefetch_status;
@@ -31,7 +31,7 @@ typedef struct SYSTEM_INFORMATION
     /* can_prefetch => prefetch_status == true */
 } SYSTEM_INFORMATION;
 
-typedef struct RVN_RANGE_LIST
+EXPORT struct RVN_RANGE_LIST
 {
     void *virtual_address;
     size_t number_of_bytes;
