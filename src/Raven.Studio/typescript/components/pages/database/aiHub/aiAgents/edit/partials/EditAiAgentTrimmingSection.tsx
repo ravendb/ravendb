@@ -1,6 +1,6 @@
 import { FormDurationPicker, FormGroup, FormInput, FormLabel, FormSwitch } from "components/common/Form";
 import { useFormContext, useWatch } from "react-hook-form";
-import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
+import { AiAgentTrimmingMethod, EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import ClickableCard from "components/common/ClickableCard";
 import OptionalLabel from "components/common/OptionalLabel";
 import Button from "react-bootstrap/Button";
@@ -14,7 +14,7 @@ export default function EditAiAgentTrimmingSection() {
         control,
     });
 
-    const handleSetTrimmingMethod = (method: "Tokens" | "Truncate") => {
+    const handleSetTrimmingMethod = (method: AiAgentTrimmingMethod) => {
         if (formValues.trimming.method === method) {
             setValue("trimming.method", null);
         } else {
@@ -28,7 +28,7 @@ export default function EditAiAgentTrimmingSection() {
                 Configure chat trimming <OptionalLabel />
             </h3>
             <div className="mb-1">
-                You can configure trimming of long conversations either by summarizing or truncating older messages.
+                You can configure trimming of long conversations by summarizing older messages.
                 <br />
                 If you &quot;enable history&quot;, the original chat content prior to trimming will be stored in
                 dedicated documents in the <code>@conversations-history</code> collection.
@@ -46,15 +46,16 @@ export default function EditAiAgentTrimmingSection() {
                             </Button>
                         )}
                     </FormLabel>
-                    <div className="d-flex gap-2">
+                    <div className="d-flex">
                         <ClickableCard
                             icon="tasks-list"
                             title="Summarize chat"
                             description="Summarize the chat conversation into a compact prompt when the total number of tokens used exceeds the configured threshold."
-                            className="w-50"
+                            className="flex-grow-1"
                             isSelected={formValues.trimming.method === "Tokens"}
                             onClick={() => handleSetTrimmingMethod("Tokens")}
                         />
+                        {/* maybe add it in RC2
                         <ClickableCard
                             icon="collapse-vertical"
                             title="Truncate chat"
@@ -62,11 +63,11 @@ export default function EditAiAgentTrimmingSection() {
                             className="w-50"
                             isSelected={formValues.trimming.method === "Truncate"}
                             onClick={() => handleSetTrimmingMethod("Truncate")}
-                        />
+                        /> */}
                     </div>
                 </FormGroup>
                 {formValues.trimming.method === "Tokens" && <TokensFields />}
-                {formValues.trimming.method === "Truncate" && <TruncateFields />}
+                {/* {formValues.trimming.method === "Truncate" && <TruncateFields />} */}
             </div>
         </>
     );
@@ -118,51 +119,51 @@ function TokensFields() {
     );
 }
 
-function TruncateFields() {
-    const { control } = useFormContext<EditAiAgentFormData>();
+// function TruncateFields() {
+//     const { control } = useFormContext<EditAiAgentFormData>();
 
-    return (
-        <>
-            <FormGroup>
-                <FormLabel>
-                    Messages length before truncate
-                    <PopoverWithHoverWrapper message="Truncation is triggered when this number of messages is exceeded.">
-                        <Icon icon="info" color="info" margin="ms-1" />
-                    </PopoverWithHoverWrapper>
-                </FormLabel>
-                <FormInput
-                    type="number"
-                    control={control}
-                    name="trimming.messagesLengthBeforeTruncate"
-                    placeholder={`Default (${defaultMessagesLengthBeforeTruncate})`}
-                />
-            </FormGroup>
-            <FormGroup>
-                <FormLabel>
-                    Messages length after truncate
-                    <PopoverWithHoverWrapper
-                        message={
-                            <>
-                                The number of most recent messages to keep after truncation.
-                                <br />
-                                Older messages beyond this number will be discarded.
-                            </>
-                        }
-                    >
-                        <Icon icon="info" color="info" margin="ms-1" />
-                    </PopoverWithHoverWrapper>
-                </FormLabel>
-                <FormInput
-                    type="number"
-                    control={control}
-                    name="trimming.messagesLengthAfterTruncate"
-                    placeholder={`Default (${defaultMessagesLengthAfterTruncate})`}
-                />
-            </FormGroup>
-            <HistoryFields />
-        </>
-    );
-}
+//     return (
+//         <>
+//             <FormGroup>
+//                 <FormLabel>
+//                     Messages length before truncate
+//                     <PopoverWithHoverWrapper message="Truncation is triggered when this number of messages is exceeded.">
+//                         <Icon icon="info" color="info" margin="ms-1" />
+//                     </PopoverWithHoverWrapper>
+//                 </FormLabel>
+//                 <FormInput
+//                     type="number"
+//                     control={control}
+//                     name="trimming.messagesLengthBeforeTruncate"
+//                     placeholder={`Default (${defaultMessagesLengthBeforeTruncate})`}
+//                 />
+//             </FormGroup>
+//             <FormGroup>
+//                 <FormLabel>
+//                     Messages length after truncate
+//                     <PopoverWithHoverWrapper
+//                         message={
+//                             <>
+//                                 The number of most recent messages to keep after truncation.
+//                                 <br />
+//                                 Older messages beyond this number will be discarded.
+//                             </>
+//                         }
+//                     >
+//                         <Icon icon="info" color="info" margin="ms-1" />
+//                     </PopoverWithHoverWrapper>
+//                 </FormLabel>
+//                 <FormInput
+//                     type="number"
+//                     control={control}
+//                     name="trimming.messagesLengthAfterTruncate"
+//                     placeholder={`Default (${defaultMessagesLengthAfterTruncate})`}
+//                 />
+//             </FormGroup>
+//             <HistoryFields />
+//         </>
+//     );
+// }
 
 function HistoryFields() {
     const { control } = useFormContext<EditAiAgentFormData>();
@@ -210,7 +211,7 @@ function HistoryFields() {
     );
 }
 
-const defaultMessagesLengthBeforeTruncate = 500;
-const defaultMessagesLengthAfterTruncate = defaultMessagesLengthBeforeTruncate / 2;
+// const defaultMessagesLengthBeforeTruncate = 500;
+// const defaultMessagesLengthAfterTruncate = defaultMessagesLengthBeforeTruncate / 2;
 const defaultMaxTokensBeforeSummarization = 32 * 1024;
 const defaultMaxTokensAfterSummarization = 1024;

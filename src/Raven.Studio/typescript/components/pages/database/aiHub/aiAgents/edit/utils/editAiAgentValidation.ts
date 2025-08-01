@@ -1,7 +1,7 @@
 import { yupResolver } from "@hookform/resolvers/yup";
 import * as yup from "yup";
 
-export type AiAgentTrimmingMethod = "Tokens" | "Truncate";
+export type AiAgentTrimmingMethod = "Tokens";
 
 const editSchema = yup.object({
     // Basic
@@ -107,7 +107,7 @@ const editSchema = yup.object({
     // Trimming
     trimming: yup
         .object({
-            method: yup.string<"Tokens" | "Truncate">().nullable(),
+            method: yup.string<AiAgentTrimmingMethod>().nullable(),
 
             // History
             isEnableHistory: yup.boolean(),
@@ -115,8 +115,8 @@ const editSchema = yup.object({
             historyExpirationInSeconds: yup.number().nullable().positive().integer(),
 
             // Truncate
-            messagesLengthBeforeTruncate: yup.number().nullable().positive().integer(),
-            messagesLengthAfterTruncate: yup.number().nullable().positive().integer(),
+            // messagesLengthBeforeTruncate: yup.number().nullable().positive().integer(),
+            // messagesLengthAfterTruncate: yup.number().nullable().positive().integer(),
 
             // Tokens
             maxTokensBeforeSummarization: yup.number().nullable().positive().integer(),

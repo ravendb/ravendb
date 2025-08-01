@@ -22,12 +22,12 @@ function mapFromDto(
             queries: [],
             actions: [],
             trimming: {
-                method: null,
+                method: "Tokens",
                 isEnableHistory: false,
                 isSetHistoryExpiration: false,
                 historyExpirationInSeconds: null,
-                messagesLengthBeforeTruncate: null,
-                messagesLengthAfterTruncate: null,
+                // messagesLengthBeforeTruncate: null,
+                // messagesLengthAfterTruncate: null,
                 maxTokensBeforeSummarization: null,
                 maxTokensAfterSummarization: null,
             },
@@ -74,8 +74,8 @@ function mapFromDto(
             isEnableHistory: !!dto.ChatTrimming?.History,
             isSetHistoryExpiration: !!dto.ChatTrimming?.History?.HistoryExpirationInSec,
             historyExpirationInSeconds: dto.ChatTrimming?.History?.HistoryExpirationInSec,
-            messagesLengthBeforeTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthBeforeTruncate,
-            messagesLengthAfterTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthAfterTruncate,
+            // messagesLengthBeforeTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthBeforeTruncate,
+            // messagesLengthAfterTruncate: dto.ChatTrimming?.Truncate?.MessagesLengthAfterTruncate,
             maxTokensBeforeSummarization: dto.ChatTrimming?.Tokens?.MaxTokensBeforeSummarization,
             maxTokensAfterSummarization: dto.ChatTrimming?.Tokens?.MaxTokensAfterSummarization,
         },
@@ -88,9 +88,9 @@ function getTrimmingMethod(
     if (dto.ChatTrimming?.Tokens) {
         return "Tokens";
     }
-    if (dto.ChatTrimming?.Truncate) {
-        return "Truncate";
-    }
+    // if (dto.ChatTrimming?.Truncate) {
+    //     return "Truncate";
+    // }
     return null;
 }
 
@@ -154,13 +154,13 @@ function mapToDto(
                                     SummarizationTaskEndPrompt: null,
                                 }
                               : null,
-                      Truncate:
-                          formData.trimming.method === "Truncate"
-                              ? {
-                                    MessagesLengthBeforeTruncate: formData.trimming.messagesLengthBeforeTruncate,
-                                    MessagesLengthAfterTruncate: formData.trimming.messagesLengthAfterTruncate,
-                                }
-                              : null,
+                      //   Truncate:
+                      //       formData.trimming.method === "Truncate"
+                      //           ? {
+                      //                 MessagesLengthBeforeTruncate: formData.trimming.messagesLengthBeforeTruncate,
+                      //                 MessagesLengthAfterTruncate: formData.trimming.messagesLengthAfterTruncate,
+                      //             }
+                      //           : null,
                   }
                 : null,
     };
