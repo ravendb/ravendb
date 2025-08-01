@@ -3,7 +3,6 @@ import { FormInput } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import { useFormContext, useFieldArray } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
-import { FormLabel } from "components/common/Form";
 import Button from "react-bootstrap/Button";
 import Table from "react-bootstrap/Table";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
@@ -47,13 +46,13 @@ export default function EditAiAgentParametersSection() {
                         variant="link"
                         size="sm"
                         onClick={() => parametersFieldArray.append({ name: "", description: null })}
+                        className="mb-1"
                     >
                         <Icon icon="plus" />
                         Add new parameter
                     </Button>
                 </div>
                 <div>
-                    <FormLabel>Parameters</FormLabel>
                     {parametersFieldArray.fields.length === 0 ? (
                         <div className="panel-bg-2 d-flex justify-content-center align-items-center rounded-2 border border-secondary p-2">
                             <EmptySet compact className="text-muted">
