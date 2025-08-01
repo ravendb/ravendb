@@ -17,11 +17,24 @@ export default function ChatAiAgentPersistenceSection() {
 
     return (
         <>
-            <h3 className="m-0 mt-3">Set chat persistence</h3>
+            <h3 className="m-0 mt-3">
+                Set chat persistence
+                <PopoverWithHoverWrapper
+                    message={
+                        <>
+                            Chat conversations are stored as documents in the <code>@conversations</code> collection.
+                            <br />
+                            <br />
+                            Configure the document ID prefix and whether these documents should expire after a set
+                            period of time.
+                        </>
+                    }
+                >
+                    <Icon icon="info" color="info" margin="ms-1" className="fs-3" />
+                </PopoverWithHoverWrapper>
+            </h3>
             <div className="mb-1">
-                Chat conversations are stored as documents in the <code>@conversations</code> collection.
-                <br /> Configure the document ID prefix and whether these documents should expire after a set period of
-                time.
+                Configure the document ID prefix and whether these documents should expire after a set period of time.
             </div>
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>

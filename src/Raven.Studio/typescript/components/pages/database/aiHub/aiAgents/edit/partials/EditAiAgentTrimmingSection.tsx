@@ -26,16 +26,25 @@ export default function EditAiAgentTrimmingSection() {
         <>
             <h3 className="m-0 mt-3">
                 Configure chat trimming <OptionalLabel />
+                <PopoverWithHoverWrapper
+                    message={
+                        <>
+                            You can configure trimming of long conversations by summarizing older messages.
+                            <br />
+                            <br />
+                            If you &quot;enable history&quot;, the original chat content prior to trimming will be
+                            stored in dedicated documents in the <code>@conversations-history</code> collection.
+                            <br />
+                            <br />
+                            Note: if there are any open action tools that have not yet received a response, trimming
+                            will be delayed until those actions are completed.
+                        </>
+                    }
+                >
+                    <Icon icon="info" color="info" margin="ms-1" className="fs-3" />
+                </PopoverWithHoverWrapper>
             </h3>
-            <div className="mb-1">
-                You can configure trimming of long conversations by summarizing older messages.
-                <br />
-                If you &quot;enable history&quot;, the original chat content prior to trimming will be stored in
-                dedicated documents in the <code>@conversations-history</code> collection.
-                <br />
-                Note: if there are any open action tools that have not yet received a response, trimming will be delayed
-                until those actions are completed.
-            </div>
+            <div className="mb-1">You can configure trimming of long conversations by summarizing older messages.</div>
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>
                     <FormLabel className="hstack justify-content-between">

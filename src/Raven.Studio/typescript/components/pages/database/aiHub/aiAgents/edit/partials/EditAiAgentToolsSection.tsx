@@ -35,14 +35,24 @@ export default function EditAiAgentToolsSection() {
 
     return (
         <>
-            <h3 className="m-0 mt-3">Define agent tools</h3>
-            <div className="mb-1">
-                Tools are a controlled way to pass context to the LLM. Configure the tools that the LLM can instruct the
-                agent to trigger in response to user prompts.
-                <br />
-                These include query tools (to retrieve data from the database) and action tools (to initiate tasks that
-                are expected to be carried out by the client or user).
-            </div>
+            <h3 className="m-0 mt-3">
+                Define agent tools
+                <PopoverWithHoverWrapper
+                    message={
+                        <>
+                            Tools are a controlled way to pass context to the LLM. Configure the tools that the LLM can
+                            instruct the agent to trigger in response to user prompts.
+                            <br />
+                            <br />
+                            These include query tools (to retrieve data from the database) and action tools (to initiate
+                            tasks that are expected to be carried out by the client or user).
+                        </>
+                    }
+                >
+                    <Icon icon="info" color="info" margin="ms-1" className="fs-3" />
+                </PopoverWithHoverWrapper>
+            </h3>
+            <div className="mb-1">Tools are a controlled way to pass context to the LLM.</div>
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <div className="hstack justify-content-between">
                     <div className="hstack gap-2">

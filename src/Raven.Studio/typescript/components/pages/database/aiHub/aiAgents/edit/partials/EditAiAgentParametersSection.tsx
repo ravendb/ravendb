@@ -30,7 +30,9 @@ export default function EditAiAgentParametersSection({
                         <>
                             Define query parameters that the agent will replace with fixed values before executing a
                             query tool against the database. This ensures that queries run only within the allowed data
-                            scope. <br />
+                            scope.
+                            <br />
+                            <br />
                             You will need to provide values for these parameters when starting a new chat with the
                             agent.
                         </>
