@@ -122,7 +122,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     ParametersSampleObject = "{}"
                 }
             ];
-
+            agent.ChatTrimming = null;
             await store.AI.CreateAgentAsync<OutputSchema>(agent);
             var r = await store.AI.GetAgentsAsync();
             using (var context = JsonOperationContext.ShortTermSingleUse())

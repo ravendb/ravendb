@@ -106,7 +106,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     ParametersSampleObject = "{}"
                 }
             ];
-
+            agent0.ChatTrimming = null;
             var agent1 = new AiAgentConfiguration("warehouse manager", aiConfig.ConnectionStringName, "You are an AI agent managing a warehouse.");
             agent1.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
             agent1.Actions =
@@ -119,7 +119,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 },
                 new AiAgentToolAction { Name = "RecentOrder", Description = "Get the recent orders of the current user", ParametersSampleObject = "{}" }
             ];
-
+            agent1.ChatTrimming = null;
             return new List<AiAgentConfiguration>() { agent0, agent1 };
         }
     }

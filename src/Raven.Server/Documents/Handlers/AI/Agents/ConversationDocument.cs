@@ -65,11 +65,11 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
 
     private string ParametersToString(AiAgentConfiguration configuration)
     {
-        var sb = new StringBuilder();
+        var sb = new StringBuilder("Parameters:\n");
         foreach (var parameter in configuration.Parameters)
         {
            var value = Parameters[parameter.Name];
-           sb.AppendLine($"the value of the '{parameter.Name}' parameter is: {value.ToString()}");
+           sb.AppendLine($"{parameter.Name} = {value.ToString()}");
         }
 
         return sb.ToString();
@@ -233,7 +233,7 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
     {
         var hasDescription = false;
         var sb = new StringBuilder();
-        sb.AppendLine("Take into account that this conversation has the following parameters defined as following:");
+        sb.AppendLine("This conversation has the following parameters:\n");
         foreach (var parameter in configuration.Parameters)
         {
             if (string.IsNullOrEmpty(parameter.Description))

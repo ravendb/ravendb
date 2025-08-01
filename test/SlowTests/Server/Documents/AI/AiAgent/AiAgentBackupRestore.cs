@@ -72,10 +72,10 @@ public class AiAgentBackupRestore : ReplicationTestBase
                     var converter = DocumentConventions.Default.Serialization.DefaultConverter;
                     var c0 = converter.ToBlittable(agents[0], context);
                     var d0 = converter.ToBlittable(destConfigs[0], context);
-                    Assert.True(c0.Equals(d0));
+                    Assert.Equal(c0, d0);
                     var c1 = converter.ToBlittable(agents[1], context);
                     var d1 = converter.ToBlittable(destConfigs[1], context);
-                    Assert.True(c1.Equals(d1));
+                    Assert.Equal(c1, d1);
                 }
             }
         }
@@ -88,7 +88,7 @@ public class AiAgentBackupRestore : ReplicationTestBase
         agent0.Identifier = "shopping-assistant";
         agent0.Persistence = new AiAgentPersistenceConfiguration("Chats/", TimeSpan.FromDays(30));
         agent0.Parameters.Add(new AiAgentParameter("company"));
-
+        agent0.ChatTrimming = null;
         agent0.Queries =
         [
             new AiAgentToolQuery
@@ -126,7 +126,7 @@ public class AiAgentBackupRestore : ReplicationTestBase
                 ParametersSampleObject = "{}"
             }
         ];
-
+        agent1.ChatTrimming = null;
         return new List<AiAgentConfiguration>() { agent0, agent1 };
     }
 }
