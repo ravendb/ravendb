@@ -115,15 +115,16 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
                 />
             </FormGroup>
             <FormGroup>
-                <div className="d-flex mb-1 justify-content-between">
+                <div className="d-flex mb-1 justify-content-between align-items-end">
                     <FormLabel className="mb-0">Query</FormLabel>
                     {queryItem.query && (
                         <Button
-                            variant="link"
-                            className="m-0 p-0"
+                            variant="info"
+                            className="rounded-pill"
                             onClick={linkToQuery}
                             title="Click to test this query in the Studio's Query View"
                         >
+                            <Icon icon="rocket" />
                             Test query
                         </Button>
                     )}
