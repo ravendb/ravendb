@@ -46,7 +46,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         return new RunConversationOperationCommand(_conversationId, _agentId, _userPrompt, _actionResponses, _options, _changeVector, conventions);
     }
 
-    internal sealed class RunConversationOperationCommand : RavenCommand<ConversationResult<TSchema>>
+    internal sealed class RunConversationOperationCommand : RavenCommand<ConversationResult<TSchema>>, IRaftCommand
     {
         private readonly string _conversationId;
         private readonly string _agentId;
@@ -72,13 +72,17 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         {
             url = $"{node.Url}/databases/{node.Database}/ai/agent" +
                   $"?conversationId={Uri.EscapeDataString(_conversationId)}&agentId={Uri.EscapeDataString(_agentId)}";
-            
+
+            if (_conversationId[_conversationId.Length - 1] == '|')
+            {
+                _raftId = Guid.NewGuid().ToString();
+            }
+
             if (_changeVector != null)
                 url += $"&changeVector={Uri.EscapeDataString(_changeVector)}";
 
             var body = new ConversionRequestBody
             {
-                Parameters = _options?.Parameters ?? new Dictionary<string, object>(),
                 ActionResponses = _actionResponses,
                 UserPrompt = _prompt,
                 Options = _options
@@ -103,12 +107,14 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
 
             Result = ConversationResult<TSchema>.Convert(response, _conventions);
         }
+
+        private string _raftId = string.Empty;
+        public string RaftUniqueRequestId => _raftId;
     }
 }
 
 internal class ConversionRequestBody : IDynamicJson
 {
-    public Dictionary<string, object> Parameters { get; set; }
     public List<AiAgentActionResponse> ActionResponses { get; set; }
     public string UserPrompt { get; set; }
     public AiConversationCreationOptions Options { get; set; }
@@ -116,10 +122,9 @@ internal class ConversionRequestBody : IDynamicJson
     {
         return new DynamicJsonValue
         {
-            [nameof(Parameters)] = DynamicJsonValue.Convert(Parameters),
-            [nameof(ActionResponses)] = ActionResponses == null ? null : new DynamicJsonArray(ActionResponses.Select(r => r.ToJson())), 
+            [nameof(ActionResponses)] = ActionResponses == null ? null : new DynamicJsonArray(ActionResponses.Select(r => r.ToJson())),
             [nameof(UserPrompt)] = UserPrompt,
-            [nameof(Options)] = Options?.ToJson()
+            [nameof(Options)] = (Options ?? new AiConversationCreationOptions()).ToJson()
         };
     }
 }

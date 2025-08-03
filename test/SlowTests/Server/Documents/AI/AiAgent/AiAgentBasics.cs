@@ -212,7 +212,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 agent,
                 document: null,
                 "what goes well with my cheese for recent orders?",
-                new Dictionary<string, object> { ["company"] = "companies/90-A" },
+                new AiConversationCreationOptions(new Dictionary<string, object>{ ["company"] = "companies/90-A" }) ,
                 actionResponses: null));
 
             var responses = new List<AiAgentActionResponse>();
@@ -228,7 +228,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 agent,
                 document: r.Document,
                 userPrompt: null, // "what goes well with my cheese for recent orders?",
-                parameters: null,
+                options: null,
                 actionResponses: responses));
         }
 
@@ -238,19 +238,19 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             private readonly AiAgentConfiguration _agent;
             private readonly string _document;
             private readonly string _userPrompt;
-            private readonly Dictionary<string, object> _parameters;
+            private readonly AiConversationCreationOptions _options;
             private readonly List<AiAgentActionResponse> _actionResponses;
-            public RunTestConversationOperation(AiAgentConfiguration agent, string document, string userPrompt, Dictionary<string, object> parameters, List<AiAgentActionResponse> actionResponses)
+            public RunTestConversationOperation(AiAgentConfiguration agent, string document, string userPrompt, AiConversationCreationOptions options, List<AiAgentActionResponse> actionResponses)
             {
                 _agent = agent;
                 _document = document;
                 _userPrompt = userPrompt;
-                _parameters = parameters;
+                _options = options;
                 _actionResponses = actionResponses;
             }
             public RavenCommand<TestResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
             {
-                return new RunConversationOperationCommand(_agent, _document, _userPrompt, _parameters, _actionResponses, conventions);
+                return new RunConversationOperationCommand(_agent, _document, _userPrompt, _options, _actionResponses, conventions);
             }
 
             private sealed class RunConversationOperationCommand : RavenCommand<TestResult<TSchema>>
@@ -258,17 +258,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 private readonly AiAgentConfiguration _agent;
                 private readonly string _document;
                 private readonly string _prompt;
-                private readonly Dictionary<string, object> _parameters;
+                private readonly AiConversationCreationOptions _options;
                 private readonly List<AiAgentActionResponse> _toolResponses;
                 private readonly DocumentConventions _conventions;
 
-                public RunConversationOperationCommand(AiAgentConfiguration agent, string document, string prompt, Dictionary<string, object> parameters,
+                public RunConversationOperationCommand(AiAgentConfiguration agent, string document, string prompt, AiConversationCreationOptions options,
                     List<AiAgentActionResponse> toolResponses, DocumentConventions conventions)
                 {
                     _agent = agent;
                     _document = document;
                     _prompt = prompt;
-                    _parameters = parameters;
+                    _options = options;
                     _toolResponses = toolResponses;
                     _conventions = conventions;
                 }
@@ -282,7 +282,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     var body = new TestRequestBody
                     {
                         Configuration = _agent,
-                        Parameters = _parameters ?? new Dictionary<string, object>(), 
+                        Options = _options, 
                         ActionResponses = _toolResponses ?? [], 
                         UserPrompt = _prompt,
                     };
@@ -314,7 +314,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             public class TestRequestBody : IDynamicJson
             {
                 public string UserPrompt { get; set; }
-                public Dictionary<string, object> Parameters { get; set; }
+                public AiConversationCreationOptions Options { get; set; }
                 public AiAgentConfiguration Configuration { get; set; }
                 public List<AiAgentActionResponse> ActionResponses { get; set; }
 
@@ -324,7 +324,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     var json = new DynamicJsonValue
                     {
                         [nameof(UserPrompt)] = UserPrompt,
-                        [nameof(Parameters)] = DynamicJsonValue.Convert(Parameters),
+                        [nameof(Options)] = (Options ?? new AiConversationCreationOptions()).ToJson(),
                         [nameof(Configuration)] = Configuration.ToJson(),
                         [nameof(ActionResponses)] = new DynamicJsonArray(ActionResponses.Select(x => x.ToJson()))
                     };

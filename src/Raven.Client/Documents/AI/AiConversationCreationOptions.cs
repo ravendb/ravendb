@@ -31,6 +31,7 @@ public class AiConversationCreationOptions : IDynamicJson
         return new DynamicJsonValue
         {
             [nameof(ConversationExpirationInSec)] = ConversationExpirationInSec,
+            [nameof(Parameters)] = Parameters != null ? DynamicJsonValue.Convert(Parameters) : null,
         };
     }
 }

@@ -179,15 +179,22 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var body = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token);
             body.TryGet(nameof(ConversionRequestBody.ActionResponses), out BlittableJsonReaderArray actionResponses);
             body.TryGet(nameof(ConversionRequestBody.UserPrompt), out string userPrompt);
-            body.TryGet(nameof(ConversionRequestBody.Parameters), out BlittableJsonReaderObject parameters);
-            body.TryGet(nameof(ConversionRequestBody.Options), out BlittableJsonReaderObject options);
+            body.TryGet(nameof(ConversionRequestBody.Options), out BlittableJsonReaderObject optionsBlittable);
+            
+            optionsBlittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
+            optionsBlittable.TryGet(nameof(AiConversationCreationOptions.ConversationExpirationInSec), out int? conversationExpirationInSec);
+
+            var options = new AiConversationCreationOptions
+            {
+                ConversationExpirationInSec = conversationExpirationInSec
+            };
 
             return new RequestBody
             {
                 ActionResponses = actionResponses, 
                 UserPrompt = userPrompt, 
                 Parameters = parameters,
-                Options = options != null ? JsonDeserializationClient.ConversationCreationOptions(options) : new AiConversationCreationOptions()
+                Options = options
             };
         }
 
@@ -506,6 +513,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         public virtual async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history)
         {
             var changeVectorLsv = context.GetLazyString(conversation.ChangeVector);
+
+            if (conversationId[^1] == '|')
+            {
+                var r = await RequestHandler.ServerStore.GenerateClusterIdentityAsync(conversationId, RequestHandler.IdentityPartsSeparator, RequestHandler.DatabaseName, RequestHandler.GetRaftRequestIdFromQuery());
+                conversationId = r.ClusterId;
+            }
+
 
             var cmd = new PutChatCommand(conversationId, conversation, history, changeVectorLsv, configuration, RequestHandler.Database);
             await RequestHandler.Database.TxMerger.Enqueue(cmd);

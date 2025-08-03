@@ -102,32 +102,27 @@ internal class AiConversation : IAiConversationOperations
         while (true)
         {
             var r = await RunAsyncInternal<TAnswer>(token).ConfigureAwait(false);
-            if (r.Status == AiConversationResult.ActionRequired)
+            if (r.Status == AiConversationResult.Done) 
+                return r;
+            
+            if (_actionRequests.Count == 0)
+                throw new InvalidOperationException($"There are no action requests to process, but Status was {r.Status}, should not be possible.");
+
+            using (var ctx = JsonOperationContext.ShortTermSingleUse())
             {
-                if (_actionRequests.Count == 0)
-                    throw new InvalidOperationException("There are no action requests to process.");
-
-                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                foreach (var action in _actionRequests)
                 {
-                    for (int i = _actionRequests.Count - 1; i >= 0; i--)
+                    if (_invocations.TryGetValue(action.Name, out var invocation))
                     {
-                        var action = _actionRequests[i];
-                        if (_invocations.TryGetValue(action.Name, out var invocation))
-                        {
-                            {
-                                var response = await invocation.ExecuteAsync(ctx, action.Arguments, token).ConfigureAwait(false);
-                                AddActionResponse(action.ToolId, response);
-                            }
-
-                            _actionRequests.RemoveAt(i);
-                        }
+                        var response = await invocation.ExecuteAsync(ctx, action.Arguments, token).ConfigureAwait(false);
+                        AddActionResponse(action.ToolId, response);
                     }
                 }
-
-                // we responded to all the action requests, so we can continue
-                if (_actionRequests.Count == 0)
-                    continue;
             }
+
+            // we have responses that we need to submit
+            if (_actionResponses.Count > 0)
+                continue;
 
             return r;
         }
@@ -223,7 +218,7 @@ internal class AiConversation : IAiConversationOperations
         }
     }
 
-    internal interface IAiActionContext
+    private interface IAiActionContext
     {
         Task<object> ExecuteAsync(JsonOperationContext context, string arguments, CancellationToken token = default);
     }

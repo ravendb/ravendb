@@ -2,6 +2,7 @@
 using System.Linq;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands.AI;
@@ -24,6 +25,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         var options = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token.Token);
         
         var body = JsonDeserializationServer.AiAgentTestRequest(options);
+        var req = body.RequestBody;
 
         AiAgentHelpers.AddDefaultValues(body.Configuration, RequestHandler.Configuration.Ai);
         AddOrUpdateAiAgentCommand.ValidateConfiguration(context, body.Configuration);
@@ -36,11 +38,11 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
 
         if (conversation == null)
         {
-            conversation = new ConversationDocument("test", body.Parameters);
+            conversation = new ConversationDocument("test", req.Parameters);
             conversation.Initialize(context, body.Configuration);
         }
 
-        await HandleRequest(context, body.Configuration, "test", conversation, body.RequestBody, token.Token);
+        await HandleRequest(context, body.Configuration, "test", conversation, req, token.Token);
     }
 
     public override Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation,
@@ -75,16 +77,23 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
     public class AiAgentTestRequest
     {
         public string UserPrompt;
-        public BlittableJsonReaderObject Parameters;
+        public BlittableJsonReaderObject Options;
         public AiAgentConfiguration Configuration;
         public BlittableJsonReaderArray ActionResponses;
         public BlittableJsonReaderObject Document;
         
-        public RequestBody RequestBody => new RequestBody
+        public RequestBody RequestBody
         {
-            UserPrompt = UserPrompt,
-            Parameters = Parameters,
-            ActionResponses = ActionResponses
-        };
+            get
+            {
+                Options.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject param);
+                return new RequestBody
+                {
+                    UserPrompt = UserPrompt, 
+                    Parameters = param, 
+                    ActionResponses = ActionResponses
+                };
+            }
+        }
     }
 }
