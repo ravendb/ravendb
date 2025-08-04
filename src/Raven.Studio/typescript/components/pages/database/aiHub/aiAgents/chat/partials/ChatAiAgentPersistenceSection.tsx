@@ -30,7 +30,7 @@ export default function ChatAiAgentPersistenceSection() {
                         </>
                     }
                 >
-                    <Icon icon="info" color="info" margin="ms-1" className="fs-3" />
+                    <Icon icon="info-new" />
                 </PopoverWithHoverWrapper>
             </h3>
             <div className="mb-1">
@@ -41,7 +41,7 @@ export default function ChatAiAgentPersistenceSection() {
                     <FormLabel>
                         Conversation ID prefix
                         <PopoverWithHoverWrapper message="Prefix to use in the document ID of each saved chat created with this agent.">
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" />
                         </PopoverWithHoverWrapper>
                     </FormLabel>
                     <FormInput
@@ -52,14 +52,14 @@ export default function ChatAiAgentPersistenceSection() {
                     />
                 </FormGroup>
                 {isDocumentExpirationEnabled.status === "success" && !isDocumentExpirationEnabled.data && (
-                    <FormGroup>
+                    <FormGroup marginClass="mb-1">
                         <FormSwitch control={control} name="isEnableDocumentExpiration">
                             Enable document expiration
                         </FormSwitch>
                     </FormGroup>
                 )}
                 {(formValues.isEnableDocumentExpiration || isDocumentExpirationEnabled.data) && (
-                    <FormGroup>
+                    <FormGroup marginClass="mb-0">
                         <FormSwitch name="isDocumentExpireInCustomizeEnabled" control={control}>
                             Set expiration
                             <PopoverWithHoverWrapper
@@ -72,7 +72,7 @@ export default function ChatAiAgentPersistenceSection() {
                                     </>
                                 }
                             >
-                                <Icon icon="info" color="info" margin="ms-1" />
+                                <Icon icon="info-new" />
                             </PopoverWithHoverWrapper>
                         </FormSwitch>
                         {formValues.isDocumentExpireInCustomizeEnabled && (

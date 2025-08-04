@@ -95,7 +95,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                                 </>
                             }
                         >
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" />
                         </PopoverWithHoverWrapper>
                     </FormLabel>
                     <FormInput
@@ -122,7 +122,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                     <FormLabel>
                         Connection String
                         <PopoverWithHoverWrapper message="The selected connection string determines which LLM the agent will interact with.">
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" />
                         </PopoverWithHoverWrapper>
                     </FormLabel>
                     <InputGroup>
@@ -165,7 +165,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                                 </>
                             }
                         >
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" />
                         </PopoverWithHoverWrapper>
                     </FormLabel>
                     <FormInput

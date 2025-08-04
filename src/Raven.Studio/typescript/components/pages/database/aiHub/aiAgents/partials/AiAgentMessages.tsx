@@ -413,8 +413,8 @@ function ToolCall({ toolCall, toolQueries, toolActions }: ToolCallProps) {
     const label = toolQuery ? "Query tool:" : "Action tool:";
 
     return (
-        <Accordion className="transcript-tool border border-secondary rounded-2 panel-bg-3">
-            <Accordion.Item eventKey={id} className="panel-bg-3">
+        <Accordion className="transcript-tool border border-secondary rounded-2 panel-bg-1">
+            <Accordion.Item eventKey={id} className="panel-bg-1">
                 <Accordion.Header>
                     <div className="hstack gap-2">
                         <div className="p-1 rounded-2 bg-faded-primary border border-primary">
@@ -426,7 +426,7 @@ function ToolCall({ toolCall, toolQueries, toolActions }: ToolCallProps) {
                     </div>
                 </Accordion.Header>
                 <Accordion.Collapse eventKey={id} mountOnEnter unmountOnExit>
-                    <Accordion.Body className="panel-bg-3 rounded-2">
+                    <Accordion.Body className="panel-bg-1 rounded-2">
                         <ToolCallBody tool={toolQuery ?? toolAction} toolCall={toolCall} />
                     </Accordion.Body>
                 </Accordion.Collapse>
@@ -458,7 +458,7 @@ function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
                             See details
                         </Accordion.Header>
                         <Accordion.Collapse eventKey={id} mountOnEnter unmountOnExit>
-                            <Accordion.Body className="panel-bg-2 rounded-2">
+                            <Accordion.Body className="panel-bg-2 rounded-2 pt-0">
                                 {tool.Description && (
                                     <div>
                                         <small className="text-muted">Description</small>

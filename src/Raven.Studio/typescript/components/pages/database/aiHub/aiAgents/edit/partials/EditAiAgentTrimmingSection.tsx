@@ -41,7 +41,7 @@ export default function EditAiAgentTrimmingSection() {
                         </>
                     }
                 >
-                    <Icon icon="info" color="info" margin="ms-1" className="fs-3" />
+                    <Icon icon="info-new" />
                 </PopoverWithHoverWrapper>
             </h3>
             <div className="mb-1">You can configure trimming of long conversations by summarizing older messages.</div>
@@ -91,7 +91,7 @@ function TokensFields() {
                 <FormLabel>
                     Max tokens before summarization
                     <PopoverWithHoverWrapper message="Summarization will be triggered when the total number of tokens used in the conversation exceeds this limit.">
-                        <Icon icon="info" color="info" margin="ms-1" />
+                        <Icon icon="info-new" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
                 <FormInput
@@ -113,7 +113,7 @@ function TokensFields() {
                             </>
                         }
                     >
-                        <Icon icon="info" color="info" margin="ms-1" />
+                        <Icon icon="info-new" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
                 <FormInput
@@ -137,7 +137,7 @@ function TokensFields() {
 //                 <FormLabel>
 //                     Messages length before truncate
 //                     <PopoverWithHoverWrapper message="Truncation is triggered when this number of messages is exceeded.">
-//                         <Icon icon="info" color="info" margin="ms-1" />
+//                         <Icon icon="info-new" />
 //                     </PopoverWithHoverWrapper>
 //                 </FormLabel>
 //                 <FormInput
@@ -159,7 +159,7 @@ function TokensFields() {
 //                             </>
 //                         }
 //                     >
-//                         <Icon icon="info" color="info" margin="ms-1" />
+//                         <Icon icon="info-new" />
 //                     </PopoverWithHoverWrapper>
 //                 </FormLabel>
 //                 <FormInput
@@ -183,7 +183,7 @@ function HistoryFields() {
 
     return (
         <>
-            <FormGroup>
+            <FormGroup marginClass="mb-0">
                 <FormSwitch control={control} name="trimming.isEnableHistory">
                     Enable history
                     <PopoverWithHoverWrapper
@@ -194,16 +194,16 @@ function HistoryFields() {
                             </>
                         }
                     >
-                        <Icon icon="info" color="info" margin="ms-1" />
+                        <Icon icon="info-new" />
                     </PopoverWithHoverWrapper>
                 </FormSwitch>
             </FormGroup>
             {formValues.trimming.isEnableHistory && (
-                <FormGroup>
+                <FormGroup marginClass="mt-1">
                     <FormSwitch control={control} name="trimming.isSetHistoryExpiration">
                         Set history expiration
                         <PopoverWithHoverWrapper message="Toggle on to set how long history documents are retained.">
-                            <Icon icon="info" color="info" margin="ms-1" />
+                            <Icon icon="info-new" />
                         </PopoverWithHoverWrapper>
                     </FormSwitch>
                     {formValues.trimming.isSetHistoryExpiration && (

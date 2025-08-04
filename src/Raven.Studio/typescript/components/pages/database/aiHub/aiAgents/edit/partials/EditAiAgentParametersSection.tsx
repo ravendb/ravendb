@@ -33,7 +33,7 @@ export default function EditAiAgentParametersSection() {
                         </>
                     }
                 >
-                    <Icon icon="info" color="info" margin="ms-1" className="fs-3" />
+                    <Icon icon="info-new" />
                 </PopoverWithHoverWrapper>
             </h3>
             <div className="mb-1">
@@ -60,53 +60,53 @@ export default function EditAiAgentParametersSection() {
                             </EmptySet>
                         </div>
                     ) : (
-                        <div className="overflow-y-auto" style={{ maxHeight: "220px" }}>
-                            <Table bordered>
-                                <thead className="panel-bg-2">
-                                    <tr>
-                                        <th>Parameter</th>
-                                        <th className="w-75">
-                                            Description <OptionalLabel />
-                                        </th>
-                                        <th style={{ width: "50px" }}></th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {parametersFieldArray.fields.map((field, index) => (
-                                        <tr key={field.id}>
-                                            <td className="p-0">
+                        <div className="parameters-grid overflow-y-auto" style={{ maxHeight: "220px" }}>
+                            <div className="parameters-header position-sticky top-0 z-1 panel-bg-2">
+                                <div className="parameters-grid-header">
+                                    <div className="parameter-name-header fw-bold">Parameter</div>
+                                    <div className="parameter-description-header fw-bold">
+                                        Description <OptionalLabel />
+                                    </div>
+                                    <div className="parameter-actions-header fw-bold">Actions</div>
+                                </div>
+                            </div>
+                            <div className="parameters-list">
+                                {parametersFieldArray.fields.map((field, index) => (
+                                    <div key={field.id} className="parameter-row">
+                                        <div className="parameters-grid-row">
+                                            <div className="parameter-name-cell">
                                                 <FormInput
                                                     type="text"
                                                     control={control}
                                                     name={`parameters.${index}.name`}
                                                     placeholder="e.g. company"
-                                                    className="rounded-0 border-0"
+                                                    className="form-control border-0 rounded-0"
                                                 />
-                                            </td>
-                                            <td className="w-75 p-0">
+                                            </div>
+                                            <div className="parameter-description-cell">
                                                 <FormInput
                                                     type="text"
                                                     control={control}
                                                     name={`parameters.${index}.description`}
                                                     placeholder="e.g. The company ID"
-                                                    className="rounded-0 border-0"
+                                                    className="form-control border-0 rounded-0"
                                                 />
-                                            </td>
-                                            <td className="align-middle">
+                                            </div>
+                                            <div className="d-flex px-1">
                                                 <Button
                                                     variant="link"
-                                                    className="text-danger"
+                                                    className="text-danger p-0"
                                                     size="sm"
                                                     onClick={() => parametersFieldArray.remove(index)}
                                                     title="Delete this parameter"
                                                 >
                                                     <Icon icon="trash" margin="m-0" />
                                                 </Button>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     )}
                 </div>

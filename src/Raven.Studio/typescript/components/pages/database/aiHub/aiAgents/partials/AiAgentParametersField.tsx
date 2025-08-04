@@ -20,11 +20,11 @@ export default function AiAgentParametersField<
 
     return (
         <div className="text-center w-100 overflow-auto py-2">
-            <Icon icon="metrics" color="primary" size="lg" />
+            <Icon icon="metrics" color="primary" size="xl" margin="mb-3" />
             <h3 className="mt-1">
-                Provide values for the agent parameters before starting the chat.
+                Provide values for the agent parameters before starting the chat
                 <PopoverWithHoverWrapper message="When a query tool is used, the agent will insert these values into the query definition before executing it against the database, filtering the data and ensuring the query only retrieves data within the allowed scope.">
-                    <Icon icon="info" color="info" margin="ms-1" size="sm" />
+                    <Icon icon="info-new" margin="ms-1" />
                 </PopoverWithHoverWrapper>
             </h3>
 

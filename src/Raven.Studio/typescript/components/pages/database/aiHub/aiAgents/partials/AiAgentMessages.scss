@@ -15,18 +15,18 @@
     }
 
     .accordion-button {
-        border-radius: sizes.$gutter-sm !important;
+        border-radius: sizes.$gutter-xxs !important;
         font-size: sizes.$font-size-sm !important;
         padding: sizes.$gutter-xxs !important;
-        background-color: colors.$panel-bg-3 !important;
+        background-color: colors.$panel-bg-1-var !important;
     }
 
     .tool-call-details {
         .accordion-button {
-            border-radius: sizes.$gutter-sm !important;
+            border-radius: sizes.$gutter-xxs !important;
             font-size: sizes.$font-size-sm !important;
             padding: sizes.$gutter-xxs !important;
-            background-color: colors.$panel-bg-2 !important;
+            background-color: colors.$panel-bg-2-var !important;
         }
     }
 }

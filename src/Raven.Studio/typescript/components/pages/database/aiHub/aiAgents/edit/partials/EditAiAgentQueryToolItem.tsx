@@ -93,7 +93,7 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
                     </Button>
                 </div>
             </div>
-            <hr />
+            <hr className="mt-2 mb-3" />
             <FormGroup>
                 <FormLabel>Tool name</FormLabel>
                 <FormInput

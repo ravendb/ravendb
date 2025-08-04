@@ -678,3 +678,16 @@ $filtering-input-bg: $toggle-bg !default;
         z-index: 1;
     }
 }
+
+.icon-info-new {
+    font-size: 100%;
+    opacity: .6;
+    transition: $transition-base;
+    margin-left: $gutter-xxxs;
+    margin-right: 0 !important;
+
+    &:hover {
+        opacity: 1;
+        transition: none;
+    }
+}

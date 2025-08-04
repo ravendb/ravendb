@@ -89,23 +89,20 @@ export default function SampleObjectAndSchemaFields<
 
     return (
         <div className="sample-object-and-schema-tabs">
-            <Tabs defaultActiveKey={defaultActiveTab} id={tabsId} justify>
+            <Tabs defaultActiveKey={defaultActiveTab} id={tabsId}>
                 <Tab
                     eventKey="sample-object"
                     title={
                         <div className={classNames({ "text-danger": hasSampleObjectError })}>
                             {sampleObjectLabel}
                             <PopoverWithHoverWrapper message={sampleObjectTooltip}>
-                                <Icon icon="info" color="info" margin="ms-1" />
+                                <Icon icon="info-new" />
                             </PopoverWithHoverWrapper>
                             {hasSampleObjectError && <Icon icon="warning" color="danger" margin="ms-1" />}
                         </div>
                     }
                 >
                     <div>
-                        {!!sampleObject && !jsonSchema && (
-                            <span>The server will auto-generate a schema from this object</span>
-                        )}
                         <FormAceEditor
                             aceRef={sampleObjectRef}
                             control={control}
@@ -137,22 +134,27 @@ export default function SampleObjectAndSchemaFields<
                                 },
                             ]}
                         />
+                        {!!sampleObject && !jsonSchema && (
+                            <div className="mt-2">
+                                <Icon icon="info" color="info" />
+                                The server will auto-generate a schema from this object
+                            </div>
+                        )}
                     </div>
                 </Tab>
                 <Tab
                     eventKey="json-schema"
                     title={
-                        <div className={classNames({ "text-danger": hasJsonSchemaError })}>
-                            {jsonSchemaLabel}
+                        <div>
+                            <span className={classNames(hasJsonSchemaError && "text-danger")}>{jsonSchemaLabel}</span>
                             <PopoverWithHoverWrapper message={jsonSchemaTooltip}>
-                                <Icon icon="info" color="info" margin="ms-1" />
+                                <Icon icon="info-new" />
                             </PopoverWithHoverWrapper>
                             {hasJsonSchemaError && <Icon icon="warning" color="danger" margin="ms-1" />}
                         </div>
                     }
                 >
                     <div>
-                        {!!jsonSchema && <span>This schema will be sent to the model</span>}
                         <div className="position-relative">
                             <FormAceEditor
                                 aceRef={jsonSchemaRef}
@@ -207,6 +209,12 @@ export default function SampleObjectAndSchemaFields<
                                 </ButtonWithSpinner>
                             )}
                         </div>
+                        {!!jsonSchema && (
+                            <div className="mt-2">
+                                <Icon icon="info" color="info" />
+                                This schema will be sent to the model
+                            </div>
+                        )}
                     </div>
                 </Tab>
             </Tabs>

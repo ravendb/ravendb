@@ -24,14 +24,14 @@ export default function EditAiAgentToolsSection() {
                         </>
                     }
                 >
-                    <Icon icon="info" color="info" margin="ms-1" className="fs-3" />
+                    <Icon icon="info-new" />
                 </PopoverWithHoverWrapper>
             </h3>
             <div className="mb-1">Tools are a controlled way to pass context to the LLM.</div>
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <div className="hstack justify-content-between">
                     <div className="hstack gap-2">
-                        <div className="p-1 rounded-2 bg-faded-primary border border-primary">
+                        <div className="tool-icon bg-faded-primary border border-primary">
                             <Icon icon="query" color="primary" margin="m-0" />
                         </div>
                         <div>
@@ -52,7 +52,7 @@ export default function EditAiAgentToolsSection() {
                                     </>
                                 }
                             >
-                                <Icon icon="info" color="info" margin="ms-1" />
+                                <Icon icon="info-new" />
                             </PopoverWithHoverWrapper>
                         </div>
                     </div>
@@ -76,7 +76,7 @@ export default function EditAiAgentToolsSection() {
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary mt-2">
                 <div className="hstack justify-content-between">
                     <div className="hstack gap-2">
-                        <div className="p-1 rounded-2 bg-faded-primary border border-primary">
+                        <div className="tool-icon bg-faded-primary border border-primary">
                             <Icon icon="force" color="primary" margin="m-0" />
                         </div>
                         <div>
@@ -94,7 +94,7 @@ export default function EditAiAgentToolsSection() {
                                     </>
                                 }
                             >
-                                <Icon icon="info" color="info" margin="ms-1" />
+                                <Icon icon="info-new" />
                             </PopoverWithHoverWrapper>
                         </div>
                     </div>
