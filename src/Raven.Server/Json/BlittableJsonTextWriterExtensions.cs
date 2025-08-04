@@ -709,7 +709,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async Task WriteIndexEntriesQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IndexEntriesQueryResult result, CancellationToken token)
+        public static async ValueTask WriteIndexEntriesQueryResultAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IndexEntriesQueryResult result, CancellationToken token)
         {
             writer.WriteStartObject();
 
@@ -732,12 +732,14 @@ namespace Raven.Server.Json
             writer.WriteInteger(result.DurationInMs);
             writer.WriteComma();
 
-            await writer.WriteQueryResultAsync(context, result, metadataOnly: false, partial: true, token);
+            var writeQueryResult = writer.WriteQueryResultAsync(context, result, metadataOnly: false, partial: true, token);
+            if (writeQueryResult.IsCompletedSuccessfully == false)
+                await writeQueryResult;
 
             writer.WriteEndObject();
         }
 
-        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentQueryResultAsync<T>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryResultServerSide<T> result, bool metadataOnly, Action<AsyncBlittableJsonTextWriter> writeAdditionalData = null, CancellationToken token = default)
+        public static async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentQueryResultAsync<T>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryResultServerSide<T> result, bool metadataOnly, Action<AsyncBlittableJsonTextWriter> writeAdditionalData = null, CancellationToken token = default)
         {
             writer.WriteStartObject();
 
@@ -770,7 +772,10 @@ namespace Raven.Server.Json
             writer.WriteArray(nameof(result.IncludedPaths), result.IncludedPaths);
             writer.WriteComma();
 
-            var numberOfResults = await writer.WriteQueryResultAsync(context, result, metadataOnly, partial: true, token);
+            var writeQueryResults = writer.WriteQueryResultAsync(context, result, metadataOnly, partial: true, token);
+            var numberOfResults = writeQueryResults.IsCompletedSuccessfully 
+                ? writeQueryResults.Result 
+                : await writeQueryResults;
 
             if (result.Highlightings != null)
             {
@@ -828,7 +833,9 @@ namespace Raven.Server.Json
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.RevisionIncludes));
                 writer.WriteStartArray();
-                await revisionIncludes.WriteIncludesAsync(writer, context, token);
+                var writeRevisionIncludes = revisionIncludes.WriteIncludesAsync(writer, context, token);
+                if (writeRevisionIncludes.IsCompletedSuccessfully == false)
+                    await writeRevisionIncludes;
                 writer.WriteEndArray();
             }
 
@@ -837,7 +844,9 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.CounterIncludes));
-                await counters.WriteIncludesAsync(writer, context, token);
+                var writeCountersIncludes = counters.WriteIncludesAsync(writer, context, token);
+                if (writeCountersIncludes.IsCompletedSuccessfully == false)
+                    await writeCountersIncludes;
 
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.IncludedCounterNames));
@@ -849,7 +858,9 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.TimeSeriesIncludes));
-                await timeSeries.WriteIncludesAsync(writer, context, token);
+                var writeTimeSeriesIncludes = timeSeries.WriteIncludesAsync(writer, context, token);
+                if (writeTimeSeriesIncludes.IsCompletedSuccessfully == false)    
+                    await writeTimeSeriesIncludes;
             }
 
             if (result.TimeSeriesFields != null)
@@ -863,7 +874,9 @@ namespace Raven.Server.Json
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(result.CompareExchangeValueIncludes));
-                await writer.WriteCompareExchangeValuesAsync(compareExchangeValues, token);
+                var writeCompareExchangeValues = writer.WriteCompareExchangeValuesAsync(compareExchangeValues, token);
+                if (writeCompareExchangeValues.IsCompletedSuccessfully == false)
+                    await writeCompareExchangeValues;
             }
 
             var spatialProperties = result.SpatialProperties;
@@ -939,7 +952,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        private static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteQueryResultAsync<TResult, TInclude>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, bool partial = false, CancellationToken token = default)
+        private static async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteQueryResultAsync<TResult, TInclude>(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, QueryResultBase<TResult, TInclude> result, bool metadataOnly, bool partial = false, CancellationToken token = default)
         {
             long numberOfResults;
             long totalDocumentsSizeInBytes = -1; // Size of facet is constant - no need to count that - similar situation happens on suggestions
@@ -954,13 +967,21 @@ namespace Raven.Server.Json
             if (results is List<Document> documents)
             {
                 writer.WritePropertyName(nameof(result.Results));
-                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, documents, metadataOnly, token);
+                var writeDocuments = writer.WriteDocumentsAsync(context, documents, metadataOnly, token);
+                (numberOfResults, totalDocumentsSizeInBytes) = writeDocuments.IsCompletedSuccessfully 
+                    ? writeDocuments.Result 
+                    : await writeDocuments;
                 writer.WriteComma();
             }
             else if (results is List<BlittableJsonReaderObject> objects)
             {
                 writer.WritePropertyName(nameof(result.Results));
-                (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteObjectsAsync(context, objects, token);
+                var writeObjects = writer.WriteObjectsAsync(context, objects, token);
+                
+                (numberOfResults, totalDocumentsSizeInBytes) = writeObjects.IsCompletedSuccessfully 
+                    ? writeObjects.Result 
+                    : await writeObjects;
+                
                 writer.WriteComma();
             }
             else if (results is List<FacetResult> facets)
@@ -968,14 +989,18 @@ namespace Raven.Server.Json
                 numberOfResults = facets.Count;
                 writer.WriteArray(context, nameof(result.Results), facets, (w, c, facet) => w.WriteFacetResult(c, facet));
                 writer.WriteComma();
-                await writer.MaybeFlushAsync(token);
+                var maybeFlush = writer.MaybeFlushAsync(token);
+                if (maybeFlush.IsCompletedSuccessfully == false)    
+                    await maybeFlush;
             }
             else if (results is List<SuggestionResult> suggestions)
             {
                 numberOfResults = suggestions.Count;
                 writer.WriteArray(context, nameof(result.Results), suggestions, (w, c, suggestion) => w.WriteSuggestionResult(c, suggestion));
                 writer.WriteComma();
-                await writer.MaybeFlushAsync(token);
+                var maybeFlush = writer.MaybeFlushAsync(token);
+                if (maybeFlush.IsCompletedSuccessfully == false)    
+                    await maybeFlush;
             }
             else
                 throw new NotSupportedException($"Cannot write query result of '{typeof(TResult)}' type in '{result.GetType()}'.");
@@ -984,13 +1009,17 @@ namespace Raven.Server.Json
             if (includes is List<Document> includeDocuments)
             {
                 writer.WritePropertyName(nameof(result.Includes));
-                await writer.WriteIncludesAsync(context, includeDocuments, token);
+                var writeIncludes = writer.WriteIncludesAsync(context, includeDocuments, token);
+                if (writeIncludes.IsCompletedSuccessfully == false)    
+                    await writeIncludes;
                 writer.WriteComma();
             }
             else if (includes is List<BlittableJsonReaderObject> includeObjects)
             {
                 writer.WritePropertyName(nameof(result.Includes));
-                await writer.WriteIncludesAsync(includeObjects, token);
+                var writeIncludes = writer.WriteIncludesAsync(includeObjects, token);
+                if (writeIncludes.IsCompletedSuccessfully == false)    
+                    await writeIncludes;
                 writer.WriteComma();
             }
             else
@@ -1875,12 +1904,12 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, CancellationToken token)
+        public static ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<Document> documents, bool metadataOnly, CancellationToken token)
         {
             return WriteDocumentsAsync(writer, context, documents.GetEnumerator(), metadataOnly, token);
         }
 
-        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerator<Document> documents, bool metadataOnly, CancellationToken token)
+        public static async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerator<Document> documents, bool metadataOnly, CancellationToken token)
         {
             long numberOfResults = 0;
             long totalDocumentsSizeInBytes = 0;
@@ -1900,7 +1929,9 @@ namespace Raven.Server.Json
                 first = false;
 
                 WriteDocument(writer, context, documents.Current, metadataOnly);
-                await writer.MaybeFlushAsync(token);
+                var maybeFlushValueTask = writer.MaybeFlushAsync(token);
+                if (maybeFlushValueTask.IsCompletedSuccessfully == false)
+                    await maybeFlushValueTask;
             }
 
             writer.WriteEndArray();
@@ -1913,7 +1944,7 @@ namespace Raven.Server.Json
             writer.WriteString(continuation.ToBase64(context));
         }
 
-        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IAsyncEnumerable<Document> documents, bool metadataOnly, CancellationToken token)
+        public static async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IAsyncEnumerable<Document> documents, bool metadataOnly, CancellationToken token)
         {
             long numberOfResults = 0;
             long totalDocumentsSizeInBytes = 0;
@@ -1998,7 +2029,10 @@ namespace Raven.Server.Json
 
                 writer.WritePropertyName(document.Id);
                 WriteDocument(writer, context, metadataOnly: false, document: document);
-                await writer.MaybeFlushAsync(token);
+                var maybeFlushValueTask = writer.MaybeFlushAsync(token);
+                if (maybeFlushValueTask.IsCompletedSuccessfully == false)
+                    await maybeFlushValueTask;
+
             }
 
             writer.WriteEndObject();
@@ -2061,7 +2095,7 @@ namespace Raven.Server.Json
             writer.WriteEndObject();
         }
 
-        public static async Task<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteObjectsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects, CancellationToken token)
+        public static async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteObjectsAsync(this AsyncBlittableJsonTextWriter writer, JsonOperationContext context, IEnumerable<BlittableJsonReaderObject> objects, CancellationToken token)
         {
             long numberOfResults = 0;
             long totalDocumentsSizeInBytes = 0;
@@ -2087,7 +2121,10 @@ namespace Raven.Server.Json
                 {
                     writer.WriteObject(o);
 
-                    var writtenBytes = await writer.MaybeFlushAsync(token);
+                    var maybeFlush = writer.MaybeFlushAsync(token);
+                    var writtenBytes = maybeFlush.IsCompletedSuccessfully 
+                        ? maybeFlush.Result 
+                        : await maybeFlush;
 
                     if (o.HasParent)
                     {
@@ -2203,7 +2240,7 @@ namespace Raven.Server.Json
             writer.WriteEndArray();
         }
 
-        public static async Task WriteCountersForDocumentAsync(this AsyncBlittableJsonTextWriter writer, List<CounterDetail> counters, CancellationToken token)
+        public static async ValueTask WriteCountersForDocumentAsync(this AsyncBlittableJsonTextWriter writer, List<CounterDetail> counters, CancellationToken token)
         {
             writer.WriteStartArray();
 
@@ -2236,13 +2273,15 @@ namespace Raven.Server.Json
 
                 writer.WriteEndObject();
 
-                await writer.MaybeFlushAsync(token);
+                var maybeFlush = writer.MaybeFlushAsync(token);
+                if (maybeFlush.IsCompletedSuccessfully == false)
+                    await maybeFlush;
             }
 
             writer.WriteEndArray();
         }
 
-        public static async Task WriteCompareExchangeValuesAsync(this AsyncBlittableJsonTextWriter writer, Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues, CancellationToken token)
+        public static async ValueTask WriteCompareExchangeValuesAsync(this AsyncBlittableJsonTextWriter writer, Dictionary<string, CompareExchangeValue<BlittableJsonReaderObject>> compareExchangeValues, CancellationToken token)
         {
             writer.WriteStartObject();
 
@@ -2278,7 +2317,9 @@ namespace Raven.Server.Json
 
                 writer.WriteEndObject();
 
-                await writer.MaybeFlushAsync(token);
+                var maybeFlush = writer.MaybeFlushAsync(token);
+                if (maybeFlush.IsCompletedSuccessfully == false)
+                    await maybeFlush;
             }
 
             writer.WriteEndObject();

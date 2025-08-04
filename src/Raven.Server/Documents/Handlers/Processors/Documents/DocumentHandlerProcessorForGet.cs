@@ -138,7 +138,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         {
             Debug.Assert(includeCompareExchangeValues != null, "includeCompareExchangeValues != null");
 
-            if (includeCompareExchangeValues.Results is { Count: > 0 })
+            if (includeCompareExchangeValues?.Results is { Count: > 0 })
             {
                 foreach (var (k, v) in includeCompareExchangeValues.Results)
                 {
@@ -160,23 +160,22 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         });
     }
 
-    protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
+    protected override ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
         DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, bool metadataOnly, CancellationToken token)
     {
-        return await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
+        return writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
     }
 
-    protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
+    protected override ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
         DocumentsOperationContext context, IAsyncEnumerable<Document> documentsToWrite, bool metadataOnly, CancellationToken token)
     {
-        return await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
+        return writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
     }
 
-    protected override async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName, List<Document> includes, CancellationToken token)
+    protected override ValueTask<(long Count, long SizeInBytes)> WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName, List<Document> includes, CancellationToken token)
     {
         writer.WritePropertyName(propertyName);
-
-        await writer.WriteIncludesAsync(context, includes, token);
+        return writer.WriteIncludesAsync(context, includes, token);
     }
 
     protected override ValueTask<DocumentsResult> GetDocumentsImplAsync(DocumentsOperationContext context, long? etag, StartsWithParams startsWith, string changeVector)

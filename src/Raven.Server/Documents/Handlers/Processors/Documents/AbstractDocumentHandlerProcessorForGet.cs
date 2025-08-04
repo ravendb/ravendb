@@ -32,7 +32,8 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Documents;
 
-internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, TOperationContext, TDocumentType> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
+internal abstract class
+    AbstractDocumentHandlerProcessorForGet<TRequestHandler, TOperationContext, TDocumentType> : AbstractDatabaseHandlerProcessor<TRequestHandler, TOperationContext>
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     where TOperationContext : JsonOperationContext
 {
@@ -55,139 +56,145 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
     protected abstract CancellationToken CancellationToken { get; }
 
-    public override async ValueTask ExecuteAsync()
+    public override ValueTask ExecuteAsync() => throw new NotImplementedException();
+    
+    public async Task ExecuteAsTaskAsync()
     {
+        using (this)
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
         {
-            await ExecuteInternalAsync(context);
-        }
-    }
+            var sw = Stopwatch.StartNew();
 
-    protected virtual async ValueTask ExecuteInternalAsync(TOperationContext context)
-    {
-        var sw = Stopwatch.StartNew();
+            var parameters = QueryStringParameters.Create(RequestHandler.HttpContext.Request);
 
-        var parameters = QueryStringParameters.Create(RequestHandler.HttpContext.Request);
-
-        if (_method == HttpMethod.Get)
-        {
-            // no-op - this was parses via QueryStringParameters few lines up
-        }
-        else if (_method == HttpMethod.Post)
-            parameters.Ids = await GetIdsFromRequestBodyAsync(context, RequestHandler);
-        else
-            throw new NotSupportedException($"Unhandled method type: {_method}");
-
-        if (SupportsShowingRequestInTrafficWatch && TrafficWatchManager.HasRegisteredClients)
-            RequestHandler.AddStringToHttpContext(IdsToString(parameters.Ids), TrafficWatchChangeType.Documents);
-
-        (long NumberOfResults, long TotalDocumentsSizeInBytes) responseWriteStats;
-        int pageSize;
-        string actionName;
-
-        if (parameters.Ids is { Count: > 0 })
-        {
-            pageSize = parameters.Ids.Count;
-            actionName = nameof(GetDocumentsByIdAsync);
-
-            var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-
-            // includes
-            var revisions = GetRevisionsToInclude(parameters);
-            var timeSeries = GetTimeSeriesToInclude(parameters);
-
-            responseWriteStats = await GetDocumentsByIdAsync(context, parameters, revisions, timeSeries, etag);
-        }
-        else
-        {
-            pageSize = RequestHandler.GetPageSize();
-            actionName = nameof(GetDocumentsAsync);
-
-            var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
-            var etag = RequestHandler.GetLongQueryString("etag", false);
-
-            var isStartsWith = HttpContext.Request.Query.ContainsKey("startsWith");
-
-            StartsWithParams startsWithParams = null;
-
-            if (isStartsWith)
+            if (_method == HttpMethod.Get)
             {
-                startsWithParams = new StartsWithParams
+                // no-op - this was parses via QueryStringParameters few lines up
+            }
+            else if (_method == HttpMethod.Post)
+                parameters.Ids = await GetIdsFromRequestBodyAsync(context, RequestHandler);
+            else
+                throw new NotSupportedException($"Unhandled method type: {_method}");
+
+            if (SupportsShowingRequestInTrafficWatch && TrafficWatchManager.HasRegisteredClients)
+                RequestHandler.AddStringToHttpContext(IdsToString(parameters.Ids), TrafficWatchChangeType.Documents);
+
+            (long NumberOfResults, long TotalDocumentsSizeInBytes) responseWriteStats;
+            int pageSize;
+            string actionName;
+
+            if (parameters.Ids is { Count: > 0 })
+            {
+                pageSize = parameters.Ids.Count;
+                actionName = nameof(GetDocumentsByIdAsync);
+
+                var etag = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+
+                // includes
+                var revisions = GetRevisionsToInclude(parameters);
+                var timeSeries = GetTimeSeriesToInclude(parameters);
+
+                var getDocumentsByIds = GetDocumentsByIdAsync(context, parameters, revisions, timeSeries, etag);
+                responseWriteStats = getDocumentsByIds.IsCompletedSuccessfully 
+                    ? getDocumentsByIds.Result 
+                    : await getDocumentsByIds.ConfigureAwait(false);
+            }
+            else
+            {
+                pageSize = RequestHandler.GetPageSize();
+                actionName = nameof(GetDocumentsAsync);
+
+                var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
+                var etag = RequestHandler.GetLongQueryString("etag", false);
+
+                var isStartsWith = HttpContext.Request.Query.ContainsKey("startsWith");
+
+                StartsWithParams startsWithParams = null;
+
+                if (isStartsWith)
                 {
-                    IdPrefix = HttpContext.Request.Query["startsWith"],
-                    Matches = HttpContext.Request.Query["matches"],
-                    Exclude = HttpContext.Request.Query["exclude"],
-                    StartAfterId = HttpContext.Request.Query["startAfter"],
-                };
+                    startsWithParams = new StartsWithParams
+                    {
+                        IdPrefix = HttpContext.Request.Query["startsWith"],
+                        Matches = HttpContext.Request.Query["matches"],
+                        Exclude = HttpContext.Request.Query["exclude"],
+                        StartAfterId = HttpContext.Request.Query["startAfter"],
+                    };
+                }
+
+                var getDocumentsAsync = GetDocumentsAsync(context, etag, startsWithParams, parameters.MetadataOnly, changeVector);
+                
+                
+                responseWriteStats = getDocumentsAsync.IsCompletedSuccessfully 
+                    ? getDocumentsAsync.Result 
+                    : await getDocumentsAsync;
             }
 
-            responseWriteStats = await GetDocumentsAsync(context, etag, startsWithParams, parameters.MetadataOnly, changeVector);
-        }
-
-        if (responseWriteStats != NoResults)
-        {
-            if (RequestHandler.ShouldAddPagingPerformanceHint(responseWriteStats.NumberOfResults))
+            if (responseWriteStats != NoResults)
             {
-                string details;
+                if (RequestHandler.ShouldAddPagingPerformanceHint(responseWriteStats.NumberOfResults))
+                {
+                    string details;
 
-                if (parameters.Ids is { Count: > 0 })
-                    details = CreatePerformanceHintDetails();
-                else
-                    details = HttpContext.Request.QueryString.Value;
+                    if (parameters.Ids is { Count: > 0 })
+                        details = CreatePerformanceHintDetails();
+                    else
+                        details = HttpContext.Request.QueryString.Value;
 
-                RequestHandler.AddPagingPerformanceHint(
-                    PagingOperationType.Documents,
-                    actionName,
-                    details,
-                    responseWriteStats.NumberOfResults,
-                    pageSize,
-                    sw.ElapsedMilliseconds,
-                    responseWriteStats.TotalDocumentsSizeInBytes);
+                    RequestHandler.AddPagingPerformanceHint(
+                        PagingOperationType.Documents,
+                        actionName,
+                        details,
+                        responseWriteStats.NumberOfResults,
+                        pageSize,
+                        sw.ElapsedMilliseconds,
+                        responseWriteStats.TotalDocumentsSizeInBytes);
+                }
             }
-        }
 
-        string CreatePerformanceHintDetails()
-        {
-            var sb = new StringBuilder();
-            var addedIdsCount = 0;
-            var first = true;
-
-            while (sb.Length < 1024 && addedIdsCount < parameters.Ids.Count)
+            string CreatePerformanceHintDetails()
             {
-                if (first == false)
-                    sb.Append(", ");
-                else
-                    first = false;
+                var sb = new StringBuilder();
+                var addedIdsCount = 0;
+                var first = true;
 
-                sb.Append($"{parameters.Ids[addedIdsCount++]}");
+                while (sb.Length < 1024 && addedIdsCount < parameters.Ids.Count)
+                {
+                    if (first == false)
+                        sb.Append(", ");
+                    else
+                        first = false;
+
+                    sb.Append($"{parameters.Ids[addedIdsCount++]}");
+                }
+
+                var idsLeftCount = parameters.Ids.Count - addedIdsCount;
+
+                if (idsLeftCount > 0)
+                {
+                    sb.Append($" ... (and {idsLeftCount} more)");
+                }
+
+                return sb.ToString();
             }
 
-            var idsLeftCount = parameters.Ids.Count - addedIdsCount;
-
-            if (idsLeftCount > 0)
+            static string IdsToString(List<ReadOnlyMemory<char>> ids)
             {
-                sb.Append($" ... (and {idsLeftCount} more)");
+                if (ids == null || ids.Count == 0)
+                    return string.Empty;
+
+                var sb = new StringBuilder();
+                for (int i = 0; i < ids.Count; i++)
+                {
+                    if (i != 0)
+                        sb.Append(",");
+
+                    ReadOnlyMemory<char> id = ids[i];
+                    sb.Append(id.ToString());
+                }
+
+                return sb.ToString();
             }
-
-            return sb.ToString();
-        }
-
-        static string IdsToString(List<ReadOnlyMemory<char>> ids)
-        {
-            if (ids == null || ids.Count == 0)
-                return string.Empty;
-
-            var sb = new StringBuilder();
-            for (int i = 0; i < ids.Count; i++)
-            {
-                if (i != 0)
-                    sb.Append(",");
-
-                ReadOnlyMemory<char> id = ids[i];
-                sb.Append(id.ToString());
-            }
-
-            return sb.ToString();
         }
     }
 
@@ -195,7 +202,13 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         QueryStringParameters parameters, RevisionIncludeField revisions, HashSet<AbstractTimeSeriesRange> timeSeries, string etag)
     {
         var clusterWideTx = parameters.TxMode == TransactionMode.ClusterWide;
-        var result = await GetDocumentsByIdImplAsync(context, parameters.Ids, parameters.IncludePaths, revisions, parameters.Counters, timeSeries, parameters.CompareExchange, parameters.MetadataOnly, clusterWideTx, etag);
+        var getDocumentsByIdImplAsyncTask = GetDocumentsByIdImplAsync(context, parameters.Ids, parameters.IncludePaths, revisions, parameters.Counters, timeSeries,
+            parameters.CompareExchange, parameters.MetadataOnly, clusterWideTx, etag);
+
+        var result = getDocumentsByIdImplAsyncTask.IsCompletedSuccessfully 
+            ? getDocumentsByIdImplAsyncTask.Result 
+            : await getDocumentsByIdImplAsyncTask;
+
 
         if (result.StatusCode == HttpStatusCode.NotFound)
         {
@@ -216,7 +229,11 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         HttpContext.Response.Headers[Constants.Headers.Etag] = "\"" + result.Etag + "\"";
 
-        return await WriteDocumentsByIdResultAsync(context, parameters.MetadataOnly, clusterWideTx, result);
+        var writeDocumentsByIdResult = WriteDocumentsByIdResultAsync(context, parameters.MetadataOnly, clusterWideTx, result);
+
+        return writeDocumentsByIdResult.IsCompletedSuccessfully
+            ? writeDocumentsByIdResult.Result
+            : await writeDocumentsByIdResult.ConfigureAwait(false);
     }
 
     private async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsByIdResultAsync(
@@ -230,24 +247,35 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
             writer.WritePropertyName(nameof(GetDocumentsResult.Results));
 
-            (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, result.Documents, metadataOnly, CancellationToken);
+            var writeDocumentsValueTaskAsync = WriteDocumentsAsync(writer, context, result.Documents, metadataOnly, CancellationToken);
+            
+            (numberOfResults, totalDocumentsSizeInBytes) = writeDocumentsValueTaskAsync.IsCompletedSuccessfully 
+                ? writeDocumentsValueTaskAsync.Result 
+                : await writeDocumentsValueTaskAsync;
+
 
             writer.WriteComma();
 
-            await WriteIncludesAsync(writer, context, nameof(GetDocumentsResult.Includes), result.Includes, CancellationToken);
+            var includeAsync = WriteIncludesAsync(writer, context, nameof(GetDocumentsResult.Includes), result.Includes, CancellationToken);
+            if (includeAsync.IsCompletedSuccessfully == false)
+                await includeAsync;
 
             if (result.CounterIncludes?.Count > 0)
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.CounterIncludes));
-                await result.CounterIncludes.WriteIncludesAsync(writer, context, CancellationToken);
+                var writeCounterIncludes = result.CounterIncludes.WriteIncludesAsync(writer, context, CancellationToken);
+                if (writeCounterIncludes.IsCompletedSuccessfully == false)    
+                    await writeCounterIncludes;
             }
 
             if (result.TimeSeriesIncludes?.Count > 0)
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.TimeSeriesIncludes));
-                await result.TimeSeriesIncludes.WriteIncludesAsync(writer, context, CancellationToken);
+                var writeTimeSeries = result.TimeSeriesIncludes.WriteIncludesAsync(writer, context, CancellationToken);
+                if (writeTimeSeries.IsCompletedSuccessfully == false)
+                    await writeTimeSeries;
             }
 
             if (result.RevisionIncludes?.Count > 0)
@@ -255,7 +283,9 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.RevisionIncludes));
                 writer.WriteStartArray();
-                await result.RevisionIncludes.WriteIncludesAsync(writer, context, CancellationToken);
+                var writeRevisionIncludes = result.RevisionIncludes.WriteIncludesAsync(writer, context, CancellationToken);
+                if (writeRevisionIncludes.IsCompletedSuccessfully == false)
+                    await writeRevisionIncludes;
                 writer.WriteEndArray();
             }
 
@@ -263,11 +293,14 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             {
                 writer.WriteComma();
                 writer.WritePropertyName(nameof(GetDocumentsResult.CompareExchangeValueIncludes));
-                await writer.WriteCompareExchangeValuesAsync(result.CompareExchangeIncludes, CancellationToken);
+                var writeCompareExchange = writer.WriteCompareExchangeValuesAsync(result.CompareExchangeIncludes, CancellationToken);
+                if (writeCompareExchange.IsCompletedSuccessfully == false)
+                    await writeCompareExchange;
             }
 
             writer.WriteEndObject();
         }
+
         return (numberOfResults, totalDocumentsSizeInBytes);
     }
 
@@ -279,7 +312,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         TOperationContext context,
         IAsyncEnumerable<TDocumentType> documentsToWrite, bool metadataOnly, CancellationToken token);
 
-    protected abstract ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, TOperationContext context, string propertyName,
+    protected abstract ValueTask<(long Count, long SizeInBytes)> WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, TOperationContext context, string propertyName,
         List<TDocumentType> includes, CancellationToken token);
 
     protected abstract ValueTask<DocumentsByIdResult<TDocumentType>> GetDocumentsByIdImplAsync(
@@ -294,10 +327,13 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         bool clusterWideTx,
         string etag);
 
-    protected async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> GetDocumentsAsync(TOperationContext context, long? etag, StartsWithParams startsWith, bool metadataOnly, string changeVector)
+    protected async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> GetDocumentsAsync(TOperationContext context, long? etag,
+        StartsWithParams startsWith, bool metadataOnly, string changeVector)
     {
-        var result = await GetDocumentsImplAsync(context, etag, startsWith, changeVector);
-
+        var getDocuments = GetDocumentsImplAsync(context, etag, startsWith, changeVector);
+        var result = getDocuments.IsCompletedSuccessfully ? getDocuments.Result : await getDocuments;
+        
+        
         if (changeVector == result.Etag)
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -321,7 +357,12 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             }
             else
             {
-                (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, result.Documents, metadataOnly, CancellationToken);
+                var writeDocuments = WriteDocumentsAsync(writer, context, result.Documents, metadataOnly, CancellationToken);
+
+                (numberOfResults, totalDocumentsSizeInBytes) = writeDocuments.IsCompletedSuccessfully
+                    ? writeDocuments.Result
+                    : await writeDocuments;
+
             }
 
             if (result.ContinuationToken != null)
@@ -345,7 +386,8 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         var rif = new RevisionIncludeField();
 
-        if (parameters.RevisionsBefore.HasValue && DateTime.TryParseExact(parameters.RevisionsBefore.Value.Span, DefaultFormat.DateTimeFormatsToRead, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dateTime))
+        if (parameters.RevisionsBefore.HasValue && DateTime.TryParseExact(parameters.RevisionsBefore.Value.Span, DefaultFormat.DateTimeFormatsToRead,
+                CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal, out var dateTime))
             rif.RevisionsBeforeDateTime = dateTime.ToUniversalTime();
 
         if (parameters.Revisions != null)
@@ -375,7 +417,8 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                                                 $"Got : timeseriesNames.Count = {timeSeriesCount}, fromList.Count = {parameters.From.Count}, toList.Count = {parameters.To.Count}.");
 
         var timeSeriesTimesCount = parameters.TimeSeriesTimes?.Count ?? 0;
-        if (timeSeriesTimesCount != parameters.TimeTypes.Count || parameters.TimeTypes.Count != parameters.TimeValues.Count || parameters.TimeValues.Count != parameters.TimeUnits.Count)
+        if (timeSeriesTimesCount != parameters.TimeTypes.Count || parameters.TimeTypes.Count != parameters.TimeValues.Count ||
+            parameters.TimeValues.Count != parameters.TimeUnits.Count)
             throw new InvalidOperationException($"Parameters 'timeseriesTime', 'timeType', 'timeValue' and 'timeUnit' must be of equal length. " +
                                                 $"Got : timeseriesTime.Count = {timeSeriesTimesCount}, timeType.Count = {parameters.TimeTypes.Count}, timeValue.Count = {parameters.TimeValues.Count}, timeUnit.Count = {parameters.TimeUnits.Count}.");
 
@@ -393,12 +436,12 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                 hs.Add(new TimeSeriesRange
                 {
                     Name = parameters.TimeSeries[i].ToString(),
-                    From = string.IsNullOrEmpty(parameters.From[i])
+                    From = parameters.From[i].IsEmpty
                         ? DateTime.MinValue
-                        : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(parameters.From[i], "from"),
-                    To = string.IsNullOrEmpty(parameters.To[i])
+                        : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(parameters.From[i].Span, "from"),
+                    To = parameters.To[i].IsEmpty
                         ? DateTime.MaxValue
-                        : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(parameters.To[i], "to")
+                        : TimeSeriesHandlerProcessorForGetTimeSeries.ParseDate(parameters.To[i].Span, "to")
                 });
             }
         }
@@ -407,18 +450,18 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         {
             for (int i = 0; i < parameters.TimeSeriesTimes.Count; i++)
             {
-                var timeValueUnit = (TimeValueUnit)Enum.Parse(typeof(TimeValueUnit), parameters.TimeUnits[i]);
+                var timeValueUnit = (TimeValueUnit)Enum.Parse(typeof(TimeValueUnit), parameters.TimeUnits[i].Span);
                 if (timeValueUnit == TimeValueUnit.None)
                     throw new InvalidOperationException(
                         $"Got unexpected {nameof(TimeValueUnit)} '{nameof(TimeValueUnit.None)}'. Only the following are supported: '{nameof(TimeValueUnit.Second)}' or '{nameof(TimeValueUnit.Month)}'.");
 
-                if (int.TryParse(parameters.TimeValues[i], out int res) == false)
+                if (int.TryParse(parameters.TimeValues[i].Span, out int res) == false)
                     throw new InvalidOperationException($"Could not parse timeseries time range value.");
 
                 hs.Add(new TimeSeriesTimeRange
                 {
                     Name = parameters.TimeSeriesTimes[i].ToString(),
-                    Type = (TimeSeriesRangeType)Enum.Parse(typeof(TimeSeriesRangeType), parameters.TimeTypes[i]),
+                    Type = (TimeSeriesRangeType)Enum.Parse(typeof(TimeSeriesRangeType), parameters.TimeTypes[i].Span),
                     Time = timeValueUnit == TimeValueUnit.Second ? TimeValue.FromSeconds(res) : TimeValue.FromMonths(res)
                 });
             }
@@ -428,13 +471,13 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         {
             for (int i = 0; i < parameters.TimeSeriesCounts.Count; i++)
             {
-                if (int.TryParse(parameters.CountValues[i], out int res) == false)
+                if (int.TryParse(parameters.CountValues[i].Span, out int res) == false)
                     throw new InvalidOperationException($"Could not parse timeseries count value.");
 
                 hs.Add(new TimeSeriesCountRange
                 {
                     Name = parameters.TimeSeriesCounts[i].ToString(),
-                    Type = (TimeSeriesRangeType)Enum.Parse(typeof(TimeSeriesRangeType), parameters.CountTypes[i]),
+                    Type = (TimeSeriesRangeType)Enum.Parse(typeof(TimeSeriesRangeType), parameters.CountTypes[i].Span),
                     Count = res
                 });
             }
@@ -539,19 +582,19 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
         public bool TimeSeriesCountsHasAllTimeSeries;
 
-        public StringValues From;
+        public List<ReadOnlyMemory<char>> From;
 
-        public StringValues To;
+        public List<ReadOnlyMemory<char>> To;
 
-        public StringValues TimeTypes;
+        public List<ReadOnlyMemory<char>> TimeTypes;
 
-        public StringValues TimeValues;
+        public List<ReadOnlyMemory<char>> TimeValues;
 
-        public StringValues TimeUnits;
+        public List<ReadOnlyMemory<char>> TimeUnits;
 
-        public StringValues CountTypes;
+        public List<ReadOnlyMemory<char>> CountTypes;
 
-        public StringValues CountValues;
+        public List<ReadOnlyMemory<char>> CountValues;
 
         public StringValues CompareExchange;
 
@@ -573,13 +616,13 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             IncludePaths = ConvertToStringValues("include");
             Counters = ConvertToStringValues("counter");
             CompareExchange = ConvertToStringValues("cmpxchg");
-            From = ConvertToStringValues("from");
-            To = ConvertToStringValues("to");
-            TimeTypes = ConvertToStringValues("timeType");
-            TimeValues = ConvertToStringValues("timeValue");
-            TimeUnits = ConvertToStringValues("timeUnit");
-            CountTypes = ConvertToStringValues("countType");
-            CountValues = ConvertToStringValues("countValue");
+            From = RetrieveValues("from");
+            To = RetrieveValues("to");
+            TimeTypes = RetrieveValues("timeType");
+            TimeValues = RetrieveValues("timeValue");
+            TimeUnits = RetrieveValues("timeUnit");
+            CountTypes = RetrieveValues("countType");
+            CountValues = RetrieveValues("countValue");
         }
 
         protected override void OnValue(QueryStringEnumerable.EncodedNameValuePair pair)
@@ -598,7 +641,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                     }
 
                     if (IsMatch(name, ToQueryStringName))
-                        AddForStringValues("to", pair.DecodeValue());  // optimize this
+                        AddForStringValues("to", pair.DecodeValue()); // optimize this
                     return;
                 }
                 case 4:
@@ -614,6 +657,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                         if (TryGetEnumValue<TransactionMode>(pair.EncodedValue, out var value))
                             TxMode = value;
                     }
+
                     return;
                 }
                 case 7:
@@ -634,7 +678,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
                     if (IsMatch(name, CounterQueryStringName))
                         AddForStringValues("counter", pair.DecodeValue()); // optimize this
-                    
+
                     return;
                 }
                 case 8:
@@ -675,7 +719,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                     if (IsMatch(name, CountValueQueryStringName))
                     {
                         AddForStringValues("countValue", pair.DecodeValue()); // optimize this
-                            return;
+                        return;
                     }
 
                     if (IsMatch(name, TimeSeriesQueryStringName))
@@ -709,6 +753,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
                         TimeSeriesTimes.Add(value);
                     }
+
                     return;
                 }
                 case 15:
@@ -718,6 +763,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
                         RevisionsBefore = pair.DecodeValue();
                         return;
                     }
+
                     if (IsMatch(name, TimeSeriesCountsQueryStringName))
                     {
                         TimeSeriesCounts ??= new List<ReadOnlyMemory<char>>(1);
@@ -728,6 +774,7 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
                         TimeSeriesCounts.Add(value);
                     }
+
                     return;
                 }
             }
@@ -741,5 +788,4 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
             return parameters;
         }
     }
-
 }
