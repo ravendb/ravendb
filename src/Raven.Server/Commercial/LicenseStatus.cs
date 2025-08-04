@@ -240,7 +240,7 @@ namespace Raven.Server.Commercial
 
         public bool HasGenAi => Enabled(LicenseAttribute.GenAi);
 
-        public bool HasAiAgent => true; //TODO: Enabled(LicenseAttribute.AiAgent);
+        public bool HasAiAgent => Enabled(LicenseAttribute.AiAgent);
 
         public bool HasPowerBI => Enabled(LicenseAttribute.PowerBI);
 
