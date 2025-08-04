@@ -77,7 +77,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
     public class AiAgentTestRequest
     {
         public string UserPrompt;
-        public BlittableJsonReaderObject Options;
+        public BlittableJsonReaderObject CreationOptions;
         public AiAgentConfiguration Configuration;
         public BlittableJsonReaderArray ActionResponses;
         public BlittableJsonReaderObject Document;
@@ -86,7 +86,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         {
             get
             {
-                Options.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject param);
+                CreationOptions.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject param);
                 return new RequestBody
                 {
                     UserPrompt = UserPrompt, 
