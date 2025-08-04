@@ -85,7 +85,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             {
                 ActionResponses = _actionResponses,
                 UserPrompt = _prompt,
-                Options = _options
+                CreationOptions = _options
             };
 
             var request = new HttpRequestMessage
@@ -117,14 +117,14 @@ internal class ConversionRequestBody : IDynamicJson
 {
     public List<AiAgentActionResponse> ActionResponses { get; set; }
     public string UserPrompt { get; set; }
-    public AiConversationCreationOptions Options { get; set; }
+    public AiConversationCreationOptions CreationOptions { get; set; }
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
         {
             [nameof(ActionResponses)] = ActionResponses == null ? null : new DynamicJsonArray(ActionResponses.Select(r => r.ToJson())),
             [nameof(UserPrompt)] = UserPrompt,
-            [nameof(Options)] = (Options ?? new AiConversationCreationOptions()).ToJson()
+            [nameof(CreationOptions)] = (CreationOptions ?? new AiConversationCreationOptions()).ToJson()
         };
     }
 }

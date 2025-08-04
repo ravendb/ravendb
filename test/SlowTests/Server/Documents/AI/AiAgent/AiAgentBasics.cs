@@ -79,7 +79,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var chat = store.AI.Conversation(
                 createResult.Identifier,
                 "chats/",
-                new AiConversationCreationOptions(builder: p => p.AddParameter("company", "companies/90-A")));
+                new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
 
             chat.SetUserPrompt("what goes well with my cheese?");
             var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);
@@ -172,7 +172,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var chat = store.AI.Conversation(
                 createResult.Identifier,
                 "chats/",
-                new AiConversationCreationOptions(builder: p => p.AddParameter("company", "companies/90-A")));
+                new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
 
             chat.SetUserPrompt("what goes well with my cheese for recent orders?");
             var r = await chat.RunAsync<OutputSchema>(CancellationToken.None);

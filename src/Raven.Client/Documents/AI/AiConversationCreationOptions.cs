@@ -6,18 +6,18 @@ namespace Raven.Client.Documents.AI;
 
 public class AiConversationCreationOptions : IDynamicJson
 {
-    // We don't serialize this field, we pass the parameters directly on the body request 
     public Dictionary<string, object> Parameters;
+    public int? ExpirationInSec { get; set; }
 
     public AiConversationCreationOptions()
     {
-        // for serialization
+         
     }
-    public AiConversationCreationOptions(Action<IAiAgentParametersBuilder> builder)
+    public AiConversationCreationOptions AddParameter(string name, object value)
     {
-        var aiAgentParameters = new AiAgentParametersBuilder();
-        builder?.Invoke(aiAgentParameters);
-        Parameters = aiAgentParameters.GetParameters() ?? new Dictionary<string, object>();
+        Parameters ??= new Dictionary<string, object>();
+        Parameters.Add(name, value);
+        return this;
     }
 
     public AiConversationCreationOptions(Dictionary<string, object> parameters)
@@ -25,12 +25,11 @@ public class AiConversationCreationOptions : IDynamicJson
         Parameters = parameters;
     }
 
-    public int? ConversationExpirationInSec { get; set; }
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
         {
-            [nameof(ConversationExpirationInSec)] = ConversationExpirationInSec,
+            [nameof(ExpirationInSec)] = ExpirationInSec,
             [nameof(Parameters)] = Parameters != null ? DynamicJsonValue.Convert(Parameters) : null,
         };
     }

@@ -88,8 +88,8 @@ public class AiAgentClientApiBasics : RavenTestBase
         var identifier = (await store.AI.CreateAgentAsync(agent, AnswerSchema.Instance)).Identifier;
 
         var chat = store.AI.Conversation(identifier, "chats/",
-            new AiConversationCreationOptions(
-                builder: p => p.AddParameter("company", "companies/90-A")));
+            new AiConversationCreationOptions()
+                .AddParameter("company", "companies/90-A"));
 
         chat.SetUserPrompt("what goes well with my cheese?");
         var r = await chat.RunAsync<AnswerSchema>();
@@ -167,9 +167,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         var chat = store.AI.Conversation(
             agentResult.Identifier,
             "chats/123",
-            new AiConversationCreationOptions(
-                builder: p => p.AddParameter("company", "companies/90-A"))
-        );
+            new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
 
         chat.SetUserPrompt("what goes well with my cheese for recent orders?");
 
@@ -213,7 +211,7 @@ public class AiAgentClientApiBasics : RavenTestBase
 
 
         var chat = store.AI.Conversation(identifier, "chats/",
-            new AiConversationCreationOptions(p => p.AddParameter("company", "companies/90-A")));
+            new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
 
         Assert.Throws<InvalidOperationException>(chat.RequiredActions);
 
@@ -285,7 +283,7 @@ public class AiAgentClientApiBasics : RavenTestBase
         var identifier = (await store.AI.CreateAgentAsync(agent, AnswerSchema.Instance)).Identifier;
 
         var chat = store.AI.Conversation(identifier, "chats/",
-            new AiConversationCreationOptions(p => p.AddParameter("company", "companies/90-A")));
+            new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
         chat.SetUserPrompt("what goes well with my cheese?");
         var r = await chat.RunAsync<AnswerSchema>();
         Assert.Equal(AiConversationResult.Done, r.Status);

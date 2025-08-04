@@ -31,7 +31,7 @@ namespace SlowTests.Issues
 
             var agentId = (await store.AI.CreateAgentAsync(agent, OutputSchema.Instance)).Identifier;
 
-            var chat = store.AI.Conversation(agentId, "chats/",new AiConversationCreationOptions(p => p.AddParameter("Company", "companies/90-A")));
+            var chat = store.AI.Conversation(agentId, "chats/",new AiConversationCreationOptions().AddParameter("Company", "companies/90-A"));
 
             chat.SetUserPrompt("what are my recent orders?");
 
@@ -117,7 +117,7 @@ namespace SlowTests.Issues
             var agentId = (await store.AI.CreateAgentAsync(agent, OutputSchema.Instance)).Identifier;
 
             var initial = store.AI.Conversation(
-                agentId, "chats/",new AiConversationCreationOptions(p => p.AddParameter("company", "companies/90-A")));
+                agentId, "chats/",new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
             initial.SetUserPrompt("What goes well with my cheese?");
             var done1 = await initial.RunAsync<OutputSchema>(CancellationToken.None);
             Assert.Equal(AiConversationResult.Done, done1.Status);

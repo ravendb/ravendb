@@ -15,7 +15,7 @@ public interface IAiConversationOperations
     /// <param name="actionName">The name of the action tool to handle.</param>
     /// <param name="action">A function that processes the arguments and returns a <see cref="Task{Object}"/> representing the response.</param>
     /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
-    void Handle<TArgs>(string actionName, Func<TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.Default) where TArgs : class;
+    void Handle<TArgs>(string actionName, Func<TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel) where TArgs : class;
 
     /// <summary>
     /// Registers a synchronous handler for an action tool.
@@ -24,7 +24,7 @@ public interface IAiConversationOperations
     /// <param name="actionName">The name of the action tool to handle.</param>
     /// <param name="action">A function that processes the arguments and returns the result.</param>
     /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
-    void Handle<TArgs>(string actionName, Func<TArgs, object> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.Default) where TArgs : class;
+    void Handle<TArgs>(string actionName, Func<TArgs, object> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel) where TArgs : class;
 
     /// <summary>
     /// Asynchronously executes one “turn” of the conversation:  
@@ -116,7 +116,6 @@ public interface IAiConversationOperations
 
 public enum AiHandleErrorStrategy
 {
-    Default,
     SendErrorsToModel,
     RaiseImmediately
 }

@@ -90,7 +90,7 @@ public class RavenDB_24407 : RavenTestBase
         var chat = store.AI.Conversation(
             agent.Identifier,
             "chats/",
-            new AiConversationCreationOptions(builder: p => p.AddParameter("company", "companies/90-A")));
+            new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
 
         chat.SetUserPrompt("what goes well with my cheese for recent orders?");
         var r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);

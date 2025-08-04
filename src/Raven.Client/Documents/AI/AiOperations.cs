@@ -14,7 +14,7 @@ namespace Raven.Client.Documents.AI;
 /// </summary>
 public class AiOperations
 {
-    private string _databaseName;
+    private readonly string _databaseName;
     internal IDocumentStore _store;
     internal readonly MaintenanceOperationExecutor _executor;
 
@@ -51,9 +51,9 @@ public class AiOperations
     /// <typeparam name="TSchema">The schema type the AI agent should use.</typeparam>
     /// <param name="configuration">The configuration to assign to the agent.</param>
     /// <returns>The result of the creation or update operation.</returns>
-    public async Task<AiAgentConfigurationResult> CreateAgentAsync<TSchema>(AiAgentConfiguration configuration, TSchema schema, CancellationToken token = default) where TSchema : new()
+    public async Task<AiAgentConfigurationResult> CreateAgentAsync<TSchema>(AiAgentConfiguration configuration, TSchema sampleObject, CancellationToken token = default) where TSchema : new()
     {
-        return await _executor.SendAsync(AddOrUpdateAiAgentOperation.Create(configuration, schema), token).ConfigureAwait(false);
+        return await _executor.SendAsync(AddOrUpdateAiAgentOperation.Create(configuration, sampleObject), token).ConfigureAwait(false);
     }
 
     /// <summary>
@@ -83,9 +83,9 @@ public class AiOperations
     /// <typeparam name="TSchema">The schema type the AI agent should use.</typeparam>
     /// <param name="configuration">The configuration to assign to the agent.</param>
     /// <returns>The result of the creation or update operation.</returns>
-    public AiAgentConfigurationResult CreateAgent<TSchema>(AiAgentConfiguration configuration, TSchema schema) where TSchema : new()
+    public AiAgentConfigurationResult CreateAgent<TSchema>(AiAgentConfiguration configuration, TSchema sampleObject) where TSchema : new()
     {
-        return AsyncHelpers.RunSync(() => CreateAgentAsync(configuration, schema));
+        return AsyncHelpers.RunSync(() => CreateAgentAsync(configuration, sampleObject));
     }
 
     /// <summary>

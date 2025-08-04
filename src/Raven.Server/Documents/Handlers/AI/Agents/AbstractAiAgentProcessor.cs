@@ -111,8 +111,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var body = await ReadRequestBodyAsync(context, token.Token);
 
             ConversationDocument conversationDocument = null;
-            AiAgentConfiguration configuration = null;
-            
+            AiAgentConfiguration configuration = GetAiAgentConfiguration(agentId);
+
             using(context.OpenReadTransaction())
             {
                 var conversation = RequestHandler.Database.DocumentsStorage.Get(context, conversationId);
@@ -136,11 +136,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     }
 
                     conversationDocument = new ConversationDocument(agentId, body.Parameters);
-                    configuration = GetAiAgentConfiguration(agentId);
 
-                    if (body.Options.ConversationExpirationInSec.HasValue)
+                    if (body.CreationOptions.ExpirationInSec.HasValue)
                     {
-                        conversationDocument.Expires = TimeSpan.FromSeconds(body.Options.ConversationExpirationInSec.Value);
+                        conversationDocument.Expires = TimeSpan.FromSeconds(body.CreationOptions.ExpirationInSec.Value);
                     }
                 
                     conversationDocument.Initialize(context, configuration);
@@ -149,11 +148,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 {
                     conversationDocument = ConversationDocument.ToDocument(conversationId, conversation.Data);
                     if (conversationDocument.Agent != agentId)
+                    {
                         throw new InvalidOperationException(
                             $"The conversation '{conversationId}' is assigned to agent '{conversationDocument.Agent}', " +
                             $"but the request is for agent '{agentId}'.");
-
-                    configuration = GetAiAgentConfiguration(conversationDocument.Agent);
+                    }
 
                     if (changeVector != null)
                     {
@@ -179,14 +178,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var body = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token);
             body.TryGet(nameof(ConversionRequestBody.ActionResponses), out BlittableJsonReaderArray actionResponses);
             body.TryGet(nameof(ConversionRequestBody.UserPrompt), out string userPrompt);
-            body.TryGet(nameof(ConversionRequestBody.Options), out BlittableJsonReaderObject optionsBlittable);
+            body.TryGet(nameof(ConversionRequestBody.CreationOptions), out BlittableJsonReaderObject optionsBlittable);
             
             optionsBlittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
-            optionsBlittable.TryGet(nameof(AiConversationCreationOptions.ConversationExpirationInSec), out int? conversationExpirationInSec);
+            optionsBlittable.TryGet(nameof(AiConversationCreationOptions.ExpirationInSec), out int? conversationExpirationInSec);
 
             var options = new AiConversationCreationOptions
             {
-                ConversationExpirationInSec = conversationExpirationInSec
+                ExpirationInSec = conversationExpirationInSec
             };
 
             return new RequestBody
@@ -194,7 +193,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 ActionResponses = actionResponses, 
                 UserPrompt = userPrompt, 
                 Parameters = parameters,
-                Options = options
+                CreationOptions = options
             };
         }
 
@@ -203,7 +202,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             public BlittableJsonReaderObject Parameters { get; set; }
             public string UserPrompt { get; set; }
             public BlittableJsonReaderArray ActionResponses { get; set; }
-            public AiConversationCreationOptions Options { get; set; }
+            public AiConversationCreationOptions CreationOptions { get; set; }
 
             public void ValidateForStart()
             {
@@ -512,15 +511,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
         public virtual async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history)
         {
-            var changeVectorLsv = context.GetLazyString(conversation.ChangeVector);
-
             if (conversationId[^1] == '|')
             {
                 var r = await RequestHandler.ServerStore.GenerateClusterIdentityAsync(conversationId, RequestHandler.IdentityPartsSeparator, RequestHandler.DatabaseName, RequestHandler.GetRaftRequestIdFromQuery());
                 conversationId = r.ClusterId;
             }
 
-
+            var changeVectorLsv = context.GetLazyString(conversation.ChangeVector);
             var cmd = new PutChatCommand(conversationId, conversation, history, changeVectorLsv, configuration, RequestHandler.Database);
             await RequestHandler.Database.TxMerger.Enqueue(cmd);
             conversation.ChangeVector = cmd.PutResult.Conversation.ChangeVector;

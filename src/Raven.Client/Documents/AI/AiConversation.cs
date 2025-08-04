@@ -18,11 +18,14 @@ internal class AiConversation : IAiConversationOperations
 
     private string _conversationId;
     private List<AiAgentActionRequest> _actionRequests;
-    private List<AiAgentActionResponse> _actionResponses = [];
+    private readonly List<AiAgentActionResponse> _actionResponses = [];
     private string _userPrompt;
     private string _changeVector;
     public string ChangeVector => _changeVector;
-    private readonly Dictionary<string, IAiActionContext> _invocations = new();
+
+    private delegate Task<object> HandleActionDelegate(JsonOperationContext context, string arguments, CancellationToken token);
+
+    private readonly Dictionary<string, HandleActionDelegate> _invocations = new();
 
     public AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector)
     {
@@ -39,8 +42,18 @@ internal class AiConversation : IAiConversationOperations
     public IEnumerable<AiAgentActionRequest> RequiredActions() =>
         _actionRequests ?? throw new InvalidOperationException($"You have to call {nameof(Run)}/{nameof(RunAsync)} first");
 
-    public string Id => _conversationId ??
-                        throw new InvalidOperationException($"This is a new conversation, the ID wasn't set yet, you have to call {nameof(Run)}/{nameof(RunAsync)}");
+    public string Id
+    {
+        get
+        {
+            if (_conversationId == null || _conversationId.EndsWith("/") || _conversationId.EndsWith("|"))
+            {
+                throw new InvalidOperationException($"This is a new conversation, the ID wasn't set yet, you have to call {nameof(Run)}/{nameof(RunAsync)}");
+            }
+
+            return _conversationId;
+        }
+    }
 
     public void AddActionResponse<TResponse>(string actionId, TResponse actionResponse) where TResponse : class
     {
@@ -74,20 +87,20 @@ internal class AiConversation : IAiConversationOperations
         _userPrompt = userPrompt;
     }
 
-    public void Handle<TArgs>(string actionName, Func<TArgs, Task<object>> action, AiHandleErrorStrategy errorStrategy = AiHandleErrorStrategy.Default)
+    public void Handle<TArgs>(string actionName, Func<TArgs, Task<object>> action, AiHandleErrorStrategy errorStrategy)
         where TArgs : class
     {
         var t = new AiActionContext<TArgs>(_aiOperations, action, errorStrategy);
-        AddAction(actionName, t);
+        AddAction(actionName, t.ExecuteAsync);
     }
 
-    public void Handle<TArgs>(string actionName, Func<TArgs, object> action, AiHandleErrorStrategy errorStrategy = AiHandleErrorStrategy.Default) where TArgs : class
+    public void Handle<TArgs>(string actionName, Func<TArgs, object> action, AiHandleErrorStrategy errorStrategy) where TArgs : class
     {
         var t = new AiActionContext<TArgs>(_aiOperations, action, errorStrategy);
-        AddAction(actionName, t);
+        AddAction(actionName, t.ExecuteAsync);
     }
 
-    private void AddAction(string actionName, IAiActionContext t)
+    private void AddAction(string actionName, HandleActionDelegate t)
     {
         if (_invocations.ContainsKey(actionName))
             throw new InvalidOperationException($"Action '{actionName}' already exists.");
@@ -108,31 +121,33 @@ internal class AiConversation : IAiConversationOperations
             if (_actionRequests.Count == 0)
                 throw new InvalidOperationException($"There are no action requests to process, but Status was {r.Status}, should not be possible.");
 
-            using (var ctx = JsonOperationContext.ShortTermSingleUse())
+            using (_aiOperations.AllocateOperationContext(out JsonOperationContext ctx))
             {
                 foreach (var action in _actionRequests)
                 {
                     if (_invocations.TryGetValue(action.Name, out var invocation))
                     {
-                        var response = await invocation.ExecuteAsync(ctx, action.Arguments, token).ConfigureAwait(false);
+                        // error handling here is expected to be done by the invocation based on the error strategy the user choose
+                        var response = await invocation.Invoke(ctx, action.Arguments, token).ConfigureAwait(false);
                         AddActionResponse(action.ToolId, response);
                     }
                 }
             }
 
-            // we have responses that we need to submit
-            if (_actionResponses.Count > 0)
-                continue;
-
-            return r;
+            // We have nothing to tell the server, but still have action requests pending
+            // we need to send those action requests to the caller that can handle them
+            if (_actionResponses.Count == 0)
+                return r; // note - this has ActionsRequired status
         }
     }
 
     private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(CancellationToken token = default)
     {
-        // we allow to run the conversation only if it is the first run with no user prompt or tool requests
-        // this way we can fetch the pending actions
-        if (_actionRequests != null && string.IsNullOrEmpty(_userPrompt) && _actionResponses.Count == 0)
+        if (
+            // if this is null, it is the first time we call RunAsync, so we are going to the server to get the pending actions
+            _actionRequests != null &&
+            // otherwise, we already went to the server and have nothing new to tell it, so we are done
+            string.IsNullOrEmpty(_userPrompt) && _actionResponses.Count == 0)
         {
             return new AiAnswer<TAnswer>
             {
@@ -168,7 +183,8 @@ internal class AiConversation : IAiConversationOperations
         }
     }
 
-    private class AiActionContext<TActionParametersSchema> : IAiActionContext where TActionParametersSchema : class
+    private class AiActionContext<TActionParametersSchema>
+        where TActionParametersSchema : class
     {
         private readonly Func<TActionParametersSchema, Task<object>> _asyncAction;
         private readonly AiHandleErrorStrategy _errorStrategy;
@@ -211,15 +227,12 @@ internal class AiConversation : IAiConversationOperations
             {
                 return await _asyncAction.Invoke(args).ConfigureAwait(false);
             }
-            catch (Exception e) when (_errorStrategy is AiHandleErrorStrategy.SendErrorsToModel or AiHandleErrorStrategy.Default)
+            catch (Exception e) when (_errorStrategy is AiHandleErrorStrategy.SendErrorsToModel)
             {
-                return e;
+                //TODO: We create a string here that would include the exception type + message recursively
+                // we need avoid sending stack trace to the model
+                return e.Message;
             }
         }
-    }
-
-    private interface IAiActionContext
-    {
-        Task<object> ExecuteAsync(JsonOperationContext context, string arguments, CancellationToken token = default);
     }
 }

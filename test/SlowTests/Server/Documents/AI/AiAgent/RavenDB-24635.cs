@@ -52,7 +52,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var identifier = (await store.AI.CreateAgentAsync(agent, AiAgentBasics.OutputSchema.Instance)).Identifier;
 
             var chat = store.AI.Conversation(identifier, "chats/",
-                new AiConversationCreationOptions(p => p.AddParameter("company", "companies/90-A")));
+                new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
 
             chat.SetUserPrompt("run tool 'RecentOrder'");
             await chat.RunAsync<AiAgentBasics.OutputSchema>(CancellationToken.None);

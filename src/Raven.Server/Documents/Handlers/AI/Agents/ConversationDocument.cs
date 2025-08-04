@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
@@ -13,9 +14,9 @@ using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-public class ConversationDocument(string agent, BlittableJsonReaderObject parameters)
+public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObject parameters)
 {
-    public string Agent = agent ?? throw new ArgumentNullException(nameof(agent));
+    public string Agent = agent;
     
     public BlittableJsonReaderObject Parameters = parameters;
     public List<BlittableJsonReaderObject> Messages = [];
@@ -179,8 +180,6 @@ public class ConversationDocument(string agent, BlittableJsonReaderObject parame
             var call = JsonDeserializationClient.ActionRequest(openToolCalls[callId] as BlittableJsonReaderObject);
             openTools.Add(callId, call);
         }
-
-        DevelopmentHelper.ToDo(DevelopmentHelper.Feature.AI, DevelopmentHelper.TeamMember.Karmel, DevelopmentHelper.Severity.Normal, "make messages IEnumerable?");
 
         return new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
