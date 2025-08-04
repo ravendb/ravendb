@@ -60,6 +60,18 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
                 return dt;
             }
         }
+        
+        public static unsafe DateTime ParseDate(ReadOnlySpan<char> dateStr, string name)
+        {
+            fixed (char* c = dateStr)
+            {
+                var result = LazyStringParser.TryParseDateTime(c, dateStr.Length, out var dt, out _, properlyParseThreeDigitsMilliseconds: true);
+                if (result != LazyStringParser.Result.DateTime)
+                    Web.RequestHandler.ThrowInvalidDateTime(name, dateStr.ToString());
+
+                return dt;
+            }
+        }
 
         public static bool CheckIfIncrementalTs(string tsName)
         {
