@@ -6,7 +6,7 @@ namespace Raven.Client.Documents.AI;
 
 public class AiConversationCreationOptions : IDynamicJson
 {
-    public Dictionary<string, object> Parameters;
+    public Dictionary<string, object> Parameters { get; set; }
     public int? ExpirationInSec { get; set; }
 
     public AiConversationCreationOptions()
