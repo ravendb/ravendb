@@ -6,6 +6,7 @@ import { loadableData, loadStatus } from "components/models/common";
 import { createSuccessState, createIdleState, createFailureState } from "components/utils/common";
 import document from "models/database/documents/document";
 import { aiAgentsUtils } from "../../utils/aiAgentsUtils";
+import { ChatAiAgentFormData } from "../utils/chatAiAgentValidation";
 
 interface EditAiAgentState {
     config: loadableData<Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration>;
@@ -15,6 +16,7 @@ interface EditAiAgentState {
     messages: AiAgentMessage[];
     isRawData: boolean;
     isWaitingForActionToolSubmit: boolean;
+    isDocumentExpirationEnabled: loadableData<boolean>;
 }
 
 const initialState: EditAiAgentState = {
@@ -25,6 +27,7 @@ const initialState: EditAiAgentState = {
     messages: [],
     isRawData: false,
     isWaitingForActionToolSubmit: false,
+    isDocumentExpirationEnabled: createIdleState(),
 };
 
 export const chatAiAgentSlice = createSlice({
@@ -85,6 +88,15 @@ export const chatAiAgentSlice = createSlice({
             })
             .addCase(runChat.fulfilled, (state) => {
                 state.runChatState = "success";
+            })
+            .addCase(getIsDocumentExpirationEnabled.pending, (state) => {
+                state.isDocumentExpirationEnabled.status = "loading";
+            })
+            .addCase(getIsDocumentExpirationEnabled.rejected, (state, action) => {
+                state.isDocumentExpirationEnabled = createFailureState(action.error.message);
+            })
+            .addCase(getIsDocumentExpirationEnabled.fulfilled, (state, action) => {
+                state.isDocumentExpirationEnabled = createSuccessState(action.payload);
             });
     },
 });
@@ -117,13 +129,13 @@ const runChat = createAsyncThunk(
     async (
         payload: {
             databaseName: string;
-            prompt: string;
-            initialParameters: { name?: string; value?: string }[];
+            formValues: ChatAiAgentFormData;
+            isDocumentExpirationEnabled: boolean;
             toolCallParameters?: AiAgentToolCall[];
         },
         { getState, dispatch }
     ): Promise<void> => {
-        const { databaseName, prompt, initialParameters, toolCallParameters } = payload;
+        const { databaseName, formValues, isDocumentExpirationEnabled, toolCallParameters } = payload;
 
         const state = getState() as RootState;
         const conversationId = state.chatAiAgent.conversationId;
@@ -132,19 +144,39 @@ const runChat = createAsyncThunk(
         const result = await services.aiAgentService.runAiAgent(
             databaseName,
             {
-                UserPrompt: toolCallParameters?.length > 0 ? null : prompt,
-                Parameters:
-                    conversationId == null ? Object.fromEntries(initialParameters.map((x) => [x.name, x.value])) : null,
+                UserPrompt: toolCallParameters?.length > 0 ? null : formValues.prompt,
                 ActionResponses: toolCallParameters?.map((x) => ({
                     ToolId: x.id,
                     Content: x.arguments,
                 })),
+                CreationOptions: {
+                    Parameters:
+                        conversationId == null
+                            ? Object.fromEntries(formValues.parameters.map((x) => [x.name, x.value]))
+                            : null,
+                    ExpirationInSec:
+                        (isDocumentExpirationEnabled || formValues.isEnableDocumentExpiration) &&
+                        formValues.isDocumentExpireInCustomizeEnabled
+                            ? formValues.persistenceExpiresInSeconds
+                            : null,
+                },
             },
-            conversationId != null ? undefined : config.data?.Identifier,
-            conversationId != null ? conversationId : undefined
+            config.data?.Identifier,
+            conversationId != null ? conversationId : formValues.persistenceConversationIdPrefix
         );
         dispatch(chatAiAgentActions.conversationIdSet(result.ConversationId));
         await dispatch(chatAiAgentActions.getDocument({ databaseName, id: result.ConversationId })).unwrap();
+    }
+);
+
+const getIsDocumentExpirationEnabled = createAsyncThunk(
+    chatAiAgentSlice.name + "/getIsDocumentExpirationEnabled",
+    async (databaseName: string): Promise<boolean> => {
+        const result = await services.databasesService.getExpirationConfiguration(databaseName);
+        if (!result) {
+            return false;
+        }
+        return !result.Disabled;
     }
 );
 
@@ -153,6 +185,7 @@ export const chatAiAgentActions = {
     getConfig,
     getDocument,
     runChat,
+    getIsDocumentExpirationEnabled,
 };
 
 export const chatAiAgentSelectors = {
@@ -167,4 +200,5 @@ export const chatAiAgentSelectors = {
         state.chatAiAgent.config.status === "loading" ||
         state.chatAiAgent.document.status === "loading",
     isWaitingForActionToolSubmit: (state: RootState) => state.chatAiAgent.isWaitingForActionToolSubmit,
+    isDocumentExpirationEnabled: (state: RootState) => state.chatAiAgent.isDocumentExpirationEnabled,
 };

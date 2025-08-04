@@ -612,6 +612,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(AbstractAiAgentProcessor.RequestBody));
             scripter.AddType(typeof(AiAgentProcessorForTestConversation.AiAgentTestRequest));
             scripter.AddType(typeof(AiAgentActionRequest));
+            scripter.AddType(typeof(ConversionRequestBody));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));

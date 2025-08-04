@@ -201,7 +201,9 @@ function UserMessage({ message, idx, toolQueries, toolActions }: UserMessageProp
                     className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset"
                     style={{ maxWidth: "75%" }}
                 >
-                    <div>{message.content}</div>
+                    <div className="overflow-auto" style={{ maxHeight: "200px", whiteSpace: "pre-wrap" }}>
+                        {message.content}
+                    </div>
                     {message.toolCalls?.length > 0 && (
                         <div className="vstack gap-2">
                             {message.toolCalls.map((toolCall) => (

@@ -7,8 +7,8 @@ import ButtonWithSpinner from "components/common/ButtonWithSpinner";
 import { useEffect, useRef } from "react";
 import AiAgentMessages from "../partials/AiAgentMessages";
 import { Icon } from "components/common/Icon";
-import ChatAiAgentInfoHub from "./ChatAiAgentInfoHub";
-import { useForm, useWatch } from "react-hook-form";
+import ChatAiAgentInfoHub from "./partials/ChatAiAgentInfoHub";
+import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { ChatAiAgentFormData, chatAiAgentYupResolver } from "./utils/chatAiAgentValidation";
 import AiAgentParametersField from "../partials/AiAgentParametersField";
 import { FormInput } from "components/common/Form";
@@ -19,6 +19,14 @@ import AceEditor from "components/common/ace/AceEditor";
 import { Switch } from "components/common/Checkbox";
 import Spinner from "react-bootstrap/Spinner";
 import Button from "react-bootstrap/Button";
+import { useAsyncCallback } from "react-async-hook";
+import { TimeInSeconds } from "common/constants/timeInSeconds";
+import ChatAiAgentPersistenceSection from "./partials/ChatAiAgentPersistenceSection";
+import { LoadError } from "components/common/LoadError";
+import { LoadingView } from "components/common/LoadingView";
+import { useServices } from "components/hooks/useServices";
+import { licenseSelectors } from "components/common/shell/licenseSlice";
+import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
 
 interface QueryParams {
     agentId: string;
@@ -29,6 +37,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const dispatch = useAppDispatch();
     const messagesPanelRef = useRef<HTMLDivElement>(null);
     const { appUrl } = useAppUrls();
+    const { databasesService } = useServices();
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const messages = useAppSelector(chatAiAgentSelectors.messages);
@@ -38,28 +47,11 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const runChatState = useAppSelector(chatAiAgentSelectors.runChatState);
     const isLoading = useAppSelector(chatAiAgentSelectors.isLoading);
     const isWaitingForActionToolSubmit = useAppSelector(chatAiAgentSelectors.isWaitingForActionToolSubmit);
+    const isDocumentExpirationEnabled = useAppSelector(chatAiAgentSelectors.isDocumentExpirationEnabled);
+    const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
 
-    // Get data on load
+    // Reset store on unmount
     useEffect(() => {
-        const getData = async () => {
-            dispatch(chatAiAgentActions.conversationIdSet(queryParams?.conversationId));
-
-            const config = await dispatch(
-                chatAiAgentActions.getConfig({ databaseName, id: queryParams?.agentId })
-            ).unwrap();
-
-            setValue(
-                "parameters",
-                config.Parameters.map((x) => ({ name: x.Name, value: "" }))
-            );
-
-            if (queryParams?.conversationId) {
-                dispatch(chatAiAgentActions.getDocument({ databaseName, id: queryParams?.conversationId }));
-            }
-        };
-
-        getData();
-
         return () => {
             dispatch(chatAiAgentActions.reset());
         };
@@ -75,13 +67,47 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         }
     }, [messages.length]);
 
-    const { control, handleSubmit, setValue } = useForm<ChatAiAgentFormData>({
-        resolver: chatAiAgentYupResolver,
-        defaultValues: {
+    const asyncGetDefaultValues = useAsyncCallback<ChatAiAgentFormData>(async () => {
+        const isDocumentExpirationEnabled = await dispatch(
+            chatAiAgentActions.getIsDocumentExpirationEnabled(databaseName)
+        ).unwrap();
+
+        dispatch(chatAiAgentActions.conversationIdSet(queryParams?.conversationId));
+
+        const config = await dispatch(
+            chatAiAgentActions.getConfig({ databaseName, id: queryParams?.agentId })
+        ).unwrap();
+
+        if (queryParams?.conversationId) {
+            dispatch(chatAiAgentActions.getDocument({ databaseName, id: queryParams?.conversationId }));
+        }
+
+        return {
             prompt: "",
-            parameters: [],
+            parameters: config.Parameters.map((x) => ({ name: x.Name, value: "" })),
+            isEnableDocumentExpiration: !isDocumentExpirationEnabled,
+            isDocumentExpireInCustomizeEnabled: false,
+            persistenceConversationIdPrefix: "",
+            persistenceExpiresInSeconds: TimeInSeconds.Day * 30,
+        };
+    });
+
+    const areParametersRequired = !window.location.href.includes("conversationId");
+
+    const chatForm = useForm<ChatAiAgentFormData>({
+        resolver: chatAiAgentYupResolver,
+        defaultValues: asyncGetDefaultValues.execute,
+        context: {
+            areParametersRequired,
         },
     });
+
+    const reloadForm = async () => {
+        const result = await asyncGetDefaultValues.execute();
+        chatForm.reset(result);
+    };
+
+    const { control, handleSubmit, setValue } = chatForm;
 
     const formValues = useWatch({
         control,
@@ -91,9 +117,9 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         await dispatch(
             chatAiAgentActions.runChat({
                 databaseName,
-                prompt: formValues.prompt,
-                initialParameters: formValues.parameters,
+                formValues,
                 toolCallParameters,
+                isDocumentExpirationEnabled: isDocumentExpirationEnabled.data,
             })
         ).unwrap();
 
@@ -102,6 +128,19 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const handleSend = async () => {
         return tryHandleSubmit(async () => {
+            if (
+                queryParams?.conversationId == null &&
+                isDocumentExpirationEnabled.status === "success" &&
+                !isDocumentExpirationEnabled.data &&
+                formValues.isEnableDocumentExpiration
+            ) {
+                await databasesService.saveExpirationConfiguration(databaseName, {
+                    Disabled: false,
+                    DeleteFrequencyInSec: isCommunityLicense ? minimumCommunityDeleteFrequencyInSec : null,
+                    MaxItemsToProcess: defaultItemsToProcess,
+                });
+            }
+
             runChat();
         });
     };
@@ -117,6 +156,14 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     if (!queryParams?.agentId) {
         router.navigate(appUrl.forAiAgents(databaseName));
         return null;
+    }
+
+    if (asyncGetDefaultValues.loading) {
+        return <LoadingView />;
+    }
+
+    if (asyncGetDefaultValues.error) {
+        return <LoadError error="Unable to load configuration" refresh={reloadForm} />;
     }
 
     return (
@@ -156,78 +203,85 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                     isHeighRequired
                     style={{ maxWidth: 800 }}
                     render={({ height }) => (
-                        <form className="vstack overflow-auto" onSubmit={handleSubmit(handleSend)} style={{ height }}>
-                            <div
-                                ref={messagesPanelRef}
-                                className="overflow-auto ps-2 pe-2 flex-grow-1 position-relative"
-                                style={{ height: height - promptHeightInPx }}
+                        <FormProvider {...chatForm}>
+                            <form
+                                className="vstack overflow-auto"
+                                onSubmit={handleSubmit(handleSend)}
+                                style={{ height }}
                             >
-                                {messages.length === 0 && (
-                                    <div className="h-100 vstack justify-content-center">
-                                        <AiAgentParametersField
-                                            control={control}
-                                            name="parameters"
-                                            value={formValues.parameters}
-                                        />
-                                    </div>
-                                )}
-                                {!isRawData && messages.length > 0 && (
-                                    <AiAgentMessages
-                                        messages={messages}
-                                        toolQueries={config.data?.Queries}
-                                        toolActions={config.data?.Actions}
-                                        handleSaveParameters={runChat}
-                                        setIsWaitingForActionToolSubmit={(value: boolean) =>
-                                            dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(value))
-                                        }
-                                    />
-                                )}
-                                {isRawData && document.data && (
-                                    <AceEditor
-                                        mode="json"
-                                        value={JSON.stringify(document.data, null, 2)}
-                                        height={`${height - promptHeightInPx}px`}
-                                        readOnly
-                                    />
-                                )}
-                                {isLoading && (
-                                    <div className="position-absolute top-50 start-50 translate-middle">
-                                        <Spinner animation="border" />
-                                    </div>
-                                )}
-                            </div>
-                            <div className="mt-3 px-2">
-                                <div className="position-relative">
-                                    <FormInput
-                                        type="textarea"
-                                        as="textarea"
-                                        control={control}
-                                        name="prompt"
-                                        placeholder="Ask the agent anything"
-                                        className="rounded-2"
-                                        style={{ resize: "none" }}
-                                        onKeyDown={(e) => {
-                                            if (e.key === "Enter" && !e.shiftKey) {
-                                                e.preventDefault();
-                                                handleSubmit(handleSend)();
+                                <div
+                                    ref={messagesPanelRef}
+                                    className="overflow-auto ps-2 pe-2 flex-grow-1 position-relative"
+                                    style={{ height: height - promptHeightInPx }}
+                                >
+                                    {messages.length === 0 && (
+                                        <div className="h-100 vstack justify-content-center">
+                                            <ChatAiAgentPersistenceSection />
+                                            <AiAgentParametersField
+                                                control={control}
+                                                name="parameters"
+                                                value={formValues.parameters}
+                                            />
+                                        </div>
+                                    )}
+                                    {!isRawData && messages.length > 0 && (
+                                        <AiAgentMessages
+                                            messages={messages}
+                                            toolQueries={config.data?.Queries}
+                                            toolActions={config.data?.Actions}
+                                            handleSaveParameters={runChat}
+                                            setIsWaitingForActionToolSubmit={(value: boolean) =>
+                                                dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(value))
                                             }
-                                        }}
-                                        disabled={isLoading || isWaitingForActionToolSubmit}
-                                    />
-                                    {formValues.prompt && (
-                                        <ButtonWithSpinner
-                                            type="submit"
-                                            variant="secondary"
-                                            icon="arrow-up"
-                                            isSpinning={runChatState === "loading"}
-                                            disabled={isLoading || isWaitingForActionToolSubmit}
-                                            className="position-absolute rounded-pill"
-                                            style={{ right: "10px", bottom: "10px", zIndex: 5 }}
                                         />
                                     )}
+                                    {isRawData && document.data && (
+                                        <AceEditor
+                                            mode="json"
+                                            value={JSON.stringify(document.data, null, 2)}
+                                            height={`${height - promptHeightInPx}px`}
+                                            readOnly
+                                        />
+                                    )}
+                                    {isLoading && (
+                                        <div className="position-absolute top-50 start-50 translate-middle">
+                                            <Spinner animation="border" />
+                                        </div>
+                                    )}
                                 </div>
-                            </div>
-                        </form>
+                                <div className="mt-3 px-2">
+                                    <div className="position-relative">
+                                        <FormInput
+                                            type="textarea"
+                                            as="textarea"
+                                            control={control}
+                                            name="prompt"
+                                            placeholder="Ask the agent anything"
+                                            className="rounded-2"
+                                            style={{ resize: "none" }}
+                                            onKeyDown={(e) => {
+                                                if (e.key === "Enter" && !e.shiftKey) {
+                                                    e.preventDefault();
+                                                    handleSubmit(handleSend)();
+                                                }
+                                            }}
+                                            disabled={isLoading || isWaitingForActionToolSubmit}
+                                        />
+                                        {formValues.prompt && (
+                                            <ButtonWithSpinner
+                                                type="submit"
+                                                variant="secondary"
+                                                icon="arrow-up"
+                                                isSpinning={runChatState === "loading"}
+                                                disabled={isLoading || isWaitingForActionToolSubmit}
+                                                className="position-absolute rounded-pill"
+                                                style={{ right: "10px", bottom: "10px", zIndex: 5 }}
+                                            />
+                                        )}
+                                    </div>
+                                </div>
+                            </form>
+                        </FormProvider>
                     )}
                 />
             </div>
@@ -236,3 +290,4 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
 }
 
 const promptHeightInPx = 150;
+const minimumCommunityDeleteFrequencyInSec = TimeInSeconds.Day * 36;

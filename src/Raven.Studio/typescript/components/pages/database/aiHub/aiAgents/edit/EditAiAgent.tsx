@@ -22,12 +22,8 @@ import { useEffect } from "react";
 import EditAiAgentInfoHub from "./partials/EditAiAgentInfoHub";
 import { editAiAgentUtils } from "./utils/editAiAgentUtils";
 import SizeGetter from "components/common/SizeGetter";
-import { TimeInSeconds } from "common/constants/timeInSeconds";
-import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
 import EditAiAgentBasicSection from "./partials/EditAiAgentBasicSection";
 import EditAiAgentParametersSection from "./partials/EditAiAgentParametersSection";
-import EditAiAgentPersistenceSection from "./partials/EditAiAgentPersistenceSection";
 import EditAiAgentToolsSection from "./partials/EditAiAgentToolsSection";
 import EditAiAgentTrimmingSection from "./partials/EditAiAgentTrimmingSection";
 import { LoadingView } from "components/common/LoadingView";
@@ -42,26 +38,20 @@ interface QueryParams {
 
 export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<QueryParams>) {
     const dispatch = useAppDispatch();
-    const { aiAgentService, databasesService } = useServices();
+    const { aiAgentService } = useServices();
     const { appUrl } = useAppUrls();
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const isDocumentExpirationEnabled = useAppSelector(editAiAgentSelectors.isDocumentExpirationEnabled);
-    const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
     const isTestOpen = useAppSelector(editAiAgentSelectors.isTestOpen);
 
     const isEditAiAgent = !!queryParams?.id && !queryParams.isClone;
 
     const asyncGetDefaultValues = useAsyncCallback(async () => {
-        const isDocumentExpirationEnabled = await dispatch(
-            editAiAgentActions.getIsDocumentExpirationEnabled(databaseName)
-        ).unwrap();
-
         if (queryParams?.id) {
             const agents = await aiAgentService.getAiAgents(databaseName, queryParams.id);
-            return editAiAgentUtils.mapFromDto(agents.AiAgents[0], queryParams.isClone, isDocumentExpirationEnabled);
+            return editAiAgentUtils.mapFromDto(agents.AiAgents[0], queryParams.isClone);
         } else {
-            return editAiAgentUtils.mapFromDto(null, false, isDocumentExpirationEnabled);
+            return editAiAgentUtils.mapFromDto(null, false);
         }
     });
 
@@ -104,22 +94,7 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     const saveAgent: SubmitHandler<EditAiAgentFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
-            if (
-                isDocumentExpirationEnabled.status === "success" &&
-                !isDocumentExpirationEnabled.data &&
-                formData.isEnableDocumentExpiration
-            ) {
-                await databasesService.saveExpirationConfiguration(databaseName, {
-                    Disabled: false,
-                    DeleteFrequencyInSec: isCommunityLicense ? minimumCommunityDeleteFrequencyInSec : null,
-                    MaxItemsToProcess: defaultItemsToProcess,
-                });
-            }
-
-            await aiAgentService.saveAiAgent(
-                databaseName,
-                editAiAgentUtils.mapToDto(formData, isDocumentExpirationEnabled.data)
-            );
+            await aiAgentService.saveAiAgent(databaseName, editAiAgentUtils.mapToDto(formData));
 
             editForm.reset(formData);
             setIsDirty(false);
@@ -162,7 +137,6 @@ export default function EditAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                             <EditAiAgentBasicSection isEditAiAgent={isEditAiAgent} />
                                             <EditAiAgentParametersSection />
                                             <EditAiAgentToolsSection />
-                                            <EditAiAgentPersistenceSection />
                                             <EditAiAgentTrimmingSection />
                                         </>
                                     )}
@@ -211,5 +185,3 @@ function ColumnResize({ handleMouseDown }: { handleMouseDown: (e: React.MouseEve
         />
     );
 }
-
-const minimumCommunityDeleteFrequencyInSec = TimeInSeconds.Day * 36;

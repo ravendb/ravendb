@@ -1,10 +1,8 @@
 import { AiAgentTrimmingMethod, EditAiAgentFormData } from "./editAiAgentValidation";
-import { TimeInSeconds } from "common/constants/timeInSeconds";
 
 function mapFromDto(
     dto?: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration,
-    isClone?: boolean,
-    isDocumentExpirationEnabled?: boolean
+    isClone?: boolean
 ): EditAiAgentFormData {
     if (!dto) {
         return {
@@ -14,10 +12,6 @@ function mapFromDto(
             systemPrompt: "",
             sampleObject: "",
             outputSchema: "",
-            isEnableDocumentExpiration: !isDocumentExpirationEnabled,
-            isDocumentExpireInCustomizeEnabled: false,
-            persistenceConversationIdPrefix: "",
-            persistenceExpiresInSeconds: TimeInSeconds.Day * 30,
             parameters: [],
             queries: [],
             actions: [],
@@ -41,10 +35,6 @@ function mapFromDto(
         systemPrompt: dto.SystemPrompt,
         sampleObject: dto.SampleObject,
         outputSchema: dto.OutputSchema,
-        isEnableDocumentExpiration: !isDocumentExpirationEnabled,
-        isDocumentExpireInCustomizeEnabled: !!dto.Persistence.ConversationExpirationInSec,
-        persistenceConversationIdPrefix: dto.Persistence.ConversationIdPrefix,
-        persistenceExpiresInSeconds: dto.Persistence.ConversationExpirationInSec,
         parameters:
             dto.Parameters?.map((x) => ({
                 name: x.Name,
@@ -94,10 +84,7 @@ function getTrimmingMethod(
     return null;
 }
 
-function mapToDto(
-    formData: EditAiAgentFormData,
-    isDocumentExpirationEnabled?: boolean
-): Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration {
+function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration {
     return {
         Name: formData.name,
         Identifier: formData.identifier,
@@ -105,14 +92,6 @@ function mapToDto(
         SystemPrompt: formData.systemPrompt,
         OutputSchema: formData.outputSchema,
         SampleObject: formData.sampleObject,
-        Persistence: {
-            ConversationIdPrefix: formData.persistenceConversationIdPrefix,
-            ConversationExpirationInSec:
-                (isDocumentExpirationEnabled || formData.isEnableDocumentExpiration) &&
-                formData.isDocumentExpireInCustomizeEnabled
-                    ? formData.persistenceExpiresInSeconds
-                    : null,
-        },
         Parameters:
             formData.parameters?.map((x) => ({
                 Name: x.name,

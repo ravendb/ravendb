@@ -1,19 +1,19 @@
 import { FormDurationPicker, FormGroup, FormInput, FormLabel, FormSwitch } from "components/common/Form";
 import { useAppSelector } from "components/store";
 import { useFormContext, useWatch } from "react-hook-form";
-import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
-import { editAiAgentSelectors } from "../store/editAiAgentSlice";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
+import { ChatAiAgentFormData } from "../utils/chatAiAgentValidation";
+import { chatAiAgentSelectors } from "../store/chatAiAgentSlice";
 
-export default function EditAiAgentPersistenceSection() {
-    const { control } = useFormContext<EditAiAgentFormData>();
+export default function ChatAiAgentPersistenceSection() {
+    const { control } = useFormContext<ChatAiAgentFormData>();
 
     const formValues = useWatch({
         control,
     });
 
-    const isDocumentExpirationEnabled = useAppSelector(editAiAgentSelectors.isDocumentExpirationEnabled);
+    const isDocumentExpirationEnabled = useAppSelector(chatAiAgentSelectors.isDocumentExpirationEnabled);
 
     return (
         <>

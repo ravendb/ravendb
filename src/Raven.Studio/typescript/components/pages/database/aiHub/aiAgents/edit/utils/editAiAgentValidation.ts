@@ -29,12 +29,6 @@ const editSchema = yup.object({
         ),
     canRegenerateSchema: yup.boolean(),
 
-    // Persistence
-    isEnableDocumentExpiration: yup.boolean(),
-    isDocumentExpireInCustomizeEnabled: yup.boolean(),
-    persistenceConversationIdPrefix: yup.string().required(),
-    persistenceExpiresInSeconds: yup.number().nullable().positive().integer(),
-
     // Parameters
     parameters: yup.array().of(
         yup.object({

@@ -5,7 +5,7 @@ import aiAgentsTypes = require("components/pages/database/aiHub/aiAgents/utils/a
 class runAiAgentCommand extends commandBase {
     constructor(
         private db: string,
-        private dto: Raven.Server.Documents.Handlers.AI.Agents.AbstractAiAgentProcessor.RequestBody,
+        private dto: Raven.Client.Documents.Operations.AI.Agents.ConversionRequestBody,
         private agentId: string,
         private conversationId?: string,
     ) {
