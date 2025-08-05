@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using FastTests;
@@ -110,7 +111,7 @@ public class RavenDB_23473(ITestOutputHelper output) : RavenTestBase(output)
                 }
             }
 
-            await mre.WaitAsync();
+            Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(60)));
 
             await Indexes.WaitForIndexingAsync(store);
             var errors = Indexes.WaitForIndexingErrors(store, errorsShouldExists: false);
