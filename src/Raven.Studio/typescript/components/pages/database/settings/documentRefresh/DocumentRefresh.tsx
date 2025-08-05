@@ -26,16 +26,12 @@ import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
-import moment = require("moment");
+import moment from "moment";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import RichAlert from "components/common/RichAlert";
 
 const defaultItemsToProcess = 65536;
-
-// Compute a future date dynamically for the sample in the 'About this view' text:
-const refreshAt = new Date();
-refreshAt.setFullYear(refreshAt.getFullYear() + 1);
 
 export default function DocumentRefresh() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -296,7 +292,7 @@ const codeExample = `{
     "Set a timestamp in the @refresh metadata property",
   "@metadata": {
     "@collection": "Foo",
-    "@refresh": "${refreshAt.toISOString()}"
+    "@refresh": "${moment().add(1, "year").toISOString()}"
   }
 }`;
 

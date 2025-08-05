@@ -34,12 +34,9 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useRavenLink } from "hooks/useRavenLink";
+import moment from "moment";
 
 const defaultItemsToProcess = 65536;
-
-// Compute a future date dynamically for the sample in the 'About this view' text:
-const archiveAt = new Date();
-archiveAt.setFullYear(archiveAt.getFullYear() + 1);
 
 export default function DataArchival() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -275,7 +272,7 @@ const codeExample = `{
   "Example": "Set a timestamp in the @archive-at metadata property",
   "@metadata": {
     "@collection": "Foo",
-    "@archive-at": "${archiveAt.toISOString()}"
+    "@archive-at": "${moment().add(1, "year").toISOString()}"
   }
 }`;
 

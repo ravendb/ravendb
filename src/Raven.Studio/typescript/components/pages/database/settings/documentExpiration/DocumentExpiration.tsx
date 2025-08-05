@@ -26,16 +26,12 @@ import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
-import moment = require("moment");
+import moment from "moment";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import RichAlert from "components/common/RichAlert";
 
 const defaultItemsToProcess = 65536;
-
-// Compute a future date dynamically for the sample in the 'About this view' text:
-const expireAt = new Date();
-expireAt.setFullYear(expireAt.getFullYear() + 1);
 
 export default function DocumentExpiration() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
@@ -297,7 +293,7 @@ const codeExample = `{
       "Set a timestamp in the @expires metadata property",
     "@metadata": {
       "@collection": "Foo",
-      "@expires": "${expireAt.toISOString()}"
+      "@expires": "${moment().add(1, "year").toISOString()}"
     }
 }`;
 
