@@ -175,14 +175,14 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     }
 
     return (
-        <div className="content-padding h-100 vstack">
-            <div className="hstack justify-content-between align-items-start">
+        <div className="h-100 vstack">
+            <div className="hstack justify-content-between align-items-start px-3 pt-3">
                 <h2 className="text-truncate w-50 mb-3" title={config.data?.Name}>
                     <Icon icon="ai-agents" /> {config.data?.Name ?? "AI Agent"}{" "}
                 </h2>
                 <ChatAiAgentInfoHub />
             </div>
-            <div className="hstack mb-2 justify-content-between">
+            <div className="hstack mb-2 justify-content-between px-3">
                 <div className="hstack gap-2">
                     <Button
                         variant="primary"
