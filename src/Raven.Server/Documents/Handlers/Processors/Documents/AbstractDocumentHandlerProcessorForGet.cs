@@ -60,6 +60,9 @@ internal abstract class
     
     public async Task ExecuteAsTaskAsync()
     {
+        // This processor is being disposed here. It means you can execute a command only once per processor instance. 
+        // The reason behind this is to avoid awaiting execution in the handler and do it directly in the router code.
+        // This reduces AsyncStateMachine size by avoiding creating state in the handler code.
         using (this)
         using (ContextPool.AllocateOperationContext(out TOperationContext context))
         {
@@ -95,9 +98,9 @@ internal abstract class
                 var timeSeries = GetTimeSeriesToInclude(parameters);
 
                 var getDocumentsByIds = GetDocumentsByIdAsync(context, parameters, revisions, timeSeries, etag);
-                responseWriteStats = getDocumentsByIds.IsCompletedSuccessfully 
-                    ? getDocumentsByIds.Result 
-                    : await getDocumentsByIds.ConfigureAwait(false);
+                responseWriteStats = getDocumentsByIds.IsCompletedSuccessfully
+                    ? getDocumentsByIds.Result
+                    : await getDocumentsByIds;
             }
             else
             {
@@ -233,7 +236,7 @@ internal abstract class
 
         return writeDocumentsByIdResult.IsCompletedSuccessfully
             ? writeDocumentsByIdResult.Result
-            : await writeDocumentsByIdResult.ConfigureAwait(false);
+            : await writeDocumentsByIdResult;
     }
 
     private async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsByIdResultAsync(

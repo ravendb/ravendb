@@ -41,12 +41,14 @@ namespace Raven.Server.Documents.Handlers
         [RavenAction("/databases/*/docs", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public Task Get()
         {
+            // Disposal of the processor is handled in the `ExecuteAsTaskAsync` method.
             return new DocumentHandlerProcessorForGet(HttpMethod.Get, this).ExecuteAsTaskAsync();
         }
 
         [RavenAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
         public Task PostGet()
         {
+            // Disposal of the processor is handled in the `ExecuteAsTaskAsync` method.
             return new DocumentHandlerProcessorForGet(HttpMethod.Post, this).ExecuteAsTaskAsync();
         }
 
