@@ -19,6 +19,7 @@ import AceEditor from "components/common/ace/AceEditor";
 import { Switch } from "components/common/Checkbox";
 import Spinner from "react-bootstrap/Spinner";
 import Button from "react-bootstrap/Button";
+import classNames from "classnames";
 import { useAsyncCallback } from "react-async-hook";
 import { TimeInSeconds } from "common/constants/timeInSeconds";
 import ChatAiAgentPersistenceSection from "./partials/ChatAiAgentPersistenceSection";
@@ -47,6 +48,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const runChatState = useAppSelector(chatAiAgentSelectors.runChatState);
     const isLoading = useAppSelector(chatAiAgentSelectors.isLoading);
     const isWaitingForActionToolSubmit = useAppSelector(chatAiAgentSelectors.isWaitingForActionToolSubmit);
+    const hasScroll = useAppSelector(chatAiAgentSelectors.hasScroll);
     const isDocumentExpirationEnabled = useAppSelector(chatAiAgentSelectors.isDocumentExpirationEnabled);
     const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
 
@@ -59,6 +61,12 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
 
     // Scroll to the bottom of the test panel when new messages are added
     useEffect(() => {
+        dispatch(
+            chatAiAgentActions.hasScrollSet(
+                messagesPanelRef.current?.scrollHeight > messagesPanelRef.current?.clientHeight
+            )
+        );
+
         if (messagesPanelRef.current) {
             messagesPanelRef.current.scrollTo({
                 top: messagesPanelRef.current.scrollHeight,
@@ -201,7 +209,6 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
             <div className="flex-grow-1 hstack justify-content-center">
                 <SizeGetter
                     isHeighRequired
-                    style={{ maxWidth: 800 }}
                     render={({ height }) => (
                         <FormProvider {...chatForm}>
                             <form
@@ -211,73 +218,80 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                             >
                                 <div
                                     ref={messagesPanelRef}
-                                    className="overflow-auto ps-2 pe-2 flex-grow-1 position-relative"
+                                    className={classNames(
+                                        "overflow-auto ps-2 flex-grow-1 position-relative d-flex justify-content-center",
+                                        { "pe-2": !hasScroll }
+                                    )}
                                     style={{ height: height - promptHeightInPx }}
                                 >
-                                    {messages.length === 0 && (
-                                        <div className="h-100 vstack justify-content-center">
-                                            <ChatAiAgentPersistenceSection />
-                                            <AiAgentParametersField
-                                                control={control}
-                                                name="parameters"
-                                                value={formValues.parameters}
-                                            />
-                                        </div>
-                                    )}
-                                    {!isRawData && messages.length > 0 && (
-                                        <AiAgentMessages
-                                            messages={messages}
-                                            toolQueries={config.data?.Queries}
-                                            toolActions={config.data?.Actions}
-                                            handleSaveParameters={runChat}
-                                            setIsWaitingForActionToolSubmit={(value: boolean) =>
-                                                dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(value))
-                                            }
-                                        />
-                                    )}
-                                    {isRawData && document.data && (
-                                        <AceEditor
-                                            mode="json"
-                                            value={JSON.stringify(document.data, null, 2)}
-                                            height={`${height - promptHeightInPx}px`}
-                                            readOnly
-                                        />
-                                    )}
-                                    {isLoading && (
-                                        <div className="position-absolute top-50 start-50 translate-middle">
-                                            <Spinner animation="border" />
-                                        </div>
-                                    )}
-                                </div>
-                                <div className="mt-3 px-2">
-                                    <div className="position-relative">
-                                        <FormInput
-                                            type="textarea"
-                                            as="textarea"
-                                            control={control}
-                                            name="prompt"
-                                            placeholder="Ask the agent anything"
-                                            className="rounded-2"
-                                            style={{ resize: "none" }}
-                                            onKeyDown={(e) => {
-                                                if (e.key === "Enter" && !e.shiftKey) {
-                                                    e.preventDefault();
-                                                    handleSubmit(handleSend)();
+                                    <div className="w-100" style={{ maxWidth: "800px" }}>
+                                        {messages.length === 0 && (
+                                            <div className="h-100 vstack justify-content-center">
+                                                <ChatAiAgentPersistenceSection />
+                                                <AiAgentParametersField
+                                                    control={control}
+                                                    name="parameters"
+                                                    value={formValues.parameters}
+                                                />
+                                            </div>
+                                        )}
+                                        {!isRawData && messages.length > 0 && (
+                                            <AiAgentMessages
+                                                messages={messages}
+                                                toolQueries={config.data?.Queries}
+                                                toolActions={config.data?.Actions}
+                                                handleSaveParameters={runChat}
+                                                setIsWaitingForActionToolSubmit={(value: boolean) =>
+                                                    dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(value))
                                                 }
-                                            }}
-                                            disabled={isLoading || isWaitingForActionToolSubmit}
-                                        />
-                                        {formValues.prompt && (
-                                            <ButtonWithSpinner
-                                                type="submit"
-                                                variant="secondary"
-                                                icon="arrow-up"
-                                                isSpinning={runChatState === "loading"}
-                                                disabled={isLoading || isWaitingForActionToolSubmit}
-                                                className="position-absolute rounded-pill"
-                                                style={{ right: "10px", bottom: "10px", zIndex: 5 }}
                                             />
                                         )}
+                                        {isRawData && document.data && (
+                                            <AceEditor
+                                                mode="json"
+                                                value={JSON.stringify(document.data, null, 2)}
+                                                height={`${height - promptHeightInPx}px`}
+                                                readOnly
+                                            />
+                                        )}
+                                        {isLoading && (
+                                            <div className="position-absolute top-50 start-50 translate-middle">
+                                                <Spinner animation="border" />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="d-flex justify-content-center mt-3 px-2">
+                                    <div className="w-100" style={{ maxWidth: "800px" }}>
+                                        <div className="position-relative">
+                                            <FormInput
+                                                type="textarea"
+                                                as="textarea"
+                                                control={control}
+                                                name="prompt"
+                                                placeholder="Ask the agent anything"
+                                                className="rounded-2"
+                                                style={{ resize: "none" }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === "Enter" && !e.shiftKey) {
+                                                        e.preventDefault();
+                                                        handleSubmit(handleSend)();
+                                                    }
+                                                }}
+                                                disabled={isLoading || isWaitingForActionToolSubmit}
+                                            />
+                                            {formValues.prompt && (
+                                                <ButtonWithSpinner
+                                                    type="submit"
+                                                    variant="secondary"
+                                                    icon="arrow-up"
+                                                    isSpinning={runChatState === "loading"}
+                                                    disabled={isLoading || isWaitingForActionToolSubmit}
+                                                    className="position-absolute rounded-pill"
+                                                    style={{ right: "10px", bottom: "10px", zIndex: 5 }}
+                                                />
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </form>

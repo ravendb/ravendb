@@ -16,6 +16,7 @@ interface EditAiAgentState {
     messages: AiAgentMessage[];
     isRawData: boolean;
     isWaitingForActionToolSubmit: boolean;
+    hasScroll: boolean;
     isDocumentExpirationEnabled: loadableData<boolean>;
 }
 
@@ -27,6 +28,7 @@ const initialState: EditAiAgentState = {
     messages: [],
     isRawData: false,
     isWaitingForActionToolSubmit: false,
+    hasScroll: false,
     isDocumentExpirationEnabled: createIdleState(),
 };
 
@@ -48,6 +50,9 @@ export const chatAiAgentSlice = createSlice({
         },
         isWaitingForActionToolSubmitSet: (state, action: PayloadAction<boolean>) => {
             state.isWaitingForActionToolSubmit = action.payload;
+        },
+        hasScrollSet: (state, action: PayloadAction<boolean>) => {
+            state.hasScroll = action.payload;
         },
         reset: () => initialState,
     },
@@ -200,5 +205,6 @@ export const chatAiAgentSelectors = {
         state.chatAiAgent.config.status === "loading" ||
         state.chatAiAgent.document.status === "loading",
     isWaitingForActionToolSubmit: (state: RootState) => state.chatAiAgent.isWaitingForActionToolSubmit,
+    hasScroll: (state: RootState) => state.chatAiAgent.hasScroll,
     isDocumentExpirationEnabled: (state: RootState) => state.chatAiAgent.isDocumentExpirationEnabled,
 };
