@@ -178,6 +178,7 @@ function SelectedAuthFields({ control, authMethod }: SelectedAuthFieldsProps) {
                     type="textarea"
                     as="textarea"
                     placeholder="Enter a connection string"
+                    rows={5}
                 />
             </div>
         );

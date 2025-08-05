@@ -209,8 +209,8 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
                             control={testForm.control}
                             name="prompt"
                             placeholder="Ask the agent anything"
+                            rows={3}
                             className="rounded-2"
-                            style={{ resize: "none" }}
                             disabled={isTestDisabled}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" && !e.shiftKey) {

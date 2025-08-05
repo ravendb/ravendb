@@ -198,6 +198,7 @@ export default function EditGenAiTaskBasicFields() {
                     <FormInput
                         type="textarea"
                         as="textarea"
+                        rows={3}
                         control={control}
                         name="startingPointChangeVector"
                         placeholder="Enter change vector to start sending documents from"
@@ -209,7 +210,14 @@ export default function EditGenAiTaskBasicFields() {
                     <FormLabel>
                         Next Batch Starting Point <small className="text-muted fw-light">(read-only)</small>
                     </FormLabel>
-                    <FormInput as="textarea" type="textarea" control={control} name="nextBatchStartingPoint" disabled />
+                    <FormInput
+                        as="textarea"
+                        type="textarea"
+                        rows={3}
+                        control={control}
+                        name="nextBatchStartingPoint"
+                        disabled
+                    />
                 </FormGroup>
             )}
         </>

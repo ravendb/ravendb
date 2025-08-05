@@ -174,6 +174,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                         control={control}
                         name="systemPrompt"
                         placeholder={agentDescriptionPlaceholder}
+                        rows={7}
                     />
                 </FormGroup>
                 <SampleObjectAndSchemaFields
