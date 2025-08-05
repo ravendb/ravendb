@@ -42,8 +42,7 @@ export default function DataArchival() {
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const hasDataArchival = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
 
-    const documentArchiveLinkToOverviewDocs = useRavenLink({ hash: "1NGJSU" });
-    const documentArchiveLinkToStudioViewDocs = useRavenLink({ hash: "VJAQ4B" });
+    const documentArchiveLinkToOverviewDocs = useRavenLink({ hash: "1FI4YS" });
 
     const { databasesService } = useServices();
     const asyncGetDataArchivalConfiguration = useAsyncCallback<DataArchivalFormData>(async () =>
@@ -254,10 +253,6 @@ export default function DataArchival() {
                                 <div className="small-label mb-2">useful links</div>
                                 <a href={documentArchiveLinkToOverviewDocs} target="_blank">
                                     <Icon icon="newtab" /> Docs - Data Archival - Overview
-                                </a>
-                                <br />
-                                <a href={documentArchiveLinkToStudioViewDocs} target="_blank">
-                                    <Icon icon="newtab" /> Docs - Data Archival - Settings view
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
