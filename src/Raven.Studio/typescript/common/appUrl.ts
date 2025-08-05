@@ -786,11 +786,12 @@ class appUrl {
         return "#databases/ai/agents/edit?" + databasePart + idPart + isClonePart;
     }
 
-    static forChatAiAgent(db: database | string, agentId: string, conversationId?: string): string {
+    static forChatAiAgent(db: database | string, agentId: string, conversationId?: string, isHistory?: boolean): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         const agentIdPart = "&agentId=" + encodeURIComponent(agentId);
         const conversationIdPart = conversationId ? "&conversationId=" + encodeURIComponent(conversationId) : "";
-        return "#databases/ai/agents/chat?" + databasePart + agentIdPart + conversationIdPart;
+        const isHistoryPart = isHistory ? "&isHistory=true" : "";
+        return "#databases/ai/agents/chat?" + databasePart + agentIdPart + conversationIdPart + isHistoryPart;
     }
 
     static forAiTasks(db: database | string): string {
