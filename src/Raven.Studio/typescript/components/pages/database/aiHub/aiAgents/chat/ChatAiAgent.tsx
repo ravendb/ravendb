@@ -59,7 +59,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         };
     }, []);
 
-    // Scroll to the bottom of the test panel when new messages are added
+    // Scroll to the bottom of the test panel when new messages are added and set hasScroll
     useEffect(() => {
         dispatch(
             chatAiAgentActions.hasScrollSet(
