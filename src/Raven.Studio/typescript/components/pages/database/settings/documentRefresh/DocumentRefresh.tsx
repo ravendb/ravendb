@@ -33,6 +33,10 @@ import RichAlert from "components/common/RichAlert";
 
 const defaultItemsToProcess = 65536;
 
+// Compute a future date dynamically for the sample in the 'About this view' text:
+const refreshAt = new Date();
+refreshAt.setFullYear(refreshAt.getFullYear() + 1);
+
 export default function DocumentRefresh() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
@@ -247,7 +251,7 @@ export default function DocumentRefresh() {
                                         Subscriptions, etc.), as defined by your configuration.
                                     </li>
                                 </ul>
-                                <p>Sample document:</p>
+                                <p>Example of a document scheduled for refresh:</p>
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
@@ -292,7 +296,7 @@ const codeExample = `{
     "Set a timestamp in the @refresh metadata property",
   "@metadata": {
     "@collection": "Foo",
-    "@refresh": "2023-07-16T08:00:00.0000000Z"
+    "@refresh": "${refreshAt.toISOString()}"
   }
 }`;
 

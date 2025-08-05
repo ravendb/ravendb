@@ -37,6 +37,10 @@ import { useRavenLink } from "hooks/useRavenLink";
 
 const defaultItemsToProcess = 65536;
 
+// Compute a future date dynamically for the sample in the 'About this view' text:
+const archiveAt = new Date();
+archiveAt.setFullYear(archiveAt.getFullYear() + 1);
+
 export default function DataArchival() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
@@ -247,7 +251,7 @@ export default function DataArchival() {
                                         </ul>
                                     </li>
                                 </ul>
-                                <p>Sample document:</p>
+                                <p>Example of a document scheduled for archival:</p>
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
@@ -268,11 +272,10 @@ export default function DataArchival() {
 }
 
 const codeExample = `{
-  "Example": 
-    "Set a timestamp in the @archive-at metadata property",
+  "Example": "Set a timestamp in the @archive-at metadata property",
   "@metadata": {
     "@collection": "Foo",
-    "@archive-at": "2023-07-16T08:00:00.0000000Z"
+    "@archive-at": "${archiveAt.toISOString()}"
   }
 }`;
 

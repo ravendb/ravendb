@@ -33,6 +33,10 @@ import RichAlert from "components/common/RichAlert";
 
 const defaultItemsToProcess = 65536;
 
+// Compute a future date dynamically for the sample in the 'About this view' text:
+const expireAt = new Date();
+expireAt.setFullYear(expireAt.getFullYear() + 1);
+
 export default function DocumentExpiration() {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const { databasesService } = useServices();
@@ -248,7 +252,7 @@ export default function DocumentExpiration() {
                                     </li>
                                 </ul>
 
-                                <p>Sample document:</p>
+                                <p>Example of a document scheduled for expiration:</p>
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
@@ -293,7 +297,7 @@ const codeExample = `{
       "Set a timestamp in the @expires metadata property",
     "@metadata": {
       "@collection": "Foo",
-      "@expires": "2023-07-16T08:00:00.0000000Z"
+      "@expires": "${expireAt.toISOString()}"
     }
 }`;
 
