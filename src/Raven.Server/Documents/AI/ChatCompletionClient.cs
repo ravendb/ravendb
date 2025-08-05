@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -19,7 +18,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.IdentityModel.Tokens;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.Handlers.AI.Agents;
@@ -30,7 +28,6 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using JsonSerializer = System.Text.Json.JsonSerializer;
-
 
 namespace Raven.Server.Documents.AI;
 

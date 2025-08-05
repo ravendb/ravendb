@@ -13,7 +13,7 @@ export interface AiAgentMessage {
     content?: string;
     date?: string;
     state?: "loading" | "success" | "error";
-    usage?: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
+    usage?: Raven.Client.Documents.Operations.AI.AiUsage;
     toolCalls?: AiAgentToolCall[];
     toolCallId?: string;
     toolName?: string;
@@ -23,7 +23,7 @@ export interface AiAgentDocumentResponse {
     Agent: string;
     Parameters: TODO;
     Messages: TODO[];
-    TotalUsage: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
+    TotalUsage: Raven.Client.Documents.Operations.AI.AiUsage;
     OpenActionCalls: TODO;
 }
 
@@ -32,7 +32,7 @@ export interface AiAgentRunResult {
     Document?: AiAgentDocumentResponse;
     Response: any;
     ActionRequests: Raven.Client.Documents.Operations.AI.Agents.AiAgentActionRequest[];
-    Usage: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
+    Usage: Raven.Client.Documents.Operations.AI.AiUsage;
 }
 
 export interface AiAgentDocMessage {
@@ -48,5 +48,5 @@ export interface AiAgentDocMessage {
     }[];
     tool_call_id?: string;
     date?: string;
-    usage?: Raven.Client.Documents.Operations.AI.Agents.AiUsage;
+    usage?: Raven.Client.Documents.Operations.AI.AiUsage;
 }

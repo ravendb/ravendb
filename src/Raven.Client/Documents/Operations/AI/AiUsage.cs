@@ -1,7 +1,7 @@
 ﻿using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Client.Documents.Operations.AI.Agents;
+namespace Raven.Client.Documents.Operations.AI;
 
 public class AiUsage : IDynamicJsonValueConvertible
 {

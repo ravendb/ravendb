@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -115,7 +116,7 @@ internal class AiConversation : IAiConversationOperations
 
         _invocations.Add(actionName, t);
     }
-  
+
     public AiAnswer<TAnswer> Run<TAnswer>() => AsyncHelpers.RunSync(() => RunAsync<TAnswer>());
 
     public async Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(CancellationToken token = default)
@@ -123,9 +124,9 @@ internal class AiConversation : IAiConversationOperations
         while (true)
         {
             var r = await RunAsyncInternal<TAnswer>(token).ConfigureAwait(false);
-            if (r.Status == AiConversationResult.Done) 
+            if (r.Status == AiConversationResult.Done)
                 return r;
-            
+
             if (_actionRequests.Count == 0)
                 throw new InvalidOperationException($"There are no action requests to process, but Status was {r.Status}, should not be possible.");
 
@@ -243,9 +244,30 @@ internal class AiConversation : IAiConversationOperations
 
         private static string CreateErrorMessageForLlm(Exception e)
         {
-            //TODO: We create a string here that would include the exception type + message recursively
-            // we need avoid sending stack trace to the model
-            return e.Message;
+            var sb = new StringBuilder();
+            var currentException = e;
+            int indentLevel = 0;
+
+            //AiException: AI model processing failed
+            //  HttpRequestException: Request to AI service failed
+            //    TaskCanceledException: A task was canceled
+            while (currentException != null)
+            {
+                if (indentLevel > 0)
+                    sb.Append(Environment.NewLine);
+
+                for (int i = 0; i < indentLevel; i++)
+                    sb.Append("  ");
+
+                sb.Append(currentException.GetType().Name);
+                sb.Append(": ");
+                sb.Append(currentException.Message);
+
+                currentException = currentException.InnerException;
+                indentLevel++;
+            }
+
+            return sb.ToString();
         }
     }
 }

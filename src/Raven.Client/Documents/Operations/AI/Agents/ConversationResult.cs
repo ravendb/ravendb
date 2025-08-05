@@ -5,15 +5,15 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
-public class ConversationResult<TSchema>
+public class ConversationResult<TAnswer>
 {
     public string ConversationId { get; set; }
     public string ChangeVector { get; set; }
-    public TSchema Response { get; set; }
+    public TAnswer Response { get; set; }
     public AiUsage TotalUsage { get; set; }
     public List<AiAgentActionRequest> ActionRequests { get; set; }
 
-    internal static ConversationResult<TSchema> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
+    internal static ConversationResult<TAnswer> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
     {
         response.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject usage);
         response.TryGet(nameof(Response), out BlittableJsonReaderObject result);
@@ -31,13 +31,13 @@ public class ConversationResult<TSchema>
             }
         }
 
-        return new ConversationResult<TSchema>
+        return new ConversationResult<TAnswer>
         {
             ConversationId = conversationId,
             ChangeVector = changeVector,
             ActionRequests = requests,
             TotalUsage = JsonDeserializationClient.AiUsage(usage),
-            Response = result == null ? default : conventions.Serialization.DefaultConverter.FromBlittable<TSchema>(result, conversationId)
+            Response = result == null ? default : conventions.Serialization.DefaultConverter.FromBlittable<TAnswer>(result, conversationId)
         };
     }
 }
