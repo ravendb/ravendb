@@ -58,6 +58,8 @@ export default function useEditAiAgent(queryParams: QueryParams) {
                 data,
                 {
                     allParameterNames: data.parameters?.map((x) => x.name) ?? [],
+                    allQueryNames: data.queries?.map((x) => x.name) ?? [],
+                    allActionNames: data.actions?.map((x) => x.name) ?? [],
                 },
                 options
             ),

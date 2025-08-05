@@ -51,7 +51,12 @@ const editSchema = yup.object({
             name: yup
                 .string()
                 .required()
-                .matches(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens"),
+                .matches(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens")
+                .test("unique-name", "Query name must be unique", function (value, ctx) {
+                    const allQueryNames = ctx.options.context.allQueryNames || [];
+                    const valuesCount = allQueryNames.filter((name: string) => name === value).length;
+                    return valuesCount <= 1;
+                }),
             description: yup.string().required(),
             query: yup.string().required(),
             parametersSampleObject: yup.string(),
@@ -80,7 +85,12 @@ const editSchema = yup.object({
             name: yup
                 .string()
                 .required()
-                .matches(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens"),
+                .matches(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens")
+                .test("unique-name", "Action name must be unique", function (value, ctx) {
+                    const allActionNames = ctx.options.context.allActionNames || [];
+                    const valuesCount = allActionNames.filter((name: string) => name === value).length;
+                    return valuesCount <= 1;
+                }),
             description: yup.string().required(),
             parametersSampleObject: yup.string(),
             parametersSchema: yup
