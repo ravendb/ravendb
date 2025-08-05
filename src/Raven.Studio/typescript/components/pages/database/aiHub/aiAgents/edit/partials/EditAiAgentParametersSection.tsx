@@ -4,7 +4,6 @@ import { Icon } from "components/common/Icon";
 import { useFormContext, useFieldArray } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import Button from "react-bootstrap/Button";
-import Table from "react-bootstrap/Table";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import OptionalLabel from "components/common/OptionalLabel";
 

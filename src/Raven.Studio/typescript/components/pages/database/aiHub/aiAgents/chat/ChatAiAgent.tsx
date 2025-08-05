@@ -3,31 +3,25 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import { chatAiAgentActions, chatAiAgentSelectors } from "./store/chatAiAgentSlice";
-import ButtonWithSpinner from "components/common/ButtonWithSpinner";
-import { useEffect, useRef } from "react";
-import AiAgentMessages from "../partials/AiAgentMessages";
+import { useEffect } from "react";
 import { Icon } from "components/common/Icon";
 import ChatAiAgentInfoHub from "./partials/ChatAiAgentInfoHub";
 import { FormProvider, useForm, useWatch } from "react-hook-form";
 import { ChatAiAgentFormData, chatAiAgentYupResolver } from "./utils/chatAiAgentValidation";
-import AiAgentParametersField from "../partials/AiAgentParametersField";
-import { FormInput } from "components/common/Form";
 import { tryHandleSubmit } from "components/utils/common";
 import { AiAgentToolCall } from "../utils/aiAgentsTypes";
 import SizeGetter from "components/common/SizeGetter";
-import AceEditor from "components/common/ace/AceEditor";
 import { Switch } from "components/common/Checkbox";
-import Spinner from "react-bootstrap/Spinner";
 import Button from "react-bootstrap/Button";
 import classNames from "classnames";
 import { useAsyncCallback } from "react-async-hook";
 import { TimeInSeconds } from "common/constants/timeInSeconds";
-import ChatAiAgentPersistenceSection from "./partials/ChatAiAgentPersistenceSection";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
 import { useServices } from "components/hooks/useServices";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
+import ChatAiAgentFormBody from "./partials/ChatAiAgentFormBody";
 
 interface QueryParams {
     agentId: string;
@@ -37,19 +31,12 @@ interface QueryParams {
 
 export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<QueryParams>) {
     const dispatch = useAppDispatch();
-    const messagesPanelRef = useRef<HTMLDivElement>(null);
     const { appUrl } = useAppUrls();
     const { databasesService } = useServices();
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const messages = useAppSelector(chatAiAgentSelectors.messages);
     const config = useAppSelector(chatAiAgentSelectors.config);
     const isRawData = useAppSelector(chatAiAgentSelectors.isRawData);
-    const document = useAppSelector(chatAiAgentSelectors.document);
-    const runChatState = useAppSelector(chatAiAgentSelectors.runChatState);
-    const isLoading = useAppSelector(chatAiAgentSelectors.isLoading);
-    const isWaitingForActionToolSubmit = useAppSelector(chatAiAgentSelectors.isWaitingForActionToolSubmit);
-    const hasScroll = useAppSelector(chatAiAgentSelectors.hasScroll);
     const isDocumentExpirationEnabled = useAppSelector(chatAiAgentSelectors.isDocumentExpirationEnabled);
     const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
 
@@ -59,22 +46,6 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
             dispatch(chatAiAgentActions.reset());
         };
     }, []);
-
-    // Scroll to the bottom of the test panel when new messages are added and set hasScroll
-    useEffect(() => {
-        dispatch(
-            chatAiAgentActions.hasScrollSet(
-                messagesPanelRef.current?.scrollHeight > messagesPanelRef.current?.clientHeight
-            )
-        );
-
-        if (messagesPanelRef.current) {
-            messagesPanelRef.current.scrollTo({
-                top: messagesPanelRef.current.scrollHeight,
-                behavior: "smooth",
-            });
-        }
-    }, [messages.length]);
 
     const asyncGetDefaultValues = useAsyncCallback<ChatAiAgentFormData>(async () => {
         const isDocumentExpirationEnabled = await dispatch(
@@ -219,86 +190,12 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                                 onSubmit={handleSubmit(handleSend)}
                                 style={{ height }}
                             >
-                                <div
-                                    ref={messagesPanelRef}
-                                    className={classNames(
-                                        "overflow-auto ps-2 flex-grow-1 position-relative d-flex justify-content-center",
-                                        { "pe-2": !hasScroll }
-                                    )}
-                                    style={{ height: height - promptHeightInPx }}
-                                >
-                                    <div className="w-100" style={{ maxWidth: "800px" }}>
-                                        {messages.length === 0 && (
-                                            <div className="h-100 vstack justify-content-center">
-                                                <ChatAiAgentPersistenceSection />
-                                                <AiAgentParametersField
-                                                    control={control}
-                                                    name="parameters"
-                                                    value={formValues.parameters}
-                                                />
-                                            </div>
-                                        )}
-                                        {!isRawData && messages.length > 0 && (
-                                            <AiAgentMessages
-                                                messages={messages}
-                                                toolQueries={config.data?.Queries}
-                                                toolActions={config.data?.Actions}
-                                                handleSaveParameters={runChat}
-                                                setIsWaitingForActionToolSubmit={(value: boolean) =>
-                                                    dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(value))
-                                                }
-                                            />
-                                        )}
-                                        {isRawData && document.data && (
-                                            <AceEditor
-                                                mode="json"
-                                                value={JSON.stringify(document.data, null, 2)}
-                                                height={`${height - promptHeightInPx}px`}
-                                                readOnly
-                                            />
-                                        )}
-                                        {isLoading && (
-                                            <div className="position-absolute top-50 start-50 translate-middle">
-                                                <Spinner animation="border" />
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                                {!queryParams?.isHistory && (
-                                    <div className="d-flex justify-content-center mt-3 px-3 pb-2">
-                                        <div className="w-100" style={{ maxWidth: "800px" }}>
-                                            <div className="position-relative">
-                                                <FormInput
-                                                    type="textarea"
-                                                    as="textarea"
-                                                    control={control}
-                                                    name="prompt"
-                                                    placeholder="Ask the agent anything"
-                                                    className="rounded-2"
-                                                    style={{ resize: "none" }}
-                                                    onKeyDown={(e) => {
-                                                        if (e.key === "Enter" && !e.shiftKey) {
-                                                            e.preventDefault();
-                                                            handleSubmit(handleSend)();
-                                                        }
-                                                    }}
-                                                    disabled={isLoading || isWaitingForActionToolSubmit}
-                                                />
-                                                {formValues.prompt && (
-                                                    <ButtonWithSpinner
-                                                        type="submit"
-                                                        variant="secondary"
-                                                        icon="arrow-up"
-                                                        isSpinning={runChatState === "loading"}
-                                                        disabled={isLoading || isWaitingForActionToolSubmit}
-                                                        className="position-absolute rounded-pill"
-                                                        style={{ right: "10px", bottom: "10px", zIndex: 5 }}
-                                                    />
-                                                )}
-                                            </div>
-                                        </div>
-                                    </div>
-                                )}
+                                <ChatAiAgentFormBody
+                                    height={height}
+                                    handleSend={handleSend}
+                                    runChat={runChat}
+                                    isHistory={queryParams?.isHistory}
+                                />
                             </form>
                         </FormProvider>
                     )}
@@ -308,5 +205,4 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     );
 }
 
-const promptHeightInPx = 150;
 const minimumCommunityDeleteFrequencyInSec = TimeInSeconds.Day * 36;
