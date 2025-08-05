@@ -10,11 +10,15 @@ namespace Sparrow.Json
     {
         private readonly Stream _outputStream;
         private readonly CancellationToken _cancellationToken;
+        
+        // PERF: Cache the MemoryStream reference to avoid repeated casting
+        private readonly MemoryStream _memoryStream;
 
         public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken = default) : base(context, RecyclableMemoryStreamFactory.GetRecyclableStream())
         {
             _outputStream = stream ?? throw new ArgumentNullException(nameof(stream));
             _cancellationToken = cancellationToken;
+            _memoryStream = (MemoryStream)_stream; // Cache the cast since we know it's always MemoryStream
         }
 
         public async ValueTask WriteStreamAsync(Stream stream, CancellationToken token = default)
@@ -34,48 +38,100 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public ValueTask<int> MaybeFlushAsync(CancellationToken token = default)
         {
-            var innerStream = _stream as MemoryStream;
-            if (innerStream == null)
-                ThrowInvalidTypeException(_stream?.GetType());
-            if (innerStream.Length * 2 <= innerStream.Capacity)
+            // PERF: Use cached MemoryStream reference
+            if (_memoryStream.Length * 2 <= _memoryStream.Capacity)
                 return new ValueTask<int>(0);
 
             FlushInternal(); // this is OK, because inner stream is a MemoryStream
             return FlushAsync(token);
         }
 
-        public async ValueTask<int> FlushAsync(CancellationToken token = default)
+        public ValueTask<int> FlushAsync(CancellationToken token = default)
         {
-            var innerStream = _stream as MemoryStream;
-            if (innerStream == null)
-                ThrowInvalidTypeException(_stream?.GetType());
+            // PERF: Use cached MemoryStream reference
             FlushInternal();
-            innerStream.TryGetBuffer(out var bytes);
+            _memoryStream.TryGetBuffer(out var bytes);
             var bytesCount = bytes.Count;
             if (bytesCount == 0)
-                return 0;
-            await _outputStream.WriteAsync(bytes.Array, bytes.Offset, bytesCount, token).ConfigureAwait(false);
+                return new ValueTask<int>(0);
+            
+            var writeTask = _outputStream.WriteAsync(bytes.Array, bytes.Offset, bytesCount, token);
+            if (writeTask.IsCompleted)
+            {
+                // PERF: Fast synchronous path - avoid async state machine overhead
+                // This happens when _outputStream is MemoryStream, FileStream with sync completion, etc.
+                writeTask.GetAwaiter().GetResult();
+                _memoryStream.SetLength(0);
+                return new ValueTask<int>(bytesCount);
+            }
+            
+            // Slow asynchronous path for network streams, slow disk I/O, etc.
+            return FlushAsyncSlow(writeTask, _memoryStream, bytesCount);
+        }
+        
+        private static async ValueTask<int> FlushAsyncSlow(Task writeTask, MemoryStream innerStream, int bytesCount)
+        {
+            await writeTask.ConfigureAwait(false);
             innerStream.SetLength(0);
             return bytesCount;
         }
 
-        public async ValueTask DisposeAsync()
+        public ValueTask DisposeAsync()
         {
             DisposeInternal();
 
-            if (await FlushAsync().ConfigureAwait(false) > 0)
+            // PERF: Check if flush completed synchronously to avoid async state machine
+            var flushTask = FlushAsync();
+            if (flushTask.IsCompleted)
+            {
+                // Fast synchronous path
+                var bytesWritten = flushTask.GetAwaiter().GetResult();
+                if (bytesWritten > 0)
+                {
+                    var outputFlushTask = _outputStream.FlushAsync();
+                    if (outputFlushTask.IsCompleted)
+                    {
+                        outputFlushTask.GetAwaiter().GetResult();
+                        return DisposeStreamAsync();
+                    }
+                    else
+                    {
+                        return DisposeAsyncSlow(outputFlushTask);
+                    }
+                }
+                else
+                {
+                    return DisposeStreamAsync();
+                }
+            }
+            
+            return DisposeAsyncSlow(flushTask);
+        }
+
+        private async ValueTask DisposeAsyncSlow(ValueTask<int> flushTask)
+        {
+            var bytesWritten = await flushTask.ConfigureAwait(false);
+            if (bytesWritten > 0)
                 await _outputStream.FlushAsync().ConfigureAwait(false);
 
+            await DisposeStreamAsync().ConfigureAwait(false);
+        }
+
+        private async ValueTask DisposeAsyncSlow(Task outputFlushTask)
+        {
+            await outputFlushTask.ConfigureAwait(false);
+            await DisposeStreamAsync().ConfigureAwait(false);
+        }
+
+        private ValueTask DisposeStreamAsync()
+        {
 #if !NETSTANDARD2_0
-            await _stream.DisposeAsync().ConfigureAwait(false);
+            return _stream.DisposeAsync();
 #else
             _stream.Dispose();
+            return default;
 #endif
         }
 
-        private void ThrowInvalidTypeException(Type typeOfStream)
-        {
-            throw new ArgumentException($"Expected stream to be MemoryStream, but got {(typeOfStream == null ? "null" : typeOfStream.ToString())}.");
-        }
     }
 }
