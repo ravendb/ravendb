@@ -16,6 +16,7 @@ class runAiAgentCommand extends commandBase {
         const args = {
             agentId: this.agentId,
             conversationId: this.conversationId,
+            changeVector: "''", // if initial conversationId already exists it will throw an error
         };
 
         const url = endpoints.databases.aiAgent.aiAgent + this.urlEncodeArgs(args);

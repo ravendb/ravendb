@@ -118,7 +118,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 var conversation = RequestHandler.Database.DocumentsStorage.Get(context, conversationId);
                 if (conversation == null)
                 {
-                    if (string.IsNullOrEmpty(changeVector) == false)
+                    if (changeVector == string.Empty)
                     {
                         throw new ConcurrencyException(
                             $"The conversation '{conversationId}' doesn't exists.")
