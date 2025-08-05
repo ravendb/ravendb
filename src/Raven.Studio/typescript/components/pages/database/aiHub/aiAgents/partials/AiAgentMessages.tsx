@@ -40,10 +40,9 @@ export default function AiAgentMessages({
 }: AiAgentMessagesProps) {
     return (
         <div className="w-100 vstack gap-2 ai-agent-messages pb-1">
-            {messages.map((message, idx) => (
+            {messages.map((message) => (
                 <AiAgentMessage
                     key={message.id}
-                    idx={idx}
                     message={message}
                     allMessages={messages}
                     toolQueries={toolQueries}
@@ -57,7 +56,6 @@ export default function AiAgentMessages({
 }
 
 interface AiAgentMessageProps {
-    idx: number;
     message: AiAgentMessage;
     allMessages: AiAgentMessage[];
     toolQueries: ToolQuery[];
@@ -67,7 +65,6 @@ interface AiAgentMessageProps {
 }
 
 function AiAgentMessage({
-    idx,
     message,
     allMessages,
     toolQueries,
@@ -86,7 +83,7 @@ function AiAgentMessage({
             {message.role === "system" && <SystemMessage message={message} />}
             {isActionTool && <ToolMessage message={message} type="action" />}
             {message.role === "user" && (
-                <UserMessage message={message} idx={idx} toolQueries={toolQueries} toolActions={toolActions} />
+                <UserMessage message={message} toolQueries={toolQueries} toolActions={toolActions} />
             )}
             {message.role === "assistant" && (
                 <AgentMessage
@@ -188,15 +185,20 @@ function SystemMessage({ message }: SystemMessageProps) {
 
 interface UserMessageProps {
     message: AiAgentMessage;
-    idx: number;
     toolQueries: ToolQuery[];
     toolActions: ToolAction[];
 }
 
-function UserMessage({ message, idx, toolQueries, toolActions }: UserMessageProps) {
+function UserMessage({ message, toolQueries, toolActions }: UserMessageProps) {
+    const isMessageWithParameters = message.content.startsWith("AI Agent Parameters:");
+
+    if (isMessageWithParameters) {
+        return null;
+    }
+
     return (
         <div>
-            {idx === 0 && <div className="text-muted text-center">{message.date}</div>}
+            <div className="text-muted text-center">{message.date}</div>
             <div className="hstack justify-content-end user-message">
                 <div
                     className="text-end bg-faded-primary p-2 rounded-3 border border-primary text-reset"

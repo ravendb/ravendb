@@ -22,6 +22,7 @@ import { useServices } from "components/hooks/useServices";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
 import ChatAiAgentFormBody from "./partials/ChatAiAgentFormBody";
+import ChatAiAgentParametersDropdown from "./partials/ChatAiAgentParametersDropdown";
 
 interface QueryParams {
     agentId: string;
@@ -39,6 +40,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     const isRawData = useAppSelector(chatAiAgentSelectors.isRawData);
     const isDocumentExpirationEnabled = useAppSelector(chatAiAgentSelectors.isDocumentExpirationEnabled);
     const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
+    const document = useAppSelector(chatAiAgentSelectors.document);
 
     // Reset store on unmount
     useEffect(() => {
@@ -168,14 +170,19 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                         <Icon icon="cancel" /> Cancel
                     </a>
                 </div>
-                <Switch
-                    color="primary"
-                    selected={isRawData}
-                    toggleSelection={() => dispatch(chatAiAgentActions.isRawDataSet(!isRawData))}
-                    title="Toggle on to view the chat communication in raw data format"
-                >
-                    Raw data
-                </Switch>
+                <div className="hstack gap-2">
+                    <Switch
+                        color="primary"
+                        selected={isRawData}
+                        toggleSelection={() => dispatch(chatAiAgentActions.isRawDataSet(!isRawData))}
+                        title="Toggle on to view the chat communication in raw data format"
+                    >
+                        Raw data
+                    </Switch>
+                    {document.data?.Parameters && (
+                        <ChatAiAgentParametersDropdown parameters={document.data.Parameters} />
+                    )}
+                </div>
             </div>
 
             <div
