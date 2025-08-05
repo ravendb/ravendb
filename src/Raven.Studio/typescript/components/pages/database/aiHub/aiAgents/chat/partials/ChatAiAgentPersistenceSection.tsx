@@ -16,9 +16,9 @@ export default function ChatAiAgentPersistenceSection() {
     const isDocumentExpirationEnabled = useAppSelector(chatAiAgentSelectors.isDocumentExpirationEnabled);
 
     return (
-        <>
-            <h3 className="m-0 mt-3">
-                Set chat persistence
+        <div>
+            <h3>
+                <Icon icon="press-releases" color="primary" /> Define conversation ID or prefix and expiration
                 <PopoverWithHoverWrapper
                     message={
                         <>
@@ -33,9 +33,6 @@ export default function ChatAiAgentPersistenceSection() {
                     <Icon icon="info-new" />
                 </PopoverWithHoverWrapper>
             </h3>
-            <div className="mb-1">
-                Configure the document ID prefix and whether these documents should expire after a set period of time.
-            </div>
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>
                     <FormLabel>
@@ -86,6 +83,6 @@ export default function ChatAiAgentPersistenceSection() {
                     </FormGroup>
                 )}
             </div>
-        </>
+        </div>
     );
 }

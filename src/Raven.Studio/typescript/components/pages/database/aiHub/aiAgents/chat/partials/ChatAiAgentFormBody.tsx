@@ -73,7 +73,13 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                     {messages.length === 0 && (
                         <div className="h-100 vstack justify-content-center">
                             <ChatAiAgentPersistenceSection />
-                            <AiAgentParametersField control={control} name="parameters" value={formValues.parameters} />
+                            <hr />
+                            <AiAgentParametersField
+                                control={control}
+                                name="parameters"
+                                value={formValues.parameters}
+                                isTest={false}
+                            />
                         </div>
                     )}
                     {!isRawData && messages.length > 0 && (

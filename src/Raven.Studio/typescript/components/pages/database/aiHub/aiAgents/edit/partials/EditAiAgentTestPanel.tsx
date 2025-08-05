@@ -166,6 +166,7 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
                                 control={testForm.control}
                                 name="parameters"
                                 value={testFormValues.parameters}
+                                isTest={true}
                             />
                         </div>
                     )}
