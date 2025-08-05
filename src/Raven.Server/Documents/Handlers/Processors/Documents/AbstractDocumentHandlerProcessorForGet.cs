@@ -412,20 +412,22 @@ internal abstract class
             throw new InvalidOperationException($"Cannot have more than one include on '{Constants.TimeSeries.All}'.");
 
         var timeSeriesCount = parameters.TimeSeries?.Count ?? 0;
-        if (timeSeriesCount != parameters.From.Count || parameters.From.Count != parameters.To.Count)
+        if (timeSeriesCount != (parameters.From?.Count ?? 0) || (parameters.From?.Count ?? 0) != (parameters.To?.Count ?? 0))
             throw new InvalidOperationException("Parameters 'timeseriesNames', 'fromList' and 'toList' must be of equal length. " +
-                                                $"Got : timeseriesNames.Count = {timeSeriesCount}, fromList.Count = {parameters.From.Count}, toList.Count = {parameters.To.Count}.");
-
+                                                $"Got : timeseriesNames.Count = {timeSeriesCount}, fromList.Count = {parameters.From?.Count ?? 0}, toList.Count = {parameters.To?.Count ?? 0}.");
+        
         var timeSeriesTimesCount = parameters.TimeSeriesTimes?.Count ?? 0;
-        if (timeSeriesTimesCount != parameters.TimeTypes.Count || parameters.TimeTypes.Count != parameters.TimeValues.Count ||
-            parameters.TimeValues.Count != parameters.TimeUnits.Count)
+        if (timeSeriesTimesCount != (parameters.TimeTypes?.Count ?? 0)
+            || (parameters.TimeTypes?.Count ?? 0) != (parameters.TimeValues?.Count ?? 0)
+            || (parameters.TimeValues?.Count ?? 0) != (parameters.TimeUnits?.Count ?? 0))
             throw new InvalidOperationException($"Parameters 'timeseriesTime', 'timeType', 'timeValue' and 'timeUnit' must be of equal length. " +
-                                                $"Got : timeseriesTime.Count = {timeSeriesTimesCount}, timeType.Count = {parameters.TimeTypes.Count}, timeValue.Count = {parameters.TimeValues.Count}, timeUnit.Count = {parameters.TimeUnits.Count}.");
+                                                $"Got : timeseriesTime.Count = {timeSeriesTimesCount}, timeType.Count = {parameters.TimeTypes?.Count ?? 0}, timeValue.Count = {parameters.TimeValues?.Count ?? 0}, timeUnit.Count = {parameters.TimeUnits?.Count ?? 0}.");
 
         var timeSeriesCountsCount = parameters.TimeSeriesCounts?.Count ?? 0;
-        if (timeSeriesCountsCount != parameters.CountTypes.Count || parameters.CountTypes.Count != parameters.CountValues.Count)
+        if (timeSeriesCountsCount != (parameters.CountTypes?.Count ?? 0) 
+            || (parameters.CountTypes?.Count ?? 0) != (parameters.CountValues?.Count ?? 0))
             throw new InvalidOperationException($"Parameters 'timeseriesCount', 'countType', 'countValue' must be of equal length. " +
-                                                $"Got : timeseriesCount.Count = {timeSeriesCountsCount}, countType.Count = {parameters.CountTypes}, countValue.Count = {parameters.CountValues.Count}.");
+                                                $"Got : timeseriesCount.Count = {timeSeriesCountsCount}, countType.Count = {parameters.CountTypes?.Count ?? 0}, countValue.Count = {parameters.CountValues?.Count ?? 0}.");
 
         var hs = new HashSet<AbstractTimeSeriesRange>(AbstractTimeSeriesRangeComparer.Instance);
 
