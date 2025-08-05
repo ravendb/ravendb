@@ -11,36 +11,35 @@ namespace Raven.Client.Documents.Operations.AI.Agents
 {
     public class AddOrUpdateAiAgentOperation : IMaintenanceOperation<AiAgentConfigurationResult>
     {
+        private readonly object _sampleObject;
         private readonly AiAgentConfiguration _configuration;
 
         public AddOrUpdateAiAgentOperation(AiAgentConfiguration configuration)
         {
             ValidationMethods.AssertNotNullOrEmpty(configuration, nameof(configuration));
-            
-            if (HasNoSampleObjectOrSchema(configuration))
-                throw new ArgumentException($"Please provide a non-empty value for either {configuration.OutputSchema} or {nameof(configuration.SampleObject)} is required.");
-
             _configuration = configuration;
+        }
+
+        public AddOrUpdateAiAgentOperation(AiAgentConfiguration configuration, object sampleObject) : this(configuration)
+        {
+            _sampleObject = sampleObject;
         }
 
         private static bool HasNoSampleObjectOrSchema(AiAgentConfiguration configuration) => 
             string.IsNullOrWhiteSpace(configuration.OutputSchema) && string.IsNullOrWhiteSpace(configuration.SampleObject);
 
-        public static AddOrUpdateAiAgentOperation Create<T>(AiAgentConfiguration configuration, T outputType)
-        {
-            if (HasNoSampleObjectOrSchema(configuration))
-            {
-                using (var ctx = JsonOperationContext.ShortTermSingleUse())
-                {
-                    configuration.SampleObject = DocumentConventions.Default.Serialization.DefaultConverter.ToBlittable(outputType, ctx).ToString();
-                }
-            }
-
-            return new AddOrUpdateAiAgentOperation(configuration);
-        }
+        public static AddOrUpdateAiAgentOperation Create<T>(AiAgentConfiguration configuration, T outputType) => new(configuration, outputType);
 
         public RavenCommand<AiAgentConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
+            if (_sampleObject != null && HasNoSampleObjectOrSchema(_configuration))
+            {
+                using (var ctx = JsonOperationContext.ShortTermSingleUse())
+                {
+                    _configuration.SampleObject = conventions.Serialization.DefaultConverter.ToBlittable(_sampleObject, ctx).ToString();
+                }
+            }
+
             return new AddOrUpdateAiAgentOperationCommand(_configuration, conventions);
         }
 
@@ -51,6 +50,9 @@ namespace Raven.Client.Documents.Operations.AI.Agents
 
             public AddOrUpdateAiAgentOperationCommand(AiAgentConfiguration configuration, DocumentConventions conventions)
             {
+                if (HasNoSampleObjectOrSchema(configuration))
+                    throw new ArgumentException($"Please provide a non-empty value for either {configuration.OutputSchema} or {nameof(configuration.SampleObject)} is required.");
+
                 _configuration = configuration;
                 _conventions = conventions;
             }

@@ -8,7 +8,7 @@ using PutOperationResults = Raven.Server.Documents.DocumentsStorage.PutOperation
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
 {
-    internal class PutChatCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
+    internal class PutConversationCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>
     {
         private string _id;
         private ConversationDocument _conversation;
@@ -19,9 +19,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         private AiAgentConfiguration _configuration;
         public (PutOperationResults Conversation, PutOperationResults History) PutResult;
 
-        private const string AiAgentConversationHistoryIdPrefix = "ChatHistory";
+        private const string AiAgentConversationHistoryIdPrefix = "ConversationHistory";
 
-        public PutChatCommand(string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history, LazyStringValue changeVector, AiAgentConfiguration configuration, DocumentDatabase database)
+        public PutConversationCommand(string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history, LazyStringValue changeVector, AiAgentConfiguration configuration, DocumentDatabase database)
         {
             _id = conversationId;
             _conversation = conversation;
@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             return new PutChatCommandDto(_id, _conversation, _historyDoc, _expectedChangeVector, _configuration, _database);
         }
 
-        public class PutChatCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, PutChatCommand>
+        public class PutChatCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, PutConversationCommand>
         {
             private string _id;
             private ConversationDocument _conversation;
@@ -76,9 +76,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 _configuration = configuration;
             }
 
-            public PutChatCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+            public PutConversationCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
             {
-                return new PutChatCommand(_id, _conversation, _historyDoc, _expectedChangeVector, _configuration, _database);
+                return new PutConversationCommand(_id, _conversation, _historyDoc, _expectedChangeVector, _configuration, _database);
             }
         }
     }

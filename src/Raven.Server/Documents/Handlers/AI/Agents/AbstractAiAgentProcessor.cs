@@ -10,7 +10,6 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
-using Raven.Server.Documents.AI.AiGen;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Documents.Handlers.Processors.MultiGet;
 using Raven.Server.ServerWide.Context;
@@ -20,6 +19,8 @@ using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using Newtonsoft.Json;
 using Raven.Client.Documents.AI;
+using Raven.Client.Documents.Commands.MultiGet;
+using Raven.Client.Documents.Queries;
 using ChatConstants = Raven.Server.Documents.AI.ChatCompletionClient.Constants;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
@@ -447,7 +448,6 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
         public async Task HandleQueryToolCallsAsync(JsonOperationContext context, AiAgentConfiguration cfg, ConversationDocument document, AiResponse result)
         {
-            // TODO: handle a response that does both query & action
             DynamicJsonArray reqs = [];
             List<string> toolCallsIds = [];
             var queryUrl = $"/databases/{RequestHandler.DatabaseName}/queries";
@@ -460,14 +460,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 toolCallsIds.Add(call.Id);
                 reqs.Add(new DynamicJsonValue
                 {
-                    ["Url"] = queryUrl,
-                    ["Query"] = null,
-                    ["Method"] = "POST",
-                    ["Content"] = new DynamicJsonValue
+                    [nameof(GetRequest.Url)] = queryUrl,
+                    [nameof(GetRequest.Query)] = null,
+                    [nameof(GetRequest.Method)] = "POST",
+                    [nameof(GetRequest.Content)] = new DynamicJsonValue
                     {
-                        ["Query"] = q.Query,
-                        // TODO: need to dispose this? Or maybe use a dedicated context per each tool call to avoid high memory?
-                        ["QueryParameters"] = CreateParameters(context, call, document.Parameters)
+                        [nameof(IndexQuery.Query)] = q.Query,
+                        [nameof(IndexQuery.QueryParameters)] = CreateParameters(context, call, document.Parameters)
                     }
                 });
             }
@@ -478,24 +477,23 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             {
                 await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
                 memoryStream.Position = 0;
-                // TODO: have to verify that we got a successful result here!
                 using var resp = context.Sync.ReadForMemory(memoryStream, "query/response");
-                if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false) // TODO: shouldn't happen, but add error handling
+                if (resp.TryGet("Results", out BlittableJsonReaderArray results) is false)
                     throw new InvalidOperationException("Missing Results from multi-get reply");
 
                 for (int i = 0; i < results.Length; i++)
                 {
                     var queryResponse = (BlittableJsonReaderObject)results[i];
-                    if (queryResponse.TryGet("StatusCode", out int statusCode) == false)
-                        throw new InvalidOperationException("Missing status code"); // TODO: shouldn't happen, but add error handling
-                    if (queryResponse.TryGet("Result", out BlittableJsonReaderObject queryResponseResult) is false)
-                        throw new InvalidOperationException("Missing Result from query request output"); // TODO: shouldn't happen, but add error handling
+                    if (queryResponse.TryGet(nameof(GetResponse.StatusCode), out int statusCode) == false)
+                        throw new InvalidOperationException("Missing status code");
+                    if (queryResponse.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject queryResponseResult) is false)
+                        throw new InvalidOperationException("Missing Result from query request output");
 
                     if (statusCode != 200)
                         throw ExceptionDispatcher.Get(queryResponseResult, (HttpStatusCode)statusCode);
 
-                    if (queryResponseResult.TryGet("Results", out BlittableJsonReaderArray queryResult) is false)
-                        throw new InvalidOperationException("Missing Results from query output"); // TODO: shouldn't happen, but add error handling
+                    if (queryResponseResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
+                        throw new InvalidOperationException("Missing Results from query output");
 
                     document.AddMessage(context, context.ReadObject(
                         new DynamicJsonValue
@@ -517,7 +515,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
 
             var changeVectorLsv = context.GetLazyString(conversation.ChangeVector);
-            var cmd = new PutChatCommand(conversationId, conversation, history, changeVectorLsv, configuration, RequestHandler.Database);
+            var cmd = new PutConversationCommand(conversationId, conversation, history, changeVectorLsv, configuration, RequestHandler.Database);
             await RequestHandler.Database.TxMerger.Enqueue(cmd);
             conversation.ChangeVector = cmd.PutResult.Conversation.ChangeVector;
             return cmd.PutResult.Conversation.Id;

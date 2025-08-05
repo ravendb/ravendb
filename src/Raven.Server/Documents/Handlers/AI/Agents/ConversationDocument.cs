@@ -40,20 +40,17 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
                 throw new ArgumentException($"Parameter '{parameter.Name}' is missing.");
         }
 
+        var promptMessage = configuration.SystemPrompt;
+        if (TryCreateParameterDescriptionMessage(configuration, out string message))
+        {
+            promptMessage += "\n" + message;
+        }
+
         AddMessage(context, context.ReadObject(new DynamicJsonValue
         {
             [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleSystemValue,
-            [ChatCompletionClient.Constants.RequestFields.Content] = configuration.SystemPrompt
+            [ChatCompletionClient.Constants.RequestFields.Content] = promptMessage
         }, "system/msg"), usage: null);
-
-        if (TryCreateParameterDescriptionMessage(configuration, out string message))
-        {
-            AddMessage(context, context.ReadObject(new DynamicJsonValue
-            {
-                [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleSystemValue,
-                [ChatCompletionClient.Constants.RequestFields.Content] = message
-            }, "system/msg"), usage: null);
-        }
 
         if (configuration.Parameters.Count > 0)
         {
@@ -67,7 +64,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     private string ParametersToString(AiAgentConfiguration configuration)
     {
-        var sb = new StringBuilder("Parameters:\n");
+        var sb = new StringBuilder("AI Agent Parameters:\n"); 
         foreach (var parameter in configuration.Parameters)
         {
            var value = Parameters[parameter.Name];

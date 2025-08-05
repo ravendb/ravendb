@@ -1,7 +1,7 @@
 ﻿using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Config.Categories;
 
-namespace Raven.Server.Utils;
+namespace Raven.Server.Documents.Handlers.AI.Agents;
 
 public static class AiAgentHelpers
 {

@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Net.Http;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -9,15 +8,15 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
-public sealed class GetAiAgentOperation : IMaintenanceOperation<GetAiAgentsResponse>
+public sealed class GetAiAgentsOperation : IMaintenanceOperation<GetAiAgentsResponse>
 {
     private readonly string _agentId;
 
-    public GetAiAgentOperation()
+    public GetAiAgentsOperation()
     {
     }
 
-    public GetAiAgentOperation(string agentId)
+    public GetAiAgentsOperation(string agentId)
     {
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
         _agentId = agentId;
@@ -60,9 +59,4 @@ public sealed class GetAiAgentOperation : IMaintenanceOperation<GetAiAgentsRespo
             Result = JsonDeserializationClient.GetAiAgentsResponse(response);
         }
     }
-}
-
-public class GetAiAgentsResponse
-{
-    public List<AiAgentConfiguration> AiAgents { get; set; }
 }

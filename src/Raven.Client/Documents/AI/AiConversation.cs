@@ -29,6 +29,7 @@ internal class AiConversation : IAiConversationOperations
 
     public AiConversation(AiOperations aiOperations, string agentId, string conversationId, AiConversationCreationOptions options, string changeVector)
     {
+        ValidationMethods.AssertNotNullOrEmpty(aiOperations, nameof(aiOperations));
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
         ValidationMethods.AssertNotNullOrEmpty(conversationId, nameof(conversationId));
 
@@ -55,11 +56,15 @@ internal class AiConversation : IAiConversationOperations
         }
     }
 
-    public void AddActionResponse<TResponse>(string actionId, TResponse actionResponse) where TResponse : class
+    public void AddActionResponse<TResponse>(string toolId, TResponse actionResponse) where TResponse : class
     {
+        ValidationMethods.AssertNotNullOrEmpty(toolId, nameof(toolId));
+        if (actionResponse == null)
+            throw new ArgumentNullException(nameof(actionResponse), $"Action response for '{toolId}' cannot be null.");
+
         if (actionResponse is string str)
         {
-            AddActionResponse(actionId, str);
+            AddActionResponse(toolId, str);
             return;
         }
 
@@ -67,15 +72,18 @@ internal class AiConversation : IAiConversationOperations
         {
             var jsonSerializer = _aiOperations._store.Conventions.Serialization.DefaultConverter;
             var json = jsonSerializer.ToBlittable(actionResponse, context);
-            AddActionResponse(actionId, json.ToString());
+            AddActionResponse(toolId, json.ToString());
         }
     }
 
-    public void AddActionResponse(string actionId, string actionResponse)
+    public void AddActionResponse(string toolId, string actionResponse)
     {
+        ValidationMethods.AssertNotNullOrEmpty(toolId, nameof(toolId));
+        ValidationMethods.AssertNotNullOrEmpty(actionResponse, nameof(actionResponse));
+
         _actionResponses.Add(new AiAgentActionResponse
         {
-            ToolId = actionId, 
+            ToolId = toolId, 
             Content = actionResponse
         });
     }
@@ -229,10 +237,15 @@ internal class AiConversation : IAiConversationOperations
             }
             catch (Exception e) when (_errorStrategy is AiHandleErrorStrategy.SendErrorsToModel)
             {
-                //TODO: We create a string here that would include the exception type + message recursively
-                // we need avoid sending stack trace to the model
-                return e.Message;
+                return CreateErrorMessageForLlm(e);
             }
+        }
+
+        private static string CreateErrorMessageForLlm(Exception e)
+        {
+            //TODO: We create a string here that would include the exception type + message recursively
+            // we need avoid sending stack trace to the model
+            return e.Message;
         }
     }
 }

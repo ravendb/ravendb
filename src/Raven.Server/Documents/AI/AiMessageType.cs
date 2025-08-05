@@ -1,19 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using Raven.Client.Documents.Operations.AI;
+﻿using System.Collections.Generic;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.AI.AiGen;
-
-public enum AiMessageType
-{
-    System,
-    User,
-    Tool,
-    ToolReply,
-    Assistant
-}
+namespace Raven.Server.Documents.AI;
 
 public enum AiResponseType
 {

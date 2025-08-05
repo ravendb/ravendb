@@ -282,7 +282,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     var body = new TestRequestBody
                     {
                         Configuration = _agent,
-                        Options = _options, 
+                        CreationOptions = _options, 
                         ActionResponses = _toolResponses ?? [], 
                         UserPrompt = _prompt,
                     };
@@ -314,7 +314,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             public class TestRequestBody : IDynamicJson
             {
                 public string UserPrompt { get; set; }
-                public AiConversationCreationOptions Options { get; set; }
+                public AiConversationCreationOptions CreationOptions { get; set; }
                 public AiAgentConfiguration Configuration { get; set; }
                 public List<AiAgentActionResponse> ActionResponses { get; set; }
 
@@ -324,7 +324,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     var json = new DynamicJsonValue
                     {
                         [nameof(UserPrompt)] = UserPrompt,
-                        [nameof(Options)] = (Options ?? new AiConversationCreationOptions()).ToJson(),
+                        [nameof(CreationOptions)] = (CreationOptions ?? new AiConversationCreationOptions()).ToJson(),
                         [nameof(Configuration)] = Configuration.ToJson(),
                         [nameof(ActionResponses)] = new DynamicJsonArray(ActionResponses.Select(x => x.ToJson()))
                     };

@@ -82,13 +82,13 @@ public interface IAiConversationOperations
     /// <summary>
     /// Adds a string response for a given action request.
     /// </summary>
-    /// <param name="actionId">
+    /// <param name="toolId">
     /// The identifier of the action request.
     /// </param>
     /// <param name="actionResponse">
     /// The textual response to supply to the agent.
     /// </param>
-    void AddActionResponse(string actionId, string actionResponse);
+    void AddActionResponse(string toolId, string actionResponse);
 
     /// <summary>
     /// Adds a typed response object for a given action request.
@@ -97,13 +97,13 @@ public interface IAiConversationOperations
     /// The CLR type of the response object.  
     /// Must be a reference type.
     /// </typeparam>
-    /// <param name="actionId">
+    /// <param name="toolId">
     /// The identifier of the action request.
     /// </param>
     /// <param name="actionResponse">
     /// The response object to supply to the agent.
     /// </param>
-    void AddActionResponse<TResponse>(string actionId, TResponse actionResponse) where TResponse : class;
+    void AddActionResponse<TResponse>(string toolId, TResponse actionResponse) where TResponse : class;
 
     /// <summary>
     /// Sets the next user prompt to send to the AI agent.

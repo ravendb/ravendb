@@ -19,7 +19,7 @@ namespace Raven.Client.Documents.Operations
         private RequestExecutor _requestExecutor;
         private ServerOperationExecutor _serverOperationExecutor;
 
-        private RequestExecutor RequestExecutor => _requestExecutor ?? (_databaseName != null ? _requestExecutor = _store.GetRequestExecutor(_databaseName) : null);
+        internal RequestExecutor RequestExecutor => _requestExecutor ?? (_databaseName != null ? _requestExecutor = _store.GetRequestExecutor(_databaseName) : null);
 
         internal MaintenanceOperationExecutor(DocumentStoreBase store, string databaseName = null, string nodeTag = null, int? shardNumber = null)
         {

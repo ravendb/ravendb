@@ -1,15 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Net.Http;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 public class RunConversationOperation<TSchema> : IMaintenanceOperation<ConversationResult<TSchema>>
@@ -111,145 +108,4 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         private string _raftId = string.Empty;
         public string RaftUniqueRequestId => _raftId;
     }
-}
-
-internal class ConversionRequestBody : IDynamicJson
-{
-    public List<AiAgentActionResponse> ActionResponses { get; set; }
-    public string UserPrompt { get; set; }
-    public AiConversationCreationOptions CreationOptions { get; set; }
-    public DynamicJsonValue ToJson()
-    {
-        return new DynamicJsonValue
-        {
-            [nameof(ActionResponses)] = ActionResponses == null ? null : new DynamicJsonArray(ActionResponses.Select(r => r.ToJson())),
-            [nameof(UserPrompt)] = UserPrompt,
-            [nameof(CreationOptions)] = (CreationOptions ?? new AiConversationCreationOptions()).ToJson()
-        };
-    }
-}
-
-public class ConversationResult<TSchema>
-{
-    public string ConversationId { get; set; }
-    public string ChangeVector { get; set; }
-    public TSchema Response { get; set; }
-    public AiUsage TotalUsage { get; set; }
-    public List<AiAgentActionRequest> ActionRequests { get; set; }
-
-    internal static ConversationResult<TSchema> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
-    {
-        response.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject usage);
-        response.TryGet(nameof(Response), out BlittableJsonReaderObject result);
-        response.TryGet(nameof(ConversationId), out string conversationId);
-        response.TryGet(nameof(ChangeVector), out string changeVector);
-
-        List<AiAgentActionRequest> requests = null;
-        if (response.TryGet(nameof(ActionRequests), out BlittableJsonReaderArray actionRequests) && actionRequests != null)
-        {
-            requests = [];
-            foreach (BlittableJsonReaderObject actionRequest in actionRequests)
-            {
-                var r = JsonDeserializationClient.ActionRequest(actionRequest);
-                requests.Add(r);
-            }
-        }
-
-        return new ConversationResult<TSchema>
-        {
-            ConversationId = conversationId,
-            ChangeVector = changeVector,
-            ActionRequests = requests,
-            TotalUsage = JsonDeserializationClient.AiUsage(usage),
-            Response = result == null ? default : conventions.Serialization.DefaultConverter.FromBlittable<TSchema>(result, conversationId)
-        };
-    }
-}
-
-public class AiAgentActionRequest : IDynamicJson
-{
-    public string Name;
-    public string ToolId;
-    public string Arguments;
-    public DynamicJsonValue ToJson()
-    {
-        return new DynamicJsonValue
-        {
-            [nameof(Name)] = Name,
-            [nameof(ToolId)] = ToolId,
-            [nameof(Arguments)] = Arguments
-        };
-    }
-}
-
-public class AiAgentActionResponse : IDynamicJson
-{
-    public string ToolId;
-    public string Content;
-    public DynamicJsonValue ToJson()
-    {
-        return new DynamicJsonValue
-        {
-            [nameof(ToolId)] = ToolId,
-            [nameof(Content)] = Content
-        };
-    }
-}
-
-public class AiUsage : IDynamicJsonValueConvertible
-{
-    public int PromptTokens { get; set; }
-    public int CompletionTokens { get; set; }
-    public int TotalTokens { get; set; }
-    public int CachedTokens { get; set; }
-
-    internal void UpdateFrom(BlittableJsonReaderObject json)
-    {
-        json.TryGet("prompt_tokens", out int promptTokens);
-        json.TryGet("completion_tokens", out int completionTokens);
-        json.TryGet("total_tokens", out int totalTokens);
-
-        PromptTokens += promptTokens;
-        CompletionTokens += completionTokens;
-        TotalTokens += totalTokens;
-
-        if (json.TryGet("prompt_tokens_details", out BlittableJsonReaderObject promptDetails))
-        {
-            if (promptDetails.TryGet("cached_tokens", out int cachedTokens))
-                CachedTokens += cachedTokens;
-        }
-    }
-
-    public DynamicJsonValue ToJson()
-    {
-        return new DynamicJsonValue
-        {
-            [nameof(PromptTokens)] = PromptTokens,
-            [nameof(CompletionTokens)] = CompletionTokens,
-            [nameof(TotalTokens)] = TotalTokens,
-            [nameof(CachedTokens)] = CachedTokens,
-        };
-    }
-
-    internal  void Write(AsyncBlittableJsonTextWriter writer)
-    {
-        writer.WriteStartObject();
-
-        writer.WritePropertyName(nameof(PromptTokens));
-        writer.WriteInteger(PromptTokens);
-        writer.WriteComma();
-        
-        writer.WritePropertyName(nameof(CompletionTokens));
-        writer.WriteInteger(CompletionTokens);
-        writer.WriteComma();
-        
-        writer.WritePropertyName(nameof(TotalTokens));
-        writer.WriteInteger(TotalTokens);
-        writer.WriteComma();
-        
-        writer.WritePropertyName(nameof(CachedTokens));
-        writer.WriteInteger(CachedTokens);
-        writer.WriteEndObject();
-    }
-
 }

@@ -25,12 +25,14 @@ public class AiOperations
     /// <param name="databaseName">The name of the database. If null, uses the default database from the store.</param>
     public AiOperations(IDocumentStore store, string databaseName = null)
     {
+        ValidationMethods.AssertNotNullOrEmpty(store, nameof(store));
+
         _databaseName = databaseName ?? store.Database;
         _store = store;
         _executor = _store.Maintenance.ForDatabase(_databaseName);
     }
 
-    internal IDisposable AllocateOperationContext(out JsonOperationContext context) => _store.GetRequestExecutor().ContextPool.AllocateOperationContext(out context);
+    internal IDisposable AllocateOperationContext(out JsonOperationContext context) => _executor.RequestExecutor.ContextPool.AllocateOperationContext(out context);
 
     /// <summary>
     /// Returns a <see cref="AiOperations"/> for a different database.
@@ -51,9 +53,9 @@ public class AiOperations
     /// <typeparam name="TSchema">The schema type the AI agent should use.</typeparam>
     /// <param name="configuration">The configuration to assign to the agent.</param>
     /// <returns>The result of the creation or update operation.</returns>
-    public async Task<AiAgentConfigurationResult> CreateAgentAsync<TSchema>(AiAgentConfiguration configuration, TSchema sampleObject, CancellationToken token = default) where TSchema : new()
+    public Task<AiAgentConfigurationResult> CreateAgentAsync<TSchema>(AiAgentConfiguration configuration, TSchema sampleObject, CancellationToken token = default)
     {
-        return await _executor.SendAsync(AddOrUpdateAiAgentOperation.Create(configuration, sampleObject), token).ConfigureAwait(false);
+        return _executor.SendAsync(AddOrUpdateAiAgentOperation.Create(configuration, sampleObject), token);
     }
 
     /// <summary>
@@ -71,9 +73,9 @@ public class AiOperations
     /// </summary>
     /// <param name="configuration">The configuration to assign to the agent.</param>
     /// <returns>The result of the creation or update operation.</returns>
-    public async Task<AiAgentConfigurationResult> CreateAgentAsync(AiAgentConfiguration configuration, CancellationToken token = default)
+    public Task<AiAgentConfigurationResult> CreateAgentAsync(AiAgentConfiguration configuration, CancellationToken token = default)
     {
-        return await _executor.SendAsync(new AddOrUpdateAiAgentOperation(configuration), token).ConfigureAwait(false);
+        return _executor.SendAsync(new AddOrUpdateAiAgentOperation(configuration), token);
     }
     
 
@@ -94,15 +96,15 @@ public class AiOperations
     /// <param name="agentId">The ID of the AI agent to retrieve.</param>
     public async Task<AiAgentConfiguration> GetAgentAsync(string agentId, CancellationToken token = default)
     {
-        var r = await _executor.SendAsync(new GetAiAgentOperation(agentId), token).ConfigureAwait(false);
-        return r.AiAgents?.FirstOrDefault();
+        var r = await _executor.SendAsync(new GetAiAgentsOperation(agentId), token).ConfigureAwait(false);
+        return r.AiAgents?.SingleOrDefault();
     }
 
     /// <summary>
     /// Retrieves all AI agents and their configurations.
     /// </summary>
     /// <returns>A response containing all AI agents.</returns>
-    public Task<GetAiAgentsResponse> GetAgentsAsync(CancellationToken token = default) => _executor.SendAsync(new GetAiAgentOperation(), token);
+    public Task<GetAiAgentsResponse> GetAgentsAsync(CancellationToken token = default) => _executor.SendAsync(new GetAiAgentsOperation(), token);
 
     /// <summary>
     /// Retrieves the AI agent configuration for a specific agent.

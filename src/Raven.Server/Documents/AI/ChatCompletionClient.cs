@@ -22,7 +22,6 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Server.Documents.AI.AiGen;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Json;
 using Raven.Server.Utils;
@@ -37,7 +36,7 @@ namespace Raven.Server.Documents.AI;
 
 internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClientForTesting
 {
-    public static string EmptySchema = GetSchemaFromSampleObject("{}");
+    public static readonly string EmptySchema = GetSchemaFromSampleObject("{}");
     
     private readonly string _model;
     private readonly string _organizationId;
@@ -46,8 +45,9 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
     private readonly HttpClientCacheKey _httpClientCacheKey;
     private readonly HttpClient _client;
     private readonly IMemoryContextPool _contextPool;
+    private readonly string _apiKey;
 
-    public static DocumentConventions ConventionsToUse = new DocumentConventions
+    public static readonly DocumentConventions ConventionsToUse = new DocumentConventions
     {
         SendApplicationIdentifier = DocumentConventions.DefaultForServer.SendApplicationIdentifier,
         MaxContextSizeToKeep = DocumentConventions.DefaultForServer.MaxContextSizeToKeep,
@@ -82,26 +82,23 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         conventions ??= ConventionsToUse;
 
-        _httpClientCacheKey = HttpClientCacheKey.CreateHttpWithApiKey(conventions.UseHttpDecompression,
+        _httpClientCacheKey = HttpClientCacheKey.Create(conventions.UseHttpDecompression,
             conventions.HasExplicitlySetDecompressionUsage, conventions.HttpPooledConnectionLifetime,
             conventions.HttpPooledConnectionIdleTimeout, conventions.GlobalHttpClientTimeout,
-            baseUri, apiKey, conventions.ConfigureHttpMessageHandler);
+            baseUri, conventions.ConfigureHttpMessageHandler);
 
         _client = DefaultRavenHttpClientFactory.Instance.GetHttpClient(_httpClientCacheKey, handler => new HttpClient(handler)
         {
             BaseAddress = new Uri(baseUri),
-            DefaultRequestHeaders =
-            {
-                Authorization = string.IsNullOrEmpty(apiKey) ? null : new AuthenticationHeaderValue(Constants.RequestFields.AuthorizationApiKeyProperty, apiKey),
-                Accept = { new MediaTypeWithQualityHeaderValue(Constants.RequestFields.MediaTypeApplicationJson) },
-            }
         });
 
         _contextPool = contextPool;
+        _apiKey = apiKey;
     }
 
     public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, CancellationToken token)
     {
+        AddDefaultHeaders(request);
         using var response = await _client.SendAsync(request, token).ConfigureAwait(false);
         var responseContent = await GetResponseContentAsync(context, response, token);
 
@@ -281,7 +278,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         BlittableJsonReaderObject GetStructuredOutputSchemaAsBlittable()
         {
-            using (var stream = new MemoryStream(Encoding.UTF8.GetBytes(schema)))
+            using (var stream = RecyclableMemoryStreamFactory.GetRecyclableStream(Encoding.UTF8.GetBytes(schema)))
             {
                 return ctx.Sync.ReadForMemory(stream, "json");
             }
@@ -302,13 +299,19 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         if (string.IsNullOrEmpty(_projectId) == false)
             request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiProject, _projectId);
 
-
+        AddDefaultHeaders(request);
         using var r = await _client.SendAsync(request, token);
 
         HttpResponseHelper.CopyStatusCode(r, response);
         HttpResponseHelper.CopyHeaders(r, response);
 
         await HttpResponseHelper.CopyContentAsync(r, response);
+    }
+
+    private void AddDefaultHeaders(HttpRequestMessage request)
+    {
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(Constants.RequestFields.MediaTypeApplicationJson));
+        request.Headers.Authorization = string.IsNullOrEmpty(_apiKey) ? null : new AuthenticationHeaderValue(Constants.RequestFields.AuthorizationApiKeyProperty, _apiKey);
     }
 
     public virtual async Task<BlittableJsonReaderObject> GetResponseContentAsync(JsonOperationContext context, HttpResponseMessage response, CancellationToken token)
