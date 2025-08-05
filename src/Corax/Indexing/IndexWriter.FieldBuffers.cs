@@ -125,9 +125,10 @@ public partial class IndexWriter
                         llt.ReleaseCompactKey(ref k);
                     }
                 }
-
-                ArrayPool<TLookupKey>.Shared.Return(Keys);
             }
+            
+            if (Keys != null)
+                ArrayPool<TLookupKey>.Shared.Return(Keys);
 
             PostListIds = null;
             PageOffsets = null;
