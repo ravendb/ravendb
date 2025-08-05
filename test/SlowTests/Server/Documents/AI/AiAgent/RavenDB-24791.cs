@@ -25,6 +25,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
         private class QuestionOutputSchema
         {
+            public static QuestionOutputSchema Instance = new();
+
             public string Answer = "Combined answer of the answers for the questions ";
 
             public List<string> RelevantQuestionsIds = ["The questions ids relevant to the query or response"];
@@ -60,7 +62,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "You are an ai agent that answer knowledge questions"
             )
             {
-                Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats"},
                 Queries =
                 [
                     new AiAgentToolQuery
@@ -75,16 +76,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             agent.Parameters.Add(new AiAgentParameter("authors"));
 
-            var createResult = await store.AI.CreateAgentAsync<QuestionOutputSchema>(agent);
-            var chat = store.AI.StartConversation<QuestionOutputSchema>(
+            var createResult = await store.AI.CreateAgentAsync(agent, QuestionOutputSchema.Instance);
+            var chat = store.AI.Conversation(
                 createResult.Identifier,
-                parameters: new Dictionary<string, object>() { { "authors", new string[] { "Aviv" } } });
+                "Chats/",
+                new AiConversationCreationOptions().AddParameter("authors", new string[] { "Aviv" }));
 
             chat.SetUserPrompt("Can you answer the questions?");
-            var more = await chat.RunAsync(CancellationToken.None);
-            Assert.True(more == AiConversationResult.Done);
+            var more = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
+            Assert.True(more.Status == AiConversationResult.Done);
 
-            var aviv = chat.Answer;
+            var aviv = more.Answer;
             Assert.NotNull(aviv.Answer);
 
             using (var session = store.OpenAsyncSession())
@@ -117,7 +119,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "You are an ai agent that answer knowledge questions"
             )
             {
-                Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats" },
                 Queries =
                 [
                     new AiAgentToolQuery
@@ -133,16 +134,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             agent.Parameters.Add(new AiAgentParameter("priority"));
             int priority = 25;
 
-            var createResult = await store.AI.CreateAgentAsync<QuestionOutputSchema>(agent);
-            var chat = store.AI.StartConversation<QuestionOutputSchema>(
+            var createResult = await store.AI.CreateAgentAsync(agent, QuestionOutputSchema.Instance);
+            var chat = store.AI.Conversation(
                 createResult.Identifier,
-                parameters: new Dictionary<string, object>() { { "priority", priority } });
+                "Chats/",
+                new AiConversationCreationOptions().AddParameter("priority", priority));
 
             chat.SetUserPrompt("Can you answer the questions?");
-            var more = await chat.RunAsync(CancellationToken.None);
-            Assert.True(more == AiConversationResult.Done);
+            var more = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
+            Assert.True(more.Status == AiConversationResult.Done);
 
-            var shahar = chat.Answer;
+            var shahar = more.Answer;
             Assert.NotNull(shahar.Answer);
 
             using (var session = store.OpenAsyncSession())
@@ -175,7 +177,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "You are an ai agent that answer knowledge questions"
             )
             {
-                Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats" },
                 Queries =
                 [
                     new AiAgentToolQuery
@@ -191,16 +192,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             agent.Parameters.Add(new AiAgentParameter("priority"));
             double priority = 25.7;
 
-            var createResult = await store.AI.CreateAgentAsync<QuestionOutputSchema>(agent);
-            var chat = store.AI.StartConversation<QuestionOutputSchema>(
+            var createResult = await store.AI.CreateAgentAsync(agent, QuestionOutputSchema.Instance);
+            var chat = store.AI.Conversation(
                 createResult.Identifier,
-                parameters: new Dictionary<string, object>() { { "priority", priority } });
+                "Chats/",
+                new AiConversationCreationOptions().AddParameter("priority", priority));
 
             chat.SetUserPrompt("Can you answer the questions?");
-            var more = await chat.RunAsync(CancellationToken.None);
-            Assert.True(more == AiConversationResult.Done);
+            var more = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
+            Assert.True(more.Status == AiConversationResult.Done);
 
-            var shahar = chat.Answer;
+            var shahar = more.Answer;
             Assert.NotNull(shahar.Answer);
 
             using (var session = store.OpenAsyncSession())
@@ -233,7 +235,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 "You are an ai agent that answer knowledge questions"
             )
             {
-                Persistence = new AiAgentPersistenceConfiguration { ConversationIdPrefix = "Chats" },
                 Queries =
                 [
                     new AiAgentToolQuery
@@ -246,18 +247,19 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 ]
             };
             agent.Parameters.Add(new AiAgentParameter("shouldAnswer"));
-            agent.Persistence = new AiAgentPersistenceConfiguration("Chats/");
 
-            var createResult = await store.AI.CreateAgentAsync<QuestionOutputSchema>(agent);
-            var chat = store.AI.StartConversation<QuestionOutputSchema>(
+            var createResult = await store.AI.CreateAgentAsync(agent, QuestionOutputSchema.Instance);
+
+            var chat = store.AI.Conversation(
                 createResult.Identifier,
-                parameters: new Dictionary<string, object>() { { "shouldAnswer", true } });
+                "Chats/",
+                new AiConversationCreationOptions().AddParameter("shouldAnswer", true));
 
             chat.SetUserPrompt("Can you answer the questions?");
-            var more = await chat.RunAsync(CancellationToken.None);
-            Assert.True(more == AiConversationResult.Done);
+            var more = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
+            Assert.True(more.Status == AiConversationResult.Done);
 
-            var shahar = chat.Answer;
+            var shahar = more.Answer;
             Assert.NotNull(shahar.Answer);
 
             using (var session = store.OpenAsyncSession())
