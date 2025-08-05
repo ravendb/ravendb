@@ -369,6 +369,20 @@ namespace Raven.Server.Web
             return val[0];
         }
 
+        internal string GetChangeVectorStringQueryString(string name, bool required = true)
+        {
+            var val = HttpContext.Request.Query[name];
+            if (val.Count == 0)
+            {
+                if (required)
+                    ThrowRequiredMember(name);
+
+                return null;
+            }
+
+            return val[0];
+        }
+
         internal char? GetCharQueryString(string name, bool required = true)
         {
             var val = HttpContext.Request.Query[name];

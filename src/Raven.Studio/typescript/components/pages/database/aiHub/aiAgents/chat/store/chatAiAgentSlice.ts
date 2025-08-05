@@ -123,7 +123,7 @@ const getDocument = createAsyncThunk(
         const result = await services.databasesService.getDocumentWithMetadata(payload.id, payload.databaseName);
 
         if (result instanceof document) {
-            return result.toDto();
+            return result.toDto(true);
         }
         return result;
     }
@@ -145,7 +145,7 @@ const runChat = createAsyncThunk(
         const state = getState() as RootState;
         const conversationId = state.chatAiAgent.conversationId;
         const config = state.chatAiAgent.config;
-
+        const changeVector = state.chatAiAgent.document.data?.["@metadata"]?.["@change-vector"] ?? "";
         const result = await services.aiAgentService.runAiAgent(
             databaseName,
             {
@@ -167,7 +167,8 @@ const runChat = createAsyncThunk(
                 },
             },
             config.data?.Identifier,
-            conversationId != null ? conversationId : formValues.persistenceConversationIdPrefix
+            conversationId != null ? conversationId : formValues.persistenceConversationIdPrefix,
+            changeVector
         );
         dispatch(chatAiAgentActions.conversationIdSet(result.ConversationId));
         await dispatch(chatAiAgentActions.getDocument({ databaseName, id: result.ConversationId })).unwrap();

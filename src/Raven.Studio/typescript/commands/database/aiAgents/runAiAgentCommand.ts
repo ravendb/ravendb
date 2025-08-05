@@ -7,7 +7,8 @@ class runAiAgentCommand extends commandBase {
         private db: string,
         private dto: Raven.Client.Documents.Operations.AI.Agents.ConversionRequestBody,
         private agentId: string,
-        private conversationId?: string,
+        private conversationId: string,
+        private changeVector: string
     ) {
         super();
     }
@@ -16,7 +17,7 @@ class runAiAgentCommand extends commandBase {
         const args = {
             agentId: this.agentId,
             conversationId: this.conversationId,
-            changeVector: "''", // if initial conversationId already exists it will throw an error
+            changeVector: this.changeVector
         };
 
         const url = endpoints.databases.aiAgent.aiAgent + this.urlEncodeArgs(args);

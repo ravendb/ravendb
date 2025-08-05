@@ -8,7 +8,6 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
-using Raven.Client.Exceptions.Documents;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.AI.AiGen;
@@ -105,7 +104,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
             var conversationId = RequestHandler.GetStringQueryString("conversationId");
             var agentId = RequestHandler.GetStringQueryString("agentId");
-            var changeVector = RequestHandler.GetStringQueryString("changeVector", required: false);
+            var changeVector = RequestHandler.GetChangeVectorStringQueryString("changeVector", required: false);
 
             using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
             var body = await ReadRequestBodyAsync(context, token.Token);
@@ -118,7 +117,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 var conversation = RequestHandler.Database.DocumentsStorage.Get(context, conversationId);
                 if (conversation == null)
                 {
-                    if (changeVector == string.Empty)
+                    if (string.IsNullOrEmpty(changeVector) == false)
                     {
                         throw new ConcurrencyException(
                             $"The conversation '{conversationId}' doesn't exists.")
