@@ -36,7 +36,7 @@ export default function ChatAiAgentPersistenceSection() {
             <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
                 <FormGroup>
                     <FormLabel>
-                        Conversation ID prefix
+                        Conversation ID or prefix
                         <PopoverWithHoverWrapper message="Prefix to use in the document ID of each saved chat created with this agent.">
                             <Icon icon="info-new" />
                         </PopoverWithHoverWrapper>
