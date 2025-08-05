@@ -18,6 +18,7 @@ import document from "models/database/documents/document";
 import Badge from "react-bootstrap/Badge";
 import { aiAgentsUtils } from "../utils/aiAgentsUtils";
 import useRqlLanguageService from "components/hooks/useRqlLanguageService";
+import genUtils from "common/generalUtils";
 
 type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
 type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
@@ -291,27 +292,27 @@ function AgentMessage({
                                 <div>
                                     <div className="hstack justify-content-between gap-3">
                                         <span>Prompt tokens</span>
-                                        <span>{agentMessage.usage.PromptTokens}</span>
+                                        <span>{genUtils.formatAiTokens(agentMessage.usage.PromptTokens)}</span>
                                     </div>
                                     <div className="hstack justify-content-between gap-3">
                                         <span>Completion tokens</span>
-                                        <span>{agentMessage.usage.CompletionTokens}</span>
+                                        <span>{genUtils.formatAiTokens(agentMessage.usage.CompletionTokens)}</span>
                                     </div>
                                     <div className="hstack justify-content-between gap-3">
                                         <span>Cached tokens</span>
-                                        <span>{agentMessage.usage.CachedTokens}</span>
+                                        <span>{genUtils.formatAiTokens(agentMessage.usage.CachedTokens)}</span>
                                     </div>
                                     <hr className="my-1" />
                                     <div className="hstack justify-content-between gap-3">
                                         <span>Total tokens used</span>
-                                        <span>{agentMessage.usage.TotalTokens}</span>
+                                        <span>{genUtils.formatAiTokens(agentMessage.usage.TotalTokens)}</span>
                                     </div>
                                 </div>
                             }
                         >
                             <Icon icon="info" />
                         </PopoverWithHoverWrapper>
-                        Tokens used: {agentMessage.usage.TotalTokens}
+                        Tokens used: {genUtils.formatAiTokens(agentMessage.usage.TotalTokens)}
                     </div>
                 )}
             </div>

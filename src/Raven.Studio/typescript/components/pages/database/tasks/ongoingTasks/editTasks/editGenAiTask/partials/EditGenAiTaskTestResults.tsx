@@ -16,6 +16,7 @@ import { EmptySet } from "components/common/EmptySet";
 import AceUnifiedDiff from "components/common/ace/AceUnifiedDiff";
 import { Switch } from "components/common/Checkbox";
 import useBoolean from "components/hooks/useBoolean";
+import genUtils from "common/generalUtils";
 
 export default function EditGenAiTaskTestResults() {
     const dispatch = useAppDispatch();
@@ -116,27 +117,27 @@ function ModelUsage() {
                     <div>
                         <div className="hstack justify-content-between gap-3">
                             <span>Prompt tokens</span>
-                            <span>{modelUsage.data.promptTokens}</span>
+                            <span>{genUtils.formatAiTokens(modelUsage.data.promptTokens)}</span>
                         </div>
                         <div className="hstack justify-content-between gap-3">
                             <span>Completion tokens</span>
-                            <span>{modelUsage.data.completionTokens}</span>
+                            <span>{genUtils.formatAiTokens(modelUsage.data.completionTokens)}</span>
                         </div>
                         <div className="hstack justify-content-between gap-3">
                             <span>Cached tokens</span>
-                            <span>{modelUsage.data.cachedTokens}</span>
+                            <span>{genUtils.formatAiTokens(modelUsage.data.cachedTokens)}</span>
                         </div>
                         <hr className="my-1" />
                         <div className="hstack justify-content-between gap-3">
                             <span>Total tokens used</span>
-                            <span>{modelUsage.data.totalTokens}</span>
+                            <span>{genUtils.formatAiTokens(modelUsage.data.totalTokens)}</span>
                         </div>
                     </div>
                 }
             >
                 <Badge bg="info">
                     <Icon icon="info" />
-                    Tokens used: {modelUsage.data.totalTokens}
+                    Tokens used: {genUtils.formatAiTokens(modelUsage.data.totalTokens)}
                 </Badge>
             </PopoverWithHoverWrapper>
         </div>

@@ -806,6 +806,14 @@ class genUtils {
         
         return Array.isArray(route) ? route.filter((x) => x)[0] : route;
     }
+
+    static formatAiTokens(tokens: number): string {
+        if (tokens == null) {
+            return "0";
+        }
+
+        return genUtils.formatNumberToStringFixed(tokens, 0);
+    }
 } 
 
 export = genUtils;
