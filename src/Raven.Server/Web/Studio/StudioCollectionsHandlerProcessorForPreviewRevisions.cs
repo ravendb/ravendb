@@ -59,7 +59,7 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
         return context.OpenReadTransaction();
     }
 
-    protected override Task WriteItemsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer)
+    protected override ValueTask WriteItemsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer)
     {
         writer.WriteStartArray();
 
@@ -78,7 +78,7 @@ internal sealed class StudioCollectionsHandlerProcessorForPreviewRevisions : Abs
         }
 
         writer.WriteEndArray();
-        return Task.CompletedTask;
+        return default;
     }
 
     private void WriteItemsInternal(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, IEnumerable<Document> revisions)

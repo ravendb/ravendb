@@ -83,15 +83,18 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 }
 
                 writer.WriteEndObject();
-                await writer.FlushAsync(token.Token);
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = writer.FlushAsync(token.Token);
+                if (!flushTask.IsCompleted)
+                    await flushTask.ConfigureAwait(false);
             }
         }
 
-        protected abstract Task WriteMissingAttachmentsForCollection(TOperationContext context, AsyncBlittableJsonTextWriter writer, string collection, long start, int pageSize, AttachmentType document, OperationCancelToken token);
-        protected abstract Task WriteMissingAttachmentsForRevisions(TOperationContext context, AsyncBlittableJsonTextWriter writer, long start, int pageSize, AttachmentType revision, OperationCancelToken token);
+        protected abstract ValueTask WriteMissingAttachmentsForCollection(TOperationContext context, AsyncBlittableJsonTextWriter writer, string collection, long start, int pageSize, AttachmentType document, OperationCancelToken token);
+        protected abstract ValueTask WriteMissingAttachmentsForRevisions(TOperationContext context, AsyncBlittableJsonTextWriter writer, long start, int pageSize, AttachmentType revision, OperationCancelToken token);
         protected abstract void CheckCollectionAndThrowIfNeeded(string collection);
 
-        protected static async Task WriteMissingAttachmentsInternal(DocumentDatabase database, IEnumerable<Document> results, DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, AttachmentType attachmentType, OperationCancelToken token)
+        protected static async ValueTask WriteMissingAttachmentsInternal(DocumentDatabase database, IEnumerable<Document> results, DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, AttachmentType attachmentType, OperationCancelToken token)
         {
             bool firstResult = true;
             foreach (var result in results)

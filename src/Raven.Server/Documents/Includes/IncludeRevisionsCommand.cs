@@ -150,7 +150,10 @@ namespace Raven.Server.Documents.Includes
                         writer.WriteDocument(context, metadataOnly: false, document: doc);
                         writer.WriteEndObject();
 
-                        await writer.MaybeFlushAsync(token);
+                        // PERF: Check if flush completed synchronously to avoid async state machine
+                        var flushTask = writer.MaybeFlushAsync(token);
+                        if (!flushTask.IsCompleted)
+                            await flushTask;
                     }
                 }
             }
@@ -174,7 +177,10 @@ namespace Raven.Server.Documents.Includes
 
                     writer.WritePropertyName(nameof(RevisionIncludeResult.Revision));
                     writer.WriteDocument(context, metadataOnly: false, document: document);
-                    await writer.MaybeFlushAsync(token);
+                    // PERF: Check if flush completed synchronously to avoid async state machine
+                    var flushTask = writer.MaybeFlushAsync(token);
+                    if (!flushTask.IsCompleted)
+                        await flushTask;
 
                     writer.WriteEndObject();
                 }

@@ -14,7 +14,7 @@ internal sealed class StudioCollectionsHandlerProcessorForRevisionsIds : Abstrac
     {
     }
 
-    protected override Task WriteItemsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, CancellationToken token)
+    protected override ValueTask WriteItemsAsync(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, CancellationToken token)
     {
         using var _ = context.OpenReadTransaction();
     
@@ -35,7 +35,7 @@ internal sealed class StudioCollectionsHandlerProcessorForRevisionsIds : Abstrac
             writer.WriteEndObject();
         }
         writer.WriteEndArray();
-        return Task.CompletedTask;
+        return default;
     }
 }
 

@@ -29,7 +29,7 @@ namespace Raven.Server.Web.Studio.Sharding.Processors
         {
         }
 
-        protected override async Task WriteItemsAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer, CancellationToken token)
+        protected override async ValueTask WriteItemsAsync(TransactionOperationContext context, AsyncBlittableJsonTextWriter writer, CancellationToken token)
         {
             var op = new ShardedRevisionsIdsOperation(RequestHandler, Prefix, PageSize);
             var result = await RequestHandler.ShardExecutor.ExecuteParallelForAllAsync(op, token);

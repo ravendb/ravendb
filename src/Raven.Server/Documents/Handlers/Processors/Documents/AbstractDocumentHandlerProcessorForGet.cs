@@ -230,7 +230,9 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
 
             writer.WritePropertyName(nameof(GetDocumentsResult.Results));
 
-            (numberOfResults, totalDocumentsSizeInBytes) = await WriteDocumentsAsync(writer, context, result.Documents, metadataOnly, CancellationToken);
+            // PERF: Check if WriteDocumentsAsync completed synchronously to avoid async state machine
+            var writeTask = WriteDocumentsAsync(writer, context, result.Documents, metadataOnly, CancellationToken);
+            (numberOfResults, totalDocumentsSizeInBytes) = writeTask.IsCompleted ? writeTask.GetAwaiter().GetResult() : await writeTask.ConfigureAwait(false);
 
             writer.WriteComma();
 

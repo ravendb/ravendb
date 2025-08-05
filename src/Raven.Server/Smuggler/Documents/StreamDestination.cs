@@ -542,7 +542,10 @@ namespace Raven.Server.Smuggler.Documents
                         break;
                 }
 
-                await _writer.MaybeFlushAsync();
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = _writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
             }
 
             private void WriteRevisionsForConflictsConfiguration(RevisionsCollectionConfiguration revisionsForConflictsConfiguration)
@@ -1256,7 +1259,10 @@ namespace Raven.Server.Smuggler.Documents
 
                 Writer.WriteEndObject();
 
-                await Writer.MaybeFlushAsync();
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
             }
 
             public async ValueTask WriteIndexAsync(IndexDefinition indexDefinition, AuthorizationStatus authorizationStatus)
@@ -1276,7 +1282,10 @@ namespace Raven.Server.Smuggler.Documents
 
                 Writer.WriteEndObject();
 
-                await Writer.MaybeFlushAsync();
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
             }
         }
 
@@ -1309,7 +1318,10 @@ namespace Raven.Server.Smuggler.Documents
 
                     Writer.WriteEndObject();
 
-                    await Writer.MaybeFlushAsync();
+                    // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
                 }
             }
 
@@ -1337,7 +1349,10 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteString(counterDetail.ChangeVector);
 
                 Writer.WriteEndObject();
-                await Writer.MaybeFlushAsync();
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
             }
 
             public void RegisterForDisposal(IDisposable data)
@@ -1429,7 +1444,10 @@ namespace Raven.Server.Smuggler.Documents
                         Writer.WriteMemoryChunk(item.Segment.Ptr, item.Segment.NumberOfBytes);
                     }
 
-                    await Writer.MaybeFlushAsync();
+                    // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
                 }
             }
 
@@ -1469,7 +1487,10 @@ namespace Raven.Server.Smuggler.Documents
 
                     Writer.WriteEndObject();
 
-                    await Writer.MaybeFlushAsync();
+                    // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
                 }
             }
 
@@ -1520,7 +1541,10 @@ namespace Raven.Server.Smuggler.Documents
 
                 _context.Write(_writer, subscriptionState.ToJson());
 
-                await Writer.MaybeFlushAsync();
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
             }
         }
 
@@ -1545,7 +1569,10 @@ namespace Raven.Server.Smuggler.Documents
                 djv[nameof(RegisterReplicationHubAccessCommand.HubName)] = hub;
                 _context.Write(_writer, djv);
 
-                await Writer.MaybeFlushAsync();
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
             }
         }
 
@@ -1594,7 +1621,10 @@ namespace Raven.Server.Smuggler.Documents
 
                     Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
 
-                    await Writer.MaybeFlushAsync();
+                    // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
                 }
             }
 
@@ -1626,7 +1656,10 @@ namespace Raven.Server.Smuggler.Documents
                         }
                     }
 
-                    await Writer.MaybeFlushAsync();
+                    // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
                 }
             }
 
@@ -1649,7 +1682,10 @@ namespace Raven.Server.Smuggler.Documents
                         [nameof(DocumentConflict.Doc)] = conflict.Doc,
                     });
 
-                    await Writer.MaybeFlushAsync();
+                    // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
                 }
             }
 
@@ -1760,7 +1796,10 @@ namespace Raven.Server.Smuggler.Documents
 
                 await Writer.WriteStreamAsync(stream);
 
-                await Writer.MaybeFlushAsync();
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
             }
 
             public override async ValueTask DisposeAsync()
@@ -1794,7 +1833,10 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteString(value.ToString());
                 Writer.WriteEndObject();
 
-                await Writer.MaybeFlushAsync();
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
             }
         }
 
@@ -1823,7 +1865,10 @@ namespace Raven.Server.Smuggler.Documents
                     Writer.WriteString(value.ToString());
                     Writer.WriteEndObject();
 
-                    await Writer.MaybeFlushAsync();
+                    // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
                 }
 
                 return false;
@@ -1840,7 +1885,10 @@ namespace Raven.Server.Smuggler.Documents
                 Writer.WriteString(key);
                 Writer.WriteEndObject();
 
-                await Writer.MaybeFlushAsync();
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = Writer.MaybeFlushAsync();
+                if (!flushTask.IsCompleted)
+                    await flushTask;
             }
 
             public ValueTask FlushAsync()

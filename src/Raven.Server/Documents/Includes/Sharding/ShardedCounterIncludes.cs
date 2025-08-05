@@ -122,7 +122,10 @@ public sealed class ShardedCounterIncludes : AbstractIncludeCountersCommand
                     writer.WriteNull();
             }
 
-            await writer.MaybeFlushAsync(token);
+            // PERF: Check if flush completed synchronously to avoid async state machine
+            var flushTask = writer.MaybeFlushAsync(token);
+            if (!flushTask.IsCompleted)
+                await flushTask;
 
             writer.WriteEndArray();
         }

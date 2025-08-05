@@ -27,7 +27,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Collections
                 {
                     writer.WriteStartObject();
                     writer.WritePropertyName("Results");
-                    (numberOfResults, totalDocumentsSizeInBytes) = await writer.WriteDocumentsAsync(context, documents, metadataOnly: false, token);
+                    // PERF: Check if WriteDocumentsAsync completed synchronously to avoid async state machine
+                    var writeTask = writer.WriteDocumentsAsync(context, documents, metadataOnly: false, token);
+                    (numberOfResults, totalDocumentsSizeInBytes) = writeTask.IsCompleted ? writeTask.GetAwaiter().GetResult() : await writeTask.ConfigureAwait(false);
                     writer.WriteEndObject();
                 }
 

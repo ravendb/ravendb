@@ -88,7 +88,7 @@ internal abstract class AbstractStudioCollectionsHandlerProcessorForPreviewRevis
 
     protected abstract bool NotModified(TOperationContext context, out string etag);
 
-    protected abstract Task WriteItemsAsync(TOperationContext context, AsyncBlittableJsonTextWriter writer);
+    protected abstract ValueTask WriteItemsAsync(TOperationContext context, AsyncBlittableJsonTextWriter writer);
 
     protected abstract Task InitializeAsync(TOperationContext context, CancellationToken token);
 

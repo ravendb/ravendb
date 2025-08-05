@@ -16,7 +16,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         {
         }
 
-        protected override async Task WriteMissingAttachmentsForCollection(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string collection, long start, int pageSize, AttachmentType document, OperationCancelToken token)
+        protected override async ValueTask WriteMissingAttachmentsForCollection(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, string collection, long start, int pageSize, AttachmentType document, OperationCancelToken token)
         {
             using var tx = context.OpenReadTransaction();
             if (collection != Constants.Documents.Collections.AllDocumentsCollection)
@@ -40,7 +40,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
             }
         }
 
-        protected override async Task WriteMissingAttachmentsForRevisions(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, long start, int pageSize, AttachmentType revision, OperationCancelToken token)
+        protected override async ValueTask WriteMissingAttachmentsForRevisions(DocumentsOperationContext context, AsyncBlittableJsonTextWriter writer, long start, int pageSize, AttachmentType revision, OperationCancelToken token)
         {
             using var tx = context.OpenReadTransaction();
             await WriteMissingAttachmentsInternal(RequestHandler.Database, RequestHandler.Database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, start, pageSize),

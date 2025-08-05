@@ -163,13 +163,17 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
     protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
         DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, bool metadataOnly, CancellationToken token)
     {
-        return await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
+        // PERF: Check if WriteDocumentsAsync completed synchronously to avoid async state machine
+        var writeTask = writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
+        return writeTask.IsCompleted ? writeTask.GetAwaiter().GetResult() : await writeTask.ConfigureAwait(false);
     }
 
     protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
         DocumentsOperationContext context, IAsyncEnumerable<Document> documentsToWrite, bool metadataOnly, CancellationToken token)
     {
-        return await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
+        // PERF: Check if WriteDocumentsAsync completed synchronously to avoid async state machine
+        var writeTask = writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
+        return writeTask.IsCompleted ? writeTask.GetAwaiter().GetResult() : await writeTask.ConfigureAwait(false);
     }
 
     protected override async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName, List<Document> includes, CancellationToken token)

@@ -127,7 +127,10 @@ public sealed class ShardedTimeSeriesIncludes : AbstractIncludeTimeSeriesCommand
             size += kvp.Key.Length;
             size += kvp.Value.Size;
 
-            await writer.MaybeFlushAsync(token);
+            // PERF: Check if flush completed synchronously to avoid async state machine
+            var flushTask = writer.MaybeFlushAsync(token);
+            if (!flushTask.IsCompleted)
+                await flushTask;
         }
 
         writer.WriteEndObject();

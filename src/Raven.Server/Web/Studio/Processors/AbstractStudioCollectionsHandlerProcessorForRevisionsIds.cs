@@ -38,6 +38,6 @@ namespace Raven.Server.Web.Studio.Processors
             }
         }
 
-        protected abstract Task WriteItemsAsync(TOperationContext context, AsyncBlittableJsonTextWriter writer, CancellationToken token);
+        protected abstract ValueTask WriteItemsAsync(TOperationContext context, AsyncBlittableJsonTextWriter writer, CancellationToken token);
     }
 }
