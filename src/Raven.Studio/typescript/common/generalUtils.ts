@@ -814,6 +814,21 @@ class genUtils {
 
         return genUtils.formatNumberToStringFixed(tokens, 0);
     }
+
+    static getNestedField(object: any, path: string) {
+        const keys = path.split(".");
+        let current = object;
+    
+        for (const key of keys) {
+            if (current && typeof current === "object") {
+                current = current[key];
+            } else {
+                return null;
+            }
+        }
+    
+        return current;
+    }
 } 
 
 export = genUtils;
