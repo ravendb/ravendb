@@ -12,7 +12,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues
+namespace SlowTests.Server.Documents.AI.AiAgent
 {
     public class RavenDB_24611 : ClusterTestBase
     {
@@ -36,7 +36,7 @@ namespace SlowTests.Issues
             chat.SetUserPrompt("what are my recent orders?");
 
             var ex = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<OutputSchema>(CancellationToken.None));
-            Assert.Contains("AiAgentParameter' is missing", ex.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.Contains("Parameter 'company' is missing", ex.Message);
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
