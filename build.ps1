@@ -4,6 +4,7 @@ param(
     [switch]$WinX86,
     [switch]$LinuxX64,
     [switch]$MacOs,
+    [switch]$MacOsArm,
     [switch]$Osx,
     [switch]$Rpi,
     [switch]$LinuxArm64,
@@ -115,6 +116,10 @@ if ([string]::IsNullOrEmpty($Target) -eq $false) {
 
     if ($MacOs) {
         $Target = @( "macos-x64" );
+    }
+
+    if ($MacOsArm) {
+        $Target = @( "macos-arm64" );
     }
 
     if ($Rpi) {
