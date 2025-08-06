@@ -573,6 +573,12 @@ public sealed unsafe partial class IndexSearcher : IDisposable
     {
         return new IncludeNonExistingMatch<TInner>(this, inner, field, forward);
     }
+
+    public DeduplicationMatch<TInner> DeduplicationMatch<TInner>(in TInner inner)
+    where TInner : IQueryMatch
+    {
+        return new DeduplicationMatch<TInner>(inner);
+    }
     
     private void InitializeSpecialTermsMarkers()
     {

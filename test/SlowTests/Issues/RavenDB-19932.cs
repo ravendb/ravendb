@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Corax.Utils;
 using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Server.Documents.Indexes.Persistence.Corax;
@@ -19,7 +20,7 @@ public class RavenDB_19932 : RavenTestBase
     [RavenFact(RavenTestCategory.Indexes)]
     public void GrowableHashSetForProjectionInCoraxIndexReadOperation()
     {
-        var growableHashSet = new CoraxIndexReadOperation.GrowableHashSet<ulong>(maxSizePerCollection: 100);
+        var growableHashSet = new GrowableHashSet<ulong>(maxSizePerCollection: 100);
         var random = new Random(64352);
         var hashset = new HashSet<ulong>();
 

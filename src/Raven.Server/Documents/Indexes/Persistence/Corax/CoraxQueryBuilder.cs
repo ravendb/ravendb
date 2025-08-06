@@ -309,12 +309,34 @@ public static class CoraxQueryBuilder
                 // optimization, but we have to sort again anyway, this ensure that this happens
                 if (streamingOptimization.SkipOrderByClause == false || sortMetadata.Length > 1)
                     coraxQuery = OrderBy(builderParameters, coraxQuery, sortMetadata);
-            } 
+            }
 
             // The parser already throws parse exception if there is a syntax error.
             // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
-            return coraxQuery;
+            if (coraxQuery.DuplicatesStatus == Duplicates.NotPossible)
+                return coraxQuery;
+
+            return DeduplicationMatch(builderParameters, coraxQuery);
         }
+    }
+
+    private static IQueryMatch DeduplicationMatch(Parameters parameters, IQueryMatch match)
+    {
+        var type = match.GetType();
+        if (type == typeof(MultiTermMatch))
+            return Build<MultiTermMatch>();
+        if (type == typeof(BinaryMatch))
+            return Build<BinaryMatch>();
+        if (type == typeof(AndNotMatch))
+            return Build<AndNotMatch>();
+        if (type == typeof(BoostingMatch))
+            return Build<BoostingMatch>();
+        if (type == typeof(MultiUnaryMatch))
+            return Build<MultiUnaryMatch>();
+        
+        return Build<IQueryMatch>();
+
+        IQueryMatch Build<TInner>() where TInner : IQueryMatch => parameters.IndexSearcher.DeduplicationMatch((TInner)match);
     }
 
     private static IQueryMatch ToCoraxQuery(Parameters builderParameters, QueryExpression expression, ref StreamingOptimization leftOnlyOptimization, bool exact = false, int? proximity = null)

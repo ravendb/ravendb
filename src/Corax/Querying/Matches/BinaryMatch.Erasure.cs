@@ -133,5 +133,6 @@ namespace Corax.Querying.Matches
         
         public struct And : IBinaryMatchMarker;
         public struct Or : IBinaryMatchMarker;
+        public Duplicates DuplicatesStatus => _inner.DuplicatesStatus;
     }
 }

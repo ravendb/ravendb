@@ -16,7 +16,9 @@ namespace Corax.Querying.Matches
         }
 
         public bool IsBoosting => _inner.IsBoosting;
-
+        
+        public Duplicates DuplicatesStatus => _inner.DuplicatesStatus;
+        
         public long Count => _functionTable.CountFunc(ref this);
 
         public SkipSortingResult AttemptToSkipSorting() => _inner.AttemptToSkipSorting();

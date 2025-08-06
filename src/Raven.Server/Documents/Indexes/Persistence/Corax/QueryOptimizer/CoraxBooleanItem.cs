@@ -26,6 +26,9 @@ public struct CoraxBooleanItem : IQueryMatch
     public bool IsBoosting => Boosting.HasValue;
     public float? Boosting;
     public long Count { get; }
+    
+    public Duplicates DuplicatesStatus => throw new InvalidOperationException($"{nameof(DuplicatesStatus)} should never be used in {nameof(CoraxBooleanItem)}");
+
 
     private CoraxBooleanItem(IndexSearcher indexSearcher, FieldMetadata field, object term, UnaryMatchOperation operation)
     {

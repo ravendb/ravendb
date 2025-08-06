@@ -43,6 +43,7 @@ namespace Corax.Querying.Matches
 
         private int FrequenciesHolderSize => _frequenciesHolder?.Length ?? 0;
 
+        public Duplicates DuplicatesStatus => Duplicates.Possible;
 
         private TTermProvider _inner;
         private TermMatch _currentTerm;
