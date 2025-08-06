@@ -22,7 +22,7 @@ import { useServices } from "components/hooks/useServices";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
 import ChatAiAgentFormBody from "./partials/ChatAiAgentFormBody";
-import ChatAiAgentParametersDropdown from "./partials/ChatAiAgentParametersDropdown";
+import AiAgentParametersDropdown from "../partials/AiAgentParametersDropdown";
 
 interface QueryParams {
     agentId: string;
@@ -179,9 +179,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                     >
                         Raw data
                     </Switch>
-                    {document.data?.Parameters && (
-                        <ChatAiAgentParametersDropdown parameters={document.data.Parameters} />
-                    )}
+                    {document.data?.Parameters && <AiAgentParametersDropdown parameters={document.data.Parameters} />}
                 </div>
             </div>
 

@@ -21,6 +21,7 @@ import messagePublisher from "common/messagePublisher";
 import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { compareSets } from "common/typeUtils";
+import AiAgentParametersDropdown from "../../partials/AiAgentParametersDropdown";
 
 interface EditAiAgentTestPanelProps {
     testForm: UseFormReturn<TestAiAgentFormData>;
@@ -137,6 +138,9 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
                     >
                         New chat
                     </Button>
+                    {testDocument?.Parameters && (
+                        <AiAgentParametersDropdown parameters={testDocument.Parameters} isCompact />
+                    )}
                     {testDocument && messages.length > 0 && (
                         <Button
                             variant="secondary"

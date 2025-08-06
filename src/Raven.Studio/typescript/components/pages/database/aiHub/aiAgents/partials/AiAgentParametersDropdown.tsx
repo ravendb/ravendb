@@ -1,13 +1,15 @@
+import { CustomDropdownToggle } from "components/common/Dropdown";
 import { Icon } from "components/common/Icon";
 import Badge from "react-bootstrap/Badge";
 import Dropdown from "react-bootstrap/Dropdown";
 import Form from "react-bootstrap/Form";
 
-interface ChatAiAgentParametersDropdownProps {
+interface AiAgentParametersDropdownProps {
     parameters: Record<string, string>;
+    isCompact?: boolean;
 }
 
-export default function ChatAiAgentParametersDropdown({ parameters }: ChatAiAgentParametersDropdownProps) {
+export default function AiAgentParametersDropdown({ parameters, isCompact = false }: AiAgentParametersDropdownProps) {
     const parametersArray = Object.entries(parameters).map(([name, value]) => ({ name, value }));
 
     if (parametersArray.length === 0) {
@@ -16,8 +18,15 @@ export default function ChatAiAgentParametersDropdown({ parameters }: ChatAiAgen
 
     return (
         <Dropdown>
-            <Dropdown.Toggle title="Parameters" variant="outline-secondary" className="rounded-pill text-reset">
-                <Icon icon="metrics" /> Parameters
+            <Dropdown.Toggle
+                title="Parameters"
+                variant="outline-secondary"
+                className="rounded-pill text-reset"
+                as={CustomDropdownToggle}
+                isCaretHidden={isCompact}
+            >
+                <Icon icon="metrics" margin={isCompact ? "m-0" : "me-1"} />
+                {isCompact ? null : "Parameters"}
             </Dropdown.Toggle>
             <Dropdown.Menu
                 style={{ width: "500px", maxHeight: "316px" }}
