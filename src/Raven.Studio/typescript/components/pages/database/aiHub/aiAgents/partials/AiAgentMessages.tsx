@@ -469,17 +469,6 @@ function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
                                         <hr className="my-1" />
                                     </div>
                                 )}
-                                {tool.ParametersSampleObject && (
-                                    <div>
-                                        <small className="text-muted">Sample parameters object</small>
-                                        <AceEditor
-                                            value={tool.ParametersSampleObject}
-                                            readOnly
-                                            mode="json"
-                                            height="100px"
-                                        />
-                                    </div>
-                                )}
                                 {tool.ParametersSchema && (
                                     <div>
                                         <small className="text-muted">Parameters schema</small>
