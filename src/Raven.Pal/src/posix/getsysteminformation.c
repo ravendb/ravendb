@@ -4,7 +4,15 @@
 
 #include <unistd.h>
 #include <errno.h>
-#include <sys/statvfs.h>
+#if defined(__APPLE__)
+    #include <sys/mount.h>
+    #define STAT_STRUCT statfs
+    #define STAT_FUNC statfs
+#elif defined(__linux__)
+    #include <sys/statvfs.h>
+    #define STAT_STRUCT statvfs
+    #define STAT_FUNC statvfs
+#endif
 
 #include "rvn.h"
 #include "status_codes.h"
@@ -34,10 +42,10 @@ EXPORT int32_t
 rvn_get_path_disk_space(const char* path, uint64_t* total_free_bytes, uint64_t* total_size_bytes, int32_t* detailed_error_code)
 {
     int rc;
-    struct statvfs buffer;
+    struct STAT_STRUCT buffer;
     *detailed_error_code = 0;
 
-    rc = statvfs(path, &buffer);
+    rc = STAT_FUNC(path, &buffer);
 
     if (rc != 0) {
         *detailed_error_code = errno;

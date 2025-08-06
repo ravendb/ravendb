@@ -32,5 +32,7 @@ namespace Sparrow.Server.Platform.Posix.macOS
         public uint ActivePagesCount => active_count;
         public uint InactivePagesCount => inactive_count;
         public uint WirePagesCount => wire_count;
+        public uint SpeculativePagesCount => speculative_count;
+        public uint PurgeablePagesCount => purgeable_count;
     }
 }

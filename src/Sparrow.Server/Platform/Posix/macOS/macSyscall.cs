@@ -26,5 +26,8 @@ namespace Sparrow.Server.Platform.Posix.macOS
 
         [DllImport(Pthread, CallingConvention = CallingConvention.Cdecl, SetLastError = true)]
         public static extern ulong pthread_self();
+
+        [DllImport(LIBC_6, SetLastError = true, CharSet = CharSet.Ansi)]
+        public static extern int sysctlbyname(string name, void* oldP, int* oldLenP, void* newP, UIntPtr newLen);
     }
 }
