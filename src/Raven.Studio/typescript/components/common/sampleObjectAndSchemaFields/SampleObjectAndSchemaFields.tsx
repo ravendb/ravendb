@@ -13,6 +13,7 @@ import Tabs from "react-bootstrap/Tabs";
 import Tab from "react-bootstrap/Tab";
 import useUniqueId from "components/hooks/useUniqueId";
 import classNames from "classnames";
+import genUtils from "common/generalUtils";
 
 interface SampleObjectAndSchemaFieldsProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> {
     control: Control<TFieldValues>;
@@ -72,7 +73,7 @@ export default function SampleObjectAndSchemaFields<
     const canRegenerateSchema = !!sampleObject && !!jsonSchema && lastSampleObjectForGenerate !== sampleObject;
 
     useEffect(() => {
-        if (formState.dirtyFields[sampleObjectName]) {
+        if (genUtils.getNestedField(formState.dirtyFields, sampleObjectName)) {
             setValue(canRegenerateSchemaName, canRegenerateSchema as TFieldValues[TName], {
                 shouldValidate: true,
             });
@@ -84,8 +85,8 @@ export default function SampleObjectAndSchemaFields<
 
     const defaultActiveTab = jsonSchema ? "json-schema" : "sample-object";
 
-    const hasSampleObjectError = formState.errors[sampleObjectName];
-    const hasJsonSchemaError = formState.errors[jsonSchemaName];
+    const hasSampleObjectError = genUtils.getNestedField(formState.errors, sampleObjectName);
+    const hasJsonSchemaError = genUtils.getNestedField(formState.errors, jsonSchemaName);
 
     return (
         <div className="sample-object-and-schema-tabs">
