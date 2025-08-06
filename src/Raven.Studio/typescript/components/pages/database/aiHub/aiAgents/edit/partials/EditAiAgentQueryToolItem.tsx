@@ -204,12 +204,16 @@ const QueryFieldQuerySyntaxHelp = () => {
     "similarityLevel": "Provide the similarity level to apply in the search."
 }`;
 
+    const exampleCode3 = `{}`;
+
     return (
         <div>
             <div>Example 1:</div>
             <Code code={exampleCode1} elementToCopy={exampleCode1} language="json" />
             <div className="mt-2">Example 2:</div>
             <Code code={exampleCode2} elementToCopy={exampleCode2} language="json" />
+            <div className="mt-2">Example 3:</div>
+            <Code code={exampleCode3} elementToCopy={exampleCode3} language="json" />
         </div>
     );
 };
