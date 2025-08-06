@@ -235,14 +235,14 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
     {
         var hasDescription = false;
         var sb = new StringBuilder();
-        sb.AppendLine("This conversation has the following parameters:\n");
+        sb.AppendLine("\nThe parameters for this conversation are described as follows:");
         foreach (var parameter in configuration.Parameters)
         {
             if (string.IsNullOrEmpty(parameter.Description))
                 continue;
 
             hasDescription = true;
-            sb.AppendLine($"{parameter.Name} - {parameter.Description}");
+            sb.AppendLine($"- {parameter.Name}: {parameter.Description}");
         }
 
         message = sb.ToString();
