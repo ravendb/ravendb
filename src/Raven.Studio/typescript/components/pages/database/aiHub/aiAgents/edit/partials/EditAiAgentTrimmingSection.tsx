@@ -2,7 +2,6 @@ import { FormDurationPicker, FormGroup, FormInput, FormLabel, FormSwitch } from 
 import { useFormContext, useWatch } from "react-hook-form";
 import { AiAgentTrimmingMethod, EditAiAgentFormData } from "../utils/editAiAgentValidation";
 import ClickableCard from "components/common/ClickableCard";
-import OptionalLabel from "components/common/OptionalLabel";
 import Button from "react-bootstrap/Button";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
@@ -25,7 +24,7 @@ export default function EditAiAgentTrimmingSection() {
     return (
         <>
             <h3 className="m-0 mt-3">
-                Configure chat trimming <OptionalLabel />
+                Configure chat trimming
                 <PopoverWithHoverWrapper
                     message={
                         <>
