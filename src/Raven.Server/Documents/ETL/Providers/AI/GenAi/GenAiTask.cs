@@ -333,7 +333,20 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         {
             case TestStage.CreateContextObjects:
             case TestStage.ApplyUpdateScript:
-                if (testGenAiScript.Document != null)
+
+                if (testGenAiScript.Document == null && string.IsNullOrEmpty(testGenAiScript.DocumentId))
+                    throw new InvalidOperationException("Document or DocumentId must be provided to run GenAI test");
+
+                if (testGenAiScript.Document != null && string.IsNullOrEmpty(testGenAiScript.DocumentId) == false)
+                {
+                    context.OpenReadTransaction();
+                    document = context.DocumentDatabase.DocumentsStorage.Get(context, testGenAiScript.DocumentId, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector);
+                    if (document == null)
+                        throw new InvalidOperationException($"Document {testGenAiScript.DocumentId} does not exist");
+
+                    document.Data = testGenAiScript.Document;
+                }
+                else if (testGenAiScript.Document != null)
                 {
                     document = new Document
                     {
@@ -344,9 +357,6 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 }
                 else
                 {
-                    if (string.IsNullOrEmpty(testGenAiScript.DocumentId))
-                        throw new InvalidOperationException("Document or DocumentId must be provided to run GenAI test");
-
                     context.OpenReadTransaction();
                     document = context.DocumentDatabase.DocumentsStorage.Get(context, testGenAiScript.DocumentId)?.Clone(context);
                     if (document == null)

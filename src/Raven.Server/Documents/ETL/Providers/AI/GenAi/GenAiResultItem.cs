@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Operations.AI;
+using System.Linq;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Documents.AI;
 using Sparrow.Json;
@@ -47,10 +48,17 @@ public class ContextOutput
     public bool IsCached { get; set; }
     public string AiHash { get; set; }
 
-    public DynamicJsonValue ToJson() => new()
+    public DynamicJsonValue ToJson()
     {
-        [nameof(Context)] = Context, 
-        [nameof(IsCached)] = IsCached, 
-        [nameof(AiHash)] = AiHash
-    };
+        var json = new DynamicJsonValue
+        {
+            [nameof(Context)] = Context, 
+            [nameof(IsCached)] = IsCached, 
+            [nameof(AiHash)] = AiHash
+        };
+        if (Attachments != null)
+            json[nameof(Attachments)] = new DynamicJsonArray(Attachments.Select(x => x.ToJson()));
+
+        return json;
+    }
 }
