@@ -632,7 +632,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                         }
 
                         builderParameters = new CoraxQueryBuilder.Parameters(IndexSearcher, _allocator, serverContext, documentsContext, query, _index,
-                            query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take, indexReadOperation: this, token: token);
+                            query.QueryParameters, QueryBuilderFactories, _fieldMappings, fieldsToFetch, highlightings.Terms, (int)take, deduplicationDisabled: false, indexReadOperation: this, token: token);
 
                         using (closeServerTransaction)
                         {
@@ -1067,7 +1067,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 using (closeServerTransaction)
                 {
                     builderParameters = new(IndexSearcher, _allocator, serverContext, context, query, _index, query.QueryParameters, QueryBuilderFactories,
-                        _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, indexReadOperation: this, token: token);
+                        _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, deduplicationDisabled: true, indexReadOperation: this, token: token);
                     moreLikeThisQuery = CoraxQueryBuilder.BuildMoreLikeThisQuery(builderParameters, query.Metadata.Query.Where);
                 }
             }
@@ -1094,7 +1094,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
 
             builderParameters = new(IndexSearcher, _allocator, null, context, query, _index, query.QueryParameters, QueryBuilderFactories,
-                _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, indexReadOperation: this, token: token);
+                _fieldMappings, null, null /* allow highlighting? */, CoraxQueryBuilder.TakeAll, deduplicationDisabled:true, indexReadOperation: this, token: token);
             using var mlt = new RavenRavenMoreLikeThis(builderParameters, options);
             long? baseDocId = null;
 
@@ -1152,6 +1152,9 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 mltQuery = IndexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery);
             }
 
+            if (mltQuery.DuplicatesStatus == Duplicates.Possible)
+                mltQuery = IndexSearcher.DeduplicationMatch(mltQuery);
+            
             var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             long[] ids = QueryPool.Rent(pageSize);
             var read = 0;
@@ -1221,7 +1224,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 take = CoraxConstants.IndexSearcher.TakeAll;
 
             IQueryMatch queryMatch;
-            var builderParameters = new CoraxQueryBuilder.Parameters(IndexSearcher, _allocator, null, null, query, _index, query.QueryParameters, QueryBuilderFactories, _fieldMappings, null, null, -1, indexReadOperation: this, token: token);
+            var builderParameters = new CoraxQueryBuilder.Parameters(IndexSearcher, _allocator, null, null, query, _index, query.QueryParameters, QueryBuilderFactories, _fieldMappings, null, null, -1, deduplicationDisabled: false, indexReadOperation: this, token: token);
             if ((queryMatch = CoraxQueryBuilder.BuildQuery(builderParameters, out _)) is null)
                 yield break;
 

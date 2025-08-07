@@ -61,12 +61,13 @@ public static class CoraxQueryBuilder
         public readonly Lazy<List<string>> DynamicFields;
         public readonly ByteStringContext Allocator;
         public readonly bool HasBoost;
+        public readonly bool DeduplicationDisabled;
         public readonly IndexReadOperationBase IndexReadOperation;
         public StreamingOptimization StreamingDisabled;
 
         internal Parameters(IndexSearcher searcher, ByteStringContext allocator, TransactionOperationContext serverContext, DocumentsOperationContext documentsContext,
             IndexQueryServerSide query, Index index, BlittableJsonReaderObject queryParameters, QueryBuilderFactories factories, IndexFieldsMapping indexFieldsMapping,
-            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, CancellationToken token = default)
+            FieldsToFetch fieldsToFetch, Dictionary<string, CoraxHighlightingTermIndex> highlightingTerms, int take, bool deduplicationDisabled, IndexReadOperationBase indexReadOperation = null, List<string> buildSteps = null, CancellationToken token = default)
         {
             IndexSearcher = searcher;
             ServerContext = serverContext;
@@ -94,6 +95,7 @@ public static class CoraxQueryBuilder
                         HasBoostingAsOrderingType(query.Metadata.OrderBy)); 
             Allocator = allocator;
             IndexReadOperation = indexReadOperation;
+            DeduplicationDisabled = deduplicationDisabled;
         }
 
         private static bool HasBoostingAsOrderingType(OrderByField[] orderBy)
@@ -313,7 +315,7 @@ public static class CoraxQueryBuilder
 
             // The parser already throws parse exception if there is a syntax error.
             // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
-            if (coraxQuery.DuplicatesStatus == Duplicates.NotPossible)
+            if (builderParameters.DeduplicationDisabled || coraxQuery.DuplicatesStatus == Duplicates.NotPossible)
                 return coraxQuery;
 
             return DeduplicationMatch(builderParameters, coraxQuery);
