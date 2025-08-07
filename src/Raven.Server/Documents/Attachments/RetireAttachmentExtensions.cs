@@ -25,7 +25,7 @@ public static class RetireAttachmentExtensions
             return false;
         }
 
-        return parameters.Flags != RetiredAttachmentFlags.None;
+        return parameters.Flags == RetiredAttachmentFlags.Retired;
     }
 
     private static RetireAttachmentParameters GetRetireAttachmentParameters(string identifier, DateTime? retireAt, RetiredAttachmentFlags flags)

@@ -514,11 +514,11 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
                 var database = await Databases.GetDocumentDatabaseInstanceFor(store);
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                using (ctx.OpenReadTransaction())
+                using (database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(ctx))
                 {
-                    ctx.OpenReadTransaction();
-                    database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(ctx);
-                    var totalCounnt = 0;
-                    var toRetire = database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(new BackgroundWorkParameters(ctx, DateTime.MaxValue, database.ReadDatabaseRecord(), "A", int.MaxValue), ref totalCounnt, out var _, default);
+                    var totalCount = 0;
+                    var toRetire = database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(new BackgroundWorkParameters(ctx, DateTime.MaxValue, database.ReadDatabaseRecord(), "A", int.MaxValue), ref totalCount, out var _, default);
                     Assert.Equal(1, toRetire.Count);
                 }
 
@@ -815,9 +815,9 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 {
                     var database = await Databases.GetDocumentDatabaseInstanceFor(node, store);
                     using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    using (database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(ctx))
                     {
-                        ctx.OpenReadTransaction();
-                        database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(ctx);
                         var totalCount = 0;
 
                         var toRetire = database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDocuments(new BackgroundWorkParameters(ctx, DateTime.MaxValue, new DatabaseRecord

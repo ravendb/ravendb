@@ -18,7 +18,9 @@ using Raven.Server.Documents.Replication;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Sparrow;
 using Sparrow.Binary;
+using Sparrow.Extensions;
 using Sparrow.Json;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
@@ -26,7 +28,6 @@ using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.Tables;
 using Voron.Impl;
-using static Raven.Server.Documents.Schemas.Attachments;
 
 namespace Raven.Server.Documents;
 
@@ -53,13 +54,79 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         });
     }
 
-    protected override void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
+    // example key: s3-identifier|categories/1-a|d|image.jpg|S5Opbm22FH1LW5SAC3wRb3HA64QM7odd26djlt5cAkM=|image/jpeg
+    private static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractIdentifierStringAndDocumentIdSliceFromRetiredAttachmentKey(DocumentsOperationContext context, Slice key, out string identifier, out Slice documentIdSlice)
     {
-        using (var lowerDocId = _documentInfoHelper.GetDocumentId(lowerId))
+        identifier = ExtractIdentifierStringFromRetiredAttachmentKey(context, key, out var sizeOfIdentifier);
+        var s = sizeOfIdentifier + 1;
+
+        var sizeOfId = AttachmentsStorage.AttachmentKey.FindNextSeparator(key, s) - s;
+        var d2 = Slice.External(context.Allocator, key.Content, s, sizeOfId, out documentIdSlice);
+        return d2;
+    }
+
+    private static LazyStringValue ExtractIdentifierStringFromRetiredAttachmentKey(DocumentsOperationContext context, Slice key, out int sizeOfIdentifier)
+    {
+        sizeOfIdentifier = AttachmentsStorage.AttachmentKey.FindNextSeparator(key, 0);
+        using var d1 = Slice.External(context.Allocator, key.Content, 0, sizeOfIdentifier, out var identifierSlice);
+        return GetStringFromIdSlice(context, identifierSlice);
+    }
+
+    private static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractIdentifierStringAndAttachmentKeySlice(DocumentsOperationContext context, Slice key, out LazyStringValue identifier, out Slice attachmentKeySlice)
+    {
+        identifier = ExtractIdentifierStringFromRetiredAttachmentKey(context, key, out _);
+        var d2 = ExtractAttachmentKeySliceFromRetiredAttachmentKey(context, key, out attachmentKeySlice);
+
+        return d2;
+    }
+
+    private static (ByteStringContext<ByteStringMemoryCache>.ExternalScope IdentifierDisposable, ByteStringContext<ByteStringMemoryCache>.ExternalScope AttachmentKeyDisposable)
+        ExtractIdentifierSliceAndAttachmentKeySlice(DocumentsOperationContext context, Slice key, out Slice identifierSlice, out Slice attachmentKeySlice)
+    {
+        var sizeOfIdentifier = AttachmentsStorage.AttachmentKey.FindNextSeparator(key, 0);
+        var d1 = Slice.External(context.Allocator, key.Content, 0, sizeOfIdentifier, out identifierSlice);
+        var d2 = ExtractAttachmentKeySliceFromRetiredAttachmentKey(context, key, out attachmentKeySlice);
+
+        return (d1, d2);
+    }
+
+    private static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractAttachmentKeySliceFromRetiredAttachmentKey(DocumentsOperationContext context, Slice key, out Slice attachmentKeySlice)
+    {
+        var sizeOfIdentifier = AttachmentsStorage.AttachmentKey.FindNextSeparator(key, 0);
+        var sizeOfAttachmentKey = key.Content.Length - sizeOfIdentifier - 1; // -1 for record separator
+
+        var d2 = Slice.External(context.Allocator, key.Content, sizeOfIdentifier + 1, sizeOfAttachmentKey, out attachmentKeySlice);
+        return d2;
+    }
+
+    public unsafe ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractHashSliceFromAttachmentId(DocumentsOperationContext context, Slice key, out Slice hashSlice)
+    {
+        var p = key.Content.Ptr;
+        var size = key.Size;
+        var sizeOfIdentifier = AttachmentsStorage.AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(p, size));
+        p = p + sizeOfIdentifier + 1; // skip identifier and record separator
+        size = size - sizeOfIdentifier - 1; // skip identifier and record separator
+        byte* pp = ExtractHashFromAttachmentIdInternal(p, size);
+        var d1 = Slice.External(context.Allocator, pp, AttachmentsStorage.AttachmentHashSize, out hashSlice);
+
+        return d1;
+    }
+
+    internal static unsafe byte* ExtractHashFromAttachmentIdInternal(byte* p, int size)
+    {
+        AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(p, size, out _, out _, out _, out int attachmentHashIndex);
+        var pp = p + attachmentHashIndex;
+        return pp;
+    }
+
+    protected override unsafe void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime)
+    {
+        var sizeOfIdentifier = AttachmentsStorage.AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(lowerId.Content.Ptr, lowerId.Size));
+        using (var lowerDocId = _documentInfoHelper.GetDocumentId(lowerId, sizeOfIdentifier + 1))
         {
             if (lowerDocId == null)
             {
-                throw new InvalidOperationException($"Couldn't retire the attachment. Document Lower id is '{lowerId}'.");
+                throw new InvalidOperationException($"Couldn't retire the attachment. Retired attachment key is '{lowerId}'.");
             }
 
             using (var doc = Database.DocumentsStorage.Get(context, lowerDocId, DocumentFields.Data | DocumentFields.Id, throwOnConflict: true))
@@ -69,7 +136,9 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
                 if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                     return;
-                var nameByKey = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentNameByKey(context, lowerId);
+
+                using var attachmentKeyDisposable = ExtractAttachmentKeySliceFromRetiredAttachmentKey(context, lowerId, out Slice attachmentKeySlice);
+                var nameByKey = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentNameByKey(context, attachmentKeySlice);
                 if (nameByKey == null)
                     return;
 
@@ -79,6 +148,10 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                     if (attachmentInMetadata.TryGet(nameof(AttachmentName.Name), out string name) == false)
                         continue;
                     if (attachmentInMetadata.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParamsObject) == false)
+                        continue;
+                    if (retireParamsObject.TryGet(nameof(RetireAttachmentParameters.Identifier), out LazyStringValue identifierFromMetadata) == false)
+                        continue;
+                    if (identifierFromMetadata != id)
                         continue;
 
                     if (name == nameByKey)
@@ -90,7 +163,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                         {
                             Name = name,
                             DocumentId = doc.Id
-                        }, lowerId);
+                        }, attachmentKeySlice);
 
                         break;
                     }
@@ -99,57 +172,71 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         }
     }
 
-    protected override DocumentExpirationInfo GetDocumentAndId(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
+    public void Put(DocumentsOperationContext context, Slice lowerId, string processDateString, string identifier)
     {
-        var info = DocumentAndIdOrCollectionInternal(options, clonedId, ticksSlice, out var document, out var collectionStr);
-        if (info != null)
-            return info;
-
-        if (document == null)
-            return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
-
-        return new DocumentExpirationInfo(ticksSlice, clonedId, id: collectionStr);
+        using (CreateRetiredAttachmentsKeyWithIdentifier(context, lowerId, identifier, out Slice key))
+            base.Put(context, key, processDateString);
     }
 
-    private DocumentExpirationInfo DocumentAndIdOrCollectionInternal(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice, out Document document, out string collectionStr)
+    private unsafe ByteStringContext.InternalScope CreateRetiredAttachmentsKeyWithIdentifier(DocumentsOperationContext context, Slice lowerId, string identifier, out Slice outSlice)
     {
-        document = null;
-        collectionStr = null;
-
-        using (var idLsv = _documentInfoHelper.GetDocumentId(clonedId))
+        // something like: my-s3-cool-storage|categories/1-a|d|image.jpg|S5Opbm22FH1LW5SAC3wRb3HA64QM7odd26djlt5cAkM=|image/jpeg
+        using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(context, identifier, out _, out Slice identifierSlice))
         {
-            var id = idLsv;
-            if (id == null)
-            {
-                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
-            }
+            var size = identifierSlice.Content.Length + 1 + lowerId.Content.Length; // identifier + record separator + lowerId 
+            var scope = context.Allocator.Allocate(size, out ByteString keyMem);
+            var pos = 0;
+            Memory.Copy(keyMem.Ptr + pos, identifierSlice.Content.Ptr, identifierSlice.Content.Length);
+            pos = identifierSlice.Content.Length;
+            keyMem.Ptr[pos++] = SpecialChars.RecordSeparator;
+            Memory.Copy(keyMem.Ptr + pos, lowerId.Content.Ptr, lowerId.Content.Length);
+
+            outSlice = new Slice(SliceOptions.Key, keyMem);
+            return scope;
+        }
+    }
+
+    protected override DocumentExpirationInfo GetDocumentAndId(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
+    {
+        using (ExtractIdentifierStringAndDocumentIdSliceFromRetiredAttachmentKey(options.Context, clonedId, out string identifier, out Slice documentIdSlice))
+        {
             // document is disposed in caller method
-            document = Database.DocumentsStorage.Get(options.Context, id, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
+            var document = Database.DocumentsStorage.Get(options.Context, documentIdSlice, DocumentFields.Id);
             // doc was deleted
             if (document == null)
             {
-                return null;
+                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
             }
 
-            if (document.TryGetCollection(out collectionStr))
+            if (options.DatabaseRecord.RetiredAttachments == null)
             {
-                if (options.DatabaseRecord.RetiredAttachments == null)
-                {
-                    // no configuration, we don't care about this collection
-                    return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
-                }
+                // no configuration, we don't care about this collection
+                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
             }
+
+            if (options.DatabaseRecord.RetiredAttachments.Destinations == null)
+            {
+                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+            }
+
+
+            if (options.DatabaseRecord.RetiredAttachments.Destinations.ContainsKey(identifier) == false)
+            {
+                // no destinations, we don't care about this collection
+                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+            }
+
+            return new DocumentExpirationInfo(ticksSlice, clonedId, id: identifier);
         }
 
-        return null;
     }
 
     [StorageIndexEntryKeyGenerator]
     internal static unsafe ByteStringContext.Scope GenerateFlagAndHashForAttachments(Transaction tx, ref TableValueReader tvr, out Slice slice)
     {
-        var hashPtr = tvr.Read((int)AttachmentsTable.Hash, out var hashSize);
+        var hashPtr = tvr.Read((int)Schemas.Attachments.AttachmentsTable.Hash, out var hashSize);
 
-        var flags = *(int*)tvr.Read((int)AttachmentsTable.Flags, out var size);
+        var flags = *(int*)tvr.Read((int)Schemas.Attachments.AttachmentsTable.Flags, out var size);
         Debug.Assert(size == sizeof(int));
         var scope = tx.Allocator.Allocate(sizeof(int) + 1 + hashSize, out var buffer); // flag + record separator + hash
 
@@ -162,7 +249,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         return scope;
     }
 
-    public unsafe void RemoveRetirePutValue(DocumentsOperationContext context, Slice lowerId, long ticks)
+    public unsafe void RemoveRetirePutValue(DocumentsOperationContext context, Slice lowerId, string identifier, long ticks)
     {
         var ticksBigEndian = Bits.SwapBytes(ticks);
 
@@ -171,8 +258,10 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             _logger.Info(msg);
 
         var tree = context.Transaction.InnerTransaction.ReadTree(_treeName);
+
+        using (CreateRetiredAttachmentsKeyWithIdentifier(context, lowerId, identifier, out Slice key))
         using (Slice.External(context.Allocator, (byte*)&ticksBigEndian, sizeof(long), out Slice ticksSlice))
-            tree.MultiDelete(ticksSlice, lowerId);
+            tree.MultiDelete(ticksSlice, key);
     }
 
     protected override void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount)
@@ -180,79 +269,89 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
             return;
 
-        using (var docId = _documentInfoHelper.GetDocumentId(clonedId))
-        {
-            (bool allExpired, string id) = GetConflictedRetiredAttachment(options.Context, options.CurrentTime, docId, clonedId);
+        (bool allExpired, string id) = GetConflictedRetiredAttachment(options.Context, options.CurrentTime, clonedId);
 
-            if (allExpired)
-            {
-                expiredDocs.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id));
-                totalCount++;
-            }
+        if (allExpired)
+        {
+            expiredDocs.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id));
+            totalCount++;
         }
     }
 
-    private (bool AllExpired, string Id) GetConflictedRetiredAttachment(DocumentsOperationContext context, DateTime currentTime, string docId, Slice attachmentKey)
+    private unsafe (bool AllExpired, string Id) GetConflictedRetiredAttachment(DocumentsOperationContext context, DateTime currentTime, Slice clonedId)
     {
-        string collection = null;
-        var allExpired = true;
-        var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
-
-        if (conflicts.Count <= 0)
-            return (true, null);
-
-        foreach (var conflict in conflicts)
+        var sizeOfIdentifier = AttachmentsStorage.AttachmentKey.GetSizeOfDocId(new ReadOnlySpan<byte>(clonedId.Content.Ptr, clonedId.Size));
+        using (var docId = _documentInfoHelper.GetDocumentId(clonedId, sizeOfIdentifier + 1))
         {
-            using (conflict)
+            var conflicts = Database.DocumentsStorage.ConflictsStorage.GetConflictsFor(context, docId);
+
+            if (conflicts.Count <= 0)
+                return (true, null);
+
+            var allExpired = true;
+            LazyStringValue identifier = null;
+
+            foreach (var conflict in conflicts)
             {
-                collection = conflict.Collection;
-                if (conflict.Doc.TryGetMetadata(out var metadata) == false)
-                    continue;
-
-                if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
-                    continue;
-
-                var nameByKey = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentNameByKey(context, attachmentKey);
-                if (nameByKey == null)
-                    continue;
-                var found = false;
-                var hasPassed = false;
-                for (var i = 0; i < attachments.Length; i++)
+                using (conflict)
                 {
-                    var attachmentInMetadata = (BlittableJsonReaderObject)attachments[i];
-                    if (attachmentInMetadata.TryGet(nameof(AttachmentName.Name), out string name) == false)
+                    if (conflict.Doc.TryGetMetadata(out var metadata) == false)
                         continue;
 
-                    if (name == nameByKey)
+                    if (metadata.TryGet(Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
+                        continue;
+
+                    using var d = ExtractIdentifierStringAndAttachmentKeySlice(context, clonedId, out identifier, out var attachmentKeySlice);
+                    var nameByKey = Database.DocumentsStorage.AttachmentsStorage.GetAttachmentNameByKey(context, attachmentKeySlice);
+                    if (nameByKey == null)
+                        continue;
+                    var found = false;
+                    var hasPassed = false;
+                    for (var i = 0; i < attachments.Length; i++)
                     {
-                        found = true;
-                        hasPassed = HasPassed(attachmentInMetadata, currentTime, MetadataPropertyName);
-                        break;
+                        var attachmentInMetadata = (BlittableJsonReaderObject)attachments[i];
+                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.Name), out string name) == false)
+                            continue;
+                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParamsObject) == false)
+                            continue;
+                        if (retireParamsObject.TryGet(nameof(RetireAttachmentParameters.Identifier), out LazyStringValue identifierFromMetadata) == false)
+                            continue;
+                        if (identifierFromMetadata != identifier)
+                            continue;
+
+                        if (name == nameByKey)
+                        {
+                            found = true;
+                            hasPassed = HasPassed(attachmentInMetadata, currentTime, MetadataPropertyName);
+                            break;
+                        }
                     }
+
+                    if (found == false)
+                        continue;
+
+                    if (hasPassed)
+                        continue;
+
+                    allExpired = false;
+                    break;
                 }
-
-                if (found == false)
-                    continue;
-
-                if (hasPassed)
-                    continue;
-
-                allExpired = false;
-                break;
             }
-        }
 
-        return (allExpired, collection);
+            return (allExpired, identifier);
+        }
     }
-    //TODO: egor now I got multiple uploaders :) need to handle that and not use first :)
-    public DirectFileDownloader GetDownloader(OperationCancelToken tcs)
+
+    public DirectFileDownloader GetDownloader(Attachment attachment, OperationCancelToken tcs)
     {
         if (Configuration == null)
-            throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetiredAttachmentsConfiguration)} is not configured on {Database.Name}.");
-        if (Configuration.Destinations.First().Value.Disabled)
-            throw new InvalidOperationException($"Cannot get retired attachment because {nameof(RetiredAttachmentsConfiguration)} is disabled.");
+            throw new InvalidOperationException($"Cannot get retired attachment '{attachment.Key}' because {nameof(RetiredAttachmentsConfiguration)} is not configured on {Database.Name}.");
+        if (Configuration.Destinations.TryGetValue(attachment.RetireParameters.Identifier, out var destination) == false)
+            throw new InvalidOperationException($"Cannot get retired attachment '{attachment.Key}' because destination for '{attachment.RetireParameters.Identifier}' doesn't exist.");
+        if (destination.Disabled)
+            throw new InvalidOperationException($"Cannot get retired attachment '{attachment.Key}' because destination for '{attachment.RetireParameters.Identifier}' is disabled.");
 
-        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(AttachmentHandlerProcessorForGetAttachment), Configuration.Destinations.First().Value.S3Settings, Configuration.Destinations.First().Value.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null, concurrentThreads: 8);
+        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(AttachmentHandlerProcessorForGetAttachment), destination.S3Settings, destination.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null, concurrentThreads: 8);
         return new DirectFileDownloader(settings, retentionPolicyParameters: null, _logger, FileUploaderBase.GenerateUploadResult(), progress => { }, tcs);
     }
 
@@ -263,11 +362,60 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         return await downloader.StreamForDownloadDestination(Database, folderName, objKeyName);
     }
 
-    public enum AttachmentRetireType : byte
+    private static unsafe LazyStringValue GetStringFromIdSlice(DocumentsOperationContext context, Slice identifierSlice)
     {
-        PutRetire = 1,
-        DeleteRetire = 2,
-        ExistingRetire = 3
+        var lzs = context.GetLazyStringValue(identifierSlice.Content.Ptr, out bool success);
+        if (success == false)
+        {
+            throw new InvalidOperationException($"Failed to get string from id: {identifierSlice}");
+        }
+
+        return lzs;
+    }
+
+    public long TryUpdateRetiredAttachment(DocumentsOperationContext context, DateTime? newRetireAtDt, long currentDt, string newIdentifier, string currentIdentifier, Slice keySlice)
+    {
+        // Handle case where there's no current retirement date
+        if (currentDt == -1L)
+        {
+            TryPutRetiredAttachment(context, keySlice, newRetireAtDt, newIdentifier, out currentDt);
+            return currentDt;
+        }
+
+        // Handle case where retirement is being removed
+        if (newRetireAtDt.HasValue == false)
+        {
+            RemoveRetirePutValue(context, keySlice, currentIdentifier, currentDt);
+            return -1L;
+        }
+
+        // Both values are present - check what changed
+        var retireAtChanged = newRetireAtDt.Value.Ticks != currentDt;
+        var identifierChanged = currentIdentifier != newIdentifier;
+
+        if (retireAtChanged == false && identifierChanged == false)
+        {
+            // No changes needed
+            return currentDt;
+        }
+
+        // Something changed - remove the old entry and add the new one
+        RemoveRetirePutValue(context, keySlice, currentIdentifier, currentDt);
+        TryPutRetiredAttachment(context, keySlice, newRetireAtDt, newIdentifier, out currentDt);
+
+        return currentDt;
+    }
+
+    private void TryPutRetiredAttachment(DocumentsOperationContext context, Slice keySlice, DateTime? retireAtDt, string identifier, out long retireAt)
+    {
+        if (retireAtDt.HasValue == false)
+        {
+            retireAt = -1L;
+            return;
+        }
+
+        retireAt = retireAtDt.Value.Ticks;
+        Put(context, keySlice, retireAtDt.Value.GetDefaultRavenFormat(), identifier);
     }
 
     public RetireAttachmentsSender UpdateRetiredAttachmentsFromDatabaseRecord(DatabaseRecord dbRecord, RetireAttachmentsSender retireAttachmentsSender)
@@ -291,7 +439,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
             retireAttachmentsSender?.Dispose();
             Configuration = dbRecord.RetiredAttachments;
 
-            if (dbRecord.RetiredAttachments.Destinations.All(x=> x.Value.Disabled))
+            if (dbRecord.RetiredAttachments.Destinations.All(x => x.Value.Disabled))
                 return null;
 
             var cleaner = new RetireAttachmentsSender(Database, dbRecord.RetiredAttachments);

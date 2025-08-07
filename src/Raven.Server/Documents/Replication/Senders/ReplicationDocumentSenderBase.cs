@@ -57,7 +57,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
             _numberOfAttachmentsTrackedForDeduplication = parent._database.Configuration.Replication.MaxNumberOfAttachmentsTrackedForDeduplication;
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
-            _downloader = new Lazy<DirectFileDownloader>(() => _parent._database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(new(_parent.CancellationToken)));
+            _downloader = new Lazy<DirectFileDownloader>(() => _parent._database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(null, new(_parent.CancellationToken))); // TODO: EGOR RavenDB-24604
         }
 
         protected virtual IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats,
@@ -492,7 +492,7 @@ namespace Raven.Server.Documents.Replication.Senders
 
             if (item is AttachmentReplicationItem attachment)
             {
-                if (attachment.Flags != RetiredAttachmentFlags.Retired)
+                if (attachment.Flags == RetiredAttachmentFlags.None)
                 {
                     if (ShouldSendAttachmentStream(attachment))
                         _replicaAttachmentStreams[attachment.Base64Hash] = attachment;

@@ -16,7 +16,19 @@ namespace Raven.Client.Documents.Attachments
         public override int GetHashCode()
         {
             var hashCode = new HashCode();
-            hashCode.Add(Destinations.GetHashCode());
+            if (Destinations == null)
+            {
+                hashCode.Add(0);
+            }
+            else
+            {
+                foreach (var kvp in Destinations)
+                {
+                    hashCode.Add(kvp.Key.GetHashCode());
+                    hashCode.Add(kvp.Value.GetHashCode());
+                }
+            }
+
             hashCode.Add(RetireFrequencyInSec);
             hashCode.Add(MaxItemsToProcess);
 
@@ -36,6 +48,12 @@ namespace Raven.Client.Documents.Attachments
             if (RetireFrequencyInSec != other.RetireFrequencyInSec)
                 return false;
             if (MaxItemsToProcess != other.MaxItemsToProcess)
+                return false;
+
+            if (Destinations == null && other.Destinations == null)
+                return true;
+
+            if (Destinations == null || other.Destinations == null)
                 return false;
 
             if (Destinations.Count != other.Destinations.Count)

@@ -11,6 +11,6 @@ public interface IBulkPostAttachmentStrategy
 {
     public string CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name);
     public Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment, string collection);
-    public DirectFileDownloader GetAttachmentsDownloader(OperationCancelToken tcs);
+    public DirectFileDownloader GetAttachmentsDownloader(Attachment attachment, OperationCancelToken tcs);
     public void WriteAttachmentDetails(AsyncBlittableJsonTextWriter writer, Attachment attachment, string documentId);
 }

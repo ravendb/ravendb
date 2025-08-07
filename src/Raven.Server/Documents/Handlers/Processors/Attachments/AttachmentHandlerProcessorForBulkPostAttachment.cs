@@ -54,7 +54,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                         if (attachment.RetireParameters.IsRetiredAttachment())
                         {
                             strategy = new RetiredBulkPostAttachmentStrategyProcessor(RequestHandler);
-                            downloader ??= strategy.GetAttachmentsDownloader(tcs);
+                            downloader ??= strategy.GetAttachmentsDownloader(attachment, tcs);
                         }
                         else
                         {

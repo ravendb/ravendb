@@ -31,7 +31,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
             return Task.FromResult(attachment.Stream);
         }
 
-        public override DirectFileDownloader GetAttachmentsDownloader(OperationCancelToken tcs)
+        public override DirectFileDownloader GetAttachmentsDownloader(Attachment attachment, OperationCancelToken tcs)
         {
             return null;
         }

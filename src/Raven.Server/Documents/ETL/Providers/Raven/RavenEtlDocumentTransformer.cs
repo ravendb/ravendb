@@ -46,7 +46,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             _transformation = transformation;
             _script = script;
-            _downloader = new Lazy<DirectFileDownloader>(() => Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(new(database.DatabaseShutdown)));
+            _downloader = new Lazy<DirectFileDownloader>(() => Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(null, new(database.DatabaseShutdown))); // TODO: EGOR RavenDB-24604
 
             LoadToDestinations = _script.LoadToCollections;
         }

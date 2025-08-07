@@ -25,9 +25,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
                 attachment.Base64Hash.ToString());
         }
 
-        public override DirectFileDownloader GetAttachmentsDownloader(OperationCancelToken tcs)
+        public override DirectFileDownloader GetAttachmentsDownloader(Attachment attachment, OperationCancelToken tcs)
         {
-            return RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(tcs);
+            return RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(attachment, tcs);
         }
     }
 }

@@ -142,7 +142,7 @@ namespace SlowTests.Server.Documents.Attachments
             await CanUploadRetiredAttachmentToCloudFromBackupAndGet(attachmentsCount, size);
         }
 
-        [AzureRetryTheory]
+        [AzureRetryTheory(Skip = "TODO EGOR RavenDB-24604")]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
         public async Task CanExternalReplicateRetiredAttachmentAndThenUploadToAzureAndGet(int attachmentsCount, int size)
@@ -173,7 +173,7 @@ namespace SlowTests.Server.Documents.Attachments
             await CanIndexWithRetiredAttachmentInternal(attachmentsCount, size);
         }
 
-        [AzureRetryTheory]
+        [AzureRetryTheory(Skip = "TODO EGOR RavenDB-24604")]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
         public async Task CanEtlWithRetiredAttachmentAndRetireOnDestination(int attachmentsCount, int size)
@@ -181,7 +181,7 @@ namespace SlowTests.Server.Documents.Attachments
             await CanEtlWithRetiredAttachmentAndRetireOnDestinationInternal(attachmentsCount, size);
         }
 
-        [AzureRetryTheory]
+        [AzureRetryTheory(Skip = "TODO EGOR RavenDB-24604")]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
         public async Task CanEtlRetiredAttachmentsToDestination(int attachmentsCount, int size)

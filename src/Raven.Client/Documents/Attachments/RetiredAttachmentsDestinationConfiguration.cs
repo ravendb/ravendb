@@ -78,6 +78,11 @@ public sealed class RetiredAttachmentsDestinationConfiguration : IDynamicJson
         };
     }
 
+    internal bool HasUploader()
+    {
+        return BackupConfiguration.CanBackupUsing(S3Settings) || BackupConfiguration.CanBackupUsing(AzureSettings);
+    }
+
     internal void AssertConfiguration(string databaseName = null)
     {
         var databaseNameStr = string.IsNullOrEmpty(databaseName) ? string.Empty : $" for database '{databaseName}'";

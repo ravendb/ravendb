@@ -27,7 +27,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
         public override async Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, string collection, CancellationToken token)
         {
             var tcs = RequestHandler.CreateHttpRequestBoundOperationToken(token);
-            using var downloader = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(tcs);
+            using var downloader = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(attachment, tcs);
             await using var stream = await RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(downloader, attachment.Base64Hash.ToString());
             await WriteAttachmentToResponseStream(context, stream, attachment, bytesRemaining: null, token);
         }

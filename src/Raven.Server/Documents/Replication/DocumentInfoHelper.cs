@@ -17,12 +17,18 @@ namespace Raven.Server.Documents.Replication
         private LazyStringValue _tmpLazyStringInstance;
         private readonly JsonOperationContext _context;
         private readonly bool _contextOwner;
-        public unsafe LazyStringValue GetDocumentId(Slice key)
+        public LazyStringValue GetDocumentId(Slice key)
         {
-            var sepIdx = key.Content.IndexOf(SpecialChars.RecordSeparator);
+            return GetDocumentId(key, start: 0);
+        }
+
+        public unsafe LazyStringValue GetDocumentId(Slice key, int start)
+        {
+            var sepIdx = key.Content.IndexOf(SpecialChars.RecordSeparator, start);
+            var idSize = sepIdx - start;
             if (_tmpLazyStringInstance == null)
                 _tmpLazyStringInstance = new LazyStringValue(null, null, 0, _context);
-            _tmpLazyStringInstance.Renew(null, key.Content.Ptr, sepIdx, _context);
+            _tmpLazyStringInstance.Renew(null, key.Content.Ptr + start, idSize, _context);
             return _tmpLazyStringInstance;
         }
 

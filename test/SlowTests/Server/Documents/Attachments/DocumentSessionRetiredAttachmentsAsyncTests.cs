@@ -7,6 +7,7 @@ using Orders;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Backups;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -18,6 +19,98 @@ namespace SlowTests.Server.Documents.Attachments
         //TODO: egor add cluster wide session test
         public DocumentSessionRetiredAttachmentsAsyncTests(ITestOutputHelper output) : base(output)
         {
+        }
+
+        [AmazonS3RetryFact]
+        public async Task CanUploadRetiredAttachmentsToMultipleDestinations()
+        {
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                var identifier2 = "Conf-identifier-s3-2";
+                var settings = Etl.GetS3Settings(nameof(RetiredAttachments), $"{Guid.NewGuid()}");
+                ModifyRetiredAttachmentsConfig = config =>
+                {
+                    config.Destinations.Add(identifier2, new RetiredAttachmentsDestinationConfiguration
+                    {
+                        S3Settings = settings,
+                        Disabled = false,
+                        Identifier = identifier2
+                    });
+                };
+
+                var identifier1 = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+
+                var baseline = DateTime.UtcNow;
+                var id1 = "Orders/1";
+                var id2 = "Orders/2";
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { Id = id1, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/1", Company = $"Companies/1" });
+                    session.SaveChanges();
+                }
+
+                var at1 = baseline.AddMinutes(3);
+                var at2 = baseline.AddMinutes(3);
+                using (var session = store.OpenSession())
+                {
+                    using var profileStream = new MemoryStream([1, 2, 3]);
+                    session.Advanced.Attachments.Store(id1, new StoreAttachmentParameters("test.png", profileStream)
+                    {
+                        RetireParameters = new RetireAttachmentParameters(identifier1, at1),
+                        ContentType = "image/png"
+                    });
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { Id = id2, OrderedAt = new DateTime(2025, 1, 1), ShipVia = $"Shippers/2", Company = $"Companies/2" });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    using var profileStream = new MemoryStream([3, 2, 2]);
+                    session.Advanced.Attachments.Store(id2, new StoreAttachmentParameters("test.png", profileStream)
+                    {
+                        RetireParameters = new RetireAttachmentParameters(identifier2, at2),
+                        ContentType = "image/png"
+                    });
+                    session.SaveChanges();
+                }
+                using (var session = store.OpenSession())
+                {
+                    var exists1 = session.Advanced.Attachments.Get(id1, "test.png");
+                    Assert.NotNull(exists1);
+                    Assert.Equal("test.png", exists1.Details.Name);
+                    Assert.Equal("image/png", exists1.Details.ContentType);
+
+                    Assert.NotNull(exists1.Details.RetireParameters);
+                    Assert.Equal(RetiredAttachmentFlags.None, exists1.Details.RetireParameters.Flags);
+                    Assert.Equal(identifier1, exists1.Details.RetireParameters.Identifier);
+                    Assert.Equal(at1, exists1.Details.RetireParameters.At.ToUniversalTime());
+
+                    var exists2 = session.Advanced.Attachments.Get(id2, "test.png");
+                    Assert.NotNull(exists2);
+                    Assert.Equal("test.png", exists2.Details.Name);
+                    Assert.Equal("image/png", exists2.Details.ContentType);
+
+                    Assert.NotNull(exists2.Details.RetireParameters);
+                    Assert.Equal(RetiredAttachmentFlags.None, exists2.Details.RetireParameters.Flags);
+                    Assert.Equal(identifier2, exists2.Details.RetireParameters.Identifier);
+                    Assert.Equal(at2, exists2.Details.RetireParameters.At.ToUniversalTime());
+                }
+
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                var filesOnCloud1 = await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+                var filesOnCloud2 = await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
+
+                Assert.Equal(1, filesOnCloud1.Count);
+                Assert.Equal(1, filesOnCloud2.Count);
+            }
         }
 
         [AmazonS3RetryFact]
@@ -162,6 +255,104 @@ namespace SlowTests.Server.Documents.Attachments
         }
 
         [AmazonS3RetryFact]
+        public async Task CanChangeIdentifierOfAttachment()
+        {
+            string newIdentifier = "Conf-identifier-s3-2";
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                S3Settings settings = null;
+                // Create second configuration with different identifier
+                settings = Etl.GetS3Settings(nameof(RetiredAttachments), $"{Guid.NewGuid()}");
+                ModifyRetiredAttachmentsConfig = config =>
+                {
+                    config.Destinations.Add(newIdentifier, new RetiredAttachmentsDestinationConfiguration
+                    {
+                        S3Settings = settings,
+                        Disabled = false,
+                        Identifier = newIdentifier
+                    });
+                };
+
+                var identifier1 = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+
+                var id = "Orders/1";
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/1", Company = $"Companies/1" });
+                    session.SaveChanges();
+                }
+
+                var retireAtDate = DateTime.UtcNow.AddMinutes(3);
+                using (var session = store.OpenSession())
+                {
+                    using var profileStream = new MemoryStream([1, 2, 3]);
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream)
+                    {
+                        RetireParameters = new RetireAttachmentParameters(identifier1, retireAtDate),
+                        ContentType = "image/png"
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var exists = session.Advanced.Attachments.Exists(id, "test.png");
+                    Assert.True(exists);
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    using var profileStream = new MemoryStream([1, 2, 3]);
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream)
+                    {
+                        RetireParameters = new RetireAttachmentParameters(newIdentifier, retireAtDate),
+                        ContentType = "image/png"
+                    });
+                    session.SaveChanges();
+                }
+
+                // try to retire - nothing should happen yet (time not reached)
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                await GetBlobsFromCloudAndAssertForCount(settings, 0);
+                await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+
+                using (var session = store.OpenSession())
+                {
+                    var attachment = session.Advanced.Attachments.Get(id, "test.png");
+
+                    Assert.NotNull(attachment);
+                    Assert.Equal("test.png", attachment.Details.Name);
+                    Assert.Equal(RetiredAttachmentFlags.None, attachment.Details.RetireParameters.Flags);
+                    Assert.Equal(newIdentifier, attachment.Details.RetireParameters.Identifier);
+                    Assert.Equal(retireAtDate, attachment.Details.RetireParameters.At);
+                    Assert.Equal("image/png", attachment.Details.ContentType);
+                }
+
+                // now retire - should work with new identifier
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                await GetBlobsFromCloudAndAssertForCount(settings, 1);
+                await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+
+                using (var session = store.OpenSession())
+                {
+                    var attachment = session.Advanced.Attachments.Get(id, "test.png");
+
+                    Assert.NotNull(attachment);
+                    Assert.Equal("test.png", attachment.Details.Name);
+                    Assert.Equal(RetiredAttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
+                    Assert.Equal(newIdentifier, attachment.Details.RetireParameters.Identifier);
+                    Assert.Equal(retireAtDate, attachment.Details.RetireParameters.At);
+                    Assert.Equal("image/png", attachment.Details.ContentType);
+                }
+            }
+        }
+
+        [AmazonS3RetryFact]
         public async Task CanGetRetiredAttachmentByDocumentIdAndName()
         {
             using (var store = GetDocumentStore())
@@ -192,6 +383,132 @@ namespace SlowTests.Server.Documents.Attachments
                     Assert.NotNull(attachment);
                     Assert.Equal("test.png", attachment.Details.Name);
                     Assert.Equal(RetiredAttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
+                }
+            }
+        }
+
+        [AmazonS3RetryFact]
+        public async Task CanChangeIdentifierAndRetireAtOfAttachment()
+        {
+            string newIdentifier = "Conf-identifier-s3-2";
+            await using (var holder = CreateCloudSettings())
+            using (var store = GetDocumentStore())
+            {
+                S3Settings settings = null;
+                // Create second configuration with different identifier
+                settings = Etl.GetS3Settings(nameof(RetiredAttachments), $"{Guid.NewGuid()}");
+                ModifyRetiredAttachmentsConfig = config =>
+                {
+                    config.Destinations.Add(newIdentifier, new RetiredAttachmentsDestinationConfiguration
+                    {
+                        S3Settings = settings,
+                        Disabled = false,
+                        Identifier = newIdentifier
+                    });
+                };
+
+                var identifier1 = await PutRetireAttachmentsConfiguration(store, Settings, collections: null);
+
+                var id = "Orders/1";
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new Order { Id = id, OrderedAt = new DateTime(2024, 1, 1), ShipVia = $"Shippers/1", Company = $"Companies/1" });
+                    session.SaveChanges();
+                }
+
+                var originalRetireAtDate = DateTime.UtcNow.AddMinutes(3);
+                using (var session = store.OpenSession())
+                {
+                    using var profileStream = new MemoryStream([1, 2, 3]);
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream)
+                    {
+                        RetireParameters = new RetireAttachmentParameters(identifier1, originalRetireAtDate),
+                        ContentType = "image/png"
+                    });
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var exists = session.Advanced.Attachments.Exists(id, "test.png");
+                    Assert.True(exists);
+                }
+
+                // Change both identifier and retire time
+                var newRetireAtDate = DateTime.UtcNow.AddMinutes(15);
+                using (var session = store.OpenSession())
+                {
+                    using var profileStream = new MemoryStream([1, 2, 3]);
+                    session.Advanced.Attachments.Store(id, new StoreAttachmentParameters("test.png", profileStream)
+                    {
+                        RetireParameters = new RetireAttachmentParameters(newIdentifier, newRetireAtDate),
+                        ContentType = "image/png"
+                    });
+                    session.SaveChanges();
+                }
+
+                // try to retire - nothing should happen yet (time not reached)
+                var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
+                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                await GetBlobsFromCloudAndAssertForCount(settings, 0);
+                await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+
+                using (var session = store.OpenSession())
+                {
+                    var attachment = session.Advanced.Attachments.Get(id, "test.png");
+
+                    Assert.NotNull(attachment);
+                    Assert.Equal("test.png", attachment.Details.Name);
+                    Assert.Equal(RetiredAttachmentFlags.None, attachment.Details.RetireParameters.Flags);
+                    Assert.Equal(newIdentifier, attachment.Details.RetireParameters.Identifier);
+                    Assert.Equal(newRetireAtDate, attachment.Details.RetireParameters.At);
+                    Assert.Equal("image/png", attachment.Details.ContentType);
+
+                    // Verify it's not the original parameters
+                    Assert.NotEqual(identifier1, attachment.Details.RetireParameters.Identifier);
+                    Assert.NotEqual(originalRetireAtDate, attachment.Details.RetireParameters.At);
+                }
+
+                // try to retire - nothing should happen yet (time not reached)
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(5);
+                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                await GetBlobsFromCloudAndAssertForCount(settings, 0);
+                await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+
+                using (var session = store.OpenSession())
+                {
+                    var attachment = session.Advanced.Attachments.Get(id, "test.png");
+
+                    Assert.NotNull(attachment);
+                    Assert.Equal("test.png", attachment.Details.Name);
+                    Assert.Equal(RetiredAttachmentFlags.None, attachment.Details.RetireParameters.Flags);
+                    Assert.Equal(newIdentifier, attachment.Details.RetireParameters.Identifier);
+                    Assert.Equal(newRetireAtDate, attachment.Details.RetireParameters.At);
+                    Assert.Equal("image/png", attachment.Details.ContentType);
+
+                    // Verify it's not the original parameters
+                    Assert.NotEqual(identifier1, attachment.Details.RetireParameters.Identifier);
+                    Assert.NotEqual(originalRetireAtDate, attachment.Details.RetireParameters.At);
+                }
+
+                // now retire - should work with new identifier and new time
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(20);
+                await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                await GetBlobsFromCloudAndAssertForCount(settings, 1);
+                await GetBlobsFromCloudAndAssertForCount(Settings, 0);
+
+                using (var session = store.OpenSession())
+                {
+                    var attachment = session.Advanced.Attachments.Get(id, "test.png");
+
+                    Assert.NotNull(attachment);
+                    Assert.Equal("test.png", attachment.Details.Name);
+                    Assert.Equal(RetiredAttachmentFlags.Retired, attachment.Details.RetireParameters.Flags);
+                    Assert.Equal(newIdentifier, attachment.Details.RetireParameters.Identifier);
+                    Assert.Equal(newRetireAtDate, attachment.Details.RetireParameters.At);
+                    Assert.Equal("image/png", attachment.Details.ContentType);
                 }
             }
         }
@@ -348,6 +665,7 @@ namespace SlowTests.Server.Documents.Attachments
                     var database = await Databases.GetDocumentDatabaseInstanceFor(Server, store);
                     database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                     await database.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+                    await GetBlobsFromCloudAndAssertForCount(Settings, 1);
                 }
 
                 using (var session = store.OpenAsyncSession())

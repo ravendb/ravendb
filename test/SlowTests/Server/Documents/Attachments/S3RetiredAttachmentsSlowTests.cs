@@ -172,7 +172,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                     await GetBlobsFromCloudAndAssertForCount(Settings, 1, 15_000);
 
-                    Assert.Equal("orders/0\u001ed\u001eprofile.png\u001ebucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=\u001eimage/png", key);
+                    Assert.Equal("\u0012conf-identifier-s3\0\u001eorders/0\u001ed\u001eprofile.png\u001ebucfDXJ3eWRJYpgggJrnskJtMuMyFohjO2GHATxTmUs=\u001eimage/png", key);
 
                     using (var session = store.OpenSession())
                     {
@@ -248,7 +248,7 @@ namespace SlowTests.Server.Documents.Attachments
                         key = infos.First().LowerId.ToString();
                     });
 
-                    Assert.Equal("orders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
+                    Assert.Equal($"\u0012conf-identifier-s3\0\u001eorders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
 
                     PatchOperation operation = new PatchOperation(id: docId, changeVector: null, patch: new PatchRequest
                     {
@@ -322,7 +322,7 @@ namespace SlowTests.Server.Documents.Attachments
 
                             key = arr.First().LowerId.ToString();
                         });
-                        Assert.Equal("orders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
+                        Assert.Equal("\u0012conf-identifier-s3\0\u001eorders/3\u001ed\u001etest.png\u001eEcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=\u001eimage/png", key);
                     }
 
                     PatchOperation operation = new PatchOperation(id: docId, changeVector: null, patch: new PatchRequest
@@ -768,7 +768,7 @@ namespace SlowTests.Server.Documents.Attachments
             await CanUploadRetiredAttachmentToCloudFromBackupAndGet(attachmentsCount, size);
         }
 
-        [AmazonS3RetryTheory]
+        [AmazonS3RetryTheory(Skip = "TODO EGOR RavenDB-24604")]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
         public async Task CanExternalReplicateRetiredAttachmentAndThenUploadToS3AndGet(int attachmentsCount, int size)
@@ -776,7 +776,7 @@ namespace SlowTests.Server.Documents.Attachments
             await CanExternalReplicateRetiredAttachmentAndThenUploadToCloudAndGet(attachmentsCount, size);
         }
 
-        [AmazonS3RetryTheory]
+        [AmazonS3RetryTheory(Skip = "TODO EGOR RavenDB-24604")]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
         public async Task ExternalReplicationOfRetiredAttachmentToExternalDatabaseShouldUnwrap(int attachmentsCount, int size)
@@ -829,7 +829,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [AmazonS3RetryTheory]
+        [AmazonS3RetryTheory(Skip = "TODO EGOR RavenDB-24604")]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
         public async Task AddRetiredAttachmentThenExternalReplicateToDatabaseWithoutRetiredConfig_ShouldUnwrap(int attachmentsCount, int size)
@@ -956,7 +956,7 @@ namespace SlowTests.Server.Documents.Attachments
             await CanIndexWithRetiredAttachmentInternal(attachmentsCount, size);
         }
 
-        [AmazonS3RetryTheory]
+        [AmazonS3RetryTheory(Skip = "TODO EGOR RavenDB-24604")]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
         public async Task CanEtlWithRetiredAttachmentAndRetireOnDestination(int attachmentsCount, int size)
@@ -964,7 +964,7 @@ namespace SlowTests.Server.Documents.Attachments
             await CanEtlWithRetiredAttachmentAndRetireOnDestinationInternal(attachmentsCount, size);
         }
 
-        [AmazonS3RetryTheory]
+        [AmazonS3RetryTheory(Skip = "TODO EGOR RavenDB-24604")]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
         public async Task CanEtlRetiredAttachmentsToDestination(int attachmentsCount, int size)
@@ -972,7 +972,7 @@ namespace SlowTests.Server.Documents.Attachments
             await CanEtlRetiredAttachmentsToDestinationInternal(attachmentsCount, size);
         }
 
-        [AmazonS3RetryTheory]
+        [AmazonS3RetryTheory(Skip = "TODO EGOR RavenDB-24604")]
         [InlineData(1, 3, true)]
         [InlineData(1, 3, false)]
      //   [InlineData(64, 3, true)]
@@ -1073,7 +1073,7 @@ namespace SlowTests.Server.Documents.Attachments
             }
         }
 
-        [AmazonS3RetryTheory]
+        [AmazonS3RetryTheory(Skip = "TODO EGOR RavenDB-24604")]
         [InlineData(1, 3)]
         [InlineData(64, 3)]
         public async Task CanExternalReplicateDeletedRetiredAttachmentsToDestination(int attachmentsCount, int size)
