@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.ETL.Providers.AI.GenAi.Test
 
         public BlittableJsonReaderObject Document { get; set; }
 
-        public DynamicJsonValue ToJson()
+        public override DynamicJsonValue ToJson()
         {
             var json = base.ToJson();
             json[nameof(TestStage)] = TestStage;

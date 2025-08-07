@@ -15,7 +15,7 @@ namespace Raven.Server.Documents.ETL.Test
         public TConfiguration Configuration;
 
 
-        public DynamicJsonValue ToJson() => new DynamicJsonValue()
+        public virtual DynamicJsonValue ToJson() => new DynamicJsonValue()
         {
             [nameof(DocumentId)] = DocumentId,
             [nameof(IsDelete)] = IsDelete,
