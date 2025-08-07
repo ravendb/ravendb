@@ -825,6 +825,7 @@ namespace Sparrow.Json
             _position += escapeSequencePos;
             return startPos;
         }
+        
         public unsafe int WriteValue(byte* buffer, int size, ReadOnlySpan<int> escapePositions, out BlittableJsonToken token, UsageMode mode, int? initialCompressedSize)
         {
             int position = _position;
@@ -845,7 +846,7 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.Write(buffer, size);
             position += size;
 
-            if (escapePositions == null)
+            if (escapePositions.IsEmpty)
             {
                 position += WriteVariableSizeInt(0);
                 goto Finish;
@@ -955,7 +956,7 @@ namespace Sparrow.Json
             _unmanagedWriteBuffer.Write(buffer, size);
             _position += size;
 
-            if (escapePositions == null)
+            if (escapePositions == null || escapePositions.Length == 0)
             {
                 _position += WriteVariableSizeInt(0);
                 return startPos;
