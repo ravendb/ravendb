@@ -363,13 +363,26 @@ namespace Voron.Data.Fixed
                 if (_currentPage == null || _currentPage.IsLeaf == false)
                     throw new InvalidOperationException("No current page was set or is wasn't a leaf!");
 
+                var currentPageHeader = _currentPage.PageHeader;
+                var lastSearchPosition = _currentPage.LastSearchPosition;
+
                 while (skip >= 0)
                 {
-                    var skipInPage = (int)Math.Min(_currentPage.LastSearchPosition, skip);
+                    var skipInPage = (int)Math.Min(lastSearchPosition, skip);
                     skip -= skipInPage;
-                    _currentPage.LastSearchPosition -= skipInPage;
+                    lastSearchPosition -= skipInPage;
+
                     if (skip == 0)
                     {
+                        // We've completed skipping the requested number of entries. Now we need to:
+                        // 1. Set the _currentPage to the appropriate page based on the current page info
+                        // 2. Update its LastSearchPosition to point to the correct entry
+
+                        if (_currentPage.PageNumber != currentPageHeader.PageNumber)
+                            _currentPage = _parent.GetReadOnlyPage(currentPageHeader.PageNumber);
+
+                        _currentPage.LastSearchPosition = lastSearchPosition;
+
                         return true;
                     }
                     
@@ -385,20 +398,23 @@ namespace Voron.Data.Fixed
                             _parent._cursor.Pop();
                             continue;
                         }
-                        
+
                         var nextChildPageNumber = parent.GetEntry(parent.LastSearchPosition)->PageNumber;
-                        var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
-                        
-                        // we move one beyond the end of elements because in both cases
-                        // (branch and leaf) we first decrement and then run it
-                        childPage.LastSearchPosition = childPage.NumberOfEntries;
-                        if (childPage.IsBranch)
+                        var childPageHeader = _parent.GetPageHeader(nextChildPageNumber);
+                        if ((childPageHeader.TreeFlags & FixedSizeTreePageFlags.Branch) == FixedSizeTreePageFlags.Branch)
                         {
+                            var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
+
+                            // we move one beyond the end of elements because in both cases
+                            // (branch and leaf) we first decrement and then run it
+                            childPage.LastSearchPosition = childPage.NumberOfEntries;
+
                             _parent._cursor.Push(childPage);
                             continue;
                         }
 
-                        _currentPage = childPage;
+                        currentPageHeader = childPageHeader;
+                        lastSearchPosition = childPageHeader.NumberOfEntries;
                         break;
                     }
                 }
@@ -414,13 +430,27 @@ namespace Voron.Data.Fixed
                 if (_currentPage == null || _currentPage.IsLeaf == false)
                     throw new InvalidOperationException("No current page was set or is wasn't a leaf!");
 
+                var currentPageHeader = _currentPage.PageHeader;
+                var lastSearchPosition = _currentPage.LastSearchPosition;
+
                 while (skip >= 0)
                 {
-                    var skipInPage = (int)Math.Min(_currentPage.NumberOfEntries - _currentPage.LastSearchPosition, skip);
+                    var skipInPage = (int)Math.Min(currentPageHeader.NumberOfEntries - lastSearchPosition, skip);
                     skip -= skipInPage;
-                    _currentPage.LastSearchPosition += skipInPage;
+                    lastSearchPosition += skipInPage;
+
                     if (skip == 0)
                     {
+                        // We've completed skipping the requested number of entries. Now we need to:
+                        // 1. Set the _currentPage to the appropriate page based on the current page info
+                        // 2. Update its LastSearchPosition to point to the correct entry
+                        // 3. Check if we've reached the end of the current page, and if so, move to the next page
+
+                        if (_currentPage.PageNumber != currentPageHeader.PageNumber)
+                            _currentPage = _parent.GetReadOnlyPage(currentPageHeader.PageNumber);
+
+                        _currentPage.LastSearchPosition = lastSearchPosition;
+
                         if (_currentPage.LastSearchPosition >= _currentPage.NumberOfEntries)
                             return MoveNext();
                         return true;
@@ -440,22 +470,20 @@ namespace Voron.Data.Fixed
                         }
                         
                         var nextChildPageNumber = parent.GetEntry(parent.LastSearchPosition)->PageNumber;
-                        var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
-
-                        if (childPage.IsBranch)
+                        var childPageHeader = _parent.GetPageHeader(nextChildPageNumber);
+                        if ((childPageHeader.TreeFlags & FixedSizeTreePageFlags.Branch) == FixedSizeTreePageFlags.Branch)
                         {
+                            var childPage = _parent.GetReadOnlyPage(nextChildPageNumber);
+
                             // we set it to negative one so the first
                             // call will increment that to zero
                             childPage.LastSearchPosition = -1;
                             _parent._cursor.Push(childPage);
                             continue;
                         }
-                        else
-                        {
-                            childPage.LastSearchPosition = 0;
-                        }
-                        
-                        _currentPage = childPage;
+
+                        currentPageHeader = childPageHeader;
+                        lastSearchPosition = 0;
                         break;
                     }
                 }

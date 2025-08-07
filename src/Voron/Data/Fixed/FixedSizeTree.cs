@@ -406,6 +406,11 @@ namespace Voron.Data.Fixed
             return new FixedSizeTreePage<TVal>(readOnlyPage.Pointer, _entrySize, Constants.Storage.PageSize);
         }
 
+        internal FixedSizeTreePageHeader GetPageHeader(long pageNumber)
+        {
+            return _tx.GetPageHeader<FixedSizeTreePageHeader>(pageNumber);
+        }
+
         private FixedSizeTreePage<TVal> FindPageFor(TVal key)
         {
             var header = (FixedSizeTreeHeader.Large*)_parent.DirectRead(_treeName);
