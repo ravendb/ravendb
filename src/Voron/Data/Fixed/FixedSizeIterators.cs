@@ -541,7 +541,7 @@ namespace Voron.Data.Fixed
                     if (MoveNext(count) == false)
                         return false;
                 }
-                else
+                else if (count < 0)
                 {
                     if (MovePrev(-count) == false)
                         return false;
