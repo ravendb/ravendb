@@ -74,6 +74,7 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
         query.queryParameters(parameters);
         query.name(queryText);
         query.recentQuery(true);
+        query.skipRunOnInit(true);
         const queryDto = query.toStorageDto();
         savedQueriesStorage.saveAndNavigate(dbName, queryDto, {
             newWindow: true,
