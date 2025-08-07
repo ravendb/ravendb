@@ -516,6 +516,18 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public T GetPageHeader<T>(long pageNumber) where T : unmanaged
+        {
+            if (IsValid == false)
+                ThrowObjectDisposed();
+
+            if (_pageLocator.TryGetReadOnlyPage(pageNumber, out Page result))
+                return *(T*)result.Pointer;
+
+            return GetPageHeaderInternal<T>(pageNumber);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public Page GetPageWithoutCache(long pageNumber)
         {
             if (IsValid == false)
@@ -546,6 +558,31 @@ namespace Voron.Impl
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private T GetPageHeaderInternal<T>(long pageNumber) where T : unmanaged
+        {
+            switch (_getPageMethod)
+            {
+                case GetPageMethod.WriteScratchFirst:
+                    if (_scratchPagesInUse.TryGetValue(pageNumber, out var pageInUse))
+                        return *(T*)pageInUse.ReadWritableRawPagePointer(ref PagerTransactionState);
+
+                    return GetPageHeaderFromDataFile<T>(pageNumber);
+
+                case GetPageMethod.ReadScratchFirst:
+                    if (_scratchPagesForReads.TryGetValue(pageNumber, out var readPage))
+                        return *(T*)readPage.ReadRawPagePointer(ref PagerTransactionState);
+
+                    return GetPageHeaderFromDataFile<T>(pageNumber);
+
+                case GetPageMethod.DataFile:
+                    return GetPageHeaderFromDataFile<T>(pageNumber);
+
+                default:
+                    throw new ArgumentOutOfRangeException(_getPageMethod.ToString());
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private Page PageInternalFromWriteScratchTable(long pageNumber)
         {
             if (_scratchPagesInUse.TryGetValue(pageNumber, out var value))
@@ -570,9 +607,10 @@ namespace Voron.Impl
             return page;
         }
 
-        public T GetPageHeaderForDebug<T>(long pageNumber) where T : unmanaged
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private T GetPageHeaderFromDataFile<T>(long pageNumber) where T : unmanaged
         {
-            return *(T*)GetPage(pageNumber).Pointer;
+            return *(T*)DataPager.AcquireRawPagePointer(DataPagerState, ref PagerTransactionState, pageNumber);
         }
 
         public void TryReleasePage(long pageNumber)
