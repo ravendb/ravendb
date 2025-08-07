@@ -977,7 +977,7 @@ namespace Sparrow.Json
                 
                 // PERF: Check if flush completed synchronously to avoid async state machine
                 var flushTask = writer.FlushAsync(token);
-                if (!flushTask.IsCompleted)
+                if (flushTask.IsCompletedSuccessfully == false)
                     await flushTask.ConfigureAwait(false);
             }
         }

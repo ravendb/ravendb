@@ -12,13 +12,16 @@ namespace Sparrow.Json
         private readonly CancellationToken _cancellationToken;
         
         // PERF: Cache the MemoryStream reference to avoid repeated casting
-        private readonly MemoryStream _memoryStream;
+        private readonly MemoryStream _innerStream;
 
         public AsyncBlittableJsonTextWriter(JsonOperationContext context, Stream stream, CancellationToken cancellationToken = default) : base(context, RecyclableMemoryStreamFactory.GetRecyclableStream())
         {
             _outputStream = stream ?? throw new ArgumentNullException(nameof(stream));
             _cancellationToken = cancellationToken;
-            _memoryStream = (MemoryStream)_stream; // Cache the cast since we know it's always MemoryStream
+            _innerStream = _stream as MemoryStream; // Cache the cast since we know it's always MemoryStream
+            
+            if (_innerStream == null)
+                throw new ArgumentException($"Expected stream to be MemoryStream, but got {(_stream?.GetType() == null ? "null" : _stream.ToString())}.");
         }
 
         public async ValueTask WriteStreamAsync(Stream stream, CancellationToken token = default)
@@ -39,7 +42,7 @@ namespace Sparrow.Json
         public ValueTask<int> MaybeFlushAsync(CancellationToken token = default)
         {
             // PERF: Use cached MemoryStream reference
-            if (_memoryStream.Length * 2 <= _memoryStream.Capacity)
+            if (_innerStream.Length * 2 <= _innerStream.Capacity)
                 return new ValueTask<int>(0);
 
             FlushInternal(); // this is OK, because inner stream is a MemoryStream
@@ -50,7 +53,7 @@ namespace Sparrow.Json
         {
             // PERF: Use cached MemoryStream reference
             FlushInternal();
-            _memoryStream.TryGetBuffer(out var bytes);
+            _innerStream.TryGetBuffer(out var bytes);
             var bytesCount = bytes.Count;
             if (bytesCount == 0)
                 return new ValueTask<int>(0);
@@ -61,12 +64,12 @@ namespace Sparrow.Json
                 // PERF: Fast synchronous path - avoid async state machine overhead
                 // This happens when _outputStream is MemoryStream, FileStream with sync completion, etc.
                 writeTask.GetAwaiter().GetResult();
-                _memoryStream.SetLength(0);
+                _innerStream.SetLength(0);
                 return new ValueTask<int>(bytesCount);
             }
             
             // Slow asynchronous path for network streams, slow disk I/O, etc.
-            return FlushAsyncSlow(writeTask, _memoryStream, bytesCount);
+            return FlushAsyncSlow(writeTask, _innerStream, bytesCount);
         }
         
         private static async ValueTask<int> FlushAsyncSlow(Task writeTask, MemoryStream innerStream, int bytesCount)
@@ -82,10 +85,10 @@ namespace Sparrow.Json
 
             // PERF: Check if flush completed synchronously to avoid async state machine
             var flushTask = FlushAsync();
-            if (flushTask.IsCompleted)
+            if (flushTask.IsCompletedSuccessfully)
             {
                 // Fast synchronous path
-                var bytesWritten = flushTask.GetAwaiter().GetResult();
+                var bytesWritten = flushTask.Result;
                 if (bytesWritten > 0)
                 {
                     var outputFlushTask = _outputStream.FlushAsync();

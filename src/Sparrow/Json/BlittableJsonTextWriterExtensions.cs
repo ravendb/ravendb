@@ -83,7 +83,7 @@ namespace Sparrow.Json
                 
                 // PERF: Check if WriteStreamAsync completed synchronously to avoid async state machine
                 var writeTask = writer.WriteStreamAsync(item);
-                if (!writeTask.IsCompleted)
+                if (writeTask.IsCompletedSuccessfully == false)
                     await writeTask.ConfigureAwait(false);
             }
 
@@ -189,7 +189,7 @@ namespace Sparrow.Json
                 
                 // PERF: Check if flush completed synchronously to avoid async state machine
                 var flushTask = writer.MaybeFlushAsync();
-                if (!flushTask.IsCompleted)
+                if (flushTask.IsCompletedSuccessfully == false)
                     await flushTask.ConfigureAwait(false);
             }
             writer.WriteEndArray();
@@ -212,7 +212,7 @@ namespace Sparrow.Json
                 
                 // PERF: Check if flush completed synchronously to avoid async state machine
                 var flushTask = writer.MaybeFlushAsync();
-                if (!flushTask.IsCompleted)
+                if (flushTask.IsCompletedSuccessfully == false)
                     await flushTask.ConfigureAwait(false);
             }
             writer.WriteEndArray();
