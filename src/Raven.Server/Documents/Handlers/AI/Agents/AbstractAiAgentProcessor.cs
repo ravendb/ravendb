@@ -227,6 +227,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         private const int DefaultMaxTokensBeforeSummarization = 32 * 1024;
         private const int DefaultMaxTokensAfterSummarization = 1024;
 
+        protected virtual ChatCompletionClient CreateClient(AiConnectionString connection) => ChatCompletionClient.CreateChatCompletionClient(ContextPool, connection);
+
         public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration,
             ConversationDocument document, CancellationToken token)
         {
@@ -240,7 +242,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             AiResponse aiResponse;
             AiUsage aiUsage;
-            using var client = ChatCompletionClient.CreateChatCompletionClient(ContextPool, conStr);
+            using var client = CreateClient(conStr);
             var count = configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
             
             while (true)
