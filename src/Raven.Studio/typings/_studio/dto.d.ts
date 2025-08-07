@@ -340,6 +340,7 @@ interface queryDto {
 
 interface storedQueryDto extends queryDto {
     hash: number;
+    skipRunOnInit?: boolean;
 }
 
 interface replicationConflictListItemDto {
