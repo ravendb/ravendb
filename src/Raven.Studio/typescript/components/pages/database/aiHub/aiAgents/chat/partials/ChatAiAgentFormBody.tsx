@@ -91,6 +91,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                             setIsWaitingForActionToolSubmit={(value: boolean) =>
                                 dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(value))
                             }
+                            parametersFromUser={document.data?.Parameters}
                         />
                     )}
                     {isRawData && document.data && (

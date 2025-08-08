@@ -183,6 +183,7 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
                             setIsWaitingForActionToolSubmit={(value: boolean) =>
                                 dispatch(editAiAgentActions.isWaitingForActionToolSubmitSet(value))
                             }
+                            parametersFromUser={testDocument?.Parameters}
                         />
                     )}
                     {isRawData && testDocument && (

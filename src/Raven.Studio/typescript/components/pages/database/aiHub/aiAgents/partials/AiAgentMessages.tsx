@@ -19,6 +19,10 @@ import Badge from "react-bootstrap/Badge";
 import { aiAgentsUtils } from "../utils/aiAgentsUtils";
 import useRqlLanguageService from "components/hooks/useRqlLanguageService";
 import genUtils from "common/generalUtils";
+import queryCriteria from "models/database/query/queryCriteria";
+import savedQueriesStorage from "common/storage/savedQueriesStorage";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
 type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
 type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
@@ -29,6 +33,7 @@ interface AiAgentMessagesProps {
     toolActions: ToolAction[];
     handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
     setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
+    parametersFromUser?: Record<string, string>;
 }
 
 export default function AiAgentMessages({
@@ -37,6 +42,7 @@ export default function AiAgentMessages({
     toolActions,
     handleSaveParameters,
     setIsWaitingForActionToolSubmit,
+    parametersFromUser,
 }: AiAgentMessagesProps) {
     return (
         <div className="w-100 vstack gap-2 ai-agent-messages pb-1">
@@ -49,6 +55,7 @@ export default function AiAgentMessages({
                     toolActions={toolActions}
                     handleSaveParameters={handleSaveParameters}
                     setIsWaitingForActionToolSubmit={setIsWaitingForActionToolSubmit}
+                    parametersFromUser={parametersFromUser}
                 />
             ))}
         </div>
@@ -62,6 +69,7 @@ interface AiAgentMessageProps {
     toolActions: ToolAction[];
     handleSaveParameters: (toolCallParameters: AiAgentToolCall[]) => void;
     setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
+    parametersFromUser?: Record<string, string>;
 }
 
 function AiAgentMessage({
@@ -71,6 +79,7 @@ function AiAgentMessage({
     toolActions,
     handleSaveParameters,
     setIsWaitingForActionToolSubmit,
+    parametersFromUser,
 }: AiAgentMessageProps) {
     const toolName = allMessages
         .find((x) => x.toolCalls?.some((y) => y.id === message.toolCallId))
@@ -93,6 +102,7 @@ function AiAgentMessage({
                     toolActions={toolActions}
                     handleSaveParameters={handleSaveParameters}
                     setIsWaitingForActionToolSubmit={setIsWaitingForActionToolSubmit}
+                    parametersFromUser={parametersFromUser}
                 />
             )}
         </div>
@@ -232,6 +242,7 @@ interface AgentMessageProps {
     toolActions: ToolAction[];
     handleSaveParameters?: (parameters: AiAgentToolCall[]) => void;
     setIsWaitingForActionToolSubmit: (isWaiting: boolean) => void;
+    parametersFromUser?: Record<string, string>;
 }
 
 function AgentMessage({
@@ -241,6 +252,7 @@ function AgentMessage({
     toolActions,
     handleSaveParameters,
     setIsWaitingForActionToolSubmit,
+    parametersFromUser,
 }: AgentMessageProps) {
     const aceRef = useRef<ReactAce>(null);
 
@@ -348,6 +360,7 @@ function AgentMessage({
                                     toolCall={toolCall}
                                     toolQueries={toolQueries}
                                     toolActions={toolActions}
+                                    parametersFromUser={parametersFromUser}
                                 />
                             ))}
                         </div>
@@ -405,9 +418,10 @@ interface ToolCallProps {
     toolCall: AiAgentToolCall;
     toolQueries: ToolQuery[];
     toolActions: ToolAction[];
+    parametersFromUser?: Record<string, string>;
 }
 
-function ToolCall({ toolCall, toolQueries, toolActions }: ToolCallProps) {
+function ToolCall({ toolCall, toolQueries, toolActions, parametersFromUser }: ToolCallProps) {
     const id = useUniqueId("tool-call");
 
     const toolQuery = toolQueries?.find((x) => x.Name === toolCall.name);
@@ -431,7 +445,11 @@ function ToolCall({ toolCall, toolQueries, toolActions }: ToolCallProps) {
                 </Accordion.Header>
                 <Accordion.Collapse eventKey={id} mountOnEnter unmountOnExit>
                     <Accordion.Body className="panel-bg-1 rounded-2">
-                        <ToolCallBody tool={toolQuery ?? toolAction} toolCall={toolCall} />
+                        <ToolCallBody
+                            tool={toolQuery ?? toolAction}
+                            toolCall={toolCall}
+                            parametersFromUser={parametersFromUser}
+                        />
                     </Accordion.Body>
                 </Accordion.Collapse>
             </Accordion.Item>
@@ -442,13 +460,12 @@ function ToolCall({ toolCall, toolQueries, toolActions }: ToolCallProps) {
 interface ToolCallBodyProps {
     tool: ToolQuery | ToolAction;
     toolCall: AiAgentToolCall;
+    parametersFromUser?: Record<string, string>;
 }
 
-function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
+function ToolCallBody({ tool, toolCall, parametersFromUser }: ToolCallBodyProps) {
     const prettifiedArguments = aiAgentsUtils.getPrettifiedContent(toolCall?.arguments);
     const argumentsMode = getAceEditorMode(prettifiedArguments);
-
-    const rqlLanguageService = useRqlLanguageService();
 
     const id = useUniqueId("tool-call-details");
 
@@ -477,16 +494,11 @@ function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
                                     </div>
                                 )}
                                 {"Query" in tool && tool.Query && (
-                                    <div>
-                                        <small className="text-muted">Query</small>
-                                        <AceEditor
-                                            value={tool.Query}
-                                            readOnly
-                                            mode="rql"
-                                            height="100px"
-                                            languageService={rqlLanguageService}
-                                        />
-                                    </div>
+                                    <ToolDetailsQuery
+                                        queryText={tool.Query}
+                                        parametersFromUser={parametersFromUser}
+                                        parametersFromModel={toolCall.arguments}
+                                    />
                                 )}
                             </Accordion.Body>
                         </Accordion.Collapse>
@@ -507,7 +519,115 @@ function ToolCallBody({ tool, toolCall }: ToolCallBodyProps) {
     );
 }
 
-function getAgentAceEditorHeight(content: string): `${number}px` {
+interface Argument {
+    key: string;
+    value: any;
+}
+
+function ToolDetailsQuery({
+    queryText,
+    parametersFromUser,
+    parametersFromModel,
+}: {
+    queryText: string;
+    parametersFromUser?: Record<string, string>;
+    parametersFromModel?: string;
+}) {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const rqlLanguageService = useRqlLanguageService();
+
+    const getLlmParametersForQuery = (matches: string[]): Argument[] => {
+        try {
+            const parametersObject = JSON.parse(parametersFromModel);
+            return matches
+                .map((x) => ({ key: x, value: parametersObject[x] }))
+                .filter((x) => x.value && !Object.keys(parametersFromUser).includes(x.key));
+        } catch {
+            return [];
+        }
+    };
+
+    const getAgentParametersForQuery = (matches: string[]): Argument[] => {
+        return matches.map((x) => ({ key: x, value: parametersFromUser?.[x] })).filter((x) => x.value);
+    };
+
+    const getArgumentFormattedValue = (value: string): string => {
+        if (typeof value === "number") {
+            return value;
+        }
+        return JSON.stringify(value);
+    };
+
+    const getQueryWithParameters = (): string => {
+        const regexToFind$: RegExp = /\$\w+/g;
+        const matches = queryText.match(regexToFind$).map((x) => x.replace("$", "")) || [];
+
+        const llmParametersForQuery = getLlmParametersForQuery(matches);
+        const agentParametersForQuery = getAgentParametersForQuery(matches);
+
+        let resultQuery = "";
+
+        if (llmParametersForQuery.length > 0) {
+            resultQuery += `// LLM parameters\n`;
+            resultQuery += llmParametersForQuery
+                .map((x) => `$${x.key} = ${getArgumentFormattedValue(x.value)}`)
+                .join("\n");
+            resultQuery += "\n\n";
+        }
+
+        if (agentParametersForQuery.length > 0) {
+            resultQuery += `// Agent parameters\n`;
+            resultQuery += agentParametersForQuery
+                .map((x) => `$${x.key} = ${getArgumentFormattedValue(x.value)}`)
+                .join("\n");
+            resultQuery += "\n\n";
+        }
+
+        resultQuery += queryText;
+
+        return resultQuery;
+    };
+
+    const queryWithParameters = getQueryWithParameters();
+
+    const linkToQuery = () => {
+        const query = queryCriteria.empty();
+
+        query.queryText(queryWithParameters);
+        query.recentQuery(true);
+        const queryDto = query.toStorageDto();
+        savedQueriesStorage.saveAndNavigate(databaseName, queryDto, {
+            newWindow: true,
+        });
+    };
+
+    return (
+        <div>
+            <div className="d-flex justify-content-between mb-1 align-items-end">
+                <small className="text-muted">Query</small>
+                <Button
+                    variant="info"
+                    className="rounded-pill"
+                    onClick={linkToQuery}
+                    title="Click to test this query in the Studio's Query View"
+                    size="sm"
+                >
+                    <Icon icon="rocket" />
+                    Test query
+                </Button>
+            </div>
+            <AceEditor
+                value={queryWithParameters}
+                readOnly
+                mode="rql"
+                height={getAgentAceEditorHeight(queryWithParameters, 200)}
+                languageService={rqlLanguageService}
+            />
+        </div>
+    );
+}
+
+function getAgentAceEditorHeight(content: string, maxHeightInPx = 320): `${number}px` {
     if (!content) {
         return "100px";
     }
@@ -522,7 +642,7 @@ function getAgentAceEditorHeight(content: string): `${number}px` {
         return `${effectiveLineCount * lineHeight + halfLineHeight}px`;
     }
 
-    return "320px";
+    return `${maxHeightInPx}px`;
 }
 
 function getAceEditorMode(content: string): "json" | "text" {
