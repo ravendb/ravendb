@@ -14,7 +14,7 @@ public struct DeduplicationMatch<TInner> : IQueryMatch
     private TInner _inner;
     private GrowableHashSet<long> _ids;
     
-    public Duplicates DuplicatesStatus => Duplicates.NotPossible;
+    public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
     
     public DeduplicationMatch(TInner inner)
     {

@@ -46,7 +46,7 @@ public unsafe partial struct SortingMatch<TInner> : IQueryMatch
     public long TotalResults;
     public SkipSortingResult AttemptToSkipSorting() => throw new NotSupportedException();
     
-    public Duplicates DuplicatesStatus => Duplicates.NotPossible;
+    public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
     
     public SortingMatch(IndexSearcher searcher, in TInner inner, OrderMetadata orderMetadata, in CancellationToken cancellationToken, int take = -1)
     {

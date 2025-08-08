@@ -43,7 +43,7 @@ namespace Corax.Querying.Matches
 
         public long Count => _inner.Count;
         
-        public Duplicates DuplicatesStatus => _inner.DuplicatesStatus;
+        public DuplicatesOccurrence DuplicatesOccurrenceStatus => _inner.DuplicatesOccurrenceStatus;
 
         public SkipSortingResult AttemptToSkipSorting() => _inner.AttemptToSkipSorting();
 

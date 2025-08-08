@@ -35,7 +35,7 @@ namespace Corax.Querying.Matches
         public bool IsBoosting => _scoreFunc != null;
         public long Count => _totalResults;
         
-        public Duplicates DuplicatesStatus => Duplicates.NotPossible;
+        public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
         
 #if DEBUG
         public string Term;

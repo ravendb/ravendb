@@ -22,7 +22,7 @@ namespace Corax.Querying.Matches.SortingMatches
 
         public long TotalResults => _functionTable.TotalResultsFunc(ref this);
         
-        public Duplicates DuplicatesStatus => Duplicates.NotPossible;
+        public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
         
         public long Count => throw new NotSupportedException();
         public SkipSortingResult AttemptToSkipSorting() => _inner.AttemptToSkipSorting();

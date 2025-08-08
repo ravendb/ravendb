@@ -369,9 +369,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
         // Even if there are no distinct statements we have to be sure that we are not including
         // documents that we have already included during this request. 
-        protected struct IdentityTracker<TDistinct, THasProjection>
-            where THasProjection : struct, IHasProjection
-            where TDistinct : struct, IHasDistinct
+        protected struct IdentityTracker<TDistinct> where TDistinct : struct, IHasDistinct
         {
             private Index _index;
             private IndexQueryServerSide _query;
@@ -399,9 +397,8 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 QueryStart = _query.Start;
                 _isMap = index.Type.IsMap();
-                
-                _canPerformPaginationBasedOnEntriesIds = searcher.EntryIdPaginationSupportStatus == EntryIdPaginationSupportStatus.Supported
-                                                        && query.Metadata.OrderBy is null;
+
+                _canPerformPaginationBasedOnEntriesIds = searcher.EntryIdPaginationSupportStatus == EntryIdPaginationSupportStatus.Supported;
 
                 if (_canPerformPaginationBasedOnEntriesIds == false)
                     _alreadySeenDocumentKeysInPreviousPage = new(UnmanagedSpanComparer.Instance);
@@ -429,8 +426,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
 
                 if (hasProjection.IsProjection == false)
                 {
-                    var isSorting = _query.Metadata.OrderBy is not null;
-                    if (isSorting || _canPerformPaginationBasedOnEntriesIds == false)
+                    if (_canPerformPaginationBasedOnEntriesIds == false)
                     {
                         Sort.Run(distinctIds);
                         while (_documentIdReader.GetAllTermsFromSet(distinctIds, out var termsSet) is var read and > 0)
@@ -583,7 +579,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             // distinct.
 
 
-            var identityTracker = new IdentityTracker<TDistinct, THasProjection>();
+            var identityTracker = new IdentityTracker<TDistinct>();
             identityTracker.Initialize(_index, query, IndexSearcher, _documentIdReader, _fieldMappings, retriever);
 
             long pageSize = query.PageSize;
@@ -853,7 +849,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
             }
         }
 
-        protected virtual QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct, THasProjection> tracker, Document document,
+        protected virtual QueryResult CreateQueryResult<TDistinct, THasProjection, THighlighting>(ref IdentityTracker<TDistinct> tracker, Document document,
             IndexQueryServerSide query, DocumentsOperationContext documentsContext, ref EntryTermsReader entryReader, FieldsToFetch highlightingFields, OrderMetadata[] orderByFields, ref THighlighting highlightings,
             Reference<long> skippedResults,
             ref THasProjection hasProjections, ref bool markedAsSkipped)
@@ -1152,7 +1148,7 @@ namespace Raven.Server.Documents.Indexes.Persistence.Corax
                 mltQuery = IndexSearcher.And(mltQuery, moreLikeThisQuery.FilterQuery);
             }
 
-            if (mltQuery.DuplicatesStatus == Duplicates.Possible)
+            if (mltQuery.DuplicatesOccurrenceStatus == DuplicatesOccurrence.Possible)
                 mltQuery = IndexSearcher.DeduplicationMatch(mltQuery);
             
             var ravenIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);

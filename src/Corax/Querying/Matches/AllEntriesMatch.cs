@@ -36,7 +36,7 @@ namespace Corax.Querying.Matches
         public long Count => _count;
         public QueryCountConfidence Confidence => QueryCountConfidence.High;
         
-        public Duplicates DuplicatesStatus => Duplicates.NotPossible;
+        public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
 
         public int Fill(Span<long> matches)
         {

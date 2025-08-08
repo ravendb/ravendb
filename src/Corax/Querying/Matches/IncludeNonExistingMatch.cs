@@ -25,7 +25,7 @@ public struct IncludeNonExistingMatch<TInner> : IQueryMatch
             _postingListIterator = searcher.GetPostingList(postingListId).Iterate();
     }
     
-    public Duplicates DuplicatesStatus => Duplicates.Possible;
+    public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.Possible;
     
     private TInner _inner;
     

@@ -24,7 +24,7 @@ namespace Corax.Querying.Matches
         public bool IsBoosting => _inner.IsBoosting;
         public long Count => _functionTable.CountFunc(ref this);
         
-        public Duplicates DuplicatesStatus => Duplicates.Possible;
+        public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.Possible;
         
         public QueryCountConfidence Confidence => _inner.Confidence;
 

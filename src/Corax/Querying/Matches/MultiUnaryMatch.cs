@@ -433,7 +433,7 @@ public struct MultiUnaryMatch<TInner> : IQueryMatch
 
     public long Count => _count;
     
-    public Duplicates DuplicatesStatus => Duplicates.Possible;
+    public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.Possible;
     
     public SkipSortingResult AttemptToSkipSorting()
     {

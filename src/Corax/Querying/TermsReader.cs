@@ -62,7 +62,10 @@ public unsafe struct TermsReader : IDisposable
     {
         const int pageSizeShift = 13;
         Debug.Assert(1 << pageSizeShift == (long)Voron.Global.Constants.Storage.PageSize);
-        var maxToProcess = Math.Min(ids.Length, 1024);
+        
+        // Process a maximum of 1024 IDs per iteration to limit memory allocations within the terms reader.
+        // Testing demonstrated that larger buffer sizes do not provide additional benefits.
+        var maxToProcess = Math.Min(ids.Length, 1024); 
         ids = ids[..maxToProcess];
 
         if (ids.IsEmpty)

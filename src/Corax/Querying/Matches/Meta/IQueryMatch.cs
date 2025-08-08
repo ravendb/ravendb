@@ -70,7 +70,7 @@ public interface IQueryMatch
 
     string DebugView => Inspect().ToString();
     
-    Duplicates DuplicatesStatus { get; }
+    DuplicatesOccurrence DuplicatesOccurrenceStatus { get; }
 }
 
 public enum SkipSortingResult
@@ -80,7 +80,7 @@ public enum SkipSortingResult
     SortingIsRequired
 }
 
-public enum Duplicates
+public enum DuplicatesOccurrence
 {
     Possible,
     NotPossible

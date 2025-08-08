@@ -315,7 +315,7 @@ public static class CoraxQueryBuilder
 
             // The parser already throws parse exception if there is a syntax error.
             // We now return null in the case of a term query that has been fully analyzed, so we need to return a valid query.
-            if (builderParameters.DeduplicationDisabled || coraxQuery.DuplicatesStatus == Duplicates.NotPossible)
+            if (builderParameters.DeduplicationDisabled || coraxQuery.DuplicatesOccurrenceStatus == DuplicatesOccurrence.NotPossible)
                 return coraxQuery;
 
             return DeduplicationMatch(builderParameters, coraxQuery);

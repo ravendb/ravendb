@@ -34,7 +34,7 @@ where TInner : IQueryMatch
         return SkipSortingResult.WillSkipSorting;
     }
     
-    public Duplicates DuplicatesStatus => Duplicates.NotPossible;
+    public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
     
     public QueryCountConfidence Confidence { get; }
     public bool IsBoosting { get; }
