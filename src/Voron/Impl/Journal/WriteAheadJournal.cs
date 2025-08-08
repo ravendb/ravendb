@@ -2193,11 +2193,13 @@ namespace Voron.Impl.Journal
 
             try
             {
-                var compressionBufferSize = _numberOfUsedCompressionBufferPagesSinceZeroing * Constants.Storage.PageSize;
-                _compressionPager.EnsureMapped(tx, 0, _numberOfUsedCompressionBufferPagesSinceZeroing);
+                var numberOfPagesToZero = Math.Min(_numberOfUsedCompressionBufferPagesSinceZeroing, _compressionPager.NumberOfAllocatedPages);
+                
+                var numberOfBytesToZero = numberOfPagesToZero * Constants.Storage.PageSize;
+                _compressionPager.EnsureMapped(tx, 0, checked((int)numberOfPagesToZero));
                 var pagePointer = _compressionPager.AcquirePagePointer(tx, 0);
 
-                Sodium.sodium_memzero(pagePointer, (UIntPtr)compressionBufferSize);
+                Sodium.sodium_memzero(pagePointer, (UIntPtr)numberOfBytesToZero);
                 _numberOfUsedCompressionBufferPagesSinceZeroing = 0;
             }
             finally
