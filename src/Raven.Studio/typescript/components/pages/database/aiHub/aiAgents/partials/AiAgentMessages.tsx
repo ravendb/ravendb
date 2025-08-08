@@ -161,7 +161,7 @@ function ToolMessage({ message, type }: ToolMessageProps) {
             ) : (
                 <AceEditor
                     aceRef={aceRef}
-                    value={message.content}
+                    defaultValue={message.content}
                     readOnly
                     mode={contentMode}
                     height="150px"
@@ -336,7 +336,7 @@ function AgentMessage({
                         <div className="mt-2">
                             <AceEditor
                                 aceRef={aceRef}
-                                value={agentMessage.content}
+                                defaultValue={agentMessage.content}
                                 readOnly
                                 mode={contentMode}
                                 actions={[
@@ -490,7 +490,12 @@ function ToolCallBody({ tool, toolCall, parametersFromUser }: ToolCallBodyProps)
                                 {tool.ParametersSchema && (
                                     <div>
                                         <small className="text-muted">Parameters schema</small>
-                                        <AceEditor value={tool.ParametersSchema} readOnly mode="json" height="100px" />
+                                        <AceEditor
+                                            defaultValue={tool.ParametersSchema}
+                                            readOnly
+                                            mode="json"
+                                            height="100px"
+                                        />
                                     </div>
                                 )}
                                 {"Query" in tool && tool.Query && (
@@ -508,7 +513,7 @@ function ToolCallBody({ tool, toolCall, parametersFromUser }: ToolCallBodyProps)
             <div>
                 <small className="text-muted">Parameters filled by LLM</small>
                 <AceEditor
-                    value={prettifiedArguments}
+                    defaultValue={prettifiedArguments}
                     readOnly
                     mode={argumentsMode}
                     height={getAgentAceEditorHeight(prettifiedArguments)}
@@ -617,7 +622,7 @@ function ToolDetailsQuery({
                 </Button>
             </div>
             <AceEditor
-                value={queryWithParameters}
+                defaultValue={queryWithParameters}
                 readOnly
                 mode="rql"
                 height={getAgentAceEditorHeight(queryWithParameters, 200)}
