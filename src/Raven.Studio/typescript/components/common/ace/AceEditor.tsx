@@ -38,6 +38,7 @@ function AceEditor(props: AceEditorProps) {
         setIsValid,
         actions = [],
         onLoad,
+        height = "200px",
         ...rest
     } = props;
 
@@ -118,7 +119,7 @@ function AceEditor(props: AceEditorProps) {
     return (
         <AceEditorContext.Provider value={aceRef}>
             <div className={classNames("ace-editor", { "has-error": errorMessage })}>
-                <div className="react-ace-wrapper">
+                <div className="react-ace-wrapper" style={{ height }}>
                     <ReactAce
                         ref={aceRef}
                         mode="csharp"
@@ -130,7 +131,7 @@ function AceEditor(props: AceEditorProps) {
                         showGutter={true}
                         highlightActiveLine={true}
                         width="100%"
-                        height="200px"
+                        height="100%"
                         setOptions={overriddenSetOptions}
                         onValidate={onValidate}
                         commands={commands}
