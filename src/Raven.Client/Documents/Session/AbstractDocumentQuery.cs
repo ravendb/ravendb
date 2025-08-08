@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Session
 
         protected Stack<bool> FilterModeStack = new();
 
-        protected Parameters QueryParameters = new Parameters();
+        protected internal Parameters QueryParameters = new Parameters();
 
         protected bool IsIntersect;
 

@@ -3,7 +3,8 @@ using System.Net.Http;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI;
@@ -14,10 +15,7 @@ public interface IChatCompletionClient : IDisposable
         @"(?<value>\d+(?:\.\d+)?)(?<unit>ns|us|µs|ms|s|m|h)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant
     );
-
-    public static readonly DocumentConventions DefaultConventions = new() { UseHttpCompression = false };
-
-    Task<(string Result, AiUsage Usage)> CompleteAsync(string prompt, string context, CancellationToken token);
+    Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, CancellationToken token);
     Task<BlittableJsonReaderObject> GetResponseContentAsync(JsonOperationContext context, HttpResponseMessage response, CancellationToken token);
 }
 

@@ -51,6 +51,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 ConnectorType: "Ollama",
                 OllamaSettings: {
                     Uri: uri,
+                    Think: formValues.ollamaSettings.think,
                 },
             };
 
@@ -61,7 +62,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                 return [];
             }
         },
-        [formValues.ollamaSettings.uri],
+        [formValues.ollamaSettings.uri, formValues.ollamaSettings.think],
         300
     );
 

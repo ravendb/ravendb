@@ -9,7 +9,6 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.Indexes;
@@ -303,6 +302,7 @@ namespace Raven.Server.Web.Studio
                 string apiKey = null;
                 string organization = null;
                 string project = null;
+                bool? think = null;
                 switch (request.ConnectorType)
                 {
                     case AiConnectorType.OpenAi:
@@ -317,13 +317,14 @@ namespace Raven.Server.Web.Studio
                         break;
                     case AiConnectorType.Ollama:
                         uri = request.OllamaSettings.Uri;
+                        think = request.OllamaSettings.Think;
                         break;
                     default:
                         throw new NotSupportedException($"Unsupported connector type: {request.ConnectorType}");
                 }
 
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
-                using (var chat = new GenericChatCompletionClientForTesting(uri, model: null, apiKey: apiKey, organizationId: organization, projectId: project, ServerStore.ContextPool))
+                using (var chat = new ChatCompletionClient(ServerStore.ContextPool, uri, apiKey, model: null, organization, project, think))
                 {
                     await chat.ProxyModelsAsync(HttpContext.Response, cts.Token);
                 }
@@ -346,11 +347,24 @@ namespace Raven.Server.Web.Studio
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
+                var type = GetEnumQueryString<SchemaType>("type", required: false);
                 var sampleObj = await context.ReadForMemoryAsync(RequestBodyStream(), "convert-to-json-schema");
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var schema = AbstractChatCompletionClient<JsonOperationContext>.GetSchemaFor(sampleObj.ToString());
+                    string schema;
+                    switch (type)
+                    {
+                        case SchemaType.Default:
+                        case SchemaType.StructureOutput:
+                            schema = ChatCompletionClient.GetSchemaForRequest(schema: null, sampleObj.ToString());
+                            break;
+                        case SchemaType.ToolParameters:
+                            schema = ChatCompletionClient.GetSchemaForTool(schema: null, sampleObj.ToString());
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException($"The type '{type}' is missing");
+                    }
 
                     writer.WriteStartObject();
                     writer.WritePropertyName("Result");
@@ -382,6 +396,13 @@ namespace Raven.Server.Web.Studio
             Database,
             Script,
             ElasticSearchIndex
+        }
+
+        public enum SchemaType
+        {
+            Default,
+            StructureOutput,
+            ToolParameters,
         }
     }
 }

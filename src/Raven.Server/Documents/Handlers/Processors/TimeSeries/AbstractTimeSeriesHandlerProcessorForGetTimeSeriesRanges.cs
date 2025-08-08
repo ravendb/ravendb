@@ -108,7 +108,9 @@ namespace Raven.Server.Documents.Handlers.Processors.TimeSeries
 
                     size += TimeSeriesHandlerProcessorForGetTimeSeries.WriteRange(writer, ranges[i], totalCount);
 
-                    await writer.MaybeFlushAsync(token);
+                    var maybeFlushAsync = writer.MaybeFlushAsync(token);
+                    if (maybeFlushAsync.IsCompletedSuccessfully == false)
+                        await maybeFlushAsync;
                 }
                 writer.WriteEndArray();
             }

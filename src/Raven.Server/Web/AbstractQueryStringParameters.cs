@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.Extensions.Primitives;
@@ -78,8 +80,8 @@ internal abstract class AbstractQueryStringParameters(HttpRequest httpRequest)
     protected static readonly ReadOnlyMemory<char> NumberOfReplicasToWaitForQueryStringName = "numberOfReplicasToWaitFor".AsMemory();
 
     protected static readonly ReadOnlyMemory<char> ThrowOnTimeoutInWaitForReplicasQueryStringName = "throwOnTimeoutInWaitForReplicas".AsMemory();
-
-    private Dictionary<string, List<string>> _tempStringValues;
+    
+    private Dictionary<string, List<ReadOnlyMemory<char>>> _tempStringValues;
 
     protected void Parse()
     {
@@ -93,13 +95,13 @@ internal abstract class AbstractQueryStringParameters(HttpRequest httpRequest)
 
     protected void AddForStringValues(string name, ReadOnlyMemory<char> value)
     {
-        _tempStringValues ??= new Dictionary<string, List<string>>();
+        _tempStringValues ??= new Dictionary<string, List<ReadOnlyMemory<char>>>();
 
         ref var item = ref CollectionsMarshal.GetValueRefOrAddDefault(_tempStringValues, name, out bool exists);
         if (exists == false)
-            item = new List<string>(1);
+            item = new (1);
 
-        item.Add(value.ToString());
+        item.Add(value);
     }
 
     protected bool AnyStringValues() => _tempStringValues is { Count: > 0 };
@@ -109,7 +111,15 @@ internal abstract class AbstractQueryStringParameters(HttpRequest httpRequest)
         if (_tempStringValues == null || _tempStringValues.TryGetValue(name, out var list) == false)
             return default;
 
-        return new StringValues(list.ToArray());
+        return new StringValues(list.Select(x => x.ToString()).ToArray());
+    }
+
+    protected List<ReadOnlyMemory<char>> RetrieveValues(string name)
+    {
+        if (_tempStringValues == null || _tempStringValues.TryGetValue(name, out var list) == false)
+            return null;
+        
+        return list;
     }
 
     protected abstract void OnFinalize();

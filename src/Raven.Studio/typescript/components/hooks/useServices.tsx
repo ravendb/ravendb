@@ -6,6 +6,7 @@ import TasksService from "../services/TasksService";
 import ManageServerService from "components/services/ManageServerService";
 import LicenseService from "components/services/LicenseService";
 import ResourcesService from "components/services/ResourcesService";
+import AiAgentService from "components/services/AiAgentService";
 
 export interface ServicesContextDto {
     indexesService: IndexesService;
@@ -14,6 +15,7 @@ export interface ServicesContextDto {
     manageServerService: ManageServerService;
     licenseService: LicenseService;
     resourcesService: ResourcesService;
+    aiAgentService: AiAgentService;
 }
 
 export let services = {
@@ -23,6 +25,7 @@ export let services = {
     manageServerService: new ManageServerService(),
     licenseService: new LicenseService(),
     resourcesService: new ResourcesService(),
+    aiAgentService: new AiAgentService(),
 };
 
 export function configureMockServices(overloads: typeof services) {

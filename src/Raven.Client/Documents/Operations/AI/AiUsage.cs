@@ -1,7 +1,7 @@
 ﻿using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
-namespace Raven.Server.Documents.AI;
+namespace Raven.Client.Documents.Operations.AI;
 
 public class AiUsage : IDynamicJsonValueConvertible
 {
@@ -20,10 +20,10 @@ public class AiUsage : IDynamicJsonValueConvertible
         CompletionTokens += completionTokens;
         TotalTokens += totalTokens;
 
-        if (json.TryGet("prompt_tokens_details", out BlittableJsonReaderObject promptDetails) &&
-            promptDetails.TryGet("cached_tokens", out int cachedTokens))
+        if (json.TryGet("prompt_tokens_details", out BlittableJsonReaderObject promptDetails))
         {
-            CachedTokens += cachedTokens;
+            if (promptDetails.TryGet("cached_tokens", out int cachedTokens))
+                CachedTokens += cachedTokens;
         }
     }
 
@@ -45,17 +45,18 @@ public class AiUsage : IDynamicJsonValueConvertible
         writer.WritePropertyName(nameof(PromptTokens));
         writer.WriteInteger(PromptTokens);
         writer.WriteComma();
-
+        
         writer.WritePropertyName(nameof(CompletionTokens));
         writer.WriteInteger(CompletionTokens);
         writer.WriteComma();
-
+        
         writer.WritePropertyName(nameof(TotalTokens));
         writer.WriteInteger(TotalTokens);
         writer.WriteComma();
-
+        
         writer.WritePropertyName(nameof(CachedTokens));
         writer.WriteInteger(CachedTokens);
         writer.WriteEndObject();
     }
+
 }

@@ -975,7 +975,11 @@ namespace Sparrow.Json
             await using (var writer = new AsyncBlittableJsonTextWriter(this, stream))
             {
                 writer.WriteObject(json);
-                await writer.FlushAsync(token).ConfigureAwait(false);
+                
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = writer.FlushAsync(token);
+                if (flushTask.IsCompletedSuccessfully == false)
+                    await flushTask.ConfigureAwait(false);
             }
         }
 

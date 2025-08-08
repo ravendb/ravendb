@@ -1,0 +1,39 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.sample-object-and-schema-tabs {
+    .nav-tabs {
+        border-bottom: none;
+        margin-bottom: sizes.$gutter-xs;
+        gap: sizes.$gutter-xxs;
+
+        .nav-link {
+            color: colors.$text-emphasis-var;
+            background-color: colors.$panel-bg-1-var;
+            display: flex;
+            border: 1px solid colors.$border-color-light-var;
+            border-radius: sizes.$border-radius;
+            transition: bs5variables.$transition-base;
+
+            &.active {
+                color: colors.$text-emphasis-var;
+                background-color: colors.$panel-header-bg-var !important;
+                border-color: colors.$border-color-light-var !important;
+                transition: bs5variables.$transition-base;
+            }
+
+            &:not(.active) {
+                border-color: colors.$secondary-var;
+                color: colors.$text-muted-var;
+                opacity: 0.75;
+
+                &:hover {
+                    filter: colors.$hover-filter-var;
+                    opacity: 1;
+                    transition: none;
+                }
+            }
+        }
+    }
+}

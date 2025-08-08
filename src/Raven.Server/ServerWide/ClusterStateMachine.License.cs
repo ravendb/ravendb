@@ -177,7 +177,9 @@ public sealed partial class ClusterStateMachine
             case nameof(AddGenAiCommand):
                 AssertGenAi(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
                 break;
-
+            case nameof(AddOrUpdateAiAgentCommand):
+                AssertAiAgent(databaseRecord, serverStore.LicenseManager.LicenseStatus, context);
+                break;
         }
     }
 
@@ -242,6 +244,7 @@ public sealed partial class ClusterStateMachine
             AssertSnowflakeEtl(databaseRecord, newLicenseLimits, context);
             AssertEmbeddingsGeneration(databaseRecord, newLicenseLimits, context);
             AssertGenAi(databaseRecord, newLicenseLimits, context);
+            AssertAiAgent(databaseRecord, newLicenseLimits, context);
         }
     }
 
@@ -1018,7 +1021,21 @@ public sealed partial class ClusterStateMachine
         throw new LicenseLimitException(LimitType.GenAi, "Your license doesn't support using the AI Generation feature.");
     }
 
-    private void AssertTimeSeriesConfigurationLicenseLimits(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    private void AssertAiAgent(DatabaseRecord databaseRecord, LicenseStatus licenseStatus, ClusterOperationContext context)
+    {
+        if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
+            return;
+        
+        if (licenseStatus.HasAiAgent)
+            return;
+
+        if (databaseRecord.AiAgents.Count == 0)
+            return;
+
+        throw new LicenseLimitException(LimitType.AiAgent, "Your license doesn't support using the AI Agent feature.");
+    }
+
+    private void AssertTimeSeriesConfigurationLicenseLimits(DatabaseRecord databaseRecord,  LicenseStatus licenseStatus, ClusterOperationContext context)
     {
         if (CanAssertLicenseLimits(context, minBuildVersion: MinBuildVersion60105) == false)
             return;

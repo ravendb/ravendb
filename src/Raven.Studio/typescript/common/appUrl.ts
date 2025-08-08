@@ -130,6 +130,10 @@ class appUrl {
 
         // AI Hub
         aiConnectionStrings: ko.pureComputed(() => appUrl.forAiConnectionStrings(appUrl.currentDatabase())),
+        aiAgents: ko.pureComputed(() => appUrl.forAiAgents(appUrl.currentDatabase())),
+        editAiAgent: (id: string) => ko.pureComputed(() => appUrl.forEditAiAgent(appUrl.currentDatabase(), id)),
+        editAiAgentUrl: ko.pureComputed(() => appUrl.forEditAiAgent(appUrl.currentDatabase())),
+        chatAiAgent: (id: string) => ko.pureComputed(() => appUrl.forChatAiAgent(appUrl.currentDatabase(), id)),
         aiTasks: ko.pureComputed(() => appUrl.forAiTasks(appUrl.currentDatabase())),
         aiTasksStats: ko.pureComputed(() => appUrl.forAiTasksStats(appUrl.currentDatabase())),
     };
@@ -768,6 +772,26 @@ class appUrl {
     static forAiConnectionStrings(db: database | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/ai/connectionStrings?" + databasePart;
+    }
+
+    static forAiAgents(db: database | string): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        return "#databases/ai/agents?" + databasePart;
+    }
+
+    static forEditAiAgent(db: database | string, id?: string, isClone?: boolean): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const idPart = id ? "&id=" + encodeURIComponent(id) : "";
+        const isClonePart = isClone ? "&isClone=true" : "";
+        return "#databases/ai/agents/edit?" + databasePart + idPart + isClonePart;
+    }
+
+    static forChatAiAgent(db: database | string, agentId: string, conversationId?: string, isHistory?: boolean): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const agentIdPart = "&agentId=" + encodeURIComponent(agentId);
+        const conversationIdPart = conversationId ? "&conversationId=" + encodeURIComponent(conversationId) : "";
+        const isHistoryPart = isHistory ? "&isHistory=true" : "";
+        return "#databases/ai/agents/chat?" + databasePart + agentIdPart + conversationIdPart + isHistoryPart;
     }
 
     static forAiTasks(db: database | string): string {

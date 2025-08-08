@@ -28,8 +28,8 @@ import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import classNames from "classnames";
 import Form from "react-bootstrap/Form";
-import { withNestedSubmit } from "components/utils/common";
 import ModelTypeField from "./aiFields/ModelTypeField";
+import { withNestedSubmit } from "components/utils/common";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -127,7 +127,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         }
                     />
                 </div>
-                <ModelTypeField />
+                <ModelTypeField initialModelType={initialConnection.modelType} />
                 <div className="mb-2">
                     <FormLabel>Connector</FormLabel>
                     <FormSelect

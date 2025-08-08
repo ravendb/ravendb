@@ -50,12 +50,22 @@ internal abstract class AbstractDatabaseOperationQueriesHandlerProcessor : Abstr
         Debug.Assert(ReferenceEquals(asyncOperationContext, QueryOperationContext.Documents), "asyncOperationContext == _queryOperationContext.Documents");
         Debug.Assert(ReferenceEquals(returnAsyncOperationContext, QueryOperationContext), "returnAsyncOperationContext == _queryOperationContext");
 
-        var op = GetOperation(query);
+        (QueryOperationFunction action, OperationType type) = GetOperation(query);
 
         if (RavenLogManager.Instance.IsAuditEnabled)
-            RequestHandler.LogAuditForDatabase("DELETE", $"Documents matching the query: {query}");
+        {
+            var logAction = type switch
+            {
+                OperationType.UpdateByQuery => "UPDATE",
+                OperationType.DeleteByQuery => "DELETE",
+                OperationType.DeleteByCollection => "DELETE",
+                _ => type.ToString().ToUpper()
+            };
 
-        ExecuteQueryOperation(query, operationId, options, op.Action,  QueryOperationContext, op.Type);
+            RequestHandler.LogAuditForDatabase(logAction, $"Documents matching the query: {query}");
+        }
+
+        ExecuteQueryOperation(query, operationId, options, action, QueryOperationContext, type);
     }
 
     private void ExecuteQueryOperation(IndexQueryServerSide query, long operationId, QueryOperationOptions options,
@@ -63,7 +73,7 @@ internal abstract class AbstractDatabaseOperationQueriesHandlerProcessor : Abstr
         IDisposable returnContextToPool,
         OperationType operationType)
     {
-        var token =  RequestHandler.CreateTimeLimitedBackgroundOperationTokenForQueryOperation();
+        var token = RequestHandler.CreateTimeLimitedBackgroundOperationTokenForQueryOperation();
 
         var description = GetOperationDescription(query);
 

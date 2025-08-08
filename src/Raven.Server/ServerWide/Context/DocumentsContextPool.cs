@@ -12,7 +12,7 @@ using Voron;
 
 namespace Raven.Server.ServerWide.Context
 {
-    public sealed class DocumentsContextPool : JsonContextPoolBase<DocumentsOperationContext>, IDocumentsContextPool
+    public sealed class DocumentsContextPool : JsonContextPoolBase<DocumentsOperationContext>, ITransactionContextPool<DocumentsOperationContext>
     {
         private DocumentDatabase _database;
 

@@ -41,7 +41,15 @@ export const editGenAiTaskSchema = yup.object({
             function (_, { parent }) {
                 return !!parent.sampleObject || !!parent.jsonSchema;
             }
+        )
+        .test(
+            "schemaRegenerationRequired",
+            "The sample object has been modified. Please regenerate the JSON schema to ensure it matches the new sample object structure",
+            function (_, { parent }) {
+                return !parent.canRegenerateSchema;
+            }
         ),
+    canRegenerateSchema: yup.boolean(),
 
     // update step
     updateScript: yup.string().required(),

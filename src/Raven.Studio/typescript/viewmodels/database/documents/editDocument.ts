@@ -184,6 +184,9 @@ class editDocument extends shardViewModelBase {
     collapseDocsWhenOpening = ko.observable<boolean>(false);
     isDocumentCollapsed = ko.observable<boolean>(false);
     forceFold = false;
+
+    aiAgentConversationUrl: KnockoutComputed<string>;
+    isAiAgentHistory: KnockoutComputed<boolean>;
     
     constructor(db: database) {
         super(db);
@@ -695,6 +698,31 @@ class editDocument extends shardViewModelBase {
             } else {
                 return this.isHugeDocument() && !this.ignoreHugeDocument();
             }
+        });
+
+        this.aiAgentConversationUrl = ko.pureComputed(() => {
+            if (this.isCreatingNewDocument()) {
+                return null;
+            }
+
+            const agentName = this.document().getValue("Agent");
+            const collection = this.document().__metadata.collection;
+            const isHistory = collection === "@conversations-history";
+            const isConversation = collection === "@conversations";
+
+            if (agentName && (isConversation || isHistory)) {
+                return appUrl.forChatAiAgent(this.db.name, String(agentName), this.document().getId(), isHistory);
+            }
+            
+            return null;
+        });
+
+        this.isAiAgentHistory = ko.pureComputed(() => {
+            if (this.isCreatingNewDocument()) {
+                return false;
+            }
+
+            return this.document().__metadata.collection === "@conversations-history";
         });
     }
 

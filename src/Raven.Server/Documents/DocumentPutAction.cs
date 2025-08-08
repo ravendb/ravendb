@@ -357,7 +357,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string BuildDocumentId(string id, long newEtag, out bool knownNewId)
+        public string BuildDocumentId(string id, long newEtag, out bool knownNewId)
         {
             if (string.IsNullOrWhiteSpace(id))
             {

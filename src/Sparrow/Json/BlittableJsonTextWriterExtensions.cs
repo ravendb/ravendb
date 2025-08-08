@@ -67,7 +67,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task WriteArrayAsync(this AsyncBlittableJsonTextWriter writer, string name, IEnumerable<Stream> items)
+        public static async ValueTask WriteArrayAsync(this AsyncBlittableJsonTextWriter writer, string name, IEnumerable<Stream> items)
         {
             writer.WritePropertyName(name);
 
@@ -80,7 +80,11 @@ namespace Sparrow.Json
                 first = false;
 
                 item.Position = 0;
-                await writer.WriteStreamAsync(item).ConfigureAwait(false);
+                
+                // PERF: Check if WriteStreamAsync completed synchronously to avoid async state machine
+                var writeTask = writer.WriteStreamAsync(item);
+                if (writeTask.IsCompletedSuccessfully == false)
+                    await writeTask.ConfigureAwait(false);
             }
 
             writer.WriteEndArray();
@@ -169,7 +173,7 @@ namespace Sparrow.Json
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task WriteArrayAsync(this AsyncBlittableJsonTextWriter writer, string name, IEnumerable<BlittableJsonReaderObject> items)
+        public static async ValueTask WriteArrayAsync(this AsyncBlittableJsonTextWriter writer, string name, IEnumerable<BlittableJsonReaderObject> items)
         {
             writer.WritePropertyName(name);
 
@@ -182,13 +186,17 @@ namespace Sparrow.Json
                 first = false;
 
                 writer.WriteObject(item);
-                await writer.MaybeFlushAsync().ConfigureAwait(false);
+                
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = writer.MaybeFlushAsync();
+                if (flushTask.IsCompletedSuccessfully == false)
+                    await flushTask.ConfigureAwait(false);
             }
             writer.WriteEndArray();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static async Task WriteArrayAsync(this AsyncBlittableJsonTextWriter writer, string name, IAsyncEnumerable<BlittableJsonReaderObject> items)
+        public static async ValueTask WriteArrayAsync(this AsyncBlittableJsonTextWriter writer, string name, IAsyncEnumerable<BlittableJsonReaderObject> items)
         {
             writer.WritePropertyName(name);
 
@@ -201,7 +209,11 @@ namespace Sparrow.Json
                 first = false;
 
                 writer.WriteObject(item);
-                await writer.MaybeFlushAsync().ConfigureAwait(false);
+                
+                // PERF: Check if flush completed synchronously to avoid async state machine
+                var flushTask = writer.MaybeFlushAsync();
+                if (flushTask.IsCompletedSuccessfully == false)
+                    await flushTask.ConfigureAwait(false);
             }
             writer.WriteEndArray();
         }

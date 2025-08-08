@@ -5,6 +5,7 @@ using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Indexes.Vector;
+using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ETL.Snowflake;
@@ -37,12 +38,15 @@ using Raven.Server.Documents.Commands.OngoingTasks;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Commands.Revisions;
 using Raven.Server.Documents.Commands.Tombstones;
+using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
+using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch.Test;
 using Raven.Server.Documents.ETL.Providers.OLAP.Test;
 using Raven.Server.Documents.ETL.Providers.Queue.Test;
 using Raven.Server.Documents.ETL.Providers.Raven.Test;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Common;
 using Raven.Server.Documents.Handlers;
+using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Server.Documents.Handlers.Processors.Subscriptions;
@@ -80,9 +84,6 @@ using DatabasesInfo = Raven.Client.ServerWide.Operations.DatabasesInfo;
 using FacetSetup = Raven.Client.Documents.Queries.Facets.FacetSetup;
 using MigrationConfiguration = Raven.Server.Smuggler.Migration.MigrationConfiguration;
 using StudioConfiguration = Raven.Client.Documents.Operations.Configuration.StudioConfiguration;
-using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Test;
-using Raven.Client.Documents.Operations.AI;
-using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
 
 namespace Raven.Server.Json
 {
@@ -353,6 +354,8 @@ namespace Raven.Server.Json
 
         internal static readonly Func<BlittableJsonReaderObject, StudioTasksHandler.AiModelsRequest> AiModelsRequest = GenerateJsonDeserializationRoutine<StudioTasksHandler.AiModelsRequest>();
         
+        internal static readonly Func<BlittableJsonReaderObject, AiAgentProcessorForTestConversation.AiAgentTestRequest> AiAgentTestRequest = GenerateJsonDeserializationRoutine<AiAgentProcessorForTestConversation.AiAgentTestRequest>();
+
         public sealed class Parameters
         {
             private Parameters()
