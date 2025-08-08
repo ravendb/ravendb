@@ -11,6 +11,7 @@ import AceEditorFormatAction from "./actions/AceEditorFormatAction";
 import AceEditorLoadFileAction from "./actions/AceEditorLoadFileAction";
 import AceEditorDeleteAction from "./actions/AceEditorDeleteAction";
 import AceEditorHelpAction from "./actions/AceEditorHelpAction";
+import AceEditorToggleNewLinesAction from "./actions/AceEditorToggleNewLinesAction";
 
 interface ActionItem {
     component: ReactNode;
@@ -195,5 +196,6 @@ AceEditor.FormatAction = AceEditorFormatAction;
 AceEditor.LoadFileAction = AceEditorLoadFileAction;
 AceEditor.DeleteAction = AceEditorDeleteAction;
 AceEditor.HelpAction = AceEditorHelpAction;
+AceEditor.ToggleNewLinesAction = AceEditorToggleNewLinesAction;
 
 export default AceEditor;
