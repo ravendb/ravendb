@@ -85,8 +85,12 @@ class editPeriodicBackupTask extends viewModelBase {
             return deferred
                 .then(() => {
                     this.dirtyFlag = this.configuration().dirtyFlag;
-                    this.fullBackupCronEditor(new cronEditor(this.configuration().getFullBackupFrequency()));
-                    this.incrementalBackupCronEditor(new cronEditor(this.configuration().getIncrementalBackupFrequency()));
+
+                    const taskId = args.taskId ? parseInt(args.taskId, 10) : undefined;
+                    const databaseName = args.taskId ? dbName() : undefined;
+
+                    this.fullBackupCronEditor(new cronEditor(this.configuration().getFullBackupFrequency(), databaseName, taskId, taskId ? true : undefined));
+                    this.incrementalBackupCronEditor(new cronEditor(this.configuration().getIncrementalBackupFrequency(), databaseName, taskId, taskId ? false : undefined));
                 });
         };
 
