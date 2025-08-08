@@ -330,6 +330,7 @@ function AgentMessage({
                                 actions={[
                                     { component: <AceEditor.FullScreenAction /> },
                                     { component: <AceEditor.FormatAction /> },
+                                    { component: <AceEditor.ToggleNewLinesAction /> },
                                 ]}
                                 height={getAgentAceEditorHeight(agentMessage.content)}
                                 wrapEnabled={contentMode === "text" ? true : false}
