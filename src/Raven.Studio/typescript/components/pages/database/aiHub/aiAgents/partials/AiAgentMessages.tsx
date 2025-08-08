@@ -560,7 +560,7 @@ function ToolDetailsQuery({
 
     const getQueryWithParameters = (): string => {
         const regexToFind$: RegExp = /\$\w+/g;
-        const matches = queryText.match(regexToFind$).map((x) => x.replace("$", "")) || [];
+        const matches = queryText.match(regexToFind$)?.map((x) => x.replace("$", "")) || [];
 
         const llmParametersForQuery = getLlmParametersForQuery(matches);
         const agentParametersForQuery = getAgentParametersForQuery(matches);
