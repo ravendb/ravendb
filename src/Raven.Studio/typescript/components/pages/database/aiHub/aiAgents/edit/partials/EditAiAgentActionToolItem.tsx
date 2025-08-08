@@ -145,6 +145,8 @@ function ActionFieldSampleObjectSyntaxHelp() {
     "problemDescription": "Provide a description of the issue."
 }`;
 
+    const exampleCodeNoParameters = `{}`;
+
     return (
         <div>
             <div>
@@ -156,6 +158,8 @@ function ActionFieldSampleObjectSyntaxHelp() {
                 tools.
             </div>
             <Code code={exampleCode} elementToCopy={exampleCode} language="json" />
+            <div className="mt-2">Example 2 (no parameters will be used):</div>
+            <Code code={exampleCodeNoParameters} elementToCopy={exampleCodeNoParameters} language="json" />
         </div>
     );
 }

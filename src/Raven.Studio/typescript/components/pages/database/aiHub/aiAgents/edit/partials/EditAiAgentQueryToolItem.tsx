@@ -213,7 +213,7 @@ const QueryFieldQuerySyntaxHelp = () => {
             <Code code={exampleCode1} elementToCopy={exampleCode1} language="json" />
             <div className="mt-2">Example 2:</div>
             <Code code={exampleCode2} elementToCopy={exampleCode2} language="json" />
-            <div className="mt-2">Example 3:</div>
+            <div className="mt-2">Example 3 (no parameters will be used):</div>
             <Code code={exampleCode3} elementToCopy={exampleCode3} language="json" />
         </div>
     );
