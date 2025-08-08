@@ -5,7 +5,10 @@ using System.Threading.Tasks;
 using Microsoft.Extensions.Primitives;
 using NCrontab.Advanced;
 using Raven.Client.Exceptions;
+using Raven.Client.Exceptions.Database;
+using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
+using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Migration;
 using Raven.Client.Util;
 using Raven.Server.Config;
@@ -483,7 +486,47 @@ namespace Raven.Server.Web.Studio
                 return;
             }
 
-            var nextOccurrence = crontabSchedule.GetNextOccurrence(SystemTime.UtcNow.ToLocalTime());
+            const string taskIdQueryParameter = "taskId";
+            var taskId = GetLongQueryString(taskIdQueryParameter, required: false);
+
+            const string databaseNameQueryParameter = "database";
+            var databaseName = GetStringQueryString(databaseNameQueryParameter, required: false);
+
+            const string isFullBackupQueryParameter = "isFull";
+            var isFull = GetBoolValueQueryString(isFullBackupQueryParameter, required: false);
+
+            DateTime baseValue;
+
+            if (taskId == null && databaseName == null && isFull == null)
+            {
+                // if no taskId, databaseName or backupKind is provided, we use the current time as the base value
+                baseValue = SystemTime.UtcNow.ToLocalTime();
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(databaseName))
+                    throw new ArgumentException($"The database name must be provided via the '{databaseNameQueryParameter}' query parameter when either '{taskIdQueryParameter}' or '{isFullBackupQueryParameter}' is specified.");
+
+                if (taskId == null)
+                    throw new ArgumentException($"The task ID must be provided via the '{taskIdQueryParameter}' query parameter when either '{databaseNameQueryParameter}' or '{isFullBackupQueryParameter}' is specified.");
+
+                if (isFull == null)
+                    throw new ArgumentException($"The backup kind must be provided via the '{isFullBackupQueryParameter}' query parameter when either '{taskIdQueryParameter}' or '{databaseNameQueryParameter}' is specified.");
+
+                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var backupStatus = BackupUtils.GetBackupStatusFromCluster(ServerStore, context, databaseName, taskId.Value);
+                    if (backupStatus == null)
+                        throw new InvalidOperationException($"No backup status found for task ID '{taskId}' in database '{databaseName}'.");
+
+                    baseValue = isFull.Value
+                        ? (backupStatus.LastFullBackup ?? SystemTime.UtcNow).ToLocalTime()
+                        : (backupStatus.LastIncrementalBackup ?? SystemTime.UtcNow).ToLocalTime();
+                }
+            }
+
+            var nextOccurrence = crontabSchedule.GetNextOccurrence(baseValue);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
