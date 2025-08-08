@@ -1,7 +1,6 @@
 /// <reference path="../../../../typings/tsd.d.ts"/>
 import genUtils = require("common/generalUtils");
 import queryUtil = require("common/queryUtil");
-import typeUtils = require("common/typeUtils");
 import moment = require("moment");
 
 class queryCriteria {
@@ -12,7 +11,6 @@ class queryCriteria {
     ignoreIndexQueryLimit = ko.observable<boolean>(false);
     
     queryText = ko.observable<string>("");
-    queryParameters = ko.observable<Record<string, string>>({});
     metadataOnly = ko.observable<boolean>(false);
     recentQuery = ko.observable<boolean>(false);
     graphOutput = ko.observable<boolean>(false);
@@ -57,12 +55,6 @@ class queryCriteria {
                 this.ignoreIndexQueryLimit(false);
             }
         });
-
-        this.queryParameters.subscribe(queryParameters => {
-            if (queryParameters && !typeUtils.isEmpty(queryParameters)) {
-                this.queryText(this.formatQueryParameters(queryParameters) + "\r\n\r\n" + this.queryText());
-            }
-        })
 
         this.queryText.subscribe(queryText => {
             if (queryUtil.isDynamicQuery(queryText)) {

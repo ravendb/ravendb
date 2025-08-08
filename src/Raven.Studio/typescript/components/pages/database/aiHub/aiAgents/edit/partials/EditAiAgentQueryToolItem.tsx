@@ -64,14 +64,19 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
 
     const linkToQuery = () => {
         const query = queryCriteria.empty();
-        const queryText = queryItem.query;
+        let queryText = "";
 
         const regexToFind$: RegExp = /\$\w+/g;
-        const matches = queryText.match(regexToFind$) || [];
-        const parameters: Record<string, null> = Object.fromEntries(matches.map((match) => [match, null]));
+        const matches = queryItem.query.match(regexToFind$) || [];
+
+        if (matches.length > 0) {
+            queryText += matches.map((x) => `${x} = null`).join("\n");
+            queryText += "\n\n";
+        }
+
+        queryText += queryItem.query;
 
         query.queryText(queryText);
-        query.queryParameters(parameters);
         query.recentQuery(true);
         query.skipRunOnInit(true);
         const queryDto = query.toStorageDto();
