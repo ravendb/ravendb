@@ -7,6 +7,7 @@ using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NCrontab.Advanced;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
@@ -653,6 +654,110 @@ namespace FastTests
                 }
                 
                 return (files, operation);
+            }
+
+            /// <summary>
+            /// Waits until a safe action window arrives, which is positioned right before the next full backup,
+            /// but after the last preceding incremental backup.
+            /// </summary>
+            /// <param name="backupConfig">The periodic backup configuration containing backup schedules.</param>
+            /// <param name="actionWindow">The duration of the window in which the action should be performed (e.g., 30 seconds).</param>
+            /// <param name="cancellationToken">A cancellation token to cancel the waiting operation.</param>
+            /// <param name="diagnosticLogBuilder">A StringBuilder to log diagnostic information about the waiting process.</param>
+            public async Task WaitUntilNextFullBackupActionWindowAsync(PeriodicBackupConfiguration backupConfig, TimeSpan actionWindow, CancellationToken cancellationToken, StringBuilder diagnosticLogBuilder = null)
+            {
+                Log("--- Starting WaitUntilNextFullBackupActionWindowAsync ---");
+                Log($"Full Backup Cron: '{backupConfig.FullBackupFrequency}'");
+                Log($"Incremental Backup Cron: '{backupConfig.IncrementalBackupFrequency ?? "N/A"}'");
+                Log($"Action Window Duration: {actionWindow.TotalSeconds} seconds");
+
+                var fullSchedule = CrontabSchedule.Parse(backupConfig.FullBackupFrequency);
+                var incrementalSchedule = string.IsNullOrWhiteSpace(backupConfig.IncrementalBackupFrequency) == false
+                    ? CrontabSchedule.Parse(backupConfig.IncrementalBackupFrequency)
+                    : null;
+
+                var baselineTime = DateTime.UtcNow;
+                Log($"Initial baseline time set to: {baselineTime:O}");
+
+                for (int i = 0; i < 2; i++)
+                {
+                    Log($"--- Iteration {i + 1} ---");
+                    Log($"Current baseline time for this iteration: {baselineTime:O}");
+
+                    var nextFullBackupDateTime = fullSchedule.GetNextOccurrence(baselineTime);
+                    Log($"Calculated next full backup time: {nextFullBackupDateTime:O}");
+
+                    // To find the start of the window, we look for the last incremental backup *before* the next full backup.
+                    var searchTimeForLastIncremental = nextFullBackupDateTime.AddTicks(-1);
+                    Log($"Searching for last incremental backup before: {searchTimeForLastIncremental:O}");
+
+                    var windowStart = incrementalSchedule?.GetPreviousOccurrence(searchTimeForLastIncremental)
+                                      ?? nextFullBackupDateTime.AddMinutes(-1); // Fallback if no incremental schedule
+                    Log($"Calculated safe window start: {windowStart:O}");
+
+                    var windowEnd = windowStart.Add(actionWindow);
+                    Log($"Calculated safe window end: {windowEnd:O}");
+
+                    var currentTime = DateTime.UtcNow;
+                    Log($"Current time for comparison: {currentTime:O}");
+
+                    // Case 1: We are before the window. We need to wait.
+                    if (currentTime < windowStart)
+                    {
+                        var delay = windowStart - currentTime;
+                        Log($"Condition met: Current time is BEFORE the window. Waiting is required.");
+                        Log($"Calculated delay: {delay.TotalSeconds:F2} seconds. Will proceed at {windowStart:O} UTC.");
+
+                        Log("Starting Task.Delay...");
+                        cancellationToken.Register(() => Log("!!! CancellationToken was CANCELED during Task.Delay !!!"));
+
+                        try
+                        {
+                            await Task.Delay(delay, cancellationToken);
+                            Log("Task.Delay completed successfully (time elapsed).");
+                        }
+                        catch (OperationCanceledException)
+                        {
+                            Log("Task.Delay was CANCELED and threw OperationCanceledException. The wait was aborted.");
+                            // We re-throw because this is the expected behavior for cancellation.
+                            // The calling code should handle it.
+                            throw;
+                        }
+
+                        Log("Returning from method after successful wait.");
+                        return; // We're done.
+                    }
+
+                    // Case 2: We are inside the window. Proceed immediately.
+                    if (currentTime >= windowStart && currentTime < windowEnd)
+                    {
+                        Log($"Condition met: Current time is INSIDE the safe action window. Proceeding immediately.");
+                        Log("Returning from method immediately.");
+                        return; // We're done.
+                    }
+
+                    // Case 3: We missed the window. Recalculate for the next cycle.
+                    Log($"Condition met: Current time ({currentTime:O}) is AFTER the window end ({windowEnd:O}). Missed the window.");
+                    Log("Recalculating for the next cycle.");
+
+                    // Update baselineTime to the start of the missed full backup to find the *next* slot in the next iteration.
+                    baselineTime = nextFullBackupDateTime;
+                    Log($"Updated baselineTime for next iteration to: {baselineTime:O}");
+                }
+
+                // If we exit the loop, something went wrong.
+                var finalNextFull = fullSchedule.GetNextOccurrence(baselineTime);
+                Log($"[FATAL] Failed to find a safe action window after two iterations.");
+                Log($"Last checked baseline time: {baselineTime:O}");
+                Log($"Next full backup from that baseline: {finalNextFull:O}");
+
+                Assert.Fail($"Failed to find a safe action window after two iterations. " +
+                            $"Last checked time: {baselineTime:O}, " +
+                            $"Next full backup time: {finalNextFull:O}, " +
+                            $"Action window: {actionWindow.TotalSeconds} seconds.");
+
+                return;
+                void Log(string message) => diagnosticLogBuilder?.AppendLine($"[{DateTime.UtcNow:O}] [WaitWindow] {message}");
             }
         }
     }
