@@ -175,7 +175,7 @@ namespace Raven.Server.Documents.Patch
             {
                 var engine = new Engine(options =>
                 {
-                    options.MaxStatements(1).LimitRecursion(1);
+                    options.MaxStatements(128).LimitRecursion(1);
                 });
                 engine.Execute(script);
             }
