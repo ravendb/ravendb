@@ -194,7 +194,6 @@
     </PackageReference>
     <PackageReference Include="Snappier" />
     <PackageReference Include="Snowflake.Data" />
-    <!-- Explicit dependency needed to work around issues with build.ps-->
     <PackageReference Include="System.Collections.Immutable" />
     <PackageReference Include="System.Linq.Async" />
     <PackageReference Include="System.Private.Uri" />

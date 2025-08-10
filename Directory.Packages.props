@@ -111,9 +111,8 @@
     <PackageVersion Include="Snowflake.Data" Version="4.7.0" />
     <PackageVersion Include="Spatial4n" Version="0.4.1.1" />
     <PackageVersion Include="System.Buffers" Version="4.6.1" />
-    <!-- Explicit dependency needed to work around issues with build.ps-->
-    <PackageVersion Include="System.Collections.Immutable" Version="9.0.7" />
     <PackageVersion Include="System.Data.HashFunction.Blake2" Version="2.0.0" />
+    <PackageVersion Include="System.Diagnostics.DiagnosticSource" Version="9.0.7" />
     <PackageVersion Include="System.Diagnostics.EventLog" Version="9.0.7" />
     <PackageVersion Include="System.Diagnostics.PerformanceCounter" Version="9.0.7" />
     <PackageVersion Include="System.DirectoryServices.Protocols" Version="9.0.7" />
@@ -128,11 +127,12 @@
     <PackageVersion Include="System.Reflection.Metadata" Version="9.0.7" />
     <PackageVersion Include="System.Runtime.Caching" Version="9.0.7" />
     <PackageVersion Include="System.Runtime.CompilerServices.Unsafe" Version="6.1.2" />
-    <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
     <PackageVersion Include="System.Security.Cryptography.ProtectedData" Version="9.0.7" />
     <PackageVersion Include="System.ServiceProcess.ServiceController" Version="9.0.7" />
     <PackageVersion Include="System.Text.Encodings.Web" Version="9.0.7" />
+    <PackageVersion Include="System.Text.Json" Version="9.0.7" />
     <PackageVersion Include="System.Text.RegularExpressions" Version="4.3.1" />
+    <PackageVersion Include="System.Threading.Channels" Version="9.0.7" />
     <PackageVersion Include="System.Threading.Tasks.Extensions" Version="4.6.3" />
     <PackageVersion Include="TypeScripter" Version="0.5.4" />
     <PackageVersion Include="xRetry" Version="1.9.0" />
@@ -142,6 +142,12 @@
     <PackageVersion Include="XunitLogger" Version="4.0.991" />
     <PackageVersion Include="YamlDotNet" Version="16.3.0" />
     <PackageVersion Include="ZstdSharp.Port" Version="0.8.5" />
+  </ItemGroup>
+  <ItemGroup Condition="!($([MSBuild]::IsTargetFrameworkCompatible($(TargetFramework), 'net8.0')) AND '$(DontPinSystemPackages)' == 'true')">
+    <PackageVersion Include="System.Collections.Immutable" Version="9.0.7" />
+  </ItemGroup>
+  <ItemGroup Condition="!($([MSBuild]::IsTargetFrameworkCompatible($(TargetFramework), 'net6.0')) AND '$(DontPinSystemPackages)' == 'true')">
+    <PackageVersion Include="System.Runtime.Loader" Version="4.3.0" />
   </ItemGroup>
   <ItemGroup Condition="!$([MSBuild]::IsTargetFrameworkCompatible($(TargetFramework), 'net5.0'))">
     <PackageVersion Include="Microsoft.Bcl.AsyncInterfaces" Version="9.0.7" />
