@@ -234,6 +234,11 @@ var ai = new AI();
                                 data = Encoding.ASCII.GetString(readOnlySpan[..(int)memoryStream.Length]);
                             }
                         }
+                        else
+                        {
+                            //if we arrive here we probably didn't pass through loadAttachment() function
+                            throw new InvalidOperationException($"GenAI ETL: attachment with reference '{reference}' was never loaded. ");
+                        }
 
                         result.Attachments.Add(new GenAiAttachment(filename, type, data));
                     }
