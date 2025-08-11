@@ -37,7 +37,7 @@ namespace SlowTests.Issues
                     Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
                     {
                         {
-                            "test", new RetiredAttachmentsDestinationConfiguration()
+                            "conf-identifier", new RetiredAttachmentsDestinationConfiguration()
                             {
                                 Disabled = false, 
                                 S3Settings = s3Settings, 

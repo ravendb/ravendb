@@ -83,11 +83,14 @@ public sealed class RetiredAttachmentsDestinationConfiguration : IDynamicJson
         return BackupConfiguration.CanBackupUsing(S3Settings) || BackupConfiguration.CanBackupUsing(AzureSettings);
     }
 
-    internal void AssertConfiguration(string databaseName = null)
+    internal void AssertConfiguration(string key, string databaseName = null)
     {
         var databaseNameStr = string.IsNullOrEmpty(databaseName) ? string.Empty : $" for database '{databaseName}'";
 
         if (string.IsNullOrEmpty(Identifier))
             throw new InvalidOperationException($"Identifier{databaseNameStr} must have a value.");
+
+        if (key != Identifier)
+            throw new InvalidOperationException($"Identifier '{Identifier}' does not match the key '{key}'{databaseNameStr}.");
     }
 }

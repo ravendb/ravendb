@@ -350,6 +350,26 @@ namespace FastTests.Server.Documents.Attachments
                     RetireFrequencyInSec = 1,
                 })));
                 Assert.Contains("Only one uploader for RetiredAttachmentsConfiguration can be configured.", e.Message);
+
+                e = await Assert.ThrowsAsync<InvalidOperationException>(async () => await store.Maintenance.ForDatabase(store.Database).SendAsync(new ConfigureRetiredAttachmentsOperation(new RetiredAttachmentsConfiguration()
+                {
+                    Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
+                    {
+                        {
+                            "test", new RetiredAttachmentsDestinationConfiguration()
+                            {
+                                Disabled = false,
+                                S3Settings = new S3Settings()
+                                {
+                                    BucketName = "testS3Bucket"
+                                },
+                                Identifier = "conf-identifier",
+                            }
+                        }
+                    },
+                    RetireFrequencyInSec = 1
+                })));
+                Assert.Contains("Identifier 'conf-identifier' does not match the key 'test'", e.Message);
             }
         }
 

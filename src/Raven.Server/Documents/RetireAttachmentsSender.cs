@@ -123,8 +123,8 @@ namespace Raven.Server.Documents
 
                                 if (string.IsNullOrEmpty(doc.Id))
                                 {
-                                    if (Logger.IsInfoEnabled)
-                                        Logger.Info($"Skipping PutRetire of retired attachment with key: '{doc.LowerId}' because it's identifier '{doc.Id}' IsNullOrEmpty.");
+                                    if (Logger.IsDebugEnabled)
+                                        Logger.Debug($"Skipping PutRetire of retired attachment with key: '{doc.LowerId}' because it's identifier '{doc.Id}' IsNullOrEmpty.");
 
                                     // document was deleted, need to remove it from retired tree
                                     retired.Enqueue(doc);
@@ -193,22 +193,22 @@ namespace Raven.Server.Documents
                                 }
                                 else
                                 {
-                                    if (Logger.IsInfoEnabled)
-                                        Logger.Info($"Timed out waiting for free thread to PutRetire retired attachments with '{doc.LowerId}', ReadTransactionMaxOpenTimeInMs: {duration.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs}, IsCancellationRequested: {_token.Token.IsCancellationRequested}, the PutRetire will happen on next iteration.");
+                                    if (Logger.IsDebugEnabled)
+                                        Logger.Debug($"Timed out waiting for free thread to PutRetire retired attachments with '{doc.LowerId}', ReadTransactionMaxOpenTimeInMs: {duration.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs}, IsCancellationRequested: {_token.Token.IsCancellationRequested}, the PutRetire will happen on next iteration.");
                                 }
                             }
 
                             if (toRetire.Count != retired.Count)
                             {
                                 // we had skipped items
-                                if (Logger.IsInfoEnabled)
-                                    Logger.Info($"Skipping retiring of '{toRetire.Count - retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
+                                if (Logger.IsDebugEnabled)
+                                    Logger.Debug($"Skipping retiring of '{toRetire.Count - retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
                             }
 
                             if (retired.Count == 0)
                             {
-                                if (Logger.IsInfoEnabled)
-                                    Logger.Info($"Skipping retiring whole batch of '{retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
+                                if (Logger.IsDebugEnabled)
+                                    Logger.Debug($"Skipping retiring whole batch of '{retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
 
                                 continue;
                             }
@@ -226,8 +226,8 @@ namespace Raven.Server.Documents
                     var command = new UpdateRetiredAttachmentsCommand(retired, _database, currentTime);
                     await _database.TxMerger.Enqueue(command);
 
-                    if (Logger.IsInfoEnabled)
-                        Logger.Info($"Successfully retired '{command.RetiredCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms.");
+                    if (Logger.IsDebugEnabled)
+                        Logger.Debug($"Successfully retired '{command.RetiredCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms.");
                 }
             }
             catch (OperationCanceledException)
@@ -237,8 +237,8 @@ namespace Raven.Server.Documents
             }
             catch (Exception e)
             {
-                if (Logger.IsInfoEnabled)
-                    Logger.Info($"Failed to retire attachments on '{_database.Name}' which are older than '{currentTime}'.", e);
+                if (Logger.IsErrorEnabled)
+                    Logger.Error($"Failed to retire attachments on '{_database.Name}' which are older than '{currentTime}'.", e);
             }
             return totalCount;
         }

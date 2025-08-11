@@ -100,7 +100,7 @@ namespace Raven.Client.Documents.Attachments
                 if (kvp.Value == null)
                     throw new InvalidOperationException($"Destination configuration for key {kvp.Key} is null{databaseNameStr}.");
 
-                kvp.Value.AssertConfiguration(databaseName);
+                kvp.Value.AssertConfiguration(kvp.Key, databaseName);
             }
 
             if (RetireFrequencyInSec == null)
