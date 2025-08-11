@@ -89,8 +89,8 @@ class editPeriodicBackupTask extends viewModelBase {
                     const taskId = args.taskId ? parseInt(args.taskId, 10) : undefined;
                     const databaseName = args.taskId ? dbName() : undefined;
 
-                    this.fullBackupCronEditor(new cronEditor(this.configuration().getFullBackupFrequency(), databaseName, taskId, taskId ? true : undefined));
-                    this.incrementalBackupCronEditor(new cronEditor(this.configuration().getIncrementalBackupFrequency(), databaseName, taskId, taskId ? false : undefined));
+                    this.fullBackupCronEditor(new cronEditor(this.configuration().getFullBackupFrequency(), databaseName, taskId, args.taskId ? true : undefined));
+                    this.incrementalBackupCronEditor(new cronEditor(this.configuration().getIncrementalBackupFrequency(), databaseName, taskId, args.taskId ? false : undefined));
                 });
         };
 
