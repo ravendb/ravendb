@@ -237,7 +237,7 @@ var ai = new AI();
                         else
                         {
                             //if we arrive here we probably didn't pass through loadAttachment() function
-                            throw new InvalidOperationException($"GenAI ETL: attachment with reference '{reference}' was never loaded. ");
+                            throw new InvalidOperationException($"GenAI Task: attachment with reference '{reference}' was never loaded. ");
                         }
 
                         result.Attachments.Add(new GenAiAttachment(filename, type, data));
