@@ -17,7 +17,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
     {
         protected readonly ISerializationConventions Conventions;
 
-        public Dictionary<object, Dictionary<object, object>> _missingDictionary = new Dictionary<object, Dictionary<object, object>>(ObjectReferenceEqualityComparer<object>.Default);
+        private Dictionary<object, Dictionary<object, object>> _missingDictionary = new Dictionary<object, Dictionary<object, object>>(ObjectReferenceEqualityComparer<object>.Default);
 
         protected BlittableJsonConverterBase(ISerializationConventions conventions)
         {
@@ -295,10 +295,9 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
         protected IEnumerable<KeyValuePair<object, object>> FillMissingProperties(object o)
         {
-            if (_missingDictionary.Count == 0)
-                return Enumerable.Empty<KeyValuePair<object, object>>();
-            _missingDictionary.TryGetValue(o, out var props);
-            return props;
+            if (_missingDictionary.TryGetValue(o, out var props))
+                return props;
+            return Enumerable.Empty<KeyValuePair<object, object>>();
         }
 
         protected void RegisterMissingProperties(object o, string id, object value)
