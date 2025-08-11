@@ -201,7 +201,7 @@ ai.genContext({}).withPdf(pdf);
         private static Stream GetEmbeddedPdfStream(string fileName)
         {
             var asm = typeof(RavenDB_24644).Assembly;
-            var resourceName = "SlowTests.Data.PdfSamples." + fileName;
+            var resourceName = "SlowTests.Data.RavenDB_24644." + fileName;
 
             var stream = asm.GetManifestResourceStream(resourceName);
             if (stream == null)
