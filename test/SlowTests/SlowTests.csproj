@@ -21,6 +21,8 @@
   </ItemGroup>
   <ItemGroup>
     <None Remove="Data\legacy-counters.4.1.5.ravendbdump" />
+    <None Remove="Data\PdfSamples\Hibernating.pdf" />
+    <None Remove="Data\PdfSamples\Raven.pdf" />
     <None Remove="Data\RavenDB_11488\ravendb-11488-artificial-docs-not-included.ravendbdump" />
     <None Remove="Data\RavenDB-12785.ravendbdump" />
     <None Remove="Data\RavenDB_11488\ravendb-11488.ravendb-snapshot" />
@@ -55,8 +57,6 @@
     <None Remove="Data\RavenDB_23100\2024-11-19-10-43-34-8245899.ravendb-snapshot" />
     <None Remove="Data\RavenDB_24002\TimeseriesWithConflictedRevisions_new.ravendbdump" />
     <None Remove="Data\RavenDB_24415\Can_push_via_filtered_replication_2.0-5.zip" />
-    <None Remove="Data\PdfSamples\Hibernating.pdf" />
-    <None Remove="Data\PdfSamples\Raven.pdf" />
     <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
   </ItemGroup>
@@ -79,6 +79,8 @@
     <EmbeddedResource Include="Data\oraclesql.basic.insert.sql" />
     <EmbeddedResource Include="Data\oraclesql.northwind.create.sql" />
     <EmbeddedResource Include="Data\oraclesql.northwind.insert.sql" />
+    <EmbeddedResource Include="Data\PdfSamples\Hibernating.pdf" />
+    <EmbeddedResource Include="Data\PdfSamples\Raven.pdf" />
     <EmbeddedResource Include="Data\RavenDB_11488\ravendb-11488-artificial-docs-not-included.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB-12785.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB-13937.ravendbdump" />
@@ -163,8 +165,6 @@
     <EmbeddedResource Include="Data\RavenDB_23100\2024-11-19-10-43-34-8245899.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_24002\TimeseriesWithConflictedRevisions_new.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_24415\Can_push_via_filtered_replication_2.0-5.zip" />
-    <EmbeddedResource Include="Data\PdfSamples\Hibernating.pdf" />
-    <EmbeddedResource Include="Data\PdfSamples\Raven.pdf" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
