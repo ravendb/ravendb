@@ -171,7 +171,7 @@ namespace Raven.Client.Documents.Subscriptions
 
             if (_requestExecutor.Conventions.PreserveDocumentPropertiesNotFoundOnModel)
             {
-                s.JsonConverter.MissingProperties = _requestExecutor.Conventions.Serialization.DefaultConverter.MissingProperties;
+                s.JsonConverter.MissingProperties = _requestExecutor.Conventions.Serialization.SubscriptionsConverter.MissingProperties;
             }
             foreach (var item in Items)
             {
@@ -248,7 +248,7 @@ namespace Raven.Client.Documents.Subscriptions
                     {
                         try
                         {
-                            instance = _requestExecutor.Conventions.Serialization.DefaultConverter.FromBlittable<T>(curDoc, id);
+                            instance = _requestExecutor.Conventions.Serialization.SubscriptionsConverter.FromBlittable<T>(curDoc, id);
                         }
                         catch (InvalidOperationException e)
                         {

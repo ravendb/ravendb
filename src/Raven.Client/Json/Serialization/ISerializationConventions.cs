@@ -17,6 +17,8 @@ namespace Raven.Client.Json.Serialization
 
         IBlittableJsonConverter DefaultConverter { get; }
 
+        ISubscriptionsBlittableJsonConverter SubscriptionsConverter { get; }
+
         ISessionBlittableJsonConverter CreateConverter(InMemoryDocumentSessionOperations session);
 
         IJsonWriter CreateWriter(JsonOperationContext context);

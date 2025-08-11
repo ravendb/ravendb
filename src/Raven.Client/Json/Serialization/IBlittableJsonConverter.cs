@@ -18,6 +18,12 @@ namespace Raven.Client.Json.Serialization
         object FromBlittable(Type type, BlittableJsonReaderObject json, string id = null);
 
         T FromBlittable<T>(BlittableJsonReaderObject json, string id = null);
+
+    }
+
+    public interface ISubscriptionsBlittableJsonConverter : IBlittableJsonConverterBase
+    {
+        T FromBlittable<T>(BlittableJsonReaderObject json, string id = null);
     }
 
     public interface ISessionBlittableJsonConverter : IBlittableJsonConverterBase

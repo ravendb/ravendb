@@ -21,34 +21,25 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
         {
             try
             {
-                ExtensionDataSetter dataSetter = null;
-                if (Conventions.Conventions.PreserveDocumentPropertiesNotFoundOnModel)
+                var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(type);
+                var entity = defaultValue;
+
+                var documentTypeAsString = Conventions.Conventions.GetClrType(id, json);
+                if (documentTypeAsString != null)
                 {
-                    dataSetter = RegisterMissingProperties;
+                    var documentType = Conventions.Conventions.ResolveTypeFromClrTypeName(documentTypeAsString);
+                    if (documentType != null && type.IsAssignableFrom(documentType))
+                    {
+                        entity = Conventions.DeserializeEntityFromBlittable(documentType, json);
+                    }
                 }
 
-                using (DefaultRavenContractResolver.RegisterExtensionDataSetter(dataSetter))
+                if (Equals(entity, defaultValue))
                 {
-                    var defaultValue = InMemoryDocumentSessionOperations.GetDefaultValue(type);
-                    var entity = defaultValue;
-
-                    var documentTypeAsString = Conventions.Conventions.GetClrType(id, json);
-                    if (documentTypeAsString != null)
-                    {
-                        var documentType = Conventions.Conventions.ResolveTypeFromClrTypeName(documentTypeAsString);
-                        if (documentType != null && type.IsAssignableFrom(documentType))
-                        {
-                            entity = Conventions.DeserializeEntityFromBlittable(documentType, json);
-                        }
-                    }
-
-                    if (Equals(entity, defaultValue))
-                    {
-                        entity = Conventions.DeserializeEntityFromBlittable(type, json);
-                    }
-
-                    return entity;
+                    entity = Conventions.DeserializeEntityFromBlittable(type, json);
                 }
+
+                return entity;
             }
             catch (Exception ex)
             {
