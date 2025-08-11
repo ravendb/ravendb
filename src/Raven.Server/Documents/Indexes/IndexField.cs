@@ -341,8 +341,6 @@ namespace Raven.Server.Documents.Indexes
 
         public static string GetVectorAutoIndexFieldName(string name, AutoVectorOptions autoVectorOptions)
         {
-            const string aiTask = "ai.task";
-            
             var methodName = Constants.VectorSearch.ConfigurationToMethodName(autoVectorOptions.SourceEmbeddingType, autoVectorOptions.DestinationEmbeddingType);
 
             string inner;
@@ -351,7 +349,7 @@ namespace Raven.Server.Documents.Indexes
             
             if (autoVectorOptions.SourceEmbeddingType == VectorEmbeddingType.Text && embeddingsGenerationTaskIdentifier != null)
             {
-                inner = methodName == string.Empty ? name : $"{methodName}({name},{aiTask}('{embeddingsGenerationTaskIdentifier}'))";
+                inner = methodName == string.Empty ? name : $"{methodName}({name},{Constants.VectorSearch.AiTaskMethodName}('{embeddingsGenerationTaskIdentifier}'))";
             }
             else
                 inner = methodName == string.Empty ? name : $"{methodName}({name})";

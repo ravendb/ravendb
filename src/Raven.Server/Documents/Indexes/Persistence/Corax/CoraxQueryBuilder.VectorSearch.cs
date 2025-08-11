@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -22,7 +23,8 @@ public static partial class CoraxQueryBuilder
     private static IQueryMatch HandleVector(Parameters builderParameters, MethodExpression me, bool exact)
     {
         var metadata = builderParameters.Metadata;
-        
+        IndexField indexField;
+        string embeddingsGenerationTaskIdentifier;
         var minimumMatch = builderParameters.Index.Configuration.CoraxVectorSearchDefaultMinimumSimilarity;
         if (me.Arguments.Count > 2)
         {
@@ -60,38 +62,84 @@ public static partial class CoraxQueryBuilder
 
         if (srcVector is MethodExpression methodValue) // embedding.forDoc(docId) ...
         {
-            PortableExceptions.ThrowIf<InvalidDataException>(methodValue.Name != Constants.VectorSearch.EmbeddingForDocument && methodValue.Name != Constants.VectorSearch.EmbeddingForRaw,
+            var supportedMethods = methodValue.Name != Constants.VectorSearch.EmbeddingForDocument
+                                   && methodValue.Name != Constants.VectorSearch.EmbeddingForRaw
+                                   && methodValue.Name != Constants.VectorSearch.EmbeddingText;
+                
+            PortableExceptions.ThrowIf<InvalidDataException>(supportedMethods,
                 $"Expected {Constants.VectorSearch.EmbeddingForDocument}() method call, but got: {methodValue.Name}");
 
-            var (methodParameter, _) = QueryBuilderHelper.GetValue(metadata.Query, metadata, builderParameters.QueryParameters, (ValueExpression)methodValue.Arguments[0],
-                allowObjectsInParameters: false, allowArraysInParameters: true);
+            var (methodParameter, valueTokenType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, builderParameters.QueryParameters, (ValueExpression)methodValue.Arguments[0], allowObjectsInParameters: false, allowArraysInParameters: true);
             
-            var isForDoc = methodValue.Name == Constants.VectorSearch.EmbeddingForDocument;
-
-            return (isForDoc, methodParameter) switch
+            var method = methodValue.Name.ToString() switch
             {
-                (isForDoc: true, string docId) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata, docId, minimumMatch, numberOfCandidates, exact,
-                    builderParameters.IsVectorSingleClause),
-                (isForDoc: true, StringSegment docIdSegment) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata, docIdSegment.Value, minimumMatch,
-                    numberOfCandidates, exact, builderParameters.IsVectorSingleClause),
-                (isForDoc: false, string vectorAsBase64) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata,
-                    GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, vectorAsBase64, false), minimumMatch, numberOfCandidates,
-                    exact, builderParameters.IsVectorSingleClause),
-                (isForDoc: false, StringSegment stringSegmentAsBase64) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata,
-                    GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, stringSegmentAsBase64.ToString(), false), minimumMatch,
-                    numberOfCandidates, exact, builderParameters.IsVectorSingleClause),
-                (_, BlittableJsonReaderArray { Length: > 0 }) => throw new InvalidDataException("Cannot perform search on empty value."),
-                _ => throw new InvalidQueryException($"Unknown method in value ({methodValue.Name}. Parameter type: {methodParameter.GetType().FullName}, Value: {methodParameter}")
+                Constants.VectorSearch.EmbeddingForDocument => VectorHelpers.MethodVectorValue.ForDocument,
+                Constants.VectorSearch.EmbeddingForRaw => VectorHelpers.MethodVectorValue.ForRaw,
+                Constants.VectorSearch.EmbeddingText => VectorHelpers.MethodVectorValue.EmbeddingText,
+                _ => throw new InvalidDataException(
+                    $"Unknown method in value ({methodValue.Name}. Parameter type: {methodParameter.GetType().FullName}, Value: {methodParameter}")
             };
+
+            if (method is not VectorHelpers.MethodVectorValue.EmbeddingText)
+            {
+                return (method, methodParameter) switch
+                {
+                    (method: VectorHelpers.MethodVectorValue.ForDocument, string docId) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata, docId,
+                        minimumMatch, numberOfCandidates, exact,
+                        builderParameters.IsVectorSingleClause),
+                    (method: VectorHelpers.MethodVectorValue.ForDocument, StringSegment docIdSegment) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata,
+                        docIdSegment.Value, minimumMatch,
+                        numberOfCandidates, exact, builderParameters.IsVectorSingleClause),
+                    (method: VectorHelpers.MethodVectorValue.ForRaw, string vectorAsBase64) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata,
+                        GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, vectorAsBase64, false), minimumMatch, numberOfCandidates,
+                        exact, builderParameters.IsVectorSingleClause),
+                    (method: VectorHelpers.MethodVectorValue.ForRaw, StringSegment stringSegmentAsBase64) => builderParameters.IndexSearcher.VectorSearch(fieldMetadata,
+                        GenerateEmbeddings.FromBase64Array(VectorOptions.Default, builderParameters.Allocator, stringSegmentAsBase64.ToString(), false), minimumMatch,
+                        numberOfCandidates, exact, builderParameters.IsVectorSingleClause),
+                    (_, BlittableJsonReaderArray { Length: > 0 }) => throw new InvalidDataException("Cannot perform search on empty value."),
+                    _ => throw new InvalidQueryException(
+                        $"Unknown method in value ({methodValue.Name}. Parameter type: {methodParameter.GetType().FullName}, Value: {methodParameter}")
+                };
+            }
+
+            var aiTaskMethod = (MethodExpression)methodValue.Arguments[1];
+            PortableExceptions.ThrowIfNot<InvalidOperationException>(aiTaskMethod.Name == Constants.VectorSearch.AiTaskMethodName, "Expected to find an AI task method call, but got: " + aiTaskMethod.Name);
+            embeddingsGenerationTaskIdentifier = QueryBuilderHelper.GetValue(metadata.Query, metadata, builderParameters.QueryParameters, (ValueExpression)aiTaskMethod.Arguments[0],
+                allowObjectsInParameters: false, allowArraysInParameters: false).Value.ToString();
+            var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
+            if (vectorOptions != null)
+            {
+                vectorOptions = new VectorOptions()
+                {
+                    DestinationEmbeddingType = vectorOptions.DestinationEmbeddingType,
+                    Dimensions = vectorOptions.Dimensions,
+                    SourceEmbeddingType = VectorEmbeddingType.Text,
+                    NumberOfCandidatesForIndexing = vectorOptions.NumberOfCandidatesForIndexing,
+                    NumberOfEdges = vectorOptions.NumberOfEdges
+                };
+            }
+            
+            var vector = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueTokenType, methodParameter, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
+
+            if (vector.SingleVector != null)
+            {
+                return builderParameters.IndexSearcher.VectorSearch(fieldMetadata, vector.SingleVector.Value, minimumMatch, numberOfCandidates, exact,
+                    builderParameters.IsVectorSingleClause);
+            }
+
+            return builderParameters.IndexSearcher.MultiVectorSearch(fieldMetadata, vector.MultiVector, minimumMatch, numberOfCandidates, exact,
+                builderParameters.IsVectorSingleClause);
+
+
+            // We need to handle embedding generation from embedding.text()
         }
         
         var (value, valueType) = QueryBuilderHelper.GetValue(metadata.Query, metadata, builderParameters.QueryParameters, (ValueExpression)srcVector,
             allowObjectsInParameters: false, allowArraysInParameters: true);
 
         (VectorValue? SingleVector, VectorValue[] MultiVector) transformedEmbeddings = (null, null);
-        IndexField indexField;
 
-        if (VectorHelpers.TryRetrieveEtlTaskName(builderParameters, fieldName, out var embeddingsGenerationTaskIdentifier))
+        if (VectorHelpers.TryRetrieveEtlTaskName(builderParameters, fieldName, out embeddingsGenerationTaskIdentifier))
         {
             var vectorOptions = VectorHelpers.GetExplicitVectorOptions(builderParameters, fieldName, out indexField);
             transformedEmbeddings = VectorHelpers.GetEmbeddingsForQueryParameter(builderParameters, valueType, value, embeddingsGenerationTaskIdentifier, vectorOptions, fieldName);
@@ -194,6 +242,13 @@ public static partial class CoraxQueryBuilder
 
     private static class VectorHelpers
     {
+        public enum MethodVectorValue
+        {
+            ForDocument,
+            ForRaw,
+            EmbeddingText
+        }
+        
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static bool TryRetrieveEtlTaskName(Parameters builderParameters, in string fieldName, out string embeddingsGenerationTaskIdentifier)
         {

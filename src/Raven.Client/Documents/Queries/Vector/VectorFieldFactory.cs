@@ -210,6 +210,14 @@ public interface IVectorEmbeddingTextFieldValueFactory
     /// </summary>
     /// <param name="text">Queried text.</param>
     public void ByText(string text);
+    
+    /// <summary>
+    /// Defines queried text.
+    /// This method should be used only to query static index when vectors where prepared via a specific model outside EmbeddingsGenerationTask and indexed via the `CreateVector` method. 
+    /// </summary>
+    /// <param name="text">Queried text.</param>
+    /// <param name="embeddingsGenerationTaskIdentifier">Embeddings generation task identifier.</param>
+    public void ByText(string text, string embeddingsGenerationTaskIdentifier);
 
     /// <summary>
     /// Query by the embedding(s) indexed from the specified document for the queried field. 
@@ -221,6 +229,14 @@ public interface IVectorEmbeddingTextFieldValueFactory
     /// </summary>
     /// <param name="texts">Queried texts.</param>
     public void ByTexts(IEnumerable<string> texts);
+    
+    /// <summary>
+    /// Defines queried texts.
+    /// This method should be used only to query static index when vectors where prepared via a specific model outside EmbeddingsGenerationTask and indexed via the `CreateVector` method.
+    /// </summary>
+    /// <param name="texts">Queried texts.</param>
+    /// <param name="embeddingsGenerationTaskIdentifier">Embeddings generation task identifier.</param>
+    public void ByTexts(IEnumerable<string> texts, string embeddingsGenerationTaskIdentifier);
 }
 
 public interface IVectorEmbeddingFieldValueFactory
@@ -295,6 +311,8 @@ public interface IVectorFieldValueFactoryAccessor
     internal string Text { get; set; }
     internal string ById { get; set; }
     internal IEnumerable<string> Texts { get; set; }
+    internal string EmbeddingsGenerationTaskIdentifier { get; set; }
+
 }
 
 internal class VectorFieldValueFactory : IVectorFieldValueFactory, IVectorFieldValueFactoryAccessor
@@ -303,6 +321,7 @@ internal class VectorFieldValueFactory : IVectorFieldValueFactory, IVectorFieldV
     public string Text { get; set; }
     public string ById { get; set; }
     public IEnumerable<string> Texts { get; set; }
+    public string EmbeddingsGenerationTaskIdentifier { get; set; }
     
     void IVectorEmbeddingFieldValueFactory.ByEmbedding<T>(IEnumerable<T> embedding)
     {
@@ -353,10 +372,22 @@ internal class VectorFieldValueFactory : IVectorFieldValueFactory, IVectorFieldV
     {
         Text = text;
     }
-    
+
+    void IVectorEmbeddingTextFieldValueFactory.ByText(string text, string embeddingsGenerationTaskIdentifier)
+    {
+        Text = text;
+        EmbeddingsGenerationTaskIdentifier = embeddingsGenerationTaskIdentifier;
+    }
+
     void IVectorEmbeddingTextFieldValueFactory.ByTexts(IEnumerable<string> texts)
     {
         Texts = texts;
+    }
+    
+    void IVectorEmbeddingTextFieldValueFactory.ByTexts(IEnumerable<string> texts, string embeddingsGenerationTaskIdentifier)
+    {
+        Texts = texts;
+        EmbeddingsGenerationTaskIdentifier = embeddingsGenerationTaskIdentifier;
     }
     
     void IVectorEmbeddingFieldValueFactory.ByEmbedding<T>(RavenVector<T> embedding)

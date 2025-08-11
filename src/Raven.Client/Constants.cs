@@ -599,8 +599,9 @@ namespace Raven.Client
 
         internal static class VectorSearch
         {
+            internal const string AiTaskMethodName = "ai.task";
             private const string EmbeddingPrefix = "embedding.";
-
+            
             internal const string EmbeddingForDocument = EmbeddingPrefix + "forDoc";
             internal const string EmbeddingForRaw = EmbeddingPrefix + "Raw";
             internal const string EmbeddingText = EmbeddingPrefix + "text";
