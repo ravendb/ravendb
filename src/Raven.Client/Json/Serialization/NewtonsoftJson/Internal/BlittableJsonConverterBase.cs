@@ -17,7 +17,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
     {
         protected readonly ISerializationConventions Conventions;
 
-        private Dictionary<object, Dictionary<object, object>> _missingDictionary = new Dictionary<object, Dictionary<object, object>>(ObjectReferenceEqualityComparer<object>.Default);
+        private Dictionary<object, Dictionary<object, object>>? _missingDictionary;
 
         protected BlittableJsonConverterBase(ISerializationConventions conventions)
         {
@@ -282,20 +282,20 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             }
         }
 
-        public Dictionary<object, Dictionary<object, object>> MissingProperties
+        public Dictionary<object, Dictionary<object, object>>? MissingProperties
         {
             get => _missingDictionary;
-            set => _missingDictionary = value ?? new Dictionary<object, Dictionary<object, object>>(ObjectReferenceEqualityComparer<object>.Default);
+            set => _missingDictionary = value;
         }
 
         public void Clear()
         {
-            _missingDictionary.Clear();
+            _missingDictionary?.Clear();
         }
 
         protected IEnumerable<KeyValuePair<object, object>> FillMissingProperties(object o)
         {
-            if (_missingDictionary.TryGetValue(o, out var props))
+            if (_missingDictionary != null && _missingDictionary.TryGetValue(o, out var props))
                 return props;
             return Enumerable.Empty<KeyValuePair<object, object>>();
         }
@@ -305,6 +305,8 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
             if (Conventions.Conventions.PreserveDocumentPropertiesNotFoundOnModel == false ||
                 id == Constants.Documents.Metadata.Key)
                 return;
+
+            _missingDictionary ??= new Dictionary<object, Dictionary<object, object>>(ObjectReferenceEqualityComparer<object>.Default);
 
             if (_missingDictionary.TryGetValue(o, out var dictionary) == false)
             {
@@ -316,7 +318,7 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
         public void RemoveFromMissing<T>(T entity)
         {
-            _missingDictionary.Remove(entity);
+            _missingDictionary?.Remove(entity);
         }
     }
 }
