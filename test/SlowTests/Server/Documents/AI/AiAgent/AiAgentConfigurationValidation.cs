@@ -150,5 +150,38 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<AiAgentBasics.OutputSchema>(CancellationToken.None));
             Assert.Contains($"Parameter 'company' is missing", e.Message);
         }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+        public async Task ThrowDuplicateToolName(Options options, GenAiConfiguration config)
+        {
+            using var store = GetDocumentStore(options);
+
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            using var session = store.OpenAsyncSession();
+
+            var agent = new AiAgentConfiguration("shopping assistant", config.ConnectionStringName,
+                "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");
+
+            agent.Parameters.Add(new AiAgentParameter("company"));
+            agent.Queries =
+            [
+                new AiAgentToolQuery
+                {
+                    Name = "ProductSearch", 
+                    Description =  "semantic search the store product catalog",
+                    Query = "from Products where vector.search(embedding.text(Name), $query)",
+                    ParametersSampleObject = "{\"query\": [\"term or phrase to search in the catalog\"]}"
+                }
+            ];
+            agent.Actions =
+            [
+                new AiAgentToolAction("ProductSearch", "semantic search the store product catalog")
+            ];
+
+            var e = await Assert.ThrowsAsync<RavenException>(() => store.AI.CreateAgentAsync(agent, AiAgentBasics.OutputSchema.Instance));
+            Assert.Contains("Tool action name 'ProductSearch' is not unique", e.Message);
+        }
     }
 }

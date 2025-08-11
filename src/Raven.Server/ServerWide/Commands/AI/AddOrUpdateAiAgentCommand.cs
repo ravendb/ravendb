@@ -151,9 +151,13 @@ namespace Raven.Server.ServerWide.Commands.AI
             if (duplicateNames.Count > 0)
                 throw new InvalidOperationException($"Duplicate parameter names found in agent configuration: {string.Join(", ", duplicateNames)}");
 
+            var uniqueToolNames = new HashSet<string>(); // tool names are case-sensitive
             var scopeParams = configuration.Parameters.Select(x => x.Name).ToHashSet();
             foreach (var tool in configuration.Queries)
             {
+                if (uniqueToolNames.Add(tool.Name) == false)
+                    throw new InvalidOperationException($"Tool query name '{tool.Name}' is not unique. It is already defined in the agent configuration.");
+
                 if (ToolNameChecker.IsMatch(tool.Name) == false)
                     throw new InvalidOperationException($"Query name '{tool.Name}' is invalid. It must match the pattern: {ToolNameChecker}");
 
@@ -182,6 +186,9 @@ namespace Raven.Server.ServerWide.Commands.AI
 
             foreach (var action in configuration.Actions)
             {
+                if (uniqueToolNames.Add(action.Name) == false)
+                    throw new InvalidOperationException($"Tool action name '{action.Name}' is not unique. It is already defined in the agent configuration.");
+
                 if (ToolNameChecker.IsMatch(action.Name) == false)
                     throw new InvalidOperationException($"Action name '{action.Name}' is invalid. It must match the pattern: {ToolNameChecker}");
             }
