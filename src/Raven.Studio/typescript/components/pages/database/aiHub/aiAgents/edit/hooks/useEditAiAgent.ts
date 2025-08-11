@@ -13,6 +13,7 @@ import { editAiAgentActions } from "../store/editAiAgentSlice";
 import { editAiAgentUtils } from "../utils/editAiAgentUtils";
 import {
     EditAiAgentFormData,
+    EditAiAgentValidationContext,
     editAiAgentYupResolver,
     TestAiAgentFormData,
     testAiAgentYupResolver,
@@ -60,7 +61,7 @@ export default function useEditAiAgent(queryParams: QueryParams) {
                     allParameterNames: data.parameters?.map((x) => x.name) ?? [],
                     allQueryNames: data.queries?.map((x) => x.name) ?? [],
                     allActionNames: data.actions?.map((x) => x.name) ?? [],
-                },
+                } satisfies EditAiAgentValidationContext,
                 options
             ),
     });

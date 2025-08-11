@@ -3,6 +3,12 @@ import * as yup from "yup";
 
 export type AiAgentTrimmingMethod = "Tokens";
 
+export interface EditAiAgentValidationContext {
+    allParameterNames: string[];
+    allQueryNames: string[];
+    allActionNames: string[];
+}
+
 const editSchema = yup.object({
     // Basic
     name: yup.string().required(),
@@ -36,11 +42,15 @@ const editSchema = yup.object({
                 .string()
                 .nullable()
                 .required()
-                .test("unique-parameter", "Parameter name must be unique", function (value, ctx) {
-                    const allParameterNames = ctx.options.context.allParameterNames || [];
-                    const valuesCount = allParameterNames.filter((name: string) => name === value).length;
-                    return valuesCount <= 1;
-                }),
+                .test(
+                    "unique-parameter",
+                    "Parameter name must be unique",
+                    function (value, ctx: yup.TestContext<EditAiAgentValidationContext>) {
+                        const allParameterNames = ctx.options.context.allParameterNames ?? [];
+                        const valuesCount = allParameterNames.filter((name: string) => name === value).length;
+                        return valuesCount <= 1;
+                    }
+                ),
             description: yup.string().nullable(),
         })
     ),
@@ -52,11 +62,7 @@ const editSchema = yup.object({
                 .string()
                 .required()
                 .matches(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens")
-                .test("unique-name", "Query name must be unique", function (value, ctx) {
-                    const allQueryNames = ctx.options.context.allQueryNames || [];
-                    const valuesCount = allQueryNames.filter((name: string) => name === value).length;
-                    return valuesCount <= 1;
-                }),
+                .test("unique-name", "Tool name must be unique", getIsToolNameUnique),
             description: yup.string().required(),
             query: yup.string().required(),
             parametersSampleObject: yup.string(),
@@ -86,11 +92,7 @@ const editSchema = yup.object({
                 .string()
                 .required()
                 .matches(/^[a-zA-Z0-9_-]+$/, "Tool name can only contain letters, numbers, underscores and hyphens")
-                .test("unique-name", "Action name must be unique", function (value, ctx) {
-                    const allActionNames = ctx.options.context.allActionNames || [];
-                    const valuesCount = allActionNames.filter((name: string) => name === value).length;
-                    return valuesCount <= 1;
-                }),
+                .test("unique-name", "Tool name must be unique", getIsToolNameUnique),
             description: yup.string().required(),
             parametersSampleObject: yup.string(),
             parametersSchema: yup
@@ -134,6 +136,15 @@ const editSchema = yup.object({
         })
         .nullable(),
 });
+
+function getIsToolNameUnique(value: string, ctx: yup.TestContext<EditAiAgentValidationContext>): boolean {
+    const allActionNames = ctx.options.context.allActionNames ?? [];
+    const allQueryNames = ctx.options.context.allQueryNames ?? [];
+    const allToolNames = [...allActionNames, ...allQueryNames];
+
+    const valuesCount = allToolNames.filter((name: string) => name === value).length;
+    return valuesCount <= 1;
+}
 
 const testSchema = yup.object({
     prompt: yup.string().nullable().required(),
