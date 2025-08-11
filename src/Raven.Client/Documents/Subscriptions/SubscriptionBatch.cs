@@ -169,6 +169,10 @@ namespace Raven.Client.Documents.Subscriptions
                     s.RegisterTimeSeries(item);
             }
 
+            if (_requestExecutor.Conventions.PreserveDocumentPropertiesNotFoundOnModel)
+            {
+                s.JsonConverter.MissingProperties = _requestExecutor.Conventions.Serialization.DefaultConverter.MissingProperties;
+            }
             foreach (var item in Items)
             {
                 if (item.Projection || item.Revision)

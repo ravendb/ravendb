@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using Raven.Client.Documents.Session;
 using Sparrow.Json;
 
@@ -41,5 +42,7 @@ namespace Raven.Client.Json.Serialization
         void PopulateEntity(object entity, BlittableJsonReaderObject json);
 
         void PopulateEntity(object entity, BlittableJsonReaderObject json, IJsonSerializer jsonSerializer);
+
+        Dictionary<object, Dictionary<object, object>> MissingProperties { get; set; }
     }
 }

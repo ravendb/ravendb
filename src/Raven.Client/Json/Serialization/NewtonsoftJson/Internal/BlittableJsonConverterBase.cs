@@ -17,6 +17,8 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
     {
         protected readonly ISerializationConventions Conventions;
 
+        public Dictionary<object, Dictionary<object, object>> _missingDictionary = new Dictionary<object, Dictionary<object, object>>(ObjectReferenceEqualityComparer<object>.Default);
+
         protected BlittableJsonConverterBase(ISerializationConventions conventions)
         {
             Conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
@@ -278,6 +280,44 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
                 default:
                     return null;
             }
+        }
+
+        public Dictionary<object, Dictionary<object, object>> MissingProperties
+        {
+            get => _missingDictionary;
+            set => _missingDictionary = value ?? new Dictionary<object, Dictionary<object, object>>(ObjectReferenceEqualityComparer<object>.Default);
+        }
+
+        public void Clear()
+        {
+            _missingDictionary.Clear();
+        }
+
+        protected IEnumerable<KeyValuePair<object, object>> FillMissingProperties(object o)
+        {
+            if (_missingDictionary.Count == 0)
+                return Enumerable.Empty<KeyValuePair<object, object>>();
+            _missingDictionary.TryGetValue(o, out var props);
+            return props;
+        }
+
+        protected void RegisterMissingProperties(object o, string id, object value)
+        {
+            if (Conventions.Conventions.PreserveDocumentPropertiesNotFoundOnModel == false ||
+                id == Constants.Documents.Metadata.Key)
+                return;
+
+            if (_missingDictionary.TryGetValue(o, out var dictionary) == false)
+            {
+                _missingDictionary[o] = dictionary = new Dictionary<object, object>();
+            }
+
+            dictionary[id] = value;
+        }
+
+        public void RemoveFromMissing<T>(T entity)
+        {
+            _missingDictionary.Remove(entity);
         }
     }
 }
