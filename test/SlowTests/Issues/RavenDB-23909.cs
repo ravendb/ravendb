@@ -22,6 +22,7 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
         {
             var (configuration, _) = AddEmbeddingsGenerationTask(store);
 
+
             using (var session = store.OpenSession())
             {
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
@@ -30,6 +31,9 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.SaveChanges();
                 
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(queriesWorkerRegistered);
+                Assert.True(indexingWorkerRegistered);
                 
                 var result = session.Query<Dto>()
                     .VectorSearch(x => 
@@ -52,6 +56,7 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
         {
             var (configuration, _) = AddEmbeddingsGenerationTask(store, targetQuantization: VectorEmbeddingType.Int8);
 
+
             using (var session = store.OpenSession())
             {
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
@@ -60,7 +65,10 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.SaveChanges();
                 
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(queriesWorkerRegistered);
+                Assert.True(indexingWorkerRegistered);
+                
                 try
                 {
                     _ = session.Query<Dto>()
@@ -93,8 +101,9 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
     {
         using (var store = GetDocumentStore(options))
         {
-            _ = AddEmbeddingsGenerationTask(store);
+            var (configuration, _) = AddEmbeddingsGenerationTask(store);
 
+            
             using (var session = store.OpenSession())
             {
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
@@ -103,6 +112,9 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.SaveChanges();
                 
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(queriesWorkerRegistered);
+                Assert.True(indexingWorkerRegistered);
 
                 var index = new DummyIndex();
                 index.Execute(store);
@@ -126,8 +138,9 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
     {
         using (var store = GetDocumentStore(options))
         {
-            _ = AddEmbeddingsGenerationTask(store);
+            var (configuration, _) = AddEmbeddingsGenerationTask(store);
 
+            
             using (var session = store.OpenSession())
             {
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
@@ -136,7 +149,10 @@ public class RavenDB_23909(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.SaveChanges();
 
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(queriesWorkerRegistered);
+                Assert.True(indexingWorkerRegistered);
+
                 var index = new DummyJsIndex();
                 index.Execute(store);
                 Indexes.WaitForIndexing(store);

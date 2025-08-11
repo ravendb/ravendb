@@ -38,6 +38,9 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         }, targetQuantization: VectorEmbeddingType.Int8);
         
         etl.Wait(DefaultEtlTimeout);
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, configuration, connectionString, "Name", ["car"], id, VectorEmbeddingType.Int8);
         
         
@@ -76,6 +79,10 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
             new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 }}
         }, targetQuantization: VectorEmbeddingType.Single);
         Assert.True(etl.Wait(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
+        
         AssertEmbeddingsForPath(store, configuration, connectionString, "Name", ["car"], id);
         
         new QuantizationInIndex().Execute(store);
@@ -110,6 +117,10 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         var etl = Etl.WaitForEtlToComplete(store);
         var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, targetQuantization: VectorEmbeddingType.Binary);
         Assert.True(etl.Wait(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
+
         AssertEmbeddingsForPath(store, configuration, connectionString, "Name", ["car"], id, VectorEmbeddingType.Binary);
 
         new Index().Execute(store);
@@ -144,11 +155,17 @@ public class LoadVectorQuantizationTests(ITestOutputHelper output) : EmbeddingsG
         var etl = Etl.WaitForEtlToComplete(store);
         var (configurationSingle, connectionStringSingle) = AddEmbeddingsGenerationTask(embeddingsGenerationTaskName: "secondEtl", store: store, targetQuantization: VectorEmbeddingType.Single);
         Assert.True(etl.Wait(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configurationSingle);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, configurationSingle, connectionStringSingle, "Name", ["car"], id, VectorEmbeddingType.Single);
         etl.Reset();
         
         var (configurationInt8, connectionStringInt8) = AddEmbeddingsGenerationTask(store, targetQuantization: VectorEmbeddingType.Int8);
         Assert.True(etl.Wait(DefaultEtlTimeout));
+        (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configurationInt8);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, configurationInt8, connectionStringInt8, "Name", ["car"], id, VectorEmbeddingType.Int8);
 
         

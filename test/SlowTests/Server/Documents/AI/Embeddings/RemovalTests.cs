@@ -29,6 +29,9 @@ public class RemovalTests(ITestOutputHelper output) : EmbeddingsGenerationTestBa
         var etlWait = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], embeddingsGenerationTaskName: "eg");
         Assert.True(etlWait.Wait(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, config, connectionString, "Name", ["Maciej"], id0);
         AssertEmbeddingsForPath(store, config, connectionString, "Name", ["Car"], id1);
 
