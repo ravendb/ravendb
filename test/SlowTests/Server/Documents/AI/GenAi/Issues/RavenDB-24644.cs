@@ -51,7 +51,7 @@ ai.genContext({}).withPdf(pdf);
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false,
             Data = new object[] { false })]
 
-        public async Task CanProcessNonExistedPdfAttachment(Options options, GenAiConfiguration config, bool withNullAttachments)
+        public async Task SelectivePdfDescriptionTransformWhenSomeAttachmentsAreMissing(Options options, GenAiConfiguration config, bool withNullAttachments)
         {
             using var store = GetDocumentStore(options);
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -106,7 +106,7 @@ ai.genContext({}).withPdf(pdf);
                 Assert.True(doc3.PdfDescription.Description == marker.Description); // shouldn't change - because it's not in 'Items' collection
 
                 Assert.False(item1.PdfDescription.Description == marker.Description);
-                var item2Changed = (item2.PdfDescription.Description != marker.Description);
+                var item2Changed = ((item2.PdfDescription.Description == marker.Description) == false);
                 if (withNullAttachments)
                     Assert.True(item2Changed);
                 else
@@ -123,7 +123,7 @@ ai.genContext({}).withPdf(pdf);
             var document = await session.LoadAsync<T>(id);
             var metadata = session.Advanced.GetMetadataFor(document);
 
-            if (!metadata.TryGetValue(Constants.Documents.Metadata.GenAiHashes, out object hashesSectionObj))
+            if (metadata.TryGetValue(Constants.Documents.Metadata.GenAiHashes, out object hashesSectionObj) == false)
                 return null;
 
             if (hashesSectionObj is not MetadataAsDictionary hashesSection)
