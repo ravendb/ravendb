@@ -3202,7 +3202,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 * * * *", mentorNode: nodes[2].ServerStore.NodeTag);
                 var taskId = await Backup.UpdateConfigAsync(nodes[1], config, responsibleStore);
 
-                var responsibleNode = GetResponsibleNodeTag(nodes[1].ServerStore, databaseName, taskId);
+                var responsibleNode = Raven.Server.Utils.BackupUtils.GetResponsibleNodeTag(nodes[1].ServerStore, databaseName, taskId);
                 Assert.Equal(responsibleNode, nodes[2].ServerStore.NodeTag);
 
                 var newOrder = new List<string>() { nodes[1].ServerStore.NodeTag, nodes[0].ServerStore.NodeTag, nodes[2].ServerStore.NodeTag };
