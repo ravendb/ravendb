@@ -19,6 +19,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Queries;
+using Raven.Client.Exceptions.Corax;
 using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Extensions;
 using Raven.Client.ServerWide.Operations;
@@ -4924,7 +4925,7 @@ namespace Raven.Server.Documents.Indexes
         public void Compact(Action<IOperationProgress> onProgress, CompactionResult result, bool shouldSkipOptimization, CancellationToken token)
         {
             if (IndexPersistence is CoraxIndexPersistence)
-                throw new NotSupportedException($"{nameof(Compact)} is not supported for Corax indexes.");
+                throw new NotSupportedInCoraxException($"{nameof(Compact)} is not supported for Corax indexes.");
 
             AssertCompactionOrOptimizationIsNotInProgress(Name, nameof(Compact));
 
