@@ -168,11 +168,17 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                 case CommandType.AttachmentPUT:
                     var docId = EtlGetDocIdFromPrefixIfNeeded(cmd.Id, cmd, lastPutResult);
 
-                    AttachmentStream attachmentStream = GetAttachmentStream(attachmentIterator, out Stream stream);
-                    AttachmentDetailsServer attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, attachmentStream.Hash, stream.Length, cmd.RetireParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
+                    Stream stream = null;
 
-                    Debug.Assert(cmd.RetireParameters.IsLocalAttachment(), "cmd.RetireParameters.IsLocalAttachment()");
+                    if (cmd.RetireParameters.IsLocalAttachment())
+                    {
+                        var attachmentStream = GetAttachmentStream(attachmentIterator, out stream);
+                        cmd.Hash = attachmentStream.Hash;
 
+                        Debug.Assert(cmd.SizeInBytes == stream.Length, "cmd.SizeInBytes == stream.Length");
+                    }
+
+                    var attachmentPutResult = Database.DocumentsStorage.AttachmentsStorage.PutAttachment(context, docId, cmd.Name, cmd.ContentType, cmd.Hash, cmd.SizeInBytes, cmd.RetireParameters, cmd.ChangeVector, stream, updateDocument: false, extractCollectionName: ModifiedCollections is not null, fromEtl: cmd.FromEtl);
                     LastChangeVector = attachmentPutResult.ChangeVector;
 
                     var apReply = new DynamicJsonValue

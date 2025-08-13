@@ -49,9 +49,14 @@ namespace Raven.Server.Documents.Expiration
 
             if (allExpired)
             {
-                expiredDocs.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id));
+                expiredDocs.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id, DocumentExpirationInfoStatus.Process));
                 totalCount++;
             }
+        }
+
+        protected override void HandleSkippedItem(DocumentExpirationInfo item)
+        {
+            // no-op, we don't handle skipped items in expiration storage
         }
 
         private (bool AllExpired, string Id) GetConflictedExpiration(DocumentsOperationContext context, DateTime currentTime, Slice clonedId)

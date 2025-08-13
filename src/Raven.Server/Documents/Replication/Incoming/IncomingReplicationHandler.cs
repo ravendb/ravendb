@@ -318,31 +318,6 @@ namespace Raven.Server.Documents.Replication.Incoming
 
             protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item, List<IDisposable> disposables)
             {
-                if (_isInternal == false)
-                {
-                    switch (item)
-                    {
-                        case AttachmentReplicationItem attachmentReplicationItem:
-                            if (attachmentReplicationItem.Flags == RetiredAttachmentFlags.Retired)
-                            {
-                                attachmentReplicationItem.Flags = RetiredAttachmentFlags.None;
-                            }
-                            break;
-
-                        case DocumentReplicationItem document:
-
-                            if (document.Type != ReplicationBatchItem.ReplicationItemType.DocumentTombstone)
-                            {
-                                if (RavenEtlScriptRun.DropRetiredAttachmentFlagFromAttachmentMetadataIfNeeded(context, document.Id, document.Data, out document.Data))
-                                {
-                                    disposables.Add(document.Data);
-                                }
-                            }
-
-                            break;
-                    }
-                }
-
                 return context.GetChangeVector(item.ChangeVector).Order;
             }
 
@@ -821,7 +796,9 @@ namespace Raven.Server.Documents.Replication.Incoming
                 {
                     if (attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false)
                         continue;
-
+                    if (attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParameters) && retireParameters != null
+                        && retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out RetiredAttachmentFlags flags) && flags == RetiredAttachmentFlags.Retired)
+                        continue;
                     if (context.DocumentDatabase.DocumentsStorage.AttachmentsStorage.AttachmentExists(context, hash))
                         continue;
 

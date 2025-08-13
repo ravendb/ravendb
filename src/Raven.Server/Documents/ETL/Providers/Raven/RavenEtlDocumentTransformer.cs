@@ -790,21 +790,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 if (attachmentInfo.TryGet(nameof(AttachmentName.Name), out string name))
                 {
                     var attachmentData = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, item.DocumentId, name, AttachmentType.Document, null);
-                    if (attachmentData.RetireParameters.IsRetiredAttachment())
-                    {
-                        using Stream stream = AsyncHelpers.RunSync(() =>
-                            Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(_downloader.Value,
-                                attachmentData.Base64Hash.ToString()));
-                        var memStream = new MemoryStream();
-                        stream.CopyTo(memStream);
-                        memStream.Position = 0;
-                        attachmentData.Stream = memStream;
-                        attachmentData.RetireParameters = new RetireAttachmentParameters(attachmentData.RetireParameters.Identifier, attachmentData.RetireParameters.At)
-                        {
-                            Flags = RetiredAttachmentFlags.None // we are loading retired attachment, so we need to reset the flag
-                        };
-
-                    }
                     results.Add(attachmentData);
                 }
             }

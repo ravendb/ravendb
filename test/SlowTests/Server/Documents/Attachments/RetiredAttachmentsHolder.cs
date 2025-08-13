@@ -12,6 +12,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Attachments;
+using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.Replication;
@@ -42,7 +43,8 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
     public abstract IAsyncDisposable CreateCloudSettings([CallerMemberName] string caller = null);
     protected abstract Task<List<FileInfoDetails>> GetBlobsFromCloudAndAssertForCount(TSettings settings, int expected, int timeout = 120_000);
     public abstract Task DeleteObjects(TSettings settings);
-    public abstract Task<string> PutRetireAttachmentsConfiguration(IDocumentStore store, TSettings settings, List<string> collections = null, string database = null);
+    public abstract Task<string> PutRetireAttachmentsConfiguration(IDocumentStore store, TSettings settings, List<string> collections = null, string database = null, string id = null);
+    public abstract TSettings GetCloudSetting(string remoteFolderName, [CallerMemberName] string caller = null);
 
     public Action<RetiredAttachmentsConfiguration> ModifyRetiredAttachmentsConfig = null;
 
@@ -354,7 +356,16 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                     }
                 }, attachmentsCount, 30_000);
                 Assert.Equal(attachmentsCount, val3);
-                await AssertGetRetiredAttachmentsInBulk(replica, size, identifier, RetiredAttachmentFlags.None);
+
+                foreach (var retired in Attachments)
+                {
+                    var e = await Assert.ThrowsAsync<RavenException>(async () =>
+                        await replica.Operations.SendAsync(new GetAttachmentOperation(retired.DocumentId, retired.Name, AttachmentType.Document, null)));
+                    Assert.Contains($"Cannot get retired attachment '{retired.Name}' on document '{retired.DocumentId}' because it is doesn't have a RetiredAttachmentsConfiguration.", e.Message);
+                }
+
+                var identifier2 = await PutRetireAttachmentsConfiguration(replica, Settings);
+                await AssertGetRetiredAttachmentsInBulk(replica, size, identifier2, RetiredAttachmentFlags.Retired);
             }
         }
     }
@@ -412,9 +423,8 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 var database2 = (await GetDocumentDatabaseInstanceForAsync(store2.Database));
                 GetStorageAttachmentsMetadataFromAllAttachments(database2);
                 var identifier2 = await PutRetireAttachmentsConfiguration(store2, Settings);
-
+                Assert.Equal(identifier1, identifier2);
                 Assert.Equal(attachmentsCount, Attachments.Count);
-
                 // move in time & start retire
                 database2.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 await database2.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
@@ -423,6 +433,59 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
             }
         }
     }
+
+    protected async Task CanExternalReplicateRetiredAttachmentAndThenUploadToCloudAndGet2(int attachmentsCount, int size)
+    {
+        using (var store1 = GetDocumentStore())
+        using (var store2 = GetDocumentStore())
+        await using (var holder = CreateCloudSettings())
+        {
+            int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+            var ids = new List<(string Id, string Collection)>();
+            var identifier1 = await PutRetireAttachmentsConfiguration(store1, Settings);
+            await CreateDocs(store1, docsCount, ids);
+            await PopulateDocsWithRandomAttachments(store1, identifier1, size, ids, attachmentsPerDoc);
+
+            await SetupReplicationAsync(store1, store2);
+            await EnsureReplicatingAsync(store1, store2);
+
+            var database2 = (await GetDocumentDatabaseInstanceForAsync(store2.Database));
+            GetStorageAttachmentsMetadataFromAllAttachments(database2);
+
+            Assert.Null(database2.RetireAttachmentsSender);
+            var settings = GetCloudSetting("RetiredAttachments", $"{store2.Database}-{Guid.NewGuid()}");
+
+            // create different config with other identifier
+            GetStorageAttachmentsMetadataFromAllAttachments(database2, settings);
+            var identifier2 = await PutRetireAttachmentsConfiguration(store2, settings, id: "my-cool-identifier322");
+            Assert.Equal("my-cool-identifier322", identifier2);
+            Assert.NotEqual(identifier1, identifier2);
+
+            Assert.Equal(attachmentsCount, Attachments.Count);
+
+            Assert.True(await WaitForValueAsync(() => database2.RetireAttachmentsSender != null, true));
+            // move in time & start retire
+
+            var retiredAt = Attachments.First().RetireParameters.At;
+
+            database2.Time.UtcDateTime = () => retiredAt.AddMinutes(1);
+            await database2.RetireAttachmentsSender!.RetireAttachments(int.MaxValue, int.MaxValue);
+            await GetBlobsFromCloudAndAssertForCount(Settings, 0, 15_000);
+
+            var config1 = await store2.Maintenance.SendAsync(new GetRetireAttachmentsConfigurationOperation());
+            var config2 = await store1.Maintenance.SendAsync(new GetRetireAttachmentsConfigurationOperation());
+            config1.Destinations[identifier1] = config2.Destinations[identifier1];
+            Assert.Equal(2, config1.Destinations.Count);
+            await store2.Maintenance.SendAsync(new ConfigureRetiredAttachmentsOperation(config1));
+
+            await database2.RetireAttachmentsSender!.RetireAttachments(int.MaxValue, int.MaxValue);
+            GetStorageAttachmentsMetadataFromAllAttachments(database2);
+
+            var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
+            await AssertAllRetiredAttachments(store2, cloudObjects, size, identifier1);
+        }
+    }
+
     protected async Task CanUploadRetiredAttachmentToCloudAndDeleteInTheSameTimeInternal(int attachmentsCount, int size, int attachmentsPerDoc)
     {
         await using (var holder = CreateCloudSettings())

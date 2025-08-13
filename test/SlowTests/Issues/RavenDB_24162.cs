@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Attachments;
@@ -7,7 +6,6 @@ using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Exceptions.Security;
 using Raven.Client.ServerWide.Operations.Certificates;
-using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,7 +23,7 @@ namespace SlowTests.Issues
             Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
             {
                 {
-                    "test", new RetiredAttachmentsDestinationConfiguration()
+                    "conf-identifier", new RetiredAttachmentsDestinationConfiguration()
                     {
                         Disabled = true,
                         S3Settings = new S3Settings

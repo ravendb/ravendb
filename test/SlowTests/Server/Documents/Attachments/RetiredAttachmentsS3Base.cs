@@ -37,12 +37,12 @@ public abstract class RetiredAttachmentsS3Base : RetiredAttachmentsHolder<S3Sett
         });
     }
 
-    public override async Task<string> PutRetireAttachmentsConfiguration(IDocumentStore store, S3Settings settings, List<string> collections = null, string database = null)
+    public override async Task<string> PutRetireAttachmentsConfiguration(IDocumentStore store, S3Settings settings, List<string> collections = null, string database = null, string id = null)
     {
         if (string.IsNullOrEmpty(database))
             database = store.Database;
 
-        var id = "conf-identifier-s3";
+        id ??= "conf-identifier-s3";
         var config = new RetiredAttachmentsConfiguration()
         {
             Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>()
@@ -63,6 +63,12 @@ public abstract class RetiredAttachmentsS3Base : RetiredAttachmentsHolder<S3Sett
         await store.Maintenance.ForDatabase(database).SendAsync(new ConfigureRetiredAttachmentsOperation(config));
 
         return id;
+    }
+
+    public override S3Settings GetCloudSetting(string remoteFolderName, string caller = null)
+    {
+        var settings = Etl.GetS3Settings(remoteFolderName, caller);
+        return settings;
     }
 
     protected override void AssertUploadRetiredAttachmentToCloudThenManuallyDeleteAndGetShouldThrowInternal(RavenException e)

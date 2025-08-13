@@ -200,35 +200,40 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
     {
         using (ExtractIdentifierStringAndDocumentIdSliceFromRetiredAttachmentKey(options.Context, clonedId, out string identifier, out Slice documentIdSlice))
         {
-            // document is disposed in caller method
-            var document = Database.DocumentsStorage.Get(options.Context, documentIdSlice, DocumentFields.Id);
-            // doc was deleted
-            if (document == null)
+            if (Database.DocumentsStorage.GetTableValueReaderForDocument(options.Context, documentIdSlice, throwOnConflict: false, out _) == false)
             {
-                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+                // doc was deleted
+                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null, DocumentExpirationInfoStatus.Delete);
             }
 
-            if (options.DatabaseRecord.RetiredAttachments == null)
+            if (ShouldSkipItem(options.DatabaseRecord.RetiredAttachments, identifier))
             {
-                // no configuration, we don't care about this collection
-                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+                return new DocumentExpirationInfo(ticksSlice, clonedId, id: identifier, DocumentExpirationInfoStatus.Skip);
             }
 
-            if (options.DatabaseRecord.RetiredAttachments.Destinations == null)
-            {
-                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
-            }
+            return new DocumentExpirationInfo(ticksSlice, clonedId, id: identifier, DocumentExpirationInfoStatus.Process);
+        }
+    }
 
-
-            if (options.DatabaseRecord.RetiredAttachments.Destinations.ContainsKey(identifier) == false)
-            {
-                // no destinations, we don't care about this collection
-                return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
-            }
-
-            return new DocumentExpirationInfo(ticksSlice, clonedId, id: identifier);
+    private bool ShouldSkipItem(RetiredAttachmentsConfiguration config, string identifier)
+    {
+        if (config?.Destinations == null)
+        {
+            return true;
         }
 
+        if (config.Destinations.Count == 0)
+        {
+            return true;
+        }
+
+        if (config.Destinations.ContainsKey(identifier) == false)
+        {
+            // no destinations, we don't care about this attachment
+            return true;
+        }
+
+        return false;
     }
 
     [StorageIndexEntryKeyGenerator]
@@ -273,8 +278,27 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
         if (allExpired)
         {
-            expiredDocs.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id));
+            expiredDocs.Enqueue(new DocumentExpirationInfo(ticksAsSlice, clonedId, id, DocumentExpirationInfoStatus.Process));
             totalCount++;
+        }
+    }
+
+    private const string AlertTitle = "Remote Attachments";
+    private const string WarnMessage = "A retired attachment was skipped.";
+    private long _counter = 0;
+
+    protected override void HandleSkippedItem(DocumentExpirationInfo item)
+    {
+        if (_logger.IsDebugEnabled)
+        {
+            _logger.Debug($"Skipping retired attachment '{item.LowerId}' with identifier '{item.Id}'");
+        }
+
+        //TODO: RavenDB-24862 - rise an alert similar to BlockingTombstonesDetails or HugeDocumentsDetails
+        if (_counter++ % 1024 == 0)
+        {
+            var alert = AlertRaised.Create(Database.Name, AlertTitle, WarnMessage, AlertType.Attachments_RemoteAttachmentWithoutIdentifier, NotificationSeverity.Warning, key: nameof(AlertType.Attachments_RemoteAttachmentWithoutIdentifier)/*, details: "TODO"*/);
+            Database.NotificationCenter.Add(alert);
         }
     }
 

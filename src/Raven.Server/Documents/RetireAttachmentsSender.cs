@@ -295,7 +295,7 @@ namespace Raven.Server.Documents
             {
                 return new UpdateRetiredAttachmentsCommandDto
                 {
-                    Retired = _retired.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id)).ToArray(),
+                    Retired = _retired.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id, Status: x.Status)).ToArray(),
                     CurrentTime = _currentTime
                 };
             }
@@ -326,13 +326,13 @@ namespace Raven.Server.Documents
             var retired = new Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo>();
             foreach (var item in Retired)
             {
-                retired.Enqueue(new AbstractBackgroundWorkStorage.DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3));
+                retired.Enqueue(new AbstractBackgroundWorkStorage.DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3, item.Item4));
             }
             var command = new RetireAttachmentsSender.UpdateRetiredAttachmentsCommand(retired, database, CurrentTime);
             return command;
         }
 
-        public (Slice, Slice, string)[] Retired { get; set; }
+        public (Slice, Slice, string, AbstractBackgroundWorkStorage.DocumentExpirationInfoStatus)[] Retired { get; set; }
 
         public DateTime CurrentTime { get; set; }
     }

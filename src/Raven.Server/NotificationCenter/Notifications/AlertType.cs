@@ -98,5 +98,7 @@ namespace Raven.Server.NotificationCenter.Notifications
         ConflictRevisionsExceeded,
         
         SqlConnectionString_DeprecatedFactoryReplaced,
+
+        Attachments_RemoteAttachmentWithoutIdentifier
     }
 }

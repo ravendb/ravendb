@@ -47,7 +47,6 @@ namespace Raven.Server.Documents.Replication.Senders
         private Queue<Slice> _deduplicatedAttachmentHashesLru = new();
         private readonly int _numberOfAttachmentsTrackedForDeduplication;
         private readonly ByteStringContext _allocator; // required to clone the hashes 
-        private readonly Lazy<DirectFileDownloader> _downloader;
 
         protected ReplicationDocumentSenderBase(Stream stream, DatabaseOutgoingReplicationHandler parent, RavenLogger log)
         {
@@ -57,7 +56,6 @@ namespace Raven.Server.Documents.Replication.Senders
 
             _numberOfAttachmentsTrackedForDeduplication = parent._database.Configuration.Replication.MaxNumberOfAttachmentsTrackedForDeduplication;
             _allocator = new ByteStringContext(SharedMultipleUseFlag.None);
-            _downloader = new Lazy<DirectFileDownloader>(() => _parent._database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(null, new(_parent.CancellationToken))); // TODO: EGOR RavenDB-24604
         }
 
         protected virtual IEnumerable<ReplicationBatchItem> GetReplicationItems(DocumentsOperationContext ctx, long etag, ReplicationStats stats,
@@ -499,26 +497,6 @@ namespace Raven.Server.Documents.Replication.Senders
 
                     if (MissingAttachmentsInLastBatch)
                         state.MissingAttachmentBase64Hashes?.Remove(attachment.Base64Hash);
-                }
-                else if (_parent.Destination.Type != ReplicationNode.ReplicationType.Internal)
-                {
-                    if (ShouldSendAttachmentStream(attachment))
-                    {
-                        stats.RecordRetiredAttachmentStreamOutput(attachment.Size);
-                        var hash = attachment.Base64Hash.ToString();
-                        using Stream stream = Client.Util.AsyncHelpers.RunSync(() => _parent._database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(_downloader.Value, hash));
-                        var memStream = new MemoryStream();
-                        stream.CopyTo(memStream);
-                        memStream.Position = 0;
-                        attachment.Stream = memStream;
-
-                        _replicaAttachmentStreams[attachment.Base64Hash] = attachment;
-
-                        if (Log.IsInfoEnabled)
-                        {
-                            Log.Info($"Successfully downloaded retired attachment '{attachment.Name}' with hash '{hash}' from cloud, attachment key '{attachment.Key}'.");
-                        }
-                    }
                 }
             }
 

@@ -38,14 +38,14 @@ public abstract class RetiredAttachmentsAzureBase : RetiredAttachmentsHolder<Azu
         });
     }
 
-    public override async Task<string> PutRetireAttachmentsConfiguration(IDocumentStore store, AzureSettings settings, List<string> collections = null, string database = null)
+    public override async Task<string> PutRetireAttachmentsConfiguration(IDocumentStore store, AzureSettings settings, List<string> collections = null, string database = null, string id = null)
     {
         if (collections == null)
             collections = new List<string> { "Orders" };
         if (string.IsNullOrEmpty(database))
             database = store.Database;
-
-        var id = "conf-identifier-azure";
+        
+        id ??= "conf-identifier-azure";
         var config = new RetiredAttachmentsConfiguration()
         {
             Destinations = new Dictionary<string, RetiredAttachmentsDestinationConfiguration>
@@ -100,6 +100,12 @@ public abstract class RetiredAttachmentsAzureBase : RetiredAttachmentsHolder<Azu
             return;
 
         await AzureTests.DeleteObjects(settings, prefix: $"{settings.RemoteFolderName}", delimiter: string.Empty);
+    }
+
+    public override AzureSettings GetCloudSetting(string remoteFolderName, string caller = null)
+    {
+        var settings = Etl.GetAzureSettings(remoteFolderName, caller);
+        return settings;
     }
 
     protected override async Task WaitForTaskDelayIfNeeded()

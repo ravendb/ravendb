@@ -234,7 +234,7 @@ namespace Raven.Server.Documents.Expiration
             {
                 return new DeleteExpiredDocumentsCommandDto
                 {
-                    Expired = _expired.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id)).ToArray(),
+                    Expired = _expired.Select(x => (Ticks: x.Ticks, LowerId: x.LowerId, Id: x.Id, Status: x.Status)).ToArray(),
                     ForExpiration = _forExpiration,
                     CurrentTime = _currentTime
                 };
@@ -249,13 +249,13 @@ namespace Raven.Server.Documents.Expiration
             var expired = new Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo>();
             foreach (var item in Expired)
             {
-                expired.Enqueue(new AbstractBackgroundWorkStorage.DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3));
+                expired.Enqueue(new AbstractBackgroundWorkStorage.DocumentExpirationInfo(item.Item1.Clone(context.Allocator), item.Item2.Clone(context.Allocator), item.Item3, item.Item4));
             }
             var command = new ExpiredDocumentsCleaner.DeleteExpiredDocumentsCommand(expired, database, ForExpiration, CurrentTime);
             return command;
         }
 
-        public (Slice, Slice, string)[] Expired { get; set; }
+        public (Slice, Slice, string, AbstractBackgroundWorkStorage.DocumentExpirationInfoStatus)[] Expired { get; set; }
 
         public bool ForExpiration { get; set; }
 

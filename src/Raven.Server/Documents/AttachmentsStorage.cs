@@ -499,7 +499,14 @@ namespace Raven.Server.Documents
                 {
                     // this works similar to expiration, we populate the tree even if we don't have a configuration for attachments retirement
                     if (flags == RetiredAttachmentFlags.None && retireAt.HasValue)
+                    {
                         RetiredAttachmentsStorage.Put(context, key, retireAt.Value.GetDefaultRavenFormat(), identifier);
+                    }
+                    else if (flags == RetiredAttachmentFlags.Retired)
+                    {
+                        // we got retired attachment, so we can remove the stream from data file
+                        context.Transaction.CheckIfShouldDeleteAttachmentStream(base64Hash);
+                    }
                 }
             }
 

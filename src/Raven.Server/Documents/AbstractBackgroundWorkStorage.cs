@@ -13,7 +13,6 @@ using Sparrow.Binary;
 using Sparrow.Json;
 using Voron;
 using Voron.Impl;
-using Voron.Util;
 
 namespace Raven.Server.Documents;
 
@@ -31,6 +30,10 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         _treeName = treeName;
         MetadataPropertyName = metadataPropertyName;
     }
+
+    protected abstract void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime);
+    protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount);
+    protected abstract void HandleSkippedItem(DocumentExpirationInfo item);
 
     public void Put(DocumentsOperationContext context, Slice lowerId, string processDateString)
     {
@@ -113,21 +116,26 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         try
         {
             var item = GetDocumentAndId(options, clonedId, ticksAsSlice);
-            if (item.Document == null)
+            if (item.Status == DocumentExpirationInfoStatus.Delete)
             {
                 toProcess.Enqueue(item);
                 totalCount++;
                 return true;
             }
 
-            using (item.GetDocumentDisposable())
-            {
-                if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
-                    return false;
+            if (ShouldHandleWorkOnCurrentNode(options.DatabaseRecord.Topology, options.NodeTag) == false)
+                return false;
 
-                toProcess.Enqueue(item);
+            if (item.Status == DocumentExpirationInfoStatus.Skip)
+            {
+                // TODO: RavenDB-24862 - if we skip number of items that is equals to totalCount then we might end up with skips only in the batch, need to handle such scenario
                 totalCount++;
+                HandleSkippedItem(item);
+                return true;
             }
+
+            toProcess.Enqueue(item);
+            totalCount++;
             return true;
         }
         catch (DocumentConflictException)
@@ -138,51 +146,18 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         return false;
     }
 
-    public class DocumentExpirationInfo
-    {
-        public Document Document { get; set; }
-        public Slice Ticks { get; }
-        public Slice LowerId { get; }
-        public string Id { get; }
-
-        private DocumentExpirationInfo()
-        {
-        }
-
-        public DocumentExpirationInfo(Slice ticks, Slice lowerId, string id)
-        {
-            Ticks = ticks;
-            LowerId = lowerId;
-            Id = id;
-        }
-
-        public IDisposable GetDocumentDisposable()
-        {
-            return new DisposableAction(() =>
-            {
-                Document?.Dispose();
-                Document = null;
-            });
-        }
-    }
-
     protected virtual DocumentExpirationInfo GetDocumentAndId(BackgroundWorkParameters options, Slice clonedId, Slice ticksSlice)
     {
-        var document = Database.DocumentsStorage.Get(options.Context, clonedId, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
+        using var document = Database.DocumentsStorage.Get(options.Context, clonedId, DocumentFields.Id | DocumentFields.Data | DocumentFields.ChangeVector);
         if (document == null ||
             document.TryGetMetadata(out var metadata) == false ||
             HasPassed(metadata, options.CurrentTime, MetadataPropertyName) == false)
         {
-            return new DocumentExpirationInfo(ticksSlice, clonedId, id: null);
+            return new DocumentExpirationInfo(ticksSlice, clonedId, id: null, DocumentExpirationInfoStatus.Delete);
         }
 
-        return new DocumentExpirationInfo(ticksSlice, clonedId, id: document.Id)
-        {
-            Document = document
-        };
+        return new DocumentExpirationInfo(ticksSlice, clonedId, id: document.Id, DocumentExpirationInfoStatus.Process);
     }
-
-    protected abstract void HandleDocumentConflict(BackgroundWorkParameters options, Slice ticksAsSlice, Slice clonedId, Queue<DocumentExpirationInfo> expiredDocs, ref int totalCount);
 
     public static bool ShouldHandleWorkOnCurrentNode(DatabaseTopology topology, string nodeTag)
     {
@@ -218,8 +193,6 @@ public abstract unsafe class AbstractBackgroundWorkStorage
         return currentTime >= date;
     }
     
-    protected abstract void ProcessDocument(DocumentsOperationContext context, Slice lowerId, string id, DateTime currentTime);
-
     public int ProcessDocuments(DocumentsOperationContext context, Queue<DocumentExpirationInfo> toProcess, DateTime currentTime)
     {
         var processedCount = 0;
@@ -255,6 +228,32 @@ public abstract unsafe class AbstractBackgroundWorkStorage
 
         return processedCount;
     }
-    
-}
 
+    public enum DocumentExpirationInfoStatus
+    {
+        Process,
+        Skip,
+        Delete
+    }
+
+    public class DocumentExpirationInfo
+    {
+        public Slice Ticks { get; }
+        public Slice LowerId { get; }
+        public string Id { get; }
+        public DocumentExpirationInfoStatus Status { get; }
+
+
+        private DocumentExpirationInfo()
+        {
+        }
+
+        public DocumentExpirationInfo(Slice ticks, Slice lowerId, string id, DocumentExpirationInfoStatus status)
+        {
+            Status = status;
+            Ticks = ticks;
+            LowerId = lowerId;
+            Id = id;
+        }
+    }
+}

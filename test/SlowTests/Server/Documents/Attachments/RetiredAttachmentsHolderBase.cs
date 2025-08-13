@@ -88,7 +88,6 @@ public abstract class RetiredAttachmentsHolderBase : ReplicationTestBase
 
         if (flags == RetiredAttachmentFlags.None)
         {
-            //TODO: egor this will change after we drop unwrapped attachments
             Assert.True(retired.RetireParameters.IsLocalAttachment());
         }
         else
