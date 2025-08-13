@@ -180,16 +180,9 @@ namespace Raven.Server.Documents
                     newFlags = _documentsStorage.GetFlagsFromOldDocumentForPut(newFlags, oldFlags, nonPersistentFlags);
                     
                     // if doc was Archived and isn't currently unarchived, leave the Archived flag
-                    if (oldFlags.Contain(DocumentFlags.Archived))
+                    if (oldFlags.Contain(DocumentFlags.Archived) && nonPersistentFlags.Contain(NonPersistentDocumentFlags.Unarchive) == false)
                     {
-                        if (document.TryGetMetadata(out BlittableJsonReaderObject newDocMetadata))
-                        {
-                            newDocMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool isStillArchived);
-                            if (isStillArchived)
-                            {
-                                newFlags |= DocumentFlags.Archived;
-                            }
-                        }
+                        newFlags |= DocumentFlags.Archived;
                     }
                 }
 
@@ -240,6 +233,37 @@ namespace Raven.Server.Documents
                     }
                 }
 
+                if (document.TryGetMetadata(out BlittableJsonReaderObject docMetadata))
+                {
+                    if (newFlags.Contain(DocumentFlags.Archived))
+                    {
+                        // If document has archived flag, but @archived is dropped, rebuild it
+                        // If document has archived flag, but @archived is set to false, revert it to true
+                        if (docMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool isArchived) == false || isArchived == false)
+                        {
+                            docMetadata.Modifications = new DynamicJsonValue(docMetadata);
+                            docMetadata.Modifications[Constants.Documents.Metadata.Archived] = true;
+                        }
+                    }
+                    else
+                    {
+                        // If document has no archived flag, but @archived is in metadata, drop the metadata entry
+                        if (docMetadata.TryGet(Constants.Documents.Metadata.Archived, out bool _))
+                        {
+                            docMetadata.Modifications = new DynamicJsonValue(docMetadata);
+                            docMetadata.Modifications.Remove(Constants.Documents.Metadata.Archived);
+                        }
+                    }
+
+                    if (docMetadata.Modifications != null)
+                    {
+                        document.Modifications = new DynamicJsonValue(document);
+                        document.Modifications[Constants.Documents.Metadata.Key] = docMetadata;
+                        document = context.ReadObject(document, id, BlittableJsonDocumentBuilder.UsageMode.ToDisk);
+                        ValidateDocument(id, document, ref documentDebugHash);
+                    }
+                }
+
                 FlagsProperlySet(newFlags, changeVector);
                 using (Slice.From(context.Allocator, changeVector.AsString(), out var cv))
                 using (table.Allocate(out TableValueBuilder tvb))
@@ -263,11 +287,11 @@ namespace Raven.Server.Documents
                     }
                 }
 
-                if (collectionName.IsHiLo == false && document.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
+                if (collectionName.IsHiLo == false && docMetadata != null)
                 {
-                    var hasExpirationDate = metadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate);
-                    var hasRefreshDate = metadata.TryGet(Constants.Documents.Metadata.Refresh, out string refreshDate);
-                    var hasArchiveAtDate= metadata.TryGet(Constants.Documents.Metadata.ArchiveAt, out string archiveAtDate);
+                    var hasExpirationDate = docMetadata.TryGet(Constants.Documents.Metadata.Expires, out string expirationDate);
+                    var hasRefreshDate = docMetadata.TryGet(Constants.Documents.Metadata.Refresh, out string refreshDate);
+                    var hasArchiveAtDate= docMetadata.TryGet(Constants.Documents.Metadata.ArchiveAt, out string archiveAtDate);
 
                     if (hasExpirationDate)
                         _documentsStorage.ExpirationStorage.Put(context, lowerId, expirationDate);
@@ -333,7 +357,7 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private string BuildDocumentId(string id, long newEtag, out bool knownNewId)
+        public string BuildDocumentId(string id, long newEtag, out bool knownNewId)
         {
             if (string.IsNullOrWhiteSpace(id))
             {

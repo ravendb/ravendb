@@ -86,6 +86,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(TxInfoResult.TotalAllocatedSize)] = new Size(lowLevelTransaction.TotalAllocatedInBytes, SizeUnit.Bytes).ToString(),
                 [nameof(TxInfoResult.DecompressedBufferSize)] = new Size(lowLevelTransaction.DecompressedBufferBytes, SizeUnit.Bytes).ToString(),
                 [nameof(TxInfoResult.TotalEncryptionBufferSize)] = lowLevelTransaction.TotalEncryptionBufferInBytes.ToString(),
+                [nameof(TxInfoResult.IsDisposed)] = lowLevelTransaction.IsDisposed,
             };
         }
     }
@@ -106,5 +107,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public string TotalAllocatedSize;
         public string DecompressedBufferSize;
         public string TotalEncryptionBufferSize;
+        public bool IsDisposed;
     }
 }

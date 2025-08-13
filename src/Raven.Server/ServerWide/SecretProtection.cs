@@ -466,6 +466,7 @@ namespace Raven.Server.ServerWide
             var ms = new MemoryStream();
             var readErrors = process.StandardError.ReadToEndAsync();
             var readStdOut = process.StandardOutput.BaseStream.CopyToAsync(ms);
+            var timeoutInMs = (int)_config.CertificateExecTimeout.AsTimeSpan.TotalMilliseconds;
 
             string GetStdError()
             {
@@ -479,20 +480,20 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            if (process.WaitForExit((int)_config.CertificateExecTimeout.AsTimeSpan.TotalMilliseconds) == false)
+            if (process.WaitForExit(timeoutInMs) == false)
             {
                 process.Kill();
-                throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}");
+                throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}, waited for {timeoutInMs} ms but the process didn't exit. Stderr: {GetStdError()}");
             }
 
             try
             {
-                readStdOut.Wait(_config.CertificateExecTimeout.AsTimeSpan);
-                readErrors.Wait(_config.CertificateExecTimeout.AsTimeSpan);
+                readStdOut.Wait(timeoutInMs);
+                readErrors.Wait(timeoutInMs);
             }
             catch (Exception e)
             {
-                throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}, waited for {_config.CertificateExecTimeout} ms but the process didn't exit. Stderr: {GetStdError()}", e);
+                throw new InvalidOperationException($"Unable to get certificate by executing {executable} {args}, waited for {timeoutInMs} ms but the process didn't exit. Stderr: {GetStdError()}", e);
             }
 
             if (Logger.IsErrorEnabled)

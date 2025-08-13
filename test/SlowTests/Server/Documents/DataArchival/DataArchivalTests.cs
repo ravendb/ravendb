@@ -173,7 +173,7 @@ namespace SlowTests.Server.Documents.DataArchival
         }
 
         [RavenFact(RavenTestCategory.ExpirationRefresh | RavenTestCategory.Revisions)]
-        public async Task ArchiveFlagShouldNotBeRemoved()
+        public async Task ArchiveFlagShouldNotBeRemovedAfterDocumentUpdate()
         {
             using (var store = GetDocumentStore())
             {
@@ -255,6 +255,190 @@ namespace SlowTests.Server.Documents.DataArchival
                     Assert.True(flagsValue.ToString().Contains("HasRevisions"));
                     
                     Assert.True(flagsValue.ToString().Contains("Archived"));
+                }
+            }
+        }
+        
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ShouldNotApplyArchivedMetadataForNewDocuments(bool archivedValue)      
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User(), null, "archived/1");
+                    var metadata = session.Advanced.GetMetadataFor(session.Load<User>("archived/1"));
+                    metadata[Constants.Documents.Metadata.Archived] = archivedValue;
+                    session.SaveChanges();
+                }
+
+                // Assert no flag in "@flags", assert no "@archived"
+                // ===============================================
+                using (var session = store.OpenSession())
+                {
+                    var archivedUser = session.Load<User>("archived/1");
+                    var archivedUserMetadata = session.Advanced.GetMetadataFor(archivedUser);
+                    Assert.False(archivedUserMetadata.ContainsKey("@archived"));
+                    if (archivedUserMetadata.TryGetValue("@flags", out object flagsValue))
+                    {
+                        Assert.DoesNotContain(flagsValue.ToString(), "Archived");
+                    }
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ExpirationRefresh)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ShouldNotApplyArchivedMetadataForUnarchivedDocsUpdates(bool archivedValue)
+        {
+            using (var store = GetDocumentStore())
+            {
+                using (var session = store.OpenSession())
+                {
+                    session.Store(new User { Name = "aaa" }, "users/1");
+                    session.SaveChanges();
+                }
+
+                using (var session = store.OpenSession())
+                {
+                    var user = session.Load<User>("users/1");
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    metadata[Constants.Documents.Metadata.Archived] = archivedValue;
+                    session.SaveChanges();
+                }
+                // Assert no "@flags", assert no "@archived"
+                // ===============================================
+                using (var session = store.OpenSession())
+                {
+                    var archivedUser = session.Load<User>("users/1");
+                    var archivedUserMetadata = session.Advanced.GetMetadataFor(archivedUser);
+                    Assert.False(archivedUserMetadata.ContainsKey("@archived"));
+                    if (archivedUserMetadata.TryGetValue("@flags", out object flagsValue))
+                    {
+                        Assert.DoesNotContain(flagsValue.ToString(), "Archived");
+                    }
+                }
+            }
+        }
+        
+        
+        [RavenFact(RavenTestCategory.ExpirationRefresh)]
+        public async Task ShouldRebuildArchivedInMetadataIfArchivedDocumentUpdateRemovesIt ()
+        {
+            using (var store = GetDocumentStore())
+            {
+                // Create document 
+                // ===============
+                var user = new User {Name = "aaa"};
+                var archiveAt = SystemTime.UtcNow.AddSeconds(30);
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(user);
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    metadata[Constants.Documents.Metadata.ArchiveAt] = archiveAt.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                    session.SaveChanges();
+                }
+                
+                // Activate the archival
+                await SetupDataArchival(store);
+
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                var documentsArchiver = database.DataArchivist;
+                await documentsArchiver.ArchiveDocs();
+
+                await Indexes.WaitForIndexingAsync(store);
+
+                
+                // Verify that @flags contains the "Archived" flag, try to delete it
+                // ===============================================
+                using (var session = store.OpenSession())
+                {
+                    var archivedUser = session.Load<User>(user.Id);
+                    var archivedUserMetadata = session.Advanced.GetMetadataFor(archivedUser);
+                    
+                    var flagsValue = archivedUserMetadata["@flags"];
+                    Assert.Contains(flagsValue.ToString(), "Archived");
+                    
+                    archivedUserMetadata.Remove(Constants.Documents.Metadata.Archived);
+                    session.SaveChanges();
+                }
+
+                // Assert flag and "@archived" still here
+                // ===============================================
+                using (var session = store.OpenSession())
+                {
+                    var archivedUser = session.Load<User>(user.Id);
+                    var archivedUserMetadata = session.Advanced.GetMetadataFor(archivedUser);
+                    
+                    Assert.True(archivedUserMetadata.TryGetValue("@archived", out object archivedValue));
+                    Assert.Equal("True", archivedValue.ToString());
+                    
+                    Assert.True(archivedUserMetadata.TryGetValue("@flags", out object flagsValue));
+                    Assert.True(flagsValue.ToString().Contains("Archived"));
+                }
+            }
+        }
+        
+        [RavenFact(RavenTestCategory.ExpirationRefresh)]
+        public async Task ShouldRevertArchivedMetadataToTrueIfArchivedDocumentUpdateSetItToFalse()
+        {
+            using (var store = GetDocumentStore())
+            {
+                // Create document 
+                // ===============
+                var user = new User {Name = "aaa"};
+                var archiveAt = SystemTime.UtcNow.AddSeconds(30);
+                
+                using (var session = store.OpenSession())
+                {
+                    session.Store(user);
+                    var metadata = session.Advanced.GetMetadataFor(user);
+                    metadata[Constants.Documents.Metadata.ArchiveAt] = archiveAt.ToString(DefaultFormat.DateTimeOffsetFormatsToWrite);
+                    session.SaveChanges();
+                }
+                
+                // Activate the archival
+                await SetupDataArchival(store);
+
+                var database = await Databases.GetDocumentDatabaseInstanceFor(store);
+                database.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                var documentsArchiver = database.DataArchivist;
+                await documentsArchiver.ArchiveDocs();
+
+                await Indexes.WaitForIndexingAsync(store);
+
+                
+                // Verify that @flags contains the "Archived" flag, try to set it to false
+                // ===============================================
+                using (var session = store.OpenSession())
+                {
+                    var archivedUser = session.Load<User>(user.Id);
+                    var archivedUserMetadata = session.Advanced.GetMetadataFor(archivedUser);
+                    
+                    var flagsValue = archivedUserMetadata["@flags"];
+                    Assert.True(flagsValue.ToString().Contains("Archived"));
+                    
+                    archivedUserMetadata[Constants.Documents.Metadata.Archived] = false;
+                    session.SaveChanges();
+                }
+
+                // Assert flag and "@archived: true" still here
+                // ===============================================
+                using (var session = store.OpenSession())
+                {
+                    var archivedUser = session.Load<User>(user.Id);
+                    var archivedUserMetadata = session.Advanced.GetMetadataFor(archivedUser);
+                    
+                    Assert.True(archivedUserMetadata.TryGetValue("@flags", out object flagsValue));
+                    Assert.Contains(flagsValue.ToString(), "Archived");
+                    
+                    Assert.True(archivedUserMetadata.TryGetValue("@archived", out object archivedValue));
+                    Assert.Equal("True", archivedValue.ToString());
                 }
             }
         }

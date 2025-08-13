@@ -66,7 +66,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             nameof(DatabaseRecord.SupportedFeatures),
 
             nameof(DatabaseRecord.Sharding),
-            nameof(DatabaseRecord.RevisionsBin)
+            nameof(DatabaseRecord.RevisionsBin),
         };
 
         private static readonly RavenLogger Logger = RavenLogManager.Instance.GetLoggerForServer<ServerWideDebugInfoPackageHandler>();

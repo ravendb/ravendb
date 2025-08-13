@@ -70,6 +70,7 @@ public class TasksManagementTests : RavenTestBase
         Assert.NotNull(addAiIntegrationTaskResult.TaskId);
 
         configuration.Disabled = true;
+        configuration.Identifier = addAiIntegrationTaskResult.Identifier;
 
         var update = store.Maintenance.Send(new UpdateEmbeddingsGenerationOperation(addAiIntegrationTaskResult.TaskId, configuration));
 

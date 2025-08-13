@@ -17,6 +17,9 @@ import { adminLogsMiddleware } from "components/pages/resources/manageServer/adm
 import { adminLogsSlice } from "components/pages/resources/manageServer/adminLogs/store/adminLogsSlice";
 import { certificatesSlice } from "components/pages/resources/manageServer/certificates/store/certificatesSlice";
 import { editGenAiTaskSlice } from "./pages/database/tasks/ongoingTasks/editTasks/editGenAiTask/store/editGenAiTaskSlice";
+import { editAiAgentSlice } from "./pages/database/aiHub/aiAgents/edit/store/editAiAgentSlice";
+import { chatAiAgentSlice } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentSlice";
+import { chatAiAgentUpdateUrlMiddleware } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentMiddleware";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -38,6 +41,8 @@ export function createStoreConfiguration() {
             adminLogs: adminLogsSlice.reducer,
             certificates: certificatesSlice.reducer,
             editGenAiTask: editGenAiTaskSlice.reducer,
+            editAiAgent: editAiAgentSlice.reducer,
+            chatAiAgent: chatAiAgentSlice.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({
@@ -47,7 +52,8 @@ export function createStoreConfiguration() {
             })
                 .prepend(listenerMiddleware.middleware)
                 .prepend(connectionStringsUpdateUrlMiddleware.middleware)
-                .prepend(adminLogsMiddleware.middleware),
+                .prepend(adminLogsMiddleware.middleware)
+                .prepend(chatAiAgentUpdateUrlMiddleware.middleware),
     });
 }
 

@@ -57,7 +57,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 
         if (counters.Count > 0)
         {
-            if (counters is [Constants.Counters.All])
+            if (counters.Count == 1 && counters[0] == Constants.Counters.All)
                 counters = Array.Empty<string>();
 
             includeCounters = new IncludeCountersCommand(RequestHandler.Database, context, counters);
@@ -112,7 +112,8 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
                         Debug.Assert(includeCompareExchangeValues != null, nameof(includeCompareExchangeValues) + " != null");
                         if (includeCompareExchangeValues.TryGetCompareExchange(ClusterWideTransactionHelper.GetAtomicGuardKey(id), lastModifiedIndex, out var index, out _))
                         {
-                            var (isValid, cv) = ChangeVectorUtils.TryUpdateChangeVector(ChangeVectorParser.TrxnTag, RequestHandler.Database.ClusterTransactionId, index, changeVector);
+                            var (isValid, cv) = ChangeVectorUtils.TryUpdateChangeVector(ChangeVectorParser.TrxnTag, RequestHandler.Database.ClusterTransactionId,
+                                index, changeVector);
                             Debug.Assert(isValid, "ChangeVector didn't have ClusterTransactionId tag but now does?!");
                             document.ChangeVector = cv;
                         }
@@ -137,7 +138,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         {
             Debug.Assert(includeCompareExchangeValues != null, "includeCompareExchangeValues != null");
 
-            if (includeCompareExchangeValues.Results is { Count: > 0 })
+            if (includeCompareExchangeValues?.Results is { Count: > 0 })
             {
                 foreach (var (k, v) in includeCompareExchangeValues.Results)
                 {
@@ -159,23 +160,22 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         });
     }
 
-    protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
+    protected override ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
         DocumentsOperationContext context, IEnumerable<Document> documentsToWrite, bool metadataOnly, CancellationToken token)
     {
-        return await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token).ConfigureAwait(false);
+        return writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
     }
 
-    protected override async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
+    protected override ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> WriteDocumentsAsync(AsyncBlittableJsonTextWriter writer,
         DocumentsOperationContext context, IAsyncEnumerable<Document> documentsToWrite, bool metadataOnly, CancellationToken token)
     {
-        return await writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token).ConfigureAwait(false);
+        return writer.WriteDocumentsAsync(context, documentsToWrite, metadataOnly, token);
     }
 
-    protected override async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName, List<Document> includes, CancellationToken token)
+    protected override ValueTask<(long Count, long SizeInBytes)> WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, DocumentsOperationContext context, string propertyName, List<Document> includes, CancellationToken token)
     {
         writer.WritePropertyName(propertyName);
-
-        await writer.WriteIncludesAsync(context, includes, token).ConfigureAwait(false);
+        return writer.WriteIncludesAsync(context, includes, token);
     }
 
     protected override ValueTask<DocumentsResult> GetDocumentsImplAsync(DocumentsOperationContext context, long? etag, StartsWithParams startsWith, string changeVector)

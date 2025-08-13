@@ -98,7 +98,7 @@ namespace Raven.Server
         {
             if (RoutesAllowedInUnsafeMode.Contains(context.Request.Path.Value))
             {
-                await RequestHandler(context).ConfigureAwait(false);
+                await RequestHandler(context);
                 return;
             }
 
@@ -107,9 +107,7 @@ namespace Raven.Server
             if (IsHtmlAcceptable(context))
             {
                 context.Response.Headers[Constants.Headers.ContentType] = "text/html; charset=utf-8";
-
-                await context.Response.WriteAsync(HtmlUtil.RenderUnsafePage())
-                                      .ConfigureAwait(false);
+                await context.Response.WriteAsync(HtmlUtil.RenderUnsafePage());
                 return;
             }
 
@@ -133,9 +131,6 @@ namespace Raven.Server
                 }
                 writer.WriteEndArray();
                 writer.WriteEndObject();
-
-                await writer.FlushAsync()
-                            .ConfigureAwait(false);
             }
         }
 
@@ -184,12 +179,10 @@ namespace Raven.Server
                 context.Response.Headers[Constants.Headers.ContentType] = ContentTypeHeaderValue;
 
                 if (_server.ServerStore.Initialized == false)
-                    await _server.ServerStore.InitializationCompleted.WaitAsync()
-                                                                     .ConfigureAwait(false);
+                    await _server.ServerStore.InitializationCompleted.WaitAsync();
 
                 sp = Stopwatch.StartNew();
-                await _router.HandlePath(requestHandlerContext)
-                             .ConfigureAwait(false);
+                await _router.HandlePath(requestHandlerContext);
                 sp.Stop();
             }
             catch (Exception e)

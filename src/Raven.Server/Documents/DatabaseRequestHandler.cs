@@ -6,6 +6,7 @@ using Raven.Client;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
+using Raven.Server.Config;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -33,6 +34,8 @@ namespace Raven.Server.Documents
         }
 
         public override char IdentityPartsSeparator => Database.IdentityPartsSeparator;
+
+        public override RavenConfiguration Configuration => Database.Configuration;
 
         public async Task<TResult> ExecuteRemoteAsync<TResult>(RavenCommand<TResult> command, CancellationToken token = default)
         {

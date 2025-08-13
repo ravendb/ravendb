@@ -189,7 +189,9 @@ namespace Raven.Server.Documents.Includes
 
                 writer.WritePropertyName(kvp.Key);
                 size += kvp.Key.Length;
-                size += await TimeSeriesHandlerProcessorForGetTimeSeriesRanges.WriteTimeSeriesRangeResultsAsync(context: null, writer, documentId: null, kvp.Value, calcTotalCount: true, token);
+                var writeResults = TimeSeriesHandlerProcessorForGetTimeSeriesRanges.WriteTimeSeriesRangeResultsAsync(context: null, writer, documentId: null, kvp.Value, calcTotalCount: true, token);
+                size += writeResults.IsCompletedSuccessfully ? writeResults.Result : await writeResults;
+
             }
 
             writer.WriteEndObject();

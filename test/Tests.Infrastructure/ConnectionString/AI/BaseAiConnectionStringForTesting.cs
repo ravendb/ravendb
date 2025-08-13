@@ -17,7 +17,7 @@ using Sparrow.Json.Parsing;
 namespace Tests.Infrastructure.ConnectionString.AI;
 
 public interface IAiConnectorForTesting<TConfig>
-    where TConfig : EtlConfiguration<AiConnectionString>
+where TConfig : EtlConfiguration<AiConnectionString>
 {
     TConfig GetAiConfiguration();
     Lazy<bool> CanConnect { get; }
@@ -147,8 +147,8 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
             logger?.Dispose();
         }
     }
-
     protected abstract bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token);
+
 }
 
 public abstract class AbstractEmbeddingsConnectorForTesting<T> : BaseAiConnectorForTesting<T, EmbeddingsGenerationConfiguration>
@@ -176,55 +176,17 @@ public abstract class AbstractGenAiConnectorForTesting<T> : BaseAiConnectorForTe
     protected override bool TryConnect(out InMemoryLoggerProvider logger, CancellationToken token)
     {
         var configuration = _aiIntegrationConfiguration.Value;
-        configuration.JsonSchema = OllamaChatCompletionClient.GetSchemaFor("{ \"Answer\" : \"answer here\" }");
-        var connectorType = configuration.Connection.GetActiveProvider();
+        var schema = ChatCompletionClient.GetSchemaFromSampleObject("{ \"Answer\" : \"answer here\" }");
         using (var contextPool = new JsonContextPool())
+        using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
         {
-            IChatCompletionClient client = connectorType switch
-            {
-                Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama => new OllamaChatCompletionClient(configuration, contextPool,
-                    IChatCompletionClient.DefaultConventions),
-                Raven.Client.Documents.Operations.AI.AiConnectorType.OpenAi => new OpenAiChatCompletionClient(configuration, contextPool,
-                    IChatCompletionClient.DefaultConventions),
-                _ => throw new NotSupportedException($"The specified model (\"{connectorType.ToString()}\") is not supported.")
-            };
-
             logger = null;
-            var result = client.CompleteAsync(prompt: "Reply with exact word only: raven", "", token).GetAwaiter().GetResult();
+            var result = client.CompleteAsync(systemPrompt: "Reply with exact word only: raven", "", schema, token).GetAwaiter().GetResult();
 
             return true;
-        }
-    }
 
-    private class OpenAiChatCompletionClient : AbstractChatCompletionClient<JsonOperationContext>
-    {
-        public OpenAiChatCompletionClient(GenAiConfiguration configuration, JsonContextPool contextPool, DocumentConventions conventions)
-            : base(
-                baseUri: new Uri(configuration.Connection.OpenAiSettings.Endpoint),
-                model: configuration.Connection.OpenAiSettings.Model,
-                apiKey: configuration.Connection.OpenAiSettings.ApiKey,
-                organizationId: configuration.Connection.OpenAiSettings.OrganizationId,
-                projectId: configuration.Connection.OpenAiSettings.ProjectId,
-                structuredOutputSchema: configuration.JsonSchema,
-                contextPool,
-                conventions)
-        {
-        }
-    }
-
-    private class OllamaChatCompletionClient : AbstractChatCompletionClient<JsonOperationContext>
-    {
-        public OllamaChatCompletionClient(GenAiConfiguration configuration, JsonContextPool contextPool, DocumentConventions conventions)
-            : base(
-                baseUri: new Uri(configuration.Connection.OllamaSettings.Uri),
-                model: configuration.Connection.OllamaSettings.Model,
-                apiKey: null,
-                organizationId: null,
-                projectId: null,
-                structuredOutputSchema: configuration.JsonSchema,
-                contextPool,
-                conventions)
-        {
         }
     }
 }
+
+

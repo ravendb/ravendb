@@ -65,6 +65,7 @@ namespace Voron.Impl.Journal
 
         private readonly object _writeLock = new object();
         private int _maxNumberOfPagesRequiredForCompressionBuffer;
+        private int _numberOfUsedCompressionBufferPagesSinceZeroing;
 
         internal NativeMemory.ThreadStats CurrentFlushingInProgressHolder;
 
@@ -1717,7 +1718,7 @@ namespace Voron.Impl.Journal
 
                 using (tempEncCompressionPagerTxState)
                 {
-                    var journalEntry = PrepareToWriteToJournal(tx, tempEncCompressionPagerTxState);
+                    var journalEntry = PrepareToWriteToJournal(tx, tempEncCompressionPagerTxState, out var numberOfUsedCompressionBufferPages);
                     if (_logger.IsDebugEnabled)
                     {
                         _logger.Debug(
@@ -1739,6 +1740,7 @@ namespace Voron.Impl.Journal
                     sp.Stop();
                     _lastCompressionAccelerationInfo.WriteDuration = sp.Elapsed;
                     _lastCompressionAccelerationInfo.CalculateOptimalAcceleration();
+                    _numberOfUsedCompressionBufferPagesSinceZeroing = Math.Max(_numberOfUsedCompressionBufferPagesSinceZeroing, numberOfUsedCompressionBufferPages);
 
                     if (_logger.IsDebugEnabled)
                         _logger.Debug($"Writing {new Size(journalEntry.NumberOf4Kbs * 4, SizeUnit.Kilobytes)} to journal {CurrentFile.Number:D19} took {sp.Elapsed}");
@@ -1760,7 +1762,8 @@ namespace Voron.Impl.Journal
             }
         }
 
-        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx, IPagerLevelTransactionState tempEncCompressionPagerTxState)
+        private CompressedPagesResult PrepareToWriteToJournal(LowLevelTransaction tx, IPagerLevelTransactionState tempEncCompressionPagerTxState,
+            out int totalNumberOfUsedCompressionBufferPages)
         {
             var txPages = tx.GetTransactionPages();
             var numberOfPages = txPages.Count;
@@ -1882,6 +1885,7 @@ namespace Voron.Impl.Journal
                                                         ((outputBufferSize + sizeof(TransactionHeader)) % Constants.Storage.PageSize == 0 ? 0 : 1)));
 
                 _maxNumberOfPagesRequiredForCompressionBuffer = Math.Max(pagesRequired + outputBufferInPages, _maxNumberOfPagesRequiredForCompressionBuffer);
+                totalNumberOfUsedCompressionBufferPages = pagesRequired + outputBufferInPages;
 
                 var totalSizeWrittenPlusTxHeader = totalSizeWritten + sizeof(TransactionHeader);
                 var pagesWritten = (totalSizeWrittenPlusTxHeader / Constants.Storage.PageSize) +
@@ -1929,6 +1933,7 @@ namespace Voron.Impl.Journal
             else
             {
                 _maxNumberOfPagesRequiredForCompressionBuffer = Math.Max(pagesRequired, _maxNumberOfPagesRequiredForCompressionBuffer);
+                totalNumberOfUsedCompressionBufferPages = pagesRequired;
             }
 
             // We need to account for the transaction header as part of the total length.
@@ -2161,11 +2166,14 @@ namespace Voron.Impl.Journal
 
             try
             {
-                var compressionBufferSize = _compressionPager.NumberOfAllocatedPages * Constants.Storage.PageSize;
-                _compressionPager.EnsureMapped(tx, 0, checked((int)_compressionPager.NumberOfAllocatedPages));
+                var numberOfPagesToZero = Math.Min(_numberOfUsedCompressionBufferPagesSinceZeroing, _compressionPager.NumberOfAllocatedPages);
+                
+                var numberOfBytesToZero = numberOfPagesToZero * Constants.Storage.PageSize;
+                _compressionPager.EnsureMapped(tx, 0, checked((int)numberOfPagesToZero));
                 var pagePointer = _compressionPager.AcquirePagePointer(tx, 0);
 
-                Sodium.sodium_memzero(pagePointer, (UIntPtr)compressionBufferSize);
+                Sodium.sodium_memzero(pagePointer, (UIntPtr)numberOfBytesToZero);
+                _numberOfUsedCompressionBufferPagesSinceZeroing = 0;
             }
             finally
             {

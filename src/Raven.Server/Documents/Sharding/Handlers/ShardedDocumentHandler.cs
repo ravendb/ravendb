@@ -26,21 +26,15 @@ namespace Raven.Server.Documents.Sharding.Handlers
         }
 
         [RavenShardedAction("/databases/*/docs", "GET")]
-        public async Task Get()
+        public Task Get()
         {
-            using (var processor = new ShardedDocumentHandlerProcessorForGet(HttpMethod.Get, this))
-            {
-                await processor.ExecuteAsync();
-            }
+            return new ShardedDocumentHandlerProcessorForGet(HttpMethod.Get, this).ExecuteAsTaskAsync();
         }
 
         [RavenShardedAction("/databases/*/docs", "POST")]
-        public async Task PostGet()
+        public Task PostGet()
         {
-            using (var processor = new ShardedDocumentHandlerProcessorForGet(HttpMethod.Post, this))
-            {
-                await processor.ExecuteAsync();
-            }
+            return new ShardedDocumentHandlerProcessorForGet(HttpMethod.Post, this).ExecuteAsTaskAsync();
         }
 
         [RavenShardedAction("/databases/*/docs", "DELETE")]

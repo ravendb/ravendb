@@ -39,7 +39,9 @@ using Raven.Server.ServerWide.Commands.Sorters;
 using Raven.Server.ServerWide.Commands.Subscriptions;
 using Sparrow.Json;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.ServerWide.Commands.AI;
+using AddEmbeddingsGenerationCommand = Raven.Server.ServerWide.Commands.AI.AddEmbeddingsGenerationCommand;
 
 namespace Raven.Server.ServerWide
 {
@@ -134,6 +136,8 @@ namespace Raven.Server.ServerWide
         public static readonly Func<BlittableJsonReaderObject, EmbeddingsGenerationConfiguration> EmbeddingsGenerationConfiguration = GenerateJsonDeserializationRoutine<EmbeddingsGenerationConfiguration>();
         
         public static readonly Func<BlittableJsonReaderObject, GenAiConfiguration> GenAiConfiguration = GenerateJsonDeserializationRoutine<GenAiConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, AiAgentConfiguration> AiAgentConfiguration = GenerateJsonDeserializationRoutine<AiAgentConfiguration>();
         
         public static readonly Func<BlittableJsonReaderObject, AddOrUpdateCompareExchangeCommand.CompareExchangeResult> CompareExchangeResult = GenerateJsonDeserializationRoutine<AddOrUpdateCompareExchangeCommand.CompareExchangeResult>();
 
@@ -317,7 +321,9 @@ namespace Raven.Server.ServerWide
             [nameof(AddPrefixedShardingSettingCommand)] = GenerateJsonDeserializationRoutine<AddPrefixedShardingSettingCommand>(),
             [nameof(DeletePrefixedShardingSettingCommand)] = GenerateJsonDeserializationRoutine<DeletePrefixedShardingSettingCommand>(),
             [nameof(UpdatePrefixedShardingSettingCommand)] = GenerateJsonDeserializationRoutine<UpdatePrefixedShardingSettingCommand>(),
-            [nameof(RevisionsBinConfigurationCommand)] = GenerateJsonDeserializationRoutine<RevisionsBinConfigurationCommand>()
+            [nameof(RevisionsBinConfigurationCommand)] = GenerateJsonDeserializationRoutine<RevisionsBinConfigurationCommand>(),
+            [nameof(AddOrUpdateAiAgentCommand)] = GenerateJsonDeserializationRoutine<AddOrUpdateAiAgentCommand>(),
+            [nameof(DeleteAiAgentCommand)] = GenerateJsonDeserializationRoutine<DeleteAiAgentCommand>()
         };
     }
 }

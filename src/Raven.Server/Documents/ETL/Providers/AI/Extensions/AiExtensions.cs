@@ -89,7 +89,7 @@ public static class AiExtensions
             case AiConnectorType.Ollama:
                 var ollamaSettings = connectionString.OllamaSettings;
                 var ollamaApiConfig = new OllamaApiClient.Configuration { Uri = new Uri(ollamaSettings.Uri), Model = ollamaSettings.Model };
-
+                
                 var ollamaApiClient = new OllamaApiClient(ollamaApiConfig);
 
                 kernelBuilder.AddOllamaEmbeddingGenerator(ollamaApiClient);

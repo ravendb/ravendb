@@ -132,12 +132,12 @@ namespace Raven.Server.Documents.Handlers.Batches
         public async Task<bool> IsClusterTransaction(Stream stream, UnmanagedJsonParser parser, JsonOperationContext.MemoryBuffer buffer, JsonParserState state)
         {
             while (parser.Read() == false)
-                await RefillParserBuffer(stream, buffer, parser).ConfigureAwait(false);
+                await RefillParserBuffer(stream, buffer, parser);
 
             if (ReadClusterTransactionProperty(state))
             {
                 while (parser.Read() == false)
-                    await RefillParserBuffer(stream, buffer, parser).ConfigureAwait(false);
+                    await RefillParserBuffer(stream, buffer, parser);
 
                 return GetStringPropertyValue(state) == nameof(TransactionMode.ClusterWide);
             }
@@ -171,7 +171,7 @@ namespace Raven.Server.Documents.Handlers.Batches
             while (true)
             {
                 while (parser.Read() == false)
-                    await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                    await RefillParserBuffer(stream, buffer, parser, token);
 
                 if (state.CurrentTokenType == JsonParserToken.EndObject)
                 {
@@ -187,7 +187,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                 {
                     case CommandPropertyName.Type:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType != JsonParserToken.String)
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.Id:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
 
                         switch (state.CurrentTokenType)
                         {
@@ -223,14 +223,14 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                         CommandParsingObserver?.OnIdsStart(parser);
 
-                        commandData.Ids = await ReadJsonArray(ctx, stream, parser, state, buffer, token).ConfigureAwait(false);
+                        commandData.Ids = await ReadJsonArray(ctx, stream, parser, state, buffer, token);
 
                         CommandParsingObserver?.OnIdsEnd(parser);
                         break;
 
                     case CommandPropertyName.Name:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -249,7 +249,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.DestinationId:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -267,7 +267,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         break;
                     case CommandPropertyName.From:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -283,7 +283,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         break;
                     case CommandPropertyName.To:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -299,7 +299,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         break;
                     case CommandPropertyName.DestinationName:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -318,7 +318,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.ContentType:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         switch (state.CurrentTokenType)
                         {
                             case JsonParserToken.Null:
@@ -389,8 +389,8 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.Document:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
-                        commandData.Document = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        commandData.Document = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         commandData.SeenAttachments = modifier.SeenAttachments;
                         commandData.SeenCounters = modifier.SeenCounters;
                         commandData.SeenTimeSeries = modifier.SeenTimeSeries;
@@ -399,23 +399,23 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.Patch:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
-                        var patch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        var patch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         commandData.Patch = PatchRequest.Parse(patch, out commandData.PatchArgs);
                         break;
 
                     case CommandPropertyName.JsonPatch:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
-                        var jsonPatch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        var jsonPatch = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         commandData.JsonPatchCommands = JsonPatchCommand.Parse(jsonPatch);
                         break;
 
                     case CommandPropertyName.TimeSeries:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
 
-                        using (var timeSeriesOperations = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false))
+                        using (var timeSeriesOperations = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token))
                         {
                             commandData.TimeSeries = commandData.Type == CommandType.TimeSeriesBulkInsert ?
                                 TimeSeriesOperation.ParseForBulkInsert(timeSeriesOperations) :
@@ -426,20 +426,20 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.CreateIfMissing:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
-                        var createIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        var createIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         commandData.CreateIfMissing = createIfMissing;
                         break;
                     case CommandPropertyName.PatchIfMissing:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
-                        var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
+                        var patchIfMissing = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         commandData.PatchIfMissing = PatchRequest.Parse(patchIfMissing, out commandData.PatchIfMissingArgs);
                         break;
 
                     case CommandPropertyName.ChangeVector:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType == JsonParserToken.Null)
                         {
                             commandData.ChangeVector = null;
@@ -458,7 +458,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                         break;
                     case CommandPropertyName.OriginalChangeVector:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType == JsonParserToken.Null)
                         {
                             commandData.OriginalChangeVector = null;
@@ -477,7 +477,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.Index:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType != JsonParserToken.Integer)
                         {
                             ThrowUnexpectedToken(JsonParserToken.Integer, state);
@@ -488,7 +488,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.IdPrefixed:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
 
                         if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
                         {
@@ -500,7 +500,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.ReturnDocument:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
 
                         if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
                         {
@@ -512,15 +512,15 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.Counters:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
 
-                        var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
+                        var counterOps = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         commandData.Counters = DocumentCountersOperation.Parse(counterOps);
                         break;
 
                     case CommandPropertyName.FromEtl:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
 
                         if (state.CurrentTokenType != JsonParserToken.True && state.CurrentTokenType != JsonParserToken.False)
                         {
@@ -532,7 +532,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.AttachmentType:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType == JsonParserToken.Null)
                         {
                             commandData.AttachmentType = AttachmentType.Document;
@@ -550,7 +550,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
                     case CommandPropertyName.ContentLength:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType != JsonParserToken.Integer)
                         {
                             ThrowUnexpectedToken(JsonParserToken.Integer, state);
@@ -561,17 +561,17 @@ namespace Raven.Server.Documents.Handlers.Batches
                     case CommandPropertyName.NoSuchProperty:
                         // unknown command - ignore it
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType == JsonParserToken.StartObject ||
                             state.CurrentTokenType == JsonParserToken.StartArray)
                         {
-                            await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
+                            await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token);
                         }
                         break;
 
                     case CommandPropertyName.ForceRevisionCreationStrategy:
                         while (parser.Read() == false)
-                            await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                            await RefillParserBuffer(stream, buffer, parser, token);
                         if (state.CurrentTokenType != JsonParserToken.String)
                         {
                             ThrowUnexpectedToken(JsonParserToken.String, state);
@@ -683,8 +683,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                 {
                     if (builder.Read())
                         break;
-
-                    await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                    await RefillParserBuffer(stream, buffer, parser, token);
                 }
 
                 builder.FinalizeDocument();
@@ -711,8 +710,7 @@ namespace Raven.Server.Documents.Handlers.Batches
                 {
                     if (builder.Read())
                         break;
-
-                    await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
+                    await RefillParserBuffer(stream, buffer, parser, token);
                 }
                 builder.FinalizeDocument();
                 reader = builder.CreateReader();
@@ -1088,7 +1086,7 @@ namespace Raven.Server.Documents.Handlers.Batches
 
             // Although we using here WithCancellation and passing the token,
             // the stream will stay open even after the cancellation until the entire server will be disposed.
-            var read = await stream.ReadAsync(buffer.Memory.Memory, token).ConfigureAwait(false);
+            var read = await stream.ReadAsync(buffer.Memory.Memory, token);
             if (read == 0)
                 ThrowUnexpectedEndOfStream();
             parser.SetBuffer(buffer, 0, read);

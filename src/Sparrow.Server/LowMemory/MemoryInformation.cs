@@ -438,6 +438,16 @@ namespace Sparrow.Server.LowMemory
                 return FailedResult;
             }
 
+            ulong compressedMemoryInBytes = 0;
+            int size = sizeof(ulong);
+
+            if (macSyscall.sysctlbyname("vm.compressor_bytes_used", &compressedMemoryInBytes, &size, null, UIntPtr.Zero) != 0)
+            {
+                if (Logger.IsInfoEnabled)
+                    Logger.Info("Failure when trying to read compressed memory in bytes info from macOS using sysctlbyname, error code was: " + Marshal.GetLastWin32Error());
+                return FailedResult;
+            }
+
             uint pageSize;
             var vmStats = new vm_statistics64();
 
@@ -469,11 +479,11 @@ namespace Sparrow.Server.LowMemory
              * Wired memory: Information in this memory can't be moved to the hard disk, so it must stay in RAM. The amount of Wired memory depends on the applications you are using.
              * Active memory: This information is currently in memory, and has been recently used.
              * Inactive memory: This information in memory is not actively being used, but was recently used. */
-            var availableMemory = new Size((vmStats.FreePagesCount + vmStats.InactivePagesCount) * pageSize, SizeUnit.Bytes);
+            var availableMemory = new Size((vmStats.FreePagesCount + vmStats.InactivePagesCount + vmStats.PurgeablePagesCount + vmStats.SpeculativePagesCount) * pageSize, SizeUnit.Bytes);
 
             // there is no commited memory value in OSX,
             // this is an approximation: wired + active + swap used
-            var commitedMemoryInBytes = (vmStats.WirePagesCount + vmStats.ActivePagesCount) * pageSize + (long)swapu.xsu_used;
+            var commitedMemoryInBytes = (vmStats.WirePagesCount + vmStats.ActivePagesCount) * pageSize + (long)compressedMemoryInBytes + (long)swapu.xsu_used;
             var commitedMemory = new Size(commitedMemoryInBytes, SizeUnit.Bytes);
 
             // commit limit: physical memory + swap

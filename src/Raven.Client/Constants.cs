@@ -306,7 +306,6 @@ namespace Raven.Client
 
                 internal const string GenAiHashes = "@gen-ai-hashes";
 
-
                 internal sealed class Sharding
                 {
                     internal const string ShardNumber = "@shard-number";
@@ -334,6 +333,15 @@ namespace Raven.Client
                 public const string EmptyCollection = "@empty";
 
                 public const string EmbeddingsCacheCollection = "@embeddings-cache";
+
+                public const string AiAgentConversationCollection = "@conversations";
+
+                public const string AiAgentConversationHistoryCollection = "@conversations-history";
+            }
+
+            internal sealed class Ai
+            {
+                public const string AiAgentIdPrefix = "Conversations";
             }
 
             public sealed class Indexing
@@ -606,8 +614,9 @@ namespace Raven.Client
 
         internal static class VectorSearch
         {
+            internal const string AiTaskMethodName = "ai.task";
             private const string EmbeddingPrefix = "embedding.";
-
+            
             internal const string EmbeddingForDocument = EmbeddingPrefix + "forDoc";
             internal const string EmbeddingForRaw = EmbeddingPrefix + "Raw";
             internal const string EmbeddingText = EmbeddingPrefix + "text";

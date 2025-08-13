@@ -15,11 +15,12 @@ internal abstract class AbstractDocumentHandlerProcessorForDelete<TRequestHandle
 
     protected abstract ValueTask HandleDeleteDocumentAsync(string docId, string changeVector);
 
-    public override async ValueTask ExecuteAsync()
+    public override ValueTask ExecuteAsync()
     {
+        
         var id = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("id");
         var changeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfMatch);
 
-        await HandleDeleteDocumentAsync(id, changeVector);
+        return HandleDeleteDocumentAsync(id, changeVector);
     }
 }

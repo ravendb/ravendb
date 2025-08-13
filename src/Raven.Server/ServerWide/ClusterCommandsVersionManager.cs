@@ -206,6 +206,9 @@ namespace Raven.Server.ServerWide
             [nameof(AddGenAiCommand)] = 71_000,
             [nameof(UpdateGenAiCommand)] = 71_000,
 
+            [nameof(AddOrUpdateAiAgentCommand)] = 71_001,
+            [nameof(DeleteAiAgentCommand)] = 71_001,
+
             [nameof(EditRetireAttachmentsCommand)] = EditRetireAttachmentsCommand.CommandVersion
         };
 

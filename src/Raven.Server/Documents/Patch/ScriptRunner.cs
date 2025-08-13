@@ -235,6 +235,7 @@ namespace Raven.Server.Documents.Patch
             public bool DebugMode;
             public List<string> DebugOutput;
             public bool PutOrDeleteCalled;
+            public bool UnarchiveCalled;
             public HashSet<string> Includes;
             public HashSet<string> IncludeRevisionsChangeVectors;
             public DateTime? IncludeRevisionByDateTimeBefore;
@@ -891,31 +892,23 @@ namespace Raven.Server.Documents.Patch
                 GetDateArg(args[1].ToString(), "archiveAt(doc, utcDateTimeString)", "utcDateTimeString");
                 
                 var archivedDocId = GetIdFromArg(args[0], _unarchiveSignature);
-                using (var doc = _database.DocumentsStorage.Get(_docsCtx, archivedDocId, DocumentFields.Data, throwOnConflict: true))
+                var boi = (BlittableObjectInstance)args[0].AsObject();
+                
+                if(boi.DocumentFlags != null && boi.DocumentFlags.Value.HasFlag(DocumentFlags.Archived))
                 {
-                    if (doc.TryGetMetadata(out var metadata) == false)
-                    {
-                        throw new InvalidOperationException($"Failed to fetch the metadata of document '{archivedDocId}'");
-                    }
-                    
-                    if(doc.Flags.HasFlag(DocumentFlags.Archived))
-                    {
-                        return JsValue.Undefined; // no-op, document already archived
-                    }
-                    // add @archive-at field
-                    metadata.Modifications = new DynamicJsonValue(metadata)
-                    {
-                        [Constants.Documents.Metadata.ArchiveAt] = args[1].ToString()
-                    };
-
-                    using (var updated = _docsCtx.ReadObject(doc.Data, archivedDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                    {
-                         _database.DocumentsStorage.Put(_docsCtx, archivedDocId, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
-                    }
+                    return JsValue.Undefined; // no-op, document already archived
                 }
                 
+                if(boi.TryGetValue(Constants.Documents.Metadata.Key, out var metadataJs) == false)
+                {
+                    throw new InvalidOperationException($"Failed to fetch the metadata of document '{archivedDocId}'");
+                }
+                
+                // add @archive-at field
+                var metadata = metadataJs.AsObject();
+                metadata.Set(Constants.Documents.Metadata.ArchiveAt, args[1].ToString());
+                
                 return JsValue.Undefined;
-
             }
 
             private JsValue UnarchiveDoc(JsValue self, JsValue[] args)
@@ -930,29 +923,23 @@ namespace Raven.Server.Documents.Patch
                     throw new InvalidOperationException("unarchive(doc) must take document object as the first argument");
                 
                 var archivedDocId = GetIdFromArg(args[0], _unarchiveSignature);
-                using (var doc = _database.DocumentsStorage.Get(_docsCtx, archivedDocId, DocumentFields.Data, throwOnConflict: true))
+                
+                var boi = (BlittableObjectInstance)args[0].AsObject();
+                if (boi.DocumentFlags.HasValue == false || boi.DocumentFlags.Value.HasFlag(DocumentFlags.Archived) == false)
                 {
-                    if (doc.Flags.HasFlag(DocumentFlags.Archived) == false)
-                    {
-                        return JsValue.Undefined;
-                    }
-                    
-                    if (doc.TryGetMetadata(out var metadata) == false)
-                    {
-                        throw new InvalidOperationException($"Failed to fetch the metadata of document '{archivedDocId}'");
-                    }
-                    
-                    // Remove archived metadata marker, remove archived document flag
-                    metadata.Modifications = new DynamicJsonValue(metadata);
-                    metadata.Modifications.Remove(Constants.Documents.Metadata.Archived);
-                    doc.Flags = doc.Flags.Strip(DocumentFlags.Archived);
-        
-                    using (var updated = _docsCtx.ReadObject(doc.Data, archivedDocId, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-                    {
-                         _database.DocumentsStorage.Put(_docsCtx, archivedDocId, null, updated, flags: doc.Flags.Strip(DocumentFlags.FromClusterTransaction));
-                    }
+                    return JsValue.Undefined; // no-op, document has no Archived flag
                 }
 
+                if (boi.TryGetValue(Constants.Documents.Metadata.Key, out var metadataJs) == false)
+                {
+                    throw new InvalidOperationException($"Failed to fetch the metadata of document '{archivedDocId}'");
+                }
+                
+                // Remove archived metadata marker, mark UnarchiveCalled (we can't set flags here, removed later)
+                var metadata = metadataJs.AsObject();
+                metadata.Delete(Constants.Documents.Metadata.Archived);
+                UnarchiveCalled = true;
+                
                 return JsValue.Undefined;
             }
 
@@ -2207,6 +2194,7 @@ namespace Raven.Server.Documents.Patch
                 DocumentCountersToUpdate?.Clear();
                 DocumentTimeSeriesToUpdate?.Clear();
                 PutOrDeleteCalled = false;
+                UnarchiveCalled = false;
                 OriginalDocumentId = null;
                 RefreshOriginalDocument = false;
                 ScriptEngine.Advanced.ResetCallStack();

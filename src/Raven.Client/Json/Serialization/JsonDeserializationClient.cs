@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Concurrent;
+using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Commands;
@@ -9,6 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.TimeSeries;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Backups;
@@ -233,6 +235,10 @@ namespace Raven.Client.Json.Serialization
         internal static readonly Func<BlittableJsonReaderObject, PullReplicationDefinition> PullReplicationDefinition = GenerateJsonDeserializationRoutine<PullReplicationDefinition>();
         
         internal static readonly Func<BlittableJsonReaderObject, AddEtlOperationResult> AddEtlOperationResult = GenerateJsonDeserializationRoutine<AddEtlOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, AddEmbeddingsGenerationOperationResult> AddEmbeddingsGenerationOperationResult = GenerateJsonDeserializationRoutine<AddEmbeddingsGenerationOperationResult>();
+
+        internal static readonly Func<BlittableJsonReaderObject, AddGenAiOperationResult> AddGenAiOperationResult = GenerateJsonDeserializationRoutine<AddGenAiOperationResult>();
         
         internal static readonly Func<BlittableJsonReaderObject, AddQueueSinkOperationResult> AddQueueSinkOperationResult = GenerateJsonDeserializationRoutine<AddQueueSinkOperationResult>();
         
@@ -343,5 +349,18 @@ namespace Raven.Client.Json.Serialization
 
         public static readonly Func<BlittableJsonReaderObject, GenAi> GetOngoingTaskGenAiResult = GenerateJsonDeserializationRoutine<GenAi>();
 
+        public static readonly Func<BlittableJsonReaderObject, AiAgentConfiguration> AiAgentConfiguration = GenerateJsonDeserializationRoutine<AiAgentConfiguration>();
+
+        public static readonly Func<BlittableJsonReaderObject, GetAiAgentsResponse> GetAiAgentsResponse = GenerateJsonDeserializationRoutine<GetAiAgentsResponse>();
+        
+        public static readonly Func<BlittableJsonReaderObject, AiAgentConfigurationResult> AiAgentConfigurationResult = GenerateJsonDeserializationRoutine<AiAgentConfigurationResult>();
+        
+        public static readonly Func<BlittableJsonReaderObject, AiUsage> AiUsage = GenerateJsonDeserializationRoutine<AiUsage>();
+
+        public static readonly Func<BlittableJsonReaderObject, AiAgentActionRequest> ActionRequest = GenerateJsonDeserializationRoutine<AiAgentActionRequest>();
+
+        public static readonly Func<BlittableJsonReaderObject, AiAgentActionResponse> ActionResponse = GenerateJsonDeserializationRoutine<AiAgentActionResponse>();
+
+        public static readonly Func<BlittableJsonReaderObject, AiConversationCreationOptions> ConversationCreationOptions = GenerateJsonDeserializationRoutine<AiConversationCreationOptions>();
     }
 }

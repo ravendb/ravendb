@@ -8,6 +8,7 @@ using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Configuration;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -976,6 +977,55 @@ namespace Raven.Server.ServerWide
             }
         }
 
+        private List<AiAgentConfiguration> _aiAgents;
+
+        public List<AiAgentConfiguration> AiAgents
+        {
+            get
+            {
+                if (_materializedRecord != null)
+                    return _materializedRecord.AiAgents;
+
+                if (_aiAgents == null)
+                {
+                    _aiAgents = new ();
+                    if (_record.TryGet(nameof(DatabaseRecord.AiAgents), out BlittableJsonReaderArray bjra) && bjra != null)
+                    {
+                        foreach (BlittableJsonReaderObject element in bjra)
+                            _aiAgents.Add(JsonDeserializationCluster.AiAgentConfiguration(element));
+                    }
+                }
+
+                return _aiAgents;
+            }
+        }
+
+        public bool TryGetAiAgent(string identifier, out AiAgentConfiguration config)
+        {
+            const string identifierName = nameof(AiAgentConfiguration.Identifier);
+
+            config = null;
+            if (_materializedRecord != null)
+            {
+                config = _materializedRecord.AiAgents.FirstOrDefault(c => c.Identifier == identifier);
+                return config != null;
+            }
+
+            if (_record.TryGet(nameof(DatabaseRecord.AiAgents), out BlittableJsonReaderArray bjra) && bjra != null)
+            {
+                foreach (BlittableJsonReaderObject element in bjra)
+                {
+                    if (element.TryGet(identifierName, out string elementIdentifier) && elementIdentifier == identifier)
+                    {
+                        config = JsonDeserializationCluster.AiAgentConfiguration(element);
+                        return true;
+                    }
+                }
+            }
+
+            return false;
+        }
+
         private Dictionary<string, string> _settings;
 
         public Dictionary<string, string> Settings
@@ -1562,6 +1612,22 @@ namespace Raven.Server.ServerWide
         
         private Dictionary<string, AiConnectionString> _aiConnectionStrings;
 
+        public AiConnectionString GetAiConnectionString(string name)
+        {
+            if (_materializedRecord != null)
+                return _materializedRecord.AiConnectionStrings.GetValueOrDefault(name);
+            
+            if (_record.TryGet(nameof(DatabaseRecord.AiConnectionStrings), out BlittableJsonReaderObject obj) && obj != null)
+            {
+                if (obj.TryGet(name, out BlittableJsonReaderObject bjro))
+                {
+                    return JsonDeserializationCluster.AiConnectionString(bjro);
+                }
+            }
+
+            return null;
+        }
+        
         public Dictionary<string, AiConnectionString> AiConnectionStrings
         {
             get

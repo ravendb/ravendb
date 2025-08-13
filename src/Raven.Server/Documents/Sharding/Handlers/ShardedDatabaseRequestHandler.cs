@@ -8,6 +8,7 @@ using Raven.Client;
 using Raven.Client.Exceptions.Database;
 using Raven.Client.Extensions;
 using Raven.Client.Http;
+using Raven.Server.Config;
 using Raven.Server.Documents.Sharding.Executors;
 using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -168,6 +169,8 @@ namespace Raven.Server.Documents.Sharding.Handlers
         public override string DatabaseName => DatabaseContext.DatabaseName;
 
         public override char IdentityPartsSeparator => DatabaseContext.IdentityPartsSeparator;
+
+        public override RavenConfiguration Configuration => DatabaseContext.Configuration;
 
         public override async Task WaitForIndexNotificationAsync(long index) => await DatabaseContext.Cluster.WaitForExecutionOnAllNodesAsync(index).ConfigureAwait(false);
 

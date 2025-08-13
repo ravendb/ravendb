@@ -50,6 +50,9 @@ public class RavenDB_22076 : RavenTestBase
                 var q5 = session.Advanced.DocumentQuery<Dto>().VectorSearch(x => x.WithText("TextField").TargetQuantization(VectorEmbeddingType.Int8),
                     factory => factory.ByText("aaaa")).ToString();
                 
+
+                
+                
                 Assert.Equal("from 'Dtos' where vector.search(embedding.text_i8(TextField), $p0)", q5);
                 
                 var q6 = session.Advanced.DocumentQuery<Dto>()

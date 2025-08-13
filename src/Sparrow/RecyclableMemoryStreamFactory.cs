@@ -23,6 +23,11 @@ internal class RecyclableMemoryStreamFactory
         return Manager.GetStream(Guid.Empty);
     }
 
+    public static RecyclableMemoryStream GetRecyclableStream(ReadOnlySpan<byte> buffer)
+    {
+        return Manager.GetStream(Guid.Empty, tag: null, buffer);
+    }
+
     public static RecyclableMemoryStream GetRecyclableStream(long requiredSize)
     {
         return Manager.GetStream(Guid.Empty, null, requiredSize);

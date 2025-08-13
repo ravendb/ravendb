@@ -925,7 +925,11 @@ class query extends shardViewModelBase {
             const hash = parseInt(indexNameOrRecentQueryHash.substr("recentquery-".length), 10);
             const matchingQuery = this.savedQueries().find(q => q.hash === hash);
             if (matchingQuery) {
-                this.runRecentQuery(matchingQuery);
+                if (matchingQuery?.skipRunOnInit) {
+                    this.previewQueryInAceEditor(matchingQuery);
+                } else {
+                    this.runRecentQuery(matchingQuery);
+                }
             } else {
                 this.navigate(appUrl.forQuery(this.db));
             }
@@ -1326,6 +1330,10 @@ class query extends shardViewModelBase {
 
     previewQuery(item: storedQueryDto): void {
         this.previewItem(item);
+    }
+
+    previewQueryInAceEditor(item: storedQueryDto): void {
+        this.criteria().updateUsing(item);
     }
 
     useQueryItem(item: storedQueryDto): void {

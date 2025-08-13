@@ -160,8 +160,7 @@ namespace Raven.Server.Routing
                 }
 
 
-                await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus)
-                            .ConfigureAwait(false);
+                await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
                 return (false, feature.Status, feature.Certificate?.Thumbprint);
             }
 
@@ -175,8 +174,7 @@ namespace Raven.Server.Routing
 
                 feature.WaitingForTwoFactorAuthentication();
 
-                await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus)
-                            .ConfigureAwait(false);
+                await UnlikelyFailAuthorizationAsync(context, databaseName, feature, route.AuthorizationStatus);
 
                 return (false, AuthenticationStatus.TwoFactorAuthFromInvalidLimit, feature.Certificate?.Thumbprint);
             }
@@ -281,7 +279,7 @@ namespace Raven.Server.Routing
             reqCtx.CheckForChanges = tryMatch.Value.CheckForChanges;
 
             var tuple = tryMatch.Value.TryGetHandler(reqCtx);
-            var handler = tuple.Item1 ?? await tuple.Item2.ConfigureAwait(false);
+            var handler = tuple.Item1 ?? await tuple.Item2;
 
             reqCtx.DatabaseMetrics?.Requests.RequestsPerSec.Mark();
             _serverMetrics.Requests.RequestsPerSec.Mark();
@@ -338,7 +336,7 @@ namespace Raven.Server.Routing
                 {
                     if (_ravenServer.Configuration.Security.AuthenticationEnabled && skipAuthorization == false)
                     {
-                        var (authorized, authorizationStatus, thumbprint) = await TryAuthorizeAsync(tryMatch.Value, context, reqCtx.DatabaseName).ConfigureAwait(false);
+                        var (authorized, authorizationStatus, thumbprint) = await TryAuthorizeAsync(tryMatch.Value, context, reqCtx.DatabaseName);
                         status = authorizationStatus;
                         certificateThumbprint = thumbprint;
 
@@ -399,7 +397,7 @@ namespace Raven.Server.Routing
                     if (tryMatch.Value.DisableOnCpuCreditsExhaustion &&
                         _ravenServer.CpuCreditsBalance.FailoverAlertRaised.IsRaised())
                     {
-                        await RejectRequestBecauseOfCpuThresholdAsync(context).ConfigureAwait(false);
+                        await RejectRequestBecauseOfCpuThresholdAsync(context);
                         return;
                     }
 
@@ -415,7 +413,7 @@ namespace Raven.Server.Routing
                                 sp = Stopwatch.StartNew();
                             }
 
-                            await reqCtx.Database.ClusterWideTransactionIndexWaiter.WaitAsync(index, context.RequestAborted).ConfigureAwait(false);
+                            await reqCtx.Database.ClusterWideTransactionIndexWaiter.WaitAsync(index, context.RequestAborted);
 
                             if (RequestLogger.IsInfoEnabled && sp != null)
                             {
@@ -423,12 +421,12 @@ namespace Raven.Server.Routing
                             }
                         }
 
-                        await handler(reqCtx).ConfigureAwait(false);
+                        await handler(reqCtx);
                     }
                 }
                 else
                 {
-                    await handler(reqCtx).ConfigureAwait(false);
+                    await handler(reqCtx);
                 }
             }
             finally
@@ -447,7 +445,7 @@ namespace Raven.Server.Routing
                 var requestBody = context.Request.Body;
                 while (true)
                 {
-                    var read = await requestBody.ReadAsync(buffer.Memory.Memory).ConfigureAwait(false);
+                    var read = await requestBody.ReadAsync(buffer.Memory.Memory);
                     if (read == 0)
                         break;
                 }

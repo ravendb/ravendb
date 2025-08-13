@@ -258,7 +258,7 @@ public class RavenDB_22498 : RavenTestBase
         return Can_Convert_Auto_Indexes_Internal(inputFile, expectedCount, expectedNotSupportedCount, expectedErrorCount);
     }
 
-    [RavenTheory(RavenTestCategory.Indexes, NightlyBuildRequired = true)]
+    [RavenMultiplatformTheory(RavenTestCategory.Indexes, RavenArchitecture.AllX64, NightlyBuildRequired = true)]
     [InlineData("SlowTests.Data.RavenDB_22498.AutoIndexes.SlowTests.json.gz", 3319, 451, 8)]
     public Task Can_Convert_Auto_Indexes_Slow(string inputFile, int expectedCount, int expectedNotSupportedCount, int expectedErrorCount)
     {

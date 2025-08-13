@@ -28,6 +28,8 @@ namespace Raven.Server.Documents.Queries.AST
         public ValueExpression FilterLimit;
 
         public List<(QueryExpression Expression, OrderByFieldType FieldType, bool Ascending)> CachedOrderBy;
+        
+        public HashSet<StringSegment> Parameters = new HashSet<StringSegment>();
 
         public Query ShallowCopy()
         {

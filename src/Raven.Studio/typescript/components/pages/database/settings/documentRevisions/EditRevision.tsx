@@ -117,7 +117,7 @@ export default function EditRevision(props: EditRevisionProps) {
     const activeDatabaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
     return (
-        <Modal show onHide={toggle} contentClassName="modal-border bulge-info">
+        <Modal size="lg" show onHide={toggle} contentClassName="modal-border bulge-info">
             <Form onSubmit={handleSubmit(onSubmit)} autoComplete="off">
                 <Modal.Body className="vstack gap-3">
                     <h4>{getTitle(taskType, configType)}</h4>

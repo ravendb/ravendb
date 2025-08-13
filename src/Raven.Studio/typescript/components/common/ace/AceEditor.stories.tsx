@@ -2,6 +2,8 @@ import { Meta, StoryObj } from "@storybook/react";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import AceEditor from "./AceEditor";
 import AceUnifiedDiff from "./AceUnifiedDiff";
+import ReactAce from "react-ace/lib/ace";
+import { useRef, useState } from "react";
 
 export default {
     title: "Bits/AceEditor",
@@ -15,10 +17,30 @@ export default {
     },
 } satisfies Meta;
 
-export const JavascriptEditor: StoryObj = {
+export const Default: StoryObj = {
     name: "Ace Editor",
-    render: () => <AceEditor mode="javascript" />,
+    render: () => <JsonEditorComponent />,
 };
+
+function JsonEditorComponent() {
+    const aceRef = useRef<ReactAce>(null);
+    const [aceValue, setAceValue] = useState("");
+
+    return (
+        <AceEditor
+            aceRef={aceRef}
+            mode="json"
+            actions={[
+                { component: <AceEditor.FullScreenAction /> },
+                { component: <AceEditor.FormatAction /> },
+                { component: <AceEditor.ToggleNewLinesAction /> },
+            ]}
+            value={aceValue}
+            onChange={(value) => setAceValue(value)}
+            height="300px"
+        />
+    );
+}
 
 export const UnifiedDiff: StoryObj = {
     render: () => {

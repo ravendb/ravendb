@@ -1,6 +1,8 @@
 ﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats;

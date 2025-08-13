@@ -1143,6 +1143,7 @@ namespace Raven.Server.Commercial
             var snowflakeEtlCount = 0;
             var embeddingsGenerationsCount = 0;
             var genAiCount = 0;
+            var aiAgentCount = 0;
             var snapshotBackupsCount = 0;
             var cloudBackupsCount = 0;
             var encryptedBackupsCount = 0;
@@ -1223,6 +1224,10 @@ namespace Raven.Server.Commercial
                     if (databaseRecord.GenAis != null &&
                         databaseRecord.GenAis.Count > 0)
                         genAiCount++;
+
+                    if (databaseRecord.AiAgents != null &&
+                        databaseRecord.AiAgents.Count > 0)
+                        aiAgentCount++;
 
                     var backupTypes = GetBackupTypes(databaseRecord.PeriodicBackups);
                     if (backupTypes.HasSnapshotBackup)
@@ -1324,6 +1329,12 @@ namespace Raven.Server.Commercial
             {
                 var message = GenerateDetails(genAiCount, "AI Generation");
                 throw GenerateLicenseLimit(LimitType.GenAi, message);
+            }
+
+            if (aiAgentCount > 0 && newLicenseStatus.HasAiAgent == false)
+            {
+                var message = GenerateDetails(aiAgentCount, "AI Agent");
+                throw GenerateLicenseLimit(LimitType.AiAgent, message);
             }
 
             if (snapshotBackupsCount > 0 && newLicenseStatus.HasSnapshotBackups == false)
@@ -1716,6 +1727,18 @@ namespace Raven.Server.Commercial
 
             const string message = "Your current license doesn't include the Gen AI feature";
             throw GenerateLicenseLimit(LimitType.GenAi, message);
+        }
+
+        public void AssertCanAddAiAgentTask()
+        {
+            if (IsValid(out var licenseLimit) == false)
+                throw licenseLimit;
+
+            if (LicenseStatus.HasAiAgent)
+                return;
+
+            const string message = "Your current license doesn't include the AI Agent feature";
+            throw GenerateLicenseLimit(LimitType.AiAgent, message);
         }
 
         public void AssertCanAddConcurrentDataSubscriptions()

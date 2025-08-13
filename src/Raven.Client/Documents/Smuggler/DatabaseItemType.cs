@@ -67,6 +67,7 @@ namespace Raven.Client.Documents.Smuggler
         EmbeddingsGenerations = 1L << 32,
         AiConnectionStrings = 1L << 33,
         GenAiEtls = 1L << 34,
-        RetireAttachments = 1 << 35,
+        AiAgents = 1L << 35,
+        RetireAttachments = 1 << 36,
     }
 }

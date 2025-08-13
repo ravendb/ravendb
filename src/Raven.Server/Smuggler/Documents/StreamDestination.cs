@@ -47,6 +47,7 @@ using Sparrow.Json.Parsing;
 using BackupUtils = Raven.Server.Utils.BackupUtils;
 using ShardingConfiguration = Raven.Client.ServerWide.Sharding.ShardingConfiguration;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.Server.Smuggler.Documents
 {
@@ -524,6 +525,13 @@ namespace Raven.Server.Smuggler.Documents
                             WriteAiConnectionStrings(databaseRecord.AiConnectionStrings);
                         }
 
+                        if (databaseRecordItemType.Contain(DatabaseRecordItemType.AiAgents))
+                        {
+                            _writer.WriteComma();
+                            _writer.WritePropertyName(nameof(databaseRecord.AiAgents));
+                            WriteAiAgents(databaseRecord.AiAgents);
+                        }
+
                         if (databaseRecordItemType.Contain(DatabaseRecordItemType.GenAiEtls))
                         {
                             _writer.WriteComma();
@@ -923,6 +931,23 @@ namespace Raven.Server.Smuggler.Documents
                 }
 
                 _writer.WriteEndObject();
+            }
+            
+            private void WriteAiAgents(List<AiAgentConfiguration> agents)
+            {
+                _writer.WriteStartArray();
+
+                var first = true;
+                foreach (var config in agents)
+                {
+                    if (first == false)
+                        _writer.WriteComma();
+                    first = false;
+
+                    _context.Write(_writer, config.ToJson());
+                }
+
+                _writer.WriteEndArray();
             }
 
             private void WriteGenAiTasks(List<GenAiConfiguration> genAiConfigurations)

@@ -5,16 +5,24 @@ import {
     ConnectionFormData,
     AiConnection,
 } from "components/pages/database/settings/connectionStrings/connectionStringsTypes";
-import classNames from "classnames";
-import IconName from "typings/server/icons";
 import { FormLabel } from "components/common/Form";
+import ClickableCard from "components/common/ClickableCard";
+import { useAppSelector } from "components/store";
+import { connectionStringSelectors } from "../../store/connectionStringsSlice";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function ModelTypeField() {
+interface ModelTypeFieldProps {
+    initialModelType: FormData["modelType"];
+}
+
+export default function ModelTypeField({ initialModelType }: ModelTypeFieldProps) {
     const { control, setValue } = useFormContext<FormData>();
 
     const formValues = useWatch({ control });
+
+    const viewContext = useAppSelector(connectionStringSelectors.viewContext);
+    const isDisabled = viewContext === "aiConnectionStrings" && !!initialModelType;
 
     return (
         <div className="mb-2">
@@ -32,6 +40,7 @@ export default function ModelTypeField() {
                     className="w-50"
                     isSelected={formValues.modelType === "Chat"}
                     onClick={() => setValue("modelType", "Chat")}
+                    isDisabled={isDisabled}
                 />
                 <ClickableCard
                     icon="document2"
@@ -40,44 +49,8 @@ export default function ModelTypeField() {
                     className="w-50"
                     isSelected={formValues.modelType === "TextEmbeddings"}
                     onClick={() => setValue("modelType", "TextEmbeddings")}
+                    isDisabled={isDisabled}
                 />
-            </div>
-        </div>
-    );
-}
-
-interface ClickableCardProps {
-    icon: IconName;
-    title: string;
-    description: string;
-    isSelected: boolean;
-    className?: string;
-    onClick: () => void;
-}
-
-function ClickableCard({ description, icon, onClick, title, isSelected, className }: ClickableCardProps) {
-    return (
-        <div
-            className={classNames(
-                "border rounded p-2 cursor-pointer",
-                {
-                    "bg-faded-primary border-primary": isSelected,
-                },
-                {
-                    "border-secondary": !isSelected,
-                },
-                className
-            )}
-            onClick={onClick}
-        >
-            <div className="text-emphasis hstack gap-2">
-                <div>
-                    <Icon icon={icon} margin="mx-1" />
-                </div>
-                <div className="flex-grow">
-                    <div className="fw-semibold">{title}</div>
-                    <div>{description}</div>
-                </div>
             </div>
         </div>
     );

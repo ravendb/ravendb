@@ -75,7 +75,8 @@ namespace FastTests.Client
                 "AdoptOrphanedRevisionsCommand",
                 "AddPrefixedShardingSettingCommand", "DeletePrefixedShardingSettingCommand", "UpdatePrefixedShardingSettingCommand", "RevertRevisionsByIdCommand",
                 "DeleteRevisionsCommand", "ConfigureRevisionsBinCleanerCommand",
-                "GetCollectionRevisionsStatisticsCommand", "AddGenAiCommand","UpdateGenAiCommand", "ConfigureAttachmentsRetireCommand",
+                "GetCollectionRevisionsStatisticsCommand", "AddGenAiCommand","UpdateGenAiCommand", "AddEmbeddingsGenerationCommand",
+                "AddOrUpdateAiAgentOperationCommand","DeleteAiAgentOperationCommand","RunConversationOperationCommand","GetAiAgentOperationCommand", "ConfigureAttachmentsRetireCommand",
                 "GetRetireAttachmentsConfigurationCommand", "DeleteAttachmentsCommand"
             }.OrderBy(t => t);
 

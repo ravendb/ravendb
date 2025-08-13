@@ -18,7 +18,7 @@ namespace Raven.Client.Documents.Operations.ETL.Queue
 
         public bool SkipAutomaticQueueDeclaration { get; set; }
 
-        public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
+        public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true)
         {
             var validationResult = base.Validate(out errors, validateName, validateConnection);
             if (Connection != null && BrokerType != Connection.BrokerType)

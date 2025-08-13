@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
@@ -45,6 +46,8 @@ namespace Raven.Server.Documents.Replication
 {
     public class ReplicationLoader : AbstractReplicationLoader<DocumentsContextPool, DocumentsOperationContext>, ITombstoneAware
     {
+        const string ReplicationDisabledByMarkerFile = "Replication is disabled because there is disable.replication.marker file in the database data directory";
+
         private readonly Timer _reconnectAttemptTimer;
         private long _reconnectInProgress;
         private readonly ReaderWriterLockSlim _locker = new ReaderWriterLockSlim();
@@ -78,6 +81,7 @@ namespace Raven.Server.Documents.Replication
         public ConflictSolver ConflictSolverConfig;
         private readonly CancellationToken _shutdownToken;
         private HubInfoForCleaner _hubInfoForCleaner;
+        private bool _replicationDisabledByMarker;
         private readonly ConcurrentQueue<TaskCompletionSource<object>> _waitForReplicationTasks = new ConcurrentQueue<TaskCompletionSource<object>>();
         private readonly ConcurrentDictionary<ReplicationNode, LastEtagPerDestination> _lastSendEtagPerDestination = new ConcurrentDictionary<ReplicationNode, LastEtagPerDestination>();
 
@@ -386,6 +390,9 @@ namespace Raven.Server.Documents.Replication
             X509Certificate2 certificate,
             JsonOperationContext.MemoryBuffer buffer)
         {
+            if (_replicationDisabledByMarker)
+                throw new InvalidOperationException(ReplicationDisabledByMarkerFile);
+
             var supportedVersions = GetSupportedVersions(tcpConnectionOptions);
             var initialRequest = GetReplicationInitialRequest(tcpConnectionOptions, supportedVersions, buffer);
 
@@ -766,6 +773,19 @@ namespace Raven.Server.Documents.Replication
             ConflictResolver = new ResolveConflictOnReplicationConfigurationChange(this, _logger);
             Task.Run(() => ConflictResolver.RunConflictResolversOnce(record.ConflictSolverConfig, index));
             _isInitialized.Raise();
+
+            if (Database.Configuration.Core.RunInMemory == false)
+            {
+                string disableMarkerPath = Database.Configuration.Core.DataDirectory.Combine("disable.replication.marker").FullPath;
+                
+                if (File.Exists(disableMarkerPath))
+                {
+                    _replicationDisabledByMarker = true;
+
+                    if (_logger.IsWarnEnabled) 
+                        _logger.Warn(ReplicationDisabledByMarkerFile);
+                }
+            }
         }
 
         public void HandleDatabaseRecordChange(DatabaseRecord newRecord, long index)
@@ -822,7 +842,7 @@ namespace Raven.Server.Documents.Replication
         private void HandleTopologyChange(DatabaseRecord newRecord)
         {
             var instancesToDispose = new List<IDisposable>();
-            if (newRecord == null || _server.IsPassive())
+            if (newRecord == null || _server.IsPassive() || _replicationDisabledByMarker)
             {
                 DropOutgoingConnections(Destinations, instancesToDispose);
                 DropIncomingConnections(Destinations, instancesToDispose);
@@ -830,6 +850,10 @@ namespace Raven.Server.Documents.Replication
                 _externalDestinations.Clear();
                 _destinations.Clear();
                 DisposeConnections(instancesToDispose);
+
+                if (_replicationDisabledByMarker && _logger.IsDebugEnabled) 
+                    _logger.Debug(ReplicationDisabledByMarkerFile);
+
                 return;
             }
 

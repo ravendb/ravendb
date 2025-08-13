@@ -26,7 +26,7 @@ import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
-import moment = require("moment");
+import moment from "moment";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import RichAlert from "components/common/RichAlert";
@@ -248,7 +248,7 @@ export default function DocumentExpiration() {
                                     </li>
                                 </ul>
 
-                                <p>Sample document:</p>
+                                <p>Example of a document scheduled for expiration:</p>
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
@@ -294,7 +294,7 @@ const codeExample = `{
       "Set a timestamp in the @expires metadata property",
     "@metadata": {
       "@collection": "Foo",
-      "@expires": "2023-07-16T08:00:00.0000000Z"
+      "@expires": "${moment().add(1, "year").toISOString()}"
     }
 }`;
 

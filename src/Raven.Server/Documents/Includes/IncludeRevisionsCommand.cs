@@ -122,6 +122,7 @@ namespace Raven.Server.Documents.Includes
         public async ValueTask WriteIncludesAsync(AsyncBlittableJsonTextWriter writer, JsonOperationContext context, CancellationToken token)
         {
             var first = true;
+            ValueTask<int> maybeFlush;
             if (IdByRevisionsByDateTimeResults != null)
             {
                 foreach ((string id, var dateTimeToDictionary) in IdByRevisionsByDateTimeResults)
@@ -150,7 +151,9 @@ namespace Raven.Server.Documents.Includes
                         writer.WriteDocument(context, metadataOnly: false, document: doc);
                         writer.WriteEndObject();
 
-                        await writer.MaybeFlushAsync(token);
+                        maybeFlush = writer.MaybeFlushAsync(token);
+                        if (maybeFlush.IsCompletedSuccessfully == false)
+                            await maybeFlush;
                     }
                 }
             }
@@ -174,12 +177,16 @@ namespace Raven.Server.Documents.Includes
 
                     writer.WritePropertyName(nameof(RevisionIncludeResult.Revision));
                     writer.WriteDocument(context, metadataOnly: false, document: document);
-                    await writer.MaybeFlushAsync(token);
-
+                    maybeFlush = writer.MaybeFlushAsync(token);
+                    if (maybeFlush.IsCompletedSuccessfully == false)
+                        await maybeFlush;
                     writer.WriteEndObject();
                 }
             }
-            await writer.MaybeFlushAsync(token);
+            
+            maybeFlush = writer.MaybeFlushAsync(token);
+            if (maybeFlush.IsCompletedSuccessfully == false)
+                await maybeFlush;
         }
 
         public int Count => RevisionsChangeVectorResults?.Count ?? 0 + IdByRevisionsByDateTimeResults?.Count ?? 0;

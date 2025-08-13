@@ -42,6 +42,7 @@ namespace FastTests.Server.Basic
                 nameof(DatabaseRecord.AiConnectionStrings),
                 nameof(DatabaseRecord.EmbeddingsGenerations),
                 nameof(DatabaseRecord.GenAis),
+                nameof(DatabaseRecord.AiAgents),
                 nameof(DatabaseRecord.RetiredAttachments)
             };
             

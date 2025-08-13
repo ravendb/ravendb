@@ -1190,8 +1190,8 @@ namespace Raven.Server.Documents.ETL
             testScript.Configuration.Initialize(connection);
 
             testScript.Configuration.TestMode = true;
-
-            if (testScript.Configuration.Validate(out List<string> errors) == false)
+            
+            if (testScript.Configuration.Validate(out List<string> errors, validateIdentifier: false) == false)
             {
                 throw new InvalidOperationException($"Invalid ETL configuration for '{testScript.Configuration.Name}'. " +
                                                     $"Reason{(errors.Count > 1 ? "s" : string.Empty)}: {string.Join(";", errors)}.");

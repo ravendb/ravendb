@@ -23,7 +23,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
         private static readonly short SupportedFilterFlags = (short)(NotificationTypeParameter.Alert | NotificationTypeParameter.PerformanceHint);
 
-        [RavenAction("/databases/*/notifications", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true)]
+        [RavenAction("/databases/*/notifications", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, SkipUsagesCount = true, IsDebugInformationEndpoint = true)]
         public async Task GetNotifications()
         {
             var postponed = GetBoolValueQueryString("postponed", required: false) ?? true;
