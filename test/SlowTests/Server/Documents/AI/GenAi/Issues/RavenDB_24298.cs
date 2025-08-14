@@ -17,7 +17,7 @@ namespace SlowTests.Server.Documents.AI.GenAi.Issues;
 public class RavenDB_24298(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
     public async Task ConfigurationUpdateShouldTakeAffect(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore();
