@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var startEtag = GetIntValueQueryString("startEtag", required: false) ?? 0;
             var corruptedCount = GetIntValueQueryString("corruptedCount", required: false) ?? int.MaxValue;
             
-            List<string> corrupted = new List<string>();
+            var corrupted = new List<string>();
             long? lastEtag = null;
             
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
@@ -101,7 +101,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 {
                     writer.WriteStartObject();
                     writer.WriteArray("CorruptedDocuments", corrupted);
-                    writer.WriteEndObject();
                     writer.WriteComma();
                     if (lastEtag.HasValue)
                     {
@@ -110,9 +109,10 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     }
                     else
                     {
-                        writer.WritePropertyName("AllScaned");
+                        writer.WritePropertyName("AllScanned");
                         writer.WriteBool(true);
                     }
+                    writer.WriteEndObject();
                 }
             }
         }

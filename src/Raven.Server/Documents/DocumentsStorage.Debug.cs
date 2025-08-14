@@ -34,8 +34,6 @@ namespace Raven.Server.Documents
                     tx.Commit();
                     return true;
                 }
-
-                return false;
             }
             
             public bool DeleteRevisionByEtag(long etag, string collection = null)

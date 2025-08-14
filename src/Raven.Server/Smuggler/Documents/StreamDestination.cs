@@ -1347,7 +1347,7 @@ namespace Raven.Server.Smuggler.Documents
                     catch (Exception e)
                     {
                         throw new SmugglerException(
-                            $"Failed to write document {document.Id}. LowerId: {document.LowerId}, Etag: {document.Etag}, ChangeVectore: {document.ChangeVector}", e);
+                            $"Failed to write document {document.Id}. LowerId: {document.LowerId}, Etag: {document.Etag}, ChangeVector: {document.ChangeVector}", e);
                     }
                 }
             }
