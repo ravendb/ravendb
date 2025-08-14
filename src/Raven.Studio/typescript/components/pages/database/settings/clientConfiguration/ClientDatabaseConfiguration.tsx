@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import Spinner from "react-bootstrap/Spinner";
 import Card from "react-bootstrap/Card";
 import InputGroup from "react-bootstrap/InputGroup";
@@ -9,7 +9,7 @@ import Button from "react-bootstrap/Button";
 import { SubmitHandler, useForm, useWatch } from "react-hook-form";
 import { FormCheckbox, FormInput, FormRadioToggleWithIcon, FormSelect, FormSwitch } from "components/common/Form";
 import { useServices } from "components/hooks/useServices";
-import { useAsync, useAsyncCallback } from "react-async-hook";
+import { useAsyncCallback } from "react-async-hook";
 import { LoadingView } from "components/common/LoadingView";
 import { LoadError } from "components/common/LoadError";
 import {
@@ -41,16 +41,31 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 export default function ClientDatabaseConfiguration() {
     const { manageServerService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const asyncGetClientConfiguration = useAsyncCallback(manageServerService.getClientConfiguration);
-    const asyncGetClientGlobalConfiguration = useAsync(manageServerService.getGlobalClientConfiguration, []);
+
+    const asyncGetClientGlobalConfiguration = useAsyncCallback(async () => {
+        const globalConfigResult = await manageServerService.getGlobalClientConfiguration();
+        if (!globalConfigResult) {
+            return null;
+        }
+
+        return ClientConfigurationUtils.mapToFormData(globalConfigResult);
+    });
+
+    const asyncGetDefaultValues = useAsyncCallback(async () => {
+        const globalConfiguration = await asyncGetClientGlobalConfiguration.execute();
+        const clientConfiguration = await manageServerService.getClientConfiguration(databaseName);
+
+        const overrideConfig = !globalConfiguration || (clientConfiguration && !clientConfiguration.Disabled);
+
+        return ClientConfigurationUtils.mapToFormData(clientConfiguration, overrideConfig);
+    });
 
     const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
 
     const { handleSubmit, control, formState, watch, reset, setValue } = useForm<ClientConfigurationFormData>({
         resolver: clientConfigurationYupResolver,
         mode: "all",
-        defaultValues: async () =>
-            ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(databaseName), false),
+        defaultValues: asyncGetDefaultValues.execute,
     });
 
     useDirtyFlag(formState.isDirty);
@@ -69,22 +84,9 @@ export default function ClientDatabaseConfiguration() {
         ],
     });
 
-    const globalConfig = useMemo(() => {
-        const globalConfigResult = asyncGetClientGlobalConfiguration.result;
-        if (!globalConfigResult) {
-            return null;
-        }
-
-        return ClientConfigurationUtils.mapToFormData(globalConfigResult, true);
-    }, [asyncGetClientGlobalConfiguration.result]);
-
     const formValues = useWatch({ control: control });
 
-    const isShouldOverride =
-        (asyncGetClientGlobalConfiguration.status === "success" && !globalConfig) ||
-        asyncGetClientGlobalConfiguration.status === "error";
-
-    useClientConfigurationFormSideEffects(watch, setValue, isShouldOverride);
+    useClientConfigurationFormSideEffects(watch, setValue);
 
     useEffect(() => {
         if (formState.isSubmitSuccessful) {
@@ -102,14 +104,16 @@ export default function ClientDatabaseConfiguration() {
     };
 
     const onRefresh = async () => {
-        reset(ClientConfigurationUtils.mapToFormData(await asyncGetClientConfiguration.execute(databaseName), false));
+        reset(await asyncGetDefaultValues.execute());
     };
 
-    if (asyncGetClientConfiguration.loading || asyncGetClientGlobalConfiguration.loading) {
+    const globalConfig = asyncGetClientGlobalConfiguration.result;
+
+    if (asyncGetDefaultValues.loading) {
         return <LoadingView />;
     }
 
-    if (asyncGetClientConfiguration.error) {
+    if (asyncGetDefaultValues.error) {
         return <LoadError error="Unable to load client configuration" refresh={onRefresh} />;
     }
 
