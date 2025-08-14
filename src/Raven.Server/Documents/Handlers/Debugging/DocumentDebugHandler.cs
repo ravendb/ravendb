@@ -121,10 +121,9 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             public override void Flush() {}
             public override int Read(byte[] buffer, int offset, int count) => count;
-            public override long Seek(long offset, SeekOrigin origin) => throw new NotImplementedException();
-            public override void SetLength(long value) => throw new NotImplementedException();
+            public override long Seek(long offset, SeekOrigin origin) => throw new InvalidOperationException();
+            public override void SetLength(long value) { }
             public override void Write(byte[] buffer, int offset, int count) { }
-
             public override bool CanRead => false;
             public override bool CanSeek => false;
             public override bool CanWrite => true;

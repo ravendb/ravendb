@@ -158,7 +158,7 @@ namespace FastTests.Server.Documents
 
         [RavenTheory(RavenTestCategory.Core)]
         [MemberData(nameof(Ids))]
-        public async Task DocumentId_WhenStore_ShouldBeAbleToLoad(string id)
+        public async Task DocumentId_WhenStore_ShouldBeAbleToLoadAndDelelte(string id)
         {
             var idWithNonAscii = (char)(DocumentIdWorker.MaxAsciiCodePoint + 1) + id;
             
@@ -174,6 +174,12 @@ namespace FastTests.Server.Documents
             {
                 Assert.NotNull(await session.LoadAsync<TestObj>(id));
                 Assert.NotNull(await session.LoadAsync<TestObj>(idWithNonAscii));
+            }
+            
+            using (var session = store.OpenAsyncSession())
+            {
+                session.Delete(id);
+                await session.SaveChangesAsync();
             }
         }
 
