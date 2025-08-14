@@ -1,4 +1,8 @@
-﻿using System.Globalization;
+﻿using System;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -53,6 +57,79 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                 writer.WriteEndObject();
             }
+        }
+        
+        [RavenAction("/databases/*/debug/documents/scan-corrupted-ids", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        public async Task ScanCorruptedIds()
+        {
+            var startEtag = GetIntValueQueryString("startEtag", required: false) ?? 0;
+            var corruptedCount = GetIntValueQueryString("corruptedCount", required: false) ?? int.MaxValue;
+            
+            List<string> corrupted = new List<string>();
+            long? lastEtag = null;
+            
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, new DummyStream()))
+                using (context.OpenReadTransaction())
+                {
+                    var documents = Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, long.MaxValue, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector);
+                    var revisions = Database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, startEtag, long.MaxValue, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector);
+                    foreach (var doc in documents.Concat(revisions))
+                    {
+                        using (doc)
+                        {
+                            try
+                            {
+                                writer.WriteString(doc.Id);
+                            }
+                            catch (Exception e)
+                            {
+                                corrupted.Add($"Id: '{doc.Id}', LowerId: '{doc.LowerId}', ChangeVector: '{doc.ChangeVector}', Etag: '{doc.Etag}', Flags: '{doc.Flags}'");
+
+                                if (corruptedCount-- <= 0)
+                                {
+                                    lastEtag = doc.Etag;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
+                {
+                    writer.WriteStartObject();
+                    writer.WriteArray("CorruptedDocuments", corrupted);
+                    writer.WriteEndObject();
+                    writer.WriteComma();
+                    if (lastEtag.HasValue)
+                    {
+                        writer.WritePropertyName("LastEtag");
+                        writer.WriteInteger(lastEtag.Value);
+                    }
+                    else
+                    {
+                        writer.WritePropertyName("AllScaned");
+                        writer.WriteBool(true);
+                    }
+                }
+            }
+        }
+        
+        private class DummyStream : Stream
+        {
+            public override void Flush() {}
+            public override int Read(byte[] buffer, int offset, int count) => count;
+            public override long Seek(long offset, SeekOrigin origin) => throw new NotImplementedException();
+            public override void SetLength(long value) => throw new NotImplementedException();
+            public override void Write(byte[] buffer, int offset, int count) { }
+
+            public override bool CanRead => false;
+            public override bool CanSeek => false;
+            public override bool CanWrite => true;
+            public override long Length => 0;
+            public override long Position { get; set; }
         }
     }
 }

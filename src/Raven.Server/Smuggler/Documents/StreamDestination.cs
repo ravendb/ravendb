@@ -32,6 +32,7 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -1329,8 +1330,8 @@ namespace Raven.Server.Smuggler.Documents
 
                 async Task AsyncWork()
                 {
-                    var document = item.Document;
-                    using (document)
+                    using var document = item.Document;
+                    try
                     {
                         if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
                             await WriteUniqueAttachmentStreamsAsync(document, progress);
@@ -1342,6 +1343,11 @@ namespace Raven.Server.Smuggler.Documents
                         Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
 
                         await Writer.MaybeFlushAsync();
+                    }
+                    catch (Exception e)
+                    {
+                        throw new SmugglerException(
+                            $"Failed to write document {document.Id}. LowerId: {document.LowerId}, Etag: {document.Etag}, ChangeVectore: {document.ChangeVector}", e);
                     }
                 }
             }
