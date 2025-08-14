@@ -49,10 +49,10 @@ export default class ClientConfigurationUtils {
         }));
     }
 
-    static mapToFormData(dto: ClientConfiguration, isGlobal: boolean): ClientConfigurationFormData {
+    static mapToFormData(dto: ClientConfiguration, overrideConfig = true): ClientConfigurationFormData {
         if (!dto) {
             return {
-                overrideConfig: isGlobal,
+                overrideConfig,
                 identityPartsSeparatorEnabled: false,
                 identityPartsSeparatorValue: null,
                 maximumNumberOfRequestsEnabled: false,
@@ -67,7 +67,7 @@ export default class ClientConfigurationUtils {
         }
 
         return {
-            overrideConfig: !dto.Disabled,
+            overrideConfig,
             identityPartsSeparatorEnabled: !!dto.IdentityPartsSeparator,
             identityPartsSeparatorValue: dto.IdentityPartsSeparator || null,
             maximumNumberOfRequestsEnabled: !!dto.MaxNumberOfRequestsPerSession,

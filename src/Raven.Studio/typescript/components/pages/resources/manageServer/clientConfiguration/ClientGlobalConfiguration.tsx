@@ -41,7 +41,7 @@ export default function ClientGlobalConfiguration() {
         resolver: clientConfigurationYupResolver,
         mode: "all",
         defaultValues: async () =>
-            ClientConfigurationUtils.mapToFormData(await asyncGetGlobalClientConfiguration.execute(), true),
+            ClientConfigurationUtils.mapToFormData(await asyncGetGlobalClientConfiguration.execute()),
     });
 
     const loadBalancingDocsLink = useRavenLink({ hash: "GYJ8JA" });
@@ -49,7 +49,7 @@ export default function ClientGlobalConfiguration() {
 
     const formValues = useWatch({ control });
 
-    useClientConfigurationFormSideEffects(watch, setValue, true);
+    useClientConfigurationFormSideEffects(watch, setValue);
 
     useEffect(() => {
         if (formState.isSubmitSuccessful) {
@@ -77,7 +77,7 @@ export default function ClientGlobalConfiguration() {
     };
 
     const onRefresh = async () => {
-        reset(ClientConfigurationUtils.mapToFormData(await asyncGetGlobalClientConfiguration.execute(), true));
+        reset(ClientConfigurationUtils.mapToFormData(await asyncGetGlobalClientConfiguration.execute()));
     };
 
     if (asyncGetGlobalClientConfiguration.loading) {
