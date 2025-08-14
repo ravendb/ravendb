@@ -67,17 +67,18 @@
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="9.0.8" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Configuration" Version="9.0.8" />
     <PackageVersion Include="Microsoft.IO.RecyclableMemoryStream" Version="3.0.1" />
+    <PackageVersion Include="Microsoft.ML.OnnxRuntime.Managed" Version="1.22.2" />
     <PackageVersion Include="Microsoft.ML.Tokenizers" Version="2.0.0-preview.1.25127.4" />
     <PackageVersion Include="Microsoft.ML.Tokenizers.Data.Cl100kBase" Version="2.0.0-preview.1.25127.4" />
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
     <PackageVersion Include="Microsoft.NETCore.Jit" Version="2.0.8" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.55.0" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.55.0-alpha" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.HuggingFace" Version="1.55.0-preview" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.MistralAI" Version="1.55.0-alpha" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.55.0-alpha" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Onnx" Version="1.55.0-alpha" />
-    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.55.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.AzureOpenAI" Version="1.62.0" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Google" Version="1.62.0-alpha" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.HuggingFace" Version="1.62.0-preview" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.MistralAI" Version="1.62.0-alpha" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Ollama" Version="1.62.0-alpha" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.Onnx" Version="1.62.0-alpha" />
+    <PackageVersion Include="Microsoft.SemanticKernel.Connectors.OpenAI" Version="1.62.0" />
     <PackageVersion Include="Microsoft.SourceLink.GitHub" Version="8.0.0" />
     <PackageVersion Include="Microsoft.Win32.Registry" Version="5.0.0" />
     <PackageVersion Include="MongoDB.Driver" Version="2.30.0" />
@@ -96,7 +97,7 @@
     <PackageVersion Include="NuGet.ProjectModel" Version="6.14.0" />
     <PackageVersion Include="NuGet.Protocol" Version="6.14.0" />
     <PackageVersion Include="NuGet.Resolver" Version="6.14.0" />
-    <PackageVersion Include="OllamaSharp" Version="5.2.2" />
+    <PackageVersion Include="OllamaSharp" Version="5.2.3" />
     <PackageVersion Include="OpenTelemetry.Exporter.Console" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.12.0" />
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.12.0" />
