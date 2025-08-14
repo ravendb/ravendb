@@ -70,20 +70,22 @@ namespace Raven.Server.Documents.Handlers.Debugging
             
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
-                await using (var writer = new AsyncBlittableJsonTextWriter(context, new DummyStream()))
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, Stream.Null))
                 using (context.OpenReadTransaction())
                 {
                     var documents = Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, long.MaxValue, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector);
                     var revisions = Database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, startEtag, long.MaxValue, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector);
                     foreach (var doc in documents.Concat(revisions))
                     {
+                        HttpContext.RequestAborted.ThrowIfCancellationRequested();
+                        
                         using (doc)
                         {
                             try
                             {
                                 writer.WriteString(doc.Id);
                             }
-                            catch (Exception e)
+                            catch (Exception)
                             {
                                 corrupted.Add($"Id: '{doc.Id}', LowerId: '{doc.LowerId}', ChangeVector: '{doc.ChangeVector}', Etag: '{doc.Etag}', Flags: '{doc.Flags}'");
 
@@ -115,20 +117,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     writer.WriteEndObject();
                 }
             }
-        }
-        
-        private class DummyStream : Stream
-        {
-            public override void Flush() {}
-            public override int Read(byte[] buffer, int offset, int count) => count;
-            public override long Seek(long offset, SeekOrigin origin) => throw new InvalidOperationException();
-            public override void SetLength(long value) { }
-            public override void Write(byte[] buffer, int offset, int count) { }
-            public override bool CanRead => false;
-            public override bool CanSeek => false;
-            public override bool CanWrite => true;
-            public override long Length => 0;
-            public override long Position { get; set; }
         }
     }
 }
