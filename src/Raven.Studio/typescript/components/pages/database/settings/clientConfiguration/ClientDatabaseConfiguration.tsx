@@ -52,12 +52,16 @@ export default function ClientDatabaseConfiguration() {
     });
 
     const asyncGetDefaultValues = useAsyncCallback(async () => {
-        const globalConfiguration = await asyncGetClientGlobalConfiguration.execute();
-        const clientConfiguration = await manageServerService.getClientConfiguration(databaseName);
+        try {
+            const globalConfiguration = await asyncGetClientGlobalConfiguration.execute();
+            const clientConfiguration = await manageServerService.getClientConfiguration(databaseName);
 
-        const overrideConfig = !globalConfiguration || (clientConfiguration && !clientConfiguration.Disabled);
+            const overrideConfig = !globalConfiguration || (clientConfiguration && !clientConfiguration.Disabled);
 
-        return ClientConfigurationUtils.mapToFormData(clientConfiguration, overrideConfig);
+            return ClientConfigurationUtils.mapToFormData(clientConfiguration, overrideConfig);
+        } catch {
+            return ClientConfigurationUtils.mapToFormData(null);
+        }
     });
 
     const isClusterAdminOrClusterNode = useAppSelector(accessManagerSelectors.isClusterAdminOrClusterNode);
