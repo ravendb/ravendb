@@ -69,7 +69,7 @@ namespace SlowTests.Smuggler
                 .Select(field => field.Name)
                 .ToList();
 
-            Assert.Equal(52, fieldNames.Count);
+            Assert.Equal(53, fieldNames.Count);
         }
 
         [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
@@ -261,22 +261,15 @@ namespace SlowTests.Smuggler
                     
                     await store1.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                     
-                    using (var context = JsonOperationContext.ShortTermSingleUse())
+                    var configuration = new SchemaValidationConfiguration
                     {
-                        var schemaDefinitionObj =
-                            new DynamicJsonValue { ["properties"] = new DynamicJsonValue { ["Prop"] = new DynamicJsonValue { ["maxLength"] = 3 } } };
-
-                        using var schemaDefinition = context.ReadObject(schemaDefinitionObj, "test object");
-                        var configuration = new SchemaValidationConfiguration
+                        Disabled = false,
+                        ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
                         {
-                            Disabled = false,
-                            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
-                            {
-                                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
-                            }
-                        };
-                        await store1.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
-                    }                    
+                            { "TestObjs", new SchemaValidator { SchemaDefinition = "{\"properties\":{\"Prop\":{\"maxLength\":3}}}" } }
+                        }
+                    };
+                    await store1.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
                     
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
@@ -1020,6 +1013,22 @@ namespace SlowTests.Smuggler
                     await store2.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config3));
                     await store2.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config4));
 
+                    await store1.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
+                    {
+                        ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+                        {
+                            { "TestObjs", new SchemaValidator { SchemaDefinition = "{\"properties\":{\"Prop\":{\"maxLength\":3}}}" } }
+                        }
+                    }));
+                        
+                    await store2.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
+                    {
+                        ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+                        {
+                            { "TestObj2s", new SchemaValidator { SchemaDefinition = "{\"properties\":{\"Prop2\":{\"maxLength\":3}}}" } }
+                        }
+                    }));
+                    
                     var operation = await store1.Smuggler.ExportAsync(new DatabaseSmugglerExportOptions(), file);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));
 
@@ -1132,6 +1141,13 @@ namespace SlowTests.Smuggler
                         Assert.Equal(true, x.AllowEtlOnNonEncryptedChannel);
                     });
                     Assert.Equal(2, disabled);
+
+                    Assert.NotNull(record.SchemaValidation.ValidatorsPerCollection);
+                    Assert.Equal(2, record.SchemaValidation.ValidatorsPerCollection.Count);
+                    Assert.True(record.SchemaValidation.ValidatorsPerCollection.ContainsKey("TestObjs"));
+                    Assert.Equal("{\"properties\":{\"Prop\":{\"maxLength\":3}}}", record.SchemaValidation.ValidatorsPerCollection["TestObjs"].SchemaDefinition);
+                    Assert.True(record.SchemaValidation.ValidatorsPerCollection.ContainsKey("TestObj2s"));
+                    Assert.Equal("{\"properties\":{\"Prop2\":{\"maxLength\":3}}}", record.SchemaValidation.ValidatorsPerCollection["TestObj2s"].SchemaDefinition);
                 }
             }
             finally

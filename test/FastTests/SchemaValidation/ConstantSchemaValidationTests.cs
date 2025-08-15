@@ -149,11 +149,10 @@ public class ConstantSchemaValidationTests : SchemaValidationTestsBase
             },
             () =>
             {
-                //TODO Make sure a string object is not valid as an object
-                // using var ctx = ReadObject(new DynamicJsonValue { ["objectProp"] = ReadObject(new DynamicJsonValue{["prop"] = 44}).ToString() });
-                //
-                // Assert.False(schemaValidator.Validate(obj, out var errors));
-                // AssertError("The value at 'objectProp' must be '{\"prop\":44}', but it is '{\"prop\": 44}'.", errors);
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["objectProp"] = "{\"prop\":44}" }, out var obj);
+                
+                Assert.False(schemaValidator.Validate(obj, out var errors));
+                AssertError("The value at 'objectProp' must be '{\"prop\":44}', but it is '\"{\"prop\":44}\"'.", errors);
             });
     }
 }

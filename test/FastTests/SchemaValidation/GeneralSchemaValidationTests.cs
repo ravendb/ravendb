@@ -118,7 +118,7 @@ public class GeneralSchemaValidationTests : SchemaValidationTestsBase
 
         await AssertMultipleParallel(() =>
             {
-                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "value1", ["prop2"] = "value2", ["prop2"] = "value2", }, out var obj);
+                using var ctx = ReadObjectOnNewCtx(new DynamicJsonValue { ["prop1"] = "value1", ["prop2"] = "value2", ["prop3"] = "value3", }, out var obj);
 
                 Assert.True(schemaValidator.Validate(obj, out var errors), errors);
             },
