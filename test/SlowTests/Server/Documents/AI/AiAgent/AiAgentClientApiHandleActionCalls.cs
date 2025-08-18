@@ -19,7 +19,7 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
     }
 
     private const string ProductSearch = nameof(ProductSearch);
-    private const string RecentOrder = nameof(RecentOrder);
+    internal const string RecentOrder = nameof(RecentOrder);
     private class Sample
     {
         public string Answer;
@@ -172,7 +172,7 @@ public class AiAgentClientApiHandleActionCalls : RavenTestBase
         await Assert.ThrowsAsync<ConcurrencyException>(() => chat2.RunAsync<Sample>());
     }
 
-    private static AiAgentConfiguration BuildAgent(string connection)
+    internal static AiAgentConfiguration BuildAgent(string connection)
     {
         var agent = new AiAgentConfiguration("shopping assistant", connection,
             "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.");

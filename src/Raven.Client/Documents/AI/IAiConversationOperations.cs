@@ -15,7 +15,8 @@ public interface IAiConversationOperations
     /// <param name="actionName">The name of the action tool to handle.</param>
     /// <param name="action">A function that processes the arguments and returns a <see cref="Task{Object}"/> representing the response.</param>
     /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
-    void Handle<TArgs>(string actionName, Func<TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel) where TArgs : class;
+    void Handle<TArgs>(string actionName, Func<TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        where TArgs : class;
 
     /// <summary>
     /// Registers a synchronous handler for an action tool.
@@ -25,6 +26,51 @@ public interface IAiConversationOperations
     /// <param name="action">A function that processes the arguments and returns the result.</param>
     /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
     void Handle<TArgs>(string actionName, Func<TArgs, object> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel) where TArgs : class;
+    
+    /// <summary>
+    /// Registers an asynchronous handler for an action tool.
+    /// </summary>
+    /// <typeparam name="TArgs">The type of the argument passed to the handler.</typeparam>
+    /// <param name="actionName">The name of the action tool to handle.</param>
+    /// <param name="action">A function that processes the arguments and returns a <see cref="Task{Object}"/> representing the response.</param>
+    /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
+    void Handle<TArgs>(string actionName, Func<AiAgentActionRequest, TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        where TArgs : class;
+
+    /// <summary>
+    /// Registers a synchronous handler for an action tool.
+    /// </summary>
+    /// <typeparam name="TArgs">The type of the argument passed to the handler.</typeparam>
+    /// <param name="actionName">The name of the action tool to handle.</param>
+    /// <param name="action">A function that processes the arguments and returns the result.</param>
+    /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
+    void Handle<TArgs>(string actionName, Func<AiAgentActionRequest, TArgs, object> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel) where TArgs : class;
+
+    /// <summary>
+    /// Registers an asynchronous receiver for an action tool - unlike handlers, receivers can *act* on the call
+    /// from the model, but require an explicit call to <see cref="AddActionResponse"/> to close the action.
+    /// The <see cref="AddActionResponse"/> call may happen at a later time (including using a different <see cref="IAiConversationOperations"/>
+    /// instance (such as a separate request at a later time). 
+    /// </summary>
+    /// <typeparam name="TArgs">The type of the argument passed to the handler.</typeparam>
+    /// <param name="actionName">The name of the action tool to handle.</param>
+    /// <param name="action">A function that processes the arguments and returns the result.</param>
+    /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
+    void Receive<TArgs>(string actionName, Func<AiAgentActionRequest, TArgs, Task> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        where TArgs : class;
+
+    /// <summary>
+    /// Registers a synchronous receiver for an action tool - unlike handlers, receivers can *act* on the call
+    /// from the model, but require an explicit call to <see cref="AddActionResponse"/> to close the action.
+    /// The <see cref="AddActionResponse"/> call may happen at a later time (including using a different <see cref="IAiConversationOperations"/>
+    /// instance (such as a separate request at a later time). 
+    /// </summary>
+    /// <typeparam name="TArgs">The type of the argument passed to the handler.</typeparam>
+    /// <param name="actionName">The name of the action tool to handle.</param>
+    /// <param name="action">A function that processes the arguments and returns the result.</param>
+    /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
+    void Receive<TArgs>(string actionName, Action<AiAgentActionRequest, TArgs> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel)
+        where TArgs : class;
 
     /// <summary>
     /// Asynchronously executes one “turn” of the conversation:  
