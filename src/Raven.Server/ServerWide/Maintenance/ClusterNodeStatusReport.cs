@@ -132,6 +132,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public long LastTransactionId; // this is local, so we don't serialize it
         public long EnvironmentsHash; // this is local, so we don't serialize it
+        public DateTime LastFullReport; // this is local, so we don't serialize it
 
         internal static long GetPeriodicBackupStatusesHash(Dictionary<long, PeriodicBackupStatusReport> periodicBackupStatusReports)
         {

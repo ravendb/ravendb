@@ -254,9 +254,9 @@ namespace Raven.Server.ServerWide.Maintenance
                         }
 
                         report.Status = DatabaseStatus.Loaded;
+                        var now = dbInstance.Time.GetUtcNow();
                         try
                         {
-                            var now = dbInstance.Time.GetUtcNow();
                             FillReplicationInfo(dbInstance, report);
                             FillClusterInfo(ctx, report, dbInstance);
 
@@ -294,10 +294,12 @@ namespace Raven.Server.ServerWide.Maintenance
 
                             // Check if anything has changed.
                             if (SupportedFeatures.Heartbeats.SendChangesOnly &&
-                                prevDatabaseReport != null && prevDatabaseReport.EnvironmentsHash == report.EnvironmentsHash)
+                                prevDatabaseReport != null && prevDatabaseReport.EnvironmentsHash == report.EnvironmentsHash
+                                && now - prevDatabaseReport.LastFullReport < _server.Configuration.Cluster.LastFullTimeReport.AsTimeSpan)
                             {
                                 // Nothing changed. Send a lightweight NoChange report.
                                 report.Status = DatabaseStatus.NoChange;
+                                report.LastFullReport = prevDatabaseReport.LastFullReport;
                                 result[dbName] = report;
                                 continue;
                             }
@@ -338,6 +340,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             report.Error = e.ToString();
                         }
 
+                        report.LastFullReport = now;
                         result[dbName] = report;
                     }
                 }
