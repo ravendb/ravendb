@@ -21,6 +21,16 @@ namespace Raven.Server.Documents.AI
     {
         public string Refusal;
         public string FinishReason;
+
+        public static void Throw(string refusal, string finishReason, string requestId)
+        {
+            throw new RefusedToAnswerException($"The request was refused by the model: '{refusal}'")
+            {
+                Refusal = refusal,
+                FinishReason = finishReason,
+                RequestId = requestId
+            };
+        }
     }
 
     public sealed class UnexpectedResponseException : AiException

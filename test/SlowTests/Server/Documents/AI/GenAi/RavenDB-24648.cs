@@ -194,8 +194,8 @@ for(const comment of this.Comments)
         Assert.Equal("star.png", genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Name);
         Assert.Equal("image/png", genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.Type);
         Assert.Equal("image/png", genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Type);
-        Assert.NotNull(genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.Data);
-        Assert.NotNull(genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Data);
+        Assert.NotNull(genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.DataAsBase64);
+        Assert.NotNull(genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.DataAsBase64);
 
         // Stage 2 : Send to model
         var sendToModel = await store.Maintenance.SendAsync(context, new TestGenAiSendToModelOperation(genAiContexts, config));
@@ -303,8 +303,8 @@ for(const comment of this.Comments)
         Assert.Equal("star.png", genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Name);
         Assert.Equal("image/png", genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.Type);
         Assert.Equal("image/png", genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Type);
-        Assert.NotNull(genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.Data);
-        Assert.NotNull(genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Data);
+        Assert.NotNull(genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.DataAsBase64);
+        Assert.NotNull(genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.DataAsBase64);
 
 
         // Stage 2 : Send to model
@@ -448,7 +448,6 @@ for(const comment of this.Comments)
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/admin/ai/gen-ai/test";
-            // var bjro = _conventions.Serialization.DefaultConverter.ToBlittable(_testGenAiScript, ctx);
             var bjro = ctx.ReadObject(_testGenAiScript.ToJson(), "TestGenAiCommand_payload");
             return new HttpRequestMessage
             {

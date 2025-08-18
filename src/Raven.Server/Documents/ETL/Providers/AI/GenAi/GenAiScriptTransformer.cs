@@ -116,6 +116,17 @@ var ai = new AI();
         }
     }
 
+    protected override bool TryGetMissingAttachmentPlaceholder(string attachmentName, ref JsValue loadAttachmentReference, ref Attachment attachment)
+    {
+        // If the attachment does not exist, its key is represented by a new instance of JsNull.
+        loadAttachmentReference = (JsNull)Activator.CreateInstance(typeof(JsNull), true);
+        attachment = new Attachment()
+        {
+            Name = Context.GetLazyString(attachmentName)
+        };
+        return true;
+    }
+
     protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
     {
         _attachments ??= [];
@@ -240,7 +251,7 @@ var ai = new AI();
                             throw new InvalidOperationException($"GenAI Task: attachment with reference '{reference}' was never loaded. ");
                         }
 
-                        result.Attachments.Add(new GenAiAttachment(filename, type, data));
+                        result.Attachments.Add(new AiAttachment(filename, type, data));
                     }
                 }
                 _currentRun.Add(result);

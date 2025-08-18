@@ -129,6 +129,8 @@ namespace Raven.Server.Documents.ETL
 
         protected abstract void AddLoadedAttachment(JsValue reference, string name, Attachment attachment);
 
+        protected virtual bool TryGetMissingAttachmentPlaceholder(string attachmentName, ref JsValue loadAttachmentReference, ref Attachment attachment) => true;
+
         protected abstract void AddLoadedCounter(JsValue reference, string name, long value);
         
         protected abstract void AddLoadedTimeSeries(JsValue reference, string name, IEnumerable<SingleResult> entries);
@@ -145,26 +147,17 @@ namespace Raven.Server.Documents.ETL
             {
                 attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachmentName, AttachmentType.Document, null);
 
-                if (attachment == null)
-                    UpdateEmptyAttachmentInfo();
+                if (attachment == null && TryGetMissingAttachmentPlaceholder(attachmentName, ref loadAttachmentReference, ref attachment) == false)
+                    return JsValue.Null;
             }
-            else
+            else if (TryGetMissingAttachmentPlaceholder(attachmentName, ref loadAttachmentReference, ref attachment) == false)
             {
-                UpdateEmptyAttachmentInfo();
+                return JsValue.Null;
             }
 
             AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
 
             return loadAttachmentReference;
-
-            void UpdateEmptyAttachmentInfo()
-            {
-                loadAttachmentReference = (JsNull)Activator.CreateInstance(typeof(JsNull), true);
-                attachment = new Attachment()
-                {
-                    Name = Context.GetLazyString(attachmentName)
-                };
-            }
         }
 
         private static JsValue CreateLoadAttachmentReference(string attachmentName)

@@ -5,8 +5,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents.ETL.Providers.AI.GenAi;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI;
@@ -17,7 +16,7 @@ public interface IChatCompletionClient : IDisposable
         @"(?<value>\d+(?:\.\d+)?)(?<unit>ns|us|µs|ms|s|m|h)",
         RegexOptions.Compiled | RegexOptions.CultureInvariant
     );
-    Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, List<GenAiAttachment> contextOutputAttachments,
+    Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, List<AiAttachment> contextOutputAttachments,
         CancellationToken token);
     
     Task<BlittableJsonReaderObject> GetResponseContentAsync(JsonOperationContext context, HttpResponseMessage response, CancellationToken token);

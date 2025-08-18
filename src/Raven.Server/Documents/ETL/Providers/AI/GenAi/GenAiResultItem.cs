@@ -1,8 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Operations.AI;
 using System.Linq;
-using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents.AI;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -44,7 +42,7 @@ public class ContextOutput
 {
     public BlittableJsonReaderObject Context { get; set; }
     
-    public List<GenAiAttachment> Attachments;
+    public List<AiAttachment> Attachments;
     public bool IsCached { get; set; }
     public string AiHash { get; set; }
 

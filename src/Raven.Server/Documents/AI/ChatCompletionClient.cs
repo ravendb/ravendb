@@ -20,6 +20,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Json;
 using Raven.Server.Utils;
@@ -27,7 +28,6 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
-using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using JsonSerializer = System.Text.Json.JsonSerializer;
 
 namespace Raven.Server.Documents.AI;
@@ -149,10 +149,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             _ = choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal) || msg.TryGet(Constants.ResponseFields.Refusal, out refusal);
 
             //TODO: full output if we get here?
-            throw new RefusedToAnswerException($"The request was refused by the model: '{refusal}'")
-            {
-                Refusal = refusal, FinishReason = finishReason, RequestId = GetRequestId(response.Headers)
-            };
+            RefusedToAnswerException.Throw(refusal, finishReason, GetRequestId(response.Headers));
         }
 
         var result = context.Sync.ReadForMemory(content, "ai/output");
@@ -161,7 +158,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
     protected virtual Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, token);
 
-    public async Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, List<GenAiAttachment> contextOutputAttachments, CancellationToken token)
+    public async Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, List<AiAttachment> attachments, CancellationToken token)
     {
         if (_forTestingPurposes?.SimulateFailureAsync != null)
             await _forTestingPurposes.SimulateFailureAsync(userPrompt);
@@ -176,10 +173,10 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         var msg2 = new DynamicJsonValue
         {
             [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
-            [Constants.RequestFields.Content] = contextOutputAttachments switch
+            [Constants.RequestFields.Content] = attachments switch
             {
                 null => userPrompt,
-                _ => CreateContentWithAttachments(userPrompt, contextOutputAttachments)
+                _ => CreateContentWithAttachments(userPrompt, attachments)
             }
         };
 
@@ -192,14 +189,14 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
     }
 
 
-    private DynamicJsonArray CreateContentWithAttachments(string context, List<GenAiAttachment> attachments)
+    private DynamicJsonArray CreateContentWithAttachments(string context, List<AiAttachment> attachments)
     {
         var content = new DynamicJsonArray
         {
             new DynamicJsonValue
             {
-                ["type"] = "text",
-                ["text"] = context
+                [Constants.AttachmentsRequestFields.Type] = Constants.AttachmentsRequestFields.TypeText,
+                [Constants.AttachmentsRequestFields.TypeText] = context
             }
         };
 
@@ -207,29 +204,32 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         {
             content.Add(attachment.Type switch
             {
-                "text/plain" => new DynamicJsonValue
+                Constants.AttachmentsRequestFields.MediaTypeTextPlain => new DynamicJsonValue
                 {
-                    ["type"] = "text",
-                    ["text"] = attachment.Data
+                    [Constants.AttachmentsRequestFields.Type] = Constants.AttachmentsRequestFields.TypeText,
+                    [Constants.AttachmentsRequestFields.TypeText] = attachment.DataAsBase64
                 },
-                "application/pdf" => new DynamicJsonValue
+                Constants.AttachmentsRequestFields.MediaTypeApplicationPdf => new DynamicJsonValue
                 {
-                    ["type"] = "file",
-                    ["file"] = new DynamicJsonValue
+                    [Constants.AttachmentsRequestFields.Type] = Constants.AttachmentsRequestFields.File,
+                    [Constants.AttachmentsRequestFields.File] = new DynamicJsonValue
                     {
-                        ["filename"] = attachment.Name,
-                        ["file_data"] = "data:application/pdf;base64," + attachment.Data
+                        [Constants.AttachmentsRequestFields.FileName] = attachment.Name,
+                        [Constants.AttachmentsRequestFields.FileData] = "data:application/pdf;base64," + attachment.DataAsBase64
                     }
                 },
-                "image/jpeg" or "image/png" or "image/gif" or "image/webp" => new DynamicJsonValue
+                Constants.AttachmentsRequestFields.MediaTypeImageJpeg or 
+                    Constants.AttachmentsRequestFields.MediaTypeImagePng or
+                    Constants.AttachmentsRequestFields.MediaTypeImageGif or 
+                    Constants.AttachmentsRequestFields.MediaTypeImageWebp => new DynamicJsonValue
                 {
-                    ["type"] = "image_url",
-                    ["image_url"] = new DynamicJsonValue
+                    [Constants.AttachmentsRequestFields.Type] = Constants.AttachmentsRequestFields.ImageUrl,
+                    [Constants.AttachmentsRequestFields.ImageUrl] = new DynamicJsonValue
                     {
-                        ["url"] = "data:" + attachment.Type + ";base64," + attachment.Data
+                        [Constants.AttachmentsRequestFields.Url] = "data:" + attachment.Type + ";base64," + attachment.DataAsBase64
                     }
                 },
-                _ => throw new InvalidOperationException("Unknown attachment type: " + attachment.Type)
+                _ => throw new InvalidOperationException($"Attachment '{attachment.Name}' has unknown type: {attachment.Type}")
             });
         }
 
@@ -751,6 +751,28 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string DefaultRelativeUri = "/v1/chat/completions";
             public const string ModelsUri = "/v1/models";
             public const string AuthorizationApiKeyProperty = "Bearer";
+
+            public const string AttachmentType = "Bearer";
+            public const string AttachmentData = "Bearer";
+        }
+
+        public static class AttachmentsRequestFields
+        {
+            public const string Type = "type";
+            public const string File = "file";
+            public const string FileName = "filename";
+            public const string FileData = "file_data";
+            public const string ImageUrl = "image_url";
+            public const string Url = "url";
+
+            public const string TypeText = "text";
+
+            public const string MediaTypeTextPlain = "text/plain";
+            public const string MediaTypeApplicationPdf = "application/pdf";
+            public const string MediaTypeImageJpeg = "image/jpeg";
+            public const string MediaTypeImagePng = "image/png";
+            public const string MediaTypeImageGif = "image/gif";
+            public const string MediaTypeImageWebp = "image/webp";
         }
     }
 

@@ -197,7 +197,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 Task<(string Result, AiUsage Usage)> task;
                 try
                 {
-                    task = _chatCompletionClient.CompleteAsync(Configuration.Prompt, json,Schema,  item.ContextOutput.Attachments, CancellationToken);
+                    task = _chatCompletionClient.CompleteAsync(Configuration.Prompt, json,Schema, item.ContextOutput.Attachments, CancellationToken);
                 }
                 catch (Exception e)
                 {
