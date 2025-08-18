@@ -7,9 +7,9 @@ using Raven.Server.Web.Http;
 
 namespace Raven.Server.Web.Studio.Processors;
 
-internal sealed class StudioDatabaseTasksHandlerProcessorForRestartDatabase : AbstractStudioDatabaseTasksHandlerProcessorForRestartDatabase<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class DatabaseTasksHandlerProcessorForRestartDatabase : AbstractDatabaseTasksHandlerProcessorForRestartDatabase<DatabaseRequestHandler, DocumentsOperationContext>
 {
-    public StudioDatabaseTasksHandlerProcessorForRestartDatabase([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
+    public DatabaseTasksHandlerProcessorForRestartDatabase([NotNull] DatabaseRequestHandler requestHandler, string urlSuffix) : base(requestHandler, urlSuffix)
     {
     }
 

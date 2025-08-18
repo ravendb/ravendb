@@ -24,7 +24,7 @@ namespace Raven.Server.Web.Studio
         [RavenAction("/databases/*/admin/studio-tasks/restart", "POST", AuthorizationStatus.DatabaseAdmin, SkipUsagesCount = true)]
         public async Task RestartDatabase()
         {
-            using (var processor = new StudioDatabaseTasksHandlerProcessorForRestartDatabase(this))
+            using (var processor = new DatabaseTasksHandlerProcessorForRestartDatabase(this, "/admin/studio-tasks/restart"))
                 await processor.ExecuteAsync();
         }
 

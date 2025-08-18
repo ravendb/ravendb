@@ -8,10 +8,10 @@ using Raven.Server.Web.Studio.Processors;
 
 namespace Raven.Server.Web.Studio.Sharding.Processors;
 
-internal sealed class ShardedStudioDatabaseTasksHandlerProcessorForRestartDatabase : AbstractStudioDatabaseTasksHandlerProcessorForRestartDatabase<ShardedDatabaseRequestHandler, TransactionOperationContext>
+internal sealed class ShardedDatabaseTasksHandlerProcessorForRestartDatabase : AbstractDatabaseTasksHandlerProcessorForRestartDatabase<ShardedDatabaseRequestHandler, TransactionOperationContext>
 {
-    public ShardedStudioDatabaseTasksHandlerProcessorForRestartDatabase([NotNull] ShardedDatabaseRequestHandler requestHandler)
-        : base(requestHandler)
+    public ShardedDatabaseTasksHandlerProcessorForRestartDatabase([NotNull] ShardedDatabaseRequestHandler requestHandler, string urlSuffix)
+        : base(requestHandler, urlSuffix)
     {
     }
 
