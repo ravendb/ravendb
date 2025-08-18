@@ -11,6 +11,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.Serialization;
 using System.Text;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
@@ -271,18 +272,22 @@ namespace Raven.Client.Documents.Indexes
 
         private string GetPropertyName(MemberInfo memberInfo)
         {
-            foreach (var customAttribute in memberInfo.GetCustomAttributes(true))
+            var propName = _conventions.FindPropertyNameForIndexDefinition?.Invoke(memberInfo);
+            if (propName != null)
+                return propName;
+
+            foreach (var customAttribute in memberInfo.GetCustomAttributes(inherit: true))
             {
-                string propName;
                 var customAttributeType = customAttribute.GetType();
                 if (typeof(JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
                     continue;
+
                 switch (customAttributeType.Name)
                 {
-                    case "JsonPropertyAttribute":
+                    case nameof(JsonPropertyAttribute):
                         propName = ((dynamic)customAttribute).PropertyName;
                         break;
-                    case "DataMemberAttribute":
+                    case nameof(DataMemberAttribute):
                         propName = ((dynamic)customAttribute).Name;
                         break;
                     default:
