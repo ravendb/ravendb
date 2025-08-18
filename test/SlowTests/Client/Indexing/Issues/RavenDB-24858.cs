@@ -20,7 +20,7 @@ public class RavenDB_24858 : RavenTestBase
     }
 
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
-    public async Task FindPropertyNameForIndexDefinitionAsWorkaroundInsteadOfPropertyNameConverter_ShouldWork()
+    public async Task ShouldTakeIntoAccount_PropertyNameConverter_WhenBuildingIndexDefinition()
     {
         using var store = GetDocumentStore(new Options
         {
@@ -28,9 +28,7 @@ public class RavenDB_24858 : RavenTestBase
             {
                 documentStore.Conventions.FindPropertyNameForIndex = ConvertStripePropertyNamesForIndex;
                 documentStore.Conventions.FindPropertyNameForDynamicIndex = ConvertStripePropertyNamesForIndex;
-#pragma warning disable CS0618 // Type or member is obsolete
-                documentStore.Conventions.FindPropertyNameForIndexDefinition = info => info.Name;
-#pragma warning restore CS0618 // Type or member is obsolete
+                documentStore.Conventions.PropertyNameConverter = info => info.Name;
                 documentStore.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                 {
                     JsonContractResolver = new IgnoreJsonPropertyNamesForSomeNamespaceContractResolver()

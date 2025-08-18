@@ -272,14 +272,19 @@ namespace Raven.Client.Documents.Indexes
 
         private string GetPropertyName(MemberInfo memberInfo)
         {
-#pragma warning disable CS0618 // Type or member is obsolete
-            var propName = _conventions.FindPropertyNameForIndexDefinition?.Invoke(memberInfo);
-#pragma warning restore CS0618 // Type or member is obsolete
-            if (propName != null)
-                return propName;
+            if (memberInfo == null)
+                return null;
+
+            if (_conventions.PropertyNameConverter != null)
+            {
+                var convertedName = _conventions.GetConvertedPropertyNameFor(memberInfo);
+                if (convertedName != null)
+                    return convertedName;
+            }
 
             foreach (var customAttribute in memberInfo.GetCustomAttributes(inherit: true))
             {
+                string propName;
                 var customAttributeType = customAttribute.GetType();
                 if (typeof(JsonPropertyAttribute).Namespace != customAttributeType.Namespace)
                     continue;
@@ -302,7 +307,7 @@ namespace Raven.Client.Documents.Indexes
                     return propName;
             }
 
-            return _conventions.GetConvertedPropertyNameFor(memberInfo);
+            return memberInfo.Name;
         }
 
         private static Type GetMemberType(MemberInfo member)
