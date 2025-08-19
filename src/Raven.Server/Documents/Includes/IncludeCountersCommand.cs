@@ -85,7 +85,9 @@ namespace Raven.Server.Documents.Includes
 
                 writer.WritePropertyName(kvp.Key);
 
-                await writer.WriteCountersForDocumentAsync(kvp.Value, token);
+                var writeCounters = writer.WriteCountersForDocumentAsync(kvp.Value, token);
+                if (writeCounters.IsCompletedSuccessfully == false)
+                    await writeCounters;
             }
 
             writer.WriteEndObject();

@@ -14,7 +14,6 @@ using Raven.Client.ServerWide;
 using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Documents.Sharding;
-using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Logging;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
@@ -106,6 +105,7 @@ namespace Raven.Server.Documents
             internal bool PreventNodePromotion = false;
             internal Func<ServerStore, Task> BeforeHandleClusterTransactionOnDatabaseChanged;
             internal Action DelayNotifyFeaturesAboutStateChange;
+            internal ManualResetEventSlim AfterDatabaseRemovedFromIdle = null;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object changeState)
@@ -481,9 +481,8 @@ namespace Raven.Server.Documents
                 }
 
                 DeleteDatabaseNotifications(dbName, throwOnError: true);
-
-                // delete the cache info
                 DeleteDatabaseCachedInfo(dbName, throwOnError: true);
+                DeleteLocalBackupStatuses(dbName, throwOnError: true);
             }
             finally
             {
@@ -908,6 +907,7 @@ namespace Raven.Server.Documents
                         ForTestingPurposes?.AfterDatabaseCreation?.Invoke((t.GetAwaiter().GetResult(), caller));
 
                         _serverStore.IdleDatabases.TryRemove(databaseName.Value, out _);
+                        ForTestingPurposes?.AfterDatabaseRemovedFromIdle?.Set();
                     }, TaskContinuationOptions.OnlyOnRanToCompletion | TaskContinuationOptions.ExecuteSynchronously);
                 }
                 else
@@ -1130,6 +1130,23 @@ namespace Raven.Server.Documents
 
                 if (_logger.IsInfoEnabled)
                     _logger.Info($"Failed to delete database info for '{databaseName}' database.", e);
+            }
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void DeleteLocalBackupStatuses(string databaseName, bool throwOnError)
+        {
+            try
+            {
+                _serverStore.DatabaseInfoCache.BackupStatusStorage.Delete(databaseName);
+            }
+            catch (Exception e)
+            {
+                if (throwOnError)
+                    throw;
+
+                if (_logger.IsDebugEnabled)
+                    _logger.Debug($"Failed to delete local backup statuses for '{databaseName}' database.", e);
             }
         }
 
@@ -1394,11 +1411,8 @@ namespace Raven.Server.Documents
                     switch (nextIdleDatabaseActivity.Type)
                     {
                         case IdleDatabaseActivityType.UpdateBackupStatusOnly:
-                            PeriodicBackupStatus backupStatus;
 
-                            using (_serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-                            using (context.OpenReadTransaction())
-                                backupStatus = BackupUtils.GetBackupStatusFromCluster(_serverStore, context, databaseName, nextIdleDatabaseActivity.TaskId);
+                            PeriodicBackupStatus backupStatus = _serverStore.DatabaseInfoCache.BackupStatusStorage.GetBackupStatus(databaseName, nextIdleDatabaseActivity.TaskId);
 
                             backupStatus.LastIncrementalBackup = backupStatus.LastIncrementalBackupInternal = nextIdleDatabaseActivity.DateTime;
                             backupStatus.LocalBackup.LastIncrementalBackup = nextIdleDatabaseActivity.DateTime;
@@ -1406,9 +1420,10 @@ namespace Raven.Server.Documents
 
                             var backupResult = new BackupResult();
                             backupResult.AddMessage($"Skipping incremental backup because no changes were made from last full backup on {backupStatus.LastFullBackup}.");
-
+                            
                             BackupUtils.SaveBackupStatus(backupStatus, databaseName, _serverStore, _logger, backupResult);
 
+                            // choose the next backup that will arrive the earliest
                             nextIdleDatabaseActivity = BackupUtils.GetEarliestIdleDatabaseActivity(new BackupUtils.EarliestIdleDatabaseActivityParameters
                             {
                                 DatabaseName = databaseName,

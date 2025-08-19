@@ -346,16 +346,12 @@ namespace Voron.Impl.Paging
 
         public virtual byte* AcquirePagePointer(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null)
         {
-            byte* p = AcquirePagePointerInternal(tx, pageNumber, pagerState);
-            PagingStatistics.MarkRead(VirtualPagerLegacyExtensions.GetNumberOfPages((PageHeader*)p));
-            return p;
+            return AcquirePagePointerInternal(tx, pageNumber, pagerState);
         }
 
         public virtual byte* AcquirePagePointerForNewPage(IPagerLevelTransactionState tx, long pageNumber, int numberOfPages, PagerState pagerState = null)
         {
-            byte* p = AcquirePagePointerInternal(tx, pageNumber, pagerState);
-            PagingStatistics.MarkRead(numberOfPages);
-            return p;
+            return AcquirePagePointerInternal(tx, pageNumber, pagerState);
         }
         
         public virtual T AcquirePagePointerHeader<T>(IPagerLevelTransactionState tx, long pageNumber, PagerState pagerState = null) where T : unmanaged
@@ -807,8 +803,6 @@ namespace Voron.Impl.Paging
 
         public void Write(long posBy4Kbs, int numberOf4Kbs, byte* source)
         {
-            PagingStatistics.MarkWrite(numberOf4Kbs / 2 + numberOf4Kbs % 2);
-            
             const int pageSizeTo4KbRatio = (Constants.Storage.PageSize / (4 * Constants.Size.Kilobyte));
             var pageNumber = posBy4Kbs / pageSizeTo4KbRatio;
             var offsetBy4Kb = posBy4Kbs % pageSizeTo4KbRatio;

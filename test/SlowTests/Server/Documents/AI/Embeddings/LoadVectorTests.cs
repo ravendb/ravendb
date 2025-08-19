@@ -54,6 +54,9 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store);
         Assert.True(etlStatus.Wait(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, config, connectionString, "Name", ["Joe"], id);
 
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
@@ -135,7 +138,9 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         var etlStatus = Etl.WaitForEtlToComplete(store);
         var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions }]);
         Assert.True(etlStatus.Wait(DefaultEtlTimeout));
-
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
         Indexes.WaitForIndexing(store);
 
@@ -223,6 +228,9 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         var (config, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Name", ChunkingOptions = DefaultChunkingOptions }], embeddingsGenerationTaskName: embeddingEtlName);
         
         Assert.True(etlStatus.Wait(DefaultEtlTimeout));
+        var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
         AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(config.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "Name", ["Joe"], id);
         
         store.Maintenance.Send(new StartIndexOperation(index.IndexName));
@@ -247,7 +255,9 @@ public class LoadVectorTests(ITestOutputHelper output) : EmbeddingsGenerationTes
         etlStatus.Reset();
         var (config2, connectionString2) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "Names", ChunkingOptions = DefaultChunkingOptions }], embeddingsGenerationTaskName: embeddingEtlName2);
         Assert.True(etlStatus.Wait(DefaultEtlTimeout));
-
+        (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config2);
+        Assert.True(queriesWorkerRegistered);
+        Assert.True(indexingWorkerRegistered);
         Indexes.WaitForIndexing(store);
         using (var session = store.OpenSession())
         {

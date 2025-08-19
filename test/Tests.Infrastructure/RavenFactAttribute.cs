@@ -111,6 +111,9 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
         if (serviceRequirement.HasFlag(RavenServiceRequirement.AmazonSqs) && ShouldSkipAmazonSqs(out skip))
             return skip;
 
+        if (serviceRequirement.HasFlag(RavenServiceRequirement.MySql) && ShouldSkipMySql(out skip))
+            return skip;
+
         return null;
     }
 
@@ -172,6 +175,9 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
 
     private static bool ShouldSkipElasticSearch(out string skipMessage) =>
         ShouldSkipService(() => ElasticSearchTestNodes.Instance.CanConnect, "ElasticSearch instance", out skipMessage);
+
+    private static bool ShouldSkipMySql(out string skipMessage) =>
+        ShouldSkipService(() => MySqlConnectionString.Instance.CanConnect, "MySQL database", out skipMessage);
 
     private static bool ShouldSkipAzureQueueStorage(out string skipMessage)
     {

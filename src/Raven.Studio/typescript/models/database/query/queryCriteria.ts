@@ -15,6 +15,7 @@ class queryCriteria {
     recentQuery = ko.observable<boolean>(false);
     graphOutput = ko.observable<boolean>(false);
     diagnostics = ko.observable<boolean>(false);
+    skipRunOnInit = ko.observable<boolean>(false);
     
     validationGroup: KnockoutValidationGroup;
 
@@ -63,6 +64,11 @@ class queryCriteria {
             }
         })
     }
+    
+    private formatQueryParameters(params: Record<string, string>): string {
+        return Object.entries(params).map(([key, value]) => `${key} = ${value}`)
+            .join("\n")
+    }
 
     updateUsing(storedQuery: storedQueryDto): void {
         this.queryText(storedQuery.queryText);
@@ -77,6 +83,7 @@ class queryCriteria {
             name: name,
             queryText: queryText,
             recentQuery: this.recentQuery(),
+            skipRunOnInit: this.skipRunOnInit(),
             modificationDate: moment().format("YYYY-MM-DD HH:mm"),
             hash: genUtils.hashCode(name + (queryText || "")) 
         };

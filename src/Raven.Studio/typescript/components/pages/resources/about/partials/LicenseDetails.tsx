@@ -114,9 +114,6 @@ function LicenseTable(props: LicenseTableProps) {
 
     const showUpgradeButton = licenseType !== "EnterpriseAi";
 
-    const isDeveloperOrEnterprise =
-        licenseType === "Developer" || licenseType === "Enterprise" || licenseType === "EnterpriseAi";
-
     const getColumnHeader = (column: LicenseColumn) => {
         if (column === "community" && licenseType === "Essential") {
             return "Essential";
@@ -249,7 +246,7 @@ function LicenseTable(props: LicenseTableProps) {
                     </div>
                 </div>
             )}
-            {!isDeveloperOrEnterprise && (
+            {licenseType !== "Developer" && (
                 <small className="pb-2 text-center text-muted">
                     <Icon icon="info" />
                     We offer a free{" "}
@@ -880,6 +877,16 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
                 developer: { value: true },
                 enterpriseAi: { value: true },
                 fieldInLicense: "HasGenAi",
+            },
+            {
+                name: "AI Agent",
+                agpl: { value: false },
+                community: { value: false },
+                professional: { value: false },
+                enterprise: { value: false },
+                developer: { value: true },
+                enterpriseAi: { value: true },
+                fieldInLicense: "HasAiAgent",
             },
         ],
     },

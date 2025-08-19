@@ -23,7 +23,14 @@ module.exports = {
     "@typescript-eslint/no-explicit-any": "off",
     "react/jsx-key": "off",
     "@typescript-eslint/prefer-namespace-keyword": "off",
-    "@typescript-eslint/no-unused-vars": "warn",
+    "@typescript-eslint/no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "caughtErrorsIgnorePattern": "^_"
+      }
+    ],
     "react/react-in-jsx-scope": "off",
     "react-compiler/react-compiler": "error",
     "react-hooks/exhaustive-deps": "off", // for now turned off (we must better handle DB switching, etc.)

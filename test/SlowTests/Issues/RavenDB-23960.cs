@@ -15,6 +15,9 @@ public class RavenDB_23960(ITestOutputHelper output) : EmbeddingsGenerationTestB
         using (var store = GetDocumentStore(options))
         {
             var (configuration, _) = AddEmbeddingsGenerationTask(store, embeddingsGenerationTaskName: "Task1");
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(queriesWorkerRegistered);
+            Assert.True(indexingWorkerRegistered);
             
             var op = new GetOngoingTaskInfoOperation(configuration.Name, OngoingTaskType.EmbeddingsGeneration);
             var taskInfo = (EmbeddingsGeneration)store.Maintenance.Send(op);
@@ -22,7 +25,10 @@ public class RavenDB_23960(ITestOutputHelper output) : EmbeddingsGenerationTestB
             store.Maintenance.Send(new ToggleOngoingTaskStateOperation(taskInfo.TaskId, OngoingTaskType.EmbeddingsGeneration, true));
                 
             var (configuration2, _) = AddEmbeddingsGenerationTask(store, embeddingsGenerationTaskName: "Task2");
-
+            (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration2);
+            Assert.True(queriesWorkerRegistered);
+            Assert.True(indexingWorkerRegistered);
+            
             op = new GetOngoingTaskInfoOperation(configuration.Name, OngoingTaskType.EmbeddingsGeneration);
             taskInfo = (EmbeddingsGeneration)store.Maintenance.Send(op);
 

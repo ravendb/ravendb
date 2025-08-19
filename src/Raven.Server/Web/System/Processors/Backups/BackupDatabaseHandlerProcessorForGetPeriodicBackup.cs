@@ -19,7 +19,7 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackup : Abstr
         if (await RequestHandler.CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
             return;
 
-        var taskId = RequestHandler.GetLongQueryString("taskId", required: true).Value;
+        var taskId = RequestHandler.GetLongQueryString("taskId");
         if (taskId == 0)
             throw new ArgumentException("Task ID cannot be 0");
 

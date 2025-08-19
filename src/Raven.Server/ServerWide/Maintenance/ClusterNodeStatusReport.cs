@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using Raven.Client.Documents.Indexes;
 using Raven.Server.ServerWide.Maintenance.Sharding;
+using Sparrow;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Maintenance
@@ -62,12 +64,49 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public string DatabaseChangeVector;
 
-        public Dictionary<string, ObservedIndexStatus> LastIndexStats = new Dictionary<string, ObservedIndexStatus>();
-        public Dictionary<string, long> LastSentEtag = new Dictionary<string, long>();
-        public Dictionary<int, BucketReport> ReportPerBucket = new Dictionary<int, BucketReport>();
+        public Dictionary<string, ObservedIndexStatus> LastIndexStats = new();
+        public Dictionary<string, long> LastSentEtag = new();
+        public Dictionary<int, BucketReport> ReportPerBucket = new();
+        public Dictionary<long, PeriodicBackupStatusReport> BackupStatuses;
 
         public long LastCompareExchangeIndex { get; set; }
         public long LastClusterWideTransactionRaftIndex { get; set; }
+
+        public DatabaseStatusReport()
+        {
+        }
+
+        /// <summary>
+        /// This is a Shallow Copy Ctor
+        /// </summary>
+        public DatabaseStatusReport([NotNull] DatabaseStatusReport other)
+        {
+            if (other == null)
+                throw new ArgumentNullException(nameof(other));
+
+            Name = other.Name;
+            NodeName = other.NodeName;
+            DatabaseChangeVector = other.DatabaseChangeVector;
+
+            // shallow
+            LastIndexStats = other.LastIndexStats;
+            LastSentEtag = other.LastSentEtag;
+            ReportPerBucket = other.ReportPerBucket;
+            BackupStatuses = other.BackupStatuses;
+
+            LastCompareExchangeIndex = other.LastCompareExchangeIndex;
+            LastClusterWideTransactionRaftIndex = other.LastClusterWideTransactionRaftIndex;
+            LastEtag = other.LastEtag;
+            LastTombstoneEtag = other.LastTombstoneEtag;
+            NumberOfConflicts = other.NumberOfConflicts;
+            NumberOfDocuments = other.NumberOfDocuments;
+            LastCompletedClusterTransaction = other.LastCompletedClusterTransaction;
+            Status = other.Status;
+            Error = other.Error;
+            UpTime = other.UpTime;
+            LastTransactionId = other.LastTransactionId;
+            EnvironmentsHash = other.EnvironmentsHash;
+        }
 
         public sealed class ObservedIndexStatus
         {
@@ -93,6 +132,24 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public long LastTransactionId; // this is local, so we don't serialize it
         public long EnvironmentsHash; // this is local, so we don't serialize it
+        public DateTime LastFullReport; // this is local, so we don't serialize it
+
+        internal static long GetPeriodicBackupStatusesHash(Dictionary<long, PeriodicBackupStatusReport> periodicBackupStatusReports)
+        {
+            long hash = 0;
+
+            if (periodicBackupStatusReports == null)
+                return hash;
+
+            foreach ((long taskId, PeriodicBackupStatusReport backupStatusReport) in periodicBackupStatusReports)
+            {
+                hash = Hashing.Combine(hash, taskId);
+                hash = Hashing.Combine(hash, backupStatusReport?.LastRaftIndexEtag ?? 0);
+                hash = Hashing.Combine(hash, backupStatusReport?.IsErrored == true ? 1L : 0L); // If backup failed, we'll have the same RaftIndexEtag, so we need to include this in the hash
+            }
+
+            return hash;
+        }
 
         public DynamicJsonValue ToJson()
         {
@@ -128,7 +185,9 @@ namespace Raven.Server.ServerWide.Maintenance
                     [nameof(stat.Value.State)] = stat.Value.State
                 };
             }
+
             dynamicJsonValue[nameof(LastIndexStats)] = indexStats;
+            dynamicJsonValue[nameof(BackupStatuses)] = DynamicJsonValue.Convert(BackupStatuses);
 
             return dynamicJsonValue;
         }
@@ -165,14 +224,14 @@ namespace Raven.Server.ServerWide.Maintenance
 
         public ClusterNodeStatusReport(
             ServerReport serverReport,
-            Dictionary<string, DatabaseStatusReport> report,
+            Dictionary<string, DatabaseStatusReport> databaseStatusReports,
             ReportStatus reportStatus, 
             Exception error, 
             DateTime updateDateTime, 
             ClusterNodeStatusReport lastSuccessfulReport)
         {
             ServerReport = serverReport;
-            Report = report;
+            Report = databaseStatusReports;
             Status = reportStatus;
             Error = error;
             UpdateDateTime = updateDateTime;
@@ -188,10 +247,9 @@ namespace Raven.Server.ServerWide.Maintenance
             }
 
             LastGoodDatabaseStatus = new Dictionary<string, DateTime>();
-            foreach (var dbReport in report)
+            foreach ((string dbName, DatabaseStatusReport databaseStatusReport) in databaseStatusReports)
             {
-                var dbName = dbReport.Key;
-                var dbStatus = dbReport.Value.Status;
+                var dbStatus = databaseStatusReport.Status;
 
                 if (reportStatus == ReportStatus.Ok && 
                     (dbStatus == DatabaseStatus.Loaded || dbStatus == DatabaseStatus.NoChange))

@@ -2,7 +2,6 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Operations.CompareExchange;
-using Raven.Server;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using SlowTests.Utils;
@@ -60,13 +59,9 @@ public class RavenDB_20206 : RavenTestBase
                 Assert.Equal(1, numOfCompareExchangeTombstones);
             }
 
-            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
                 // clean tombstones
-                var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store1.Database, server, true);
-                Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
-            }
+                var cleanupState1 = await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store1.Database, ignoreClustrTrx: true);
+                Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState1);
 
             using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
@@ -82,13 +77,9 @@ public class RavenDB_20206 : RavenTestBase
                 Assert.Equal(2, numOfCompareExchanges);
             }
 
-            using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
-            using (context.OpenReadTransaction())
-            {
-                // clean tombstones
-                var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(context, store2.Database, server, true);
-                Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
-            }
+            // clean tombstones
+            var cleanupState = await CompareExchangeTombstoneCleanerTestHelper.Clean(nodes: [server], store2.Database,ignoreClustrTrx: true);
+            Assert.Equal(ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones, cleanupState);
 
             using (server.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
             using (context.OpenReadTransaction())
@@ -104,24 +95,5 @@ public class RavenDB_20206 : RavenTestBase
                 Assert.Equal(2, numOfCompareExchanges);
             }
         }
-    }
-
-    private static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> CleanupCompareExchangeTombstonesAsync(RavenServer server, string database, ClusterOperationContext context)
-    {
-        var merged = ClusterObserver.MergedDatabaseObservationState.GetEmpty();
-        merged.States.Add(0, null);
-        var cmd = server.ServerStore.Observer.GetCompareExchangeTombstonesToCleanup(database, merged, context, out var cleanupState);
-        if (cleanupState != ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones)
-            return cleanupState;
-
-        Assert.NotNull(cmd);
-
-        var result = await server.ServerStore.SendToLeaderAsync(cmd);
-        await server.ServerStore.Cluster.WaitForIndexNotification(result.Index);
-
-        var hasMore = (bool)result.Result;
-        return hasMore
-            ? ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones
-            : ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones;
     }
 }

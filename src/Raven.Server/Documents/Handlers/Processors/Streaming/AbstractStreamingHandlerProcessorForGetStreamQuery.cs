@@ -130,7 +130,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                     var fromDocument = RequestHandler.GetStringQueryString("fromDocument", false);
                     if (string.IsNullOrEmpty(fromDocument) == false)
                     {
-                        var docData = await GetDocumentDataAsync(context, fromDocument).ConfigureAwait(false);
+                        var docData = await GetDocumentDataAsync(context, fromDocument);
                         if (docData == null)
                         {
                             throw new DocumentDoesNotExistException($"Was request to stream a query taken from {fromDocument} document, but it does not exist.");
@@ -148,8 +148,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 else
                 {
                     await using var stream = RequestHandler.TryGetRequestFromStream("ExportOptions") ?? RequestHandler.RequestBodyStream();
-                    var queryJson = await context.ReadForMemoryAsync(stream, "index/query")
-                                                 .ConfigureAwait(false);
+                    var queryJson = await context.ReadForMemoryAsync(stream, "index/query");
                     query = IndexQueryServerSide.Create(HttpContext, queryJson, GetQueryMetadataCache(), tracker);
                 }
                 query.IsStream = true;
@@ -173,8 +172,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 {
                     if (string.Equals(debug, "entries", StringComparison.OrdinalIgnoreCase))
                     {
-                        await ExecuteAndWriteIndexQueryStreamEntriesAsync(context, query, format, propertiesArray, fileNamePrefix, ignoreLimit, token)
-                                    .ConfigureAwait(false);
+                        await ExecuteAndWriteIndexQueryStreamEntriesAsync(context, query, format, propertiesArray, fileNamePrefix, ignoreLimit, token);
                     }
                     else
                     {
@@ -183,8 +181,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Streaming
                 }
                 else
                 {
-                    await ExecuteAndWriteQueryStreamAsync(context, query, format, propertiesArray, fileNamePrefix, token)
-                                .ConfigureAwait(false);
+                    await ExecuteAndWriteQueryStreamAsync(context, query, format, propertiesArray, fileNamePrefix, token);
                 }
             }
         }

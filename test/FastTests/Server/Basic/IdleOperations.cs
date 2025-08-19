@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
+using Raven.Server.Web.System;
+using Sparrow;
 using Xunit;
 using Xunit.Abstractions;
 using Tests.Infrastructure;
@@ -95,18 +98,31 @@ namespace FastTests.Server.Basic
                     }
                 }
 
-                Server.ServerStore.IdleOperations(null);
+                var stats = new Dictionary<StringSegment, DatabasesDebugHandler.IdleDatabaseStatistics>();
+                Server.ServerStore.IdleOperations(stats);
 
                 for (var i = 0; i < 10; i++)
                 {
                     var name = "IdleOperations_CleanupResources_DB_" + i;
 
-                    if (i % 2 == 1)
-                        Assert.True(landlord.LastRecentlyUsed.TryGetValue(name, out outTime));
-                    else
-                        Assert.False(landlord.LastRecentlyUsed.TryGetValue(name, out outTime));
-
-                    store.Maintenance.Server.Send(new DeleteDatabasesOperation(name, true));
+                    try
+                    {
+                        if (i % 2 == 1)
+                            Assert.True(landlord.LastRecentlyUsed.TryGetValue(name, out outTime), name);
+                        else
+                            Assert.False(landlord.LastRecentlyUsed.TryGetValue(name, out outTime), name);
+                    }
+                    catch (Exception)
+                    {
+                        foreach (var kvp in stats)
+                            Output.WriteLine($"[{kvp.Key}]. Explanations: {string.Join(", ", kvp.Value.Explanations)}");
+                        
+                        throw;
+                    }
+                    finally
+                    {
+                        store.Maintenance.Server.Send(new DeleteDatabasesOperation(name, true));
+                    }
                 }
             }
         }

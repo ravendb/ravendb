@@ -34,6 +34,7 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { ConditionalPopover } from "components/common/ConditionalPopover";
 import { useRavenLink } from "hooks/useRavenLink";
+import moment from "moment";
 
 const defaultItemsToProcess = 65536;
 
@@ -42,8 +43,7 @@ export default function DataArchival() {
     const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
     const hasDataArchival = useAppSelector(licenseSelectors.statusValue("HasDataArchival"));
 
-    const documentArchiveLinkToOverviewDocs = useRavenLink({ hash: "1NGJSU" });
-    const documentArchiveLinkToStudioViewDocs = useRavenLink({ hash: "VJAQ4B" });
+    const documentArchiveLinkToOverviewDocs = useRavenLink({ hash: "1FI4YS" });
 
     const { databasesService } = useServices();
     const asyncGetDataArchivalConfiguration = useAsyncCallback<DataArchivalFormData>(async () =>
@@ -248,16 +248,12 @@ export default function DataArchival() {
                                         </ul>
                                     </li>
                                 </ul>
-                                <p>Sample document:</p>
+                                <p>Example of a document scheduled for archival:</p>
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
                                 <a href={documentArchiveLinkToOverviewDocs} target="_blank">
                                     <Icon icon="newtab" /> Docs - Data Archival - Overview
-                                </a>
-                                <br />
-                                <a href={documentArchiveLinkToStudioViewDocs} target="_blank">
-                                    <Icon icon="newtab" /> Docs - Data Archival - Settings view
                                 </a>
                             </AccordionItemWrapper>
                             <FeatureAvailabilitySummaryWrapper
@@ -273,11 +269,10 @@ export default function DataArchival() {
 }
 
 const codeExample = `{
-  "Example": 
-    "Set a timestamp in the @archive-at metadata property",
+  "Example": "Set a timestamp in the @archive-at metadata property",
   "@metadata": {
     "@collection": "Foo",
-    "@archive-at": "2023-07-16T08:00:00.0000000Z"
+    "@archive-at": "${moment().add(1, "year").toISOString()}"
   }
 }`;
 

@@ -460,6 +460,8 @@ namespace Raven.Server.ServerWide
                     case nameof(AddQueueSinkCommand):
                     case nameof(AddSnowflakeEtlCommand):
                     case nameof(AddEmbeddingsGenerationCommand):
+                    case nameof(AddOrUpdateAiAgentCommand):
+                    case nameof(DeleteAiAgentCommand):
                     case nameof(UpdateRavenEtlCommand):
                     case nameof(UpdateSqlEtlCommand):
                     case nameof(UpdateOlapEtlCommand):
@@ -1765,7 +1767,8 @@ namespace Raven.Server.ServerWide
             nameof(DatabaseRecord.SnowflakeEtls),
             nameof(DatabaseRecord.QueueSinks),
             nameof(DatabaseRecord.EmbeddingsGenerations),
-            nameof(DatabaseRecord.GenAis)
+            nameof(DatabaseRecord.GenAis),
+            nameof(DatabaseRecord.AiAgents)
         };
 
         private unsafe List<string> AddDatabase(ClusterOperationContext context, string type, BlittableJsonReaderObject cmd, long index, ServerStore serverStore)
@@ -2747,7 +2750,7 @@ namespace Raven.Server.ServerWide
                         return;
                     }
 
-                    AssertLicenseLimits(type, serverStore, databaseRecord, items, context);
+                    AssertLicenseLimits(type, serverStore, databaseRecord, items, context, updateCommand);
 
                     UpdateIndexForBackup(databaseRecord, type, index);
                     var updatedDatabaseBlittable = DocumentConventions.DefaultForServer.Serialization.DefaultConverter.ToBlittable(databaseRecord, context);
@@ -2799,6 +2802,8 @@ namespace Raven.Server.ServerWide
                 case nameof(AddSnowflakeEtlCommand):
                 case nameof(AddEmbeddingsGenerationCommand): 
                 case nameof(AddGenAiCommand):
+                case nameof(AddOrUpdateAiAgentCommand):
+                case nameof(DeleteAiAgentCommand):
                 case nameof(AddRavenEtlCommand):
                 case nameof(AddSqlEtlCommand):
                 case nameof(DeleteIndexCommand):

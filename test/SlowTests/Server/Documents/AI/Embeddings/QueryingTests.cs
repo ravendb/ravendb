@@ -61,6 +61,9 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(queriesWorkerRegistered);
+            Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", ["apple"], dto1.Id);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", ["computer"], dto2.Id);
             
@@ -112,6 +115,9 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(queriesWorkerRegistered);
+            Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [queriedText], dto1.Id);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", ["computer"], dto2.Id);
 
@@ -159,6 +165,9 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 });
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(queriesWorkerRegistered);
+            Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [queriedText], dto1.Id);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", ["computer"], dto2.Id);
             
@@ -199,6 +208,9 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             var (configuration, connectionString) = AddEmbeddingsGenerationTask(store, embeddingsPaths: [new EmbeddingPathConfiguration() { Path = "TextualValue", ChunkingOptions = DefaultChunkingOptions }]);
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(queriesWorkerRegistered);
+            Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto1.TextualValue], dto1.Id);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto2.TextualValue], dto2.Id);
             
@@ -252,6 +264,9 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             ], chunkingOptionsForQuerying: new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 5 });
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(queriesWorkerRegistered);
+            Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto1.TextualValue], dto1.Id);
             
             var index = new SomeIndex();
@@ -290,6 +305,10 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             session.SaveChanges();
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(queriesWorkerRegistered);
+            Assert.True(indexingWorkerRegistered);
+            
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto1.TextualValue], dto1.Id);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto2.TextualValue], dto2.Id);
             AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto3.TextualValue], dto3.Id);
@@ -350,6 +369,10 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 await session1.SaveChangesAsync();
 
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = await WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, configuration);
+                Assert.True(queriesWorkerRegistered);
+                Assert.True(indexingWorkerRegistered);
+                
                 AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto1.TextualValue], dto1.Id);
                 AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto2.TextualValue], dto2.Id);
                 AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto3.TextualValue], dto3.Id);
@@ -389,6 +412,9 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
             session.SaveChanges();
 
             Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, config);
+            Assert.True(queriesWorkerRegistered);
+            Assert.True(indexingWorkerRegistered);
             AssertEmbeddingsForPath(store, config, connection, "TextualValue", ["asdsdfsdf"], "dto/1");
             
             var multiVectorTextualQuery = session.Query<Dto>().Customize(p => p.WaitForNonStaleResults())
@@ -432,6 +458,9 @@ public class QueryingTests(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 session.SaveChanges();
 
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(queriesWorkerRegistered);
+                Assert.True(indexingWorkerRegistered);
                 AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto1.TextualValue], dto1.Id);
                 AssertEmbeddingsForPath(store, configuration, connectionString, "TextualValue", [dto2.TextualValue], dto2.Id);
 

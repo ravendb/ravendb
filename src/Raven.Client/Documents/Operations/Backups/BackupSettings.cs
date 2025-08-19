@@ -132,6 +132,7 @@ namespace Raven.Client.Documents.Operations.Backups
             var djv = base.ToJson();
 
             djv[nameof(FolderPath)] = FolderPath;
+            djv[nameof(ShardNumber)] = ShardNumber;
 
             return djv;
         }

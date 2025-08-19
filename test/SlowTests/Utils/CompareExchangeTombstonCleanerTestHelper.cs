@@ -1,79 +1,114 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Server;
-using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
 using Xunit;
+using Xunit.Abstractions;
 
 namespace SlowTests.Utils;
 
-internal static class CompareExchangeTombstoneCleanerTestHelper
+internal abstract class CompareExchangeTombstoneCleanerTestHelper : RavenTestBase
 {
-    public static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> Clean(ClusterOperationContext context, string database, RavenServer server, bool ignoreClustrTrx, StringBuilder sb = null)
+    protected CompareExchangeTombstoneCleanerTestHelper(ITestOutputHelper output) : base(output)
     {
+    }
+
+    public static async Task<ClusterObserver.CompareExchangeTombstonesCleanupState> Clean(List<RavenServer> nodes, string databaseName, bool ignoreClustrTrx, StringBuilder sb = null)
+    {
+        var server = await WaitForNotNullAsync(() => Task.FromResult(nodes.SingleOrDefault(x => x.ServerStore.CurrentRachisState is RachisState.Leader)),
+            timeout: (int) TimeSpan.FromSeconds(10).TotalMilliseconds,
+            interval: (int) TimeSpan.FromMilliseconds(500).TotalMilliseconds);
+
         sb ??= new StringBuilder();
-        CleanCompareExchangeTombstonesCommand cmd;
+        var cleanupState = ClusterObserver.CompareExchangeTombstonesCleanupState.InvalidDatabaseObservationState;
+        CleanCompareExchangeTombstonesCommand cmd = null;
+        Action<string> onDiagnosticLog = message => sb.AppendLine(message);
+
         var serverStore = server.ServerStore;
-        using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, database))
+
+        using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         {
-            var current = serverStore.Observer.Maintenance.GetStats();
-            var previous = serverStore.Observer.Maintenance.GetStats();
-
-            var mergedState = new ClusterObserver.MergedDatabaseObservationState(rawRecord);
-            if (rawRecord.IsSharded)
+            await WaitAndAssertForValueAsync(() =>
             {
-                foreach ((var name, var topology) in rawRecord.Topologies)
+                using (context.OpenReadTransaction())
                 {
-                    AddState(name, rawRecord, topology, current, previous, mergedState);
+                    using (var rawRecord = serverStore.Cluster.ReadRawDatabaseRecord(context, databaseName))
+                    {
+                        var current = serverStore.Observer.Maintenance.GetStats();
+                        var previous = serverStore.Observer.Maintenance.GetStats();
+
+                        var mergedState = new ClusterObserver.MergedDatabaseObservationState(rawRecord);
+                        if (rawRecord.IsSharded)
+                        {
+                            foreach ((string name, DatabaseTopology topology) in rawRecord.Topologies)
+                                AddState(name, topology);
+                        }
+                        else
+                        {
+                            AddState(databaseName, rawRecord.Topology);
+                        }
+
+                        if (mergedState.IsValid(onDiagnosticLog) == false)
+                            return Task.FromResult(false);
+
+                        var beforeCleanupCompareExchangeTombstonesNumber = serverStore.Cluster.GetNumberOfCompareExchangeTombstones(context, databaseName);
+                        sb.AppendLine($"Before cleanup: {beforeCleanupCompareExchangeTombstonesNumber} tombstones.");
+
+                        cmd = serverStore.Observer.GetCleanCompareExchangeTombstonesCommand(databaseName, mergedState, context, out cleanupState);
+
+                        return Task.FromResult(true);
+
+                        void AddState(string name, DatabaseTopology topology)
+                        {
+                            var state = new ClusterObserver.DatabaseObservationState(name, rawRecord, topology, server.ServerStore.GetClusterTopology(context), current,
+                                previous,
+                                lastIndexModification: 0, observerIteration: 0);
+                            if (ignoreClustrTrx)
+                            {
+                                foreach ((string _, var clusterNodeStatusReport) in state.Current)
+                                foreach ((string _, var databaseStatusReport) in clusterNodeStatusReport.Report)
+                                    databaseStatusReport.LastClusterWideTransactionRaftIndex = long.MaxValue;
+                            }
+
+                            mergedState.AddState(state);
+                        }
+                    }
                 }
-            }
-            else
-            {
-                AddState(database, rawRecord, rawRecord.Topology, current, previous, mergedState);
-            }
-
-            sb.AppendLine($"Before cleanup: {serverStore.Cluster.GetNumberOfCompareExchangeTombstones(context, database)} tombstones.");
-
-            cmd = serverStore.Observer.GetCompareExchangeTombstonesToCleanup(database, mergedState, context, out var cleanupState);
-            if (cleanupState != ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones)
-            {
-                sb.AppendLine($"Exiting early, cleanupState: {cleanupState}");
-                return cleanupState;
-            }
-
-            Assert.NotNull(cmd);
+            },
+                expectedVal: true,
+                timeout: (int)TimeSpan.FromSeconds(10).TotalMilliseconds,
+                interval: (int)TimeSpan.FromMilliseconds(500).TotalMilliseconds);
         }
 
-        sb.AppendLine($"Sending cleanup command...");
+        if (cleanupState != ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones)
+        {
+            sb.AppendLine($"Exiting early, cleanupState: {cleanupState}");
+            return cleanupState;
+        }
+
+        Assert.NotNull(cmd);
+
+        sb.AppendLine($"Sending {nameof(CleanCompareExchangeTombstonesCommand)} with values: Database `{cmd.DatabaseName}`, MaxRaftIndex `{cmd.MaxRaftIndex}, Take `{cmd.Take}`");
         var result = await serverStore.SendToLeaderAsync(cmd);
         await serverStore.Cluster.WaitForIndexNotification(result.Index);
 
-        var hasMore = (bool)result.Result;
-        sb.AppendLine($"After cleanup: {serverStore.Cluster.GetNumberOfCompareExchangeTombstones(context, database)} tombstones.");
+        using (serverStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+        using (context.OpenReadTransaction())
+        {
+            long afterCleanupCompareExchangeTombstonesNumber = serverStore.Cluster.GetNumberOfCompareExchangeTombstones(context, databaseName);
+            sb.AppendLine($"After cleanup: {afterCleanupCompareExchangeTombstonesNumber} tombstones.");
+        }
 
+        var hasMore = (bool)result.Result;
         return hasMore
             ? ClusterObserver.CompareExchangeTombstonesCleanupState.HasMoreTombstones
             : ClusterObserver.CompareExchangeTombstonesCleanupState.NoMoreTombstones;
-
-        void AddState(string name, RawDatabaseRecord rawRecord, DatabaseTopology topology, Dictionary<string, ClusterNodeStatusReport> current, Dictionary<string, ClusterNodeStatusReport> previous, ClusterObserver.MergedDatabaseObservationState mergedState)
-        {
-            var state = new ClusterObserver.DatabaseObservationState(name, rawRecord, topology, serverStore.GetClusterTopology(context), current, previous, 0,
-                0);
-            if (ignoreClustrTrx)
-            {
-                foreach ((var key, var value) in state.Current)
-                {
-                    foreach ( (var inKey, var inValue) in value.Report)
-                    {
-                        inValue.LastClusterWideTransactionRaftIndex = long.MaxValue;
-                    }
-                }
-            }
-            mergedState.AddState(state);
-        }
     }
 }

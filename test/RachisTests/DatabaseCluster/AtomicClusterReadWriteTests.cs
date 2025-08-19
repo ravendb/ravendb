@@ -501,7 +501,7 @@ namespace RachisTests.DatabaseCluster
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");
 
-            var (nodes, leader) = await CreateRaftCluster(3);
+            var (nodes, leader) = await CreateRaftCluster(3, watcherCluster: true);
             options.Server = leader;
             options.ReplicationFactor = nodes.Count;
             using var documentStore = InternalGetDocumentStore(options);

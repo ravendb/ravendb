@@ -42,7 +42,7 @@ public class RavenDB_21339 : RavenTestBase
             }))
             {
                 var e = Assert.Throws<InvalidOperationException>(() => session.Load<Product>("products/1", includes => includes.IncludeDocuments(x => x.Supplier)));
-                Assert.Contains("registering includes is forbidden", e.Message);
+                Assert.Contains("Cannot register includes when NoTracking is enabled", e.Message);
             }
 
             using (var session = store.OpenAsyncSession(new SessionOptions
@@ -51,7 +51,7 @@ public class RavenDB_21339 : RavenTestBase
             }))
             {
                 var e = await Assert.ThrowsAsync<InvalidOperationException>(() => session.LoadAsync<Product>("products/1", includes => includes.IncludeDocuments(x => x.Supplier)));
-                Assert.Contains("registering includes is forbidden", e.Message);
+                Assert.Contains("Cannot register includes when NoTracking is enabled", e.Message);
             }
 
             using (var session = store.OpenSession(new SessionOptions
@@ -60,7 +60,7 @@ public class RavenDB_21339 : RavenTestBase
             }))
             {
                 var e = Assert.Throws<InvalidOperationException>(() => session.Query<Product>().Include(x => x.Supplier).ToList());
-                Assert.Contains("registering includes is forbidden", e.Message);
+                Assert.Contains("Cannot register includes when NoTracking is enabled", e.Message);;
             }
 
             using (var session = store.OpenAsyncSession(new SessionOptions
@@ -69,7 +69,7 @@ public class RavenDB_21339 : RavenTestBase
             }))
             {
                 var e = await Assert.ThrowsAsync<InvalidOperationException>(() => session.Query<Product>().Include(x => x.Supplier).ToListAsync());
-                Assert.Contains("registering includes is forbidden", e.Message);
+                Assert.Contains("Cannot register includes when NoTracking is enabled", e.Message);
             }
 
             using (var session = store.OpenSession(new SessionOptions
@@ -78,7 +78,7 @@ public class RavenDB_21339 : RavenTestBase
             }))
             {
                 var e = Assert.Throws<InvalidOperationException>(() => session.Advanced.DocumentQuery<Product>().Include(x => x.Supplier).ToList());
-                Assert.Contains("registering includes is forbidden", e.Message);
+                Assert.Contains("Cannot register includes when NoTracking is enabled", e.Message);
             }
 
             using (var session = store.OpenAsyncSession(new SessionOptions
@@ -87,7 +87,7 @@ public class RavenDB_21339 : RavenTestBase
             }))
             {
                 var e = await Assert.ThrowsAsync<InvalidOperationException>(() => session.Advanced.AsyncDocumentQuery<Product>().Include(x => x.Supplier).ToListAsync());
-                Assert.Contains("registering includes is forbidden", e.Message);
+                Assert.Contains("Cannot register includes when NoTracking is enabled", e.Message);
             }
         }
     }

@@ -15,6 +15,7 @@ using Raven.Client.Documents.Indexes.Analysis;
 using Raven.Client.Documents.Indexes.Spatial;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.CompareExchange;
@@ -81,6 +82,7 @@ using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.ETL.Test;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Documents.Handlers.Admin;
+using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Documents.Handlers.Batches;
 using Raven.Server.Documents.Handlers.Debugging;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
@@ -484,6 +486,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(NodeId));
             scripter.AddType(typeof(ModifyOngoingTaskResult));
             scripter.AddType(typeof(Transformation));
+            scripter.AddType(typeof(SchemaType));
 
             // ongoing tasks - replication
             scripter.AddType(typeof(OngoingTaskReplication));
@@ -603,6 +606,13 @@ namespace TypingsGenerator
 
             // AI
             scripter.AddType(typeof(AiModelsRequest));
+
+            // AI Agent
+            scripter.AddType(typeof(AiAgentConfiguration));
+            scripter.AddType(typeof(AbstractAiAgentProcessor.RequestBody));
+            scripter.AddType(typeof(AiAgentProcessorForTestConversation.AiAgentTestRequest));
+            scripter.AddType(typeof(AiAgentActionRequest));
+            scripter.AddType(typeof(ConversionRequestBody));
 
             // connection strings
             scripter.AddType(typeof(ConnectionString));

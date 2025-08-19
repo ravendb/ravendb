@@ -71,7 +71,7 @@ namespace Tests.Infrastructure
             [CallerMemberName] string database = null,
             CancellationToken token = default)
         {
-            var processNode = await GetServerAsync(serverVersion, options, database, token);
+            var processNode = await GetServerAsync(serverVersion, options, database, token:token);
 
             options = options ?? InterversionTestOptions.Default;
             var name = GetDatabaseName(database);
@@ -119,6 +119,7 @@ namespace Tests.Infrastructure
             string serverVersion,
             InterversionTestOptions options = null,
             [CallerMemberName] string database = null,
+            Dictionary<string, string> customSettings = null,
             CancellationToken token = default)
         {
             var serverBuildInfo = ServerBuildDownloadInfo.Create(serverVersion);
@@ -126,7 +127,7 @@ namespace Tests.Infrastructure
             var testServerPath = NewDataPath(prefix: serverVersion);
             CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(testServerPath));
 
-            var locator = new ConfigurableRavenServerLocator(Path.Combine(testServerPath, "Server"), serverVersion, environmentVariables: options?.EnvironmentVariables);
+            var locator = new ConfigurableRavenServerLocator(Path.Combine(testServerPath, "Server"), serverVersion, environmentVariables: options?.EnvironmentVariables, customSettings: customSettings);
 
             var result = await RunServer(locator);
             return new ProcessNode
@@ -143,6 +144,7 @@ namespace Tests.Infrastructure
             string toVersion,
             ProcessNode node,
             Dictionary<string, string> environmentVariables = null,
+            Dictionary<string, string> customSettings = null,
             CancellationToken token = default)
         {
             KillSlavedServerProcess(node.Process);
@@ -157,7 +159,7 @@ namespace Tests.Infrastructure
             var serverPath = await _serverBuildRetriever.GetServerPath(serverBuildInfo, token);
             CopyFilesRecursively(new DirectoryInfo(serverPath), new DirectoryInfo(node.ServerPath));
 
-            var locator = new ConfigurableRavenServerLocator(Path.Combine(node.ServerPath, "Server"), toVersion, node.DataDir, node.Url, environmentVariables);
+            var locator = new ConfigurableRavenServerLocator(Path.Combine(node.ServerPath, "Server"), toVersion, node.DataDir, node.Url, environmentVariables, customSettings);
 
             var result = await RunServer(locator);
             Assert.Equal(node.Url, result.ServerUrl);

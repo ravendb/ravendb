@@ -47,7 +47,7 @@ describe("AboutPage", function () {
             expect(screen.queryByText(selectors.registerLicense)).not.toBeInTheDocument();
             expect(screen.queryByText(selectors.forceUpdate)).toBeInTheDocument();
             expect(screen.queryByText(selectors.replaceLicense)).toBeInTheDocument();
-            expect(screen.queryByRole("link", { name: selectors.developerLicenseLink })).not.toBeInTheDocument();
+            expect(screen.queryByRole("link", { name: selectors.developerLicenseLink })).toBeInTheDocument();
         });
 
         it("professional", async () => {

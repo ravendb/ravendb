@@ -55,7 +55,6 @@ using Tests.Infrastructure.Entities;
 using Voron.Data.Tables;
 using Xunit;
 using Xunit.Abstractions;
-using static Raven.Server.Utils.BackupUtils;
 using Constants = Raven.Client.Constants;
 
 namespace SlowTests.Server.Documents.PeriodicBackup
@@ -2961,23 +2960,12 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var updatePeriodicBackupOperation = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
                     var taskId = updatePeriodicBackupOperation.TaskId;
 
-                    OngoingTaskBackup taskBackupInfo = null;
+                    var taskBackupInfo = await Backup.WaitForOnGoingBackupNotNullAsync(store, taskId, timeout: (int)TimeSpan.FromMinutes(2).TotalMilliseconds);
+                    Assert.Null(taskBackupInfo.LastFullBackup);
+
                     using (var requestExecutor = ClusterRequestExecutor.CreateForSingleNode(server.WebUrl, null, DocumentConventions.DefaultForServer))
                     using (requestExecutor.ContextPool.AllocateOperationContext(out var ctx))
                     {
-                        await WaitForValueAsync(async () =>
-                        {
-                            taskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                            return taskBackupInfo?.OnGoingBackup != null;
-                        },
-                            expectedVal: true,
-                            timeout: (int)TimeSpan.FromMinutes(2).TotalMilliseconds,
-                            interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds);
-
-                        Assert.NotNull(taskBackupInfo);
-                        Assert.Null(taskBackupInfo.LastFullBackup);
-                        Assert.NotNull(taskBackupInfo.OnGoingBackup);
-
                         await store.GetRequestExecutor(store.Database)
                             .ExecuteAsync(new KillOperationCommand(taskBackupInfo.OnGoingBackup.RunningBackupTaskId, server.ServerStore.NodeTag), ctx);
 
@@ -3019,13 +3007,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var config = Backup.CreateBackupConfiguration(backupPath);
                     var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
 
-                    // The backup task is running, and the next backup should be scheduled for the 1 January next year (local time)
-                    var taskBackupInfo =
-                        await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-
-                    Assert.NotNull(taskBackupInfo);
-                    Assert.NotNull(taskBackupInfo.OnGoingBackup);
-
+                    var taskBackupInfo = await Backup.WaitForOnGoingBackupNotNullAsync(store, taskId);
                     var expectedNextBackupDateTime = new DateTime(DateTime.Now.Year + 1, 1, 1, 0, 0, 0, DateTimeKind.Local).ToUniversalTime();
                     Assert.Equal(expectedNextBackupDateTime, taskBackupInfo.NextBackup.DateTime);
 
@@ -3186,6 +3168,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
         [RavenFact(RavenTestCategory.BackupExportImport | RavenTestCategory.Cluster | RavenTestCategory.ChangesApi)]
         public async Task StartingBackupOnNonResponsibleNodeShouldRedirectToResponsibleNode()
         {
+            DoNotReuseServer();
             const int clusterSize = 3;
 
             var backupPath = NewDataPath(suffix: "BackupFolder");
@@ -3216,20 +3199,29 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
 
                 // responsible node will be nodes[2]
-                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "* * * * *", mentorNode: nodes[2].ServerStore.NodeTag);
+                var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 * * * *", mentorNode: nodes[2].ServerStore.NodeTag);
                 var taskId = await Backup.UpdateConfigAsync(nodes[1], config, responsibleStore);
 
                 var responsibleNode = Raven.Server.Utils.BackupUtils.GetResponsibleNodeTag(nodes[1].ServerStore, databaseName, taskId);
                 Assert.Equal(responsibleNode, nodes[2].ServerStore.NodeTag);
 
+                var newOrder = new List<string>() { nodes[1].ServerStore.NodeTag, nodes[0].ServerStore.NodeTag, nodes[2].ServerStore.NodeTag };
+                var record = await otherStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                bool sequenceEqual = await WaitForValueAsync(() => record.Topology.Members.SequenceEqual(newOrder), false);
+                Assert.False(sequenceEqual, $"The current record.Topology.Members: {string.Join(", ", record.Topology.Members)} is equal to the expected newOrder.");
+
                 // we are going to send the next backup operation to the non-responsible node
-                await otherStore.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(databaseName,
-                    new List<string>() { nodes[1].ServerStore.NodeTag, nodes[0].ServerStore.NodeTag, nodes[2].ServerStore.NodeTag }));
+                await otherStore.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(databaseName, newOrder));
 
                 var re = otherStore.GetRequestExecutor();
                 var updated = await re.UpdateTopologyAsync(
                     new RequestExecutor.UpdateTopologyParameters(new ServerNode() { ClusterTag = nodes[1].ServerStore.NodeTag, Url = nodes[1].WebUrl, Database = databaseName}));
                 Assert.True(updated);
+
+                record = await otherStore.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                sequenceEqual = await WaitForValueAsync(() => record.Topology.Members.SequenceEqual(newOrder), true);
+
+                Assert.True(sequenceEqual, $"The record.Topology.Members: {string.Join(", ", record.Topology.Members)} is not equal to the expected newOrder: {string.Join(", ", newOrder)}.");
 
                 // wait for the preferred node be non-responsible node
                 var res = await WaitForValueAsync(async () =>
@@ -3280,8 +3272,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     // Let's delay the backup task to 1 hour
                     var delayDuration = TimeSpan.FromHours(1);
                     var sw = Stopwatch.StartNew();
-                    var onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                    Assert.NotNull(onGoingTaskInfo);
+                    var onGoingTaskInfo = await Backup.WaitForOnGoingBackupNotNullAsync(leaderStore, taskId);
                     var runningBackupTaskId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
                     await leaderStore.Maintenance.SendAsync(new DelayBackupOperation(runningBackupTaskId, delayDuration));
 
@@ -3353,7 +3344,6 @@ namespace SlowTests.Server.Documents.PeriodicBackup
 
             var (nodes, leaderServer) = await CreateRaftCluster(clusterSize);
             await CreateDatabaseInCluster(databaseName, clusterSize, leaderServer.WebUrl);
-            var notLeaderServer = nodes.First(x => x != leaderServer);
 
             using (var leaderStore = new DocumentStore
             {
@@ -3379,8 +3369,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     // Let's delay the backup task to 1 hour
                     var delayDuration = TimeSpan.FromHours(1);
                     var sw = Stopwatch.StartNew();
-                    var onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                    Assert.NotNull(onGoingTaskInfo);
+
+                    var onGoingTaskInfo = await Backup.WaitForOnGoingBackupNotNullAsync(leaderStore, taskId);
                     var runningBackupTaskId = onGoingTaskInfo.OnGoingBackup.RunningBackupTaskId;
                     await leaderStore.Maintenance.SendAsync(new DelayBackupOperation(runningBackupTaskId, delayDuration));
 
@@ -3389,7 +3379,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     {
                         using (var store = new DocumentStore
                         {
-                            Urls = new[] { server.WebUrl },
+                            Urls = [server.WebUrl],
                             Conventions = new DocumentConventions { DisableTopologyUpdates = true },
                             Database = databaseName
                         })
@@ -3402,7 +3392,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                             PeriodicBackupStatus inMemoryStatus = null;
                             WaitForValue(() =>
                             {
-                                inMemoryStatus = documentDatabase.PeriodicBackupRunner.GetBackupStatus(taskId);
+                                inMemoryStatus = documentDatabase.PeriodicBackupRunner.GetMostUpdatedClusterBackupStatus(taskId);
                                 return inMemoryStatus != null;
                             }, true);
 
@@ -3453,7 +3443,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     }
 
                     // Let's delay the backup task to 1 hour
-                    var onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
+                    var onGoingTaskInfo = await Backup.WaitForOnGoingBackupNotNullAsync(leaderStore, taskId);
                     Assert.NotNull(onGoingTaskInfo);
                     var delayDuration = TimeSpan.FromHours(1);
                     var sw = Stopwatch.StartNew();
@@ -3461,12 +3451,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     await leaderStore.Maintenance.SendAsync(new DelayBackupOperation(runningBackupTaskId, delayDuration));
 
                     // Check that there is no ongoing backup and new task scheduled properly
-                    onGoingTaskInfo = null;
-                    await WaitForValueAsync(async () =>
-                    {
-                        onGoingTaskInfo = await leaderStore.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                        return onGoingTaskInfo is { OnGoingBackup: null };
-                    }, true);
+                    onGoingTaskInfo = await Backup.WaitForOngoingBackupIsNullAsync(leaderStore, taskId);
                     Assert.Null(onGoingTaskInfo.LastFullBackup);
                     Assert.True(onGoingTaskInfo.NextBackup.TimeSpan > delayDuration.Subtract(TimeSpan.FromMilliseconds(sw.ElapsedMilliseconds + 1_000)) &&
                                 onGoingTaskInfo.NextBackup.TimeSpan <= delayDuration,
@@ -3507,9 +3492,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                     var taskId = await Backup.UpdateConfigAndRunBackupAsync(server, config, store, opStatus: OperationStatus.InProgress);
 
                     // The backup task is running, and the next backup should be scheduled for the next minute (based on the backup configuration)
-                    var taskBackupInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(taskId, OngoingTaskType.Backup)) as OngoingTaskBackup;
-                    Assert.NotNull(taskBackupInfo);
-                    Assert.NotNull(taskBackupInfo.OnGoingBackup);
+                    var taskBackupInfo = await Backup.WaitForOnGoingBackupNotNullAsync(store, taskId);
 
                     using (server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                     using (context.OpenReadTransaction())
@@ -4359,6 +4342,45 @@ namespace SlowTests.Server.Documents.PeriodicBackup
                 }
             }
         }
+
+        [RavenFact(RavenTestCategory.BackupExportImport)]
+        public async Task NextCronScheduleOccurence_BasedOnLastBackup_ShouldBeCorrect()
+        {
+            const string endpoint = "/studio-tasks/next-cron-expression-occurrence";
+            const string cronExpression = "*/2 * * * *";
+            using var store = GetDocumentStore();
+
+            var configuration = Backup.CreateBackupConfiguration(NewDataPath(), fullBackupFrequency: cronExpression);
+            await Backup.WaitUntilNextFullBackupActionWindowAsync(configuration, TimeSpan.FromSeconds(15), Server.ServerStore.ServerShutdown);
+            var taskId = await Backup.UpdateConfigAsync(Server, configuration, store);
+            await Task.Delay(TimeSpan.FromSeconds(130));
+
+            var client = store.GetRequestExecutor().HttpClient;
+
+            var uri = $"{store.Urls.First()}{endpoint}?expression=* * * * *&taskId={taskId}&database={store.Database}&isFull=true";
+            var json = await client.GetStringAsync(uri);
+            var response = JsonConvert.DeserializeObject<NextCronExpressionOccurrenceResponse>(json);
+
+            // The endpoint with taskId should return the next occurrence based on the last backup time
+            Assert.True(response.IsValid, $"Expected valid response, but got: {json}");
+            Assert.True(response.Utc < DateTime.UtcNow, $"Based on the last backup time, the next cron schedule occurrence should be in the past, but got UTC: {response.Utc}, ServerTime: {response.ServerTime}");
+
+            uri = $"{store.Urls.First()}{endpoint}?expression=* * * * *";
+            json = await client.GetStringAsync(uri);
+            response = JsonConvert.DeserializeObject<NextCronExpressionOccurrenceResponse>(json);
+
+            // The endpoint without taskId should return the next occurrence based on the current time
+            Assert.True(response.IsValid, $"Expected valid response, but got: {json}");
+            Assert.True(response.Utc > DateTime.UtcNow, $"Expected next cron schedule occurrence to be in the future, but got UTC: {response.Utc}, ServerTime: {response.ServerTime}");
+        }
+
+        private record NextCronExpressionOccurrenceResponse
+        {
+            public bool IsValid { get; init; }
+            public DateTime Utc { get; init; }
+            public DateTime ServerTime { get; init; }
+        }
+
 
         private static IDisposable ReadOnly(string path)
         {

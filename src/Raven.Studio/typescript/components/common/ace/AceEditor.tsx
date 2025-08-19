@@ -11,6 +11,7 @@ import AceEditorFormatAction from "./actions/AceEditorFormatAction";
 import AceEditorLoadFileAction from "./actions/AceEditorLoadFileAction";
 import AceEditorDeleteAction from "./actions/AceEditorDeleteAction";
 import AceEditorHelpAction from "./actions/AceEditorHelpAction";
+import AceEditorToggleNewLinesAction from "./actions/AceEditorToggleNewLinesAction";
 
 interface ActionItem {
     component: ReactNode;
@@ -37,6 +38,7 @@ function AceEditor(props: AceEditorProps) {
         setIsValid,
         actions = [],
         onLoad,
+        height = "200px",
         ...rest
     } = props;
 
@@ -117,7 +119,7 @@ function AceEditor(props: AceEditorProps) {
     return (
         <AceEditorContext.Provider value={aceRef}>
             <div className={classNames("ace-editor", { "has-error": errorMessage })}>
-                <div className="react-ace-wrapper">
+                <div className="react-ace-wrapper" style={{ height }}>
                     <ReactAce
                         ref={aceRef}
                         mode="csharp"
@@ -129,7 +131,7 @@ function AceEditor(props: AceEditorProps) {
                         showGutter={true}
                         highlightActiveLine={true}
                         width="100%"
-                        height="200px"
+                        height="100%"
                         setOptions={overriddenSetOptions}
                         onValidate={onValidate}
                         commands={commands}
@@ -195,5 +197,6 @@ AceEditor.FormatAction = AceEditorFormatAction;
 AceEditor.LoadFileAction = AceEditorLoadFileAction;
 AceEditor.DeleteAction = AceEditorDeleteAction;
 AceEditor.HelpAction = AceEditorHelpAction;
+AceEditor.ToggleNewLinesAction = AceEditorToggleNewLinesAction;
 
 export default AceEditor;

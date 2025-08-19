@@ -1192,7 +1192,7 @@ loadToOrders(orderData);
             }
         }
         
-        [RequiresNpgSqlFact]
+        [RavenFact(RavenTestCategory.Etl, Requires = RavenServiceRequirement.NpgSql)]
         public void CanTestNpgsqlConnection()
         {
             using (var store = GetDocumentStore())
@@ -1203,8 +1203,8 @@ loadToOrders(orderData);
                 }
             }
         }
-                
-        [RequiresOracleSqlFact]
+
+        [RavenFact(RavenTestCategory.Etl, Requires = RavenServiceRequirement.OracleSql)]
         public void CanTestOracleConnection()
         {
             using (var store = GetDocumentStore())
@@ -1215,8 +1215,8 @@ loadToOrders(orderData);
                 }
             }
         }
-                
-        [RequiresMySqlFact]
+
+        [RavenFact(RavenTestCategory.Etl, Requires = RavenServiceRequirement.MySql)]
         public void CanTestMySqlConnection()
         {
             using (var store = GetDocumentStore())

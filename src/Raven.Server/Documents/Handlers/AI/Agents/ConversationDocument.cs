@@ -1,0 +1,265 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using JetBrains.Annotations;
+using Raven.Client;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
+using Raven.Client.Json.Serialization;
+using Raven.Server.Documents.AI;
+using Sparrow.Json;
+using Sparrow.Json.Parsing;
+using Sparrow.Server.Json.Sync;
+using Sparrow.Utils;
+
+namespace Raven.Server.Documents.Handlers.AI.Agents;
+
+public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObject parameters)
+{
+    public string Agent = agent;
+    
+    public BlittableJsonReaderObject Parameters = parameters;
+    public List<BlittableJsonReaderObject> Messages = [];
+    public List<string> LinkedConversations = [];
+    public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
+    public AiUsage TotalUsage = new AiUsage();
+    public string ChangeVector;
+    public string Id;
+
+    public DateTime LastMessageAt;
+    public DateTime CreatedAt = DateTime.UtcNow;
+    public TimeSpan? Expires;
+    public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration)
+    {
+        if (Messages.Count > 0)
+            throw new InvalidOperationException("conversation document is already initialized. Cannot re-initialize.");
+
+        foreach (var parameter in configuration.Parameters)
+        {
+            if (Parameters == null || Parameters.TryGet(parameter.Name, out object _) == false)
+                throw new ArgumentException($"Parameter '{parameter.Name}' is missing.");
+        }
+
+        var promptMessage = configuration.SystemPrompt;
+        if (TryCreateParameterDescriptionMessage(configuration, out string message))
+        {
+            promptMessage += "\n" + message;
+        }
+
+        AddMessage(context, context.ReadObject(new DynamicJsonValue
+        {
+            [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleSystemValue,
+            [ChatCompletionClient.Constants.RequestFields.Content] = promptMessage
+        }, "system/msg"), usage: null);
+
+        if (configuration.Parameters.Count > 0)
+        {
+            AddMessage(context, context.ReadObject(new DynamicJsonValue
+            {
+                [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleUserValue,
+                [ChatCompletionClient.Constants.RequestFields.Content] = ParametersToString(configuration)
+            }, "system/msg"), usage: null);
+        }
+    }
+
+    private string ParametersToString(AiAgentConfiguration configuration)
+    {
+        var sb = new StringBuilder("AI Agent Parameters:\n"); 
+        foreach (var parameter in configuration.Parameters)
+        {
+           var value = Parameters[parameter.Name];
+           sb.AppendLine($"{parameter.Name} = {value.ToString()}");
+        }
+
+        return sb.ToString();
+    }
+
+    public void EnsureInitialized()
+    {
+        if (Messages.Count == 0)
+            throw new InvalidOperationException("conversation document is not initialized. Call Initialize() first.");
+    }
+
+    public BlittableJsonReaderObject ToBlittable(JsonOperationContext context, AiAgentConfiguration configuration)
+    {
+        var metadata = new DynamicJsonValue
+        {
+            [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.AiAgentConversationCollection,
+        };
+        
+        if (Expires.HasValue)
+        {
+            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(Expires.Value);
+        }
+
+        var conversation = ToJson();
+        conversation[Constants.Documents.Metadata.Key] = metadata;
+            
+        return context.ReadObject(conversation, "create-conversion");
+    }
+
+    public BlittableJsonReaderObject ToHistoryBlittable(JsonOperationContext context, AiAgentConfiguration configuration, TimeSpan? expiration = null)
+    {
+        var metadata = new DynamicJsonValue
+        {
+            [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.AiAgentConversationHistoryCollection,
+        };
+        
+        if (expiration.HasValue)
+        {
+            metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expiration.Value);
+        }
+
+        var conversation = ToJson();
+
+        conversation[Constants.Documents.Metadata.Key] = metadata;
+        conversation[nameof(LinkedConversations)] = new DynamicJsonArray
+        {
+            Id
+        };
+        return context.ReadObject(conversation, "create-conversion");
+    }
+
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(Agent)] = Agent,
+            [nameof(Parameters)] = Parameters,
+            [nameof(Messages)] = Messages,
+            [nameof(LinkedConversations)] = LinkedConversations,
+            [nameof(TotalUsage)] = TotalUsage.ToJson(),
+            [nameof(OpenActionCalls)] = DynamicJsonValue.Convert(OpenActionCalls),
+            [nameof(LastMessageAt)] = LastMessageAt,
+            [nameof(CreatedAt)] = CreatedAt,
+            [nameof(Expires)] = Expires,
+        };
+    }
+    
+    public const string DateProperty = "date";
+    public const string UsageProperty = "usage";
+
+    public void AddMessage(JsonOperationContext context, BlittableJsonReaderObject msg, AiUsage usage)
+    {
+        var currentDate = DateTime.UtcNow;
+        msg.Modifications ??= new DynamicJsonValue(msg);
+        msg.Modifications[DateProperty] = currentDate;
+        if (usage != null)
+            msg.Modifications[UsageProperty] = usage.ToJson();
+        Messages.Add(msg);
+        LastMessageAt = currentDate;
+    }
+
+    public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document)
+    {
+        if (document.TryGet(nameof(Agent), out string agent) == false)
+            throw new ArgumentException($"Missing Agent in '{id}' conversation document");
+        if (document.TryGet(nameof(Parameters), out BlittableJsonReaderObject parameters) == false)
+            throw new ArgumentException($"Missing Parameters in '{id}' conversation document");
+        if (document.TryGet(nameof(Messages), out BlittableJsonReaderArray messages) == false)
+            throw new ArgumentException($"Missing Messages in '{id}' conversation document");
+        if (document.TryGet(nameof(LinkedConversations), out BlittableJsonReaderArray historyDocs) == false)
+            throw new ArgumentException($"Missing HistoryDocuments in '{id}' conversation document");
+        if (document.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject usage) == false)
+            throw new ArgumentException($"AI Usage in '{id}' conversation document");
+        if (document.TryGet(nameof(OpenActionCalls), out BlittableJsonReaderObject openToolCalls) == false)
+            throw new ArgumentException($"Missing Open Tool Calls in '{id}' conversation document");
+        if (document.TryGet(nameof(LastMessageAt), out DateTime lastMessageAt) == false)
+            throw new ArgumentException($"Missing LastMessageAt in '{id}' conversation document");
+        if (document.TryGet(nameof(CreatedAt), out DateTime createAt) == false)
+            throw new ArgumentException($"Missing CreatedAt in '{id}' conversation document");
+        if (document.TryGet(nameof(Expires), out TimeSpan? expires) == false)
+            throw new ArgumentException($"Missing Expires in '{id}' conversation document");
+
+        var openTools = new Dictionary<string, AiAgentActionRequest>();
+        foreach (var callId in openToolCalls.GetPropertyNames())
+        {
+            var call = JsonDeserializationClient.ActionRequest(openToolCalls[callId] as BlittableJsonReaderObject);
+            openTools.Add(callId, call);
+        }
+
+        return new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
+        {
+            Id = id,
+            Messages = messages.Items.Select(m=>((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
+            LinkedConversations = historyDocs.Items.Select(s => s.ToString()).ToList(),
+            TotalUsage = JsonDeserializationClient.AiUsage(usage),
+            OpenActionCalls = openTools,
+            LastMessageAt = lastMessageAt,
+            CreatedAt = createAt,
+            Expires = expires,
+        };
+    }
+
+    public static List<BlittableJsonReaderObject> GenerateTools(JsonOperationContext context, AiAgentConfiguration configuration)
+    {
+        List<BlittableJsonReaderObject> tools = [];
+        foreach (var q in configuration.Queries ?? [])
+        {
+            var paramsSchema = ChatCompletionClient.GetSchemaForTool(q.ParametersSchema, q.ParametersSampleObject);
+            var tool = new DynamicJsonValue
+            {
+                ["type"] = "function",
+                ["function"] = new DynamicJsonValue
+                {
+                    ["name"] = q.Name,
+                    ["description"] = q.Description,
+                    ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
+                },
+                ["strict"] = true
+            };
+            tools.Add(context.ReadObject(tool, "tool"));
+        }
+        foreach (var a in configuration.Actions ?? [])
+        {
+            string paramsSchema = ChatCompletionClient.GetSchemaForTool(a.ParametersSchema, a.ParametersSampleObject);
+            var tool = new DynamicJsonValue
+            {
+                ["type"] = "function",
+                ["function"] = new DynamicJsonValue
+                {
+                    ["name"] = a.Name,
+                    ["description"] = a.Description,
+                    ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
+                },
+                ["strict"] = true
+            };
+            tools.Add(context.ReadObject(tool, "tool"));
+        }
+
+        return tools;
+    }
+
+    private static bool TryCreateParameterDescriptionMessage(AiAgentConfiguration configuration, out string message)
+    {
+        var hasDescription = false;
+        var sb = new StringBuilder();
+        sb.AppendLine("\nThe parameters for this conversation are described as follows:");
+        foreach (var parameter in configuration.Parameters)
+        {
+            if (string.IsNullOrEmpty(parameter.Description))
+                continue;
+
+            hasDescription = true;
+            sb.AppendLine($"- {parameter.Name}: {parameter.Description}");
+        }
+
+        message = sb.ToString();
+        return hasDescription;
+    }
+
+    public void UpdateUsage(AiUsage usage)
+    {
+        if (TotalUsage is null)
+        {
+            TotalUsage = usage;
+            return;
+        }
+
+        TotalUsage.TotalTokens += usage.TotalTokens;
+        TotalUsage.PromptTokens += usage.PromptTokens;
+        TotalUsage.CompletionTokens += usage.CompletionTokens;
+        TotalUsage.CachedTokens += usage.CachedTokens;
+    }
+}

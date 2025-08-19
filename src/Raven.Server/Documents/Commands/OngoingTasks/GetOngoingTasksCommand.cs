@@ -1,5 +1,6 @@
 ﻿using System.Net.Http;
 using Raven.Client.Http;
+using Raven.Client.Json.Serialization;
 using Raven.Server.Web.System;
 using Sparrow.Json;
 

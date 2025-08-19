@@ -671,7 +671,7 @@ export const ongoingTasksReducer: Reducer<OngoingTasksState, OngoingTaskReducerA
                                 draft.tasks[draftTaskIdx].shared = task.shared;
                             }
 
-                            let effectiveLocations = original(draft.tasks[draftTaskIdx].responsibleLocations);
+                            let effectiveLocations = draft.tasks[draftTaskIdx].responsibleLocations;
 
                             task.responsibleLocations.forEach((responsibleLocation) => {
                                 effectiveLocations = mergeResponsibleNodes(effectiveLocations, responsibleLocation);

@@ -52,9 +52,24 @@ class cronEditor {
     nextOccurrenceLocalTime = ko.observable<string>();
     nextInterval = ko.observable<string>();
     canDisplayNextOccurrenceLocalTime: KnockoutComputed<boolean>;
+
+    private readonly databaseName: string;
+    private readonly taskId: number;
+    private readonly isFull: boolean;
+
+    constructor(targetField: KnockoutObservable<string>);
+    constructor(targetField: KnockoutObservable<string>, databaseName: string, taskId: number, isFull: boolean);
     
-    constructor(targetField: KnockoutObservable<string>) {
+    constructor(
+        targetField: KnockoutObservable<string>,
+        databaseName?: string,
+        taskId?: number,
+        isFull?: boolean
+    ) {
         this.targetField = targetField;
+        this.databaseName = databaseName;
+        this.taskId = taskId;
+        this.isFull = isFull;
         
         this.populateForm();
         
@@ -203,16 +218,22 @@ class cronEditor {
         }
 
         const dateFormat = generalUtils.dateFormat;
-        new getCronExpressionOccurrenceCommand(cronExpression)
+        new getCronExpressionOccurrenceCommand(cronExpression, this.databaseName, this.taskId, this.isFull)
             .execute()
             .done((result: Raven.Server.Web.Studio.StudioTasksHandler.NextCronExpressionOccurrence) => {
                 if (result.IsValid) {
-                    this.nextOccurrenceServerTime(moment(result.ServerTime).format(dateFormat));
                     const nextOccurrenceUtc = moment.utc(result.Utc);
+                    const nowUtc = moment.utc();
+
+                    this.nextOccurrenceServerTime(moment(result.ServerTime).format(dateFormat));
                     this.nextOccurrenceLocalTime(nextOccurrenceUtc.local().format(dateFormat));
 
-                    const fromDuration = generalUtils.formatDurationByDate(nextOccurrenceUtc, true);
-                    this.nextInterval(`${fromDuration}`);
+                    if (nextOccurrenceUtc.isBefore(nowUtc)) {
+                        this.nextInterval("will run on save");
+                    } else {
+                        const fromDuration = generalUtils.formatDurationByDate(nextOccurrenceUtc, true);
+                        this.nextInterval(`${fromDuration}`);
+                    }
 
                     this.parsingError(null);
                 } else {

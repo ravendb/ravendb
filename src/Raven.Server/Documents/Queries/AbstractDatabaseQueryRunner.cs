@@ -60,7 +60,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
 
     public abstract Task<SuggestionQueryResult> ExecuteSuggestionQuery(IndexQueryServerSide query, QueryOperationContext queryContext, long? existingResultEtag, OperationCancelToken token);
 
-    protected async Task<SuggestionQueryResult> ExecuteSuggestion(
+    protected Task<SuggestionQueryResult> ExecuteSuggestion(
         IndexQueryServerSide query,
         Index index,
         QueryOperationContext queryContext,
@@ -90,10 +90,10 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
         {
             var etag = index.GetIndexEtag(queryContext, query.Metadata);
             if (etag == existingResultEtag.Value)
-                return SuggestionQueryResult.NotModifiedResult;
+                return Task.FromResult(SuggestionQueryResult.NotModifiedResult);
         }
 
-        return await index.SuggestionQuery(query, queryContext, token).ConfigureAwait(false);
+        return index.SuggestionQuery(query, queryContext, token);
     }
 
     protected Task<IOperationResult> ExecuteDelete(IndexQueryServerSide query, Index index, QueryOperationOptions options, QueryOperationContext queryContext,
@@ -161,7 +161,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
 
         try
         {
-            var results = await index.IdQuery(query, queryContext, progress, onProgress, token).ConfigureAwait(false);
+            var results = await index.IdQuery(query, queryContext, progress, onProgress, token);
             if (options.AllowStale == false && results.IsStale)
                 throw new InvalidOperationException("Cannot perform bulk operation. Index is stale.");
 
@@ -193,7 +193,7 @@ public abstract class AbstractDatabaseQueryRunner : AbstractQueryRunner
                     }, rateGate, token,
                     batchSize: batchSize);
 
-                await Database.TxMerger.Enqueue(command).ConfigureAwait(false);
+                await Database.TxMerger.Enqueue(command);
                 progress.Processed += command.Processed;
                 onProgress(progress);
 

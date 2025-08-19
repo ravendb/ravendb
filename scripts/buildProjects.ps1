@@ -125,7 +125,7 @@ function NpmInstall () {
 
     foreach ($i in 1..3) {
         try {
-            exec { npm install }
+            exec { npm ci }
             CheckLastExitCode
             return
         }

@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -21,6 +20,7 @@ using Raven.Client.ServerWide.Operations.Certificates;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Documents.Commands.Indexes;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -2032,6 +2032,166 @@ namespace RachisTests.DatabaseCluster
                 await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex, TimeSpan.FromSeconds(15));
                 record = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(store.Database));
                 Assert.Equal(1, record.UnusedDatabaseIds.Count);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ true ])]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ false ])]
+        public async Task RemoveLocalBackupStatusesOnDatabaseDeletion_ShouldDeleteAllStatusesForAllDatabaseTasks(Options options, bool isHardDelete)
+        {
+            const int numberOfNodes = 3;
+
+            var backupPath = NewDataPath(suffix: "Backup");
+            var cluster = await CreateRaftCluster(numberOfNodes, watcherCluster: true);
+            options.ReplicationFactor = numberOfNodes;
+            options.Server = cluster.Leader;
+
+            using (var store = GetDocumentStore(options))
+            {
+                var backupConfiguration1 = Backup.CreateBackupConfiguration(backupPath);
+                var backupConfiguration2 = Backup.CreateBackupConfiguration(backupPath, name: $"{backupConfiguration1.Name}_1");
+
+                foreach (var clusterNode in cluster.Nodes)
+                {
+                    BlittableJsonReaderObject localBackupStatusBlittable1;
+                    BlittableJsonReaderObject localBackupStatusBlittable2;
+                    using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        localBackupStatusBlittable1 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
+                        localBackupStatusBlittable2 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration2.TaskId);
+                    }
+
+                    Assert.True(localBackupStatusBlittable1 == null, $"Local backup status should not exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration1)}` before backup is run.");
+                    Assert.True(localBackupStatusBlittable2 == null, $"Local backup status should not exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration2)}` before backup is run.");
+
+                    backupConfiguration1.MentorNode = clusterNode.ServerStore.NodeTag;
+                    backupConfiguration1.TaskId = await Backup.UpdateConfigAndRunBackupAsync(clusterNode, backupConfiguration1, store);
+
+                    backupConfiguration2.MentorNode = clusterNode.ServerStore.NodeTag;
+                    backupConfiguration2.TaskId = await Backup.UpdateConfigAndRunBackupAsync(clusterNode, backupConfiguration1, store);
+
+                    await WaitAndAssertForValueAsync(() =>
+                        {
+                            using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                            using (context.OpenReadTransaction())
+                            {
+                                localBackupStatusBlittable1 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
+                                localBackupStatusBlittable2 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration2.TaskId);
+                                return Task.FromResult(localBackupStatusBlittable1 != null && localBackupStatusBlittable2 != null);
+                            }
+                        }, expectedVal: true,
+                        interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds,
+                        timeout: (int)TimeSpan.FromSeconds(15).TotalMilliseconds);
+                }
+
+                var result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, isHardDelete, timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex, TimeSpan.FromSeconds(15));
+
+                foreach (var clusterNode in cluster.Nodes)
+                {
+                    BlittableJsonReaderObject localBackupStatusBlittable1;
+                    BlittableJsonReaderObject localBackupStatusBlittable2;
+                    using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        localBackupStatusBlittable1 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
+                        localBackupStatusBlittable2 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration2.TaskId);
+                    }
+
+                    Assert.True(localBackupStatusBlittable1 == null, $"Local backup status should not exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration1)}` after database deletion.");
+                    Assert.True(localBackupStatusBlittable2 == null, $"Local backup status should not exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration2)}` after database deletion.");
+                }
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ true ])]
+        [RavenData(DatabaseMode = RavenDatabaseMode.Single, Data = [ false ])]
+        public async Task RemoveLocalBackupStatusesOnDatabaseDeletion_ShouldLeaveBackupStatusesForRemainingDatabases(Options options, bool isHardDelete)
+        {
+            const int numberOfNodes = 3;
+
+            var backupPath = NewDataPath(suffix: "Backup");
+            var cluster = await CreateRaftCluster(numberOfNodes, watcherCluster: true);
+            options.ReplicationFactor = numberOfNodes;
+            options.Server = cluster.Leader;
+
+            using (var store = GetDocumentStore(options))
+            using (var anotherStore = GetDocumentStore(options))
+            {
+                // Create backup statuses for the first database on all cluster nodes
+                var backupConfiguration1 = Backup.CreateBackupConfiguration(backupPath);
+                foreach (var clusterNode in cluster.Nodes)
+                {
+                    BlittableJsonReaderObject localBackupStatusBlittable;
+                    using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                        localBackupStatusBlittable = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
+
+                    Assert.True(localBackupStatusBlittable == null, $"Local backup status should not exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration1)}` before backup is run.");
+
+                    backupConfiguration1.MentorNode = clusterNode.ServerStore.NodeTag;
+                    backupConfiguration1.TaskId = await Backup.UpdateConfigAndRunBackupAsync(clusterNode, backupConfiguration1, store);
+
+                    await WaitAndAssertForValueAsync(() =>
+                        {
+                            using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                            using (context.OpenReadTransaction())
+                            {
+                                localBackupStatusBlittable = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
+                                return Task.FromResult(localBackupStatusBlittable != null);
+                            }
+                        }, expectedVal: true,
+                        interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds,
+                        timeout: (int)TimeSpan.FromSeconds(15).TotalMilliseconds);
+                }
+
+                // Create backup statuses for the second database on all cluster nodes
+                var backupConfiguration2 = Backup.CreateBackupConfiguration(backupPath);
+                foreach (var clusterNode in cluster.Nodes)
+                {
+                    BlittableJsonReaderObject localBackupStatusBlittable;
+                    using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                        localBackupStatusBlittable = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, anotherStore.Database, backupConfiguration2.TaskId);
+
+                    Assert.True(localBackupStatusBlittable == null, $"Local backup status should not exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration2)}` before backup is run.");
+
+                    backupConfiguration2.MentorNode = clusterNode.ServerStore.NodeTag;
+                    backupConfiguration2.TaskId = await Backup.UpdateConfigAndRunBackupAsync(clusterNode, backupConfiguration2, anotherStore);
+
+                    await WaitAndAssertForValueAsync(() =>
+                        {
+                            using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                            using (context.OpenReadTransaction())
+                            {
+                                localBackupStatusBlittable = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, anotherStore.Database, backupConfiguration2.TaskId);
+                                return Task.FromResult(localBackupStatusBlittable != null);
+                            }
+                        }, expectedVal: true,
+                        interval: (int)TimeSpan.FromSeconds(1).TotalMilliseconds,
+                        timeout: (int)TimeSpan.FromSeconds(15).TotalMilliseconds);
+                }
+
+                var result = await store.Maintenance.Server.SendAsync(new DeleteDatabasesOperation(store.Database, isHardDelete, timeToWaitForConfirmation: TimeSpan.FromSeconds(15)));
+                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.RaftCommandIndex, TimeSpan.FromSeconds(15));
+
+                foreach (var clusterNode in cluster.Nodes)
+                {
+                    BlittableJsonReaderObject localBackupStatusBlittable1;
+                    BlittableJsonReaderObject localBackupStatusBlittable2;
+                    using (clusterNode.ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                    using (context.OpenReadTransaction())
+                    {
+                        localBackupStatusBlittable1 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, store.Database, backupConfiguration1.TaskId);
+                        localBackupStatusBlittable2 = BackupStatusStorage.GetLocalBackupStatusBlittableInternal(context, anotherStore.Database, backupConfiguration2.TaskId);
+                    }
+
+                    Assert.True(localBackupStatusBlittable1 == null, $"Local backup status should not exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration1)}` after database deletion.");
+                    Assert.True(localBackupStatusBlittable2 != null, $"Local backup status should still exist on the cluster node `{clusterNode.ServerStore.NodeTag}` for `{nameof(backupConfiguration2)}` after deletion of the first database.");
+                }
             }
         }
 

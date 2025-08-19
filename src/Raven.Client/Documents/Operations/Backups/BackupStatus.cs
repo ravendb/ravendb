@@ -54,13 +54,14 @@ namespace Raven.Client.Documents.Operations.Backups
     {
         public long? LastEtag { get; set; }
 
-        public DynamicJsonValue ToJson()
-        {
-            return new DynamicJsonValue
+        public long? LastFullBackupEtag { get; set; }
+
+        public DynamicJsonValue ToJson() =>
+            new()
             {
-                [nameof(LastEtag)] = LastEtag
+                [nameof(LastEtag)] = LastEtag,
+                [nameof(LastFullBackupEtag)] = LastFullBackupEtag
             };
-        }
     }
 
     public sealed class LocalBackup : BackupStatus

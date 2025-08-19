@@ -71,6 +71,7 @@ export interface IndexFilterCriteria {
     searchText: string;
     statuses: IndexStatus[];
     types: IndexType[];
+    searchEngine: SearchEngineType[];
     showOnlyIndexesWithIndexingErrors: boolean;
     autoRefresh: boolean;
     sortBy: IndexSortBy;

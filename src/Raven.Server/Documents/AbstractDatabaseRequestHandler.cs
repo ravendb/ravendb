@@ -6,6 +6,7 @@ using Sparrow.Json;
 using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using System;
+using Raven.Server.Config;
 using Raven.Server.Logging;
 
 namespace Raven.Server.Documents;
@@ -16,7 +17,7 @@ public abstract class AbstractDatabaseRequestHandler<TOperationContext> : Reques
     public abstract string DatabaseName { get; }
 
     public RavenLogger Logger;
-
+    public abstract RavenConfiguration Configuration { get; }
     public abstract char IdentityPartsSeparator { get; }
 
     public abstract OperationCancelToken CreateHttpRequestBoundTimeLimitedOperationToken();

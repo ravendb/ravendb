@@ -31,7 +31,10 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
-                
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(queriesWorkerRegistered);
+                Assert.True(indexingWorkerRegistered);
+
                 var result = session.Query<Dto>()
                     .Customize(c => c.WaitForNonStaleResults())
                     .Statistics(out var stats)
@@ -137,8 +140,10 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
             
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
-            
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(queriesWorkerRegistered);
+                Assert.True(indexingWorkerRegistered);
                 
                 _ = session.Query<Dto>()
                     .Customize(c => c.WaitForNonStaleResults())
@@ -184,8 +189,11 @@ public class RavenDB_23962(ITestOutputHelper output) : EmbeddingsGenerationTestB
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
             
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
-            
+                
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(queriesWorkerRegistered);
+                Assert.True(indexingWorkerRegistered);
                 
                 var result = session.Query<Dto>()
                     .Statistics(out var stats)

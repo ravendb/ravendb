@@ -273,14 +273,13 @@ class indexDefinition {
 
         return fields;
     }
-
+    
     private configurationToDto(): Raven.Client.Documents.Indexes.IndexConfiguration {
         const result = {} as Raven.Client.Documents.Indexes.IndexConfiguration;
-
-        this.configuration().forEach((configItem: configurationItem) => {
-            result[configItem.key()] = configItem.value();
-        });
-
+        
+        const existingConfigurationOptions = this.configuration().filter(configItem => configurationItem.PerDatabaseIndexingConfigurationOptions.includes(configItem.key()));
+        existingConfigurationOptions.forEach((configItem: configurationItem) => result[configItem.key()] = configItem.value());
+        
         return result;
     }
     

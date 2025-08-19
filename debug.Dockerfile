@@ -18,6 +18,6 @@ RUN dotnet build ./src/Raven.Server/Raven.Server.csproj && \
 COPY tools/ ./tools
 RUN dotnet build ./tools/TypingsGenerator/TypingsGenerator.csproj \
     && cd src/Raven.Studio \
-    && npm install && npm run gulp restore && npm run gulp compile
+    && npm ci && npm run gulp restore && npm run gulp compile
 
 ENTRYPOINT [ "dotnet", "./src/Raven.Server/bin/Debug/net8.0/Raven.Server.dll" ]

@@ -5,6 +5,7 @@ using JetBrains.Annotations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Backups.Sharding;
 using Raven.Server.Documents.Handlers.Processors;
+using Raven.Server.Documents.PeriodicBackup;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
@@ -21,13 +22,17 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
     public override async ValueTask ExecuteAsync()
     {
         var name = RequestHandler.GetQueryStringValueAndAssertIfSingleAndNotEmpty("name");
+        var type = RequestHandler.GetStringQueryString("type", required: false) ?? nameof(StatusType.Cluster);
 
         if (await RequestHandler.CanAccessDatabaseAsync(name, requireAdmin: false, requireWrite: false) == false)
             return;
 
-        var taskId = RequestHandler.GetLongQueryString("taskId", required: true);
+        var taskId = RequestHandler.GetLongQueryString("taskId");
 
-        using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
+        if (Enum.TryParse(type, ignoreCase: true, out StatusType statusType) == false)
+            throw new ArgumentException($"provided '{nameof(type)}' has to be `{nameof(StatusType.Cluster)}` or '{nameof(StatusType.Local)}'");
+
+        using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
         using (context.OpenReadTransaction())
         {
             List<IDisposable> toDispose = new();
@@ -40,9 +45,11 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
 
                 foreach (var shardNumber in dbRecord.Sharding.Shards.Keys)
                 {
-                    var itemName = PeriodicBackupStatus.GenerateItemName(ShardHelper.ToShardName(name, shardNumber), taskId.Value);
-                    var status = ServerStore.Cluster.Read(context, itemName);
-
+                    var dbName = ShardHelper.ToShardName(name, shardNumber);
+                    var status = statusType == StatusType.Local
+                        ? BackupStatusStorage.GetBackupStatusBlittable(context, dbName, taskId)
+                        : BackupUtils.GetBackupStatusFromClusterBlittable(context, dbName, taskId);
+                    
                     toDispose.Add(status);
                     statusByShard[shardNumber.ToString()] = status;
                 }
@@ -52,7 +59,9 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
             }
             else
             {
-                var status = ServerStore.Cluster.Read(context, PeriodicBackupStatus.GenerateItemName(name, taskId.Value));
+                var status = statusType == StatusType.Local
+                    ? BackupStatusStorage.GetBackupStatusBlittable(context, name, taskId)
+                    : BackupUtils.GetBackupStatusFromClusterBlittable(context, name, taskId);
                 toDispose.Add(status);
 
                 result[nameof(GetPeriodicBackupStatusOperationResult.IsSharded)] = false;
@@ -70,5 +79,11 @@ internal sealed class BackupDatabaseHandlerProcessorForGetPeriodicBackupStatus :
             }
 
         }
+    }
+
+    enum StatusType
+    {
+        Local,
+        Cluster
     }
 }

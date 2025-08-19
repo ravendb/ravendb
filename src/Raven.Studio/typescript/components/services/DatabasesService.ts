@@ -73,6 +73,7 @@ import getRevisionsPreviewCommand from "commands/database/documents/getRevisions
 import deleteRevisionsForDocumentsCommand = require("commands/database/documents/deleteRevisionsForDocumentsCommand");
 import getRevisionsIdsCommand from "commands/database/documents/getRevisionsIdsCommand";
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
+import getDocumentsByIDPrefixCommand = require("commands/database/documents/getDocumentsByIDPrefixCommand");
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -316,6 +317,10 @@ export default class DatabasesService {
 
     async getDocumentsMetadataByIDPrefix(...args: ConstructorParameters<typeof getDocumentsMetadataByIDPrefixCommand>) {
         return new getDocumentsMetadataByIDPrefixCommand(...args).execute();
+    }
+
+    async getDocumentsByIDPrefix(...args: ConstructorParameters<typeof getDocumentsByIDPrefixCommand>) {
+        return new getDocumentsByIDPrefixCommand(...args).execute();
     }
 
     async getIdentities(...args: ConstructorParameters<typeof getIdentitiesCommand>) {

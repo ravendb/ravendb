@@ -109,6 +109,10 @@ interface computedAppUrls {
 
     // AI Hub
     aiConnectionStrings: KnockoutComputed<string>;
+    aiAgents: KnockoutComputed<string>;
+    editAiAgent: (id: string, isClone?: boolean) => KnockoutComputed<string>;
+    editAiAgentUrl: KnockoutComputed<string>;
+    chatAiAgent: (id: string) => KnockoutComputed<string>;
     aiTasks: KnockoutComputed<string>;
     aiTasksStats: KnockoutComputed<string>;
 }

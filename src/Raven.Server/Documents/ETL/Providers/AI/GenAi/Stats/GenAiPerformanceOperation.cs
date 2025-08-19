@@ -1,4 +1,6 @@
 using System;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Stats;
 

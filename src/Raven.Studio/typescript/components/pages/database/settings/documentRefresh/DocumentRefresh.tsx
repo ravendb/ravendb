@@ -26,7 +26,7 @@ import FeatureAvailabilitySummaryWrapper, {
     FeatureAvailabilityData,
 } from "components/common/FeatureAvailabilitySummary";
 import { useLimitedFeatureAvailability } from "components/utils/licenseLimitsUtils";
-import moment = require("moment");
+import moment from "moment";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import RichAlert from "components/common/RichAlert";
@@ -247,7 +247,7 @@ export default function DocumentRefresh() {
                                         Subscriptions, etc.), as defined by your configuration.
                                     </li>
                                 </ul>
-                                <p>Sample document:</p>
+                                <p>Example of a document scheduled for refresh:</p>
                                 <Code code={codeExample} language="javascript" />
                                 <hr />
                                 <div className="small-label mb-2">useful links</div>
@@ -293,7 +293,7 @@ const codeExample = `{
     "Set a timestamp in the @refresh metadata property",
   "@metadata": {
     "@collection": "Foo",
-    "@refresh": "2023-07-16T08:00:00.0000000Z"
+    "@refresh": "${moment().add(1, "year").toISOString()}"
   }
 }`;
 

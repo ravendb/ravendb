@@ -1,6 +1,7 @@
 #pragma warning disable SKEXP0070
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
@@ -30,7 +31,7 @@ public static class GenerateEmbeddings
     // Dimensions (buffer size) from internals of SmartComponents.
     public const int F32Size = 1536;
 
-    private static SessionOptions OnnxSessionOptions;
+    private static Lazy<SessionOptions> OnnxSessionOptions = new(() => null);
 
     internal static readonly Lazy<IEmbeddingGenerator<string, Embedding<float>>> Embedder = new(() => CreateTextEmbeddingGenerationService());
 
@@ -50,7 +51,13 @@ public static class GenerateEmbeddings
 
         try
         {
-            OnnxSessionOptions = new SessionOptions { IntraOpNumThreads = configuration.Indexing.MaxNumberOfThreadsForLocalEmbeddingsGeneration };
+            OnnxSessionOptions = new Lazy<SessionOptions>(valueFactory: () =>
+            {
+                if (PlatformDetails.RunningOnCortexA53)
+                    throw new IncorrectDllException("Could not initialize 'ONNX Runtime'. Your CPU, the Cortex A53, is not supported by ONNX Runtime: https://github.com/microsoft/onnxruntime/issues/25472");
+                
+                return new SessionOptions { IntraOpNumThreads = configuration.Indexing.MaxNumberOfThreadsForLocalEmbeddingsGeneration };
+            });
         }
         catch (TypeInitializationException e) when (PlatformDetails.RunningOnWindows)
         {
@@ -270,7 +277,7 @@ public static class GenerateEmbeddings
             var modelBytes = new MemoryStream();
             onnxModelStream.CopyTo(modelBytes);
 
-            var onnxSession = new InferenceSession(modelBytes.Length == modelBytes.GetBuffer().Length ? modelBytes.GetBuffer() : modelBytes.ToArray(), OnnxSessionOptions ?? new SessionOptions());
+            var onnxSession = new InferenceSession(modelBytes.Length == modelBytes.GetBuffer().Length ? modelBytes.GetBuffer() : modelBytes.ToArray(), OnnxSessionOptions.Value ?? new SessionOptions());
             dimensions ??= onnxSession.OutputMetadata.First().Value.Dimensions.Last();
 
             var tokenizer = new BertTokenizer();

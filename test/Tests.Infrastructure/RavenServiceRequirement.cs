@@ -52,5 +52,10 @@ public enum RavenServiceRequirement
     /// <summary>
     /// Test requires Amazon SQS.
     /// </summary>
-    AmazonSqs = 1 << 7
+    AmazonSqs = 1 << 7,
+
+    /// <summary>
+    /// Test requires MySQL.
+    /// </summary>
+    MySql = 1 << 8,
 }

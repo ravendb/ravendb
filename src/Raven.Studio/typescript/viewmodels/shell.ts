@@ -135,6 +135,7 @@ class shell extends viewModelBase {
 
     protractedRequestMessageView: ReactInKnockout<typeof ProtractedRequestMessage.default>;
     helpAndResourcesWidgetView: ReactInKnockout<typeof HelpAndResourcesWidget.HelpAndResourcesWidget>;
+    isHelpAndResourcesWidgetVisible: KnockoutComputed<boolean>;
     logoSrc: KnockoutObservable<string>;
     logoClass: KnockoutComputed<string>;
     
@@ -286,6 +287,13 @@ class shell extends viewModelBase {
         }));
         
         this.helpAndResourcesWidgetView = ko.pureComputed(() => ({ component: HelpAndResourcesWidget.HelpAndResourcesWidget }));
+
+        this.isHelpAndResourcesWidgetVisible = ko.pureComputed(() => {
+            const routesToHide: string[] = ["databases/ai/agents/edit", "databases/ai/agents/chat"];
+            const route = genUtils.getSingleRoute(router.activeInstruction()?.config?.route);
+
+            return !routesToHide.includes(route);
+        });
 
         this.logoSrc = ko.pureComputed(() => {
             if (license.getStatusValue("Type") === "EnterpriseAi") {

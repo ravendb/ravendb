@@ -14,14 +14,16 @@ namespace Raven.Server.Documents
     {
         public readonly struct DocumentCompareOptions
         {
-            private DocumentCompareOptions(bool tryMergeMetadataConflicts, bool throwOnAttachmentModifications)
+            private DocumentCompareOptions(bool tryMergeMetadataConflicts, bool throwOnAttachmentModifications, bool compareDataArchivalMetadata = false)
             {
                 TryMergeMetadataConflicts = tryMergeMetadataConflicts;
                 ThrowOnAttachmentModifications = throwOnAttachmentModifications;
+                CompareDataArchivalMetadata = compareDataArchivalMetadata;
             }
 
             public readonly bool TryMergeMetadataConflicts;
             public readonly bool ThrowOnAttachmentModifications;
+            public readonly bool CompareDataArchivalMetadata;
 
             public static DocumentCompareOptions Default = new DocumentCompareOptions();
 
@@ -30,6 +32,9 @@ namespace Raven.Server.Documents
 
             public static DocumentCompareOptions MergeMetadataAndThrowOnAttachmentModification =
                 new DocumentCompareOptions(tryMergeMetadataConflicts: true, throwOnAttachmentModifications: true);
+            
+            public static DocumentCompareOptions  MergeMetadataAndThrowOnAttachmentModificationCompareDataArchivalMetadata =
+                new DocumentCompareOptions(tryMergeMetadataConflicts: true, throwOnAttachmentModifications: true, compareDataArchivalMetadata: true);
         }
 
         public static unsafe DocumentCompareResult IsEqualTo(BlittableJsonReaderObject original, BlittableJsonReaderObject modified, in DocumentCompareOptions options)
@@ -114,6 +119,26 @@ namespace Raven.Server.Documents
         {
             throw new InvalidOperationException("Illegal modifications of '@attachments' detected");
         }
+        
+        private static bool IsSignificantMetadataProperty(string property, in DocumentCompareOptions options)
+        {
+            if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) ||
+                property.Equals(Constants.Documents.Metadata.Expires, StringComparison.OrdinalIgnoreCase) ||
+                property.Equals(Constants.Documents.Metadata.Refresh, StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            // Archival properties are significant only when the option is enabled
+            if (options.CompareDataArchivalMetadata &&
+                (property.Equals(Constants.Documents.Metadata.ArchiveAt, StringComparison.OrdinalIgnoreCase) ||
+                 property.Equals(Constants.Documents.Metadata.Archived, StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+
+            return false;
+        }
 
         private static DocumentCompareResult ComparePropertiesExceptStartingWithAt(
             BlittableJsonReaderObject current,
@@ -192,9 +217,7 @@ namespace Raven.Server.Documents
                                 continue;
                             }
                         }
-                        else if (property.Equals(Constants.Documents.Metadata.Collection, StringComparison.OrdinalIgnoreCase) == false &&
-                                 property.Equals(Constants.Documents.Metadata.Expires, StringComparison.OrdinalIgnoreCase) == false &&
-                                 property.Equals(Constants.Documents.Metadata.Refresh, StringComparison.OrdinalIgnoreCase) == false)
+                        else if (IsSignificantMetadataProperty(property, options) == false)
                             continue;
                     }
                     else if (property.Equals(Constants.Documents.Metadata.Key, StringComparison.OrdinalIgnoreCase))

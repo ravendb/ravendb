@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Globalization;
+using System.IO;
 using System.Runtime.InteropServices;
 using System.Runtime.Versioning;
 
@@ -35,6 +36,7 @@ namespace Sparrow.Platform
 #endif
         public static readonly bool RunningOnWindows = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
 
+        public static readonly bool RunningOnCortexA53 = RunningOnLinux && CheckIfRunningOnCortexA53();
         public static readonly bool CanPrefetch;
         public static readonly bool CanDiscardMemory;
         internal static readonly bool CanUseHttp2;
@@ -84,6 +86,36 @@ namespace Sparrow.Platform
             {
                 return false;
             }
+        }
+
+        private static bool CheckIfRunningOnCortexA53()
+        {
+            const string midrPath = "/sys/devices/system/cpu/cpu0/regs/identification/midr_el1";
+
+            if (File.Exists(midrPath) == false)
+                return false;
+
+            try
+            {
+                string text = File.ReadAllText(midrPath).Trim(); // e.g. "410fd034"
+                if (text.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                    text = text.Substring(2);
+
+                if (ulong.TryParse(text, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out ulong midr))
+                {
+                    ulong implementer = (midr >> 24) & 0xFF;
+                    ulong partNumber = (midr >> 4) & 0xFFF;
+
+                    // ARM implementer 0x41 (A), part 0xD03 ⇒ Cortex‑A53
+                    return implementer == 0x41 && partNumber == 0xD03;
+                }
+            }
+            catch (Exception)
+            {
+                // ignore – fall through and report false
+            }
+
+            return false;
         }
 
         internal static string GetVcRedistLink()

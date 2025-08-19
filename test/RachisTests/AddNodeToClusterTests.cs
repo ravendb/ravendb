@@ -646,15 +646,46 @@ namespace RachisTests
 
                 await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(res.Index, cluster.Nodes);
 
+                // Step 1: Wait for database to be created
                 await WaitForAssertionAsync(() =>
                 {
                     using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
                     using (ctx.OpenReadTransaction())
                     {
                         var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, db);
-                        Assert.True((record.DeletionInProgress?.Count ?? 0) == 0, GetRecordFixedString(record, cluster.Leader));
+                        Assert.NotNull(record);
+                        Assert.Equal(0, record.DeletionInProgress?.Count ?? 0);
+                    }
 
+                    return Task.CompletedTask;
+                }, timeoutInMs: 15_000);
+
+                // Step 2: Wait for topology to have sufficient members
+                await WaitForAssertionAsync(() =>
+                {
+                    using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, db);
                         var topology = record.Topology;
+
+                        // At minimum, we should have the replication factor met
+                        Assert.True(topology.Members.Count >= topology.ReplicationFactor,
+                            $"Members count ({topology.Members.Count}) should be >= replication factor ({topology.ReplicationFactor})");
+                    }
+
+                    return Task.CompletedTask;
+                }, timeoutInMs: 30_000);
+
+                // Step 3: Wait for final topology stabilization
+                await WaitForAssertionAsync(() =>
+                {
+                    using (cluster.Leader.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                    using (ctx.OpenReadTransaction())
+                    {
+                        var record = cluster.Leader.ServerStore.Cluster.ReadDatabase(ctx, db);
+                        var topology = record.Topology;
+
                         Assert.Equal(3, topology.ReplicationFactor);
                         Assert.Equal(3, topology.Members.Count);
                         Assert.Equal(0, topology.Promotables.Count);

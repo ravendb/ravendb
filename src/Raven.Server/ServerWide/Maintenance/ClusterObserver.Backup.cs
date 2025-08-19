@@ -56,7 +56,7 @@ internal partial class ClusterObserver
             TimeSpan moveToNewResponsibleNodeGracePeriod,
             ClusterOperationContext context)
     {
-        var responsibleNodeBlittable = BackupUtils.GetResponsibleNodeInfoFromCluster(_server, context, databaseName, configuration.TaskId);
+        var responsibleNodeBlittable = BackupUtils.GetResponsibleNodeInfoFromCluster(context, databaseName, configuration.TaskId);
         string currentResponsibleNode = null;
         responsibleNodeBlittable?.TryGet(nameof(ResponsibleNodeInfo.ResponsibleNode), out currentResponsibleNode);
 
@@ -160,7 +160,7 @@ internal partial class ClusterObserver
     {
         var lastResponsibleNode = currentResponsibleNode ??
                                   // backward compatibility - will continue running the backup on the last node that ran the backup
-                                  BackupUtils.GetBackupStatusFromCluster(_server, context, databaseName, configuration.TaskId)?.NodeTag;
+                                  BackupUtils.GetBackupStatusFromCluster(context, databaseName, configuration.TaskId)?.NodeTag;
 
         var mentorNode = configuration.GetMentorNode();
         if (mentorNode != null)

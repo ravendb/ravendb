@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
@@ -11,7 +12,9 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Documents.Operations.ETL;
+using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Extensions.Streams;
+using Raven.Client.Util;
 using Raven.Server.Documents;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.Documents.ETL.Providers.AI;
@@ -29,7 +32,7 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
     protected const string DefaultConnectionStringName = "Local AI connection";
     protected const string DefaultEmbeddingGenerationTaskName = "localAiTask";
     protected ByteStringContext _allocator;
-    protected readonly TimeSpan DefaultEtlTimeout = Debugger.IsAttached == false ? TimeSpan.FromSeconds(30) : TimeSpan.FromMinutes(15);
+    protected static readonly TimeSpan DefaultEtlTimeout = Debugger.IsAttached == false ? TimeSpan.FromSeconds(30) : TimeSpan.FromMinutes(15);
 
     protected static readonly ChunkingOptions DefaultChunkingOptions = new ChunkingOptions() { ChunkingMethod = ChunkingMethod.PlainTextSplitLines, MaxTokensPerChunk = 2048 };
     
@@ -80,8 +83,25 @@ public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : R
         Assert.NotNull(putResult.RaftCommandIndex);
 
         store.Maintenance.Send(new AddEmbeddingsGenerationOperation(configuration));
-
+        
         return (configuration, connectionString);
+    }
+
+    protected (bool QueriesWorkerRegistered, bool IndexingWorkerRegistered) WaitForEmbeddingsGenerationWorkerToRegister(IDocumentStore store, EmbeddingsGenerationConfiguration embeddingsGenerationConfigurationTask,
+        string database = null)
+    {
+        return AsyncHelpers.RunSync(() => WaitForEmbeddingsGenerationWorkerToRegisterAsync(store, embeddingsGenerationConfigurationTask, database));
+    }
+    
+    protected async Task<(bool QueriesWorkerRegistered, bool IndexingWorkerRegistered)> WaitForEmbeddingsGenerationWorkerToRegisterAsync(IDocumentStore store, EmbeddingsGenerationConfiguration embeddingsGenerationConfigurationTask, string databaseName = null)
+    {
+        databaseName ??= store.Database;
+        var database = await GetDatabase(databaseName);
+
+        var queriesGenerator = await WaitForValueAsync(() => database.EmbeddingsGeneratorQueries.EmbeddingTaskExists(new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationConfigurationTask.Identifier)), true, timeout: (int)DefaultEtlTimeout.TotalMilliseconds);
+        var indexingGenerator = await WaitForValueAsync(() => database.EmbeddingsGeneratorEtl.EmbeddingTaskExists(new EmbeddingsGenerationTaskIdentifier(embeddingsGenerationConfigurationTask.Identifier)), true, timeout: (int)DefaultEtlTimeout.TotalMilliseconds);
+        
+        return (queriesGenerator, indexingGenerator);
     }
     
     protected void AssertEmbeddingsForPath(IDocumentStore store,

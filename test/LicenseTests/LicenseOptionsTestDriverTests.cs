@@ -30,8 +30,8 @@ public class LicenseOptionsTestDriverTests : RavenTestBase
 
     private void RunScenario(LicenseOptionsTestDriverScenario optionsTestDriverScenario)
     {
-        var originalLicense = Environment.GetEnvironmentVariable("RAVEN_License");
-        var originalLicensePath = Environment.GetEnvironmentVariable("RAVEN_License.Path");
+        var originalLicense = Environment.GetEnvironmentVariable("RAVEN_LICENSE");
+        var originalLicensePath = Environment.GetEnvironmentVariable("RAVEN_LICENSE_PATH");
 
         var testServerOptions = new TestServerOptions { ServerDirectory = _serverDirectory };
 
@@ -57,8 +57,8 @@ public class LicenseOptionsTestDriverTests : RavenTestBase
             }
             finally
             {
-                Environment.SetEnvironmentVariable("RAVEN_License", originalLicense);
-                Environment.SetEnvironmentVariable("RAVEN_License.Path", originalLicensePath);
+                Environment.SetEnvironmentVariable("RAVEN_LICENSE", originalLicense);
+                Environment.SetEnvironmentVariable("RAVEN_LICENSE_PATH", originalLicensePath);
 
                 var path = Path.Combine(_serverDirectory, "license.json");
                 if (File.Exists(path)) File.Delete(path);

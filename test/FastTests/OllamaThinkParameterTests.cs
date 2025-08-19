@@ -1,10 +1,10 @@
+using System.Collections.Generic;
 using System.IO;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Server.Documents.AI.GenAi;
+using Raven.Server.Documents.AI;
 using Raven.Server.Logging;
 using Sparrow.Logging;
 using Raven.Server.ServerWide.Context;
@@ -33,6 +33,7 @@ namespace FastTests
                 Prompt = "Test prompt",
                 Connection = new AiConnectionString
                 {
+                    ModelType = AiModelType.Chat,
                     Name = "test-connection",
                     OllamaSettings = new OllamaSettings
                     {
@@ -43,24 +44,16 @@ namespace FastTests
                 }
             };
 
-            // Create context pool for the client
             using var contextPool = new TransactionContextPool(RavenLogManager.Instance.CreateNullLogger(), new StorageEnvironment(StorageEnvironmentOptions.CreateMemoryOnlyForTests()));
+            using var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, genAiConfig.Connection);
             
-            // Create Ollama client and test WriteCustomParameters directly
-            using var client = new OllamaChatCompletionClient(genAiConfig, "{}", contextPool, Raven.Client.Documents.Conventions.DocumentConventions.DefaultForServer);
-            
-            // Test the WriteCustomParameters method by capturing what it writes
-            string capturedParameters = null;
+            string capturedParameters;
             
             using (var context = JsonOperationContext.ShortTermSingleUse())
             using (var stream = new MemoryStream())
             await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
             {
-                // Simulate calling WriteCustomParameters like the real payload generation does
-                var method = typeof(OllamaChatCompletionClient).GetMethod("WriteCustomParameters", 
-                    BindingFlags.NonPublic | BindingFlags.Instance);
-                
-                method?.Invoke(client, [writer]);
+                client.WriteCompletionRequestPayload(writer, context, [], [], true, ChatCompletionClient.EmptySchema);
                 await writer.FlushAsync();
                 
                 capturedParameters = Encoding.UTF8.GetString(stream.ToArray());
@@ -70,7 +63,7 @@ namespace FastTests
             if (expectedJsonContent == null)
             {
                 // When Think is null, no parameters should be written
-                Assert.True(string.IsNullOrEmpty(capturedParameters));
+                Assert.DoesNotContain("think", capturedParameters);
             }
             else
             {

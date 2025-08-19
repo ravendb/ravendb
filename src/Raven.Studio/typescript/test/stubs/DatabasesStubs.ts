@@ -603,6 +603,23 @@ export class DatabasesStubs {
                     OpenAiSettings: null,
                     MistralAiSettings: null,
                 },
+                "ai-name-gen-ai": {
+                    Type: "Ai",
+                    Name: "ai-name-gen-ai",
+                    Identifier: "some-identifier",
+                    ModelType: "Chat",
+                    GoogleSettings: {
+                        ApiKey: "some-api-key",
+                        Model: "some-model",
+                        AiVersion: "V1",
+                    },
+                    AzureOpenAiSettings: null,
+                    HuggingFaceSettings: null,
+                    OllamaSettings: null,
+                    EmbeddedSettings: null,
+                    OpenAiSettings: null,
+                    MistralAiSettings: null,
+                },
             },
         };
     }

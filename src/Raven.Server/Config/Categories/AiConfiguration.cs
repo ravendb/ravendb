@@ -29,4 +29,25 @@ public sealed class AiConfiguration : ConfigurationCategory
     [MinValue(1)]
     public int EmbeddingsMaxConcurrentBatches { get; set; }
 
+    [Description("Instruction text prepended to the serialized conversation when requesting a summary.")]
+    [DefaultValue(@"Summarize the following AI conversation into a concise, linear narrative that retains all critical information. Ensure the summary:
+- Includes key identifiers, usernames, timestamps, and any reference codes
+- Preserves the original intent of both the user and the assistant in each exchange
+- Reflects decisions made, suggestions given, preferences expressed, and any changes in direction
+- Captures tone when relevant (e.g., sarcastic, formal, humorous, concerned)
+- Omits general filler or small talk unless it contributes to context or tone Format the output in a structured manner (such as bullet points or labeled sections) suitable for fitting into a limited context window. Do not discard any information that contributes to understanding the conversation's flow and outcome.")]
+    [ConfigurationEntry("Ai.Agent.Trimming.Summarization.SummarizationTaskBeginningPrompt", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public string SummarizationTaskBeginningPrompt { get; set; }
+
+    [Description("The user-role message that triggers the conversation summarization process.")]
+    [DefaultValue("Reminder - go over the entire previous conversation and summarize that according to the original instructions")]
+    [ConfigurationEntry("Ai.Agent.Trimming.Summarization.SummarizationTaskEndPrompt", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public string SummarizationTaskEndPrompt { get; set; }
+
+
+    [Description("The text prefix that appears before the generated summary of the previous conversation.")]
+    [DefaultValue("Summary of previous conversation: ")]
+    [ConfigurationEntry("Ai.Agent.Trimming.Summarization.SummarizationResultPrefix", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public string SummarizationResultPrefix { get; set; }
+
 }

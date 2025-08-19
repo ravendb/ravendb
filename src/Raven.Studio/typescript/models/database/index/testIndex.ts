@@ -14,6 +14,7 @@ import assertUnreachable = require("components/utils/assertUnreachable");
 import prismjs = require("prismjs");
 import rqlLanguageService = require("common/rqlLanguageService");
 import aceEditorBindingHandler = require("common/bindingHelpers/aceEditorBindingHandler");
+import configurationConstants = require("configuration");
 
 type testTabName = "queryResults" | "indexEntries" | "mapResults" | "reduceResults";
 type fetcherType = (skip: number, take: number) => JQueryPromise<pagedResult<documentObject>>;
@@ -53,8 +54,11 @@ class testIndex {
 
     languageService: rqlLanguageService;
 
-    constructor(dbProvider: () => database) {
+    searchEngineConfiguration = ko.observable<Raven.Client.Documents.Indexes.SearchEngineType>();
+
+    constructor(dbProvider: () => database, searchEngineConfiguration: KnockoutObservable<Raven.Client.Documents.Indexes.SearchEngineType>) {
         this.dbProvider = dbProvider;
+        this.searchEngineConfiguration = searchEngineConfiguration;
         aceEditorBindingHandler.install();
 
         this.languageService = new rqlLanguageService(dbProvider(), ko.observableArray([]), "Select"); // we intentionally pass empty indexes here as subscriptions works only on collections
@@ -180,6 +184,12 @@ class testIndex {
         this.spinners.testing(true);
 
         const dto = this.toDto(indexDef);
+
+        if (this.searchEngineConfiguration()) {
+            dto.IndexDefinition.Configuration[configurationConstants.indexing.staticIndexingEngineType] = this.searchEngineConfiguration();
+        } else {
+            delete dto.IndexDefinition.Configuration[configurationConstants.indexing.staticIndexingEngineType];
+        }
 
         return new testIndexCommand(dto, db, location).execute()
             .done(result => {

@@ -320,7 +320,7 @@ function FeatureAvailabilitySummaryModal({
                         <Icon icon="license" color="primary" />
                         License comparison
                     </h3>
-                    {licenseType !== "Developer" && licenseType !== "EnterpriseAi" && (
+                    {licenseType !== "Developer" && (
                         <>
                             <br />
                             <div>

@@ -4,14 +4,9 @@ import { ClientConfigurationFormData } from "./ClientConfigurationValidation";
 
 export default function useClientConfigurationFormSideEffects(
     watch: UseFormWatch<ClientConfigurationFormData>,
-    setValue: UseFormSetValue<ClientConfigurationFormData>,
-    isShouldOverride: boolean
+    setValue: UseFormSetValue<ClientConfigurationFormData>
 ) {
     useEffect(() => {
-        if (isShouldOverride) {
-            setValue("overrideConfig", true, { shouldValidate: true });
-        }
-
         const { unsubscribe } = watch((values, { name }) => {
             if (name === "identityPartsSeparatorEnabled" && !values.identityPartsSeparatorEnabled) {
                 setValue("identityPartsSeparatorValue", null, { shouldValidate: true });
@@ -37,5 +32,5 @@ export default function useClientConfigurationFormSideEffects(
         });
 
         return () => unsubscribe();
-    }, [watch, setValue, isShouldOverride]);
+    }, [watch, setValue]);
 }

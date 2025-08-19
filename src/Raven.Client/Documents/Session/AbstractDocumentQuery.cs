@@ -78,7 +78,7 @@ namespace Raven.Client.Documents.Session
 
         protected Stack<bool> FilterModeStack = new();
 
-        protected Parameters QueryParameters = new Parameters();
+        protected internal Parameters QueryParameters = new Parameters();
 
         protected bool IsIntersect;
 
@@ -1533,8 +1533,9 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var texts = fieldValueFactoryAccessor.Texts;
             var embeddings = fieldValueFactoryAccessor.Embeddings;
             var byId = fieldValueFactoryAccessor.ById;
+            var embeddingsGenerationTaskIdentifierFromValue = fieldValueFactoryAccessor.EmbeddingsGenerationTaskIdentifier;
 
-            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts,  embeddings, byId, embeddingsGenerationTaskIdentifier);
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts,  embeddings, byId, embeddingsGenerationTaskIdentifier, embeddingsGenerationTaskIdentifierFromValue);
         }
         
         internal void VectorSearch(VectorEmbeddingFieldFactory<T> embeddingFieldFactory, VectorFieldValueFactory embeddingValueFactory,
@@ -1549,12 +1550,13 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
             var texts = embeddingValueFactory.Texts;
             var embeddings = embeddingValueFactory.Embeddings;
             var byId = embeddingValueFactory.ById;
-            
-            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts, embeddings, byId, embeddingsGenerationTaskIdentifier);
+            var embeddingsGenerationTaskIdentifierFromValue = embeddingValueFactory.EmbeddingsGenerationTaskIdentifier;
+
+            VectorSearch(fieldName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, text, texts, embeddings, byId, embeddingsGenerationTaskIdentifier, embeddingsGenerationTaskIdentifierFromValue);
         }
         
         private void VectorSearch(string fieldName, VectorEmbeddingType sourceQuantizationType, VectorEmbeddingType targetQuantizationType, float? minimumSimilarity,
-            int? numberOfCandidates, bool isExact, string text, IEnumerable<string> texts, object embeddings, string byId, string embeddingsGenerationTaskIdentifier = null)
+            int? numberOfCandidates, bool isExact, string text, IEnumerable<string> texts, object embeddings, string byId, string embeddingsGenerationTaskIdentifier = null, string embeddingsGenerationTaskIdentifierValue = null)
         {
             string queryParameterName;
 
@@ -1593,7 +1595,7 @@ Use session.Query<T>() instead of session.Advanced.DocumentQuery<T>. The session
                 throw new InvalidOperationException("Cannot use VectorSearch without text(s), document id or embedding(s).");
             }
             
-            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, isDocumentId, embeddingsGenerationTaskIdentifier);
+            var vectorSearchToken = new VectorSearchToken(fieldName, queryParameterName, sourceQuantizationType, targetQuantizationType, minimumSimilarity, numberOfCandidates, isExact, isDocumentId, embeddingsGenerationTaskIdentifier, embeddingsGenerationTaskIdentifierValue);
 
             WhereTokens.AddLast(vectorSearchToken);
         }

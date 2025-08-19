@@ -23,6 +23,10 @@ import activeDatabaseTracker = require("common/shell/activeDatabaseTracker");
 import licenseModel = require("models/auth/licenseModel");
 import TimeInSeconds = require("common/constants/timeInSeconds");
 import popoverUtils = require("common/popoverUtils");
+import testAiConnectionStringCommand = require("commands/database/cluster/testAiConnectionStringCommand");
+import aiConnectionStringUtils = require("components/pages/database/settings/connectionStrings/editForms/aiConnectionStringUtils");
+import eventsCollector = require("common/eventsCollector");
+import generalUtils = require("common/generalUtils");
 
 const minimumCommunityDeleteFrequencyInSec = TimeInSeconds.TimeInSeconds.Day * 36;
 
@@ -40,7 +44,8 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
     aiConnectionStrings = ko.observableArray<Raven.Client.Documents.Operations.AI.AiConnectionString>([]);
 
     spinners = {
-        save: ko.observable<boolean>(false)
+        save: ko.observable<boolean>(false),
+        testConnection: ko.observable<boolean>(false),
     };
 
     collections = collectionsTracker.default.collections;
@@ -63,6 +68,8 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
     enableDocumentExpiration = ko.observable<boolean>(false);
     isCommunityLicense = licenseModel.getStatusValue("Type") === "Community";
 
+    testConnectionResult = ko.observable<Raven.Server.Web.System.NodeConnectionTestResult>();
+
     constructor(db: database) {
         super(db);
         this.bindToCurrentInstance(
@@ -71,6 +78,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             "toggleIsNewConnectionStringOpen",
             "setState",
             "getIsDocumentExpirationEnabled",
+            "testConnection",
         );
         
         aceEditorBindingHandler.install();
@@ -226,17 +234,30 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         return new getConnectionStringsCommand(this.db)
             .execute()
             .done((result: Raven.Client.Documents.Operations.ConnectionStrings.GetConnectionStringsResult) => {
-                this.aiConnectionStrings(Object.values(result.AiConnectionStrings));
+                this.aiConnectionStrings(Object.values(result.AiConnectionStrings).filter(x => x.ModelType === "TextEmbeddings"));
 
-                const connectionStringsNames = Object.keys(result.AiConnectionStrings);
+                const connectionStringsNames = Object.keys(result.AiConnectionStrings).filter(key =>
+                    result.AiConnectionStrings[key].ModelType === "TextEmbeddings",
+                );
                 this.connectionStringsNames(typeUtils.sortBy(connectionStringsNames, x => x.toUpperCase()));
             });
     }
 
     private initObservables() {
+        const model = this.editedEmbeddingsGeneration();
 
         this.collectionNames = ko.pureComputed(() => {
             return collectionsTracker.default.getCollectionNames();
+        });
+
+        model.connectionStringName.subscribe(() => this.testConnectionResult(null));
+
+        this.shortErrorText = ko.pureComputed(() => {
+            const result = this.testConnectionResult();
+            if (!result || result.Success) {
+                return "";
+            }
+            return generalUtils.trimMessage(result.Error);
         });
 
         const connectionStringName = this.editedEmbeddingsGeneration().connectionStringName();
@@ -325,6 +346,29 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
         } else {
             router.navigate(appUrl.forOngoingTasks(this.db));
         }
+    }
+
+    testConnection() {
+        eventsCollector.default.reportEvent("embeddings-generation-etl-connection-string", "test-connection");
+        if (!this.editedEmbeddingsGeneration().connectionStringName()) {
+            return;
+        }
+
+        this.spinners.testConnection(true);
+
+        const connectionString = this.aiConnectionStrings().find(x =>
+            x.Name === this.editedEmbeddingsGeneration().connectionStringName());
+
+        if (!connectionString) {
+            app.showBootstrapMessage("Connection string not found", "Warning");
+            this.spinners.testConnection(false);
+            return;
+        }
+
+        new testAiConnectionStringCommand(this.db, aiConnectionStringUtils.getConnectorType(connectionString), "TextEmbeddings", aiConnectionStringUtils.mapAiConnectionStringToSettingsDto(connectionString))
+            .execute()
+            .done((testResult) => this.testConnectionResult(testResult))
+            .always(() => this.spinners.testConnection(false));
     }
 
     syntaxHelp() {

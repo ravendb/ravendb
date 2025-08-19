@@ -25,7 +25,7 @@ public sealed class ShardedStudioDatabaseTasksHandler : ShardedDatabaseRequestHa
     [RavenShardedAction("/databases/*/admin/studio-tasks/restart", "POST")]
     public async Task RestartDatabase()
     {
-        using (var processor = new ShardedStudioDatabaseTasksHandlerProcessorForRestartDatabase(this))
+        using (var processor = new ShardedDatabaseTasksHandlerProcessorForRestartDatabase(this, "/admin/studio-tasks/restart"))
             await processor.ExecuteAsync();
     }
 

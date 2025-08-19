@@ -22,8 +22,8 @@ type backupConfigurationClass = manualBackupConfiguration | periodicBackupConfig
 interface ActivateProps {
     database: string;
     sourceView: EditPeriodicBackupTaskSourceView;
-    taskId?: number;
-    manual?: boolean;
+    taskId?: string;
+    manual?: string;
 }
 
 class editPeriodicBackupTask extends shardViewModelBase {
@@ -85,7 +85,7 @@ class editPeriodicBackupTask extends shardViewModelBase {
             if (args.taskId) {
                 // 1. Editing an existing task
                 this.isAddingNewBackupTask(false);
-                new getPeriodicBackupConfigurationCommand(this.db, args.taskId)
+                new getPeriodicBackupConfigurationCommand(this.db, parseInt(args.taskId, 10))
                     .execute()
                     .done((configuration: Raven.Client.Documents.Operations.Backups.PeriodicBackupConfiguration) => {
                         if (this.serverConfiguration().LocalRootPath && configuration.LocalSettings.FolderPath && configuration.LocalSettings.FolderPath.startsWith(this.serverConfiguration().LocalRootPath)) {
@@ -114,8 +114,12 @@ class editPeriodicBackupTask extends shardViewModelBase {
             return deferred
                 .then(() => {
                     this.dirtyFlag = this.configuration().dirtyFlag;
-                    this.fullBackupCronEditor(new cronEditor(this.configuration().getFullBackupFrequency()));
-                    this.incrementalBackupCronEditor(new cronEditor(this.configuration().getIncrementalBackupFrequency()));
+
+                    const taskId = args.taskId ? parseInt(args.taskId, 10) : undefined;
+                    const databaseName = args.taskId ? dbName() : undefined;
+
+                    this.fullBackupCronEditor(new cronEditor(this.configuration().getFullBackupFrequency(), databaseName, taskId, args.taskId ? true : undefined));
+                    this.incrementalBackupCronEditor(new cronEditor(this.configuration().getIncrementalBackupFrequency(), databaseName, taskId, args.taskId ? false : undefined));
                 });
         };
 

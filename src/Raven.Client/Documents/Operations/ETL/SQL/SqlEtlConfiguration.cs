@@ -26,7 +26,7 @@ namespace Raven.Client.Documents.Operations.ETL.SQL
 
         public override EtlType EtlType => EtlType.Sql;
 
-        public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true)
+        public override bool Validate(out List<string> errors, bool validateName = true, bool validateConnection = true, bool validateIdentifier = true)
         {
             base.Validate(out errors, validateName, validateConnection);
 

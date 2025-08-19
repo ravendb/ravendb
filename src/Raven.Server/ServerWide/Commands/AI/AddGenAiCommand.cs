@@ -58,7 +58,7 @@ public sealed class AddGenAiCommand : AddEtlCommand<GenAiConfiguration, AiConnec
         if (string.IsNullOrWhiteSpace(Configuration.Identifier))
             throw new RachisApplyException("Integration task identifier must be set, but it is not");
 
-        if (EmbeddingsGenerationConfiguration.ValidateIdentifier(Configuration.Identifier, out var errors) == false)
+        if (AiTaskIdentifierHelper.ValidateIdentifier(Configuration.Identifier, out var errors) == false)
             throw new RachisApplyException($"Invalid identifier format. Validation errors:{Environment.NewLine} - {string.Join($"{Environment.NewLine} - ", errors)}");
 
         var isUpdate = databaseRecord.GenAis.Any(x => x.Name == Configuration.Name);

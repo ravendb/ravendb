@@ -390,10 +390,9 @@ namespace Raven.Server.Monitoring.Snmp
             store.Add(new ProcessCpu(server.MetricCacher, server.CpuUsageCalculator));
             store.Add(new MachineCpu(server.MetricCacher, server.CpuUsageCalculator));
             store.Add(new IoWait(server.MetricCacher, server.CpuUsageCalculator));
-            
-            store.Add(new TotalPagesRead());
-            store.Add(new TotalPagesWritten());
 
+            store.Add(new ProcessOpenFileDescriptors());
+            
             store.Add(new CpuCreditsBase(server.CpuCreditsBalance));
             store.Add(new CpuCreditsMax(server.CpuCreditsBalance));
             store.Add(new CpuCreditsRemaining(server.CpuCreditsBalance));

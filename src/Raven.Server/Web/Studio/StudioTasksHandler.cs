@@ -9,7 +9,6 @@ using Raven.Client.Util;
 using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.Indexes;
@@ -18,6 +17,7 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web.Studio.Processors;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -270,7 +270,47 @@ namespace Raven.Server.Web.Studio
                 return;
             }
 
-            var nextOccurrence = crontabSchedule.GetNextOccurrence(SystemTime.UtcNow.ToLocalTime());
+            const string taskIdQueryParameter = "taskId";
+            var taskId = GetLongQueryString(taskIdQueryParameter, required: false);
+
+            const string databaseNameQueryParameter = "database";
+            var databaseName = GetStringQueryString(databaseNameQueryParameter, required: false);
+
+            const string isFullBackupQueryParameter = "isFull";
+            var isFull = GetBoolValueQueryString(isFullBackupQueryParameter, required: false);
+
+            DateTime baseValue;
+
+            if (taskId == null && databaseName == null && isFull == null)
+            {
+                // if no taskId, databaseName or backupKind is provided, we use the current time as the base value
+                baseValue = SystemTime.UtcNow.ToLocalTime();
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(databaseName))
+                    throw new ArgumentException($"The database name must be provided via the '{databaseNameQueryParameter}' query parameter when either '{taskIdQueryParameter}' or '{isFullBackupQueryParameter}' is specified.");
+
+                if (taskId == null)
+                    throw new ArgumentException($"The task ID must be provided via the '{taskIdQueryParameter}' query parameter when either '{databaseNameQueryParameter}' or '{isFullBackupQueryParameter}' is specified.");
+
+                if (isFull == null)
+                    throw new ArgumentException($"The backup kind must be provided via the '{isFullBackupQueryParameter}' query parameter when either '{taskIdQueryParameter}' or '{databaseNameQueryParameter}' is specified.");
+
+                using (ServerStore.Engine.ContextPool.AllocateOperationContext(out ClusterOperationContext context))
+                using (context.OpenReadTransaction())
+                {
+                    var backupStatus = BackupUtils.GetBackupStatusFromCluster(context, databaseName, taskId.Value);
+                    if (backupStatus == null)
+                        throw new InvalidOperationException($"No backup status found for task ID '{taskId}' in database '{databaseName}'.");
+
+                    baseValue = isFull.Value
+                        ? (backupStatus.LastFullBackup ?? SystemTime.UtcNow).ToLocalTime()
+                        : (backupStatus.LastIncrementalBackup ?? SystemTime.UtcNow).ToLocalTime();
+                }
+            }
+
+            var nextOccurrence = crontabSchedule.GetNextOccurrence(baseValue);
 
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
@@ -303,6 +343,7 @@ namespace Raven.Server.Web.Studio
                 string apiKey = null;
                 string organization = null;
                 string project = null;
+                bool? think = null;
                 switch (request.ConnectorType)
                 {
                     case AiConnectorType.OpenAi:
@@ -317,13 +358,14 @@ namespace Raven.Server.Web.Studio
                         break;
                     case AiConnectorType.Ollama:
                         uri = request.OllamaSettings.Uri;
+                        think = request.OllamaSettings.Think;
                         break;
                     default:
                         throw new NotSupportedException($"Unsupported connector type: {request.ConnectorType}");
                 }
 
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
-                using (var chat = new GenericChatCompletionClientForTesting(uri, model: null, apiKey: apiKey, organizationId: organization, projectId: project, ServerStore.ContextPool))
+                using (var chat = new ChatCompletionClient(ServerStore.ContextPool, uri, apiKey, model: null, organization, project, think))
                 {
                     await chat.ProxyModelsAsync(HttpContext.Response, cts.Token);
                 }
@@ -346,11 +388,24 @@ namespace Raven.Server.Web.Studio
         {
             using (ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
+                var type = GetEnumQueryString<SchemaType>("type", required: false);
                 var sampleObj = await context.ReadForMemoryAsync(RequestBodyStream(), "convert-to-json-schema");
 
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
-                    var schema = AbstractChatCompletionClient<JsonOperationContext>.GetSchemaFor(sampleObj.ToString());
+                    string schema;
+                    switch (type)
+                    {
+                        case SchemaType.Default:
+                        case SchemaType.StructureOutput:
+                            schema = ChatCompletionClient.GetSchemaForRequest(schema: null, sampleObj.ToString());
+                            break;
+                        case SchemaType.ToolParameters:
+                            schema = ChatCompletionClient.GetSchemaForTool(schema: null, sampleObj.ToString());
+                            break;
+                        default:
+                            throw new ArgumentOutOfRangeException($"The type '{type}' is missing");
+                    }
 
                     writer.WriteStartObject();
                     writer.WritePropertyName("Result");
@@ -382,6 +437,13 @@ namespace Raven.Server.Web.Studio
             Database,
             Script,
             ElasticSearchIndex
+        }
+
+        public enum SchemaType
+        {
+            Default,
+            StructureOutput,
+            ToolParameters,
         }
     }
 }

@@ -38,10 +38,19 @@ public class RavenDB_20202 : ClusterTestBase
             Conventions = new DocumentConventions { RequestTimeout = timeOut, }
         }.Initialize())
         {
+            await WaitForValueAsync(async () =>
+            {
+                var databaseRecordWithEtag = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+                return databaseRecordWithEtag.Topology.Members.Count;
+            }, 3);
+
+            var databaseRecordWithEtag = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+            Assert.Equal(3, databaseRecordWithEtag.Topology.Members.Count);
+
             List<string> originalNodesOrder = new() { "A", "B", "C" };
             await store.Maintenance.Server.SendAsync(new ReorderDatabaseMembersOperation(store.Database, originalNodesOrder));
 
-            var databaseRecordWithEtag = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
+            databaseRecordWithEtag = await store.Maintenance.Server.SendAsync(new GetDatabaseRecordOperation(databaseName));
             Assert.Equal(originalNodesOrder, databaseRecordWithEtag.Topology.Members);
 
             // We'll hold database settings load and health check executions for nodes 'A' and 'B' only

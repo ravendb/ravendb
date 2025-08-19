@@ -100,11 +100,6 @@ export function EditGenAiTaskStepUpdateFooter() {
         formValues.playgroundModelOutputs.length === 0 ||
         formValues.playgroundContexts.length !== formValues.playgroundModelOutputs.length;
 
-    console.log("kalczur", {
-        playgroundContexts: formValues.playgroundContexts,
-        playgroundModelOutputs: formValues.playgroundModelOutputs,
-    });
-
     return (
         <div className="hstack justify-content-between">
             <div className="hstack gap-2">

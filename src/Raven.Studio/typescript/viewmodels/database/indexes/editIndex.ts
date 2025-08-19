@@ -175,7 +175,7 @@ class editIndex extends shardViewModelBase {
         aceEditorBindingHandler.install();
         autoCompleteBindingHandler.install();
 
-        this.testIndex = new testIndex(() => this.db);
+        this.testIndex = new testIndex(() => this.db, this.searchEngineConfiguration);
 
         this.initializeObservables();
 

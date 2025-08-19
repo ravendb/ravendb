@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Extensions;
 using Raven.Server.Documents.AI;
-using Raven.Server.Documents.AI.GenAi;
 using Raven.Server.Documents.ETL.Metrics;
 using Raven.Server.Documents.ETL.Providers.AI.Enumerators;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Stats;
@@ -39,6 +40,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
     private const string TestDocumentId = "GenAi/TestDocument";
     private int _maxConcurrency;
     private IChatCompletionClient _chatCompletionClient;
+    private string _schema;
+    public string Schema => _schema ??= ChatCompletionClient.GetSchemaForRequest(Configuration.JsonSchema, Configuration.SampleObject);
 
     public GenAiTask(Transformation transformation, GenAiConfiguration configuration, DocumentDatabase database, ServerStore serverStore)
         : base(transformation, configuration, database, serverStore, GenAiTaskTag)
@@ -49,23 +52,8 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         if (configuration.TestMode == false)
             _chatCompletionClient = GetClient();
     }
-
-    private IChatCompletionClient GetClient()
-    {
-        var schema = Configuration.JsonSchema;
-        if (string.IsNullOrWhiteSpace(schema))
-            schema = OllamaChatCompletionClient.GetSchemaFor(Configuration.SampleObject);
-
-        var connectorType = Configuration.Connection.GetActiveProvider();
-        IChatCompletionClient client = connectorType switch
-        {
-            AiConnectorType.Ollama => new OllamaChatCompletionClient(Configuration, schema, Database.ServerStore.ContextPool, IChatCompletionClient.DefaultConventions),
-            AiConnectorType.OpenAi => new OpenAiChatCompletionClient(Configuration, schema, Database.ServerStore.ContextPool, IChatCompletionClient.DefaultConventions),
-            _ => throw new NotSupportedException($"The specified model (\"{connectorType.ToString()}\") is not supported.")
-        };
-
-        return client;
-    }
+    
+    private IChatCompletionClient GetClient() => ChatCompletionClient.CreateChatCompletionClient(Database.DocumentsStorage.ContextPool, Configuration.Connection);
 
     public override EtlType EtlType => EtlType.GenAi;
     public override bool ShouldTrackCounters() => false;
@@ -153,7 +141,13 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         if (results.Count is 0)
             return 0;
 
-        var exceptions = SendToModel(results, context, scope);
+        List<Exception> exceptions;
+        
+        // Prevent database unloading during long-running AI operations
+        using (Database.PreventFromUnloadingByIdleOperations())
+        {
+            exceptions = SendToModel(results, context, scope);
+        }
 
         ApplyUpdateScript(context, results, scope);
 
@@ -203,7 +197,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 Task<(string Result, AiUsage Usage)> task;
                 try
                 {
-                    task = _chatCompletionClient.CompleteAsync(Configuration.Prompt, json, CancellationToken);
+                    task = _chatCompletionClient.CompleteAsync(Configuration.Prompt, json, Schema, CancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -330,7 +324,9 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
     {
         List<GenAiResultItem> items;
         BlittableJsonReaderObject outputDocument = null;
-
+        DynamicJsonValue debugActions = null;
+        List<string> debugOutput = null;
+        PatchStatus status = PatchStatus.NotModified;
         Document document = null;
 
         switch (testGenAiScript.TestStage)
@@ -431,19 +427,27 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                             createIfMissing: null,
                             identityPartsSeparator: Database.IdentityPartsSeparator,
                             isTest: false,
-                            debugMode: false,
+                            debugMode: true,
                             collectResultsNeeded: true,
                             returnDocument: false,
                             ignoreMaxStepsForScript: false);
 
                         cmd.Execute(context, recordingState: null);
-
-                        item.DebugActions = cmd.DebugActions;
-                        item.DebugOutput = cmd.DebugOutput;
                     }
 
-                    if (lastPatch?.PatchResult?.ModifiedDocument != null)
-                        outputDocument = GenAiBatchPatchCommand.UpdateHashesInMetadata(document.Id, lastPatch.PatchResult.ModifiedDocument, Configuration.Identifier, hashes, context);
+
+                    if (lastPatch != null)
+                    {
+                        status = lastPatch.PatchResult.Status;
+                        debugActions = lastPatch?.DebugActions;
+                        debugOutput = lastPatch?.DebugOutput;
+
+                        if (lastPatch?.PatchResult?.ModifiedDocument != null)
+                        {
+                            outputDocument = GenAiBatchPatchCommand.UpdateHashesInMetadata(document.Id, lastPatch.PatchResult.ModifiedDocument, Configuration.Identifier,
+                                hashes, context);
+                        }
+                    }
 
                     break;
                 }
@@ -451,13 +455,19 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
             default:
                 throw new InvalidOperationException("Unknown TestStage type : " + testGenAiScript.TestStage.GetType());
         }
-
+        var originalDoc = document?.Data;
+        var modifiedDoc = outputDocument;
         return new GenAiTestScriptResult
         {
-            InputDocument = document?.Data,
+            Status = status,
+            InputDocument = originalDoc,
+            OriginalDocument = originalDoc,
+            OutputDocument = modifiedDoc,
+            ModifiedDocument = modifiedDoc,
             Results = items,
-            OutputDocument = outputDocument,
-            TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList()
+            DebugActions = debugActions,
+            DebugOutput = debugOutput,
+            TransformationErrors = Statistics.TransformationErrorsInCurrentBatch.Errors.ToList(),
         };
     }
 

@@ -64,6 +64,7 @@ export function IndexesPage({ queryParams }: ReactQueryParamsProps<IndexesPagePr
         setFilter,
         filterByStatusOptions,
         filterByTypeOptions,
+        filterByEngineOptions,
         regularIndexes,
         groups,
         replacements,
@@ -295,6 +296,7 @@ export function IndexesPage({ queryParams }: ReactQueryParamsProps<IndexesPagePr
                         filter={filter}
                         setFilter={(x) => setFilter(x)}
                         filterByStatusOptions={filterByStatusOptions}
+                        filterByEngineOptions={filterByEngineOptions}
                         filterByTypeOptions={filterByTypeOptions}
                         indexesCount={allIndexesCount}
                     />

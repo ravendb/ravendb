@@ -471,7 +471,7 @@ public class EmbeddingsGenerator(DocumentDatabase database, RavenLogger logger, 
             {
                 // we wait for a bit for all the tasks to complete before
                 // we are done
-                Task.WaitAll(tasks.ToArray(), 15_000);
+                await Task.WhenAny(Task.WhenAll(tasks), Task.Delay(15_000));
             }
             catch
             {

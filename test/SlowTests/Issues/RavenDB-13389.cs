@@ -26,7 +26,7 @@ public class RavenDB_13389 : RavenTestBase
             Assert.Equal("{\"Result\":0}", scriptResult);
         }
     }
-    
+
     [RavenFact(RavenTestCategory.JavaScript)]
     public async Task TestClusterContextScript()
     {

@@ -30,8 +30,10 @@ public class RavenDB_23720 : EmbeddingsGenerationTestBase
                 var aiTaskDone = Etl.WaitForEtlToComplete(store);
 
                 var (configuration, _) = AddEmbeddingsGenerationTask(store);
-                
                 Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+                var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+                Assert.True(queriesWorkerRegistered);
+                Assert.True(indexingWorkerRegistered);
                 
                 var autoResults1 = session.Query<Dto>().VectorSearch(x => x.WithText(x => x.Name).UsingTask(configuration.Identifier),
                     factory => factory.ByText("some text")).ToList();

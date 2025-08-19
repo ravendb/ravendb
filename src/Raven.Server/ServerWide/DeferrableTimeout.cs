@@ -25,16 +25,18 @@ public class DeferrableTimeout
 
         private Result ScheduleOrDefer(TimeSpan deferBy, out Task task)
         {
-            _completeAt = DateTime.UtcNow.Add(deferBy);
-            var prev = Interlocked.CompareExchange(ref _scheduled, new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously), null);
-            task = _scheduled!.Task;
+            var newTcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+            var prev = Interlocked.CompareExchange(ref _scheduled, newTcs, null);
 
             if (prev == null)
             {
+                _completeAt = DateTime.UtcNow.Add(deferBy);
+                task = newTcs.Task;
                 Promises.Enqueue(this);
                 return Result.Scheduled;
             }
 
+            task = prev.Task;
             return Result.Deferred;
         }
 

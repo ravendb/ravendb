@@ -283,7 +283,7 @@ namespace SlowTests.Server.Documents.TimeSeries
 
         [RavenTheory(RavenTestCategory.TimeSeries | RavenTestCategory.Replication | RavenTestCategory.Cluster | RavenTestCategory.BackupExportImport)]
         [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task CleanTimeSeriesTombstonesInTheClusterWithOnlyFullBackup(Options options)
+        public async Task KeepTimeSeriesTombstonesInTheClusterWithOnlyFullBackup(Options options)
         {
             var cluster = await CreateRaftCluster(3);
             var database = GetDatabaseName();
@@ -345,6 +345,9 @@ namespace SlowTests.Server.Documents.TimeSeries
                 }
 
                 Assert.True(await WaitForChangeVectorInClusterForModeAsync(cluster.Nodes, dbName, options.DatabaseMode), "await WaitForChangeVectorInClusterAsync(cluster.Nodes, database)");
+
+                var expectedNumberOfTimeSeriesDeletedRanges = 0L;
+                var expectedNumberOfTimeSeriesPendingDeletionSegments = 0L;
             
                 foreach (var server in cluster.Nodes)
                 {
@@ -352,31 +355,35 @@ namespace SlowTests.Server.Documents.TimeSeries
                     using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     using (context.OpenReadTransaction())
                     {
-                        var c2 = storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context);
-                        var c3 = storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesPendingDeletionSegments(context);
+                        expectedNumberOfTimeSeriesDeletedRanges = storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context);
+                        expectedNumberOfTimeSeriesPendingDeletionSegments = storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesPendingDeletionSegments(context);
 
-                        Assert.Equal(750, c2);
-                        Assert.Equal(2, c3);
+                        Assert.Equal(750, expectedNumberOfTimeSeriesDeletedRanges);
+                        Assert.Equal(2, expectedNumberOfTimeSeriesPendingDeletionSegments);
                     }
                 }
 
-                var res = await WaitForValueAsync(async () =>
+                await WaitAndAssertForValueAsync(async () =>
                 {
-                    var c = 0L;
+                    var afterTombstoneCleanerNumberOfTimeSeriesDeletedRanges = 0L;
+                    var afterTombstoneCleanerNumberOfTimeSeriesPendingDeletionSegments = 0L;
                     foreach (var server in cluster.Nodes)
                     {
                         var storage = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(dbName);
+
+                        // Run the tombstone cleaner and check the number of tombstones again
                         await storage.TombstoneCleaner.ExecuteCleanup();
                         using (storage.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
-                            c += storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context);
-                            c += storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesPendingDeletionSegments(context);
+                            afterTombstoneCleanerNumberOfTimeSeriesDeletedRanges += storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesDeletedRanges(context);
+                            afterTombstoneCleanerNumberOfTimeSeriesPendingDeletionSegments += storage.DocumentsStorage.TimeSeriesStorage.GetNumberOfTimeSeriesPendingDeletionSegments(context);
                         }
                     }
-                    return c;
-                }, 0, interval: 333);
-                Assert.Equal(0, res);
+                    return (afterTombstoneCleanerNumberOfTimeSeriesDeletedRanges, afterTombstoneCleanerNumberOfTimeSeriesPendingDeletionSegments);
+                },
+                    expectedVal: (expectedNumberOfTimeSeriesDeletedRanges, expectedNumberOfTimeSeriesPendingDeletionSegments),
+                    interval: (int) TimeSpan.FromSeconds(1).TotalMilliseconds);
             }
         }
 

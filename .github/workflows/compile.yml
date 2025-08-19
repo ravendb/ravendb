@@ -34,7 +34,7 @@ jobs:
           
       - name: Restore
         run: |
-          npm install
+          npm ci
           npm run restore
         working-directory: src/Raven.Studio
 
