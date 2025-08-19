@@ -52,7 +52,6 @@ namespace Sparrow.LowMemory
 
         private void RunLowMemoryHandlers(bool isLowMemory, MemoryInfoResult memoryInfo, LowMemorySeverity lowMemorySeverity)
         {
-
             try
             {
                 try
@@ -113,6 +112,7 @@ namespace Sparrow.LowMemory
                             _inactiveHandlers.Add(lowMemoryHandler);
                     }
                 }
+
                 foreach (var x in _inactiveHandlers)
                 {
                     if (x == null)
@@ -228,15 +228,11 @@ namespace Sparrow.LowMemory
 
                 _lowMemoryMonitor = monitor;
 
-                var thread = new Thread(MonitorMemoryUsage)
-                {
-                    IsBackground = true,
-                    Name = NotificationThreadName
-                };
+                var thread = new Thread(MonitorMemoryUsage) { IsBackground = true, Name = NotificationThreadName };
 
                 thread.Start();
 
-                _cancellationTokenRegistration = shutdownNotification.Register(() => _shutdownRequested.Set());
+                _cancellationTokenRegistration = shutdownNotification.Register(static (state) => ((ManualResetEvent)state).Set(), _shutdownRequested);
             }
         }
 
@@ -286,7 +282,8 @@ namespace Sparrow.LowMemory
                         try
                         {
                             if (_logger.IsInfoEnabled)
-                                _logger.Info("Out of memory error in the low memory notification thread, will wait 5 seconds before trying to check memory status again. The system is likely running out of memory");
+                                _logger.Info(
+                                    "Out of memory error in the low memory notification thread, will wait 5 seconds before trying to check memory status again. The system is likely running out of memory");
                         }
                         catch
                         {
@@ -349,6 +346,7 @@ namespace Sparrow.LowMemory
                 memoryInfo = default;
                 totalUnmanagedAllocations = -1;
             }
+
             if (isLowMemory != LowMemorySeverity.None)
             {
                 if (LowMemoryState == false)
@@ -357,10 +355,9 @@ namespace Sparrow.LowMemory
                     {
                         if (_logger.IsInfoEnabled)
                         {
-
                             _logger.Info("Low memory detected, will try to reduce memory usage...");
-
                         }
+
                         AddLowMemEvent(LowMemReason.LowMemOnTimeoutChk, memoryInfo, totalUnmanagedAllocations);
                     }
                     catch (OutOfMemoryException)
@@ -368,6 +365,7 @@ namespace Sparrow.LowMemory
                         // nothing we can do, we'll wait and try again
                     }
                 }
+
                 LowMemoryState = true;
 
                 timeout = 500;
@@ -377,6 +375,7 @@ namespace Sparrow.LowMemory
                 {
                     isLowMemory = LowMemorySeverity.ExtremelyLow; // On linux we want two severity steps
                 }
+
                 _clearInactiveHandlersCounter = 0;
                 RunLowMemoryHandlers(true, memoryInfo, isLowMemory);
             }
@@ -389,6 +388,7 @@ namespace Sparrow.LowMemory
 
                     AddLowMemEvent(LowMemReason.BackToNormal, memoryInfo, totalUnmanagedAllocations);
                 }
+
                 LowMemoryState = false;
                 RunLowMemoryHandlers(false, memoryInfo, isLowMemory);
                 timeout = memoryInfo.AvailableMemory < LowMemoryThreshold * 2 ? 1000 : 5000;

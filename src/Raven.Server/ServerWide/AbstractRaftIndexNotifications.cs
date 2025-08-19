@@ -10,7 +10,7 @@ using Sparrow.Utils;
 namespace Raven.Server.ServerWide;
 
 public abstract class AbstractRaftIndexNotifications<TNotification> : IDisposable
-where TNotification : RaftIndexNotification
+    where TNotification : RaftIndexNotification
 {
     protected readonly ConcurrentQueue<ErrorHolder> Errors = new ConcurrentQueue<ErrorHolder>();
     private readonly ConcurrentQueue<TNotification> _recentNotifications = new ConcurrentQueue<TNotification>();
@@ -42,7 +42,7 @@ where TNotification : RaftIndexNotification
         }
 
         var tcs = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-        await using (token.Register(() => tcs.TrySetResult()))
+        await using (token.Register(static (state) => ((TaskCompletionSource)state).TrySetResult(), tcs))
         {
             if (await WaitForTaskCompletion(index, new Lazy<Task>(tcs.Task)))
                 return;
@@ -74,11 +74,7 @@ where TNotification : RaftIndexNotification
     {
         if (e != null)
         {
-            Errors.Enqueue(new ErrorHolder
-            {
-                Index = index,
-                Exception = ExceptionDispatchInfo.Capture(e)
-            });
+            Errors.Enqueue(new ErrorHolder { Index = index, Exception = ExceptionDispatchInfo.Capture(e) });
 
             if (Interlocked.Increment(ref _numberOfErrors) > 25)
             {
@@ -112,7 +108,7 @@ where TNotification : RaftIndexNotification
                                              $"Last commit index is: {lastModifiedIndex}. " +
                                              $"Number of errors is: {_numberOfErrors}." + closingString);
     }
-    
+
     protected void ThrowApplyException(long index, Exception e)
     {
         throw new InvalidOperationException($"Index {index} was successfully committed, but the apply failed.", e);
@@ -144,6 +140,7 @@ where TNotification : RaftIndexNotification
                 .Append(notification.ToString())
                 .AppendLine();
         }
+
         return builder.ToString();
     }
 }

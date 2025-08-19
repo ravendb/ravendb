@@ -806,7 +806,7 @@ namespace Sparrow.Json
             UnmanagedJsonParser parser = null;
             BlittableJsonDocumentBuilder builder = null;
             var generation = _generation;
-            var streamDisposer = token?.Register(stream.Dispose);
+            var streamDisposer = token?.Register(static (state) => ((Stream)state).Dispose(), stream);
             try
             {
                 parser = new UnmanagedJsonParser(this, _jsonParserState, documentId);

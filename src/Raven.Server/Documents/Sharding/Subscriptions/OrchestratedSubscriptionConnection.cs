@@ -34,7 +34,8 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 tcpConnection.DatabaseContext.DatabaseShutdown)
         {
             _databaseContext = tcpConnection.DatabaseContext;
-            _tokenRegisterDisposable = CancellationTokenSource.Token.Register(() => _processor?.CurrentBatch?.SetCancel());
+            _tokenRegisterDisposable =
+                CancellationTokenSource.Token.Register(static (state) => ((OrchestratedSubscriptionConnection)state)._processor?.CurrentBatch?.SetCancel(), this);
             _dbIdsToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { _databaseContext.DatabaseRecord.Sharding.DatabaseId };
         }
 
