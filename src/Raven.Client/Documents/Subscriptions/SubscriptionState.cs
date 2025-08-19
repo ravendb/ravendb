@@ -12,6 +12,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Subscriptions
 {
+    /// <summary>
+    /// Represents the configuration and current state of a subscription task.
+    /// </summary>
     public class SubscriptionState : IDatabaseTask, IDatabaseTaskStatus
     {
         public string Query { get; set; }

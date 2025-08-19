@@ -197,7 +197,7 @@ namespace Raven.Client.Documents.Subscriptions
         public int SendBufferSizeInBytes { get; set; }
 
         /// <summary>
-        /// Receive buffer for the underlying connection. Default: 4096 bytes (4 kB)
+        /// Receive buffer for the underlying connection. Default: 32768 bytes (32 kB)
         /// </summary>
         public int ReceiveBufferSizeInBytes { get; set; }
 
