@@ -58,7 +58,7 @@ namespace Sparrow.Server
                   tcs.TrySetResult(t.Result);
               }, token);
 
-            await using (token.Register(() => tcs.TrySetCanceled(token)))
+            await using (token.Register(static (state, t) => ((TaskCompletionSource<bool>)state).TrySetCanceled(t), tcs))
             {
                 return await tcs.Task.ConfigureAwait(false);
             }
