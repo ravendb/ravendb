@@ -29,7 +29,7 @@ namespace Raven.Client.Documents.Smuggler
         private RequestExecutor _requestExecutor;
         private RequestExecutor RequestExecutor => _requestExecutor ?? (_databaseName != null ? _requestExecutor = _getRequestExecutor(_databaseName) : null);
 
-        public DatabaseSmuggler(IDocumentStore store, string databaseName = null) 
+        public DatabaseSmuggler(IDocumentStore store, string databaseName = null)
             : this(store.Changes, store.GetRequestExecutor, databaseName ?? store.Database)
         {
         }
@@ -62,7 +62,7 @@ namespace Raven.Client.Documents.Smuggler
                 try
                 {
                     await handleStreamResponse(stream).ConfigureAwait(false);
-                    
+
                     tcs.TrySetResult(null);
                 }
                 catch (Exception e)
@@ -145,7 +145,7 @@ namespace Raven.Client.Documents.Smuggler
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-                var cancellationTokenRegistration = token.Register(static (state, t) => ((TaskCompletionSource<object>)state).TrySetCanceled(t), tcs);
+                var cancellationTokenRegistration = tcs.RegisterTryCancelOnToken(token);
 
                 var command = new ExportCommand(RequestExecutor.Conventions, context, options, handleStreamResponse, operationId, tcs, getOperationIdCommand.NodeTag);
 
@@ -243,6 +243,7 @@ namespace Raven.Client.Documents.Smuggler
                 var op = await ImportAsync(options, filePath, cancellationToken).ConfigureAwait(false);
                 await op.WaitForCompletionAsync().WithCancellation(cancellationToken).ConfigureAwait(false);
             }
+
             options.OperateOnTypes = oldOperateOnTypes;
 
             var lastFilePath = Path.Combine(fromDirectory, files.Last());
@@ -293,27 +294,27 @@ namespace Raven.Client.Documents.Smuggler
                 var operationId = getOperationIdCommand.Result;
 
                 var tcs = new TaskCompletionSource<object>(TaskCreationOptions.RunContinuationsAsynchronously);
-                var cancellationTokenRegistration = token.Register(static (state, t) => ((TaskCompletionSource<object>)state).TrySetCanceled(t), tcs);
+                var cancellationTokenRegistration = tcs.RegisterTryCancelOnToken(token);
 
                 var command = new ImportCommand(RequestExecutor.Conventions, context, options, stream, operationId, tcs, this, getOperationIdCommand.NodeTag);
 
                 var task = RequestExecutor.ExecuteAsync(command, context, sessionInfo: null, token: token);
                 requestTask = task
-                        .ContinueWith(t =>
+                    .ContinueWith(t =>
+                    {
+                        returnContext?.Dispose();
+                        cancellationTokenRegistration.Dispose();
+                        using (disposeStream)
                         {
-                            returnContext?.Dispose();
-                            cancellationTokenRegistration.Dispose();
-                            using (disposeStream)
+                            if (t.IsFaulted)
                             {
-                                if (t.IsFaulted)
-                                {
-                                    tcs.TrySetException(t.Exception);
+                                tcs.TrySetException(t.Exception);
 
-                                    if (Logger.IsErrorEnabled)
-                                        Logger.Error("Could not execute import", t.Exception);
-                                }
+                                if (Logger.IsErrorEnabled)
+                                    Logger.Error("Could not execute import", t.Exception);
                             }
-                        }, token);
+                        }
+                    }, token);
 
                 try
                 {
@@ -327,7 +328,6 @@ namespace Raven.Client.Documents.Smuggler
 
                 return new Operation(RequestExecutor, () => _getChanges(_databaseName, getOperationIdCommand.NodeTag), RequestExecutor.Conventions, operationId,
                     nodeTag: getOperationIdCommand.NodeTag, afterOperationCompleted: task);
-
             }
             catch (Exception e)
             {
@@ -350,7 +350,8 @@ namespace Raven.Client.Documents.Smuggler
             private readonly long _operationId;
             private readonly TaskCompletionSource<object> _tcs;
 
-            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs, string nodeTag)
+            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerExportOptions options,
+                Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs, string nodeTag)
             {
                 if (options == null)
                     throw new ArgumentNullException(nameof(options));
@@ -406,7 +407,8 @@ namespace Raven.Client.Documents.Smuggler
 
             public override bool IsReadRequest => false;
 
-            public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs, DatabaseSmuggler parent, string nodeTag)
+            public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId,
+                TaskCompletionSource<object> tcs, DatabaseSmuggler parent, string nodeTag)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _stream = stream ?? throw new ArgumentNullException(nameof(stream));
@@ -432,19 +434,14 @@ namespace Raven.Client.Documents.Smuggler
 
                 var form = new MultipartFormDataContent
                 {
-                    {new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _options).ConfigureAwait(false), _conventions), Constants.Smuggler.ImportOptions},
-                    {new StreamContentWithConfirmation(_stream, _tcs, _parent), "file", "name"}
+                    {
+                        new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _options).ConfigureAwait(false), _conventions),
+                        Constants.Smuggler.ImportOptions
+                    },
+                    { new StreamContentWithConfirmation(_stream, _tcs, _parent), "file", "name" }
                 };
 
-                return new HttpRequestMessage
-                {
-                    Headers =
-                    {
-                        TransferEncodingChunked = true
-                    },
-                    Method = HttpMethod.Post,
-                    Content = form
-                };
+                return new HttpRequestMessage { Headers = { TransferEncodingChunked = true }, Method = HttpMethod.Post, Content = form };
             }
         }
 
