@@ -140,10 +140,10 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Cluster.MaxClusterTransactionBatchSize", ConfigurationEntryScope.ServerWideOrPerDatabase)]
         public int MaxClusterTransactionsBatchSize { get; set; }
         
-        [Description("EXPERT: Peroid of time to send a full database report (in minutes) regardless of changes.")]
+        [Description("EXPERT: Period of time to send a full database report (in minutes) regardless of changes.")]
         [DefaultValue(5)]
         [TimeUnit(TimeUnit.Minutes)]
-        [ConfigurationEntry("Cluster.LastFullTimeReportInMin", ConfigurationEntryScope.ServerWideOnly)]
-        public TimeSetting LastFullTimeReport { get; set; }
+        [ConfigurationEntry("Cluster.FullReportIntervalInMin", ConfigurationEntryScope.ServerWideOnly)]
+        public TimeSetting FullReportInterval { get; set; }
     }
 }

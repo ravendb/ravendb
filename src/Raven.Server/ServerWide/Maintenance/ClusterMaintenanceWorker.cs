@@ -295,7 +295,7 @@ namespace Raven.Server.ServerWide.Maintenance
                             // Check if anything has changed.
                             if (SupportedFeatures.Heartbeats.SendChangesOnly &&
                                 prevDatabaseReport != null && prevDatabaseReport.EnvironmentsHash == report.EnvironmentsHash
-                                && now - prevDatabaseReport.LastFullReport < _server.Configuration.Cluster.LastFullTimeReport.AsTimeSpan)
+                                && now - prevDatabaseReport.LastFullReport < _server.Configuration.Cluster.FullReportInterval.AsTimeSpan)
                             {
                                 // Nothing changed. Send a lightweight NoChange report.
                                 report.Status = DatabaseStatus.NoChange;
