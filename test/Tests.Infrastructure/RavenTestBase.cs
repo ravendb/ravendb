@@ -32,6 +32,7 @@ using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;
@@ -1244,6 +1245,29 @@ namespace FastTests
                 ms.Seek(0, SeekOrigin.Begin);
 
                 return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
+            }
+        }
+
+        public static bool ValidateErrorNotification(DocumentDatabase db, string err, string id = null)
+        {
+            using (db.NotificationCenter.GetStored(out var actions))
+            {
+                var jsonAlerts = actions.ToList();
+                if (jsonAlerts.Count == 0)
+                    return false;
+                var bjro = jsonAlerts.First().Json;
+
+                if (bjro.TryGet("Details", out BlittableJsonReaderObject details) &&
+                    details.TryGet("Errors", out BlittableJsonReaderArray errors) &&
+                    errors.Length > 0)
+                {
+                    var firstErr = errors.First() as BlittableJsonReaderObject;
+                    return firstErr != null &&
+                           (id == null || (firstErr.TryGet("DocumentId", out string documentId) && documentId == id)) &&
+                           firstErr.TryGet("Error", out string error) && error.Contains(err);
+                }
+
+                return false;
             }
         }
     }

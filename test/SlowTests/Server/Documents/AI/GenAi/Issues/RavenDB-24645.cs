@@ -1,13 +1,10 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Server.Documents;
-using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -94,7 +91,7 @@ ai.genContext({})
             Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30)));
         
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            Assert.False(ValidateRefusalNotification(db));
+            Assert.False(ValidateErrorNotification(db, string.Empty));
             using (var session = store.OpenAsyncSession())
             {
                 var item1 = await session.LoadAsync<Item>(FirstItemId);
@@ -149,23 +146,7 @@ ai.genContext({})
             Assert.False(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30)));
 
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            Assert.True(ValidateRefusalNotification(db, "You uploaded an unsupported image."));
-        }
-
-        private static bool ValidateRefusalNotification(DocumentDatabase db, string msg = "")
-        {
-            using (db.NotificationCenter.GetStored(out var actions))
-            {
-                var jsonAlerts = actions.ToList();
-                if (jsonAlerts.Count == 0)
-                    return false;
-                var bjro = jsonAlerts.First().Json;
-
-                return bjro.TryGet("Details", out BlittableJsonReaderObject details) &&
-                       details.TryGet("Errors", out BlittableJsonReaderArray errors) &&
-                       errors.Length > 0 &&
-                       errors.First().ToString()!.Contains(msg);
-            }
+            Assert.True(ValidateErrorNotification(db, "You uploaded an unsupported image."));
         }
 
         private static Stream GetEmbeddedImgStream(string format)

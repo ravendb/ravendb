@@ -11,8 +11,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Json;
-using Raven.Server.Documents;
-using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -112,7 +110,7 @@ ai.genContext({}).withPng(img1);
             Assert.False(item1.ImageDescriptions.Any(d => d.Description == marker.Description));
             var item2Changed = item2.ImageDescriptions.Any(d => d.Description == marker.Description) == false;
             if (withNullAttachments)
-                Assert.True(item2Changed || ValidateRefusalNotification(db));
+                Assert.True(item2Changed || ValidateErrorNotification(db, "The request was refused by the model"));
             else
                 Assert.False(item2Changed);
         }
@@ -249,7 +247,7 @@ ai.genContext({
             Assert.False(transaction1.Summary.Any(d => d.Notes == marker.Notes));
             var transaction2Changed = transaction2.Summary.Any(d => d.Notes == marker.Notes) == false;
             if (withNullAttachments)
-                Assert.True(transaction2Changed || ValidateRefusalNotification(db));
+                Assert.True(transaction2Changed || ValidateErrorNotification(db, "The request was refused by the model"));
             else
                 Assert.False(transaction2Changed);
         }
@@ -351,7 +349,7 @@ ai.genContext({})
 
             Assert.False(item1.FileDescriptions.Any(d => d.Description == marker.Description));
             var item2Changed = item2.FileDescriptions.Any(d => d.Description == marker.Description) == false;
-            Assert.True(item2Changed || ValidateRefusalNotification(db));
+            Assert.True(item2Changed || ValidateErrorNotification(db, "The request was refused by the model"));
         }
     }
 
@@ -559,22 +557,6 @@ for(const comment of this.Comments)
             }
 
             return null;
-        }
-    }
-
-    private static bool ValidateRefusalNotification(DocumentDatabase db)
-    {
-        using (db.NotificationCenter.GetStored(out var actions))
-        {
-            var jsonAlerts = actions.ToList();
-            if (jsonAlerts.Count == 0)
-                return false;
-            var bjro = jsonAlerts.First().Json;
-
-            return bjro.TryGet("Details", out BlittableJsonReaderObject details) &&
-                   details.TryGet("Errors", out BlittableJsonReaderArray errors) &&
-                   errors.Length > 0 &&
-                   errors.First().ToString()!.Contains("The request was refused by the model");
         }
     }
 }

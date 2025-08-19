@@ -241,8 +241,8 @@ var ai = new AI();
                         {
                             //if we arrive here we probably didn't pass through loadAttachment() function
                             data = reference.ToString();
-                            if (type != "text/plain" && Base64Regex.Matches(data).Count == 0)
-                                throw new InvalidOperationException($"Attachment '{filename}' must be loaded or base64 string (on type {type})");
+                            if (type != "text/plain" && Base64Regex.IsMatch(data) == false)
+                                throw new InvalidOperationException($"Attachment must be loaded or base64 string (on type {type})");
                         }
 
                         result.Attachments.Add(new AiAttachment(filename, type, data));
