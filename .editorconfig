@@ -24,6 +24,7 @@ csharp_new_line_before_finally = true
 csharp_new_line_before_members_in_object_initializers = true
 csharp_new_line_before_members_in_anonymous_types = true
 csharp_new_line_between_query_expression_clauses = true
+csharp_max_line_length = 260
 
 # Indentation preferences
 csharp_indent_block_contents = true
@@ -42,6 +43,10 @@ dotnet_style_qualification_for_event = false:suggestion
 csharp_style_var_for_built_in_types = false:none
 csharp_style_var_when_type_is_apparent = false:none
 csharp_style_var_elsewhere = false:suggestion
+
+# initializers, preserve existing and don't force one line
+csharp_keep_existing_initializer_arrangement = true
+csharp_place_simple_initializer_on_single_line = false
 
 # use language keywords instead of BCL types
 dotnet_style_predefined_type_for_locals_parameters_members = true:suggestion
