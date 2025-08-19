@@ -19,9 +19,6 @@ public class RavenDB_24858 : RavenTestBase
     {
     }
 
-    [Obsolete("The `FindPropertyNameForIndexDefinition` convention is a workaround for an issue where `PropertyNameConverter` is not respected during index definition creation. " +
-              "A direct fix is a breaking change scheduled for RavenDB v8.0. " +
-              "The `FindPropertyNameForIndexDefinition` temporary convention was added in v7.1 to address the problem and will be removed in v8.0.")]
     [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Querying)]
     public async Task FindPropertyNameForIndexDefinitionAsWorkaroundInsteadOfPropertyNameConverter_ShouldWork()
     {
@@ -31,7 +28,9 @@ public class RavenDB_24858 : RavenTestBase
             {
                 documentStore.Conventions.FindPropertyNameForIndex = ConvertStripePropertyNamesForIndex;
                 documentStore.Conventions.FindPropertyNameForDynamicIndex = ConvertStripePropertyNamesForIndex;
+#pragma warning disable CS0618 // Type or member is obsolete
                 documentStore.Conventions.FindPropertyNameForIndexDefinition = info => info.Name;
+#pragma warning restore CS0618 // Type or member is obsolete
                 documentStore.Conventions.Serialization = new NewtonsoftJsonSerializationConventions
                 {
                     JsonContractResolver = new IgnoreJsonPropertyNamesForSomeNamespaceContractResolver()

@@ -272,7 +272,9 @@ namespace Raven.Client.Documents.Indexes
 
         private string GetPropertyName(MemberInfo memberInfo)
         {
+#pragma warning disable CS0618 // Type or member is obsolete
             var propName = _conventions.FindPropertyNameForIndexDefinition?.Invoke(memberInfo);
+#pragma warning restore CS0618 // Type or member is obsolete
             if (propName != null)
                 return propName;
 
