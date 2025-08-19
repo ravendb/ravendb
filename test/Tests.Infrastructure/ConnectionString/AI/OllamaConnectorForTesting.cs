@@ -5,7 +5,7 @@ namespace Tests.Infrastructure.ConnectionString.AI;
 
 public class OllamaConnectorForTesting : BaseAiConnectorForTesting<OllamaConnectorForTesting>
 {
-    private const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_OLLAMA_URI";
+    private const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_OLLAMA_EMB_URI";
     private const string Model = "phi:latest";
 
     public OllamaConnectorForTesting()
