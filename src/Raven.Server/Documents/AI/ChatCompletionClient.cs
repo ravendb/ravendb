@@ -148,8 +148,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
             _ = choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal) || msg.TryGet(Constants.ResponseFields.Refusal, out refusal);
 
-            //TODO: full output if we get here?
-            RefusedToAnswerException.Throw(refusal, finishReason, GetRequestId(response.Headers));
+            RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
         }
 
         var result = context.Sync.ReadForMemory(content, "ai/output");
@@ -751,9 +750,6 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string DefaultRelativeUri = "/v1/chat/completions";
             public const string ModelsUri = "/v1/models";
             public const string AuthorizationApiKeyProperty = "Bearer";
-
-            public const string AttachmentType = "Bearer";
-            public const string AttachmentData = "Bearer";
         }
 
         public static class AttachmentsRequestFields

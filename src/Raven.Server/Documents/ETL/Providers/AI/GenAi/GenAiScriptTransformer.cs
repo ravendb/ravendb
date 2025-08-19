@@ -116,16 +116,7 @@ var ai = new AI();
         }
     }
 
-    protected override bool TryGetMissingAttachmentPlaceholder(string attachmentName, ref JsValue loadAttachmentReference, ref Attachment attachment)
-    {
-        // If the attachment does not exist, its key is represented by a new instance of JsNull.
-        loadAttachmentReference = (JsNull)Activator.CreateInstance(typeof(JsNull), true);
-        attachment = new Attachment()
-        {
-            Name = Context.GetLazyString(attachmentName)
-        };
-        return true;
-    }
+    protected override MissingAttachmentPolicy MissingAttachmentOnLoadPolicy => MissingAttachmentPolicy.ReturnEmpty;
 
     protected override void AddLoadedAttachment(JsValue reference, string name, Attachment attachment)
     {

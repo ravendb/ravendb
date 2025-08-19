@@ -22,9 +22,9 @@ namespace Raven.Server.Documents.AI
         public string Refusal;
         public string FinishReason;
 
-        public static void Throw(string refusal, string finishReason, string requestId)
+        public static void Throw(string refusal, string responseContent, string finishReason, string requestId)
         {
-            throw new RefusedToAnswerException($"The request was refused by the model: '{refusal}'")
+            throw new RefusedToAnswerException($"The request was refused by the model: '{refusal}', response content: {responseContent}")
             {
                 Refusal = refusal,
                 FinishReason = finishReason,
