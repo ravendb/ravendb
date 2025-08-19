@@ -7,6 +7,11 @@ using Raven.Client.Documents.Operations.AI.Agents;
 
 namespace Raven.Client.Documents.AI;
 
+/// <summary>
+/// Fluent API for handling tool calls and running a conversation with an AI agent.
+/// Implementations allow registering handlers/receivers for tools, adding responses,
+/// setting the user prompt, and executing conversation turns.
+/// </summary>
 public interface IAiConversationOperations
 {
     /// <summary>
@@ -214,9 +219,18 @@ public interface IAiConversationOperations
     event Func<UnhandledActionEventArgs, Task> OnUnhandledAction;
 }
 
+/// <summary>
+/// Specifies how errors thrown by tool handlers/receivers should be handled.
+/// </summary>
 public enum AiHandleErrorStrategy
 {
+    /// <summary>
+    /// Convert the error to a textual message and send it back to the model as the tool response.
+    /// </summary>
     SendErrorsToModel,
+    /// <summary>
+    /// Throw the exception immediately to the caller instead of sending it to the model.
+    /// </summary>
     RaiseImmediately
 }
 

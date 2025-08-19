@@ -17,6 +17,9 @@ using Sparrow.Json.Sync;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
+/// <summary>
+/// Continues or resumes a conversation with an AI agent, returning a typed response and tool call requests.
+/// </summary>
 public class RunConversationOperation<TSchema> : IMaintenanceOperation<ConversationResult<TSchema>>
 {
     private readonly string _agentId;
@@ -32,6 +35,15 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly Func<string, Task> _streamedChunksCallback;
 #endif
 
+    /// <summary>
+    /// Initializes a new conversation step for the specified agent and conversation.
+    /// </summary>
+    /// <param name="agentId">The agent identifier to route this conversation to.</param>
+    /// <param name="conversationId">The conversation document ID used to maintain state.</param>
+    /// <param name="userPrompt">The user’s prompt to send to the model.</param>
+    /// <param name="actionResponses">Optional responses for tool action requests from a previous step.</param>
+    /// <param name="options">Creation options including timeouts and other preferences.</param>
+    /// <param name="changeVector">Optional expected change vector for optimistic concurrency on the conversation document.</param>
     public RunConversationOperation(
         string agentId,
         string conversationId,
@@ -73,6 +85,9 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
 #endif
     }
 
+    /// <summary>
+    /// Creates the command that will be sent to the server to execute the conversation step.
+    /// </summary>
     public RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
     {
         return new RunConversationOperationCommand(this, conventions);

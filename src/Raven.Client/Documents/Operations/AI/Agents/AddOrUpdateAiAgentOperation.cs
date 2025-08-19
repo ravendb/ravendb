@@ -9,17 +9,30 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.AI.Agents
 {
+    /// <summary>
+    /// Creates or updates an AI agent configuration on the server.
+    /// </summary>
     public class AddOrUpdateAiAgentOperation : IMaintenanceOperation<AiAgentConfigurationResult>
     {
         private readonly object _sampleObject;
         private readonly AiAgentConfiguration _configuration;
 
+        /// <summary>
+        /// Initializes the operation for creating or updating an AI agent configuration.
+        /// </summary>
+        /// <param name="configuration">The agent configuration to store.</param>
         public AddOrUpdateAiAgentOperation(AiAgentConfiguration configuration)
         {
             ValidationMethods.AssertNotNullOrEmpty(configuration, nameof(configuration));
             _configuration = configuration;
         }
 
+        /// <summary>
+        /// Initializes the operation and provides a sample object used to auto-generate a SampleObject payload
+        /// when neither OutputSchema nor SampleObject is specified in the configuration.
+        /// </summary>
+        /// <param name="configuration">The agent configuration to store.</param>
+        /// <param name="sampleObject">An example .NET object describing expected output shape.</param>
         public AddOrUpdateAiAgentOperation(AiAgentConfiguration configuration, object sampleObject) : this(configuration)
         {
             _sampleObject = sampleObject;
@@ -28,8 +41,14 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         private static bool HasNoSampleObjectOrSchema(AiAgentConfiguration configuration) => 
             string.IsNullOrWhiteSpace(configuration.OutputSchema) && string.IsNullOrWhiteSpace(configuration.SampleObject);
 
+        /// <summary>
+        /// Helper for strong-typed creation that uses a type to infer a sample output schema.
+        /// </summary>
         public static AddOrUpdateAiAgentOperation Create<T>(AiAgentConfiguration configuration, T outputType) => new(configuration, outputType);
 
+        /// <summary>
+        /// Creates the underlying command that will be sent to the server.
+        /// </summary>
         public RavenCommand<AiAgentConfigurationResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
         {
             if (_sampleObject != null && HasNoSampleObjectOrSchema(_configuration))

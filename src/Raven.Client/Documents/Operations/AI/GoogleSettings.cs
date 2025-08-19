@@ -4,6 +4,9 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
+/// <summary>
+/// Configuration for Google AI (Gemini) embeddings and related services.
+/// </summary>
 public sealed class GoogleSettings : AbstractAiSettings
 {
     public GoogleSettings(string model, string apiKey, GoogleAIVersion? aiVersion = null, int? dimensions = null)
