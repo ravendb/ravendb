@@ -228,7 +228,11 @@ namespace Sparrow.LowMemory
 
                 _lowMemoryMonitor = monitor;
 
-                var thread = new Thread(MonitorMemoryUsage) { IsBackground = true, Name = NotificationThreadName };
+                var thread = new Thread(MonitorMemoryUsage) 
+                {
+                    IsBackground = true, 
+                    Name = NotificationThreadName
+                };
 
                 thread.Start();
 
@@ -282,8 +286,7 @@ namespace Sparrow.LowMemory
                         try
                         {
                             if (_logger.IsInfoEnabled)
-                                _logger.Info(
-                                    "Out of memory error in the low memory notification thread, will wait 5 seconds before trying to check memory status again. The system is likely running out of memory");
+                                _logger.Info("Out of memory error in the low memory notification thread, will wait 5 seconds before trying to check memory status again. The system is likely running out of memory");
                         }
                         catch
                         {

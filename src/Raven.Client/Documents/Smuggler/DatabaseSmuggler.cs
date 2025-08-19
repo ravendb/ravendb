@@ -350,8 +350,7 @@ namespace Raven.Client.Documents.Smuggler
             private readonly long _operationId;
             private readonly TaskCompletionSource<object> _tcs;
 
-            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerExportOptions options,
-                Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs, string nodeTag)
+            public ExportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerExportOptions options, Func<Stream, Task> handleStreamResponse, long operationId, TaskCompletionSource<object> tcs, string nodeTag)
             {
                 if (options == null)
                     throw new ArgumentNullException(nameof(options));
@@ -407,8 +406,7 @@ namespace Raven.Client.Documents.Smuggler
 
             public override bool IsReadRequest => false;
 
-            public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId,
-                TaskCompletionSource<object> tcs, DatabaseSmuggler parent, string nodeTag)
+            public ImportCommand(DocumentConventions conventions, JsonOperationContext context, DatabaseSmugglerImportOptions options, Stream stream, long operationId, TaskCompletionSource<object> tcs, DatabaseSmuggler parent, string nodeTag)
             {
                 _conventions = conventions ?? throw new ArgumentNullException(nameof(conventions));
                 _stream = stream ?? throw new ArgumentNullException(nameof(stream));
@@ -434,14 +432,19 @@ namespace Raven.Client.Documents.Smuggler
 
                 var form = new MultipartFormDataContent
                 {
-                    {
-                        new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _options).ConfigureAwait(false), _conventions),
-                        Constants.Smuggler.ImportOptions
-                    },
-                    { new StreamContentWithConfirmation(_stream, _tcs, _parent), "file", "name" }
+                    {new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _options).ConfigureAwait(false), _conventions), Constants.Smuggler.ImportOptions},
+                    {new StreamContentWithConfirmation(_stream, _tcs, _parent), "file", "name"}
                 };
 
-                return new HttpRequestMessage { Headers = { TransferEncodingChunked = true }, Method = HttpMethod.Post, Content = form };
+                return new HttpRequestMessage
+                {
+                    Headers =
+                    {
+                        TransferEncodingChunked = true
+                    },
+                    Method = HttpMethod.Post,
+                    Content = form
+                };
             }
         }
 

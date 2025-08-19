@@ -74,7 +74,11 @@ public abstract class AbstractRaftIndexNotifications<TNotification> : IDisposabl
     {
         if (e != null)
         {
-            Errors.Enqueue(new ErrorHolder { Index = index, Exception = ExceptionDispatchInfo.Capture(e) });
+            Errors.Enqueue(new ErrorHolder
+            {
+                Index = index,
+                Exception = ExceptionDispatchInfo.Capture(e)
+            });
 
             if (Interlocked.Increment(ref _numberOfErrors) > 25)
             {
