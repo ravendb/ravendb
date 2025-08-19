@@ -1,14 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Session;
-using Raven.Client.Util;
 using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
-    internal class SessionBlittableJsonConverter : BlittableJsonConverterBase, ISessionBlittableJsonConverter
+    internal class SessionBlittableJsonConverter : BlittableJsonConverterWithMissingProperties, ISessionBlittableJsonConverter
     {
         private readonly InMemoryDocumentSessionOperations _session;
 
@@ -143,6 +143,24 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 
                 return document;
             }
+        }
+
+        public void Clear()
+        {
+            MissingProperties?.Clear();
+        }
+
+        protected IEnumerable<KeyValuePair<object, object>> FillMissingProperties(object o)
+        {
+            if (MissingProperties != null && MissingProperties.TryGetValue(o, out var props))
+                return props;
+
+            return Enumerable.Empty<KeyValuePair<object, object>>();
+        }
+
+        public void RemoveFromMissing<T>(T entity)
+        {
+            MissingProperties?.Remove(entity);
         }
     }
 }

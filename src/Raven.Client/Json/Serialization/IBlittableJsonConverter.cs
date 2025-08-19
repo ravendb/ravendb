@@ -24,6 +24,8 @@ namespace Raven.Client.Json.Serialization
     public interface ISubscriptionsBlittableJsonConverter : IBlittableJsonConverterBase
     {
         T FromBlittable<T>(BlittableJsonReaderObject json, string id = null);
+
+        internal Dictionary<object, Dictionary<object, object>> MissingProperties { get; set; }
     }
 
     public interface ISessionBlittableJsonConverter : IBlittableJsonConverterBase
@@ -41,6 +43,8 @@ namespace Raven.Client.Json.Serialization
         void RemoveFromMissing<T>(T entity);
 
         void Clear();
+
+        internal Dictionary<object, Dictionary<object, object>> MissingProperties { get; set; }
     }
 
     public interface IBlittableJsonConverterBase
@@ -48,7 +52,5 @@ namespace Raven.Client.Json.Serialization
         void PopulateEntity(object entity, BlittableJsonReaderObject json);
 
         void PopulateEntity(object entity, BlittableJsonReaderObject json, IJsonSerializer jsonSerializer);
-
-        Dictionary<object, Dictionary<object, object>> MissingProperties { get; set; }
     }
 }

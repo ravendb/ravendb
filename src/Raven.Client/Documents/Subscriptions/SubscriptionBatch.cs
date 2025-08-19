@@ -173,6 +173,7 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 s.JsonConverter.MissingProperties = _requestExecutor.Conventions.Serialization.SubscriptionsConverter.MissingProperties;
             }
+
             foreach (var item in Items)
             {
                 if (item.Projection || item.Revision)

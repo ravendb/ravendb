@@ -5,7 +5,7 @@ using Sparrow.Json;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson.Internal
 {
-    internal class SubscriptionBlittableJsonConverter : BlittableJsonConverterBase, ISubscriptionsBlittableJsonConverter
+    internal class SubscriptionBlittableJsonConverter : BlittableJsonConverterWithMissingProperties, ISubscriptionsBlittableJsonConverter
     {
         public SubscriptionBlittableJsonConverter(ISerializationConventions conventions) : base(conventions)
         {
