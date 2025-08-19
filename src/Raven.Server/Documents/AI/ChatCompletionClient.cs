@@ -214,12 +214,6 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             RequestUri = new Uri(Constants.RequestFields.DefaultRelativeUri, UriKind.Relative)
         };
 
-        if (string.IsNullOrEmpty(_organizationId) == false)
-            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiOrganization, _organizationId);
-
-        if (string.IsNullOrEmpty(_projectId) == false)
-            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiProject, _projectId);
-
         return request;
     }
 
@@ -292,12 +286,6 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             RequestUri = new Uri(Constants.RequestFields.ModelsUri, UriKind.Relative)
         };
 
-        if (string.IsNullOrEmpty(_organizationId) == false)
-            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiOrganization, _organizationId);
-
-        if (string.IsNullOrEmpty(_projectId) == false)
-            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiProject, _projectId);
-
         AddDefaultHeaders(request);
         using var r = await _client.SendAsync(request, token);
 
@@ -311,6 +299,12 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
     {
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(Constants.RequestFields.MediaTypeApplicationJson));
         request.Headers.Authorization = string.IsNullOrEmpty(_apiKey) ? null : new AuthenticationHeaderValue(Constants.RequestFields.AuthorizationApiKeyProperty, _apiKey);
+
+        if (string.IsNullOrEmpty(_organizationId) == false)
+            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiOrganization, _organizationId);
+
+        if (string.IsNullOrEmpty(_projectId) == false)
+            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiProject, _projectId);
     }
 
     public virtual async Task<BlittableJsonReaderObject> GetResponseContentAsync(JsonOperationContext context, HttpResponseMessage response, CancellationToken token)
