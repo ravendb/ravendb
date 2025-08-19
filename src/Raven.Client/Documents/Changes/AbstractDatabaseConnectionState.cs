@@ -30,15 +30,17 @@ internal abstract class AbstractDatabaseConnectionState
         {
             var task = _firstSet.Task.IgnoreUnobservedExceptions();
 
-            connection.ContinueWith(t =>
+            connection.ContinueWith(static (t, firstSet) =>
             {
+                var tcs = (TaskCompletionSource<object>)firstSet;
+                
                 if (t.IsFaulted)
-                    _firstSet.TrySetException(t.Exception);
+                    tcs.TrySetException(t.Exception);
                 else if (t.IsCanceled)
-                    _firstSet.TrySetCanceled();
+                    tcs.TrySetCanceled();
                 else
-                    _firstSet.TrySetResult(null);
-            });
+                    tcs.TrySetResult(null);
+            }, _firstSet);
         }
         _connected = connection;
     }
