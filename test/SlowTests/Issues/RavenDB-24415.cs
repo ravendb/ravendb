@@ -19,7 +19,7 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenFact(RavenTestCategory.Attachments, Skip = "TODO: Egor unskip when RavenDB-24543 is implemented")]
+        [RavenFact(RavenTestCategory.Attachments)]
         public async Task Can_Get_Missing_attachments()
         {
             var dest = "Can_push_via_filtered_replication_2.0-5";

@@ -323,7 +323,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Advanced.Attachments.Store(id, "my_file", fileStream);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 991;
+                    expectedSize = 968;
                 }
 
                 AssertStats(db, bucket, expectedSize);
@@ -344,7 +344,7 @@ namespace SlowTests.Sharding.Cluster
                     user.Name = "b";
                     await session.SaveChangesAsync();
 
-                    expectedSize = 2611;
+                    expectedSize = 2542;
                 }
 
                 AssertStats(db, bucket, expectedSize);
@@ -364,7 +364,7 @@ namespace SlowTests.Sharding.Cluster
                     }, id3);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 3677;
+                    expectedSize = 3608;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
@@ -381,7 +381,7 @@ namespace SlowTests.Sharding.Cluster
 
                     await session.SaveChangesAsync();
 
-                    expectedSize = 4963;
+                    expectedSize = 4894;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
@@ -393,7 +393,7 @@ namespace SlowTests.Sharding.Cluster
 
                     await session.SaveChangesAsync();
 
-                    expectedSize = 5074;
+                    expectedSize = 5005;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 3);
@@ -403,7 +403,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id3);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 5058;
+                    expectedSize = 4989;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 2);
@@ -413,7 +413,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id2);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 4251;
+                    expectedSize = 4182;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 1);
@@ -423,7 +423,7 @@ namespace SlowTests.Sharding.Cluster
                     session.Delete(id);
                     await session.SaveChangesAsync();
 
-                    expectedSize = 3726;
+                    expectedSize = 3680;
                 }
 
                 AssertStats(db, bucket, expectedSize, expectedDocs: 0);
@@ -571,7 +571,7 @@ namespace SlowTests.Sharding.Cluster
                 using (ctx.OpenReadTransaction())
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
-                    Assert.Equal(104858186, stats.Size);
+                    Assert.Equal(104858163, stats.Size);
                     Assert.Equal(1, stats.NumberOfDocuments);
 
                     var attachmentMetadata = db.DocumentsStorage.AttachmentsStorage.GetAttachmentsMetadataForDocumentWithCounts(ctx, id).FirstOrDefault();
@@ -605,7 +605,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(3, count.RegularHashes); // document attachment + 2 revision attachments
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
-                    Assert.Equal(104859472, stats.Size);
+                    Assert.Equal(104859403, stats.Size);
                     Assert.Equal(1, stats.NumberOfDocuments);
                 }
 
@@ -623,7 +623,7 @@ namespace SlowTests.Sharding.Cluster
                     Assert.Equal(2, count.RegularHashes); // 2 revision attachments
 
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
-                    Assert.Equal(104859240, stats.Size);
+                    Assert.Equal(104859194, stats.Size);
                     Assert.Equal(0, stats.NumberOfDocuments);
                 }
 

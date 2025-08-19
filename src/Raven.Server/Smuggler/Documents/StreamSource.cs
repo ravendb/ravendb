@@ -1891,18 +1891,6 @@ namespace Raven.Server.Smuggler.Documents
                             }
                         }
 
-                        if (attachmentInMetadata.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParameters) == false)
-                        {
-                            if (attachmentInMetadata.Modifications == null)
-                            {
-                                attachmentInMetadata.Modifications = new DynamicJsonValue(attachmentInMetadata) { [nameof(AttachmentName.RetireParameters)] = null };
-                            }
-                            else
-                            {
-                                attachmentInMetadata.Modifications[nameof(AttachmentName.RetireParameters)] = null;
-                            }
-                        }
-
                         if (attachmentInMetadata.Modifications != null)
                         {
                             didWork = true;

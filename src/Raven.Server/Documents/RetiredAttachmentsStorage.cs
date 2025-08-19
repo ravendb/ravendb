@@ -415,7 +415,7 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
 
         // Both values are present - check what changed
         var retireAtChanged = newRetireAtDt.Value.Ticks != currentDt;
-        var identifierChanged = currentIdentifier != newIdentifier;
+        var identifierChanged = HasIdentifierChanged(currentIdentifier, newIdentifier);
 
         if (retireAtChanged == false && identifierChanged == false)
         {
@@ -428,6 +428,11 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         TryPutRetiredAttachment(context, keySlice, newRetireAtDt, newIdentifier, out currentDt);
 
         return currentDt;
+    }
+
+    private static bool HasIdentifierChanged(string currentIdentifier, string newIdentifier)
+    {
+        return (string.IsNullOrEmpty(currentIdentifier) && string.IsNullOrEmpty(newIdentifier)) == false && currentIdentifier != newIdentifier;
     }
 
     private void TryPutRetiredAttachment(DocumentsOperationContext context, Slice keySlice, DateTime? retireAtDt, string identifier, out long retireAt)

@@ -2,7 +2,6 @@
 using System.IO;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.PeriodicBackup.DirectDownload;
 using Raven.Server.ServerWide;
@@ -16,17 +15,15 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
         {
         }
 
-        public override string CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
+        public override void CheckAttachmentFlagAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
         {
             if (attachment.RetireParameters.IsRetiredAttachment())
             {
                 throw new InvalidOperationException($"Cannot bulk get attachment '{name}' on document '{documentId}' because it is retired. Please use dedicated API.");
             }
-
-            return null;
         }
 
-        public override Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment, string collection)
+        public override Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment)
         {
             return Task.FromResult(attachment.Stream);
         }

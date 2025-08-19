@@ -633,14 +633,13 @@ namespace Raven.Server.Documents
                 if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                     attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
                     attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
-                    attachment.TryGet(nameof(AttachmentName.Size), out long size) == false ||
-                    attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParamsBjro) == false)
+                    attachment.TryGet(nameof(AttachmentName.Size), out long size) == false)
                     throw new ArgumentException($"The attachment info in missing a mandatory value: {attachment}");
 
                 var cv = Slices.Empty;
                 var type = AttachmentType.Document;
                 RetireAttachmentParameters retireParams = null;
-                if (retireParamsBjro != null)
+                if (attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParamsBjro) && retireParamsBjro != null)
                 {
                     retireParams = JsonDeserializationClient.RetireAttachmentParameters(retireParamsBjro);
                 }
@@ -816,20 +815,26 @@ namespace Raven.Server.Documents
 
         public DynamicJsonArray GetAttachmentsMetadataForDocument(DocumentsOperationContext context, Slice lowerDocumentId)
         {
-             
             var attachments = new DynamicJsonArray();
             using (AttachmentKey.GetPrefix(context, lowerDocumentId, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
             {
                 foreach (Attachment attachment in GetAttachmentsForDocument(context, prefixSlice))
                 {
-                    attachments.Add(new DynamicJsonValue
+                    var djv = new DynamicJsonValue
                     {
                         [nameof(AttachmentName.Name)] = attachment.Name,
                         [nameof(AttachmentName.Hash)] = attachment.Base64Hash.ToString(),
                         [nameof(AttachmentName.ContentType)] = attachment.ContentType,
                         [nameof(AttachmentName.Size)] = attachment.Size,
-                        [nameof(AttachmentName.RetireParameters)] = attachment.RetireParameters?.ToJson()
-                    });
+   
+                    };
+
+                    if (attachment.RetireParameters != null)
+                    {
+                        djv[nameof(AttachmentName.RetireParameters)] = attachment.RetireParameters.ToJson();
+                    }
+
+                    attachments.Add(djv);
                 }
             }
             return attachments;
@@ -1262,13 +1267,13 @@ namespace Raven.Server.Documents
                 if (conflictAttachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue conflictName) == false ||
                     conflictAttachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue conflictContentType) == false ||
                     conflictAttachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue conflictHash) == false ||
-                    conflictAttachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject conflictRetireParamsBjro) == false ||
                     conflictAttachment.TryGet(nameof(AttachmentName.Size), out long conflictSize) == false)
                 {
                     Debug.Assert(false, "Should never happen.");
                     continue;
                 }
 
+                conflictAttachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject conflictRetireParamsBjro);
                 var attachmentFoundInResolveDocument = false;
                 if (attachments != null)
                 {
@@ -1277,12 +1282,13 @@ namespace Raven.Server.Documents
                         if (attachment.TryGet(nameof(AttachmentName.Name), out LazyStringValue name) == false ||
                             attachment.TryGet(nameof(AttachmentName.ContentType), out LazyStringValue contentType) == false ||
                             attachment.TryGet(nameof(AttachmentName.Hash), out LazyStringValue hash) == false ||
-                            attachment.TryGet(nameof(AttachmentName.Size), out long size) == false ||
-                            attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParamsBjro) == false)
+                            attachment.TryGet(nameof(AttachmentName.Size), out long size) == false)
                         {
                             Debug.Assert(false, "Should never happen.");
                             continue;
                         }
+
+                        attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParamsBjro);
 
                         if (conflictName.Equals(name) &&
                             conflictContentType.Equals(contentType) &&
@@ -1320,14 +1326,7 @@ namespace Raven.Server.Documents
             {
                 var lastModifiedTicks = _documentDatabase.Time.GetUtcNow().Ticks;
 
-                if (retiredParams is { Flags: RetiredAttachmentFlags.Retired })
-                {
-                    DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
-                }
-                else
-                {
-                    DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
-                }
+                DeleteAttachmentDirect(context, keySlice, false, null, null, changeVector, lastModifiedTicks);
             }
         }
 

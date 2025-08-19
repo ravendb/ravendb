@@ -1145,7 +1145,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(9068, stats.Size);
+                    Assert.Equal(8907, stats.Size);
                     Assert.Equal(4, stats.NumberOfDocuments);
                 }
 
@@ -1217,7 +1217,7 @@ namespace SlowTests.Sharding.Cluster
                 {
                     var stats = ShardedDocumentsStorage.GetBucketStatisticsFor(ctx, bucket);
                     Assert.Equal(bucket, stats.Bucket);
-                    Assert.Equal(9938, stats.Size);
+                    Assert.Equal(9777, stats.Size);
                     Assert.Equal(4, stats.NumberOfDocuments);
                 }
 

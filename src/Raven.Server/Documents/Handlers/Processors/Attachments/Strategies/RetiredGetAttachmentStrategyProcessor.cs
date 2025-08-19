@@ -1,8 +1,6 @@
-﻿using System;
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
-using Raven.Client.Documents.Attachments;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
@@ -14,9 +12,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
 
         }
 
-        public override string CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
+        public override void CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
         {
-            return IGetAttachmentStrategy.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, "get");
+            IGetAttachmentStrategy.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, "get");
         }
 
         public override void DisposeReadTransactionIfNeeded(DocumentsTransaction tx)
@@ -24,7 +22,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
             tx.Dispose();
         }
 
-        public override async Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, string collection, CancellationToken token)
+        public override async Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, CancellationToken token)
         {
             var tcs = RequestHandler.CreateHttpRequestBoundOperationToken(token);
             using var downloader = RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.GetDownloader(attachment, tcs);

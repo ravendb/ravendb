@@ -62,14 +62,13 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                             canDisposeReadTransaction = false;
                         }
 
-                        var collection = strategy.CheckAttachmentFlagAndThrowIfNeeded(context, attachment, id, name);
-
+                        strategy.CheckAttachmentFlagAndThrowIfNeeded(context, attachment, id, name);
 
                         if (first == false)
                             writer.WriteComma();
                         first = false;
 
-                        var attachmentStream = strategy.GetAttachmentStream(downloader, attachment, collection);
+                        var attachmentStream = strategy.GetAttachmentStream(downloader, attachment);
                         tasks.Add(attachmentStream);
 
                         strategy.WriteAttachmentDetails(writer, attachment, id);

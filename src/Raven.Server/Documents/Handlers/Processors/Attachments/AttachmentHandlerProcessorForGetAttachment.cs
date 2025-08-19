@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.ServerWide.Context;
@@ -36,7 +35,7 @@ internal class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHa
                   ? new RetiredGetAttachmentStrategyProcessor(RequestHandler)
                   : new RegularGetAttachmentStrategyProcessor(RequestHandler);
 
-            var collection = strategy.CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(context, attachment, documentId, name);
+            strategy.CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(context, attachment, documentId, name);
 
             var attachmentChangeVector = RequestHandler.GetStringFromHeaders(Constants.Headers.IfNoneMatch);
             if (attachmentChangeVector == attachment.ChangeVector)
@@ -81,7 +80,7 @@ internal class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHa
 
             strategy.DisposeReadTransactionIfNeeded(tx);
 
-            await strategy.WriteResponseStream(context, attachment, collection, token);
+            await strategy.WriteResponseStream(context, attachment, token);
         }
     }
 }

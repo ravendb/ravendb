@@ -20,6 +20,7 @@
     <Compile Remove="Data\RavenDB_14939\MyAnalyzer.cs" />
   </ItemGroup>
   <ItemGroup>
+    <None Remove="Data\Attachments\RavenDB_24543\Northwind.zip" />
     <None Remove="Data\legacy-counters.4.1.5.ravendbdump" />
     <None Remove="Data\RavenDB_11488\ravendb-11488-artificial-docs-not-included.ravendbdump" />
     <None Remove="Data\RavenDB-12785.ravendbdump" />
@@ -68,6 +69,8 @@
     </Content>
     <EmbeddedResource Include="Corax\Bugs\repro-2.log.gz" />
     <EmbeddedResource Include="Corax\Bugs\repro-4.log.gz" />
+    <EmbeddedResource Include="Data\Attachments\RavenDB_24543\DumpofNorthwind.ravendbdump" />
+    <EmbeddedResource Include="Data\Attachments\RavenDB_24543\Northwind.zip" />
     <EmbeddedResource Include="Data\legacy-counters.4.1.5.ravendbdump" />
     <EmbeddedResource Include="Data\npgsql.basic.create.sql" />
     <EmbeddedResource Include="Data\npgsql.basic.insert.sql" />
