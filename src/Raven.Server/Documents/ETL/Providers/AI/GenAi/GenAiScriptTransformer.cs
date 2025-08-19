@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using Jint;
 using Jint.Native;
 using Jint.Native.Function;
@@ -240,6 +241,8 @@ var ai = new AI();
                         {
                             //if we arrive here we probably didn't pass through loadAttachment() function
                             data = reference.ToString();
+                            if (type != "text/plain" && Base64Regex.Matches(data).Count == 0)
+                                throw new InvalidOperationException($"Attachment '{filename}' must be loaded or base64 string (on type {type})");
                         }
 
                         result.Attachments.Add(new AiAttachment(filename, type, data));
@@ -249,7 +252,9 @@ var ai = new AI();
             }
         }
     }
-    
+
+    public static readonly Regex Base64Regex = new(@"^[a-zA-Z0-9+/]*={0,2}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private static bool ShouldSendContext(string hash, string taskIdentifier, Document doc)
     {
         if (doc.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||

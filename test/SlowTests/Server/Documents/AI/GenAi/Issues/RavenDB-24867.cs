@@ -15,6 +15,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Client.Json.Serialization;
 using Raven.Client.Util;
+using Raven.Server.Documents;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
 using Raven.Server.ServerWide.Context;
@@ -38,20 +39,95 @@ public class RavenDB_24867(ITestOutputHelper output) : RavenTestBase(output)
 
     [RavenTheory(RavenTestCategory.Ai)]
     [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
-    public async Task PndAsBase64Directly(Options options, GenAiConfiguration config)
+    public async Task PngAsBase64Directly(Options options, GenAiConfiguration config)
     {
         string script = 
             $"const heart = '{HeartPngBase64}'; const star = '{StarPngBase64}'; " +
             @"
-let ctx = ai.genContext({});
+if (this.Name === 'shahar') {
+    ai.genContext({}).withPng(heart);
+    return;
+}
 
+if (this.Name === 'aviv') {
+    ai.genContext({}).withPng(star);
+    return;
+}
+";
+
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        config.Prompt = "Describe the following images." + NonEmptyAnswerHint;
+        config.Collection = "Users";
+        config.SampleObject = JsonConvert.SerializeObject(new
+        {
+            ImageDescriptions = new[]
+            {
+                new { Description = "Detailed description of the image", SafeForWork = true, Tags = new[] { "matching tags for the image" } }
+            }
+        });
+        config.UpdateScript = @"this.ImageDescriptions = $output.ImageDescriptions;";
+        config.GenAiTransformation = new GenAiTransformation { Script = script };
+
+        await store.Maintenance.SendAsync(new AddGenAiOperation(config));
+
+        var etl = Etl.WaitForEtlToComplete(store);
+
+        var marker = new[] { new ImageDescription("None" + Guid.NewGuid(), false, null) };
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new User()
+            {
+                Id = "Users/1",
+                Name = "shahar",
+                ImageDescriptions = marker
+            });
+            await session.StoreAsync(new User()
+            {
+                Id = "Users/2",
+                Name = "aviv",
+                ImageDescriptions = marker
+            });            
+            await session.StoreAsync(new User()
+            {
+                Id = "Users/3",
+                Name = "karmel",
+                ImageDescriptions = marker
+            });
+
+            await session.SaveChangesAsync();
+        }
+
+        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var user1 = await session.LoadAsync<User>("Users/1");
+            var user2 = await session.LoadAsync<User>("Users/2");
+            var user3 = await session.LoadAsync<User>("Users/3");
+
+            Assert.NotEqual(marker[0].Description, user1.ImageDescriptions[0].Description);
+            Assert.NotEqual(marker[0].Description, user2.ImageDescriptions[0].Description);
+            Assert.Equal(marker[0].Description, user3.ImageDescriptions[0].Description);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    public async Task PngNotAsBase64ShouldThrow(Options options, GenAiConfiguration config)
+    {
+        string script =
+            $"const heart = '{HeartPngBase64}'; " +
+            @"
 if (this.Name === 'Shahar') {
-    ctx.withPng(heart);
+    ai.genContext({}).withPng(heart);
     return;
 }
 
 if (this.Name === 'Aviv') {
-    ctx.withPng(star);
+    ai.genContext({}).withPng('This is a star');
     return;
 }
 ";
@@ -90,7 +166,7 @@ if (this.Name === 'Aviv') {
                 Id = "Users/2",
                 Name = "Aviv",
                 ImageDescriptions = marker
-            });            
+            });
             await session.StoreAsync(new User()
             {
                 Id = "Users/3",
@@ -108,10 +184,37 @@ if (this.Name === 'Aviv') {
             var user1 = await session.LoadAsync<User>("Users/1");
             var user2 = await session.LoadAsync<User>("Users/2");
             var user3 = await session.LoadAsync<User>("Users/3");
-
+        
             Assert.NotEqual(marker[0].Description, user1.ImageDescriptions[0].Description);
-            Assert.NotEqual(marker[0].Description, user2.ImageDescriptions[0].Description);
+            Assert.Equal(marker[0].Description, user2.ImageDescriptions[0].Description);
             Assert.Equal(marker[0].Description, user3.ImageDescriptions[0].Description);
+        }
+
+        var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+        Assert.True(ValidateErrorNotification(db, "Users/2", "Attachment 'unknown.name' must be loaded or base64 string (on type image/png)"));
+    }
+
+    private static bool ValidateErrorNotification(DocumentDatabase db, string id, string err)
+    {
+        using (db.NotificationCenter.GetStored(out var actions))
+        {
+            var jsonAlerts = actions.ToList();
+            if (jsonAlerts.Count == 0)
+                return false;
+            var bjro = jsonAlerts.First().Json;
+
+            if (bjro.TryGet("Details", out BlittableJsonReaderObject details) &&
+                details.TryGet("Errors", out BlittableJsonReaderArray errors) &&
+                errors.Length > 0)
+            {
+                var firstErr = errors.First() as BlittableJsonReaderObject;
+                return firstErr!= null && 
+                       firstErr.TryGet("DocumentId", out string documentId) && 
+                       firstErr.TryGet("Error", out string error) &&
+                       documentId == id && error.Contains(err);
+            }
+            
+            return false;
         }
     }
 
