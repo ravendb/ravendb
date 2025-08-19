@@ -61,10 +61,12 @@ namespace Raven.Server.Documents
             public long Etag;
         }
 
-        internal sealed class DbIdsHolder
+        internal sealed class DbIdsHolder : IDisposable
         {
             private readonly BlittableJsonReaderArray _dbIdsBlittableArray;
             public readonly List<LazyStringValue> dbIdsList;
+
+            private readonly List<IDisposable> _lazyStrings = new();
 
             public DbIdsHolder(BlittableJsonReaderArray dbIds)
             {
@@ -87,9 +89,21 @@ namespace Raven.Server.Documents
                     dbIdsList.Add(dbId);
                     _dbIdsBlittableArray.Modifications ??= new DynamicJsonArray();
                     _dbIdsBlittableArray.Modifications.Add(dbId);
+
+                    _lazyStrings.Add(dbId);
                 }
 
                 return dbIdIndex;
+            }
+
+            public void Dispose()
+            {
+                foreach (var lsv in _lazyStrings)
+                {
+                    lsv.Dispose();
+                }
+
+                _lazyStrings.Clear();
             }
         }
 
@@ -809,13 +823,19 @@ namespace Raven.Server.Documents
             }
         }
 
-        internal sealed class PutCountersData
+        internal sealed class PutCountersData : IDisposable
         {
             public BlittableJsonReaderObject Data;
             public DbIdsHolder DbIdsHolder;
             public ChangeVector ChangeVector;
             public bool Modified;
             public ByteStringContext.InternalScope KeyScope;
+            
+            public void Dispose()
+            {
+                KeyScope.Dispose();
+                DbIdsHolder.Dispose();
+            }
         }
 
         public bool PutCounters(DocumentsOperationContext context, string documentId, string collection, ChangeVector changeVector,
@@ -1081,10 +1101,10 @@ namespace Raven.Server.Documents
                     s.Dispose();
                 }
 
-                foreach (var kvp in entriesToUpdate)
+                foreach (var (key, countersData) in entriesToUpdate)
                 {
-                    kvp.Value.KeyScope.Dispose();
-                    kvp.Key.Dispose();
+                    key.Dispose();
+                    countersData.Dispose();
                 }
 
                 _counterModificationMemoryScopes.Clear();
@@ -1304,21 +1324,22 @@ namespace Raven.Server.Documents
         {
             foreach (var entry in deletedCv)
             {
-                using (var dbIdLsv = context.GetLazyString(entry.DbId))
+                var dbIdLsv = context.GetLazyString(entry.DbId);
+                var dbIdIndex = dbIdsHolder.GetOrAddDbIdIndex(dbIdLsv);
+                if (dbIdIndex < localCounterValues.Length / SizeOfCounterValues)
                 {
-                    var dbIdIndex = dbIdsHolder.GetOrAddDbIdIndex(dbIdLsv);
-                    if (dbIdIndex < localCounterValues.Length / SizeOfCounterValues)
+                    var current = (CounterValues*)localCounterValues.Address + dbIdIndex;
+                    if (entry.Etag > current->Etag)
                     {
-                        var current = (CounterValues*)localCounterValues.Address + dbIdIndex;
-                        if (entry.Etag > current->Etag)
-                        {
-                            current->Etag = entry.Etag;
-                        }
+                        current->Etag = entry.Etag;
                     }
-                    else
-                    {
-                        localCounterValues = AddPartialValueToExistingCounter(context, localCounterValues, dbIdIndex, 0, entry.Etag);
-                    }
+
+                    // already exists in dbIds, safe to dispose
+                    dbIdLsv.Dispose();
+                }
+                else
+                {
+                    localCounterValues = AddPartialValueToExistingCounter(context, localCounterValues, dbIdIndex, 0, entry.Etag);
                 }
             }
         }
