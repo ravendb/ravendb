@@ -1,0 +1,125 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
+using FastTests;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Raven.Client.Http;
+using Raven.Client.Json;
+using Raven.Client.Json.Serialization;
+using Raven.Client.Util;
+using Raven.Server.Documents.ETL.Providers.AI.GenAi;
+using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
+using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Tests.Infrastructure;
+using Xunit;
+using Xunit.Abstractions;
+
+namespace SlowTests.Server.Documents.AI.GenAi.Issues;
+
+public class RavenDB_24867(ITestOutputHelper output) : RavenTestBase(output)
+{
+    private const string HeartPngBase64 =
+"iVBORw0KGgoAAAANSUhEUgAAACAAAAAgCAYAAABzenr0AAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAGHaVRYdFhNTDpjb20uYWRvYmUueG1wAAAAAAA8P3hwYWNrZXQgYmVnaW49J++7vycgaWQ9J1c1TTBNcENlaGlIenJlU3pOVGN6a2M5ZCc/Pg0KPHg6eG1wbWV0YSB4bWxuczp4PSJhZG9iZTpuczptZXRhLyI+PHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj48cmRmOkRlc2NyaXB0aW9uIHJkZjphYm91dD0idXVpZDpmYWY1YmRkNS1iYTNkLTExZGEtYWQzMS1kMzNkNzUxODJmMWIiIHhtbG5zOnRpZmY9Imh0dHA6Ly9ucy5hZG9iZS5jb20vdGlmZi8xLjAvIj48dGlmZjpPcmllbnRhdGlvbj4xPC90aWZmOk9yaWVudGF0aW9uPjwvcmRmOkRlc2NyaXB0aW9uPjwvcmRmOlJERj48L3g6eG1wbWV0YT4NCjw/eHBhY2tldCBlbmQ9J3cnPz4slJgLAAAA1ElEQVRYR+2WORLDIAxF5Rwhvcvc/0Ap0+cKpMID4gtJmK3IqzwYfb2Rl+EIIQRayIMvzObQJvA9X9f18/PO7kl4akSBNATBg737I1BAC4vEUOt+AiKFgCesBS6QvYSjmxPosfwruAS42UjSXvtMYBV/gX0E+A9iJGmvfSawikxgxmPgPfaaAAHDnqDsQmA2UACZ3kXKhAJUKWihliUKkFJoRcuoCpAhoIalVhUgYxDHWmMSIEcgOfcWp2IL0vHN0zhinkAKaoTWLDRNoCdNE+jJcoEf1VNdHhBR9pYAAAAASUVORK5CYII=";
+
+    private const string StarPngBase64 =
+        "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";
+
+    private const string NonEmptyAnswerHint =
+        " ;Always provide a valid structured response matching the schema (if you have no answer or an empty answer - please return default values instead)";
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    public async Task PndAsBase64Directly(Options options, GenAiConfiguration config)
+    {
+        string script = 
+            $"const heart = '{HeartPngBase64}'; const star = '{StarPngBase64}'; " +
+            @"
+let ctx = ai.genContext({});
+
+if (this.Name === 'Shahar') {
+    ctx.withPng(heart);
+    return;
+}
+
+if (this.Name === 'Aviv') {
+    ctx.withPng(star);
+    return;
+}
+";
+
+        using var store = GetDocumentStore(options);
+        await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+        config.Prompt = "Describe the following images." + NonEmptyAnswerHint;
+        config.Collection = "Users";
+        config.SampleObject = JsonConvert.SerializeObject(new
+        {
+            ImageDescriptions = new[]
+            {
+                new { Description = "Detailed description of the image", SafeForWork = true, Tags = new[] { "matching tags for the image" } }
+            }
+        });
+        config.UpdateScript = @"this.ImageDescriptions = $output.ImageDescriptions;";
+        config.GenAiTransformation = new GenAiTransformation { Script = script };
+
+        await store.Maintenance.SendAsync(new AddGenAiOperation(config));
+
+        var etl = Etl.WaitForEtlToComplete(store);
+
+        var marker = new[] { new ImageDescription("None" + Guid.NewGuid(), false, null) };
+
+        using (var session = store.OpenAsyncSession())
+        {
+            await session.StoreAsync(new User()
+            {
+                Id = "Users/1",
+                Name = "Shahar",
+                ImageDescriptions = marker
+            });
+            await session.StoreAsync(new User()
+            {
+                Id = "Users/2",
+                Name = "Aviv",
+                ImageDescriptions = marker
+            });            
+            await session.StoreAsync(new User()
+            {
+                Id = "Users/3",
+                Name = "Karmel",
+                ImageDescriptions = marker
+            });
+
+            await session.SaveChangesAsync();
+        }
+
+        Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 120)));
+
+        using (var session = store.OpenAsyncSession())
+        {
+            var user1 = await session.LoadAsync<User>("Users/1");
+            var user2 = await session.LoadAsync<User>("Users/2");
+            var user3 = await session.LoadAsync<User>("Users/3");
+
+            Assert.NotEqual(marker[0].Description, user1.ImageDescriptions[0].Description);
+            Assert.NotEqual(marker[0].Description, user2.ImageDescriptions[0].Description);
+            Assert.Equal(marker[0].Description, user3.ImageDescriptions[0].Description);
+        }
+    }
+
+    private class User
+    {
+        public string Id { get; set; }
+        public string Name { get; set; }
+        public ImageDescription[] ImageDescriptions { get; set; }
+    }
+    public record ImageDescription(string Description, bool SafeForWork, string[] Tags);
+}

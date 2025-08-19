@@ -104,46 +104,6 @@ ai.genContext({})
             }
         }
 
-
-        [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "png" })]
-        public async Task CanUseImageActualName(Options options, GenAiConfiguration config, string format)
-        {
-            using var store = GetDocumentStore(options);
-            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
-
-            config.Prompt = "Describe the following images" + NonEmptyAnswerHint;
-            config.Collection = "Items";
-            config.SampleObject = JsonConvert.SerializeObject(new
-            {
-                ImageDescriptions = new[]
-                {
-                    new { Description = "Detailed description of the image", SafeForWork = true, Tags = new[] { "matching tags for the image" } }
-                }
-            });
-            config.UpdateScript = @"this.ImageDescriptions = $output.ImageDescriptions;";
-            config.GenAiTransformation = new GenAiTransformation { Script = @"
-ai.genContext({})
-    .withPng('image.png');
-" };
-
-            await store.Maintenance.SendAsync(new AddGenAiOperation(config));
-            var etl = Etl.WaitForEtlToComplete(store);
-            var marker = new ImageDescription("None" + Guid.NewGuid(), false, new string[] { "None" });
-            using (var session = store.OpenAsyncSession())
-            {
-                await session.StoreAsync(new Item(marker), FirstItemId);
-                await using var file1 = GetEmbeddedImgStream(format);
-
-                session.Advanced.Attachments.Store(FirstItemId, "image.png", file1);
-                await session.SaveChangesAsync();
-            }
-            etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30));
-
-            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
-            Assert.True(ValidateRefusalNotification(db, "was never loaded."));
-        }
-
         [RavenTheory(RavenTestCategory.Ai)]
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "png" })]
         public async Task ShouldNotifyOnInvalidImage(Options options, GenAiConfiguration config, string format)
