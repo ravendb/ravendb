@@ -63,8 +63,8 @@ namespace Sparrow.Json
         {
             DisposeInternal();
 
-            if (await FlushAsync().ConfigureAwait(false) > 0)
-                await _outputStream.FlushAsync().ConfigureAwait(false);
+            if (await FlushAsync(_cancellationToken).ConfigureAwait(false) > 0)
+                await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(false);
 
 #if !NETSTANDARD2_0
             await _stream.DisposeAsync().ConfigureAwait(false);
