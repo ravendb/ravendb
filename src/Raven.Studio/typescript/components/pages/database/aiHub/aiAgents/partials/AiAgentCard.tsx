@@ -11,6 +11,7 @@ import Dropdown from "react-bootstrap/Dropdown";
 import Spinner from "react-bootstrap/Spinner";
 import copyToClipboard from "common/copyToClipboard";
 import Button from "react-bootstrap/Button";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 interface AiAgentCardProps {
     config: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration;
@@ -19,6 +20,9 @@ interface AiAgentCardProps {
 
 export default function AiAgentCard({ config, reloadAiAgents }: AiAgentCardProps) {
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+    const hasDatabaseWriteAccess = useAppSelector(accessManagerSelectors.getHasDatabaseWriteAccess)();
+
     const { aiAgentService } = useServices();
     const confirm = useConfirm();
 
@@ -76,35 +80,39 @@ export default function AiAgentCard({ config, reloadAiAgents }: AiAgentCardProps
                     {config.SystemPrompt}
                 </div>
                 <div className="hstack justify-content-between mt-2">
-                    <a href={appUrl.forChatAiAgent(databaseName, config.Identifier)} className="btn btn-primary">
-                        <Icon icon="llm" />
-                        Start new chat
-                    </a>
-                    <Dropdown>
-                        <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="secondary">
-                            <Icon icon="more" margin="m-0" />
-                        </Dropdown.Toggle>
-                        <Dropdown.Menu>
-                            <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier)}>
-                                <Icon icon="edit" /> Edit agent
-                            </Dropdown.Item>
-                            <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier, true)}>
-                                <Icon icon="copy" /> Clone agent
-                            </Dropdown.Item>
-                            <Dropdown.Item
-                                className="text-danger"
-                                onClick={handleDelete}
-                                disabled={asyncDeleteAiAgent.loading}
-                            >
-                                {asyncDeleteAiAgent.loading ? (
-                                    <Spinner size="sm" className="me-1" />
-                                ) : (
-                                    <Icon icon="trash" />
-                                )}
-                                Delete agent
-                            </Dropdown.Item>
-                        </Dropdown.Menu>
-                    </Dropdown>
+                    {hasDatabaseWriteAccess && (
+                        <a href={appUrl.forChatAiAgent(databaseName, config.Identifier)} className="btn btn-primary">
+                            <Icon icon="llm" />
+                            Start new chat
+                        </a>
+                    )}
+                    {hasDatabaseAdminAccess && (
+                        <Dropdown>
+                            <Dropdown.Toggle as={CustomDropdownToggle} isCaretHidden variant="secondary">
+                                <Icon icon="more" margin="m-0" />
+                            </Dropdown.Toggle>
+                            <Dropdown.Menu>
+                                <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier)}>
+                                    <Icon icon="edit" /> Edit agent
+                                </Dropdown.Item>
+                                <Dropdown.Item href={appUrl.forEditAiAgent(databaseName, config.Identifier, true)}>
+                                    <Icon icon="copy" /> Clone agent
+                                </Dropdown.Item>
+                                <Dropdown.Item
+                                    className="text-danger"
+                                    onClick={handleDelete}
+                                    disabled={asyncDeleteAiAgent.loading}
+                                >
+                                    {asyncDeleteAiAgent.loading ? (
+                                        <Spinner size="sm" className="me-1" />
+                                    ) : (
+                                        <Icon icon="trash" />
+                                    )}
+                                    Delete agent
+                                </Dropdown.Item>
+                            </Dropdown.Menu>
+                        </Dropdown>
+                    )}
                 </div>
             </div>
         </Col>

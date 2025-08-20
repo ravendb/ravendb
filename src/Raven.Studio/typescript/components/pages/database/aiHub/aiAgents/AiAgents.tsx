@@ -1,5 +1,5 @@
 import { Icon } from "components/common/Icon";
-import AiAgentsInfoHub from "./AiAgentsInfoHub";
+import AiAgentsInfoHub from "./partials/AiAgentsInfoHub";
 import { AboutViewHeading } from "components/common/AboutView";
 import Form from "react-bootstrap/Form";
 import { EmptySet } from "components/common/EmptySet";
@@ -18,17 +18,19 @@ import { ConditionalPopover } from "components/common/ConditionalPopover";
 import FeatureNotAvailableInYourLicensePopoverBody from "components/common/FeatureNotAvailableInYourLicensePopoverBody";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import classNames from "classnames";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 
 export default function AiAgents() {
     const db = useAppSelector(databaseSelectors.activeDatabase);
     const hasAiAgent = useAppSelector(licenseSelectors.statusValue("HasAiAgent"));
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
     const { appUrl } = useAppUrls();
 
     const { aiAgentService } = useServices();
 
     const asyncGetAiAgents = useAsync(async () => {
-        if (!db || db.isSharded || !db.name) {
+        if (!db || db.isSharded || !db.name || !hasDatabaseAdminAccess) {
             return [];
         }
 
@@ -55,22 +57,24 @@ export default function AiAgents() {
                 <AboutViewHeading title="AI Agents" icon="ai-agents" marginBottom={4} />
                 <AiAgentsInfoHub />
             </div>
-            <ConditionalPopover
-                conditions={{
-                    isActive: !hasAiAgent,
-                    message: <FeatureNotAvailableInYourLicensePopoverBody />,
-                }}
-            >
-                <a
-                    href={appUrl.forEditAiAgent(db.name)}
-                    className={classNames("btn btn-primary rounded-pill", {
-                        disabled: !hasAiAgent,
-                    })}
+            {hasDatabaseAdminAccess && (
+                <ConditionalPopover
+                    conditions={{
+                        isActive: !hasAiAgent,
+                        message: <FeatureNotAvailableInYourLicensePopoverBody />,
+                    }}
                 >
-                    <Icon icon="plus" />
-                    Add new agent
-                </a>
-            </ConditionalPopover>
+                    <a
+                        href={appUrl.forEditAiAgent(db.name)}
+                        className={classNames("btn btn-primary rounded-pill", {
+                            disabled: !hasAiAgent,
+                        })}
+                    >
+                        <Icon icon="plus" />
+                        Add new agent
+                    </a>
+                </ConditionalPopover>
+            )}
             <div className="d-flex flex-column flex-grow mt-4">
                 <div className="small-label ms-1 mb-1">Filter by name</div>
                 <div className="clearable-input">

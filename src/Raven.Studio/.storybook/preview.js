@@ -117,6 +117,8 @@ export const parameters = {
               ],
               "Stats",
               ["Stats", "IO Stats", "Storage Report", "Running Queries", "Ongoing Tasks Stats"],
+              "Ai Hub",
+              ["Ai Connection Strings","Ai Agents", "Ai Tasks", "Ai Tasks Stats"],
               "Databases",
               "Cluster Dashboard",
               "Manage Server",
