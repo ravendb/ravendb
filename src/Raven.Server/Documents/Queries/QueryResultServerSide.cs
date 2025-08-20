@@ -107,8 +107,11 @@ namespace Raven.Server.Documents.Queries
        
         public abstract IRevisionIncludes GetRevisionIncludes();
 
+        public IDisposable ReadTransactionDispose;
+
         public virtual void Dispose()
         {
+            ReadTransactionDispose?.Dispose();
         }
     }
 }
