@@ -63,32 +63,32 @@ namespace Raven.Server.Documents
 
         internal sealed class DbIdsHolder : IDisposable
         {
-            private readonly BlittableJsonReaderArray _dbIdsBlittableArray;
-            public readonly List<LazyStringValue> dbIdsList;
+            public readonly BlittableJsonReaderArray DbIdsBlittableArray;
+            public readonly List<LazyStringValue> DbIdsList;
 
             private readonly List<IDisposable> _lazyStrings = new();
 
             public DbIdsHolder(BlittableJsonReaderArray dbIds)
             {
-                _dbIdsBlittableArray = dbIds;
-                dbIdsList = DbIdsToList(dbIds);
+                DbIdsBlittableArray = dbIds;
+                DbIdsList = DbIdsToList(dbIds);
             }
 
             public int GetOrAddDbIdIndex(LazyStringValue dbId)
             {
                 int dbIdIndex;
-                for (dbIdIndex = 0; dbIdIndex < dbIdsList.Count; dbIdIndex++)
+                for (dbIdIndex = 0; dbIdIndex < DbIdsList.Count; dbIdIndex++)
                 {
-                    var current = dbIdsList[dbIdIndex];
+                    var current = DbIdsList[dbIdIndex];
                     if (current.Equals(dbId))
                         break;
                 }
 
-                if (dbIdIndex == dbIdsList.Count)
+                if (dbIdIndex == DbIdsList.Count)
                 {
-                    dbIdsList.Add(dbId);
-                    _dbIdsBlittableArray.Modifications ??= new DynamicJsonArray();
-                    _dbIdsBlittableArray.Modifications.Add(dbId);
+                    DbIdsList.Add(dbId);
+                    DbIdsBlittableArray.Modifications ??= new DynamicJsonArray();
+                    DbIdsBlittableArray.Modifications.Add(dbId);
 
                     _lazyStrings.Add(dbId);
                 }
@@ -1165,7 +1165,7 @@ namespace Raven.Server.Documents
                         {
                             // blob + delete => resolve conflict
 
-                            var conflictStatus = CompareCounterValuesAndDeletedCounter(sourceBlob, deletedLocalCounter, dbIdsHolder.dbIdsList, remoteDelete: false, docId, counterName, out _);
+                            var conflictStatus = CompareCounterValuesAndDeletedCounter(sourceBlob, deletedLocalCounter, sourceDbIds, remoteDelete: false, docId, counterName, out _);
 
                             switch (conflictStatus)
                             {
@@ -1220,7 +1220,7 @@ namespace Raven.Server.Documents
                             // delete + blob => resolve conflict
 
                             var conflictStatus =
-                                CompareCounterValuesAndDeletedCounter(localCounterValues, deletedSourceCounter, dbIdsHolder.dbIdsList, remoteDelete: true, docId, counterName, out var deletedCv);
+                                CompareCounterValuesAndDeletedCounter(localCounterValues, deletedSourceCounter, dbIdsHolder.DbIdsBlittableArray, remoteDelete: true, docId, counterName, out var deletedCv);
 
                             switch (conflictStatus)
                             {
@@ -2311,7 +2311,7 @@ namespace Raven.Server.Documents
         }
 
         private static ConflictStatus CompareCounterValuesAndDeletedCounter(BlittableJsonReaderObject.RawBlob counterValues, string deletedCounter,
-            List<LazyStringValue> dbIds, bool remoteDelete, string docId, string counterName, out ChangeVectorEntry[] deletedCv)
+            BlittableJsonReaderArray dbIds, bool remoteDelete, string docId, string counterName, out ChangeVectorEntry[] deletedCv)
         {
             //any missing entries from a change vector are assumed to have zero value
             var blobHasLargerEntries = false;
@@ -2333,7 +2333,7 @@ namespace Raven.Server.Documents
 
                 for (int j = 0; j < deletedCv.Length; j++)
                 {
-                    if (dbIds[i] == deletedCv[j].DbId)
+                    if (dbIds[i].ToString() == deletedCv[j].DbId)
                     {
                         found = true;
                         numOfMatches++;
