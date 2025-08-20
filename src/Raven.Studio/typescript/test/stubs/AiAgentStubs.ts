@@ -1,3 +1,5 @@
+import document from "models/database/documents/document";
+
 export class AiAgentStubs {
     static getAiAgents(): GetAiAgentResultDto {
         return {
@@ -6,16 +8,139 @@ export class AiAgentStubs {
                     Identifier: "first-agent",
                     Name: "First agent",
                     ConnectionStringName: "open-ai",
-                    SystemPrompt: "Sample prompt",
+                    SystemPrompt:
+                        "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.",
                     OutputSchema: "",
-                    SampleObject: "{}",
-                    Queries: [],
-                    Actions: [],
-                    Parameters: [],
+                    SampleObject:
+                        '{\r\n    "Answer": "Answer to the user question",\r\n    "Relevant": true,\r\n    "RelevantOrdersId": ["The order ids relevant to the query or response"],\r\n    "MatchingProductsId": ["All the product ids referenced either by the user or the system"]\r\n}',
+                    Queries: [
+                        {
+                            Name: "QueryProductSearch",
+                            Description: "semantic search the store product catalog",
+                            Query: "from Products where vector.search(embedding.text(Name), $query)",
+                            ParametersSampleObject: '{"query": ["term or phrase to search in the catalog"]}',
+                            ParametersSchema: null,
+                        },
+                        {
+                            Name: "QueryRecentCategories",
+                            Description: "Get the recent orders of the current user",
+                            Query: "from Categories",
+                            ParametersSampleObject: "{}",
+                            ParametersSchema: null,
+                        },
+                    ],
+                    Actions: [
+                        {
+                            Name: "ActionProductSearch",
+                            Description: "semantic search the store product catalog",
+                            ParametersSampleObject: '{"query": ["term or phrase to search in the catalog"]}',
+                            ParametersSchema: null,
+                        },
+                        {
+                            Name: "ActionRecentOrder",
+                            Description: "Get the recent orders of the current user",
+                            ParametersSampleObject: "{}",
+                            ParametersSchema: null,
+                        },
+                    ],
+                    Parameters: [
+                        {
+                            Name: "company",
+                            Description: null,
+                        },
+                    ],
                     ChatTrimming: null,
                     MaxModelIterationsPerCall: null,
                 },
             ],
         };
+    }
+
+    static getAiAgentDocument(): document {
+        return new document({
+            Agent: "first-agent",
+            Parameters: {
+                company: "companies/90-A",
+            },
+            Messages: [
+                {
+                    role: "system",
+                    content:
+                        "You are an AI agent of an online shop, helping customers answer queries about that topic only. When talking about orders or products, include the ids as well.",
+                    date: "2025-08-08T10:28:20.5582526Z",
+                },
+                {
+                    role: "user",
+                    content: "AI Agent Parameters:\ncompany = companies/90-A\r\n",
+                    date: "2025-08-08T10:28:20.5582755Z",
+                },
+                {
+                    role: "user",
+                    content: "use QueryRecentCategories tool",
+                    date: "2025-08-08T10:28:20.5582920Z",
+                },
+                {
+                    role: "assistant",
+                    content: null,
+                    tool_calls: [
+                        {
+                            id: "call_whzFC5Mlx17thYJYOvdWf7RW",
+                            type: "function",
+                            function: {
+                                name: "QueryRecentCategories",
+                                arguments: "{}",
+                            },
+                        },
+                    ],
+                    refusal: null,
+                    annotations: [],
+                    date: "2025-08-08T10:28:23.5363531Z",
+                    usage: {
+                        PromptTokens: 398,
+                        CompletionTokens: 14,
+                        TotalTokens: 412,
+                        CachedTokens: 0,
+                    },
+                },
+                {
+                    tool_call_id: "call_whzFC5Mlx17thYJYOvdWf7RW",
+                    role: "tool",
+                    content:
+                        '[{"Name":"Beverages","Description":"Soft drinks, coffees, teas, beers, and ales","@metadata":{"@attachments":[{"Name":"image.jpg","Hash":"S5Opbm22FH1LW5SAC3wRb3HA64QM7odd26djlt5cAkM=","ContentType":"image/jpeg","Size":16958}],"@collection":"Categories","@change-vector":"A:1750-zbpmCj4aA0WLV/H8tjaiag","@flags":"HasAttachments","@id":"categories/1-A","@last-modified":"2018-07-27T12:15:47.7253469Z"}},{"Name":"Condiments","Description":"Sweet and savory sauces, relishes, spreads, and seasonings","@metadata":{"@attachments":[{"Name":"image.jpg","Hash":"YNLL8N+arOV1ZBP5q0wkeWc8RugEQ7wx3wRhB+xQWaI=","ContentType":"image/jpeg","Size":36514}],"@collection":"Categories","@change-vector":"A:1753-zbpmCj4aA0WLV/H8tjaiag","@flags":"HasAttachments","@id":"categories/2-A","@last-modified":"2018-07-27T12:16:24.1438586Z"}},{"Name":"Confections","Description":"Desserts, candies, and sweet breads","@metadata":{"@attachments":[{"Name":"image.jpg","Hash":"1QxSMa3tBr+y8wQYNre7E9UJFFVTNWGjVoC+IC+gSSs=","ContentType":"image/jpeg","Size":47955}],"@collection":"Categories","@change-vector":"A:1756-zbpmCj4aA0WLV/H8tjaiag","@flags":"HasAttachments","@id":"categories/3-A","@last-modified":"2018-07-27T12:16:44.1738714Z"}},{"Name":"Dairy Products","Description":"Cheeses","@metadata":{"@attachments":[{"Name":"image.jpg","Hash":"zBO1hw5HSdn8UYmWJKIXZdn2fdH0QNfzmPU2gSMc5yg=","ContentType":"image/jpeg","Size":43504}],"@collection":"Categories","@change-vector":"A:1759-zbpmCj4aA0WLV/H8tjaiag","@flags":"HasAttachments","@id":"categories/4-A","@last-modified":"2018-07-27T12:17:33.8212726Z"}},{"Name":"Grains/Cereals","Description":"Breads, crackers, pasta, and cereal","@metadata":{"@attachments":[{"Name":"image.jpg","Hash":"EMviKh017Gl7KUZWRecVbuCcXNQcrQ/7EdtnLKt/fgc=","ContentType":"image/jpeg","Size":55376}],"@collection":"Categories","@change-vector":"A:1762-zbpmCj4aA0WLV/H8tjaiag","@flags":"HasAttachments","@id":"categories/5-A","@last-modified":"2018-07-27T12:20:31.8237074Z"}},{"Name":"Meat/Poultry","Description":"Prepared meats","@metadata":{"@attachments":[{"Name":"image.jpg","Hash":"K37huqcfGCjDC0up0zVte7DAut5YS5K1z1kC+iUmeCI=","ContentType":"image/jpeg","Size":31219}],"@collection":"Categories","@change-vector":"A:1765-zbpmCj4aA0WLV/H8tjaiag","@flags":"HasAttachments","@id":"categories/6-A","@last-modified":"2018-07-27T12:20:49.7774078Z"}},{"Name":"Produce","Description":"Dried fruit and bean curd","@metadata":{"@attachments":[{"Name":"image.jpg","Hash":"asY7yUHhdgaVoKhivgua0OUSJKXqNDa3Z1uLP9XAocM=","ContentType":"image/jpeg","Size":61749}],"@collection":"Categories","@change-vector":"A:1768-zbpmCj4aA0WLV/H8tjaiag","@flags":"HasAttachments","@id":"categories/7-A","@last-modified":"2018-07-27T12:21:11.2283909Z"}},{"Name":"Seafood","Description":"Seaweed and fish","@metadata":{"@attachments":[{"Name":"image.jpg","Hash":"GWdpGVCWyLsrtNdA5AOee0QOZFG6rKIqCosZZN5WnCA=","ContentType":"image/jpeg","Size":33396}],"@collection":"Categories","@change-vector":"A:1771-zbpmCj4aA0WLV/H8tjaiag","@flags":"HasAttachments","@id":"categories/8-A","@last-modified":"2018-07-27T12:21:39.1315788Z"}}]',
+                    date: "2025-08-08T10:28:23.5380397Z",
+                },
+                {
+                    role: "assistant",
+                    content:
+                        '{"Answer":"I ran QueryRecentCategories for company companies/90-A and found 8 recent categories:\\n1) Beverages (categories/1-A) — Soft drinks, coffees, teas, beers, and ales\\n2) Condiments (categories/2-A) — Sweet and savory sauces, relishes, spreads, and seasonings\\n3) Confections (categories/3-A) — Desserts, candies, and sweet breads\\n4) Dairy Products (categories/4-A) — Cheeses\\n5) Grains/Cereals (categories/5-A) — Breads, crackers, pasta, and cereal\\n6) Meat/Poultry (categories/6-A) — Prepared meats\\n7) Produce (categories/7-A) — Dried fruit and bean curd\\n8) Seafood (categories/8-A) — Seaweed and fish","Relevant":true,"RelevantOrdersId":[],"MatchingProductsId":["categories/1-A","categories/2-A","categories/3-A","categories/4-A","categories/5-A","categories/6-A","categories/7-A","categories/8-A"]}',
+                    refusal: null,
+                    annotations: [],
+                    date: "2025-08-08T10:28:30.5884757Z",
+                    usage: {
+                        PromptTokens: 1548,
+                        CompletionTokens: 665,
+                        TotalTokens: 2213,
+                        CachedTokens: 0,
+                    },
+                },
+            ],
+            LinkedConversations: [],
+            TotalUsage: {
+                PromptTokens: 1946,
+                CompletionTokens: 679,
+                TotalTokens: 2625,
+                CachedTokens: 0,
+            },
+            OpenActionCalls: {},
+            LastMessageAt: "2025-08-08T10:28:30.5884757Z",
+            CreatedAt: "2025-08-08T10:28:20.5582091Z",
+            Expires: null,
+            "@metadata": {
+                "@collection": "@conversations",
+                "@change-vector": "A:9023-zbpmCj4aA0WLV/H8tjaiag",
+                "@id": "Chats/0000000000000009018-A",
+                "@last-modified": "2025-08-20T09:27:14.9226011Z",
+            },
+        });
     }
 }

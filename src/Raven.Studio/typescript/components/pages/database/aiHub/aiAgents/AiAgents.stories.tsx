@@ -5,7 +5,7 @@ import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";
 
 export default {
-    title: "Pages/AI Hub/AI Agents",
+    title: "Pages/AI Hub/AI Agents/AI Agents",
     decorators: [withStorybookContexts, withBootstrap5],
 } satisfies Meta;
 

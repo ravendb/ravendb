@@ -201,4 +201,8 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
     withRevisionsPreview(dto?: MockedValue<pagedResultWithToken<RevisionsPreviewResultItem>>) {
         return this.mockResolvedValue(this.mocks.getRevisionsPreview, dto, DatabasesStubs.revisionsPreview());
     }
+
+    withDocumentWithMetadata(dto?: MockedValue<any>) {
+        return this.mockResolvedValue(this.mocks.getDocumentWithMetadata, dto, new document({ Name: "some-name" }));
+    }
 }
