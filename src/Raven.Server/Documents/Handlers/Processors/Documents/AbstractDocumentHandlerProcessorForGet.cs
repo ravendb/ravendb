@@ -197,6 +197,8 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         var clusterWideTx = parameters.TxMode == TransactionMode.ClusterWide;
         var result = await GetDocumentsByIdImplAsync(context, parameters.Ids, parameters.IncludePaths, revisions, parameters.Counters, timeSeries, parameters.CompareExchange, parameters.MetadataOnly, clusterWideTx, etag);
 
+        using var _ = result.ReadTransaction;
+
         if (result.StatusCode == HttpStatusCode.NotFound)
         {
             if (etag == HttpCache.NotFoundResponse)
@@ -297,6 +299,8 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
     protected async ValueTask<(long NumberOfResults, long TotalDocumentsSizeInBytes)> GetDocumentsAsync(TOperationContext context, long? etag, StartsWithParams startsWith, bool metadataOnly, string changeVector)
     {
         var result = await GetDocumentsImplAsync(context, etag, startsWith, changeVector);
+
+        using var _ = result.ReadTransaction;
 
         if (changeVector == result.Etag)
         {
@@ -489,6 +493,8 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         public string Etag { get; set; }
 
         public HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
+
+        public DocumentsTransaction ReadTransaction;
     }
 
     protected sealed class DocumentsResult
@@ -500,6 +506,8 @@ internal abstract class AbstractDocumentHandlerProcessorForGet<TRequestHandler, 
         public ShardedPagingContinuation ContinuationToken { get; set; }
 
         public string Etag { get; set; }
+
+        public DocumentsTransaction ReadTransaction;
     }
 
     protected sealed class StartsWithParams
