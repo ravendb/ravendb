@@ -22,6 +22,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Platform;
+using AttachmentsRequestConstants = Raven.Server.Documents.AI.ChatCompletionClient.Constants.AttachmentsRequestFields;
 
 namespace Raven.Server.Documents.ETL.Providers.AI.GenAi;
 
@@ -185,7 +186,7 @@ var ai = new AI();
                 if (data.IsNull() == false)
                     attachmentsHashes.Add(_attachments?.TryGetValue(data, out var attachment) is true ? attachment?.Base64Hash.ToString() : data.AsString());
 
-                attachmentsHashes.Add(attachmentObj.GetOwnProperty("type").Value.AsString());
+                attachmentsHashes.Add(attachmentObj.GetOwnProperty(AttachmentsRequestConstants.Type).Value.AsString());
             }
             
             string hash = CalculateHash(context, attachmentsHashes);
@@ -206,7 +207,7 @@ var ai = new AI();
                         var attachmentObj = current.AsObject();
                         var reference = attachmentObj.GetOwnProperty("data").Value;
                         var data = string.Empty;
-                        string type = attachmentObj.GetOwnProperty("type").Value.AsString();
+                        string type = attachmentObj.GetOwnProperty(AttachmentsRequestConstants.Type).Value.AsString();
                         string filename = "unknown.name";
 
                         // TODO: we aren't being really efficient here in terms of allocations / memory
@@ -217,12 +218,12 @@ var ai = new AI();
                             if (reference.IsNull())
                             {
                                 data = $"File '{filename}' (of type '{type}') could not be loaded: attachment not found";
-                                type = "text/plain";
+                                type = AttachmentsRequestConstants.MediaTypeTextPlain;
                             }
                             else
                             {
                                 using var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream();
-                                if (type == "text/plain")
+                                if (type == AttachmentsRequestConstants.MediaTypeTextPlain)
                                 {
                                     attachment.Stream.CopyTo(memoryStream);
                                 }
@@ -241,7 +242,7 @@ var ai = new AI();
                         {
                             //if we arrive here we probably didn't pass through loadAttachment() function
                             data = reference.ToString();
-                            if (type != "text/plain" && Base64Regex.IsMatch(data) == false)
+                            if (type != AttachmentsRequestConstants.MediaTypeTextPlain && IsBase64(data) == false)
                                 throw new InvalidOperationException($"Attachment must be loaded or base64 string (on type {type})");
                         }
 
@@ -253,7 +254,9 @@ var ai = new AI();
         }
     }
 
-    public static readonly Regex Base64Regex = new(@"^[a-zA-Z0-9+/]*={0,2}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex Base64Regex = new(@"^[a-zA-Z0-9+/]*={0,2}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static bool IsBase64(string data) => data.Length % 4 == 0 && Base64Regex.IsMatch(data);
 
     private static bool ShouldSendContext(string hash, string taskIdentifier, Document doc)
     {
