@@ -839,8 +839,10 @@ namespace Raven.Server.Documents
         }
 
         public bool PutCounters(DocumentsOperationContext context, string documentId, string collection, ChangeVector changeVector,
-            BlittableJsonReaderObject sourceData)
+            BlittableJsonReaderObject sourceData, out bool updateMetadata)
         {
+            updateMetadata = false;
+
             if (context.Transaction == null)
             {
                 DocumentPutAction.ThrowRequiresTransaction();
@@ -981,7 +983,7 @@ namespace Raven.Server.Documents
                                 }
 
                                 if (MergeCounterIfNeeded(context, localCounters, ref prop, putCountersData.DbIdsHolder, sourceDbIds, sourceCounterNames, originalNames, documentId,
-                                        out var localCounterValues, out var changeType) == false)
+                                        out var localCounterValues, out var changeType, out updateMetadata) == false)
                                 {
                                     continue;
                                 }
@@ -1132,11 +1134,13 @@ namespace Raven.Server.Documents
             BlittableJsonReaderObject localCounterNames,
             string docId,
             out BlittableJsonReaderObject.RawBlob localCounterValues,
-            out CounterChangeTypes changeType)
+            out CounterChangeTypes changeType, 
+            out bool updateMetadata)
         {
             LazyStringValue deletedLocalCounter = null;
             localCounterValues = null;
             changeType = CounterChangeTypes.None;
+            updateMetadata = false;
             string counterName = incomingCountersProp.Name;
 
             if (sourceCounterNames == null)
@@ -1174,6 +1178,7 @@ namespace Raven.Server.Documents
                                 case ConflictStatus.Conflict:
                                     // conflict => resolve to raw blob
                                     localCounterValues = new BlittableJsonReaderObject.RawBlob();
+                                    updateMetadata = true;
                                     break;
 
                                 case ConflictStatus.AlreadyMerged:
