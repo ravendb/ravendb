@@ -167,7 +167,7 @@ public interface IAiConversationOperations
     ///
     /// You can also access all the actions that require answers using the <see cref="RequiredActions"/> method.
     /// </summary>
-    event EventHandler<AiAgentActionRequest> OnUnhandledAction;
+    event Func<IAiConversationOperations,AiAgentActionRequest, CancellationToken, Task> OnUnhandledAction;
 }
 
 public enum AiHandleErrorStrategy

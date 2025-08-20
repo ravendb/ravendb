@@ -176,7 +176,7 @@ internal class AiConversation : IAiConversationOperations
                     }
                     else if (OnUnhandledAction is { } e)
                     {
-                        e(this, action);
+                        await e(this, action, token).ConfigureAwait(false);
                     }
                     else
                     {
@@ -194,7 +194,7 @@ internal class AiConversation : IAiConversationOperations
         }
     }
 
-    public event EventHandler<AiAgentActionRequest> OnUnhandledAction;
+    public event Func<IAiConversationOperations,AiAgentActionRequest, CancellationToken, Task> OnUnhandledAction;
 
     private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(CancellationToken token = default)
     {
