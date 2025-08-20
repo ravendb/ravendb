@@ -255,7 +255,7 @@ var ai = new AI();
         }
     }
 
-    private static bool IsBase64(string data) => string.IsNullOrEmpty(data) == false && data.Length % 4 == 0 && Base64.IsValid(data);
+    private static bool IsBase64(string data) => string.IsNullOrEmpty(data) == false && Base64.IsValid(data);
     
 
     private static bool ShouldSendContext(string hash, string taskIdentifier, Document doc)
