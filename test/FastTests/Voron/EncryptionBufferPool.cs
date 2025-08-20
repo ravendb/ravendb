@@ -203,7 +203,6 @@ namespace FastTests.Voron
             var updateMemoryStatsForThreadCount = 0;
             var testingStuff = encryptionBuffersPool.ForTestingPurposesOnly();
             testingStuff.CanAddToPerCorePool = false;
-            testingStuff.CanAddToGlobalPool = false;
             testingStuff.OnFree4KbAlignedMemory = s =>
             {
                 free4KbAlignedMemoryCount++;

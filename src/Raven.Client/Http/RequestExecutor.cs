@@ -316,11 +316,7 @@ namespace Raven.Client.Http
             Certificate = certificate;
             Conventions = conventions.Clone();
 
-            var maxNumberOfContextsToKeepInGlobalStack = PlatformDetails.Is32Bits == false
-                ? 1024
-                : 256;
-
-            ContextPool = new JsonContextPool(Conventions.MaxContextSizeToKeep, maxNumberOfContextsToKeepInGlobalStack, 1024, Logger);
+            ContextPool = new JsonContextPool(Conventions.MaxContextSizeToKeep, 1024, Logger);
 
             GlobalHttpClientTimeout = conventions.GlobalHttpClientTimeout;
             DefaultTimeout = Conventions.RequestTimeout;
