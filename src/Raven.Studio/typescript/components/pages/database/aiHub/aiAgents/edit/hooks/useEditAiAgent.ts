@@ -36,7 +36,7 @@ export default function useEditAiAgent(queryParams: QueryParams) {
 
     // Set connection strings view context on mount and reset store on unmount
     useEffect(() => {
-        dispatch(connectionStringsActions.viewContextSet("aiConnectionStrings"));
+        dispatch(connectionStringsActions.viewContextSet("aiTask"));
 
         return () => {
             dispatch(editAiAgentActions.reset());

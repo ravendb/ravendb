@@ -22,7 +22,10 @@ export default function ModelTypeField({ initialModelType }: ModelTypeFieldProps
     const formValues = useWatch({ control });
 
     const viewContext = useAppSelector(connectionStringSelectors.viewContext);
-    const isDisabled = viewContext === "aiConnectionStrings" && !!initialModelType;
+
+    const isChatVisible = viewContext !== "aiTask" || initialModelType !== "TextEmbeddings";
+    const isTextEmbeddingsVisible = viewContext !== "aiTask" || initialModelType !== "Chat";
+    const isAllVisible = isChatVisible && isTextEmbeddingsVisible;
 
     return (
         <div className="mb-2">
@@ -33,24 +36,26 @@ export default function ModelTypeField({ initialModelType }: ModelTypeFieldProps
                 </PopoverWithHoverWrapper>
             </FormLabel>
             <div className="d-flex gap-2">
-                <ClickableCard
-                    icon="llm"
-                    title="Chat"
-                    description="Conversational AI and content generation model"
-                    className="w-50"
-                    isSelected={formValues.modelType === "Chat"}
-                    onClick={() => setValue("modelType", "Chat")}
-                    isDisabled={isDisabled}
-                />
-                <ClickableCard
-                    icon="document2"
-                    title="Text embeddings"
-                    description="Embedding generation model for vector search and similarity comparison"
-                    className="w-50"
-                    isSelected={formValues.modelType === "TextEmbeddings"}
-                    onClick={() => setValue("modelType", "TextEmbeddings")}
-                    isDisabled={isDisabled}
-                />
+                {isChatVisible && (
+                    <ClickableCard
+                        icon="llm"
+                        title="Chat"
+                        description="Conversational AI and content generation model"
+                        className={isAllVisible ? "w-50" : "w-100"}
+                        isSelected={formValues.modelType === "Chat"}
+                        onClick={() => setValue("modelType", "Chat")}
+                    />
+                )}
+                {isTextEmbeddingsVisible && (
+                    <ClickableCard
+                        icon="document2"
+                        title="Text embeddings"
+                        description="Embedding generation model for vector search and similarity comparison"
+                        className={isAllVisible ? "w-50" : "w-100"}
+                        isSelected={formValues.modelType === "TextEmbeddings"}
+                        onClick={() => setValue("modelType", "TextEmbeddings")}
+                    />
+                )}
             </div>
         </div>
     );
