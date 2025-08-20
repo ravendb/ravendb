@@ -174,6 +174,16 @@ internal class AiConversation : IAiConversationOperations
                         // error handling here is expected to be done by the invocation based on the error strategy the user choose
                         await invocation.Invoke(ctx, action, token).ConfigureAwait(false);
                     }
+                    else if (OnUnhandledAction is { } e)
+                    {
+                        e(this, action);
+                    }
+                    else
+                    {
+                        throw new InvalidOperationException(
+                            $"There is no action defined for action '{action.Name}' on agent '{_agentId}' ({_conversationId}), but it was invoked by the model with: {action.Arguments}. " +
+                            $"Did you forget to call {nameof(Receive)} or {nameof(Handle)}? You can also handle unexpected action invocations using the {nameof(OnUnhandledAction)} event.");
+                    }
                 }
             }
 
@@ -183,6 +193,8 @@ internal class AiConversation : IAiConversationOperations
                 return r; // note - this has ActionsRequired status
         }
     }
+
+    public event EventHandler<AiAgentActionRequest> OnUnhandledAction;
 
     private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(CancellationToken token = default)
     {

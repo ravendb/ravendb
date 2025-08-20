@@ -158,6 +158,16 @@ public interface IAiConversationOperations
     /// The text of the user’s message.
     /// </param>
     void SetUserPrompt(string userPrompt);
+
+    /// <summary>
+    /// This is called if the model invoked an action that has no register handler using
+    /// <see cref="Handle"/> or <see cref="Receive"/>. If there is no event handler for
+    /// this event and an unexpected action is raised by the model, and exception will
+    /// be thrown.
+    ///
+    /// You can also access all the actions that require answers using the <see cref="RequiredActions"/> method.
+    /// </summary>
+    event EventHandler<AiAgentActionRequest> OnUnhandledAction;
 }
 
 public enum AiHandleErrorStrategy
