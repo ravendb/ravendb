@@ -33,7 +33,7 @@ internal abstract class AbstractDatabaseConnectionState
             connection.ContinueWith(static (t, firstSet) =>
             {
                 var tcs = (TaskCompletionSource<object>)firstSet;
-                
+
                 if (t.IsFaulted)
                     tcs.TrySetException(t.Exception);
                 else if (t.IsCanceled)
