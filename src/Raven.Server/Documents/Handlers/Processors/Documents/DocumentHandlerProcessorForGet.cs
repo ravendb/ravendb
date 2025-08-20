@@ -73,7 +73,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         }
 
         long lastModifiedIndex = RequestHandler.Database.ClusterWideTransactionIndexWaiter.LastIndex;
-        context.OpenReadTransaction();
+        var readTx = context.OpenReadTransaction();
 
         foreach (var id in ids)
         {
@@ -156,7 +156,8 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
             RevisionIncludes = includeRevisions,
             CounterIncludes = includeCounters,
             TimeSeriesIncludes = includeTimeSeries,
-            CompareExchangeIncludes = includeCompareExchangeValues?.Results
+            CompareExchangeIncludes = includeCompareExchangeValues?.Results,
+            ReadTransaction = readTx
         });
     }
 
@@ -180,7 +181,7 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
 
     protected override ValueTask<DocumentsResult> GetDocumentsImplAsync(DocumentsOperationContext context, long? etag, StartsWithParams startsWith, string changeVector)
     {
-        context.OpenReadTransaction();
+        var readTx = context.OpenReadTransaction();
 
         var databaseChangeVector = DocumentsStorage.GetDatabaseChangeVector(context);
 
@@ -213,7 +214,8 @@ internal sealed class DocumentHandlerProcessorForGet : AbstractDocumentHandlerPr
         return new ValueTask<DocumentsResult>(new DocumentsResult
         {
             Documents = documents,
-            Etag = databaseChangeVector
+            Etag = databaseChangeVector,
+            ReadTransaction = readTx
         });
     }
 }
