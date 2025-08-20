@@ -132,7 +132,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         dispatch(chatAiAgentActions.messagesSet([]));
         dispatch(chatAiAgentActions.documentSet(null));
         dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(false));
-        setValue("prompt", "");
+        chatForm.reset();
     };
 
     if (!queryParams?.agentId) {
