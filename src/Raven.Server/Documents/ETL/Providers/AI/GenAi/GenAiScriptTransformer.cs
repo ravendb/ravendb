@@ -1,4 +1,5 @@
 using System;
+using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -254,9 +255,8 @@ var ai = new AI();
         }
     }
 
-    private static readonly Regex Base64Regex = new(@"^[a-zA-Z0-9+/]*={0,2}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-
-    private static bool IsBase64(string data) => data.Length % 4 == 0 && Base64Regex.IsMatch(data);
+    private static bool IsBase64(string data) => string.IsNullOrEmpty(data) == false && data.Length % 4 == 0 && Base64.IsValid(data);
+    
 
     private static bool ShouldSendContext(string hash, string taskIdentifier, Document doc)
     {
