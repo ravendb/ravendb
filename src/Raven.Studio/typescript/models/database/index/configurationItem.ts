@@ -45,8 +45,9 @@ class configurationItem {
         "Indexing.Corax.MaxMemoizationSizeInMb",
         "Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb",
         "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
-        "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb"
-
+        "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
+        "Indexing.IntervalOfStoringElapsedTimeFromLastQuery"
+        
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
             Obsolete keys:
