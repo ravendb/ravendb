@@ -66,8 +66,6 @@ namespace Raven.Server.Documents
             public readonly BlittableJsonReaderArray DbIdsBlittableArray;
             public readonly List<LazyStringValue> DbIdsList;
 
-            private readonly List<IDisposable> _lazyStrings = new();
-
             public DbIdsHolder(BlittableJsonReaderArray dbIds)
             {
                 DbIdsBlittableArray = dbIds;
@@ -89,8 +87,6 @@ namespace Raven.Server.Documents
                     DbIdsList.Add(dbId);
                     DbIdsBlittableArray.Modifications ??= new DynamicJsonArray();
                     DbIdsBlittableArray.Modifications.Add(dbId);
-
-                    _lazyStrings.Add(dbId);
                 }
 
                 return dbIdIndex;
@@ -98,12 +94,12 @@ namespace Raven.Server.Documents
 
             public void Dispose()
             {
-                foreach (var lsv in _lazyStrings)
+                foreach (var lsv in DbIdsList)
                 {
                     lsv.Dispose();
                 }
 
-                _lazyStrings.Clear();
+                DbIdsList.Clear();
             }
         }
 
