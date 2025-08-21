@@ -297,6 +297,7 @@ namespace TypingsGenerator
             scripter.AddType(typeof(QueueSinkErrorsDetails));
             scripter.AddType(typeof(CpuCreditsExhaustionWarning));
             scripter.AddType(typeof(ConflictPerformanceDetails));
+            scripter.AddType(typeof(ExceededTokenThresholdDetails));
 
             // subscriptions
             scripter.AddType(typeof(SubscriptionStatsCollector));

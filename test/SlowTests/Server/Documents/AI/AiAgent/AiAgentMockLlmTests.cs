@@ -93,7 +93,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                     var conv = new ConversationDocument(agent.Name, parameters: parameters);
                     conv.Initialize(context, agent);
-                    var r = await processor.TalkAsync(context, agent, conv, CancellationToken.None);
+                    var r = await processor.TalkAsync(context, agent, conv.Id, conv, CancellationToken.None);
                     var response = r.Response.ToString();
 
                     Assert.Contains("my order", response);

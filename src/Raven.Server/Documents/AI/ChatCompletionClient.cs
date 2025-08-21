@@ -943,6 +943,9 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string Required = "required";
             public const string Items = "items";
             public const string Description = "description";
+            public const string Id = "id";
+            public const string Function = "function";
+            public const string Arguments = "arguments";
 
             // Values
             public const string TypeObject = "object";

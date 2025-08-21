@@ -10,6 +10,18 @@ public class AiUsage : IDynamicJsonValueConvertible
     public int TotalTokens { get; set; }
     public int CachedTokens { get; set; }
 
+    public AiUsage()
+    {
+    }
+
+    public AiUsage(AiUsage other)
+    {
+        PromptTokens = other.PromptTokens;
+        CompletionTokens = other.CompletionTokens;
+        TotalTokens = other.TotalTokens;
+        CachedTokens = other.CachedTokens;
+    }
+
     internal void UpdateFrom(BlittableJsonReaderObject json)
     {
         json.TryGet("prompt_tokens", out int promptTokens);

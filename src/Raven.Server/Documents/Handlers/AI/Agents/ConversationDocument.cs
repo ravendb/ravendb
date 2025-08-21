@@ -8,10 +8,10 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
@@ -24,6 +24,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
     public List<string> LinkedConversations = [];
     public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
+    public AiUsage CurrentUsage = new AiUsage();
     public string ChangeVector;
     public string Id;
 
@@ -134,6 +135,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             [nameof(LastMessageAt)] = LastMessageAt,
             [nameof(CreatedAt)] = CreatedAt,
             [nameof(Expires)] = Expires,
+            [nameof(CurrentUsage)] = CurrentUsage
         };
     }
     
@@ -163,6 +165,8 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             throw new ArgumentException($"Missing HistoryDocuments in '{id}' conversation document");
         if (document.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject usage) == false)
             throw new ArgumentException($"AI Usage in '{id}' conversation document");
+        if (document.TryGet(nameof(CurrentUsage), out BlittableJsonReaderObject currentUsage) == false)
+            throw new ArgumentException($"AI Usage in '{id}' conversation document");
         if (document.TryGet(nameof(OpenActionCalls), out BlittableJsonReaderObject openToolCalls) == false)
             throw new ArgumentException($"Missing Open Tool Calls in '{id}' conversation document");
         if (document.TryGet(nameof(LastMessageAt), out DateTime lastMessageAt) == false)
@@ -185,6 +189,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             Messages = messages.Items.Select(m=>((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
             LinkedConversations = historyDocs.Items.Select(s => s.ToString()).ToList(),
             TotalUsage = JsonDeserializationClient.AiUsage(usage),
+            CurrentUsage = JsonDeserializationClient.AiUsage(currentUsage),
             OpenActionCalls = openTools,
             LastMessageAt = lastMessageAt,
             CreatedAt = createAt,
@@ -261,5 +266,56 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         TotalUsage.PromptTokens += usage.PromptTokens;
         TotalUsage.CompletionTokens += usage.CompletionTokens;
         TotalUsage.CachedTokens += usage.CachedTokens;
+    }
+
+    public bool TryGetDetailsOfRecentToolCall(AiAgentConfiguration configuration, out List<ExceededTokenThresholdDetails.ToolCallDetails> toolCalls)
+    {
+        toolCalls = null;
+        for (var i = Messages.Count - 1; i >= 0; i--)
+        {
+            var m = Messages[i];
+
+            if (m.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string r) && r == ChatCompletionClient.Constants.RequestFields.RoleUserValue)
+            {
+                break;
+            }
+
+            if (r == ChatCompletionClient.Constants.RequestFields.RoleAssistantValue && m.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCallsArray))
+            {
+                foreach (BlittableJsonReaderObject call in toolCallsArray)
+                {
+                    call.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Id, out string id);
+                    call.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Function, out BlittableJsonReaderObject function);
+                    function.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Name, out string name);
+                    function.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Arguments, out string arguments);
+
+                    ToolType toolType;
+                    if (configuration.FindAction(name) != null)
+                    {
+                        toolType = ToolType.Action;
+                    }
+                    else if (configuration.FindQuery(name) != null)
+                    {
+                        toolType = ToolType.Query;
+                    }
+                    else
+                    {
+                        toolType = ToolType.Unknown;
+                    }
+
+                    toolCalls ??= new List<ExceededTokenThresholdDetails.ToolCallDetails>();
+
+                    toolCalls.Add(new ExceededTokenThresholdDetails.ToolCallDetails
+                    {
+                        Id = id,
+                        Name = name,
+                        Type = toolType,
+                        Arguments = arguments
+                    });
+                }
+            }
+        }
+
+        return toolCalls?.Count > 0;
     }
 }
