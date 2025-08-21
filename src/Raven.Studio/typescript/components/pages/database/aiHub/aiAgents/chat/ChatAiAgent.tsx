@@ -3,137 +3,30 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import { chatAiAgentActions, chatAiAgentSelectors } from "./store/chatAiAgentSlice";
-import { useEffect } from "react";
 import { Icon } from "components/common/Icon";
 import ChatAiAgentInfoHub from "./partials/ChatAiAgentInfoHub";
-import { FormProvider, useForm, useWatch } from "react-hook-form";
-import { ChatAiAgentFormData, chatAiAgentYupResolver } from "./utils/chatAiAgentValidation";
-import { tryHandleSubmit } from "components/utils/common";
-import { AiAgentToolCall } from "../utils/aiAgentsTypes";
+import { FormProvider } from "react-hook-form";
 import SizeGetter from "components/common/SizeGetter";
 import { Switch } from "components/common/Checkbox";
 import Button from "react-bootstrap/Button";
 import classNames from "classnames";
-import { useAsyncCallback } from "react-async-hook";
-import { TimeInSeconds } from "common/constants/timeInSeconds";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
-import { useServices } from "components/hooks/useServices";
-import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
 import ChatAiAgentFormBody from "./partials/ChatAiAgentFormBody";
 import AiAgentParametersDropdown from "../partials/AiAgentParametersDropdown";
+import useChatAiAgent, { ChatAiAgentQueryParams } from "./hooks/useChatAiAgent";
 
-interface QueryParams {
-    agentId: string;
-    conversationId: string;
-    isHistory: boolean;
-}
+export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatAiAgentQueryParams>) {
+    const { handleSend, reloadForm, handleNewChat, chatForm, asyncGetDefaultValues, handleSubmit, runChat } =
+        useChatAiAgent(queryParams);
 
-export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<QueryParams>) {
     const dispatch = useAppDispatch();
     const { appUrl } = useAppUrls();
-    const { databasesService } = useServices();
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const config = useAppSelector(chatAiAgentSelectors.config);
     const isRawData = useAppSelector(chatAiAgentSelectors.isRawData);
-    const isDocumentExpirationEnabled = useAppSelector(chatAiAgentSelectors.isDocumentExpirationEnabled);
-    const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
     const document = useAppSelector(chatAiAgentSelectors.document);
-
-    // Reset store on unmount
-    useEffect(() => {
-        return () => {
-            dispatch(chatAiAgentActions.reset());
-        };
-    }, []);
-
-    const asyncGetDefaultValues = useAsyncCallback<ChatAiAgentFormData>(async () => {
-        const isDocumentExpirationEnabled = await dispatch(
-            chatAiAgentActions.getIsDocumentExpirationEnabled(databaseName)
-        ).unwrap();
-
-        dispatch(chatAiAgentActions.conversationIdSet(queryParams?.conversationId));
-
-        const config = await dispatch(
-            chatAiAgentActions.getConfig({ databaseName, id: queryParams?.agentId })
-        ).unwrap();
-
-        if (queryParams?.conversationId) {
-            dispatch(chatAiAgentActions.getDocument({ databaseName, id: queryParams?.conversationId }));
-        }
-
-        return {
-            prompt: "",
-            parameters: config.Parameters.map((x) => ({ name: x.Name, value: "" })),
-            isEnableDocumentExpiration: !isDocumentExpirationEnabled,
-            isDocumentExpireInCustomizeEnabled: false,
-            persistenceConversationIdPrefix: "",
-            persistenceExpiresInSeconds: TimeInSeconds.Day * 30,
-        };
-    });
-
-    const areParametersRequired = !window.location.href.includes("conversationId");
-
-    const chatForm = useForm<ChatAiAgentFormData>({
-        resolver: chatAiAgentYupResolver,
-        defaultValues: asyncGetDefaultValues.execute,
-        context: {
-            areParametersRequired,
-        },
-    });
-
-    const reloadForm = async () => {
-        const result = await asyncGetDefaultValues.execute();
-        chatForm.reset(result);
-    };
-
-    const { control, handleSubmit, setValue } = chatForm;
-
-    const formValues = useWatch({
-        control,
-    });
-
-    const runChat = async (toolCallParameters?: AiAgentToolCall[]) => {
-        await dispatch(
-            chatAiAgentActions.runChat({
-                databaseName,
-                formValues,
-                toolCallParameters,
-                isDocumentExpirationEnabled: isDocumentExpirationEnabled.data,
-            })
-        ).unwrap();
-
-        setValue("prompt", "");
-    };
-
-    const handleSend = async () => {
-        return tryHandleSubmit(async () => {
-            if (
-                queryParams?.conversationId == null &&
-                isDocumentExpirationEnabled.status === "success" &&
-                !isDocumentExpirationEnabled.data &&
-                formValues.isEnableDocumentExpiration
-            ) {
-                await databasesService.saveExpirationConfiguration(databaseName, {
-                    Disabled: false,
-                    DeleteFrequencyInSec: isCommunityLicense ? minimumCommunityDeleteFrequencyInSec : null,
-                    MaxItemsToProcess: defaultItemsToProcess,
-                });
-            }
-
-            runChat();
-        });
-    };
-
-    const handleNewChat = () => {
-        dispatch(chatAiAgentActions.conversationIdSet(null));
-        dispatch(chatAiAgentActions.messagesSet([]));
-        dispatch(chatAiAgentActions.documentSet(null));
-        dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(false));
-        chatForm.reset();
-    };
 
     if (!queryParams?.agentId) {
         router.navigate(appUrl.forAiAgents(databaseName));
@@ -209,5 +102,3 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
         </div>
     );
 }
-
-const minimumCommunityDeleteFrequencyInSec = TimeInSeconds.Day * 36;
