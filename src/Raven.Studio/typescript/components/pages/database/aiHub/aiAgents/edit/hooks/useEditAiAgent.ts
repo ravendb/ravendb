@@ -1,7 +1,6 @@
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "components/hooks/useAppUrls";
 import { useDirtyFlag } from "components/hooks/useDirtyFlag";
-import useResizableWidth from "components/hooks/useResizableWidth";
 import { useServices } from "components/hooks/useServices";
 import { connectionStringsActions } from "components/pages/database/settings/connectionStrings/store/connectionStringsSlice";
 import { useAppDispatch, useAppSelector } from "components/store";
@@ -87,12 +86,6 @@ export default function useEditAiAgent(queryParams: QueryParams) {
         editForm.reset(result);
     };
 
-    const testAreaResizable = useResizableWidth({
-        initialWidth: 500,
-        minWidth: 500,
-        maxWidth: 1000,
-    });
-
     const saveAgent: SubmitHandler<EditAiAgentFormData> = async (formData) => {
         return tryHandleSubmit(async () => {
             await aiAgentService.saveAiAgent(databaseName, editAiAgentUtils.mapToDto(formData));
@@ -110,7 +103,6 @@ export default function useEditAiAgent(queryParams: QueryParams) {
         asyncGetEditDefaultValues,
         allQueriesNames,
         handleSubmit: editForm.handleSubmit(saveAgent),
-        testAreaResizable,
         isEditAiAgent,
     };
 }
