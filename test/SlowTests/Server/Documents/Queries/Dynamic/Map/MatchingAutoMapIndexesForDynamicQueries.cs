@@ -318,7 +318,7 @@ namespace SlowTests.Server.Documents.Queries.Dynamic.Map
             Assert.Equal(DynamicQueryMatchType.Failure, result.MatchType);
 
             index.SetPriority(IndexPriority.Normal);
-            index._indexStorage.UpdateStats(DateTime.UtcNow, new IndexingRunStats()
+            index._indexStorage.UpdateStats(DateTime.UtcNow, TimeSpan.Zero, new IndexingRunStats()
             {
                 MapAttempts = 1000,
                 MapErrors = 900

@@ -510,8 +510,6 @@ namespace Raven.Server.ServerWide.Maintenance
 
             var indexes = new Dictionary<string, TimeSpan>();
 
-            var lowestDatabaseUpTime = TimeSpan.MaxValue;
-            var newestIndexQueryTime = TimeSpan.MaxValue;
 
             foreach (var shardToState in mergedStates.States)
             {
@@ -527,18 +525,12 @@ namespace Raven.Server.ServerWide.Maintenance
 
                     if (nodeReport.Report.TryGetValue(databaseState.Name, out var report) == false)
                         return cleanupCommands;
-
-                    if (report.UpTime.HasValue && lowestDatabaseUpTime > report.UpTime)
-                        lowestDatabaseUpTime = report.UpTime.Value;
-
+                    
                     foreach (var kvp in report.LastIndexStats)
                     {
                         var lastQueried = kvp.Value.LastQueried;
                         if (lastQueried.HasValue == false)
                             continue;
-
-                        if (newestIndexQueryTime > lastQueried.Value)
-                            newestIndexQueryTime = lastQueried.Value;
 
                         var indexName = kvp.Key;
                         if (indexName.StartsWith(autoIndexPrefix, StringComparison.OrdinalIgnoreCase) == false)
@@ -561,15 +553,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var kvp in indexes)
             {
-                TimeSpan difference;
-                if (lowestDatabaseUpTime > kvp.Value)
-                    difference = kvp.Value;
-                else
-                {
-                    difference = kvp.Value - newestIndexQueryTime;
-                    if (difference == TimeSpan.Zero && lowestDatabaseUpTime > kvp.Value)
-                        difference = kvp.Value;
-                }
+                var smallestTimeElapsedInCluster = kvp.Value;
 
                 var state = IndexState.Normal;
                 if (mergedStates.RawDatabase.AutoIndexes.TryGetValue(kvp.Key, out var definition) && definition.State.HasValue)
@@ -577,28 +561,28 @@ namespace Raven.Server.ServerWide.Maintenance
 
                 var shardedDatabaseName = ShardHelper.ToDatabaseName(mergedStates.RawDatabase.DatabaseName);
 
-                if (state == IndexState.Idle && difference >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
+                if (state == IndexState.Idle && smallestTimeElapsedInCluster >= timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan)
                 {
                     var deleteIndexCommand = new DeleteIndexCommand(kvp.Key, shardedDatabaseName, RaftIdGenerator.NewId());
-                    var updateReason = $"Deleting idle auto-index '{kvp.Key}' because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan}'.";
+                    var updateReason = $"Deleting idle auto-index '{kvp.Key}' because last query time value is '{smallestTimeElapsedInCluster}' and threshold is set to '{timeToWaitBeforeDeletingAutoIndexMarkedAsIdle.AsTimeSpan}'.";
 
                     cleanupCommands.Add((deleteIndexCommand, updateReason));
                     continue;
                 }
 
-                if (state == IndexState.Normal && difference >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                if (state == IndexState.Normal && smallestTimeElapsedInCluster >= timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                 {
                     var setIndexStateCommand = new SetIndexStateCommand(kvp.Key, IndexState.Idle, shardedDatabaseName, RaftIdGenerator.NewId());
-                    var updateReason = $"Marking auto-index '{kvp.Key}' as idle because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.";
+                    var updateReason = $"Marking auto-index '{kvp.Key}' as idle because last query time value is '{smallestTimeElapsedInCluster}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.";
 
                     cleanupCommands.Add((setIndexStateCommand, updateReason));
                     continue;
                 }
 
-                if (state == IndexState.Idle && difference < timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
+                if (state == IndexState.Idle && smallestTimeElapsedInCluster < timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan)
                 {
                     var setIndexStateCommand = new SetIndexStateCommand(kvp.Key, IndexState.Normal, shardedDatabaseName, Guid.NewGuid().ToString());
-                    var updateReason = $"Marking idle auto-index '{kvp.Key}' as normal because last query time value is '{difference}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.";
+                    var updateReason = $"Marking idle auto-index '{kvp.Key}' as normal because last query time value is '{smallestTimeElapsedInCluster}' and threshold is set to '{timeToWaitBeforeMarkingAutoIndexAsIdle.AsTimeSpan}'.";
 
                     cleanupCommands.Add((setIndexStateCommand, updateReason));
                 }

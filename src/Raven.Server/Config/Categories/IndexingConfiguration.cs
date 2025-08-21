@@ -597,6 +597,13 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.Static.ComplexFieldIndexingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public CoraxComplexFieldIndexingBehavior CoraxStaticIndexComplexFieldIndexingBehavior { get; protected set; }
 
+        [Description("Interval of saving elapsed time from last query in an idle index")]
+        [DefaultValue(10)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.IntervalOfStoringElapsedTimeFromLastQueryInMin", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public TimeSetting IntervalOfStoringElapsedTimeFromLastQuery { get; protected set; }
+        
         protected override void ValidateProperty(PropertyInfo property)
         {
             base.ValidateProperty(property);

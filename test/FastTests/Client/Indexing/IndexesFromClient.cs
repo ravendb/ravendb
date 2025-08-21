@@ -212,7 +212,7 @@ namespace FastTests.Client.Indexing
                 batchStats.Errors[0].Timestamp = now;
                 batchStats.Errors[1].Timestamp = nowNext;
 
-                index._indexStorage.UpdateStats(SystemTime.UtcNow, batchStats);
+                index._indexStorage.UpdateStats(SystemTime.UtcNow, TimeSpan.Zero, batchStats);
                 var errors = Indexes.WaitForIndexingErrors(store, new[] { index.Name });
                 var error = errors[0];
                 Assert.Equal(index.Name, error.Name);

@@ -393,7 +393,36 @@ namespace Raven.Server.Documents.Indexes
                 }
             }
         }
+        
+        public TimeSpan? ReadElapsedTimeFromLastQuery(RavenTransaction tx)
+        {
+            var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
 
+            var lastQueryTimeSlice = statsTree.Read(IndexSchema.ElapsedTimeFromLastQuerySlice);
+            if (lastQueryTimeSlice == null)
+                return null;
+
+            return new TimeSpan(ticks: lastQueryTimeSlice.Reader.ReadLittleEndianInt64());
+        }
+
+        public void WriteElapsedTimeFromLastQuery(TimeSpan value)
+        {
+            using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
+            using (var tx = context.OpenWriteTransaction())
+            {
+                var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
+                WriteElapsedFromLastQueryToStatsTree(context.Allocator, value, statsTree);
+                tx.Commit();
+            }
+        }
+
+        private static unsafe void WriteElapsedFromLastQueryToStatsTree(ByteStringContext context, TimeSpan value, Tree statsTree)
+        {
+            var timeElapsedFromLastQuery = value.Ticks;
+            using (Slice.External(context, (byte*)&timeElapsedFromLastQuery, sizeof(long), out Slice timeElapsedFromLastQuerySlice))
+                statsTree.Add(IndexSchema.ElapsedTimeFromLastQuerySlice, timeElapsedFromLastQuerySlice);
+        }
+        
         public DateTime? ReadLastIndexingTime(RavenTransaction tx)
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
@@ -956,7 +985,7 @@ namespace Raven.Server.Documents.Indexes
             return lastEtag;
         }
 
-        public unsafe IndexFailureInformation UpdateStats(DateTime indexingTime, IndexingRunStats stats)
+        public unsafe IndexFailureInformation UpdateStats(DateTime indexingTime, TimeSpan lastQueryElapsed, IndexingRunStats stats)
         {
             if (_logger.IsInfoEnabled)
                 _logger.Info($"Updating statistics for '{_index.Name}'. Stats: {stats}.");
@@ -1006,6 +1035,8 @@ namespace Raven.Server.Documents.Indexes
                 var binaryDate = indexingTime.ToBinary();
                 using (Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long), out Slice binaryDateslice))
                     statsTree.Add(IndexSchema.LastIndexingTimeSlice, binaryDateslice);
+
+                WriteElapsedFromLastQueryToStatsTree(context.Allocator, lastQueryElapsed, statsTree);
 
                 if (stats.Errors != null)
                 {
@@ -1255,6 +1286,8 @@ namespace Raven.Server.Documents.Indexes
             public static readonly Slice ReduceErrorsSlice;
 
             public static readonly Slice LastIndexingTimeSlice;
+            
+            public static readonly Slice ElapsedTimeFromLastQuerySlice;
 
             public static readonly Slice StateSlice;
 
@@ -1288,6 +1321,7 @@ namespace Raven.Server.Documents.Indexes
                     Slice.From(ctx, "ReduceSuccesses", ByteStringType.Immutable, out ReduceSuccessesSlice);
                     Slice.From(ctx, "ReduceErrors", ByteStringType.Immutable, out ReduceErrorsSlice);
                     Slice.From(ctx, "LastIndexingTime", ByteStringType.Immutable, out LastIndexingTimeSlice);
+                    Slice.From(ctx, "ElapsedTimeFromLastQuery", ByteStringType.Immutable, out ElapsedTimeFromLastQuerySlice);
                     Slice.From(ctx, "Priority", ByteStringType.Immutable, out _);
                     Slice.From(ctx, "State", ByteStringType.Immutable, out StateSlice);
                     Slice.From(ctx, "ErrorTimestamps", ByteStringType.Immutable, out ErrorTimestampsSlice);
