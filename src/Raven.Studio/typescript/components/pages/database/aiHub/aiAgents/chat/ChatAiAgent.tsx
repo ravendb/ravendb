@@ -19,6 +19,7 @@ import genUtils from "common/generalUtils";
 import Badge from "react-bootstrap/Badge";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import AiTokensUsagePopoverBody from "components/common/AiTokensUsagePopoverBody";
+import AiAgentLinkedConversationsDropdown from "../partials/AiAgentLinkedConversationsDropdown";
 
 export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatAiAgentQueryParams>) {
     const { handleSend, reloadForm, handleNewChat, chatForm, asyncGetDefaultValues, handleSubmit, runChat } =
@@ -31,6 +32,7 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatA
     const config = useAppSelector(chatAiAgentSelectors.config);
     const isRawData = useAppSelector(chatAiAgentSelectors.isRawData);
     const document = useAppSelector(chatAiAgentSelectors.document);
+    const conversationId = useAppSelector(chatAiAgentSelectors.conversationId);
 
     const title = config.data?.Name ?? "AI Agent";
 
@@ -68,6 +70,15 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatA
                     >
                         <Icon icon="plus" /> New chat
                     </Button>
+                    {conversationId && (
+                        <a
+                            href={appUrl.forEditDoc(conversationId, databaseName)}
+                            className="btn btn-secondary rounded-pill"
+                            target="_blank"
+                        >
+                            <Icon icon="document" /> Edit document
+                        </a>
+                    )}
                     <a className="btn btn-secondary rounded-pill" href={appUrl.forAiAgents(databaseName)}>
                         <Icon icon="cancel" /> Cancel
                     </a>
@@ -82,6 +93,9 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatA
                         Raw data
                     </Switch>
                     {document.data?.Parameters && <AiAgentParametersDropdown parameters={document.data.Parameters} />}
+                    {document.data?.LinkedConversations && (
+                        <AiAgentLinkedConversationsDropdown linkedConversations={document.data.LinkedConversations} />
+                    )}
                 </div>
             </div>
 
