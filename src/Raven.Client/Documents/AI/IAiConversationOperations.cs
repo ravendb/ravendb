@@ -26,7 +26,7 @@ public interface IAiConversationOperations
     /// <param name="action">A function that processes the arguments and returns the result.</param>
     /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
     void Handle<TArgs>(string actionName, Func<TArgs, object> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel) where TArgs : class;
-    
+
     /// <summary>
     /// Registers an asynchronous handler for an action tool.
     /// </summary>
@@ -167,7 +167,7 @@ public interface IAiConversationOperations
     ///
     /// You can also access all the actions that require answers using the <see cref="RequiredActions"/> method.
     /// </summary>
-    event Func<UnhandledActionArgs, Task> OnUnhandledAction;
+    event Func<UnhandledActionEventArgs, Task> OnUnhandledAction;
 }
 
 public enum AiHandleErrorStrategy
@@ -176,9 +176,16 @@ public enum AiHandleErrorStrategy
     RaiseImmediately
 }
 
-public class UnhandledActionArgs
+public class UnhandledActionEventArgs
 {
-    public IAiConversationOperations Sender{ get; set; }
-    public AiAgentActionRequest Action{ get; set; }
-    public CancellationToken Cancellation { get; set; }
-};
+    internal UnhandledActionEventArgs(IAiConversationOperations sender, AiAgentActionRequest action, CancellationToken token)
+    {
+        Sender = sender;
+        Action = action;
+        Token = token;
+    }
+
+    public IAiConversationOperations Sender { get; private set; }
+    public AiAgentActionRequest Action { get; private set; }
+    public CancellationToken Token { get; private set; }
+}

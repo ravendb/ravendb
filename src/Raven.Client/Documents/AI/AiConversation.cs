@@ -174,14 +174,9 @@ internal class AiConversation : IAiConversationOperations
                         // error handling here is expected to be done by the invocation based on the error strategy the user choose
                         await invocation.Invoke(ctx, action, token).ConfigureAwait(false);
                     }
-                    else if (OnUnhandledAction is { } e)
+                    else if (OnUnhandledAction is { } onUnhandledAction)
                     {
-                        await e(new UnhandledActionArgs
-                        {
-                            Action = action,
-                            Sender = this,
-                            Cancellation = token,
-                        }).ConfigureAwait(false);
+                        await onUnhandledAction(new UnhandledActionEventArgs(this, action, token)).ConfigureAwait(false);
                     }
                     else
                     {
@@ -199,7 +194,7 @@ internal class AiConversation : IAiConversationOperations
         }
     }
 
-    public event Func<UnhandledActionArgs, Task> OnUnhandledAction;
+    public event Func<UnhandledActionEventArgs, Task> OnUnhandledAction;
 
     private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(CancellationToken token = default)
     {
