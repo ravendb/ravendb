@@ -59,11 +59,11 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
         
-        [RavenAction("/databases/*/debug/documents/scan-corrupted-ids", "GET", AuthorizationStatus.ValidUser, EndpointType.Read, IsDebugInformationEndpoint = true)]
+        [RavenAction("/databases/*/debug/documents/scan-corrupted-ids", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task ScanCorruptedIds()
         {
             var startEtag = GetIntValueQueryString("startEtag", required: false) ?? 0;
-            var corruptedCount = GetIntValueQueryString("corruptedCount", required: false) ?? int.MaxValue;
+            var corruptedCount = GetIntValueQueryString("corruptedCount", required: false) ?? 1024;
             
             var corrupted = new List<string>();
             long? lastEtag = null;

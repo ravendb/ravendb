@@ -1562,6 +1562,12 @@ namespace Raven.Server.Documents.Revisions
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public unsafe ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, LazyStringValue lowerId, out Slice prefixSlice)
+        {
+            return GetKeyPrefix(context.Allocator, lowerId.Buffer, lowerId.Size, out prefixSlice);
+        }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public unsafe ByteStringContext.InternalScope GetKeyPrefix(DocumentsOperationContext context, Slice lowerId, out Slice prefixSlice)
         {
             return GetKeyPrefix(context.Allocator, lowerId.Content.Ptr, lowerId.Size, out prefixSlice);
@@ -1617,8 +1623,7 @@ namespace Raven.Server.Documents.Revisions
             return numbers.Read(prefix)?.Reader.ReadLittleEndianInt64() ?? 0;
         }
 
-        public Document
-            GetRevisionBefore(DocumentsOperationContext context, string id, DateTime max)
+        public Document GetRevisionBefore(DocumentsOperationContext context, string id, DateTime max)
         {
             using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))

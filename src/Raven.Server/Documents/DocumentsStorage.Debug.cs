@@ -35,36 +35,6 @@ namespace Raven.Server.Documents
                     return true;
                 }
             }
-            
-            public bool DeleteRevisionByEtag(long etag, string collection = null)
-            {
-                using (_storage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
-                using (var tx = context.OpenWriteTransaction())
-                {
-                    var index = Revisions.RevisionsStorage.RevisionsSchema.FixedSizeIndexes[Revisions.RevisionsStorage.AllRevisionsEtagsSlice];
-                    if (collection == null)
-                    {
-                        using var table = new Table(Revisions.RevisionsStorage.RevisionsSchema, context.Transaction.InnerTransaction);
-                        if (table.FindByIndex(index, etag, out var reader) == false)
-                            return false;
-                        
-                        using var doc = Revisions.RevisionsStorage.TableValueToRevision(context, ref reader, DocumentFields.Data);
-                        if (doc.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata)
-                            && metadata.TryGet(Constants.Documents.Metadata.Collection, out collection) == false)
-                            return false;
-                    }
-                    
-                    var collectionName = new CollectionName(collection);
-                    var tableName = collectionName.GetTableName(CollectionTableType.Revisions);
-                    using var collectionTable = tx.InnerTransaction.OpenTable(Revisions.RevisionsStorage.RevisionsSchema, tableName);
-
-                    if (collectionTable.DeleteByIndex(index, etag) == false) 
-                        return false;
-                    
-                    tx.Commit();
-                    return true;
-                }
-            }
         }
     }
 }

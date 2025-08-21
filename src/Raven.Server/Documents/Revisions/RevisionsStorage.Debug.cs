@@ -1,15 +1,54 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
+using Raven.Client;
 using Raven.Server.ServerWide.Context;
+using Sparrow.Json;
+using Voron;
 using Voron.Data.Tables;
 
 namespace Raven.Server.Documents.Revisions
 {
     public partial class RevisionsStorage
     {
+        public Debugging ForDebug => new Debugging(this);
+
+        public class Debugging
+        {
+            private readonly RevisionsStorage _storage;
+            public Debugging(RevisionsStorage storage)
+            {
+                _storage = storage;
+            }
+            // Used to delete corrupted document from the JS admin console
+            public bool DeleteRevisionByEtag(long etag)
+            {
+                using (_storage._documentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                using (var tx = context.OpenWriteTransaction())
+                {
+                    var index = RevisionsSchema.FixedSizeIndexes[AllRevisionsEtagsSlice];
+                    using var table = new Table(RevisionsSchema, context.Transaction.InnerTransaction);
+                    if (table.FindByIndex(index, etag, out var tvr) == false)
+                        return false;
+                        
+                    using var doc = TableValueToRevision(context, ref tvr, DocumentFields.Data | DocumentFields.ChangeVector | DocumentFields.LowerId);
+                    if (doc.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false
+                        || metadata.TryGet(Constants.Documents.Metadata.Collection, out string collection) == false)
+                        return false;
+                    
+                    var collectionName = new CollectionName(collection);
+                    var collectionTable = _storage.EnsureRevisionTableCreated(context.Transaction.InnerTransaction, collectionName);
+
+                    using (_storage.GetKeyPrefix(context, doc.LowerId, out Slice prefixSlice))
+                    {
+                        _storage.DeleteRevisionFromTable(context, collectionTable, new Dictionary<string, Table>(), doc, collectionName, doc.ChangeVector, _storage._database.Time.GetUtcNow().Ticks);
+                        IncrementCountOfRevisions(context, prefixSlice, -1);
+                    }
+                    
+                    tx.Commit();
+                    return true;
+                }
+            }
+
+        }
         internal class TestingStuff
         {
             private RevisionsStorage _parent;
