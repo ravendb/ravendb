@@ -9,16 +9,44 @@ public class RequiresMsSqlRetryTheoryAttribute : RetryTheoryAttribute
     public RequiresMsSqlRetryTheoryAttribute(int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
         : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
     {
+
+    }
+
+    public override string Skip
+    {
+        get
+        {
+            if (string.IsNullOrEmpty(base.Skip) == false)
+                return base.Skip;
+
+            ShouldSkip(out var skipMessage);
+            return skipMessage;
+        }
+
+        set => base.Skip = value;
+    }
+
+    private static bool ShouldSkip(out string skipMessage)
+    {
         if (RavenTestHelper.SkipIntegrationTests)
         {
-            Skip = RavenTestHelper.SkipIntegrationMessage;
-            return;
+            skipMessage = RavenTestHelper.SkipIntegrationMessage;
+            return true;
         }
 
         if (RavenTestHelper.IsRunningOnCI)
-            return;
+        {
+            skipMessage = null;
+            return false;
+        }
 
         if (MsSqlConnectionString.Instance.CanConnect == false)
-            Skip = "Test requires MsSQL database";
+        {
+            skipMessage = "Test requires MsSQL database";
+            return true;
+        }
+
+        skipMessage = null;
+        return false;
     }
 }
