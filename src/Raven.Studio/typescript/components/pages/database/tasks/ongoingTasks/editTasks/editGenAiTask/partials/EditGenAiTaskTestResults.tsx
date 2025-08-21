@@ -17,6 +17,7 @@ import AceUnifiedDiff from "components/common/ace/AceUnifiedDiff";
 import { Switch } from "components/common/Checkbox";
 import useBoolean from "components/hooks/useBoolean";
 import genUtils from "common/generalUtils";
+import AiTokensUsagePopoverBody from "components/common/AiTokensUsagePopoverBody";
 
 export default function EditGenAiTaskTestResults() {
     const dispatch = useAppDispatch();
@@ -114,25 +115,12 @@ function ModelUsage() {
         <div>
             <PopoverWithHoverWrapper
                 message={
-                    <div>
-                        <div className="hstack justify-content-between gap-3">
-                            <span>Prompt tokens</span>
-                            <span>{genUtils.formatAiTokens(modelUsage.data.promptTokens)}</span>
-                        </div>
-                        <div className="hstack justify-content-between gap-3">
-                            <span>Completion tokens</span>
-                            <span>{genUtils.formatAiTokens(modelUsage.data.completionTokens)}</span>
-                        </div>
-                        <div className="hstack justify-content-between gap-3">
-                            <span>Cached tokens</span>
-                            <span>{genUtils.formatAiTokens(modelUsage.data.cachedTokens)}</span>
-                        </div>
-                        <hr className="my-1" />
-                        <div className="hstack justify-content-between gap-3">
-                            <span>Total tokens used</span>
-                            <span>{genUtils.formatAiTokens(modelUsage.data.totalTokens)}</span>
-                        </div>
-                    </div>
+                    <AiTokensUsagePopoverBody
+                        prompt={modelUsage.data.promptTokens}
+                        completion={modelUsage.data.completionTokens}
+                        cached={modelUsage.data.cachedTokens}
+                        total={modelUsage.data.totalTokens}
+                    />
                 }
             >
                 <Badge bg="info">

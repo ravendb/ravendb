@@ -15,6 +15,10 @@ import { LoadingView } from "components/common/LoadingView";
 import ChatAiAgentFormBody from "./partials/ChatAiAgentFormBody";
 import AiAgentParametersDropdown from "../partials/AiAgentParametersDropdown";
 import useChatAiAgent, { ChatAiAgentQueryParams } from "./hooks/useChatAiAgent";
+import genUtils from "common/generalUtils";
+import Badge from "react-bootstrap/Badge";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import AiTokensUsagePopoverBody from "components/common/AiTokensUsagePopoverBody";
 
 export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatAiAgentQueryParams>) {
     const { handleSend, reloadForm, handleNewChat, chatForm, asyncGetDefaultValues, handleSubmit, runChat } =
@@ -27,6 +31,8 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatA
     const config = useAppSelector(chatAiAgentSelectors.config);
     const isRawData = useAppSelector(chatAiAgentSelectors.isRawData);
     const document = useAppSelector(chatAiAgentSelectors.document);
+
+    const title = config.data?.Name ?? "AI Agent";
 
     if (!queryParams?.agentId) {
         router.navigate(appUrl.forAiAgents(databaseName));
@@ -44,9 +50,12 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatA
     return (
         <div className="h-100 vstack">
             <div className="hstack justify-content-between align-items-start px-3 pt-3">
-                <h2 className="text-truncate w-50 mb-3" title={config.data?.Name}>
-                    <Icon icon="ai-agents" /> {config.data?.Name ?? "AI Agent"}{" "}
-                </h2>
+                <div className="hstack gap-2 w-50 mb-3 align-items-center">
+                    <h2 className="text-truncate m-0" title={title}>
+                        <Icon icon="ai-agents" /> {title}
+                    </h2>
+                    {document.data?.TotalUsage && <TotalUsageBadge usage={document.data.TotalUsage} />}
+                </div>
                 <ChatAiAgentInfoHub />
             </div>
             <div className="hstack mb-2 justify-content-between px-3">
@@ -100,5 +109,26 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatA
                 />
             </div>
         </div>
+    );
+}
+
+function TotalUsageBadge({ usage }: { usage: Raven.Client.Documents.Operations.AI.AiUsage }) {
+    return (
+        <Badge bg="info" pill>
+            <PopoverWithHoverWrapper
+                placement="bottom"
+                message={
+                    <AiTokensUsagePopoverBody
+                        prompt={usage.PromptTokens}
+                        completion={usage.CompletionTokens}
+                        cached={usage.CachedTokens}
+                        total={usage.TotalTokens}
+                    />
+                }
+            >
+                <Icon icon="info" />
+            </PopoverWithHoverWrapper>
+            Tokens used: {genUtils.formatAiTokens(usage.TotalTokens)}
+        </Badge>
     );
 }
