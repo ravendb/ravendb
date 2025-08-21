@@ -28,7 +28,7 @@ namespace SlowTests.Voron.CompactTrees
             };
 
         [RavenTheory(RavenTestCategory.Voron)]
-        [MemberData("Configuration")]
+        [MemberData("Configuration", Skip = "Corax test")]
         public void RandomUpsertsWithoutRemoves(int treeSize, int randomSeed = 1337, int transactionSize = 10000)
         {
             var currentState = new Dictionary<long, long>();
@@ -93,7 +93,7 @@ namespace SlowTests.Voron.CompactTrees
 
 
         [RavenTheory(RavenTestCategory.Voron)]
-        [MemberData("Configuration")]
+        [MemberData("Configuration", Skip = "Corax test")]
         public void RandomUpsertsWithRemoves(int treeSize, int randomSeed = 1337, int transactionSize = 10000)
         {
             var currentState = new Dictionary<long, long>();

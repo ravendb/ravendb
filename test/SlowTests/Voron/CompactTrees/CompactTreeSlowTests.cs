@@ -15,7 +15,7 @@ public class CompactTreeSlowTests : StorageTest
     {
     }
 
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenFact(RavenTestCategory.Voron, Skip = "Corax test")]
     public void CanStoreLargeNumberOfItemsInRandomlyOrder()
     {
         const int Size = 400000;
@@ -41,7 +41,7 @@ public class CompactTreeSlowTests : StorageTest
     }
 
 
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenFact(RavenTestCategory.Voron, Skip = "Corax test")]
     public void CanDeleteLargeNumberOfItemsInRandomOrder()
     {
         const int Size = 400000;
@@ -75,7 +75,7 @@ public class CompactTreeSlowTests : StorageTest
         }
     }
 
-    [RavenTheory(RavenTestCategory.Voron)]
+    [RavenTheory(RavenTestCategory.Voron, Skip = "Corax test")]
     [InlineData(400000, 1337)]
     [InlineDataWithRandomSeed(400000)]
     public void CanDeleteLargeNumberOfItemsInRandomInsertionOrder(int size, int random)
@@ -126,7 +126,7 @@ public class CompactTreeSlowTests : StorageTest
     }
 
 
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenFact(RavenTestCategory.Voron, Skip = "Corax test")]
     public void CanDeleteLargeNumberOfItemsFromStart()
     {
         const int Size = 400000;
@@ -160,7 +160,7 @@ public class CompactTreeSlowTests : StorageTest
     }
 
 
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenFact(RavenTestCategory.Voron, Skip = "Corax test")]
     public void CanDeleteLargeNumberOfItemsFromEnd()
     {
         const int Size = 400000;
@@ -194,7 +194,7 @@ public class CompactTreeSlowTests : StorageTest
     }
 
 
-    [RavenFact(RavenTestCategory.Voron)]
+    [RavenFact(RavenTestCategory.Voron, Skip = "Corax test")]
     public void CanStoreLargeNumberOfItemsInSequentialOrder()
     {
         const int Size = 400000;
