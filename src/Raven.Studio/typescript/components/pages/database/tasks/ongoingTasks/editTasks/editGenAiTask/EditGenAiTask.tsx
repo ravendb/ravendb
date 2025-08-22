@@ -43,7 +43,7 @@ export default function EditGenAiTask({ queryParams }: ReactQueryParamsProps<Que
             dispatch(editGenAiTaskActions.sourceViewSet(queryParams.sourceView));
         }
 
-        dispatch(connectionStringsActions.viewContextSet("aiConnectionStrings"));
+        dispatch(connectionStringsActions.viewContextSet("aiTask"));
 
         return () => {
             dispatch(editGenAiTaskActions.reset());

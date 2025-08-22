@@ -43,24 +43,25 @@ public class CustomS3RetryTheoryAttribute : RetryTheoryAttribute
     public CustomS3RetryTheoryAttribute([CallerMemberName] string memberName = "", int maxRetries = 3, int delayBetweenRetriesMs = 0, params Type[] skipOnExceptions)
         : base(maxRetries, delayBetweenRetriesMs, skipOnExceptions)
     {
-        //if (RavenTestHelper.IsRunningOnCI)
-        //    return;
+    }
 
-        if (EnvVariableMissing)
+    public override string Skip
+    {
+        get
         {
-            Skip = $"Test is missing '{S3CredentialEnvironmentVariable}' environment variable.";
-            return;
+            if (string.IsNullOrEmpty(base.Skip) == false)
+                return base.Skip;
+
+            ShouldSkip(out var skipMessage);
+            return skipMessage;
         }
 
-        if (string.IsNullOrEmpty(ParsingError) == false)
-        {
-            Skip = $"Failed to parse custom S3 settings, error: {ParsingError}";
-            return;
-        }
+        set => base.Skip = value;
+    }
 
-        if (_s3Settings == null)
-        {
-            Skip = $"S3 {memberName} tests missing S3 settings.";
-        }
+    private static bool ShouldSkip(out string skipMessage)
+    {
+        skipMessage = CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(EnvVariableMissing, S3CredentialEnvironmentVariable, ParsingError, _s3Settings, skipIsRunningOnCI: true);
+        return string.IsNullOrEmpty(skipMessage) == false;
     }
 }

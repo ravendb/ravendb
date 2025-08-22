@@ -13,10 +13,10 @@ namespace Corax.Indexing;
 
 public partial class IndexWriter
 {
-    private static void ThrowTriedToDeleteTermThatDoesNotExists(Slice term, IndexedField indexedField)
+    private static void ThrowTriedToDeleteTermThatDoesNotExists<TKey>(TKey term, Slice indexedFieldName)
     {
         throw new InvalidOperationException(
-            $"Attempt to remove term: '{term}' for field {indexedField.Name}, but it does not exists! This is a bug.");
+            $"Attempt to remove term: '{term}' for field {indexedFieldName}, but it does not exists! This is a bug.");
     }
     
     private static void ThrowMoreThanOneRemovalFoundForSingleItem(long idInTree, in EntriesModifications entries, long existingEntryId, short existingFrequency)
