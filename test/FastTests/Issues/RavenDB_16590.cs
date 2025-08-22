@@ -90,7 +90,7 @@ namespace FastTests.Issues
                 "Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb",
                 "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
                 "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
-                "Indexing.IntervalOfStoringElapsedTimeFromLastQuery",
+                "Indexing.ElapsedSinceQueriedPersistIntervalInMin",
                 
                 //Obsolete studio keys:
                 "Indexing.Static.SearchEngineType",

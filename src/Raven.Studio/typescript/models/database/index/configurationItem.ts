@@ -46,7 +46,7 @@ class configurationItem {
         "Indexing.Corax.MaxAllocationsAtDictionaryTrainingInMb",
         "Indexing.Corax.Static.ComplexFieldIndexingBehavior",
         "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
-        "Indexing.IntervalOfStoringElapsedTimeFromLastQuery"
+        "Indexing.ElapsedSinceQueriedPersistIntervalInMin"
         
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*

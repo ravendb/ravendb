@@ -599,10 +599,11 @@ namespace Raven.Server.Config.Categories
 
         [Description("Interval of saving elapsed time from last query in an idle index")]
         [DefaultValue(10)]
+        [MinValue(1)]
         [TimeUnit(TimeUnit.Minutes)]
         [IndexUpdateType(IndexUpdateType.None)]
-        [ConfigurationEntry("Indexing.IntervalOfStoringElapsedTimeFromLastQueryInMin", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
-        public TimeSetting IntervalOfStoringElapsedTimeFromLastQuery { get; protected set; }
+        [ConfigurationEntry("Indexing.ElapsedSinceQueriedPersistIntervalInMin", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public TimeSetting ElapsedSinceQueriedPersistInterval { get; set; }
         
         protected override void ValidateProperty(PropertyInfo property)
         {

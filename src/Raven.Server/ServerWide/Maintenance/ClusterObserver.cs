@@ -553,6 +553,7 @@ namespace Raven.Server.ServerWide.Maintenance
 
             foreach (var kvp in indexes)
             {
+                // This value is actually the result of the Min function of values from all nodes for an index.
                 var smallestTimeElapsedInCluster = kvp.Value;
 
                 var state = IndexState.Normal;

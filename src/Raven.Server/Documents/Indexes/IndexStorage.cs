@@ -398,29 +398,29 @@ namespace Raven.Server.Documents.Indexes
         {
             var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
 
-            var lastQueryTimeSlice = statsTree.Read(IndexSchema.ElapsedTimeFromLastQuerySlice);
+            var lastQueryTimeSlice = statsTree.Read(IndexSchema.ElapsedSinceQueriedSlice);
             if (lastQueryTimeSlice == null)
                 return null;
 
             return new TimeSpan(ticks: lastQueryTimeSlice.Reader.ReadLittleEndianInt64());
         }
 
-        public void WriteElapsedTimeFromLastQuery(TimeSpan value)
+        public void WriteElapsedSinceQueried(TimeSpan value)
         {
             using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
             using (var tx = context.OpenWriteTransaction())
             {
                 var statsTree = tx.InnerTransaction.ReadTree(IndexSchema.StatsTree);
-                WriteElapsedFromLastQueryToStatsTree(context.Allocator, value, statsTree);
+                WriteElapsedSinceQueriedToStatsTree(context.Allocator, value, statsTree);
                 tx.Commit();
             }
         }
 
-        private static unsafe void WriteElapsedFromLastQueryToStatsTree(ByteStringContext context, TimeSpan value, Tree statsTree)
+        private static unsafe void WriteElapsedSinceQueriedToStatsTree(ByteStringContext context, TimeSpan value, Tree statsTree)
         {
             var timeElapsedFromLastQuery = value.Ticks;
             using (Slice.External(context, (byte*)&timeElapsedFromLastQuery, sizeof(long), out Slice timeElapsedFromLastQuerySlice))
-                statsTree.Add(IndexSchema.ElapsedTimeFromLastQuerySlice, timeElapsedFromLastQuerySlice);
+                statsTree.Add(IndexSchema.ElapsedSinceQueriedSlice, timeElapsedFromLastQuerySlice);
         }
         
         public DateTime? ReadLastIndexingTime(RavenTransaction tx)
@@ -1036,7 +1036,7 @@ namespace Raven.Server.Documents.Indexes
                 using (Slice.External(context.Allocator, (byte*)&binaryDate, sizeof(long), out Slice binaryDateslice))
                     statsTree.Add(IndexSchema.LastIndexingTimeSlice, binaryDateslice);
 
-                WriteElapsedFromLastQueryToStatsTree(context.Allocator, lastQueryElapsed, statsTree);
+                WriteElapsedSinceQueriedToStatsTree(context.Allocator, lastQueryElapsed, statsTree);
 
                 if (stats.Errors != null)
                 {
@@ -1287,7 +1287,7 @@ namespace Raven.Server.Documents.Indexes
 
             public static readonly Slice LastIndexingTimeSlice;
             
-            public static readonly Slice ElapsedTimeFromLastQuerySlice;
+            public static readonly Slice ElapsedSinceQueriedSlice;
 
             public static readonly Slice StateSlice;
 
@@ -1321,7 +1321,7 @@ namespace Raven.Server.Documents.Indexes
                     Slice.From(ctx, "ReduceSuccesses", ByteStringType.Immutable, out ReduceSuccessesSlice);
                     Slice.From(ctx, "ReduceErrors", ByteStringType.Immutable, out ReduceErrorsSlice);
                     Slice.From(ctx, "LastIndexingTime", ByteStringType.Immutable, out LastIndexingTimeSlice);
-                    Slice.From(ctx, "ElapsedTimeFromLastQuery", ByteStringType.Immutable, out ElapsedTimeFromLastQuerySlice);
+                    Slice.From(ctx, "ElapsedSinceQueried", ByteStringType.Immutable, out ElapsedSinceQueriedSlice);
                     Slice.From(ctx, "Priority", ByteStringType.Immutable, out _);
                     Slice.From(ctx, "State", ByteStringType.Immutable, out StateSlice);
                     Slice.From(ctx, "ErrorTimestamps", ByteStringType.Immutable, out ErrorTimestampsSlice);
