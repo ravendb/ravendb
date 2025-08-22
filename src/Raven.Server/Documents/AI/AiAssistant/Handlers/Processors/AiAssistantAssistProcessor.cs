@@ -21,8 +21,8 @@ internal class AiAssistantAssistProcessor([NotNull] RequestHandler requestHandle
         using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
             var requestBody = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "assist request");
-            var operationTypeFound = requestBody.TryGetMember(nameof(AiAssistantOperationType), out var operationTypeObject);
-            PortableExceptions.ThrowIf<InvalidOperationException>(operationTypeFound == false || operationTypeObject is not LazyStringValue, $"AiAssistant request requires '{nameof(AiAssistantOperationType)}', which wasn't provided.");
+            var operationTypeFound = requestBody.TryGetMember(nameof(AiAssistRequestBase.OperationType), out var operationTypeObject);
+            PortableExceptions.ThrowIf<InvalidOperationException>(operationTypeFound == false || operationTypeObject is not LazyStringValue, $"AiAssistant request requires '{nameof(AiAssistRequestBase.OperationType)}', which wasn't provided.");
 
             if (operationTypeObject is not LazyStringValue operationTypeLsv || Enum.TryParse(operationTypeLsv, out AiAssistantOperationType operationType) == false)
                 throw new InvalidOperationException($"Couldn't parse {operationTypeObject} as '{nameof(AiAssistantOperationType)}'.");
@@ -30,6 +30,7 @@ internal class AiAssistantAssistProcessor([NotNull] RequestHandler requestHandle
             var request = operationType switch
             {
                 AiAssistantOperationType.RefineText => GetRefineTextGenAiRequestBody(requestBody),
+                AiAssistantOperationType.RefineGenAiPrompt => GetRefineGenAiPromptRequestBody(requestBody),
                 _ => throw new NotSupportedException($"Unsupported {nameof(AiAssistantOperationType)} - '{operationType}'")
             };
             
@@ -55,6 +56,14 @@ internal class AiAssistantAssistProcessor([NotNull] RequestHandler requestHandle
     private string GetRefineTextGenAiRequestBody(BlittableJsonReaderObject requestBody)
     {
         RefineTextRequest request = JsonDeserializationServer.RefineTextRequest(requestBody);
+        FulfillRequestMetadata(request);
+        
+        return JsonConvert.SerializeObject(request);
+    }
+
+    private string GetRefineGenAiPromptRequestBody(BlittableJsonReaderObject requestBody)
+    {
+        RefineGenAiPromptRequest request = JsonDeserializationServer.RefineGenAiPromptRequest(requestBody);
         FulfillRequestMetadata(request);
         
         return JsonConvert.SerializeObject(request);

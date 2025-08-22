@@ -3,4 +3,5 @@
 public enum AiAssistantOperationType
 {
     RefineText,
+    RefineGenAiPrompt
 }

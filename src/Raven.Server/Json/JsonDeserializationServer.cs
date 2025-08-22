@@ -366,6 +366,8 @@ namespace Raven.Server.Json
 
         internal static readonly Func<BlittableJsonReaderObject, RefineTextGenAi> RefineTextGenAi = GenerateJsonDeserializationRoutine<RefineTextGenAi>();
         
+        internal static readonly Func<BlittableJsonReaderObject, RefineGenAiPromptRequest> RefineGenAiPromptRequest = GenerateJsonDeserializationRoutine<RefineGenAiPromptRequest>();
+        
         public sealed class Parameters
         {
             private Parameters()
