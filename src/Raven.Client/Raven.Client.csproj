@@ -171,6 +171,7 @@
     <PackageReference Include="Newtonsoft.Json" />
     <PackageReference Include="Nito.AsyncEx.Coordination" />
     <PackageReference Include="Raven.CodeAnalysis" PrivateAssets="All" />
+    <PackageReference Include="System.Net.ServerSentEvents" />
   </ItemGroup>
   <ItemGroup Condition="'$(TargetFramework)' == 'net6.0' OR '$(TargetFramework)' == 'net7.0'">
     <PackageReference Include="System.Collections.Immutable" VersionOverride="8.0.0" />

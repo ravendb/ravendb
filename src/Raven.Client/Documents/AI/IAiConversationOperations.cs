@@ -91,6 +91,8 @@ public interface IAiConversationOperations
     /// </returns>
     Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(CancellationToken token = default);
 
+    Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string propertyToStream, Func<string, Task> streamedChunksCallback, CancellationToken token = default);
+    
     /// <summary>
     /// Synchronously executes one turn of the conversation.
     /// </summary>

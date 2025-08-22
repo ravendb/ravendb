@@ -154,26 +154,43 @@ internal class AiConversation : IAiConversationOperations
 
     public AiAnswer<TAnswer> Run<TAnswer>() => AsyncHelpers.RunSync(() => RunAsync<TAnswer>());
 
+    public async Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string propertyToStream, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
+    {
+        while (true)
+        {
+            var r = await RunAsyncInternal<TAnswer>(propertyToStream, streamedChunksCallback, token).ConfigureAwait(false);
+            if (await HandleServerReply(r, token).ConfigureAwait(false))
+                return r;
+        }
+    }
+
     public async Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(CancellationToken token = default)
     {
         while (true)
         {
-            var r = await RunAsyncInternal<TAnswer>(token).ConfigureAwait(false);
-            if (r.Status == AiConversationResult.Done)
+            var r = await RunAsyncInternal<TAnswer>(null, null, token).ConfigureAwait(false);
+            if (await HandleServerReply(r, token).ConfigureAwait(false))
                 return r;
+        }
+    }
 
-            if (_actionRequests.Count == 0)
-                throw new InvalidOperationException($"There are no action requests to process, but Status was {r.Status}, should not be possible.");
+    private async Task<bool> HandleServerReply<TAnswer>(AiAnswer<TAnswer> r, CancellationToken token)
+    {
+        if (r.Status == AiConversationResult.Done)
+            return true;
 
-            using (_aiOperations.AllocateOperationContext(out JsonOperationContext ctx))
+        if (_actionRequests.Count == 0)
+            throw new InvalidOperationException($"There are no action requests to process, but Status was {r.Status}, should not be possible.");
+
+        using (_aiOperations.AllocateOperationContext(out JsonOperationContext ctx))
+        {
+            foreach (var action in _actionRequests)
             {
-                foreach (var action in _actionRequests)
+                if (_invocations.TryGetValue(action.Name, out var invocation))
                 {
-                    if (_invocations.TryGetValue(action.Name, out var invocation))
-                    {
-                        // error handling here is expected to be done by the invocation based on the error strategy the user choose
-                        await invocation.Invoke(ctx, action, token).ConfigureAwait(false);
-                    }
+                    // error handling here is expected to be done by the invocation based on the error strategy the user choose
+                    await invocation.Invoke(ctx, action, token).ConfigureAwait(false);
+                }
                     else if (OnUnhandledAction is { } onUnhandledAction)
                     {
                         await onUnhandledAction(new UnhandledActionEventArgs(this, action, token)).ConfigureAwait(false);
@@ -187,16 +204,14 @@ internal class AiConversation : IAiConversationOperations
                 }
             }
 
-            // We have nothing to tell the server, but still have action requests pending
-            // we need to send those action requests to the caller that can handle them
-            if (_actionResponses.Count == 0)
-                return r; // note - this has ActionsRequired status
-        }
+        // We have nothing to tell the server, but still have action requests pending
+        // we need to send those action requests to the caller that can handle them
+        return _actionResponses.Count == 0;
     }
 
     public event Func<UnhandledActionEventArgs, Task> OnUnhandledAction;
 
-    private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(CancellationToken token = default)
+    private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(string propertyToStream, Func<string, Task> streamedChunksCallback,CancellationToken token = default)
     {
         if (
             // if this is null, it is the first time we call RunAsync, so we are going to the server to get the pending actions
@@ -210,7 +225,7 @@ internal class AiConversation : IAiConversationOperations
             };
         }
 
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _userPrompt, _actionResponses, _options, _changeVector);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _userPrompt, _actionResponses, _options, _changeVector, propertyToStream, streamedChunksCallback);
 
         try
         {

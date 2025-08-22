@@ -164,6 +164,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             conversationId = await TryPersistAsync(context, configuration, conversationId, r.Document, r.History);
             await responseStream.WriteAsync(ResultPrefix, token);
             await WriteResponseAsync(context, conversationId, r.Response, r.Document);
+            await responseStream.WriteAsync(NewLinePostfix, token);
             await responseStream.FlushAsync(token);
         }
         public override async ValueTask ExecuteAsync()
