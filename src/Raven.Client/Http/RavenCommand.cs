@@ -129,6 +129,12 @@ namespace Raven.Client.Http
             }
         }
 
+        public virtual Task SetResponseRawAsync(HttpResponseMessage response, Stream stream, JsonOperationContext context)
+        {
+            SetResponseRaw(response, stream, context);
+            return Task.CompletedTask;
+        }
+
         public virtual void SetResponseRaw(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
             throw new NotSupportedException($"When {nameof(ResponseType)} is set to Raw then please override this method to handle the response.");
@@ -189,7 +195,7 @@ namespace Raven.Client.Http
                 await using (var uncompressedStream = await RequestExecutor.ReadAsStreamUncompressedAsync(response).ConfigureAwait(false))
 #endif
                 await using (var stream = new StreamWithTimeout(uncompressedStream))
-                    SetResponseRaw(response, stream, context);
+                    await SetResponseRawAsync(response, stream, context).ConfigureAwait(false);
             }
             return ResponseDisposeHandling.Automatic;
         }
