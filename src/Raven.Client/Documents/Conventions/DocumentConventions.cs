@@ -388,7 +388,6 @@ namespace Raven.Client.Documents.Conventions
         private bool? _useHttpCompression;
         private HttpCompressionAlgorithm _httpCompressionAlgorithm;
         private Func<MemberInfo, string> _propertyNameConverter;
-        private Func<MemberInfo, string> _findPropertyNameForIndexDefinition;
         private Func<Type, bool> _typeIsKnownServerSide = _ => false;
         private Func<MemberInfo, bool> _shouldApplyPropertyNameConverter;
         private OperationStatusFetchMode _operationStatusFetchMode;
@@ -555,22 +554,6 @@ namespace Raven.Client.Documents.Conventions
             {
                 AssertNotFrozen();
                 _propertyNameConverter = value;
-            }
-        }
-
-        /// <summary>
-        /// Gets or sets a function to find the property name for a member when building an index definition from a LINQ expression.
-        /// </summary>
-        [Obsolete("This convention is a workaround for an issue where `PropertyNameConverter` is not respected during index definition creation. " +
-                  "A direct fix is a breaking change scheduled for RavenDB v8.0. " +
-                  "This temporary convention was added in v7.1 to address the problem and will be removed in v8.0.", error: false)]
-        public Func<MemberInfo, string> FindPropertyNameForIndexDefinition
-        {
-            get => _findPropertyNameForIndexDefinition;
-            set
-            {
-                AssertNotFrozen();
-                _findPropertyNameForIndexDefinition = value;
             }
         }
 
