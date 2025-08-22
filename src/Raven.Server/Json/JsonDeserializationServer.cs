@@ -364,7 +364,7 @@ namespace Raven.Server.Json
         
         internal static readonly Func<BlittableJsonReaderObject, AiAgentProcessorForTestConversation.AiAgentTestRequest> AiAgentTestRequest = GenerateJsonDeserializationRoutine<AiAgentProcessorForTestConversation.AiAgentTestRequest>();
 
-        internal static readonly Func<BlittableJsonReaderObject, RefineTextGenAi> RefineTextGenAi = GenerateJsonDeserializationRoutine<RefineTextGenAi>();
+        internal static readonly Func<BlittableJsonReaderObject, RefineTextRequest> RefineTextRequest = GenerateJsonDeserializationRoutine<RefineTextRequest>();
         
         internal static readonly Func<BlittableJsonReaderObject, RefineGenAiPromptRequest> RefineGenAiPromptRequest = GenerateJsonDeserializationRoutine<RefineGenAiPromptRequest>();
         
