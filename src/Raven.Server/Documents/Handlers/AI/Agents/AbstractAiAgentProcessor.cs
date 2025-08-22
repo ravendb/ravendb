@@ -117,7 +117,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
         private static readonly byte[] ResultPrefix = "event: result\ndata: "u8.ToArray();
         private static readonly byte[] DataPrefix = "data: "u8.ToArray();
-        private static readonly byte[] NewLinePostfix = "\n\n"u8.ToArray();
+        private static readonly byte[] TwoNewLinesEnd = "\n\n"u8.ToArray();
+        private static readonly byte[] NewLinePostfix = "\n"u8.ToArray();
 
         public async Task HandleStreamingRequest(
             JsonOperationContext context, 
@@ -143,14 +144,29 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             {
                 r = await StreamingTalkAsync(context, configuration, document, propertyToStream, async (data) =>
                 {
-                    while (data.IsEmpty is false)
+                    while (true)
                     {
                         int nextLineBreak = data.Span.IndexOf((byte)'\n');
-                        int length = nextLineBreak >= 0 ? nextLineBreak + 1 : data.Length;
+                        int length = nextLineBreak >= 0 ? nextLineBreak : data.Length;
+
                         await responseStream.WriteAsync(DataPrefix, token);
                         await responseStream.WriteAsync(data[..length], token);
-                        data = data[length..];
+                        await responseStream.WriteAsync(NewLinePostfix, token);
+
+                        if (nextLineBreak is -1) // wrote the entire thing, no line breaks
+                            break;
+                        
+                        data = data[(length + 1)..];
+                        if (data.IsEmpty is false)
+                            continue;
+                        
+                        // means that we had a line break in the end, so let's emit that
+                        await responseStream.WriteAsync(DataPrefix, token);
+                        await responseStream.WriteAsync(NewLinePostfix, token);
+                        break;
                     }
+                    
+                    // becomes the blank new line indicating we are done with this message
                     await responseStream.WriteAsync(NewLinePostfix, token);
                     await responseStream.FlushAsync(token);
 
@@ -163,8 +179,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             conversationId = await TryPersistAsync(context, configuration, conversationId, r.Document, r.History);
             await responseStream.WriteAsync(ResultPrefix, token);
-            await WriteResponseAsync(context, conversationId, r.Response, r.Document);
-            await responseStream.WriteAsync(NewLinePostfix, token);
+            await WriteResponseAsync(context, conversationId, r.Response, r.Document); // can have no new lines here
+            await responseStream.WriteAsync(TwoNewLinesEnd, token); // \n\n for end of message
             await responseStream.FlushAsync(token);
         }
         public override async ValueTask ExecuteAsync()
@@ -309,7 +325,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             AiAgentConfiguration configuration,
             ConversationDocument document,
             string firstPropertyToStream,
-            Func<Memory<byte>,Task>streaming, 
+            Func<Memory<byte>,Task> streaming, 
             CancellationToken token = default)
         {
             using var talker = new Talker(this, context, configuration, document);

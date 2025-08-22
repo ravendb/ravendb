@@ -146,16 +146,19 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         public void AddAndReset()
         {
             if (_toolCallIndex == -1)
+            {
+                _id ??= new();
+                _type ??= new();
+                _name ??= new();
+                _arguments ??= new();
+
                 return;
+            }
             
             AllToolCalls ??= [];
             AllToolCalls.Add(new AiToolCall(_id.ToString(), _name.ToString(), _arguments.ToString()));
         
-            _id ??= new();
-            _type ??= new();
-            _name ??= new();
-            _arguments ??= new();
-
+     
             _toolCallIndex = -1;
             _id.Clear();
             _type.Clear();
@@ -273,7 +276,31 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         
         if (toolCallState.AllToolCalls?.Count >= 0)
         {
-            return new AiResponse(AiResponseType.Tool) { Message = message, ToolCalls = toolCallState.AllToolCalls, };
+            DynamicJsonArray toolCalls = new ();
+            foreach (var call in toolCallState.AllToolCalls)
+            {
+                toolCalls.Add(new DynamicJsonValue
+                {
+                    ["id"] = call.Id,
+                    ["type"] = "function",
+                    ["function"] = new DynamicJsonValue
+                    {
+                        ["name"] = call.Name,
+                        ["arguments"] = call.Arguments
+                    }
+                });
+            }
+            
+            return new AiResponse(AiResponseType.Tool)
+            {
+                Message = streamingContext.ReadObject(new DynamicJsonValue
+                {
+                    ["role"] = "assistant", 
+                    ["content"] = null,
+                    ["tool_calls"] = toolCalls 
+                }, "persisted/streamed/toolcalls"),
+                ToolCalls = toolCallState.AllToolCalls,
+            };
         }
    
         return new AiResponse(AiResponseType.Result)
