@@ -966,18 +966,18 @@ namespace Sparrow.Json.Parsing
 
         public void ValidateFloat()
         {
-            _unmanagedWriteBuffer.EnsureSingleChunk(out var buffer, out var size);
-            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(buffer, size), out double value, out var consumed) && size == consumed)
+            _unmanagedWriteBuffer.EnsureSingleChunk(out var buffer, out var used);
+            if (Utf8Parser.TryParse(new ReadOnlySpan<byte>(buffer, used), out double value, out var consumed) && used == consumed)
             {
                 if (double.IsInfinity(value) == false)
                     return;
-                else if (size == "Infinity".Length && IsInfinity(buffer, 0))
+                else if (used == "Infinity".Length && IsInfinity(buffer, 0))
                     return;
-                else if (size == "-Infinity".Length && buffer[0] == '-' && IsInfinity(buffer, 1))
+                else if (used == "-Infinity".Length && buffer[0] == '-' && IsInfinity(buffer, 1))
                     return;
             }
 
-            ThrowException("Could not parse double: " + Encoding.UTF8.GetString(buffer, size));
+            ThrowException("Could not parse double: " + Encoding.UTF8.GetString(buffer, used));
 
             static bool IsInfinity(byte* buffer, int offset)
             {

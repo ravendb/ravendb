@@ -20,7 +20,10 @@ namespace Sparrow.Json
         void Write<T>(in Span<T> buffer) where T : unmanaged;
         void Write<T>(in ReadOnlySpan<T> buffer) where T : unmanaged;
         void EnsureSingleChunk(JsonParserState state);
-        void EnsureSingleChunk(out byte* ptr, out int size);
+        void EnsureSingleChunk(out byte* ptr, out int used);
+        
+        Span<byte> ReserveSpace(int maxSize);
+        void CommitSpace(int written);
     }
 
     internal unsafe struct UnmanagedStreamBuffer : IUnmanagedWriteBuffer
@@ -28,8 +31,9 @@ namespace Sparrow.Json
         private readonly Stream _stream;
         private int _sizeInBytes;
         public int Used;
-        private readonly JsonOperationContext.MemoryBuffer _buffer;
-        private readonly JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
+        private readonly JsonOperationContext _context;
+        private JsonOperationContext.MemoryBuffer _buffer;
+        private JsonOperationContext.MemoryBuffer.ReturnBuffer _returnBuffer;
         private bool _isDisposed;
 
         public int SizeInBytes => _sizeInBytes;
@@ -39,6 +43,7 @@ namespace Sparrow.Json
             _stream = stream;
             _sizeInBytes = 0;
             Used = 0;
+            _context = context;
             _returnBuffer = context.GetMemoryBuffer(out _buffer);
             _isDisposed = false;
         }
@@ -240,9 +245,38 @@ namespace Sparrow.Json
         {
             throw new NotSupportedException();
         }
-        public void EnsureSingleChunk(out byte* ptr, out int size)
+        public void EnsureSingleChunk(out byte* ptr, out int used)
         {
             throw new NotSupportedException();
+        }
+
+        public Span<byte> ReserveSpace(int maxSize)
+        {
+            // For stream buffer, ensure we have enough space in the current buffer
+            if (_buffer.Size - Used < maxSize)
+            {
+                // Flush the current buffer and start fresh
+                _stream.Write(_buffer.Memory.Memory.Span.Slice(0, Used));
+                Used = 0;
+            }
+
+            // IF even after flushing the size is not big enough. Then we need to get a new memory buffer.            
+            if (_buffer.Size < maxSize)
+            {
+                _returnBuffer.Dispose();
+                _returnBuffer = _context.GetMemoryBuffer(maxSize, out _buffer);
+            }
+            
+            return new Span<byte>(_buffer.Address, maxSize);
+        }
+
+        public void CommitSpace(int actualSize)
+        {
+            if (actualSize < 0)
+                throw new ArgumentOutOfRangeException(nameof(actualSize), "Must be non-negative");
+
+            _sizeInBytes += actualSize;
+            Used += actualSize;
         }
 
         public bool IsDisposed => _isDisposed;
@@ -692,13 +726,13 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void EnsureSingleChunk(JsonParserState state)
         {
-            EnsureSingleChunk(out var buffer, out var size);
+            EnsureSingleChunk(out var buffer, out var used);
             state.StringBuffer = buffer;
-            state.StringSize = size;
+            state.StringSize = used;
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public void EnsureSingleChunk(out byte* ptr, out int size)
+        public void EnsureSingleChunk(out byte* ptr, out int used)
         {
             ThrowOnDisposed();
 
@@ -707,14 +741,14 @@ namespace Sparrow.Json
                 // Common case is we have a single chunk already, so no need 
                 // to do anything
                 ptr = _head.Address;
-                size = SizeInBytes;
+                used = SizeInBytes;
                 return;
             }
 
-            UnlikelyEnsureSingleChunk(out ptr, out size);
+            UnlikelyEnsureSingleChunk(out ptr, out used);
         }
 
-        private void UnlikelyEnsureSingleChunk(out byte* ptr, out int size)
+        private void UnlikelyEnsureSingleChunk(out byte* ptr, out int used)
         {
             // we are using multiple segments, but the current one can fit all
             // the required memory
@@ -725,7 +759,7 @@ namespace Sparrow.Json
                 Memory.Move(_head.Address, _head.Address + _head.Used, SizeInBytes);
 
                 ptr = _head.Address;
-                size = SizeInBytes;
+                used = SizeInBytes;
                 _head.Used = SizeInBytes;
                 // Ensure we are thought of as a single chunk
                 _head.Previous = null;
@@ -760,7 +794,34 @@ namespace Sparrow.Json
             _head.Previous = null;
 
             ptr = _head.Address;
-            size = _head.Used;
+            used = _head.Used;
+        }
+        
+        public Span<byte> ReserveSpace(int maxSize)
+        {
+            ThrowOnDisposed();
+
+            if (maxSize <= 0)
+                return Span<byte>.Empty;
+
+            // Ensure we have enough contiguous space
+            var head = _head;
+            if (head.Allocation.SizeInBytes - head.Used < maxSize)
+            {
+                AllocateNextSegment(maxSize, true);
+            }
+
+            return new Span<byte>(_head.Address + _head.Used, maxSize);
+        }
+
+        public void CommitSpace(int written)
+        {
+            if (written < 0)
+                throw new ArgumentOutOfRangeException(nameof(written), "Must be non-negative");
+
+            var head = _head;
+            head.AccumulatedSizeInBytes += written;
+            head.Used += written;
         }
     }
 }

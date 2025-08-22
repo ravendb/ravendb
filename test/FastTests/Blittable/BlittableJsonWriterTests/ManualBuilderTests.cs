@@ -1130,6 +1130,49 @@ namespace FastTests.Blittable.BlittableJsonWriterTests
                 }
             }
         }
+
+        [RavenTheory(RavenTestCategory.Core)]
+        [InlineData(511)]  // Test stackalloc path (<512 properties)
+        [InlineData(512)]  // Test boundary: stackalloc path (=512 properties)
+        [InlineData(513)]  // Test boundary: WriteDirect path (>512 properties)
+        [InlineData(600)]  // Test WriteDirect path (>512 properties)
+        [InlineData(1000)] // Test larger case
+        public void LargeObjectWithManyPropertiesTest(int propertiesCount)
+        {
+            using (var context = new JsonOperationContext(1024, 1024 * 4, 32 * 1024, SharedMultipleUseFlag.None))
+            {
+                using (var builder = new ManualBlittableJsonDocumentBuilder<UnmanagedWriteBuffer>(context))
+                {
+                    builder.Reset(BlittableJsonDocumentBuilder.UsageMode.None);
+
+                    builder.StartWriteObjectDocument();
+                    builder.StartWriteObject();
+
+                    // Create a single object with many properties to trigger WriteDirect path
+                    for (int i = 0; i < propertiesCount; i++)
+                    {
+                        builder.WritePropertyName($"Property{i}");
+                        builder.WriteValue(i * 2); // Simple values
+                    }
+
+                    builder.WriteObjectEnd();
+                    builder.FinalizeDocument();
+
+                    using (var reader = builder.CreateReader())
+                    {
+                        Assert.Equal(propertiesCount, reader.Count);
+                        
+                        // Verify a few random properties to ensure data integrity
+                        for (int i = 0; i < Math.Min(10, propertiesCount); i++)
+                        {
+                            var propertyName = $"Property{i}";
+                            Assert.True(reader.TryGet(propertyName, out object value));
+                            Assert.Equal(i * 2, Convert.ToInt32(value));
+                        }
+                    }
+                }
+            }
+        }
     }
 
 }

@@ -52,12 +52,12 @@ namespace Sparrow.Json
 
         public unsafe BlittableJsonReaderObject CreateReader()
         {
-            _unmanagedWriteBuffer.EnsureSingleChunk(out byte* ptr, out int size);
+            _unmanagedWriteBuffer.EnsureSingleChunk(out byte* ptr, out int used);
             
-            _lastSize = size;
+            _lastSize = used;
             var reader = new BlittableJsonReaderObject(
                 ptr,
-                size,
+                used,
                 _context,
                 (UnmanagedWriteBuffer)(object)_unmanagedWriteBuffer);
 
@@ -225,13 +225,9 @@ namespace Sparrow.Json
             // the unmanaged writer. This is a trade-off between stack usage and performance.
             var requiredMetadataBufferSize = maxPropertySize * properties.Count + VariableSizeEncoding.MaximumSizeOf<int>();
 
-            // PERF: If the amount of properties is bigger than 512, we are facing a real outlier. This may happen
-            // when we store a large dictionary. Therefore, we want to just deal with it differently than face a stackoverflow
-            // even though the probability is quite low.
-            Span<byte> metadataBuffer = properties.Count < 512 ? 
-                                            stackalloc byte[requiredMetadataBufferSize] : 
-                                            new byte[requiredMetadataBufferSize];
-
+            // Use ReserveSpace for all property counts - zero allocations!
+            Span<byte> metadataBuffer = _unmanagedWriteBuffer.ReserveSpace(requiredMetadataBufferSize);
+            
             // Write object metadata
             ref byte metadataStartPtr = ref MemoryMarshal.GetReference(metadataBuffer);
             ref byte metadataPtr = ref Unsafe.Add(ref metadataStartPtr, VariableSizeEncoding.Write(metadataBuffer, properties.Count));
@@ -253,7 +249,7 @@ namespace Sparrow.Json
             }
             
             int length = (int)Unsafe.ByteOffset(ref metadataStartPtr, ref metadataPtr);
-            _unmanagedWriteBuffer.Write(metadataBuffer.Slice(0, length));
+            _unmanagedWriteBuffer.CommitSpace(length);
             _position += length;
 
             return new WriteToken(objectMetadataStart, objectToken);
@@ -355,9 +351,8 @@ namespace Sparrow.Json
             var propertyArrayOffsetValueByteSize = SetOffsetSizeFlag(ref propertiesSizeMetadata, propertyNamesOffset);
 
             int maxPropertiesBufferLength = sizeof(byte) + propertiesDiscovered * sizeof(int);
-            Span<byte> propertiesBuffer = propertiesDiscovered < 512 ? 
-                                                stackalloc byte[maxPropertiesBufferLength] :
-                                                new byte[maxPropertiesBufferLength];
+            // Use ReserveSpace for all property counts - zero allocations!
+            Span<byte> propertiesBuffer = _unmanagedWriteBuffer.ReserveSpace(maxPropertiesBufferLength);
 
             ref byte propertiesStartPtr = ref MemoryMarshal.GetReference(propertiesBuffer);
             ref byte propertiesPtr = ref propertiesStartPtr;
@@ -378,7 +373,7 @@ namespace Sparrow.Json
 
             // Write property names offsets in the actual buffer.
             int length = (int)(Unsafe.ByteOffset(ref propertiesStartPtr, ref propertiesPtr));
-            _unmanagedWriteBuffer.Write(propertiesBuffer.Slice(0, length));
+            _unmanagedWriteBuffer.CommitSpace(length);
             _position += length;
 
             return propertiesStart;
@@ -546,128 +541,7 @@ namespace Sparrow.Json
             // Then take the first byte and calculate the distance to the end and write it.
             _unmanagedWriteBuffer.Write(destPtr, (int)(destEnd - destPtr));
         }
-
-#if NET7_0_OR_GREATER
-
-        public static byte[] ByteActionTable =>
-        [
-            // 0-31: Control characters (action = 2)
-            2, 2, 2, 2, 2, 2, 2, 2, // 0-7
-            1, 1, 1, 2, 1, 1, 2, 2, // 8-15 (\b, \t, \n, _, \f, \r)
-            2, 2, 2, 2, 2, 2, 2, 2, // 16-23
-            2, 2, 2, 2, 2, 2, 2, 2, // 24-31
-
-            // 32-63: Mostly normal characters (action = 0), except " at 34
-            0, 0, 1, 0, 0, 0, 0, 0, // 32-39 (space, !, ", #, $, %, &, ')
-            0, 0, 0, 0, 0, 0, 0, 0, // 40-47 ((, ), *, +, ,, -, ., /)
-            0, 0, 0, 0, 0, 0, 0, 0, // 48-55 (0-7)
-            0, 0, 0, 0, 0, 0, 0, 0, // 56-63 (8-9, :, ;, <, =, >, ?)
-
-            // 64-95: Normal characters (action = 0), except \ at 92
-            0, 0, 0, 0, 0, 0, 0, 0, // 64-71 (@, A-G)
-            0, 0, 0, 0, 0, 0, 0, 0, // 72-79 (H-O)
-            0, 0, 0, 0, 0, 0, 0, 0, // 80-87 (P-W)
-            0, 0, 0, 0, 1, 0, 0, 0, // 88-95 (X, Y, Z, [, \, ], ^, _)
-
-            // 96-127: Normal characters (action = 0)
-            0, 0, 0, 0, 0, 0, 0, 0, // 96-103 (`, a-h)
-            0, 0, 0, 0, 0, 0, 0, 0, // 104-111 (i-p)
-            0, 0, 0, 0, 0, 0, 0, 0, // 112-119 (q-x)
-            0, 0, 0, 0, 0, 0, 0, 0, // 120-127 (y-z, {, |, }, ~, DEL)
-
-            // 128-255: UTF-8 continuation bytes or high ASCII (action = 0)
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0
-        ];
-
-        [SkipLocalsInit]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private unsafe int WriteValueFromStack(ReadOnlySpan<byte> str, out BlittableJsonToken token)
-        {
-            // This should never trigger, if it does it mean the caller was modified incorrectly.
-            Debug.Assert(str.Length < 512);
-
-            int* escapePositions = stackalloc int[str.Length]; // Max escapes: one per char
-            byte* buffer = stackalloc byte[str.Length * 6]; // Max size: 6 bytes per char
-
-            byte* current = buffer; // Pointer to current position in output buffer
-            int escapeCount = 0; // Number of simple escapes
-            int lastEscape = 0; // Position after last escape for distance calculation
-
-            // Get references for input string
-            ref byte startRef = ref MemoryMarshal.GetReference(str);
-            ref byte endRef = ref Unsafe.Add(ref startRef, str.Length); // Reference just past the end
-            ref byte currentRef = ref startRef;
-
-            // Process string using reference arithmetic
-            while (Unsafe.IsAddressGreaterThan(ref endRef, ref currentRef))
-            {
-                byte value = currentRef; // Read current byte
-                byte action = ByteActionTable[value];
-
-                if (action == 0) // No escape
-                {
-                    *current = value;
-                    current++;
-                }
-                else if (action == 1) // Simple escape
-                {
-                    *current = value;
-                    int escapePos = (int)(current - buffer); // Current offset in output
-                    escapePositions[escapeCount] = escapePos - lastEscape;
-                    lastEscape = escapePos + 1;
-                    escapeCount++;
-                    current++;
-                }
-                else // action == 2, Control character
-                {
-                    *(ushort*)current = '\\' | ('u' << 8); // Write "\u"
-                    *(int*)(current + 2) = AbstractBlittableJsonTextWriter.ControlCodeEscapes[value]; // 4 hex digits
-                    current += 6; // Advance past 6 bytes
-                }
-
-                currentRef = ref Unsafe.Add(ref currentRef, 1); // Move to next byte in input
-            }
-
-            Debug.Assert((current - buffer) <= str.Length * 6, "We check that even a full escape characters string would respect this property.");
-
-            token = BlittableJsonToken.String;
-            int startPos = _position;
-
-            int length = (int)(current - buffer);
-
-            int posCount = 0;
-            posCount += WriteVariableSizeInt(length); // Write length prefix
-            _unmanagedWriteBuffer.Write(buffer, length); // Write the string data
-            posCount += length;
-
-            Debug.Assert(str.Length >= escapeCount, "We check that even a full escape characters string would respect this property.");
-
-            posCount += WriteVariableSizeInt(escapeCount); // Write escape positions count
-            for (int i = 0; i < escapeCount; i++)
-                posCount += WriteVariableSizeInt(escapePositions[i]); // Write escape position sequence
-
-            _position += posCount;
-
-            return startPos;
-        }
-
-        [SkipLocalsInit]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private int WriteValueFromStack(ReadOnlySpan<char> str, out BlittableJsonToken token)
-        {
-            Span<byte> strBuffer = stackalloc byte[Encodings.Utf8.GetMaxByteCount(str.Length)];
-            var stringSize = Encodings.Utf8.GetBytes(str, strBuffer);
-            return WriteValueFromStack(strBuffer.Slice(0, stringSize), out token);
-        }
-#endif
-
+        
         private unsafe int WriteValueFromHeap(ReadOnlySpan<byte> str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
         {
             _intBuffer ??= new FastList<int>();
@@ -699,16 +573,6 @@ namespace Sparrow.Json
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public int WriteValue(ReadOnlySpan<byte> str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
         {
-#if NET7_0_OR_GREATER
-            if (str.Length <= 256 && mode is not (UsageMode.CompressSmallStrings or UsageMode.CompressStrings))
-            {
-                // PERF: Since we know the size, we can actually do this much more efficiently. 
-                // even more if the caller is an actual string constant, which will cause the call to be inlined
-                // as a constant value.
-                return WriteValueFromStack(str, out token);
-            }
-#endif
-
             // PERF: This is the unoptimized version.
             return WriteValueFromHeap(str, out token, mode);
         }
@@ -725,16 +589,6 @@ namespace Sparrow.Json
         public int WriteValue(string str, out BlittableJsonToken token, UsageMode mode = UsageMode.None)
 #endif
         {
-#if NET7_0_OR_GREATER
-            if (str.Length <= 256 && mode is (UsageMode.None or UsageMode.ValidateDouble))
-            {
-                // PERF: Since we know the size, we can actually do this much more efficiently. 
-                // even more if the caller is an actual string constant, which will cause the call to be inlined
-                // as a constant value.
-                return WriteValueFromStack(str, out token);
-            }
-#endif
-
             // PERF: This is the unoptimized version.
             return WriteValueFromHeap(str, out token, mode);
         }

@@ -26,9 +26,9 @@ namespace Raven.Client.Documents.Queries
 
         public ulong GetHash()
         {
-            _buffer.EnsureSingleChunk(out var ptr, out var size);
+            _buffer.EnsureSingleChunk(out var ptr, out var used);
 
-            return Hashing.XXHash64.Calculate(ptr, (ulong)size);
+            return Hashing.XXHash64.Calculate(ptr, (ulong)used);
         }
 
         public void Write(float f)
