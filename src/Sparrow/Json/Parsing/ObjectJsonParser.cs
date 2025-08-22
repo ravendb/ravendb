@@ -1070,7 +1070,7 @@ namespace Sparrow.Json.Parsing
             return last?.ToString() ?? string.Empty;
         }
 
-        public  EventHandler<UnmanagedWriteBuffer> OnStringRead
+        public  OnStringReadDelegate OnStringRead
         {
             set { throw new NotSupportedException(); }
         }
