@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -91,7 +92,46 @@ public interface IAiConversationOperations
     /// </returns>
     Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(CancellationToken token = default);
 
+    /// <summary>
+    /// Asynchronously executes one “turn” of the conversation, streaming the specified property's value for immediate feedback.
+    /// Sends the current prompt, processes any required actions, and awaits the agent’s reply while invoking the callback with streamed values.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="propertyToStream">The property of the response to stream.</param>
+    /// <param name="streamedChunksCallback">
+    /// A callback function invoked with streamed value of the specified property.
+    /// Must be a simple string property, *strongly* recommended that it would be the first one defined in the schema.
+    /// </param>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    /// <returns>
+    /// A <see cref="Task{AiAnswer}"/> containing an <see cref="AiAnswer{TAnswer}"/> indicating the outcome of the turn:
+    /// <list type="bullet">
+    /// <item><see cref="AiConversationResult.ActionRequired"/> if the agent requires further interaction (e.g., pending tool requests).</item>
+    /// <item><see cref="AiConversationResult.Done"/> if the conversation has completed and a final answer is available.</item>
+    /// </list>
+    /// </returns>
     Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string propertyToStream, Func<string, Task> streamedChunksCallback, CancellationToken token = default);
+
+    /// <summary>
+    /// Asynchronously executes one “turn” of the conversation, streaming the specified property's value for immediate feedback.
+    /// Sends the current prompt, processes any required actions, and awaits the agent’s reply while invoking the callback with streamed values.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="propertyToStream">The property of the response to stream.</param>
+    /// <param name="streamedChunksCallback">
+    /// A callback function invoked with streamed value of the specified property.
+    /// Must be a simple string property, *strongly* recommended that it would be the first one defined in the schema.
+    /// </param>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    /// <returns>
+    /// A <see cref="Task{AiAnswer}"/> containing an <see cref="AiAnswer{TAnswer}"/> indicating the outcome of the turn:
+    /// <list type="bullet">
+    /// <item><see cref="AiConversationResult.ActionRequired"/> if the agent requires further interaction (e.g., pending tool requests).</item>
+    /// <item><see cref="AiConversationResult.Done"/> if the conversation has completed and a final answer is available.</item>
+    /// </list>
+    /// </returns>
+    Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> propertyToStream, Func<string, Task> streamedChunksCallback,
+        CancellationToken token = default);
     
     /// <summary>
     /// Synchronously executes one turn of the conversation.
