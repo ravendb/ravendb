@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -767,15 +768,20 @@ namespace Raven.Server.ServerWide
                 // and it exploded with thousands of certificates. This caused ssl handshakes to fail on that machine, because it would timeout when
                 // trying to match one of these certs to validate the chain.
 
-                if (loadedCertificate.SubjectName.Name == null)
-                    return;
-
-                var cnValue = loadedCertificate.SubjectName.Name.StartsWith("CN=", StringComparison.OrdinalIgnoreCase)
-                    ? loadedCertificate.SubjectName.Name.Substring(3)
-                    : loadedCertificate.SubjectName.Name;
+                IEnumerable<X509Certificate2> existingCerts;
+                if (string.IsNullOrEmpty(loadedCertificate.SubjectName.Name))
+                {
+                    existingCerts = userIntermediateStore.Certificates.Where(x => x.GetDisplayName() == loadedCertificate.GetDisplayName()).ToList();;
+                }
+                else
+                {
+                    var cnValue = loadedCertificate.SubjectName.Name.StartsWith("CN=", StringComparison.OrdinalIgnoreCase)
+                        ? loadedCertificate.SubjectName.Name.Substring(3)
+                        : loadedCertificate.SubjectName.Name;
+                    existingCerts = userIntermediateStore.Certificates.Find(X509FindType.FindBySubjectName, cnValue, false);
+                }
 
                 var utcNow = DateTime.UtcNow;
-                var existingCerts = userIntermediateStore.Certificates.Find(X509FindType.FindBySubjectName, cnValue, false);
                 foreach (var c in existingCerts)
                 {
                     if (c.NotAfter.ToUniversalTime() > utcNow && c.NotBefore.ToUniversalTime() < utcNow)
