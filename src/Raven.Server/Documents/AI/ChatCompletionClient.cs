@@ -36,7 +36,7 @@ namespace Raven.Server.Documents.AI;
 internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClientForTesting
 {
     public static readonly string EmptySchema = GetSchemaFromSampleObject("{}");
-    
+
     private readonly string _model;
     private readonly string _organizationId;
     private readonly string _projectId;
@@ -95,54 +95,58 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         _apiKey = apiKey;
     }
 
-    
+
     private struct ToolCallState
     {
-        private StringBuilder _id ;
+        private StringBuilder _id;
         private StringBuilder _type;
         private StringBuilder _name;
         private StringBuilder _arguments;
 
         private int _toolCallIndex;
-        
+
         public List<AiToolCall> AllToolCalls;
 
         public ToolCallState()
         {
             _toolCallIndex = -1;
         }
-        
+
         public void Merge(BlittableJsonReaderObject toolCallChunk)
         {
-            if (!toolCallChunk.TryGet("index", out int index))
+            if (!toolCallChunk.TryGet(Constants.ResponseFields.Index, out int index))
                 return;
-            
+
             if (index != _toolCallIndex)
             {
                 AddAndReset();
                 _toolCallIndex = index;
             }
-            if (toolCallChunk.TryGet("id", out string id))
+
+            if (toolCallChunk.TryGet(Constants.ResponseFields.Id, out string id))
             {
                 _id.Append(id);
             }
-            if (toolCallChunk.TryGet("type", out string type))
+
+            if (toolCallChunk.TryGet(Constants.ResponseFields.Type, out string type))
             {
                 _type.Append(type);
             }
-            if (toolCallChunk.TryGet("function", out BlittableJsonReaderObject functionChunk))
+
+            if (toolCallChunk.TryGet(Constants.ResponseFields.Function, out BlittableJsonReaderObject functionChunk))
             {
-                if (functionChunk.TryGet("name", out string nameChunk))
+                if (functionChunk.TryGet(Constants.ResponseFields.Name, out string nameChunk))
                 {
                     _name.Append(nameChunk);
                 }
-                if (functionChunk.TryGet("arguments", out string argsChunk))
+
+                if (functionChunk.TryGet(Constants.ResponseFields.Arguments, out string argsChunk))
                 {
                     _arguments.Append(argsChunk);
                 }
             }
         }
-        
+
         public void AddAndReset()
         {
             if (_toolCallIndex == -1)
@@ -154,11 +158,11 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
                 return;
             }
-            
+
             AllToolCalls ??= [];
             AllToolCalls.Add(new AiToolCall(_id.ToString(), _name.ToString(), _arguments.ToString()));
-        
-     
+
+
             _toolCallIndex = -1;
             _id.Clear();
             _type.Clear();
@@ -168,16 +172,16 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
     }
 
 
-    public async Task<AiResponse> StreamingCompleteAsync(JsonOperationContext streamingContext, IMemoryContextPool contextPool, 
+    public async Task<AiResponse> StreamingCompleteAsync(JsonOperationContext streamingContext, IMemoryContextPool contextPool,
         string propertyToStream, HttpRequestMessage request,
-        Func<Memory<byte>,Task> streamedPropertyCallback,
+        Func<Memory<byte>, Task> streamedPropertyCallback,
         AiUsage usage, CancellationToken token)
     {
         AddDefaultHeaders(request);
         // we use a small buffer size since we expect those to be "token" level updates, not very big ones
         const int initialBufferSize = 64;
 
-        using var __ = streamingContext.GetRawMemoryBuffer(initialBufferSize,out var streamedPropertyBuffer);
+        using var __ = streamingContext.GetRawMemoryBuffer(initialBufferSize, out var streamedPropertyBuffer);
         var parser = new SseStreamingJsonParser(streamingContext, propertyToStream);
         var alreadySeen = 0;
         var sizeToStream = 0;
@@ -188,6 +192,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             {
                 streamingContext.GrowAllocation(streamedPropertyBuffer, size - streamedPropertyBuffer.SizeInBytes);
             }
+
             unsafe
             {
                 var read = e.CopyTo(alreadySeen, streamedPropertyBuffer.Address);
@@ -203,52 +208,52 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             HandleUnsuccessfulResponse(response, responseContent);
             Debug.Assert(false, "we should never get here");
         }
+
         await using var responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
-        //var s = Encoding.UTF8.GetString(((MemoryStream)responseStream).ToArray());
         ToolCallState toolCallState = new();
         BlittableJsonReaderObject message = null;
-     
+
         // need to contexts here because we run two parsing operations at once, first for each of the SSE events
         // and then for the internal buffer that there are providing.
         using var ___ = contextPool.AllocateOperationContext(out JsonOperationContext parsingContext);
         // Note that here we iterate over blittable, whose scope is only the _single_ iteration we run, you need to copy
         // any data that you need out of them.
         await foreach (var sseEvent in SseParser.Create(responseStream, (_, data) =>
-        {
-            unsafe
-            {
-                if (data.SequenceEqual("[DONE]"u8))
-                    return null;
-                fixed (byte* p = data)
-                {
-                    return parsingContext.ParseBuffer(p, data.Length, "msg", BlittableJsonDocumentBuilder.UsageMode.None);
-                }
-            }
-
-        }).EnumerateAsync(token))
+                       {
+                           unsafe
+                           {
+                               if (data.SequenceEqual("[DONE]"u8))
+                                   return null;
+                               fixed (byte* p = data)
+                               {
+                                   return parsingContext.ParseBuffer(p, data.Length, "msg", BlittableJsonDocumentBuilder.UsageMode.None);
+                               }
+                           }
+                       }).EnumerateAsync(token))
         {
             using var _ = sseEvent.Data;
 
-            if (sseEvent.Data is null)// "[DONE]"
+            if (sseEvent.Data is null) // "[DONE]"
             {
                 toolCallState.AddAndReset();
                 break;
             }
 
-            if (sseEvent.Data.TryGet("usage", out BlittableJsonReaderObject streamedUsage) && streamedUsage is not null)
+            if (sseEvent.Data.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject streamedUsage) && streamedUsage is not null)
             {
                 usage.UpdateFrom(streamedUsage);
             }
 
-            if (sseEvent.Data.TryGet("choices", out BlittableJsonReaderArray choices) is false ||
+            if (sseEvent.Data.TryGet(Constants.ResponseFields.Choices, out BlittableJsonReaderArray choices) is false ||
                 choices.Length == 0)
             {
                 continue;
             }
+
             var choice = (BlittableJsonReaderObject)choices[0];
-            if (choice.TryGet("delta", out BlittableJsonReaderObject delta))
+            if (choice.TryGet(Constants.ResponseFields.Delta, out BlittableJsonReaderObject delta))
             {
-                if (delta.TryGet("content", out LazyStringValue content) && content?.Length > 0)
+                if (delta.TryGet(Constants.ResponseFields.Content, out LazyStringValue content) && content?.Length > 0)
                 {
                     toolCallState.AddAndReset();
 
@@ -258,13 +263,14 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                         await streamedPropertyCallback(streamedPropertyBuffer.AsMemory()[..sizeToStream]);
                         sizeToStream = 0;
                     }
+
                     if (final is not null)
                     {
                         message = final;
                     }
                 }
 
-                if (delta.TryGet("tool_calls", out BlittableJsonReaderArray toolCalls))
+                if (delta.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCalls))
                 {
                     foreach (BlittableJsonReaderObject toolCallChunk in toolCalls)
                     {
@@ -273,46 +279,45 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                 }
             }
         }
-        
+
         if (toolCallState.AllToolCalls?.Count >= 0)
         {
-            DynamicJsonArray toolCalls = new ();
+            DynamicJsonArray toolCalls = new();
             foreach (var call in toolCallState.AllToolCalls)
             {
                 toolCalls.Add(new DynamicJsonValue
                 {
-                    ["id"] = call.Id,
-                    ["type"] = "function",
-                    ["function"] = new DynamicJsonValue
+                    [Constants.ResponseFields.Id] = call.Id,
+                    [Constants.ResponseFields.Type] = Constants.ResponseFields.Function,
+                    [Constants.ResponseFields.Function] = new DynamicJsonValue
                     {
-                        ["name"] = call.Name,
-                        ["arguments"] = call.Arguments
+                        [Constants.ResponseFields.Name] = call.Name,
+                        [Constants.ResponseFields.Arguments] = call.Arguments
                     }
                 });
             }
-            
+
             return new AiResponse(AiResponseType.Tool)
             {
                 Message = streamingContext.ReadObject(new DynamicJsonValue
                 {
-                    ["role"] = "assistant", 
-                    ["content"] = null,
-                    ["tool_calls"] = toolCalls 
+                    [Constants.ResponseFields.Role] = Constants.RequestFields.RoleAssistantValue,
+                    [Constants.ResponseFields.Content] = null,
+                    [Constants.ResponseFields.ToolCalls] = toolCalls
                 }, "persisted/streamed/toolcalls"),
                 ToolCalls = toolCallState.AllToolCalls,
             };
         }
-   
+
         return new AiResponse(AiResponseType.Result)
         {
             Message = streamingContext.ReadObject(new DynamicJsonValue
             {
-                ["role"] = "assistant",
-                ["content"] = message!.ToString(),
-            }, "persisted/streamed/message"), 
+                [Constants.ResponseFields.Role] = Constants.RequestFields.RoleAssistantValue,
+                [Constants.ResponseFields.Content] = message!.ToString(),
+            }, "persisted/streamed/message"),
             Result = message,
         };
-
     }
 
     public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, CancellationToken token)
@@ -326,13 +331,14 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         responseParser.ParseMessage(usage);
         if (responseParser.TryParseToolCalls(out var tools))
         {
-            return new AiResponse(AiResponseType.Tool) { ToolCalls = tools, Message =  responseParser.Message };
+            return new AiResponse(AiResponseType.Tool) { ToolCalls = tools, Message = responseParser.Message };
         }
+
         var result = responseParser.GetContent(context);
         return new AiResponse(AiResponseType.Result) { Result = result, Message = responseParser.Message };
     }
 
-    private struct AiResponseParser(ChatCompletionClient client, HttpResponseMessage response,BlittableJsonReaderObject responseContent)
+    private struct AiResponseParser(ChatCompletionClient client, HttpResponseMessage response, BlittableJsonReaderObject responseContent)
     {
         public BlittableJsonReaderObject Message;
         private string _content;
@@ -342,7 +348,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         {
             if (response.IsSuccessStatusCode)
                 return;
-            
+
             client.HandleUnsuccessfulResponse(response, responseContent);
             Debug.Assert(false, "we should never get here");
         }
@@ -355,16 +361,16 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             }
 
             _choice0 = (BlittableJsonReaderObject)choices[0];
-        
+
             if (_choice0.TryGet(Constants.ResponseFields.Message, out Message) == false ||
                 Message.TryGet(Constants.ResponseFields.Content, out _content) == false)
             {
                 throw new UnexpectedResponseException("No message/content property in choice: " + responseContent) { RequestId = GetRequestId(response.Headers) };
             }
-        
+
             if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson) == false)
                 throw new UnexpectedResponseException("No choices property in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
-        
+
             usage.UpdateFrom(usageJson);
         }
 
@@ -376,19 +382,20 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                 return false;
             }
 
-            toolCalls =  [];
+            toolCalls = [];
             foreach (BlittableJsonReaderObject call in calls)
             {
-                if (call.TryGet("id", out string callId) is false ||
-                    call.TryGet("function", out BlittableJsonReaderObject function) is false ||
-                    function.TryGet("name", out string name) is false ||
-                    function.TryGet("arguments", out string args) is false)
+                if (call.TryGet(Constants.ResponseFields.Id, out string callId) is false ||
+                    call.TryGet(Constants.ResponseFields.Function, out BlittableJsonReaderObject function) is false ||
+                    function.TryGet(Constants.ResponseFields.Name, out string name) is false ||
+                    function.TryGet(Constants.ResponseFields.Arguments, out string args) is false)
                     throw new UnexpectedResponseException("Invalid function call: " + call)
                     {
                         RequestId = GetRequestId(response.Headers)
                     };
                 toolCalls.Add(new AiToolCall(callId, name, args));
             }
+
             return true;
         }
 
@@ -397,7 +404,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             if (string.IsNullOrEmpty(_content))
             {
                 _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
-                _choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal); 
+                _choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal);
                 //TODO: full output if we get here?
                 throw new RefusedToAnswerException("The request was refused by the model")
                 {
@@ -410,7 +417,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
     }
 
     protected virtual Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, token);
-    
+
     protected virtual Task<HttpResponseMessage> SendStreamingRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
 
     public async Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, CancellationToken token)
@@ -438,11 +445,12 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         return (results.Result.ToString(), usage);
     }
+
     public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, string schema) => CreateCompletionRequest(ctx, messages, tools: null, useTools: false, streaming: false, schema);
 
-    public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, 
-        List<BlittableJsonReaderObject> messages, 
-        List<BlittableJsonReaderObject> tools, 
+    public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx,
+        List<BlittableJsonReaderObject> messages,
+        List<BlittableJsonReaderObject> tools,
         bool useTools,
         bool streaming,
         string schema)
@@ -468,8 +476,8 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         var request = new HttpRequestMessage
         {
-            Method = HttpMethod.Post, 
-            Content = content, 
+            Method = HttpMethod.Post,
+            Content = content,
             RequestUri = new Uri(Constants.RequestFields.DefaultRelativeUri, UriKind.Relative)
         };
 
@@ -516,16 +524,16 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         writer.WritePropertyName(Constants.RequestFields.JsonSchema);
         writer.WriteObject(GetStructuredOutputSchemaAsBlittable());
         writer.WriteEndObject();
-        
+
         if (streaming)
         {
             writer.WriteComma();
-            writer.WritePropertyName("stream");
+            writer.WritePropertyName(Constants.RequestFields.Stream);
             writer.WriteBool(true);
             writer.WriteComma();
-            writer.WritePropertyName("stream_options");
+            writer.WritePropertyName(Constants.RequestFields.StreamOptions);
             writer.WriteStartObject();
-            writer.WritePropertyName("include_usage");
+            writer.WritePropertyName(Constants.RequestFields.IncludeUsage);
             writer.WriteBool(true);
             writer.WriteEndObject();
         }
@@ -665,10 +673,10 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                         // TPM/RPM - should retry only for this exception
                         throw new
                             RateLimitException(message)
-                        {
-                            RetryAfter = retryAfter,
-                            RequestId = reqId
-                        };
+                            {
+                                RetryAfter = retryAfter,
+                                RequestId = reqId
+                            };
                     default:
                         throw new TooManyRequestsException(message)
                         {
@@ -689,6 +697,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         {
             return string.Empty;
         }
+
         return values.FirstOrDefault();
     }
 
@@ -746,6 +755,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                     return false;
             }
         }
+
         return true;
     }
 
@@ -760,7 +770,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         {
             return GetSchemaFromSampleObject(sampleObject);
         }
-       
+
         throw new InvalidOperationException("Missing output schema and sample object in configuration (there must be at least one of them)");
     }
 
@@ -902,6 +912,15 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string ErrorTypeInsufficientQuota = "insufficient_quota";
             public const string ErrorTypeTokens = "tokens";
             public const string ErrorTypeRequests = "requests";
+            
+            public const string Index = "index";
+            public const string Id = "id";
+            public const string Type = "type";
+            public const string Function = "function";
+            public const string Name = "name";
+            public const string Arguments = "arguments";
+            public const string Delta = "delta";
+            public const string Role = "role";
         }
 
         public static class Headers
@@ -965,7 +984,10 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string DefaultRelativeUri = "/v1/chat/completions";
             public const string ModelsUri = "/v1/models";
             public const string AuthorizationApiKeyProperty = "Bearer";
+            
+            public const string Stream = "stream";
+            public const string StreamOptions = "stream_options";
+            public const string IncludeUsage = "include_usage";
         }
     }
-
 }

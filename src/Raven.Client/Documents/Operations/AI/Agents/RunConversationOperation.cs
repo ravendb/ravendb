@@ -14,6 +14,7 @@ using Sparrow.Json;
 using Sparrow.Json.Sync;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
+
 public class RunConversationOperation<TSchema> : IMaintenanceOperation<ConversationResult<TSchema>>
 {
     private readonly string _agentId;
@@ -27,13 +28,23 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly Func<string, Task> _streamedChunksCallback;
 
     public RunConversationOperation(
-        string agentId, 
-        string conversationId, 
-        string userPrompt, 
+        string agentId,
+        string conversationId,
+        string userPrompt,
         List<AiAgentActionResponse> actionResponses,
-        AiConversationCreationOptions options, 
-        string changeVector, 
-        string propertyToStream, 
+        AiConversationCreationOptions options,
+        string changeVector) : this(agentId, conversationId, userPrompt, actionResponses, options, changeVector, null, null)
+    {
+    }
+
+    public RunConversationOperation(
+        string agentId,
+        string conversationId,
+        string userPrompt,
+        List<AiAgentActionResponse> actionResponses,
+        AiConversationCreationOptions options,
+        string changeVector,
+        string propertyToStream,
         Func<string, Task> streamedChunksCallback)
     {
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
@@ -47,11 +58,10 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         _changeVector = changeVector;
         _actionResponses = actionResponses;
         _options = options;
-        
-          
+
+
         _propertyToStream = propertyToStream;
         _streamedChunksCallback = streamedChunksCallback;
-
     }
 
     public RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -64,7 +74,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         private readonly RunConversationOperation<TSchema> _parent;
         private readonly DocumentConventions _conventions;
 
-        public RunConversationOperationCommand(RunConversationOperation<TSchema> parent,DocumentConventions conventions)
+        public RunConversationOperationCommand(RunConversationOperation<TSchema> parent, DocumentConventions conventions)
         {
             _conventions = conventions;
             _parent = parent;
@@ -73,8 +83,9 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 ResponseType = RavenCommandResponseType.Raw;
             }
         }
-        
+
         public override bool IsReadRequest => false;
+
         public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
         {
             url = $"{node.Url}/databases/{node.Database}/ai/agent" +
@@ -88,9 +99,9 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             if (_parent._changeVector != null)
                 url += $"&changeVector={Uri.EscapeDataString(_parent._changeVector)}";
 
-            if(_parent._propertyToStream is not null)
+            if (_parent._propertyToStream is not null)
                 url += $"&streaming=true&propertyToStream={Uri.EscapeDataString(_parent._propertyToStream)}";
-            
+
             var body = new ConversionRequestBody
             {
                 ActionResponses = _parent._actionResponses,
@@ -103,7 +114,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 Method = HttpMethod.Post,
                 Content = new BlittableJsonContent(async stream =>
                 {
-                    await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(),"conversation-params")).ConfigureAwait(false);
+                    await ctx.WriteAsync(stream, ctx.ReadObject(body.ToJson(), "conversation-params")).ConfigureAwait(false);
                 }, _conventions)
             };
 
@@ -120,6 +131,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                     Result = ConversationResult<TSchema>.Convert(final, _conventions);
                     break;
                 }
+
                 // streaming the output...
                 await _parent._streamedChunksCallback(msg.Data).ConfigureAwait(false);
             }
