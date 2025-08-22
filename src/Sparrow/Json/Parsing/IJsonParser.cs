@@ -7,6 +7,7 @@ namespace Sparrow.Json.Parsing
         bool Read();
         void ValidateFloat();
         string GenerateErrorState();
-        EventHandler<UnmanagedWriteBuffer> OnStringRead { set; }
+        OnStringReadDelegate OnStringRead { set; }
     }
+    public delegate void OnStringReadDelegate(UnmanagedWriteBuffer buffer, bool partial);
 }

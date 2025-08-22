@@ -182,7 +182,7 @@ namespace Sparrow.Json
             base.Dispose();
         }
 
-        public (string Name, EventHandler<UnmanagedWriteBuffer> Handler) PropertyToWatchForStreaming; 
+        public (string Name, Action<UnmanagedWriteBuffer> Handler) PropertyToWatchForStreaming; 
 
         private bool ReadInternal<TWriteStrategy, TJsonParser, TStreamBehavior>() 
             where TWriteStrategy : IWriteStrategy
@@ -231,7 +231,13 @@ namespace Sparrow.Json
 
                                     if(typeof(TStreamBehavior) == typeof(WithStreaming) && property.Equals(PropertyToWatchForStreaming.Name))
                                     {
-                                        reader.OnStringRead = PropertyToWatchForStreaming.Handler;
+                                        Action<UnmanagedWriteBuffer> handler = PropertyToWatchForStreaming.Handler;
+                                        reader.OnStringRead = (buffer, partial) =>
+                                        {
+                                            handler(buffer);
+                                            if (partial is false) // we are done...
+                                                reader.OnStringRead = null;
+                                        };
                                         PropertyToWatchForStreaming = default; // we only do that for the _first_ property that match the name
                                     }
                                     

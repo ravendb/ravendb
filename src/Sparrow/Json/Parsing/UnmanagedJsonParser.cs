@@ -50,7 +50,7 @@ namespace Sparrow.Json.Parsing
 
         private static readonly ParseNumberAction[] ParseNumberTable;
 
-        public EventHandler<UnmanagedWriteBuffer> OnStringRead
+        public OnStringReadDelegate OnStringRead
         {
             set => _onStringRead = value;
         }
@@ -734,7 +734,8 @@ namespace Sparrow.Json.Parsing
         private bool _parsingUnicode;
         private int _unicodeValue;
         private int _unicodeIndex;
-        private EventHandler<UnmanagedWriteBuffer> _onStringRead;
+
+        private OnStringReadDelegate _onStringRead;
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private bool ParseString(ref uint currentPos)
@@ -834,15 +835,11 @@ namespace Sparrow.Json.Parsing
             }
 
         ReturnTrue:
-            if (_onStringRead is not null)
-            {
-                _onStringRead.Invoke(this, _unmanagedWriteBuffer);
-                _onStringRead = null; // once we are done parsing _a_ property, we clear this
-            }
+            _onStringRead?.Invoke(_unmanagedWriteBuffer, false);
             return true;
 
         ReturnFalse:
-            _onStringRead?.Invoke(this, _unmanagedWriteBuffer);
+            _onStringRead?.Invoke(_unmanagedWriteBuffer, true);
             return false;
         }
 

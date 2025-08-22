@@ -38,7 +38,7 @@ public unsafe class SseStreamingJsonParser : IDisposable
 
     public event Action<UnmanagedWriteBuffer>? OnStringRead;
 
-    private void OnStringReadInvoke(object? sender, UnmanagedWriteBuffer e)
+    private void OnStringReadInvoke(UnmanagedWriteBuffer e)
     {
         OnStringRead?.Invoke(e);
     }
