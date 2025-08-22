@@ -46,7 +46,7 @@ export default function DatabasesList({
                                 width: "100%",
                                 transform: `translateY(${virtualRow.start}px)`,
                             }}
-                            className="pb-3"
+                            className="pb-2 pt-1"
                         >
                             <DatabasePanel
                                 key={dbName}
