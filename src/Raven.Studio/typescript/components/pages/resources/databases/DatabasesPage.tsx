@@ -1,5 +1,4 @@
-﻿import React, { useEffect, useState } from "react";
-import { DatabasePanel } from "./partials/DatabasePanel";
+﻿import { useEffect, useState } from "react";
 import { DatabasesSelectActions } from "./partials/DatabasesSelectActions";
 import { DatabasesFilter } from "./partials/DatabasesFilter";
 import { NoDatabases } from "./partials/NoDatabases";
@@ -16,11 +15,12 @@ import {
 } from "components/pages/resources/databases/store/databasesViewActions";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { databasesViewSelectors } from "components/pages/resources/databases/store/databasesViewSelectors";
-import { StickyHeader } from "components/common/StickyHeader";
 import { Icon } from "components/common/Icon";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import CreateDatabase, { CreateDatabaseMode } from "./partials/create/CreateDatabase";
 import Button from "react-bootstrap/Button";
+import SizeGetter from "components/common/SizeGetter";
+import DatabasesList from "./partials/DatabasesList";
 
 interface DatabasesPageProps {
     compact?: string;
@@ -107,58 +107,60 @@ export function DatabasesPage({ queryParams }: ReactQueryParamsProps<DatabasesPa
     const [createDatabaseMode, setCreateDatabaseMode] = useState<CreateDatabaseMode>(null);
 
     return (
-        <div className="content-margin">
-            <StickyHeader>
-                <div className="d-flex flex-wrap gap-3 align-items-end">
-                    {isOperatorOrAbove && (
-                        <>
-                            <Button
-                                variant="primary"
-                                onClick={() => setCreateDatabaseMode("regular")}
-                                className="rounded-pill"
-                            >
-                                <Icon icon="database" addon="plus" />
-                                New database
-                            </Button>
-                            {createDatabaseMode && (
-                                <CreateDatabase
-                                    closeModal={() => setCreateDatabaseMode(null)}
-                                    initialMode={createDatabaseMode}
-                                />
-                            )}
-                        </>
-                    )}
-                    {showToggleButton && (
-                        <Button variant="secondary" className="rounded-pill" onClick={toggleFilterOptions}>
-                            <Icon icon="filter" />
-                            {showFilterOptions ? "Hide Filtering Options" : "Show Filtering Options"}
+        <div className="h-100 vstack">
+            <div className="d-flex flex-wrap gap-3 align-items-end px-4 pt-4">
+                {isOperatorOrAbove && (
+                    <>
+                        <Button
+                            variant="primary"
+                            onClick={() => setCreateDatabaseMode("regular")}
+                            className="rounded-pill"
+                        >
+                            <Icon icon="database" addon="plus" />
+                            New database
                         </Button>
-                    )}
-                    <div className="d-flex flex-grow flex-wrap gap-3">
-                        {showFilterOptions && (
-                            <DatabasesFilter searchCriteria={filterCriteria} setFilterCriteria={setFilterCriteria} />
+                        {createDatabaseMode && (
+                            <CreateDatabase
+                                closeModal={() => setCreateDatabaseMode(null)}
+                                initialMode={createDatabaseMode}
+                            />
                         )}
-                    </div>
+                    </>
+                )}
+                {showToggleButton && (
+                    <Button variant="secondary" className="rounded-pill" onClick={toggleFilterOptions}>
+                        <Icon icon="filter" />
+                        {showFilterOptions ? "Hide Filtering Options" : "Show Filtering Options"}
+                    </Button>
+                )}
+                <div className="d-flex flex-grow flex-wrap gap-3">
+                    {showFilterOptions && (
+                        <DatabasesFilter searchCriteria={filterCriteria} setFilterCriteria={setFilterCriteria} />
+                    )}
                 </div>
-
-                <DatabasesSelectActions
-                    databaseNames={filteredDatabaseNames}
-                    selectedDatabases={selectedDatabases}
-                    setSelectedDatabaseNames={setSelectedDatabaseNames}
-                />
-            </StickyHeader>
-            <div className="mt-3">
-                {filteredDatabaseNames.map((dbName) => (
-                    <DatabasePanel
-                        key={dbName}
-                        databaseName={dbName}
-                        selected={selectedDatabaseNames.includes(dbName)}
-                        toggleSelection={() => toggleSelection(dbName)}
-                    />
-                ))}
-
-                {!databases.length && <NoDatabases />}
             </div>
+            <DatabasesSelectActions
+                databaseNames={filteredDatabaseNames}
+                selectedDatabases={selectedDatabases}
+                setSelectedDatabaseNames={setSelectedDatabaseNames}
+            />
+            {databases.length > 0 ? (
+                <div className="flex-grow-1">
+                    <SizeGetter
+                        isHeighRequired
+                        render={({ height }) => (
+                            <DatabasesList
+                                maxHeight={height}
+                                filteredDatabaseNames={filteredDatabaseNames}
+                                selectedDatabaseNames={selectedDatabaseNames}
+                                toggleSelection={toggleSelection}
+                            />
+                        )}
+                    />
+                </div>
+            ) : (
+                <NoDatabases />
+            )}
         </div>
     );
 }
