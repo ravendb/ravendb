@@ -53,7 +53,7 @@ namespace FastTests
             using (var stream = new MemoryStream())
             await using (var writer = new AsyncBlittableJsonTextWriter(context, stream))
             {
-                client.WriteCompletionRequestPayload(writer, context, [], [], true, ChatCompletionClient.EmptySchema);
+                client.WriteCompletionRequestPayload(writer, context, [], [], true, false, ChatCompletionClient.EmptySchema);
                 await writer.FlushAsync();
                 
                 capturedParameters = Encoding.UTF8.GetString(stream.ToArray());

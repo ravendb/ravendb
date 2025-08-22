@@ -484,6 +484,25 @@ namespace Sparrow.Json
             head.Used++;
         }
 
+        public int CopyTo(int start, byte* pointer)
+        {
+            ThrowOnDisposed();
+
+            var whereToWrite = pointer + _head.AccumulatedSizeInBytes - start;
+            var copiedBytes = 0L;
+
+            for (var head = _head; head != null && whereToWrite > pointer; head = head.Previous)
+            {
+                long copy = Math.Min(head.Used, whereToWrite - pointer);
+                whereToWrite -= copy;
+                copiedBytes += copy;
+                Memory.Copy(whereToWrite, head.Address + head.Used - copy, copy);
+            }
+
+            return (int)copiedBytes;
+        }
+
+        
         public int CopyTo(byte* pointer)
         {
             ThrowOnDisposed();
