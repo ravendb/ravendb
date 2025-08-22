@@ -1,10 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http.Features;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
@@ -30,14 +34,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         protected AbstractAiAgentProcessor([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
-
-        public async Task HandleRequest(
-            JsonOperationContext context, 
-            AiAgentConfiguration configuration, 
-            string conversationId, 
-            ConversationDocument document, 
-            RequestBody body,
-            CancellationToken token)
+        
+        private async Task<bool> TryHandleActionResponses(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument document,
+            RequestBody body)
         {
             var hasActionResponse = body.ActionResponses is { Length: > 0 };
             var hasUserPrompt = string.IsNullOrEmpty(body.UserPrompt) == false;
@@ -71,12 +70,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 // ensuring we can recover if TalkAsync fails.
                 await TryPersistAsync(context, configuration, conversationId, document, history: null);
                 await WriteResponseAsync(context, conversationId, response: null, document);
-                return;
+                return false;
             }
 
             if (hasActionResponse == false && hasUserPrompt == false)
                 throw new InvalidOperationException($"Cannot have a conversation '{conversationId}' without open action calls or user prompt.");
-
+            
+            
             if (string.IsNullOrEmpty(body.UserPrompt) == false)
             {
                 document.AddMessage(context, context.ReadObject(new DynamicJsonValue
@@ -85,6 +85,21 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     ["content"] = body.UserPrompt
                 }, "user/msg"), usage: null);
             }
+
+            return true;
+        }
+
+
+        public async Task HandleRequest(
+            JsonOperationContext context, 
+            AiAgentConfiguration configuration, 
+            string conversationId, 
+            ConversationDocument document, 
+            RequestBody body,
+            CancellationToken token)
+        {
+            if (await TryHandleActionResponses(context, configuration, conversationId, document, body) is false) 
+                return;
 
             (BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History) r;
             try
@@ -100,11 +115,63 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             await WriteResponseAsync(context, conversationId, r.Response, r.Document);
         }
 
+        private static readonly byte[] ResultPrefix = "event: result\ndata: "u8.ToArray();
+        private static readonly byte[] DataPrefix = "data: "u8.ToArray();
+        private static readonly byte[] NewLinePostfix = "\n\n"u8.ToArray();
+
+        public async Task HandleStreamingRequest(
+            JsonOperationContext context, 
+            AiAgentConfiguration configuration, 
+            string conversationId, 
+            ConversationDocument document, 
+            RequestBody body,
+            CancellationToken token)
+        {
+            if (await TryHandleActionResponses(context, configuration, conversationId, document, body) is false) 
+                return;
+            
+            var propertyToStream = RequestHandler.GetStringQueryString("propertyToStream");
+
+
+            HttpContext.Response.Headers.ContentType = "text/event-stream";
+            var feature = HttpContext.Features.Get<IHttpResponseBodyFeature>();
+            feature?.DisableBuffering();
+            
+            await using var responseStream = RequestHandler.ResponseBodyStream();
+            (BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History) r;
+            try
+            {
+                r = await StreamingTalkAsync(context, configuration, document, propertyToStream, async (data) =>
+                {
+                    while (data.IsEmpty is false)
+                    {
+                        int nextLineBreak = data.Span.IndexOf((byte)'\n');
+                        int length = nextLineBreak >= 0 ? nextLineBreak + 1 : data.Length;
+                        await responseStream.WriteAsync(DataPrefix, token);
+                        await responseStream.WriteAsync(data[..length], token);
+                        data = data[length..];
+                    }
+                    await responseStream.WriteAsync(NewLinePostfix, token);
+                    await responseStream.FlushAsync(token);
+
+                }, token: token);
+            }
+            catch (Exception e)
+            {
+                throw new AiException($"Failed to 'talk' with the agent '{configuration.Identifier}' (streaming), conversation: '{conversationId}'.", e) { RequestId = null };
+            }
+
+            conversationId = await TryPersistAsync(context, configuration, conversationId, r.Document, r.History);
+            await responseStream.WriteAsync(ResultPrefix, token);
+            await WriteResponseAsync(context, conversationId, r.Response, r.Document);
+            await responseStream.FlushAsync(token);
+        }
         public override async ValueTask ExecuteAsync()
         {
             using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
             var conversationId = RequestHandler.GetStringQueryString("conversationId");
             var agentId = RequestHandler.GetStringQueryString("agentId");
+            var streaming = RequestHandler.GetBoolValueQueryString("streaming", required:false) ?? false;
             var changeVector = RequestHandler.GetChangeVectorStringQueryString("changeVector", required: false);
 
             using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
@@ -170,7 +237,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 }
             }
 
-            await HandleRequest(context, configuration, conversationId, conversationDocument, body, token.Token);
+            if (streaming)
+            {
+                await HandleStreamingRequest(context, configuration, conversationId, conversationDocument, body, token.Token);
+            }
+            else
+            {
+                await HandleRequest(context, configuration, conversationId, conversationDocument, body, token.Token);
+            }
         }
 
         public async Task<RequestBody> ReadRequestBodyAsync(JsonOperationContext context, CancellationToken token)
@@ -229,91 +303,179 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
         protected virtual ChatCompletionClient CreateClient(AiConnectionString connection) => ChatCompletionClient.CreateChatCompletionClient(ContextPool, connection);
 
-        public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> TalkAsync(JsonOperationContext context, AiAgentConfiguration configuration,
-            ConversationDocument document, CancellationToken token)
+         public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> StreamingTalkAsync(
+            JsonOperationContext context, 
+            AiAgentConfiguration configuration,
+            ConversationDocument document,
+            string firstPropertyToStream,
+            Func<Memory<byte>,Task>streaming, 
+            CancellationToken token = default)
         {
-            document.EnsureInitialized();
-
-            var conStr = GetAiConnectionString(configuration.ConnectionStringName);
-
-            var schema = ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
-
-            var tools = ConversationDocument.GenerateTools(context, configuration);
-
-            AiResponse aiResponse;
-            AiUsage aiUsage;
-            using var client = CreateClient(conStr);
-            var count = configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
+            using var talker = new Talker(this, context, configuration, document);
+            talker.Init();
             
             while (true)
             {
-                aiUsage = new();
-                using var request = client.CreateCompletionRequest(context, document.Messages, tools, useTools: count-- > 0, schema);
+                using var request = talker.CreateCompletionRequest(streaming: true);
 
-                aiResponse = await client.CompleteAsync(
-                    context,
-                    request,
-                    aiUsage,
-                    token
-                );
-
-                document.AddMessage(context, aiResponse.Message, aiUsage);
-                document.UpdateUsage(aiUsage);
-                if (aiResponse.Type is AiResponseType.Result)
+                await talker.Stream(ContextPool, request,firstPropertyToStream, streaming, token);
+                talker.UpdateDocument();
+                
+                if (talker.ResponseType is AiResponseType.Result)
                     break;
 
-                await HandleQueryToolCallsAsync(context, configuration, document, aiResponse);
+                await HandleQueryToolCallsAsync(context, configuration, document, talker.ToolCalls);
 
-                if (TryGetUserTools(context, document, configuration, aiResponse))
+                if (TryGetUserTools(context, document, configuration, talker.ToolCalls))
                     break; // we need to return the user tool requests to the client, so we can continue the conversation
             }
 
-            var history = await TryReduceChatSize();
+            var history = await TryReduceChatSize(context, talker.Client, configuration, document, talker.AiUsage, token);
 
-            return (aiResponse.Result, document, history);
+            return (talker.Result, document, history);
+        }
 
+        private class Talker(AbstractAiAgentProcessor processor, JsonOperationContext context, AiAgentConfiguration configuration, ConversationDocument document) : IDisposable
+        {
+            private string _schema;
+            private List<BlittableJsonReaderObject> _tools;
+            private int _count;
+            private AiResponse _aiResponse;
 
-            async Task<BlittableJsonReaderObject> TryReduceChatSize()
+            public AiUsage AiUsage;
+            public ChatCompletionClient Client;
+            
+            public AiResponseType ResponseType => _aiResponse.Type;
+            public List<AiToolCall> ToolCalls => _aiResponse.ToolCalls;
+            
+            public BlittableJsonReaderObject Result => _aiResponse.Result;
+
+            public void Init()
             {
-                var reduction = configuration.ChatTrimming;
-                if (reduction == null || document.OpenActionCalls.Count > 0)
-                    return null;
+                document.EnsureInitialized();
 
-                TimeSpan? historyExpiration = reduction.History?.HistoryExpirationInSec == null
-                    ? null
-                    : TimeSpan.FromSeconds(reduction.History.HistoryExpirationInSec.Value);
+                var conStr = processor.GetAiConnectionString(configuration.ConnectionStringName);
 
-                if (reduction.Truncate != null)
+                _schema = ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
+
+                _tools = ConversationDocument.GenerateTools(context, configuration);
+
+                Client = processor.CreateClient(conStr);
+                _count = configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
+            }
+
+            public HttpRequestMessage CreateCompletionRequest(bool streaming)
+            {
+                AiUsage = new();
+                return Client.CreateCompletionRequest(context, document.Messages, _tools, useTools: _count-- > 0, streaming, _schema);
+            }
+
+            public async Task Run(HttpRequestMessage request, CancellationToken token)
+            {
+                _aiResponse = await Client.CompleteAsync(
+                    context,
+                    request,
+                    AiUsage,
+                    token
+                );
+            }
+
+            public void UpdateDocument()
+            {
+                document.AddMessage(context, _aiResponse.Message, AiUsage);
+                document.UpdateUsage(AiUsage);
+            }
+
+            public async Task Stream(IMemoryContextPool contextPool,HttpRequestMessage request, string propertyToStream,  Func<Memory<byte>,Task> streamedPropertyCallback, CancellationToken token)
+            {
+                _aiResponse = await Client.StreamingCompleteAsync(
+                    context,
+                    contextPool, 
+                    propertyToStream,
+                    request,                  
+                    streamedPropertyCallback,
+                    AiUsage,  
+                    token
+                );
+            }
+
+            public void Dispose()
+            {
+                Client?.Dispose();
+            }
+        }
+         
+        public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> TalkAsync(
+            JsonOperationContext context, 
+            AiAgentConfiguration configuration,
+            ConversationDocument document,
+            CancellationToken token = default)
+        {
+            using var talker = new Talker(this, context, configuration, document);
+            talker.Init();
+            
+            while (true)
+            {
+                using var request = talker.CreateCompletionRequest(streaming: false);
+
+                await talker.Run(request, token);
+                talker.UpdateDocument();
+                
+                if (talker.ResponseType is AiResponseType.Result)
+                    break;
+
+                await HandleQueryToolCallsAsync(context, configuration, document, talker.ToolCalls);
+
+                if (TryGetUserTools(context, document, configuration, talker.ToolCalls))
+                    break; // we need to return the user tool requests to the client, so we can continue the conversation
+            }
+
+            var history = await TryReduceChatSize(context, talker.Client, configuration, document, talker.AiUsage, token);
+
+            return (talker.Result, document, history);
+        }
+
+
+        async Task<BlittableJsonReaderObject> TryReduceChatSize(JsonOperationContext context, ChatCompletionClient client, AiAgentConfiguration configuration, ConversationDocument document,AiUsage aiUsage, CancellationToken token)
+        {
+            var reduction = configuration.ChatTrimming;
+            if (reduction == null || document.OpenActionCalls.Count > 0)
+                return null;
+
+            TimeSpan? historyExpiration = reduction.History?.HistoryExpirationInSec == null
+                ? null
+                : TimeSpan.FromSeconds(reduction.History.HistoryExpirationInSec.Value);
+
+            if (reduction.Truncate != null)
+            {
+                if (document.Messages.Count > reduction.Truncate.MessagesLengthBeforeTruncate)
                 {
-                    if (document.Messages.Count > reduction.Truncate.MessagesLengthBeforeTruncate)
-                    {
-                        var truncateCount = document.Messages.Count - reduction.Truncate.MessagesLengthAfterTruncate;
-                        truncateCount = int.Min(truncateCount, document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
-                        if (truncateCount > 0)
-                        {
-                            var chatBefore = reduction.History == null ? null : document.ToHistoryBlittable(context, configuration, historyExpiration);
-                            document.Messages.RemoveRange(1, truncateCount);
-                            return chatBefore;
-                        }
-                    }
-                }
-                else if (reduction.Tokens != null)
-                {
-                    reduction.Tokens.MaxTokensBeforeSummarization = configuration.ChatTrimming.Tokens.MaxTokensBeforeSummarization ?? 
-                                                                    DefaultMaxTokensBeforeSummarization;
-                    reduction.Tokens.MaxTokensAfterSummarization = configuration.ChatTrimming.Tokens.MaxTokensAfterSummarization ?? 
-                                                                   DefaultMaxTokensAfterSummarization;
-
-                    if (aiUsage.TotalTokens > reduction.Tokens.MaxTokensBeforeSummarization)
+                    var truncateCount = document.Messages.Count - reduction.Truncate.MessagesLengthAfterTruncate;
+                    truncateCount = int.Min(truncateCount, document.Messages.Count - 1); // prevent System.ArgumentException (out of bounds)
+                    if (truncateCount > 0)
                     {
                         var chatBefore = reduction.History == null ? null : document.ToHistoryBlittable(context, configuration, historyExpiration);
-                        await SummarizeAsync(context, client, configuration, document, token);
+                        document.Messages.RemoveRange(1, truncateCount);
                         return chatBefore;
                     }
                 }
-
-                return null; // if reduction wasn't executed -> no history to persist (return null)
             }
+            else if (reduction.Tokens != null)
+            {
+                reduction.Tokens.MaxTokensBeforeSummarization = configuration.ChatTrimming.Tokens.MaxTokensBeforeSummarization ??
+                                                                DefaultMaxTokensBeforeSummarization;
+                reduction.Tokens.MaxTokensAfterSummarization = configuration.ChatTrimming.Tokens.MaxTokensAfterSummarization ??
+                                                               DefaultMaxTokensAfterSummarization;
+
+                if (aiUsage.TotalTokens > reduction.Tokens.MaxTokensBeforeSummarization)
+                {
+                    var chatBefore = reduction.History == null ? null : document.ToHistoryBlittable(context, configuration, historyExpiration);
+                    await SummarizeAsync(context, client, configuration, document, token);
+                    return chatBefore;
+                }
+            }
+
+            return null; // if reduction wasn't executed -> no history to persist (return null)
         }
 
         private async Task SummarizeAsync(JsonOperationContext context, ChatCompletionClient client, AiAgentConfiguration configuration, ConversationDocument oldChat, CancellationToken token)
@@ -356,7 +518,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             var usage = new AiUsage();
             var tools = ConversationDocument.GenerateTools(context, configuration);
-            using var request = client.CreateCompletionRequest(context, messages, tools, useTools: false, SummarizationOutputSchema);
+            using var request = client.CreateCompletionRequest(context, messages, tools, useTools: false, streaming: false, SummarizationOutputSchema);
             var result = await client.CompleteAsync(context, request, usage, token);
 
             if (result.Result.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)
@@ -377,9 +539,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             oldChat.UpdateUsage(usage);
         }
 
-        private bool TryGetUserTools(JsonOperationContext context, ConversationDocument document, AiAgentConfiguration configuration, AiResponse result)
+        private bool TryGetUserTools(JsonOperationContext context, ConversationDocument document, AiAgentConfiguration configuration, List<AiToolCall> toolCalls)
         {
-            foreach (var call in result.ToolCalls)
+            foreach (var call in toolCalls)
             {
                 if (configuration.FindAction(call.Name) == null)
                     continue;
@@ -448,12 +610,12 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
         }
 
-        public async Task HandleQueryToolCallsAsync(JsonOperationContext context, AiAgentConfiguration cfg, ConversationDocument document, AiResponse result)
+        public async Task HandleQueryToolCallsAsync(JsonOperationContext context, AiAgentConfiguration cfg, ConversationDocument document, List<AiToolCall> toolCalls)
         {
             DynamicJsonArray reqs = [];
             List<string> toolCallsIds = [];
             var queryUrl = $"/databases/{RequestHandler.DatabaseName}/queries";
-            foreach (var call in result.ToolCalls)
+            foreach (var call in toolCalls)
             {
                 var q = cfg.FindQuery(call.Name);
                 if (q is null)

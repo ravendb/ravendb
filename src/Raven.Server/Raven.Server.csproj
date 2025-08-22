@@ -207,6 +207,7 @@
     <PackageReference Include="System.Formats.Asn1" />
     <PackageReference Include="System.Linq.Async" />
     <PackageReference Include="System.Net.Http" />
+    <PackageReference Include="System.Net.ServerSentEvents" />
     <PackageReference Include="System.Private.Uri" />
     <PackageReference Include="System.Reflection.Metadata" />
     <PackageReference Include="System.Runtime.Caching" />

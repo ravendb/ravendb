@@ -183,6 +183,16 @@ namespace Sparrow.Json
             return new MemoryBuffer.ReturnBuffer(rawMemory, buffer, this);
         }
 
+        public unsafe MemoryBuffer.ReturnBuffer GetRawMemoryBuffer(int size, out AllocatedMemoryData buffer)
+        {
+            EnsureNotDisposed();
+
+            buffer = GetMemory(size);
+
+            return new MemoryBuffer.ReturnBuffer(buffer, this);
+        }
+        
+
         public sealed unsafe class MemoryBuffer
         {
             public const int DefaultSize = 32 * Constants.Size.Kilobyte;
@@ -318,6 +328,12 @@ namespace Sparrow.Json
 #if DEBUG
                     _buffer = buffer ?? throw new ArgumentNullException(nameof(buffer));
 #endif
+                    _allocatedMemory = allocatedMemory ?? throw new ArgumentNullException(nameof(allocatedMemory));
+                    _parent = parent ?? throw new ArgumentNullException(nameof(parent));
+                }
+
+                public ReturnBuffer(AllocatedMemoryData allocatedMemory, JsonOperationContext parent)
+                {
                     _allocatedMemory = allocatedMemory ?? throw new ArgumentNullException(nameof(allocatedMemory));
                     _parent = parent ?? throw new ArgumentNullException(nameof(parent));
                 }

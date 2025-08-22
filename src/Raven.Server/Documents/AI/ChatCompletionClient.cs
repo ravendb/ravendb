@@ -3,10 +3,12 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
+using System.Net.ServerSentEvents;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -93,71 +95,296 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         _apiKey = apiKey;
     }
 
+    
+    private struct ToolCallState
+    {
+        private StringBuilder _id ;
+        private StringBuilder _type;
+        private StringBuilder _name;
+        private StringBuilder _arguments;
+
+        private int _toolCallIndex;
+        
+        public List<AiToolCall> AllToolCalls;
+
+        public ToolCallState()
+        {
+            _toolCallIndex = -1;
+        }
+        
+        public void Merge(BlittableJsonReaderObject toolCallChunk)
+        {
+            if (!toolCallChunk.TryGet("index", out int index))
+                return;
+            
+            if (index != _toolCallIndex)
+            {
+                AddAndReset();
+                _toolCallIndex = index;
+            }
+            if (toolCallChunk.TryGet("id", out string id))
+            {
+                _id.Append(id);
+            }
+            if (toolCallChunk.TryGet("type", out string type))
+            {
+                _type.Append(type);
+            }
+            if (toolCallChunk.TryGet("function", out BlittableJsonReaderObject functionChunk))
+            {
+                if (functionChunk.TryGet("name", out string nameChunk))
+                {
+                    _name.Append(nameChunk);
+                }
+                if (functionChunk.TryGet("arguments", out string argsChunk))
+                {
+                    _arguments.Append(argsChunk);
+                }
+            }
+        }
+        
+        public void AddAndReset()
+        {
+            if (_toolCallIndex == -1)
+                return;
+            
+            AllToolCalls ??= [];
+            AllToolCalls.Add(new AiToolCall(_id.ToString(), _name.ToString(), _arguments.ToString()));
+        
+            _id ??= new();
+            _type ??= new();
+            _name ??= new();
+            _arguments ??= new();
+
+            _toolCallIndex = -1;
+            _id.Clear();
+            _type.Clear();
+            _name.Clear();
+            _arguments.Clear();
+        }
+    }
+
+
+    public async Task<AiResponse> StreamingCompleteAsync(JsonOperationContext streamingContext, IMemoryContextPool contextPool, 
+        string propertyToStream, HttpRequestMessage request,
+        Func<Memory<byte>,Task> streamedPropertyCallback,
+        AiUsage usage, CancellationToken token)
+    {
+        AddDefaultHeaders(request);
+        // we use a small buffer size since we expect those to be "token" level updates, not very big ones
+        const int initialBufferSize = 64;
+
+        using var __ = streamingContext.GetRawMemoryBuffer(initialBufferSize,out var streamedPropertyBuffer);
+        var parser = new SseStreamingJsonParser(streamingContext, propertyToStream);
+        var alreadySeen = 0;
+        var sizeToStream = 0;
+        parser.OnStringRead += (e) =>
+        {
+            int size = e.SizeInBytes - alreadySeen;
+            if (size > streamedPropertyBuffer.SizeInBytes)
+            {
+                streamingContext.GrowAllocation(streamedPropertyBuffer, size - streamedPropertyBuffer.SizeInBytes);
+            }
+            unsafe
+            {
+                var read = e.CopyTo(alreadySeen, streamedPropertyBuffer.Address);
+                alreadySeen += read;
+                sizeToStream += read;
+            }
+        };
+
+        using var response = await SendStreamingRequestAsync(request, token);
+        if (response.IsSuccessStatusCode == false)
+        {
+            var responseContent = await GetResponseContentAsync(streamingContext, response, token);
+            HandleUnsuccessfulResponse(response, responseContent);
+            Debug.Assert(false, "we should never get here");
+        }
+        await using var responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false);
+        //var s = Encoding.UTF8.GetString(((MemoryStream)responseStream).ToArray());
+        ToolCallState toolCallState = new();
+        BlittableJsonReaderObject message = null;
+     
+        // need to contexts here because we run two parsing operations at once, first for each of the SSE events
+        // and then for the internal buffer that there are providing.
+        using var ___ = contextPool.AllocateOperationContext(out JsonOperationContext parsingContext);
+        // Note that here we iterate over blittable, whose scope is only the _single_ iteration we run, you need to copy
+        // any data that you need out of them.
+        await foreach (var sseEvent in SseParser.Create(responseStream, (_, data) =>
+        {
+            unsafe
+            {
+                if (data.SequenceEqual("[DONE]"u8))
+                    return null;
+                fixed (byte* p = data)
+                {
+                    return parsingContext.ParseBuffer(p, data.Length, "msg", BlittableJsonDocumentBuilder.UsageMode.None);
+                }
+            }
+
+        }).EnumerateAsync(token))
+        {
+            using var _ = sseEvent.Data;
+
+            if (sseEvent.Data is null)// "[DONE]"
+            {
+                toolCallState.AddAndReset();
+                break;
+            }
+
+            if (sseEvent.Data.TryGet("usage", out BlittableJsonReaderObject streamedUsage) && streamedUsage is not null)
+            {
+                usage.UpdateFrom(streamedUsage);
+            }
+
+            if (sseEvent.Data.TryGet("choices", out BlittableJsonReaderArray choices) is false ||
+                choices.Length == 0)
+            {
+                continue;
+            }
+            var choice = (BlittableJsonReaderObject)choices[0];
+            if (choice.TryGet("delta", out BlittableJsonReaderObject delta))
+            {
+                if (delta.TryGet("content", out LazyStringValue content) && content?.Length > 0)
+                {
+                    toolCallState.AddAndReset();
+
+                    var final = parser.Process(content);
+                    if (sizeToStream is not 0)
+                    {
+                        await streamedPropertyCallback(streamedPropertyBuffer.AsMemory()[..sizeToStream]);
+                        sizeToStream = 0;
+                    }
+                    if (final is not null)
+                    {
+                        message = final;
+                    }
+                }
+
+                if (delta.TryGet("tool_calls", out BlittableJsonReaderArray toolCalls))
+                {
+                    foreach (BlittableJsonReaderObject toolCallChunk in toolCalls)
+                    {
+                        toolCallState.Merge(toolCallChunk);
+                    }
+                }
+            }
+        }
+        
+        if (toolCallState.AllToolCalls?.Count >= 0)
+        {
+            return new AiResponse(AiResponseType.Tool) { Message = message, ToolCalls = toolCallState.AllToolCalls, };
+        }
+   
+        return new AiResponse(AiResponseType.Result)
+        {
+            Message = streamingContext.ReadObject(new DynamicJsonValue
+            {
+                ["role"] = "assistant",
+                ["content"] = message!.ToString(),
+            }, "persisted/streamed/message"), 
+            Result = message,
+        };
+
+    }
+
     public async Task<AiResponse> CompleteAsync(JsonOperationContext context, HttpRequestMessage request, AiUsage usage, CancellationToken token)
     {
         AddDefaultHeaders(request);
         using var response = await SendRequestAsync(request, token);
         var responseContent = await GetResponseContentAsync(context, response, token);
 
-        if (response.IsSuccessStatusCode == false)
+        var responseParser = new AiResponseParser(this, response, responseContent);
+        responseParser.EnsureSuccessfulResponse();
+        responseParser.ParseMessage(usage);
+        if (responseParser.TryParseToolCalls(out var tools))
         {
-            HandleUnsuccessfulResponse(response, responseContent);
+            return new AiResponse(AiResponseType.Tool) { ToolCalls = tools, Message =  responseParser.Message };
+        }
+        var result = responseParser.GetContent(context);
+        return new AiResponse(AiResponseType.Result) { Result = result, Message = responseParser.Message };
+    }
+
+    private struct AiResponseParser(ChatCompletionClient client, HttpResponseMessage response,BlittableJsonReaderObject responseContent)
+    {
+        public BlittableJsonReaderObject Message;
+        private string _content;
+        private BlittableJsonReaderObject _choice0;
+
+        public void EnsureSuccessfulResponse()
+        {
+            if (response.IsSuccessStatusCode)
+                return;
+            
+            client.HandleUnsuccessfulResponse(response, responseContent);
             Debug.Assert(false, "we should never get here");
         }
 
-        if (responseContent.TryGet(Constants.ResponseFields.Choices, out BlittableJsonReaderArray choices) == false || choices.Length == 0)
+        public void ParseMessage(AiUsage usage)
         {
-            throw new UnexpectedResponseException("No choices in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+            if (responseContent.TryGet(Constants.ResponseFields.Choices, out BlittableJsonReaderArray choices) == false || choices.Length == 0)
+            {
+                throw new UnexpectedResponseException("No choices in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+            }
+
+            _choice0 = (BlittableJsonReaderObject)choices[0];
+        
+            if (_choice0.TryGet(Constants.ResponseFields.Message, out Message) == false ||
+                Message.TryGet(Constants.ResponseFields.Content, out _content) == false)
+            {
+                throw new UnexpectedResponseException("No message/content property in choice: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+            }
+        
+            if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson) == false)
+                throw new UnexpectedResponseException("No choices property in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+        
+            usage.UpdateFrom(usageJson);
         }
 
-        var choice0 = (BlittableJsonReaderObject)choices[0];
-        
-        if (choice0.TryGet(Constants.ResponseFields.Message, out BlittableJsonReaderObject msg) == false ||
-            msg.TryGet(Constants.ResponseFields.Content, out string content) == false)
+        public bool TryParseToolCalls(out List<AiToolCall> toolCalls)
         {
-            throw new UnexpectedResponseException("No message/content property in choice: " + responseContent) { RequestId = GetRequestId(response.Headers) };
-        }
-        
-        if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson) == false)
-            throw new UnexpectedResponseException("No choices property in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
-        
-        usage.UpdateFrom(usageJson);
+            if (Message.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray calls) is false)
+            {
+                toolCalls = null;
+                return false;
+            }
 
-        if (msg.TryGet(Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray calls))
-        {
-            var resp = new AiResponse(AiResponseType.Tool) { ToolCalls = [], Message = msg };
+            toolCalls =  [];
             foreach (BlittableJsonReaderObject call in calls)
             {
                 if (call.TryGet("id", out string callId) is false ||
                     call.TryGet("function", out BlittableJsonReaderObject function) is false ||
                     function.TryGet("name", out string name) is false ||
                     function.TryGet("arguments", out string args) is false)
-                    throw new UnexpectedResponseException("Invalid function call: " + call.ToString())
+                    throw new UnexpectedResponseException("Invalid function call: " + call)
                     {
                         RequestId = GetRequestId(response.Headers)
                     };
-                resp.ToolCalls.Add(new AiToolCall(callId, name, args));
+                toolCalls.Add(new AiToolCall(callId, name, args));
+            }
+            return true;
+        }
+
+        public BlittableJsonReaderObject GetContent(JsonOperationContext context)
+        {
+            if (string.IsNullOrEmpty(_content))
+            {
+                _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
+                _choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal); 
+                //TODO: full output if we get here?
+                throw new RefusedToAnswerException("The request was refused by the model")
+                {
+                    Refusal = refusal, FinishReason = finishReason, RequestId = GetRequestId(response.Headers)
+                };
             }
 
-            return resp;
+            return context.Sync.ReadForMemory(_content, "ai/output");
         }
-
-        if (string.IsNullOrEmpty(content))
-        {
-            choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
-            choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal); 
-            //TODO: full output if we get here?
-            throw new RefusedToAnswerException("The request was refused by the model")
-            {
-                Refusal = refusal, FinishReason = finishReason, RequestId = GetRequestId(response.Headers)
-            };
-        }
-
-        var result = context.Sync.ReadForMemory(content, "ai/output");
-        return new AiResponse(AiResponseType.Result) { Result = result, Message = msg};
     }
 
     protected virtual Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, token);
+    
+    protected virtual Task<HttpResponseMessage> SendStreamingRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
 
     public async Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, CancellationToken token)
     {
@@ -184,9 +411,14 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         return (results.Result.ToString(), usage);
     }
-    public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, string schema) => CreateCompletionRequest(ctx, messages, tools: null, useTools: false, schema);
+    public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, string schema) => CreateCompletionRequest(ctx, messages, tools: null, useTools: false, streaming: false, schema);
 
-    public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, string schema)
+    public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, 
+        List<BlittableJsonReaderObject> messages, 
+        List<BlittableJsonReaderObject> tools, 
+        bool useTools,
+        bool streaming,
+        string schema)
     {
         if (_model is null)
             throw new ArgumentNullException(nameof(_model));
@@ -201,7 +433,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                     return;
                 }
 
-                WriteCompletionRequestPayload(writer, ctx, messages, tools, useTools, schema);
+                WriteCompletionRequestPayload(writer, ctx, messages, tools, useTools, streaming, schema);
             }
         }, ConventionsToUse);
 
@@ -217,7 +449,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         return request;
     }
 
-    public void WriteCompletionRequestPayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, string schema)
+    public void WriteCompletionRequestPayload(AsyncBlittableJsonTextWriter writer, JsonOperationContext ctx, IEnumerable<BlittableJsonReaderObject> messages, List<BlittableJsonReaderObject> tools, bool useTools, bool streaming, string schema)
     {
         writer.WriteStartObject();
 
@@ -257,6 +489,19 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         writer.WritePropertyName(Constants.RequestFields.JsonSchema);
         writer.WriteObject(GetStructuredOutputSchemaAsBlittable());
         writer.WriteEndObject();
+        
+        if (streaming)
+        {
+            writer.WriteComma();
+            writer.WritePropertyName("stream");
+            writer.WriteBool(true);
+            writer.WriteComma();
+            writer.WritePropertyName("stream_options");
+            writer.WriteStartObject();
+            writer.WritePropertyName("include_usage");
+            writer.WriteBool(true);
+            writer.WriteEndObject();
+        }
 
         // Add Ollama-specific "think" parameter if specified
         if (_think.HasValue)
@@ -307,7 +552,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiProject, _projectId);
     }
 
-    public virtual async Task<BlittableJsonReaderObject> GetResponseContentAsync(JsonOperationContext context, HttpResponseMessage response, CancellationToken token)
+    public async Task<BlittableJsonReaderObject> GetResponseContentAsync(JsonOperationContext context, HttpResponseMessage response, CancellationToken token)
     {
         await using (var responseStream = await response.Content.ReadAsStreamAsync(token).ConfigureAwait(false))
         await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
