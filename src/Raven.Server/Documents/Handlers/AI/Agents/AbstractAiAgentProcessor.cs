@@ -34,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         protected AbstractAiAgentProcessor([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
-        
+
         private async Task<bool> TryHandleActionResponses(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument document,
             RequestBody body)
         {
@@ -52,11 +52,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     if (document.OpenActionCalls.Remove(t.ToolId) == false)
                         throw new InvalidOperationException($"{t.ToolId} is an unknown action ID for conversation '{conversationId}'");
 
-                    document.AddMessage(context,context.ReadObject(
+                    document.AddMessage(context, context.ReadObject(
                         new DynamicJsonValue
                         {
-                            ["tool_call_id"] = t.ToolId, 
-                            ["role"] = "tool", 
+                            ["tool_call_id"] = t.ToolId,
+                            ["role"] = "tool",
                             ["content"] = t.Content
                         },
                         "user/tool"), usage: null);
@@ -75,13 +75,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             if (hasActionResponse == false && hasUserPrompt == false)
                 throw new InvalidOperationException($"Cannot have a conversation '{conversationId}' without open action calls or user prompt.");
-            
-            
+
+
             if (string.IsNullOrEmpty(body.UserPrompt) == false)
             {
                 document.AddMessage(context, context.ReadObject(new DynamicJsonValue
                 {
-                    ["role"] = "user", 
+                    ["role"] = "user",
                     ["content"] = body.UserPrompt
                 }, "user/msg"), usage: null);
             }
@@ -91,14 +91,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
 
         public async Task HandleRequest(
-            JsonOperationContext context, 
-            AiAgentConfiguration configuration, 
-            string conversationId, 
-            ConversationDocument document, 
+            JsonOperationContext context,
+            AiAgentConfiguration configuration,
+            string conversationId,
+            ConversationDocument document,
             RequestBody body,
             CancellationToken token)
         {
-            if (await TryHandleActionResponses(context, configuration, conversationId, document, body) is false) 
+            if (await TryHandleActionResponses(context, configuration, conversationId, document, body) is false)
                 return;
 
             (BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History) r;
@@ -121,23 +121,23 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         private static readonly byte[] NewLinePostfix = "\n"u8.ToArray();
 
         public async Task HandleStreamingRequest(
-            JsonOperationContext context, 
-            AiAgentConfiguration configuration, 
-            string conversationId, 
-            ConversationDocument document, 
+            JsonOperationContext context,
+            AiAgentConfiguration configuration,
+            string conversationId,
+            ConversationDocument document,
             RequestBody body,
             CancellationToken token)
         {
-            if (await TryHandleActionResponses(context, configuration, conversationId, document, body) is false) 
+            if (await TryHandleActionResponses(context, configuration, conversationId, document, body) is false)
                 return;
-            
+
             var propertyToStream = RequestHandler.GetStringQueryString("propertyToStream");
 
 
             HttpContext.Response.Headers.ContentType = "text/event-stream";
             var feature = HttpContext.Features.Get<IHttpResponseBodyFeature>();
             feature?.DisableBuffering();
-            
+
             await using var responseStream = RequestHandler.ResponseBodyStream();
             (BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History) r;
             try
@@ -155,21 +155,20 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
                         if (nextLineBreak is -1) // wrote the entire thing, no line breaks
                             break;
-                        
+
                         data = data[(length + 1)..];
                         if (data.IsEmpty is false)
                             continue;
-                        
+
                         // means that we had a line break in the end, so let's emit that
                         await responseStream.WriteAsync(DataPrefix, token);
                         await responseStream.WriteAsync(NewLinePostfix, token);
                         break;
                     }
-                    
+
                     // becomes the blank new line indicating we are done with this message
                     await responseStream.WriteAsync(NewLinePostfix, token);
                     await responseStream.FlushAsync(token);
-
                 }, token: token);
             }
             catch (Exception e)
@@ -183,12 +182,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             await responseStream.WriteAsync(TwoNewLinesEnd, token); // \n\n for end of message
             await responseStream.FlushAsync(token);
         }
+
         public override async ValueTask ExecuteAsync()
         {
             using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
             var conversationId = RequestHandler.GetStringQueryString("conversationId");
             var agentId = RequestHandler.GetStringQueryString("agentId");
-            var streaming = RequestHandler.GetBoolValueQueryString("streaming", required:false) ?? false;
+            var streaming = RequestHandler.GetBoolValueQueryString("streaming", required: false) ?? false;
             var changeVector = RequestHandler.GetChangeVectorStringQueryString("changeVector", required: false);
 
             using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
@@ -197,7 +197,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             ConversationDocument conversationDocument = null;
             AiAgentConfiguration configuration = GetAiAgentConfiguration(agentId);
 
-            using(context.OpenReadTransaction())
+            using (context.OpenReadTransaction())
             {
                 var conversation = RequestHandler.Database.DocumentsStorage.Get(context, conversationId);
                 if (conversation == null)
@@ -207,8 +207,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                         throw new ConcurrencyException(
                             $"The conversation '{conversationId}' doesn't exists.")
                         {
-                            ExpectedChangeVector = changeVector, 
-                            ActualChangeVector = string.Empty, 
+                            ExpectedChangeVector = changeVector,
+                            ActualChangeVector = string.Empty,
                             Id = conversationId
                         };
                     }
@@ -225,7 +225,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     {
                         conversationDocument.Expires = TimeSpan.FromSeconds(body.CreationOptions.ExpirationInSec.Value);
                     }
-                
+
                     conversationDocument.Initialize(context, configuration);
                 }
                 else
@@ -244,8 +244,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                             throw new ConcurrencyException(
                                 $"The conversation '{conversationId}' was updated and doesn't match the expected change vector. Reload the conversation and try again.")
                             {
-                                ExpectedChangeVector = changeVector, 
-                                ActualChangeVector = conversation.ChangeVector, 
+                                ExpectedChangeVector = changeVector,
+                                ActualChangeVector = conversation.ChangeVector,
                                 Id = conversationId
                             };
 
@@ -270,7 +270,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             body.TryGet(nameof(ConversionRequestBody.ActionResponses), out BlittableJsonReaderArray actionResponses);
             body.TryGet(nameof(ConversionRequestBody.UserPrompt), out string userPrompt);
             body.TryGet(nameof(ConversionRequestBody.CreationOptions), out BlittableJsonReaderObject optionsBlittable);
-            
+
             optionsBlittable.TryGet(nameof(AiConversationCreationOptions.Parameters), out BlittableJsonReaderObject parameters);
             optionsBlittable.TryGet(nameof(AiConversationCreationOptions.ExpirationInSec), out int? conversationExpirationInSec);
 
@@ -281,8 +281,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             return new RequestBody
             {
-                ActionResponses = actionResponses, 
-                UserPrompt = userPrompt, 
+                ActionResponses = actionResponses,
+                UserPrompt = userPrompt,
                 Parameters = parameters,
                 CreationOptions = options
             };
@@ -320,24 +320,24 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
         protected virtual ChatCompletionClient CreateClient(AiConnectionString connection) => ChatCompletionClient.CreateChatCompletionClient(ContextPool, connection);
 
-         public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> StreamingTalkAsync(
-            JsonOperationContext context, 
+        public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> StreamingTalkAsync(
+            JsonOperationContext context,
             AiAgentConfiguration configuration,
             ConversationDocument document,
             string firstPropertyToStream,
-            Func<Memory<byte>,Task> streaming, 
+            Func<Memory<byte>, Task> streaming,
             CancellationToken token = default)
         {
             using var talker = new Talker(this, context, configuration, document);
             talker.Init();
-            
+
             while (true)
             {
                 using var request = talker.CreateCompletionRequest(streaming: true);
 
-                await talker.Stream(ContextPool, request,firstPropertyToStream, streaming, token);
+                await talker.StreamAsync(ContextPool, request, firstPropertyToStream, streaming, token);
                 talker.UpdateDocument();
-                
+
                 if (talker.ResponseType is AiResponseType.Result)
                     break;
 
@@ -347,7 +347,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     break; // we need to return the user tool requests to the client, so we can continue the conversation
             }
 
-            var history = await TryReduceChatSize(context, talker.Client, configuration, document, talker.AiUsage, token);
+            var history = await TryReduceChatSizeAsync(context, talker.Client, configuration, document, talker.AiUsage, token);
 
             return (talker.Result, document, history);
         }
@@ -361,10 +361,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             public AiUsage AiUsage;
             public ChatCompletionClient Client;
-            
+
             public AiResponseType ResponseType => _aiResponse.Type;
             public List<AiToolCall> ToolCalls => _aiResponse.ToolCalls;
-            
+
             public BlittableJsonReaderObject Result => _aiResponse.Result;
 
             public void Init()
@@ -387,7 +387,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 return Client.CreateCompletionRequest(context, document.Messages, _tools, useTools: _count-- > 0, streaming, _schema);
             }
 
-            public async Task Run(HttpRequestMessage request, CancellationToken token)
+            public async Task RunAsync(HttpRequestMessage request, CancellationToken token)
             {
                 _aiResponse = await Client.CompleteAsync(
                     context,
@@ -403,15 +403,15 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 document.UpdateUsage(AiUsage);
             }
 
-            public async Task Stream(IMemoryContextPool contextPool,HttpRequestMessage request, string propertyToStream,  Func<Memory<byte>,Task> streamedPropertyCallback, CancellationToken token)
+            public async Task StreamAsync(IMemoryContextPool contextPool, HttpRequestMessage request, string propertyToStream, Func<Memory<byte>, Task> streamedPropertyCallback, CancellationToken token)
             {
                 _aiResponse = await Client.StreamingCompleteAsync(
                     context,
-                    contextPool, 
+                    contextPool,
                     propertyToStream,
-                    request,                  
+                    request,
                     streamedPropertyCallback,
-                    AiUsage,  
+                    AiUsage,
                     token
                 );
             }
@@ -421,23 +421,23 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 Client?.Dispose();
             }
         }
-         
+
         public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> TalkAsync(
-            JsonOperationContext context, 
+            JsonOperationContext context,
             AiAgentConfiguration configuration,
             ConversationDocument document,
             CancellationToken token = default)
         {
             using var talker = new Talker(this, context, configuration, document);
             talker.Init();
-            
+
             while (true)
             {
                 using var request = talker.CreateCompletionRequest(streaming: false);
 
-                await talker.Run(request, token);
+                await talker.RunAsync(request, token);
                 talker.UpdateDocument();
-                
+
                 if (talker.ResponseType is AiResponseType.Result)
                     break;
 
@@ -447,13 +447,12 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     break; // we need to return the user tool requests to the client, so we can continue the conversation
             }
 
-            var history = await TryReduceChatSize(context, talker.Client, configuration, document, talker.AiUsage, token);
+            var history = await TryReduceChatSizeAsync(context, talker.Client, configuration, document, talker.AiUsage, token);
 
             return (talker.Result, document, history);
         }
 
-
-        async Task<BlittableJsonReaderObject> TryReduceChatSize(JsonOperationContext context, ChatCompletionClient client, AiAgentConfiguration configuration, ConversationDocument document,AiUsage aiUsage, CancellationToken token)
+        private async Task<BlittableJsonReaderObject> TryReduceChatSizeAsync(JsonOperationContext context, ChatCompletionClient client, AiAgentConfiguration configuration, ConversationDocument document, AiUsage aiUsage, CancellationToken token)
         {
             var reduction = configuration.ChatTrimming;
             if (reduction == null || document.OpenActionCalls.Count > 0)
@@ -679,8 +678,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     document.AddMessage(context, context.ReadObject(
                         new DynamicJsonValue
                         {
-                            ["tool_call_id"] = toolCallsIds[i], 
-                            ["role"] = "tool", 
+                            ["tool_call_id"] = toolCallsIds[i],
+                            ["role"] = "tool",
                             ["content"] = queryResult.ToString()
                         }, "tool-call/response"), usage: null);
                 }
