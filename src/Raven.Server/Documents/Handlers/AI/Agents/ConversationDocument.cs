@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
@@ -9,6 +10,7 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Web.Studio;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
@@ -62,6 +64,47 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
                 [ChatCompletionClient.Constants.RequestFields.Content] = ParametersToString(configuration)
             }, "system/msg"), usage: null);
         }
+    }
+
+    public List<AiToolCall> InitialQueries(JsonOperationContext context, AiAgentConfiguration configuration)
+    {
+        List<AiToolCall> result = null ;
+        
+        foreach (AiAgentToolQuery query in configuration.Queries ??[])
+        {
+            if(query.Options.HasFlag(AiAgentToolQueryOptions.AddToInitialContext) is false)
+                continue;
+            
+            result ??= [];
+            result.Add(new AiToolCall(Guid.NewGuid().ToString("N"), query.Name, "{}"));
+        }
+
+        if (result is null)
+            return null;
+
+        // here we generate artificial tools calls, so the model will have a better grasp
+        // of what information we are actually giving it
+        var tools = new DynamicJsonArray();
+        foreach (AiToolCall call in result)
+        {
+            tools.Add(new DynamicJsonValue
+            {
+                [ChatCompletionClient.Constants.ResponseFields.Id] = call.Id,
+                [ChatCompletionClient.Constants.ResponseFields.Type] = ChatCompletionClient.Constants.ResponseFields.Function,
+                [ChatCompletionClient.Constants.ResponseFields.Function] = new DynamicJsonValue
+                {
+                    [ChatCompletionClient.Constants.ResponseFields.Name] = call.Name,
+                    [ChatCompletionClient.Constants.ResponseFields.Arguments] = call.Arguments 
+                }
+            });
+        }
+        AddMessage(context, context.ReadObject(new DynamicJsonValue
+        {
+            [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleAssistantValue,
+            [ChatCompletionClient.Constants.ResponseFields.ToolCalls] = tools
+        }, "tools/msg"), usage: null);
+
+        return result;
     }
 
     private string ParametersToString(AiAgentConfiguration configuration)
@@ -173,7 +216,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             throw new ArgumentException($"Missing CreatedAt in '{id}' conversation document");
         if (document.TryGet(nameof(Expires), out TimeSpan? expires) == false)
             throw new ArgumentException($"Missing Expires in '{id}' conversation document");
-        
+
         var openTools = new Dictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
         {
@@ -196,7 +239,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         if (document.TryGet(nameof(CurrentUsage), out BlittableJsonReaderObject currentUsageBlittable))
         {
             conversation.CurrentUsage = JsonDeserializationClient.AiUsage(currentUsageBlittable);
-        }
+    }
         return conversation;
     }
 
@@ -205,6 +248,9 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         List<BlittableJsonReaderObject> tools = [];
         foreach (var q in configuration.Queries ?? [])
         {
+            if(q.Options.HasFlag(AiAgentToolQueryOptions.AllowModelQueries) is false)
+                continue;
+            
             var paramsSchema = ChatCompletionClient.GetSchemaForTool(q.ParametersSchema, q.ParametersSampleObject);
             var tool = new DynamicJsonValue
             {
@@ -286,7 +332,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             if (m.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role) == false)
             {
                 continue;
-            }
+}
 
             switch (role)
             {

@@ -215,6 +215,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     }
 
                     conversationDocument.Initialize(context, configuration);
+                    if (conversationDocument.InitialQueries(context, configuration) is { } queries)
+                    {
+                        // run initial tool calls...
+                        await HandleQueryToolCallsAsync(context, configuration, conversationDocument, queries);
+                    }
                 }
                 else
                 {
