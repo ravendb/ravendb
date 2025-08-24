@@ -526,8 +526,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
 
             var usage = new AiUsage();
-            var tools = ConversationDocument.GenerateTools(context, configuration);
-            using var request = client.CreateCompletionRequest(context, messages, tools, useTools: false, streaming: false, SummarizationOutputSchema);
+            using var request = client.CreateCompletionRequest(context, messages, [], useTools: false, streaming: false, SummarizationOutputSchema);
             var result = await client.CompleteAsync(context, request, usage, token);
 
             if (result.Result.TryGet(nameof(SummarizationSampleObject.Answer), out string messagesSummary) == false)
