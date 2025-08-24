@@ -5,10 +5,12 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features;
+using Microsoft.Extensions.Primitives;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
@@ -227,10 +229,15 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     }
 
                     conversationDocument.Initialize(context, configuration);
-                    if (conversationDocument.InitialQueries(context, configuration) is { } queries)
+                    var initialQueries = conversationDocument.InitialOperations(context, configuration);
+                    
+                    // We want to persist here so  we already ensure that we have  a document id for sub-agents calls
+                    // we do that after the initial operation creation (but before we run them) to show the current state
+                    conversationId = await TryPersistAsync(context, configuration, conversationId, conversationDocument, history: null);
+                    if (initialQueries is not null)
                     {
                         // run initial tool calls...
-                        await HandleQueryToolCallsAsync(context, configuration, conversationDocument, queries);
+                        await HandleQueryToolCallsAsync(context, configuration, conversationDocument, initialQueries);
                     }
                 }
                 else
@@ -348,7 +355,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
                 _schema = ChatCompletionClient.GetSchemaForRequest(configuration.OutputSchema, configuration.SampleObject);
 
-                _tools = ConversationDocument.GenerateTools(context, configuration);
+                _tools = ConversationDocument.GenerateTools(context, configuration, processor);
 
                 Client = processor.CreateClient(conStr);
                 _count = configuration.MaxModelIterationsPerCall ?? DefaultMaxModelIterationsPerCall;
@@ -551,11 +558,15 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         {
             foreach (var call in toolCalls)
             {
-                if (configuration.FindAction(call.Name) == null)
+                if (configuration.Find(call.Name) is not AiAgentToolAction)
                     continue;
 
-                document.OpenActionCalls.Add(call.Id,
-                    new AiAgentActionRequest { ToolId = call.Id, Name = call.Name, Arguments = CreateParameters(context, call, document.Parameters).ToString() });
+                document.OpenActionCalls.Add(call.Id, new AiAgentActionRequest
+                {
+                    ToolId = call.Id, 
+                    Name = call.Name,
+                    Arguments = CreateParameters(context, call, document.Parameters).ToString()
+                });
             }
 
             return document.OpenActionCalls.Count > 0;
@@ -579,20 +590,25 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         public static BlittableJsonReaderObject CreateParameters(JsonOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)
         {
             var args = context.Sync.ReadForMemory(call.Arguments, "call/args");
-            if (parameters is null)
-                return args;
+         
+            return MergeParams(context, parameters, args);
+        }
 
-            args.Modifications = new DynamicJsonValue();
+        private static BlittableJsonReaderObject MergeParams(JsonOperationContext context, BlittableJsonReaderObject scopeParameters, BlittableJsonReaderObject callArguments)
+        {
+            if (scopeParameters is null)
+                return callArguments;
+
+            callArguments.Modifications ??= new DynamicJsonValue(callArguments);
             BlittableJsonReaderObject.PropertyDetails prop = default;
-            for (int i = 0; i < parameters.Count; i++)
+            for (int i = 0; i < scopeParameters.Count; i++)
             {
                 // Important: we *override* any parameter from the model with the user provided values
                 // to ensure the safety & security of this feature. Model cannot override those values, period.
-                parameters.GetPropertyByIndex(i, ref prop);
-                args.Modifications[prop.Name] = prop.Value;
+                scopeParameters.GetPropertyByIndex(i, ref prop);
+                callArguments.Modifications[prop.Name] = prop.Value;
             }
-
-            return args;
+            return context.ReadObject(callArguments, "call/params");
         }
 
         public AiAgentConfiguration GetAiAgentConfiguration(string identifier)
@@ -617,31 +633,42 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                        ?? throw new InvalidOperationException("Cannot find connection string: " + name);
             }
         }
-
-        public async Task HandleQueryToolCallsAsync(JsonOperationContext context, AiAgentConfiguration cfg, ConversationDocument document, List<AiToolCall> toolCalls)
+        
+        private async Task HandleQueryToolCallsAsync(JsonOperationContext context, AiAgentConfiguration cfg, ConversationDocument document, List<AiToolCall> toolCalls)
         {
             DynamicJsonArray reqs = [];
-            List<string> toolCallsIds = [];
-            var queryUrl = $"/databases/{RequestHandler.DatabaseName}/queries";
+            List<AiToolCall> activeToolCalls = [];
             foreach (var call in toolCalls)
             {
-                var q = cfg.FindQuery(call.Name);
-                if (q is null)
-                    continue;
-
-                toolCallsIds.Add(call.Id);
-                reqs.Add(new DynamicJsonValue
+                switch (cfg.Find(call.Name))
                 {
-                    [nameof(GetRequest.Url)] = queryUrl,
-                    [nameof(GetRequest.Query)] = null,
-                    [nameof(GetRequest.Method)] = "POST",
-                    [nameof(GetRequest.Content)] = new DynamicJsonValue
-                    {
-                        [nameof(IndexQuery.Query)] = q.Query,
-                        [nameof(IndexQuery.QueryParameters)] = CreateParameters(context, call, document.Parameters)
-                    }
-                });
+                    case AiAgentToolQuery q:
+                        activeToolCalls.Add(call);
+                        BuildQueryRequest(context, document, reqs, q, call);
+                        break;
+                    case AiAgentToolSubAgent agent:
+                        try
+                        {
+                            BuildAgentRequest(context, document, call, agent, reqs);
+                        }
+                        catch (Exception e)
+                        {
+                            document.AddMessage(context, context.ReadObject(
+                                new DynamicJsonValue
+                                {
+                                    ["tool_call_id"] = call.Id,
+                                    ["role"] = "tool",
+                                    ["content"] = "Failure calling " + call.Id +", because: " + e.Message
+                                }, "tool-call/response"), usage: null);
+                            continue;
+                        }
+                        activeToolCalls.Add(call);
+                        break;
+                }
             }
+
+            if (reqs.Count is 0)
+                return;
 
             using (var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-agent/multi-query"))
             using (var handler = new MultiGetHandlerProcessorForPost(RequestHandler))
@@ -655,27 +682,117 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
                 for (int i = 0; i < results.Length; i++)
                 {
-                    var queryResponse = (BlittableJsonReaderObject)results[i];
-                    if (queryResponse.TryGet(nameof(GetResponse.StatusCode), out int statusCode) == false)
+                    var response = (BlittableJsonReaderObject)results[i];
+                    if (response.TryGet(nameof(GetResponse.StatusCode), out int statusCode) == false)
                         throw new InvalidOperationException("Missing status code");
-                    if (queryResponse.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject queryResponseResult) is false)
+                    if (response.TryGet(nameof(GetResponse.Result), out BlittableJsonReaderObject requestResult) is false)
                         throw new InvalidOperationException("Missing Result from query request output");
 
                     if (statusCode != 200)
-                        throw ExceptionDispatcher.Get(queryResponseResult, (HttpStatusCode)statusCode);
+                        throw ExceptionDispatcher.Get(requestResult, (HttpStatusCode)statusCode);
 
-                    if (queryResponseResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
-                        throw new InvalidOperationException("Missing Results from query output");
+                    AiToolCall currentCall = activeToolCalls[i];
+                    switch (cfg.Find(currentCall.Name))
+                    {
+                        case AiAgentToolQuery:
+                            if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
+                                throw new InvalidOperationException("Missing Results from query output");
 
-                    document.AddMessage(context, context.ReadObject(
-                        new DynamicJsonValue
-                        {
-                            ["tool_call_id"] = toolCallsIds[i],
-                            ["role"] = "tool",
-                            ["content"] = queryResult.ToString()
-                        }, "tool-call/response"), usage: null);
+                            document.AddMessage(context, context.ReadObject(
+                                new DynamicJsonValue
+                                {
+                                    ["tool_call_id"] = currentCall.Id,
+                                    ["role"] = "tool",
+                                    ["content"] = queryResult.ToString()
+                                }, "tool-call/response"), usage: null);
+                            break;
+                        case AiAgentToolSubAgent agent:
+                            if (requestResult.TryGet(nameof(ConversationResult<object>.Response), out BlittableJsonReaderObject agentResult) is false)
+                                throw new InvalidOperationException("Missing Results from query output");
+                            if (requestResult.TryGet(nameof(ConversationResult<object>.ActionRequests), out BlittableJsonReaderArray actionRequests) is false)
+                                throw new InvalidOperationException("Missing ActionRequests from query output");
+
+                            if (actionRequests?.Length > 0)
+                            {
+                                // we have open action calls, let's add them to the parent and continue... 
+                                foreach (BlittableJsonReaderObject requestObj in actionRequests)
+                                {
+                                    var req = JsonDeserializationClient.ActionRequest(requestObj);
+                                    toolCalls.Add(new AiToolCall(agent.Identifier + "/" + req.ToolId, req.Name, req.Arguments));
+                                }
+                                continue;
+                            }
+                            
+                            if (requestResult.TryGet(nameof(ConversationResult<object>.ConversationId), out string conversationId) is false)
+                                throw new InvalidOperationException("Missing TotalUsage from query output");
+                            document.AddMessage(context, context.ReadObject(
+                                new DynamicJsonValue
+                                {
+                                    ["tool_call_id"] = currentCall.Id,
+                                    ["role"] = "tool",
+                                    ["content"] = agentResult.ToString(),
+                                    ["subAgent"] = conversationId,
+                                }, "tool-call/response"), usage: null);
+                            break;
+                    }
                 }
             }
+        }
+
+        private void BuildQueryRequest(JsonOperationContext context, ConversationDocument document, DynamicJsonArray reqs, AiAgentToolQuery q, AiToolCall call)
+        {
+            reqs.Add(new DynamicJsonValue
+            {
+                [nameof(GetRequest.Url)] = $"/databases/{RequestHandler.DatabaseName}/queries",
+                [nameof(GetRequest.Query)] = null,
+                [nameof(GetRequest.Method)] = "POST",
+                [nameof(GetRequest.Content)] = new DynamicJsonValue
+                {
+                    [nameof(IndexQuery.Query)] = q.Query,
+                    [nameof(IndexQuery.QueryParameters)] = CreateParameters(context, call, document.Parameters)
+                }
+            });
+        }
+
+        private void BuildAgentRequest(JsonOperationContext context, ConversationDocument document, AiToolCall call, AiAgentToolSubAgent agent, DynamicJsonArray reqs)
+        {
+            var args = context.Sync.ReadForMemory(call.Arguments, "call/args");
+            if (args.TryGet("subAgentUserPrompt", out string prompt) is false)
+            {
+                throw new InvalidOperationException($"Missing required 'subAgentUserPrompt' parameter on call to {call.Name}. Arguments: {call.Arguments}.");
+            }
+            
+            args.Modifications = new DynamicJsonValue(args);
+            args.Modifications.Remove("subAgentUserPrompt");
+
+            var parameters = MergeParams(context, document.Parameters, args);
+            var subConversationId = document.Id + "/" + call.Name + "/" + AttachmentsStorageHelper.CalculateHash(parameters.AsSpan());
+
+            var queryString = new StringBuilder("?")
+                .Append("&conversationId=").Append(Uri.EscapeDataString(subConversationId))
+                .Append("&agentId=").Append(Uri.EscapeDataString(agent.Identifier))
+                .ToString();
+
+            reqs.Add(new DynamicJsonValue
+            {
+                [nameof(GetRequest.Url)] = $"/databases/{RequestHandler.DatabaseName}/ai/agent",
+                [nameof(GetRequest.Query)] = queryString,
+                [nameof(GetRequest.Method)] = "POST",
+                [nameof(GetRequest.Content)] = new DynamicJsonValue
+                {
+                    [nameof(ConversionRequestBody.UserPrompt)] = prompt,
+                    [nameof(ConversionRequestBody.ActionResponses)] = Array.Empty<object>(),
+                    [nameof(ConversionRequestBody.CreationOptions)] = new DynamicJsonValue
+                    {
+                        [nameof(AiConversationCreationOptions.Parameters)] = parameters,
+                        [nameof(AiConversationCreationOptions.ExpirationInSec)] = document.Expires switch
+                        {
+                            { } td => (int)td.TotalSeconds,
+                            null => null
+                        },
+                    }
+                }
+            });
         }
 
         public virtual async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history)
@@ -690,6 +807,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var cmd = new PutConversationCommand(conversationId, conversation, history, changeVectorLsv, configuration, RequestHandler.Database);
             await RequestHandler.Database.TxMerger.Enqueue(cmd);
             conversation.ChangeVector = cmd.PutResult.Conversation.ChangeVector;
+            conversation.Id = cmd.PutResult.Conversation.Id;
             return cmd.PutResult.Conversation.Id;
         }
 

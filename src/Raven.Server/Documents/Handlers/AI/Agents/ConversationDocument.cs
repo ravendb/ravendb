@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
@@ -65,7 +66,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         }
     }
 
-    public List<AiToolCall> InitialQueries(JsonOperationContext context, AiAgentConfiguration configuration)
+    public List<AiToolCall> InitialOperations(JsonOperationContext context, AiAgentConfiguration configuration)
     {
         List<AiToolCall> result = null ;
         
@@ -235,7 +236,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         };
     }
 
-    public static List<BlittableJsonReaderObject> GenerateTools(JsonOperationContext context, AiAgentConfiguration configuration)
+    internal static List<BlittableJsonReaderObject> GenerateTools(JsonOperationContext context, AiAgentConfiguration configuration, AbstractAiAgentProcessor processor)
     {
         List<BlittableJsonReaderObject> tools = [];
         foreach (var q in configuration.Queries ?? [])
@@ -270,6 +271,30 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
                     ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
                 },
                 ["strict"] = true
+            };
+            tools.Add(context.ReadObject(tool, "tool"));
+        }
+        foreach (var a in configuration.SubAgents ?? [])
+        {
+            AiAgentConfiguration agentConfiguration = processor.GetAiAgentConfiguration(a.Identifier);
+            var argsSchema = new DynamicJsonValue();
+            foreach (AiAgentParameter parameter in agentConfiguration.Parameters ?? [])
+            {
+                argsSchema[parameter.Name] = parameter.Description;
+            }
+            argsSchema["subAgentUserPrompt"] = "A prompt for an agent, explaining in concise terms what it is you are asking it to do. Required argument, MUST NOT be empty!";
+            using var args = context.ReadObject(argsSchema, "args");
+            string paramsSchema = ChatCompletionClient.GetSchemaForTool(null, args.ToString());
+            var tool = new DynamicJsonValue
+            {
+                [ChatCompletionClient.Constants.JsonSchemaFields.Type] = "function",
+                [ChatCompletionClient.Constants.ResponseFields.Function] = new DynamicJsonValue
+                {
+                    [ChatCompletionClient.Constants.ResponseFields.Name] = a.Identifier,
+                    [ChatCompletionClient.Constants.JsonSchemaFields.Description] = a.Description,
+                    ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
+                },
+                [ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true
             };
             tools.Add(context.ReadObject(tool, "tool"));
         }
