@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+#if FEATURE_AI_AGENT_STREAMING_SUPPORT
 using System.Net.ServerSentEvents;
+#endif
 using System.Threading.Tasks;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Conventions;
@@ -24,8 +26,11 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly string _conversationId;
     private readonly List<AiAgentActionResponse> _actionResponses;
     private readonly string _changeVector;
+
+#if FEATURE_AI_AGENT_STREAMING_SUPPORT
     private readonly string _propertyToStream;
     private readonly Func<string, Task> _streamedChunksCallback;
+#endif
 
     public RunConversationOperation(
         string agentId,
@@ -59,9 +64,13 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         _actionResponses = actionResponses;
         _options = options;
 
-
+#if FEATURE_AI_AGENT_STREAMING_SUPPORT
         _propertyToStream = propertyToStream;
         _streamedChunksCallback = streamedChunksCallback;
+#else
+        if (propertyToStream != null)
+            throw new InvalidOperationException("AI Agent conversation streaming is not supported in your framework.");
+#endif
     }
 
     public RavenCommand<ConversationResult<TSchema>> GetCommand(DocumentConventions conventions, JsonOperationContext context)
@@ -78,10 +87,13 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         {
             _conventions = conventions;
             _parent = parent;
+
+#if FEATURE_AI_AGENT_STREAMING_SUPPORT
             if (parent._propertyToStream is not null)
             {
                 ResponseType = RavenCommandResponseType.Raw;
             }
+#endif
         }
 
         public override bool IsReadRequest => false;
@@ -99,8 +111,10 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             if (_parent._changeVector != null)
                 url += $"&changeVector={Uri.EscapeDataString(_parent._changeVector)}";
 
+#if FEATURE_AI_AGENT_STREAMING_SUPPORT
             if (_parent._propertyToStream is not null)
                 url += $"&streaming=true&propertyToStream={Uri.EscapeDataString(_parent._propertyToStream)}";
+#endif
 
             var body = new ConversionRequestBody
             {
@@ -121,6 +135,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             return request;
         }
 
+#if FEATURE_AI_AGENT_STREAMING_SUPPORT
         public override async Task SetResponseRawAsync(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
             await foreach (var msg in SseParser.Create(stream).EnumerateAsync())
@@ -136,6 +151,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 await _parent._streamedChunksCallback(msg.Data).ConfigureAwait(false);
             }
         }
+#endif
 
         public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
         {

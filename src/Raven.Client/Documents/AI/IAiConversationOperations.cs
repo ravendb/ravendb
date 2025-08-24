@@ -92,6 +92,7 @@ public interface IAiConversationOperations
     /// </returns>
     Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(CancellationToken token = default);
 
+#if FEATURE_AI_AGENT_STREAMING_SUPPORT
     /// <summary>
     /// Asynchronously executes one “turn” of the conversation, streaming the specified property's value for immediate feedback.
     /// Sends the current prompt, processes any required actions, and awaits the agent’s reply while invoking the callback with streamed values.
@@ -132,7 +133,8 @@ public interface IAiConversationOperations
     /// </returns>
     Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> propertyToStream, Func<string, Task> streamedChunksCallback,
         CancellationToken token = default);
-    
+#endif
+
     /// <summary>
     /// Synchronously executes one turn of the conversation.
     /// </summary>

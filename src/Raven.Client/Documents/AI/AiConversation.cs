@@ -156,6 +156,7 @@ internal class AiConversation : IAiConversationOperations
 
     public AiAnswer<TAnswer> Run<TAnswer>() => AsyncHelpers.RunSync(() => RunAsync<TAnswer>());
 
+#if FEATURE_AI_AGENT_STREAMING_SUPPORT
     public Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> propertyToStream, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
     {
         var pathProvider = new LinqPathProvider(_aiOperations._store.Conventions);
@@ -172,6 +173,7 @@ internal class AiConversation : IAiConversationOperations
                 return r;
         }
     }
+#endif
 
     public async Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(CancellationToken token = default)
     {
