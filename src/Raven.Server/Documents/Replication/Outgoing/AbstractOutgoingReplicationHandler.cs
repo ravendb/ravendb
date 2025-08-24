@@ -22,7 +22,7 @@ using Raven.Server.Documents.Replication.Senders;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.Sharding.Handlers;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Exceptions;
+using Raven.Server.Exceptions.Attachments;
 using Raven.Server.Json;
 using Raven.Server.Logging;
 using Raven.Server.NotificationCenter;

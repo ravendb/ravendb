@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Raven.Server.Exceptions
+namespace Raven.Server.Exceptions.Attachments
 {
     [Serializable]
     internal sealed class MissingAttachmentException : Exception

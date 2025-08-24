@@ -1,7 +1,6 @@
 using System.IO;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.ServerWide;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
@@ -15,7 +14,7 @@ public class DirectUploadBackupTask : BackupTask
 
     protected override BackupDestinationStream GetUploaderForBackupDestination(string filePath, string folderName, string fileName)
     {
-        var uploaderSettings = UploaderSettings.GenerateUploaderSettingForBackup(Database, Configuration, _taskName, _isServerWide, _backupToLocalFolder, OnBackupException);
+        var uploaderSettings = UploaderSettings.GenerateUploaderSettingsForBackup(Database, Configuration, _taskName, _isServerWide, _backupToLocalFolder, OnBackupException);
         var backupUploader = new DirectFileUploader(uploaderSettings, RetentionPolicyParameters, _logger, BackupResult, _onProgress, TaskCancelToken);
         return new BackupDestinationStream()
         {

@@ -18,7 +18,7 @@ using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.Documents.TcpHandlers;
-using Raven.Server.Exceptions;
+using Raven.Server.Exceptions.Attachments;
 using Raven.Server.Logging;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;

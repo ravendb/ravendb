@@ -31,7 +31,7 @@ public sealed class UploaderSettings
     internal BackupConfiguration.BackupDestination Destination;
     public short ConcurrentThreads { get; set; }
 
-    public static UploaderSettings GenerateUploaderSetting(DocumentDatabase database, string taskName, S3Settings s3Settings, AzureSettings azureSettings, GlacierSettings glacierSettings, GoogleCloudSettings googleCloudSettings, FtpSettings ftpSettings)
+    public static UploaderSettings GenerateUploaderSettingsForOlap(DocumentDatabase database, string taskName, S3Settings s3Settings, AzureSettings azureSettings, GlacierSettings glacierSettings, GoogleCloudSettings googleCloudSettings, FtpSettings ftpSettings)
     {
         return new UploaderSettings(database.Configuration.Backup)
         {
@@ -50,29 +50,22 @@ public sealed class UploaderSettings
         };
     }
 
-    public static UploaderSettings GenerateDirectUploaderSetting(DocumentDatabase database, string taskName, S3Settings s3Settings, AzureSettings azureSettings, GlacierSettings glacierSettings, GoogleCloudSettings googleCloudSettings, FtpSettings ftpSettings, short concurrentThreads)
+    public static UploaderSettings GenerateDirectUploaderSettingsForAttachments(DocumentDatabase database, string taskName, S3Settings s3Settings, AzureSettings azureSettings, short concurrentThreads)
     {
-        var destination = BackupConfigurationHelper.DestinationForDirectUpload(database.Configuration.Backup, s3Settings, azureSettings, glacierSettings, googleCloudSettings, ftpSettings);
         return new UploaderSettings(database.Configuration.Backup)
         {
             S3Settings = BackupTask.GetBackupConfigurationFromScript(s3Settings, x => JsonDeserializationServer.S3Settings(x),
                 database, updateServerWideSettingsFunc: null, serverWide: false),
             AzureSettings = BackupTask.GetBackupConfigurationFromScript(azureSettings, x => JsonDeserializationServer.AzureSettings(x),
                 database, updateServerWideSettingsFunc: null, serverWide: false),
-            GlacierSettings = BackupTask.GetBackupConfigurationFromScript(glacierSettings, x => JsonDeserializationServer.GlacierSettings(x),
-                database, updateServerWideSettingsFunc: null, serverWide: false),
-            GoogleCloudSettings = BackupTask.GetBackupConfigurationFromScript(googleCloudSettings, x => JsonDeserializationServer.GoogleCloudSettings(x),
-                database, updateServerWideSettingsFunc: null, serverWide: false),
-            FtpSettings = BackupTask.GetBackupConfigurationFromScript(ftpSettings, x => JsonDeserializationServer.FtpSettings(x),
-                database, updateServerWideSettingsFunc: null, serverWide: false),
             DatabaseName = database.Name,
             TaskName = taskName,
-            Destination = destination,
+            Destination = BackupConfigurationHelper.DestinationForDirectUpload(database.Configuration.Backup, s3Settings, azureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null),
             ConcurrentThreads = concurrentThreads
         };
     }
 
-    public static UploaderSettings GenerateUploaderSettingForBackup(DocumentDatabase database, BackupConfiguration configuration, string taskName, bool isServerWide, bool backupToLocalFolder,
+    public static UploaderSettings GenerateUploaderSettingsForBackup(DocumentDatabase database, BackupConfiguration configuration, string taskName, bool isServerWide, bool backupToLocalFolder,
         Action backupException)
     {
         var destination = BackupConfigurationHelper.GetBackupDestinationForDirectUpload(backupToLocalFolder, configuration, database.Configuration.Backup);

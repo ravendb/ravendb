@@ -10,7 +10,7 @@ using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Attachments.Retired;
 using Raven.Client.Documents.Operations.Indexes;
-using Raven.Server.Exceptions;
+using Raven.Server.Exceptions.Attachments;
 using SlowTests.Server.Documents.Attachments;
 using Tests.Infrastructure;
 using Xunit;

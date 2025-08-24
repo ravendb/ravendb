@@ -18,9 +18,9 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
             IGetAttachmentStrategy.CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(context, RequestHandler.Database, attachment, documentId, name, "bulk");
         }
 
-        public override async Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment)
+        public override Task<Stream> GetAttachmentStream(DirectFileDownloader downloader, Attachment attachment)
         {
-            return await RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(downloader,
+            return RequestHandler.Database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.StreamForDownloadDestinationInternal(downloader,
                 attachment.Base64Hash.ToString());
         }
 

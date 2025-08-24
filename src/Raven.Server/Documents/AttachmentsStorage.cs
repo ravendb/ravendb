@@ -24,6 +24,7 @@ using Sparrow.Server;
 using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data;
+using Voron.Data.BTrees;
 using Voron.Data.Tables;
 using Voron.Impl;
 using static Raven.Server.Documents.DocumentsStorage;
@@ -1048,10 +1049,21 @@ namespace Raven.Server.Documents
         public static long GetAttachmentStreamLength(DocumentsOperationContext context, Slice hashSlice)
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            return GetAttachmentStreamLength(tree, hashSlice);
+        }
+
+        private static long GetAttachmentStreamLength(Tree tree, Slice hashSlice)
+        {
             var info = tree.GetStreamInfo(hashSlice, false);
             if (info == null)
                 return -1;
             return info->TotalSize;
+        }
+
+        public (Stream Stream, long Size) GetAttachmentStreamAndLength(DocumentsOperationContext context, Slice hashSlice)
+        {
+            Tree tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
+            return (tree.ReadStream(hashSlice), GetAttachmentStreamLength(tree, hashSlice));
         }
 
         public static Attachment TableValueToAttachment(DocumentsOperationContext context, ref TableValueReader tvr)

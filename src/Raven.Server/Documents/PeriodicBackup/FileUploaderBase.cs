@@ -1,36 +1,23 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
-using Raven.Client.Extensions;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.ServerWide;
-using Raven.Server.Utils;
-using Sparrow.Collections;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
-using Sparrow.Server.Utils;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup;
 
-public abstract class FileUploaderBase
+public abstract class FileUploaderBase : FileUploaderDownloaderBase
 {
-    public readonly OperationCancelToken TaskCancelToken;
-
     protected readonly bool _isFullBackup;
     protected readonly Action<IOperationProgress> _onProgress;
     protected readonly RetentionPolicyBaseParameters _retentionPolicyParameters;
     protected readonly BackupResult _backupResult;
-    protected readonly UploaderSettings _settings;
     protected readonly RavenLogger _logger;
-    protected readonly List<PoolOfThreads.LongRunningWork> _threads;
-    protected readonly ConcurrentSet<Exception> _exceptions;
 
     protected const string AzureName = "Azure";
     protected const string S3Name = "S3";
@@ -38,102 +25,19 @@ public abstract class FileUploaderBase
     protected const string GoogleCloudName = "Google Cloud";
     protected const string FtpName = "FTP";
 
-    protected FileUploaderBase(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, RavenLogger logger, BackupResult backupResult,
-        Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken)
+    protected FileUploaderBase(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, RavenLogger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken) : base(settings, taskCancelToken)
     {
-        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
         _onProgress = onProgress;
         _backupResult = backupResult;
-
         _retentionPolicyParameters = retentionPolicyParameters;
-
         _isFullBackup = retentionPolicyParameters?.IsFullBackup ?? false;
-
         _logger = logger;
-        TaskCancelToken = taskCancelToken;
-        _threads = new List<PoolOfThreads.LongRunningWork>();
-        _exceptions = new ConcurrentSet<Exception>();
-    }
-
-    public virtual string CombinePathAndKey(string path, string folderName, string fileName)
-    {
-        if (path?.EndsWith('/') == true)
-            path = path[..^1];
-
-        var prefix = string.IsNullOrWhiteSpace(path) == false ? $"{path}/" : string.Empty;
-        prefix = string.IsNullOrWhiteSpace(folderName) == false ? $"{prefix}{folderName}/" : prefix;
-
-        return $"{prefix}{fileName}";
-    }
-
-    public virtual string GetBackupDescription()
-    {
-        var fullBackupText = _settings.BackupType == BackupType.Backup ? "Full backup" : "A snapshot";
-        return _isFullBackup ? fullBackupText : "Incremental backup";
     }
 
     protected void AddInfo(string message)
     {
         _backupResult.AddInfo(message);
         _onProgress.Invoke(_backupResult.Progress);
-    }
-
-    protected void Execute()
-    {
-        _threads.ForEach(x => x.Join(int.MaxValue));
-
-        if (_exceptions.IsEmpty == false)
-        {
-            if (_exceptions.Count == 1)
-                throw _exceptions.First();
-
-            if (_exceptions.All(x => x is OperationCanceledException))
-                throw _exceptions.First();
-
-            throw new AggregateException(_exceptions);
-        }
-    }
-
-    protected void CreateDeletionTaskIfNeeded<T>(T settings, Action<T, string,string> deleteFromServer, string targetName, string folderName, string fileName)
-        where T : BackupSettings
-    {
-        if (BackupConfiguration.CanBackupUsing(settings) == false)
-            return;
-
-        var threadInfo = ThreadNames.ForDeleteBackupFile($"Delete backup file of database '{_settings.DatabaseName}' from {targetName} (task: '{_settings.TaskName}')", _settings.DatabaseName, targetName, _settings.TaskName);
-        PoolOfThreads.LongRunningWork thread = CreateLongRunningDeleteThread(settings, deleteFromServer, targetName, folderName, fileName, threadInfo);
-
-        _threads.Add(thread);
-    }
-
-    protected PoolOfThreads.LongRunningWork CreateLongRunningDeleteThread<T>(T settings, Action<T, string, string> deleteFromServer, string targetName, string folderName, string fileName,
-        ThreadNames.ThreadInfo threadInfo) where T : BackupSettings
-    {
-        var thread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
-        {
-            try
-            {
-                ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadInfo.FullName, _logger);
-                NativeMemory.EnsureRegistered();
-
-                AddInfo($"Starting the delete of backup file from {targetName}.");
-                deleteFromServer(settings, folderName, fileName);
-            }
-            catch (Exception e)
-            {
-                var extracted = e.ExtractSingleInnerException();
-                var error = $"Failed to delete the backup file from {targetName}.";
-                Exception exception = null;
-                if (extracted is OperationCanceledException)
-                {
-                    // shutting down or HttpClient timeout
-                    exception = TaskCancelToken.Token.IsCancellationRequested ? extracted : new TimeoutException(error, e);
-                }
-
-                _exceptions.Add(exception ?? new InvalidOperationException(error, e));
-            }
-        }, null, threadInfo);
-        return thread;
     }
 
     protected void DeleteFromS3(S3Settings settings, string folderName, string fileName)

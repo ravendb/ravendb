@@ -42,7 +42,7 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             Metrics = OlapMetrics;
             _operationCancelToken = new OperationCancelToken(Database.DatabaseShutdown, CancellationToken);
 
-            _uploaderSettings = UploaderSettings.GenerateUploaderSetting(database, Name, Configuration.Connection.S3Settings, Configuration.Connection.AzureSettings, Configuration.Connection.GlacierSettings, Configuration.Connection.GoogleCloudSettings, Configuration.Connection.FtpSettings);
+            _uploaderSettings = UploaderSettings.GenerateUploaderSettingsForOlap(database, Name, Configuration.Connection.S3Settings, Configuration.Connection.AzureSettings, Configuration.Connection.GlacierSettings, Configuration.Connection.GoogleCloudSettings, Configuration.Connection.FtpSettings);
 
             UpdateTimer(LastProcessState.LastBatchTime);
         }

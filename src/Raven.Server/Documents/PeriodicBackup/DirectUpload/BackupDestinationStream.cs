@@ -11,7 +11,6 @@ public struct BackupDestinationStream : IDisposable
 
     public void Dispose()
     {
-        FileUploader?.Reset();
         Stream?.Dispose();
     }
 }

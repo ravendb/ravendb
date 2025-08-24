@@ -6,6 +6,7 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Indexes.Static.Attachments;
 using Raven.Server.Exceptions;
+using Raven.Server.Exceptions.Attachments;
 
 namespace Raven.Server.Documents.Indexes.Static
 {

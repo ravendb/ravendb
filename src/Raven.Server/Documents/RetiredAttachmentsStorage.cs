@@ -375,15 +375,15 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         if (destination.Disabled)
             throw new InvalidOperationException($"Cannot get retired attachment '{attachment.Key}' because destination for '{attachment.RetireParameters.Identifier}' is disabled.");
 
-        var settings = UploaderSettings.GenerateDirectUploaderSetting(Database, nameof(AttachmentHandlerProcessorForGetAttachment), destination.S3Settings, destination.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null, concurrentThreads: 8);
-        return new DirectFileDownloader(settings, retentionPolicyParameters: null, _logger, FileUploaderBase.GenerateUploadResult(), progress => { }, tcs);
+        var settings = UploaderSettings.GenerateDirectUploaderSettingsForAttachments(Database, nameof(AttachmentHandlerProcessorForGetAttachment), destination.S3Settings, destination.AzureSettings, concurrentThreads: 8);
+        return new DirectFileDownloader(settings, tcs);
     }
 
-    public async Task<Stream> StreamForDownloadDestinationInternal(DirectFileDownloader downloader, string objKeyName)
+    public Task<Stream> StreamForDownloadDestinationInternal(DirectFileDownloader downloader, string objKeyName)
     {
         var folderName = string.Empty;
 
-        return await downloader.StreamForDownloadDestination(Database, folderName, objKeyName);
+        return downloader.StreamForDownloadDestination(Database, folderName, objKeyName);
     }
 
     private static unsafe LazyStringValue GetStringFromIdSlice(DocumentsOperationContext context, Slice identifierSlice)

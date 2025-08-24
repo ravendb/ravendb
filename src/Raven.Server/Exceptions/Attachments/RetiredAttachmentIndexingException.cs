@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace Raven.Server.Exceptions
+﻿namespace Raven.Server.Exceptions.Attachments
 {
     public sealed class RetiredAttachmentIndexingException : CriticalIndexingException
     {

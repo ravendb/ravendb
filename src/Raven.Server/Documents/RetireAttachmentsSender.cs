@@ -4,14 +4,14 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
 using Raven.Server.Background;
+using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Expiration;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.TransactionMerger.Commands;
+using Raven.Server.Exceptions.Attachments;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -85,6 +85,7 @@ namespace Raven.Server.Documents
 
                     Stopwatch duration;
                     var retired = new Queue<AbstractBackgroundWorkStorage.DocumentExpirationInfo>();
+                    var exceptions = new List<UploadAttachmentException>();
 
                     using (var tx = context.OpenReadTransaction())
                     using (_database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.Initialize(context))
@@ -107,7 +108,7 @@ namespace Raven.Server.Documents
                             return totalCount;
                         }
 
-                        var directUploaders = new Dictionary<string, DirectFileUploader>();
+                        var directUploaders = new Dictionary<string, AttachmentUploader>();
 
                         try
                         {
@@ -130,7 +131,6 @@ namespace Raven.Server.Documents
                                     retired.Enqueue(doc);
                                     continue;
                                 }
-
 
                                 // get uploader for the attachment
                                 if (directUploaders.TryGetValue(doc.Id, out var directUpload) == false)
@@ -160,9 +160,21 @@ namespace Raven.Server.Documents
                                     }
 
                                     // create new uploader for the attachment
-                                    directUploaders[doc.Id] = directUpload = new DirectFileUploader(UploaderSettings.GenerateDirectUploaderSetting(_database, nameof(RetireAttachmentsSender),
-                                            destination.S3Settings, destination.AzureSettings, glacierSettings: null, googleCloudSettings: null, ftpSettings: null, ConcurrentThreadsNumber), retentionPolicyParameters: null, Logger,
-                                        FileUploaderBase.GenerateUploadResult(), onProgress: ProgressNotification, _token);
+                                    directUpload = new AttachmentUploader(UploaderSettings.GenerateDirectUploaderSettingsForAttachments(_database, doc.Id, destination.S3Settings, destination.AzureSettings, ConcurrentThreadsNumber), Logger, _token)
+                                    {
+                                        OnSuccessAction = x =>
+                                        {
+                                            totalUploaded += x.AttachmentSize;
+                                            retired.Enqueue(x.Doc);
+                                        },
+                                        OnExceptionAction = x =>
+                                        {
+                                            var key = x.Doc.LowerId.ToString();
+                                            exceptions.Add(new UploadAttachmentException(x.Doc.Id, key, $"Upload task of retired attachment with key '{key}' and identifier '{x.Doc.Id}' failed.", x.UploadTask.Exception));
+                                        }
+                                    };
+
+                                    directUploaders[doc.Id] = directUpload;
                                 }
 
                                 using var hashSliceDisposable = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.ExtractHashSliceFromAttachmentId(context, doc.LowerId, out Slice hashSlice);
@@ -175,8 +187,10 @@ namespace Raven.Server.Documents
                                     continue;
                                 }
 
+                                _token.ThrowIfCancellationRequested();
+
                                 // the attachment stream is disposed by the directUpload
-                                var attachmentStream = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, hashSlice);
+                                var (attachmentStream, attachmentLength) = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamAndLength(context, hashSlice);
                                 if (attachmentStream == null)
                                 {
                                     // attachment was deleted, need to remote it from retired tree
@@ -184,33 +198,15 @@ namespace Raven.Server.Documents
                                     continue;
                                 }
 
-                                if (directUpload.TryCleanFinishedThreads(duration, _token))
+                                if (await directUpload.WaitForFinishedTasksIfNeededAsync(duration, _token))
                                 {
-                                    directUpload.CreateUploadTask(_database, attachmentStream, hash, CancellationToken);
-
-                                    totalUploaded += attachmentStream.Length;
-                                    retired.Enqueue(doc);
+                                    directUpload.CreateUploadTask(_database, doc, attachmentStream, hash, attachmentLength, CancellationToken);
                                 }
                                 else
                                 {
                                     if (Logger.IsDebugEnabled)
-                                        Logger.Debug($"Timed out waiting for free thread to PutRetire retired attachments with '{doc.LowerId}', ReadTransactionMaxOpenTimeInMs: {duration.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs}, IsCancellationRequested: {_token.Token.IsCancellationRequested}, the PutRetire will happen on next iteration.");
+                                        Logger.Debug($"Timed out waiting for free slot to upload retired attachments with '{doc.LowerId}', ReadTransactionMaxOpenTimeInMs: {duration.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs}, IsCancellationRequested: {_token.Token.IsCancellationRequested}, the upload will happen on next iteration.");
                                 }
-                            }
-
-                            if (toRetire.Count != retired.Count)
-                            {
-                                // we had skipped items
-                                if (Logger.IsDebugEnabled)
-                                    Logger.Debug($"Skipping retiring of '{toRetire.Count - retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
-                            }
-
-                            if (retired.Count == 0)
-                            {
-                                if (Logger.IsDebugEnabled)
-                                    Logger.Debug($"Skipping retiring whole batch of '{retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
-
-                                continue;
                             }
                         }
                         finally
@@ -218,16 +214,56 @@ namespace Raven.Server.Documents
                             // Wait for all direct uploaders to finish
                             foreach (var uploader in directUploaders.Values)
                             {
-                                uploader.Reset();
+                                _token.ThrowIfCancellationRequested();
+
+                                uploader.Execute();
                             }
+                        }
+
+                        if (toRetire.Count != retired.Count)
+                        {
+                            // we had skipped items
+                            if (Logger.IsDebugEnabled)
+                                Logger.Debug($"Skipping retiring of '{toRetire.Count - retired.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
+                        }
+
+                        if (retired.Count == 0)
+                        {
+                            if (Logger.IsDebugEnabled)
+                                Logger.Debug($"Skipping retiring whole batch of '{toRetire.Count:#,#;;0}' attachments, Uploaded: {new Size(totalUploaded, SizeUnit.Bytes)}, read tx open time: '{duration.ElapsedMilliseconds}'. Skipped keys: {string.Join(", ", toRetire.Select(x => retired.Contains(x) == false))}");
+
+
+                            if (exceptions.Count == 0)
+                            {
+                                continue;
+                            }
+
+                            // we have exceptions and nothing was retired, we need to throw
+                            throw new AggregateException("Failed to upload all attachments.", exceptions);
                         }
                     }
 
                     var command = new UpdateRetiredAttachmentsCommand(retired, _database, currentTime);
                     await _database.TxMerger.Enqueue(command);
 
-                    if (Logger.IsDebugEnabled)
-                        Logger.Debug($"Successfully retired '{command.RetiredCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms.");
+                    if (Logger.IsInfoEnabled)
+                    {
+                        if (exceptions.Count == 0)
+                        {
+                            Logger.Info($"Successfully retired whole batch of '{command.RetiredCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms. Total uploaded data: {Client.Util.Size.Humane(totalUploaded)}.");
+                        }
+                        else
+                        {
+                            var msg =
+                                $"Successfully retired partial batch of '{command.RetiredCount:#,#;;0}' attachments in '{duration.ElapsedMilliseconds:#,#;;0}' ms. Total uploaded data: {Client.Util.Size.Humane(totalUploaded)}.";
+
+                            msg += $" Failed to upload '{exceptions.Count:#,#;;0}' attachments:{Environment.NewLine}{
+                                string.Join(Environment.NewLine, exceptions.OrderByDescending(x => x.Identifier)
+                                    .Select(x => $"Identifier: '{x.Identifier}', AttachmentKey: {x.Key}"))}";
+
+                            Logger.Info(msg);
+                        }
+                    }
                 }
             }
             catch (OperationCanceledException)
@@ -262,11 +298,6 @@ namespace Raven.Server.Documents
             }
 
             return true;
-        }
-
-        private void ProgressNotification(IOperationProgress progress)
-        {
-
         }
 
         internal sealed class UpdateRetiredAttachmentsCommand : MergedTransactionCommand<DocumentsOperationContext, DocumentsTransaction>

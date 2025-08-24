@@ -11,12 +11,12 @@ using Raven.Client.Extensions;
 using Raven.Client.Util;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.Documents.PeriodicBackup.Azure;
+using Raven.Server.Documents.PeriodicBackup.DirectUpload;
 using Raven.Server.Documents.PeriodicBackup.GoogleCloud;
 using Raven.Server.Documents.PeriodicBackup.Retention;
 using Raven.Server.ServerWide;
 using Raven.Server.Utils;
 using Sparrow;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 using Sparrow.Server.Utils;
 using Sparrow.Utils;
@@ -25,7 +25,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup
 {
-    public sealed class BackupUploader : FileUploaderBase
+    public sealed class BackupUploader : MultipleFileUploaderBase<PoolOfThreads.LongRunningWork>
     {
         public BackupUploader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, RavenLogger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken) :
             base(settings, retentionPolicyParameters, logger, backupResult, onProgress, taskCancelToken)
@@ -50,6 +50,21 @@ namespace Raven.Server.Documents.PeriodicBackup
             Execute();
         }
 
+        public override void Execute()
+        {
+            _threads.ForEach(x => x.Join(int.MaxValue));
+
+            if (_exceptions.IsEmpty == false)
+            {
+                if (_exceptions.Count == 1)
+                    throw _exceptions.First();
+
+                if (_exceptions.All(x => x is OperationCanceledException))
+                    throw _exceptions.First();
+
+                throw new AggregateException(_exceptions);
+            }
+        }
 
         public void ExecuteDelete()
         {
@@ -224,6 +239,41 @@ namespace Raven.Server.Documents.PeriodicBackup
                     _exceptions.Add(exception ?? new InvalidOperationException(error, e));
                 }
             }, null, ThreadNames.ForUploadBackupFile(threadName, _settings.DatabaseName, targetName, _settings.TaskName));
+
+            _threads.Add(thread);
+        }
+
+        private void CreateDeletionTaskIfNeeded<T>(T settings, Action<T, string, string> deleteFromServer, string targetName, string folderName, string fileName)
+            where T : BackupSettings
+        {
+            if (BackupConfiguration.CanBackupUsing(settings) == false)
+                return;
+
+            var threadInfo = ThreadNames.ForDeleteBackupFile($"Delete backup file of database '{_settings.DatabaseName}' from {targetName} (task: '{_settings.TaskName}')", _settings.DatabaseName, targetName, _settings.TaskName);
+            var thread = PoolOfThreads.GlobalRavenThreadPool.LongRunning(_ =>
+            {
+                try
+                {
+                    ThreadHelper.TrySetThreadPriority(ThreadPriority.BelowNormal, threadInfo.FullName, _logger);
+                    NativeMemory.EnsureRegistered();
+
+                    AddInfo($"Starting the delete of backup file from {targetName}.");
+                    deleteFromServer(settings, folderName, fileName);
+                }
+                catch (Exception e)
+                {
+                    var extracted = e.ExtractSingleInnerException();
+                    var error = $"Failed to delete the backup file from {targetName}.";
+                    Exception exception = null;
+                    if (extracted is OperationCanceledException)
+                    {
+                        // shutting down or HttpClient timeout
+                        exception = TaskCancelToken.Token.IsCancellationRequested ? extracted : new TimeoutException(error, e);
+                    }
+
+                    _exceptions.Add(exception ?? new InvalidOperationException(error, e));
+                }
+            }, null, threadInfo);
 
             _threads.Add(thread);
         }
