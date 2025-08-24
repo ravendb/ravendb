@@ -98,7 +98,7 @@ public interface IAiConversationOperations
     /// Sends the current prompt, processes any required actions, and awaits the agent’s reply while invoking the callback with streamed values.
     /// </summary>
     /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
-    /// <param name="propertyToStream">The property of the response to stream.</param>
+    /// <param name="streamPropertyPath">The property of the response to stream.</param>
     /// <param name="streamedChunksCallback">
     /// A callback function invoked with streamed value of the specified property.
     /// Must be a simple string property, *strongly* recommended that it would be the first one defined in the schema.
@@ -111,14 +111,14 @@ public interface IAiConversationOperations
     /// <item><see cref="AiConversationResult.Done"/> if the conversation has completed and a final answer is available.</item>
     /// </list>
     /// </returns>
-    Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string propertyToStream, Func<string, Task> streamedChunksCallback, CancellationToken token = default);
+    Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default);
 
     /// <summary>
     /// Asynchronously executes one “turn” of the conversation, streaming the specified property's value for immediate feedback.
     /// Sends the current prompt, processes any required actions, and awaits the agent’s reply while invoking the callback with streamed values.
     /// </summary>
     /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
-    /// <param name="propertyToStream">The property of the response to stream.</param>
+    /// <param name="streamPropertyPath">The property of the response to stream.</param>
     /// <param name="streamedChunksCallback">
     /// A callback function invoked with streamed value of the specified property.
     /// Must be a simple string property, *strongly* recommended that it would be the first one defined in the schema.
@@ -131,7 +131,7 @@ public interface IAiConversationOperations
     /// <item><see cref="AiConversationResult.Done"/> if the conversation has completed and a final answer is available.</item>
     /// </list>
     /// </returns>
-    Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> propertyToStream, Func<string, Task> streamedChunksCallback,
+    Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback,
         CancellationToken token = default);
 #endif
 

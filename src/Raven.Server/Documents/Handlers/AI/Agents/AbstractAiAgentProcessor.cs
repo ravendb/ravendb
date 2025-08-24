@@ -131,8 +131,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             if (await TryHandleActionResponses(context, configuration, conversationId, document, body) is false)
                 return;
 
-            var propertyToStream = RequestHandler.GetStringQueryString("propertyToStream");
-
+            var streamPropertyPath = RequestHandler.GetStringQueryString("streamPropertyPath");
 
             HttpContext.Response.Headers.ContentType = "text/event-stream";
             var feature = HttpContext.Features.Get<IHttpResponseBodyFeature>();
@@ -142,7 +141,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             (BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History) r;
             try
             {
-                r = await StreamingTalkAsync(context, configuration, document, propertyToStream, async (data) =>
+                r = await StreamingTalkAsync(context, configuration, document, streamPropertyPath, async (data) =>
                 {
                     while (true)
                     {
@@ -320,7 +319,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
         protected virtual ChatCompletionClient CreateClient(AiConnectionString connection) => ChatCompletionClient.CreateChatCompletionClient(ContextPool, connection);
 
-        private class Talker(AbstractAiAgentProcessor processor, JsonOperationContext context, AiAgentConfiguration configuration, ConversationDocument document, string firstPropertyToStream, Func<Memory<byte>, Task> streaming) : IDisposable
+        private class Talker(AbstractAiAgentProcessor processor, JsonOperationContext context, AiAgentConfiguration configuration, ConversationDocument document, string firstStreamPropertyPath, Func<Memory<byte>, Task> streaming) : IDisposable
         {
             private string _schema;
             private List<BlittableJsonReaderObject> _tools;
@@ -371,7 +370,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     _aiResponse = await Client.StreamingCompleteAsync(
                         context,
                         contextPool,
-                        firstPropertyToStream,
+                        firstStreamPropertyPath,
                         request,
                         streaming,
                         AiUsage,
@@ -395,11 +394,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             JsonOperationContext context,
             AiAgentConfiguration configuration,
             ConversationDocument document,
-            string firstPropertyToStream,
+            string firstStreamPropertyPath,
             Func<Memory<byte>, Task> streaming,
             CancellationToken token = default)
         {
-            using var talker = new Talker(this, context, configuration, document, firstPropertyToStream, streaming);
+            using var talker = new Talker(this, context, configuration, document, firstStreamPropertyPath, streaming);
             return await RunInternalAsync(context, configuration, document, talker, token);
         }
         
@@ -409,7 +408,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             ConversationDocument document,
             CancellationToken token = default)
         {
-            using var talker = new Talker(this, context, configuration, document, firstPropertyToStream: null, streaming: null);
+            using var talker = new Talker(this, context, configuration, document, firstStreamPropertyPath: null, streaming: null);
             return await RunInternalAsync(context, configuration, document, talker, token);
         }
 

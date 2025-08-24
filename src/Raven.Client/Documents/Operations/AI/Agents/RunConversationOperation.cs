@@ -28,7 +28,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly string _changeVector;
 
 #if FEATURE_AI_AGENT_STREAMING_SUPPORT
-    private readonly string _propertyToStream;
+    private readonly string _streamPropertyPath;
     private readonly Func<string, Task> _streamedChunksCallback;
 #endif
 
@@ -49,13 +49,13 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         List<AiAgentActionResponse> actionResponses,
         AiConversationCreationOptions options,
         string changeVector,
-        string propertyToStream,
+        string streamPropertyPath,
         Func<string, Task> streamedChunksCallback)
     {
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
         ValidationMethods.AssertNotNullOrEmpty(conversationId, nameof(conversationId));
-        PortableExceptions.ThrowIfNot<InvalidOperationException>(propertyToStream is null == streamedChunksCallback is null,
-            "Both propertyToStream and streamedChunksCallback must be specified together");
+        PortableExceptions.ThrowIfNot<InvalidOperationException>(streamPropertyPath is null == streamedChunksCallback is null,
+            "Both streamPropertyPath and streamedChunksCallback must be specified together");
 
         _agentId = agentId;
         _conversationId = conversationId;
@@ -65,10 +65,10 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         _options = options;
 
 #if FEATURE_AI_AGENT_STREAMING_SUPPORT
-        _propertyToStream = propertyToStream;
+        _streamPropertyPath = streamPropertyPath;
         _streamedChunksCallback = streamedChunksCallback;
 #else
-        if (propertyToStream != null)
+        if (streamPropertyPath != null)
             throw new InvalidOperationException("AI Agent conversation streaming is not supported in your framework.");
 #endif
     }
@@ -89,7 +89,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             _parent = parent;
 
 #if FEATURE_AI_AGENT_STREAMING_SUPPORT
-            if (parent._propertyToStream is not null)
+            if (parent._streamPropertyPath is not null)
             {
                 ResponseType = RavenCommandResponseType.Raw;
             }
@@ -112,8 +112,8 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
                 url += $"&changeVector={Uri.EscapeDataString(_parent._changeVector)}";
 
 #if FEATURE_AI_AGENT_STREAMING_SUPPORT
-            if (_parent._propertyToStream is not null)
-                url += $"&streaming=true&propertyToStream={Uri.EscapeDataString(_parent._propertyToStream)}";
+            if (_parent._streamPropertyPath is not null)
+                url += $"&streaming=true&streamPropertyPath={Uri.EscapeDataString(_parent._streamPropertyPath)}";
 #endif
 
             var body = new ConversionRequestBody
@@ -142,7 +142,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             {
                 if (msg.EventType is "result")
                 {
-                    var final = context.Sync.ReadForMemory(msg.Data, "final/result");
+                    using var final = context.Sync.ReadForMemory(msg.Data, "final/result");
                     Result = ConversationResult<TSchema>.Convert(final, _conventions);
                     break;
                 }
