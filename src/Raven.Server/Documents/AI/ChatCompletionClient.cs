@@ -213,7 +213,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         ToolCallState toolCallState = new();
         BlittableJsonReaderObject message = null;
 
-        // need to contexts here because we run two parsing operations at once, first for each of the SSE events
+        // need two contexts here because we run two parsing operations at once, first for each of the SSE events
         // and then for the internal buffer that there are providing.
         using var ___ = contextPool.AllocateOperationContext(out JsonOperationContext parsingContext);
         // Note that here we iterate over blittable, whose scope is only the _single_ iteration we run, you need to copy
