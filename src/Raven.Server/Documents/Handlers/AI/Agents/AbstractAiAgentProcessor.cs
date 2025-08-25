@@ -27,6 +27,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Queries;
+using Raven.Server.Extensions;
 using ChatConstants = Raven.Server.Documents.AI.ChatCompletionClient.Constants;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
@@ -718,7 +719,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                                 foreach (BlittableJsonReaderObject requestObj in actionRequests)
                                 {
                                     var req = JsonDeserializationClient.ActionRequest(requestObj);
-                                    toolCalls.Add(new AiToolCall(agent.Identifier + "/" + req.ToolId, req.Name, req.Arguments));
+                                    toolCalls.Add(new AiToolCall(agent.Identifier + "/" + currentCall.SubAgentIndex + "/" + req.ToolId, req.Name, req.Arguments));
                                 }
                                 continue;
                             }
@@ -766,10 +767,15 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             args.Modifications.Remove("subAgentUserPrompt");
 
             var parameters = MergeParams(context, document.Parameters, args);
-            var subConversationId = document.Id + "/" + call.Name + "/" + AttachmentsStorageHelper.CalculateHash(parameters.AsSpan());
+            var subConversationParamsHash = call.Name + "/" + AttachmentsStorageHelper.CalculateHash(parameters.AsSpan());
+            if (document.SubAgentsIds.TryGetValue(subConversationParamsHash, out int conversationIndex) is false)
+            {
+                document.SubAgentsIds[subConversationParamsHash] = conversationIndex = document.SubAgentsIds.Count + 1;
+            } 
+            call.SubAgentIndex= conversationIndex;
 
             var queryString = new StringBuilder("?")
-                .Append("&conversationId=").Append(Uri.EscapeDataString(subConversationId))
+                .Append("&conversationId=").Append(Uri.EscapeDataString(document.Id +"/sub-agents/"+ conversationIndex))
                 .Append("&agentId=").Append(Uri.EscapeDataString(agent.Identifier))
                 .ToString();
 

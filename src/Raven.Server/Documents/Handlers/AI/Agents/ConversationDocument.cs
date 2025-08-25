@@ -2,19 +2,15 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.Json.Nodes;
-using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Json.Serialization;
 using Raven.Server.Documents.AI;
-using Raven.Server.Web.Studio;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
-using Sparrow.Utils;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
@@ -25,6 +21,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
     public BlittableJsonReaderObject Parameters = parameters;
     public List<BlittableJsonReaderObject> Messages = [];
     public List<string> LinkedConversations = [];
+    public Dictionary<string, int> SubAgentsIds = [];
     public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
     public string ChangeVector;
@@ -167,12 +164,18 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     public DynamicJsonValue ToJson()
     {
+        var subAgentsIds = new DynamicJsonValue();
+        foreach (var (k, v) in SubAgentsIds)
+        {
+            subAgentsIds[k] = v;
+        }
         return new DynamicJsonValue
         {
             [nameof(Agent)] = Agent,
             [nameof(Parameters)] = Parameters,
             [nameof(Messages)] = Messages,
             [nameof(LinkedConversations)] = LinkedConversations,
+            [nameof(SubAgentsIds)] = subAgentsIds,
             [nameof(TotalUsage)] = TotalUsage.ToJson(),
             [nameof(OpenActionCalls)] = DynamicJsonValue.Convert(OpenActionCalls),
             [nameof(LastMessageAt)] = LastMessageAt,
@@ -203,8 +206,10 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             throw new ArgumentException($"Missing Parameters in '{id}' conversation document");
         if (document.TryGet(nameof(Messages), out BlittableJsonReaderArray messages) == false)
             throw new ArgumentException($"Missing Messages in '{id}' conversation document");
-        if (document.TryGet(nameof(LinkedConversations), out BlittableJsonReaderArray historyDocs) == false)
-            throw new ArgumentException($"Missing HistoryDocuments in '{id}' conversation document");
+        if (document.TryGet(nameof(LinkedConversations), out BlittableJsonReaderArray linkedConversations) == false)
+            throw new ArgumentException($"Missing LinkedConversations in '{id}' conversation document");
+        if (document.TryGet(nameof(SubAgentsIds), out BlittableJsonReaderObject subAgentsIdsObj) == false)
+            throw new ArgumentException($"Missing SubAgentsIds in '{id}' conversation document");
         if (document.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject usage) == false)
             throw new ArgumentException($"AI Usage in '{id}' conversation document");
         if (document.TryGet(nameof(OpenActionCalls), out BlittableJsonReaderObject openToolCalls) == false)
@@ -216,18 +221,28 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         if (document.TryGet(nameof(Expires), out TimeSpan? expires) == false)
             throw new ArgumentException($"Missing Expires in '{id}' conversation document");
 
+        // TODO: Why are we doing it in such a yucky manner?
         var openTools = new Dictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
         {
             var call = JsonDeserializationClient.ActionRequest(openToolCalls[callId] as BlittableJsonReaderObject);
             openTools.Add(callId, call);
         }
+        
+        var subAgentsIds = new Dictionary<string, int>();
+        BlittableJsonReaderObject.PropertyDetails prop = default;
+        for (var i = 0; i < subAgentsIdsObj.Count; i++)
+        {
+            subAgentsIdsObj.GetPropertyByIndex(i, ref prop);
+            subAgentsIds[prop.Name] = (int)prop.Value;
+        }
 
         return new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
             Id = id,
             Messages = messages.Items.Select(m=>((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
-            LinkedConversations = historyDocs.Items.Select(s => s.ToString()).ToList(),
+            LinkedConversations = linkedConversations.Items.Select(s => s.ToString()).ToList(),
+            SubAgentsIds = subAgentsIds,
             TotalUsage = JsonDeserializationClient.AiUsage(usage),
             OpenActionCalls = openTools,
             LastMessageAt = lastMessageAt,
