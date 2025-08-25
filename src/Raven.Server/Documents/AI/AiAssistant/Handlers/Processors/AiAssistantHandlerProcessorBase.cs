@@ -1,11 +1,9 @@
 ﻿using System;
-using System.IO;
 using JetBrains.Annotations;
 using Raven.Server.Commercial;
 using Raven.Server.Documents.AI.AiAssistant.Requests;
 using Raven.Server.Documents.Handlers.Processors;
 using Raven.Server.Web;
-using Sparrow;
 
 namespace Raven.Server.Documents.AI.AiAssistant.Handlers.Processors;
 
@@ -26,9 +24,6 @@ internal abstract class AiAssistantHandlerProcessorBase : AbstractHandlerProcess
 
     protected void FulfillRequestMetadata<TRequest>(TRequest request) where TRequest : AiAssistantRequestAuthentication
     {
-        PortableExceptions.ThrowIf<InvalidDataException>(request.License is not null, "License should be set by the server.");
-        PortableExceptions.ThrowIf<InvalidDataException>(request.CertificateThumbprint is not null, "Certificate thumbprint should be set by the server.");
-
         request.License = _license;
         request.CertificateThumbprint = _certificateThumbprint;
     }
