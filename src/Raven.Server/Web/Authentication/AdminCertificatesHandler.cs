@@ -906,6 +906,21 @@ namespace Raven.Server.Web.Authentication
 
             await HttpContext.Response.Body.WriteAsync(pfx, 0, pfx.Length);
         }
+        
+        [RavenAction("/admin/certificates/for-communication/export", "GET", AuthorizationStatus.Operator)]
+        public async Task GetServerCertificateForCommunication()
+        {
+            if (Server.Certificate.ClientCertificate == null)
+                return;
+
+            var bytes = Server.Certificate.ClientCertificate.Export(X509ContentType.Cert);
+
+            var contentDisposition = "attachment; filename=ServerCertificateForCommunication.crt";
+            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+            HttpContext.Response.ContentType = "application/octet-stream";
+
+            await HttpContext.Response.Body.WriteAsync(bytes, 0, bytes.Length);
+        }
 
         [RavenAction("/admin/certificates/mode", "GET", AuthorizationStatus.ClusterAdmin)]
         public async Task Mode()
