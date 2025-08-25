@@ -51,7 +51,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             if (hasActionResponse && hasUserPrompt)
                 throw new InvalidOperationException($"Cannot have a conversation '{conversationId}' with open action calls and user prompt.");
 
-            Dictionary<ConversationDocument.SubAgentInstance, List<AiAgentActionResponse>> subAgentsActions = null;
+            Dictionary<AiSubAgentInstance, List<AiAgentActionResponse>> subAgentsActions = null;
             foreach (BlittableJsonReaderObject tool in body.ActionResponses ?? Enumerable.Empty<object>())
             {
                 var t = JsonDeserializationClient.ActionResponse(tool);
@@ -79,16 +79,14 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     "user/tool"), usage: null);
             }
 
-            document.HasOpenCalls = document.OpenActionCalls.Count > 0;
-
             if (subAgentsActions is not null)
             {
                 var reqs = new DynamicJsonArray();
-                var toolCallIds = new List<string>();
+                var subAgents = new List<AiSubAgentInstance>();
                 foreach (var (subAgent, responses) in subAgentsActions)
                 {
-                    toolCallIds.AddRange(responses.Select(x=>x.ToolId));
-                    reqs.Add(CreateAgentRequest(subAgent.Agent, subAgent.ConversationId, null, responses, null));
+                    subAgents.Add(subAgent);
+                    reqs.Add(CreateAgentRequest(subAgent.Agent, subAgent.ConversationId, null, responses, new DynamicJsonValue()));
                 }
 
                 await foreach (var (requestResult, i) in ExecuteMultiRequests(context, reqs))
@@ -100,25 +98,41 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
                     if (actionRequests?.Length > 0)
                     {
-                        document.HasOpenCalls = true;
                         continue;
                     }
+                    
                     if (requestResult.TryGet(nameof(ConversationResult<object>.ConversationId), out string subAgentConversationId) is false)
                         throw new InvalidOperationException("Missing TotalUsage from query output");
 
-                    document.AddMessage(context, context.ReadObject(
-                        new DynamicJsonValue
-                        {
-                            ["tool_call_id"] = toolCallIds[i],
-                            ["role"] = "tool",
-                            ["content"] = agentResult.ToString(),
-                            ["subAgent"] = subAgentConversationId,
-                        }, "tool-call/response"), usage: null);
-                    break;
+                    bool found = false;
+                    foreach (var (toolCallId, openAction) in document.OpenActionCalls)
+                    {
+                        if(openAction.Type != AiAgentActionRequestType.SubAgent || 
+                           openAction.Name != subAgents[i].Agent)
+                            continue;
+
+                        found = true;
+                        document.OpenActionCalls.Remove(toolCallId);
+                        
+                        // we can now close the sub-agent call, since it has no remaining open calls
+                        // and has returned a result to us
+                        document.AddMessage(context, context.ReadObject(
+                            new DynamicJsonValue
+                            {
+                                ["tool_call_id"] = toolCallId,
+                                ["role"] = "tool",
+                                ["content"] = agentResult.ToString(),
+                                ["subAgent"] = subAgentConversationId,
+                            }, "tool-call/response"), usage: null);
+                        break;
+                    }
+
+                    if (found is false)
+                        throw new InvalidOperationException($"A response to sub-agent '{subAgents[i].Agent}' was provide in '{conversationId}', but no matching open action was found");
                 }
             }
 
-            if (document.HasOpenCalls)
+            if (document.OpenActionCalls.Count > 0)
             {
                 // We have pending tool-call results from the user;
                 // skip reduction - persist the document now without history,
@@ -144,7 +158,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         }
 
 
-        private async Task HandleRequest(
+        public async Task HandleRequest(
             DocumentsOperationContext context,
             AiAgentConfiguration configuration,
             string conversationId,
@@ -175,7 +189,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         private static readonly byte[] NewLinePostfix = "\n"u8.ToArray();
 
         public async Task HandleStreamingRequest(
-            JsonOperationContext context,
+            DocumentsOperationContext context,
             AiAgentConfiguration configuration,
             string conversationId,
             ConversationDocument document,
@@ -294,8 +308,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 }
                 else
                 {
-                    conversationDocument = JsonDeserializationServer.ConversationDocument(conversation.Data);
-                    conversationDocument.Id = conversationId;
+                    conversationDocument = ConversationDocument.ToDocument(conversationId, conversation.Data);
                     if (conversationDocument.Agent != agentId)
                     {
                         throw new InvalidOperationException(
@@ -508,7 +521,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         private async Task<BlittableJsonReaderObject> TryReduceChatSizeAsync(JsonOperationContext context, ChatCompletionClient client, AiAgentConfiguration configuration, ConversationDocument document, AiUsage aiUsage, CancellationToken token)
         {
             var reduction = configuration.ChatTrimming;
-            if (reduction == null || document.HasOpenCalls)
+            if (reduction == null || document.OpenActionCalls.Count > 0)
                 return null;
 
             TimeSpan? historyExpiration = reduction.History?.HistoryExpirationInSec == null
@@ -614,7 +627,6 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 if (FindToolFrom(configuration, call.Name) is not AiAgentToolAction)
                     continue;
 
-                document.HasOpenCalls = true;
                 document.OpenActionCalls.Add(call.Id, new AiAgentActionRequest
                 {
                     ToolId = call.Id, 
@@ -623,7 +635,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 });
             }
 
-            return document.HasOpenCalls;
+            return document.OpenActionCalls.Count > 0;
         }
 
         private object FindToolFrom(AiAgentConfiguration self, string name)
@@ -659,13 +671,12 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             return FindToolFrom(subAgent, name);
         }
 
-        public virtual async Task WriteResponseAsync(DocumentsOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
+        protected virtual async Task WriteResponseAsync(DocumentsOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
         {
             var openActions = new DynamicJsonArray();
             using (context.OpenReadTransaction())
             {
-                AddConversationOpenActions(context, document, openActions);
-                document.HasOpenCalls = openActions.Count > 0;
+                AddConversationOpenActions(context, document, openActions, string.Empty, string.Empty);
             }
 
             var output = new DynamicJsonValue
@@ -681,17 +692,41 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             context.Write(writer, output);
         }
 
-        private void AddConversationOpenActions(DocumentsOperationContext context, ConversationDocument document, DynamicJsonArray openActions)
+        private void AddConversationOpenActions(
+            DocumentsOperationContext context, 
+            ConversationDocument document, 
+            DynamicJsonArray openActions,
+            string toolIdPostfix,
+            string actionNamePrefix)
         {
-            openActions.AddRange(document.OpenActionCalls.Select(x=>x.Value.ToJson()));
-            foreach (var subAgent in document.SubAgents ?? [])
+            foreach (var (toolId, call) in document.OpenActionCalls ?? [])
             {
-                var conversation = RequestHandler.Database.DocumentsStorage.Get(context, subAgent.ConversationId);
-                if(conversation is null) 
+                if(call.Type is not AiAgentActionRequestType.UserAction)
                     continue;
-                var conversationDocument = JsonDeserializationServer.ConversationDocument(conversation.Data);
+                
+                openActions.Add(new AiAgentActionRequest
+                {
+                    Name = actionNamePrefix + call.Name,
+                    ToolId = toolId + toolIdPostfix,
+                    Arguments = call.Arguments,
+                    Type = call.Type,
+                }.ToJson());
+            }
+            if (document.SubAgents is null)
+                return;
+            for (int index = 0; index < document.SubAgents.Count; index++)
+            {
+                AiSubAgentInstance aiSubAgent = document.SubAgents[index];
+                var conversation = RequestHandler.Database.DocumentsStorage.Get(context, aiSubAgent.ConversationId);
+                if (conversation is null)
+                    continue;
+                var conversationDocument = ConversationDocument.ToDocument(aiSubAgent.ConversationId, conversation.Data);
+                
                 RuntimeHelpers.EnsureSufficientExecutionStack();
-                AddConversationOpenActions(context, conversationDocument, openActions);
+                
+                AddConversationOpenActions(context, conversationDocument, openActions, 
+                    toolIdPostfix + "/" + index,
+                    aiSubAgent.Agent +"/" + actionNamePrefix);
             }
         }
 
@@ -803,7 +838,13 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
                         if (actionRequests?.Length > 0)
                         {
-                            document.HasOpenCalls = true;
+                            document.OpenActionCalls[currentCall.Id] = new AiAgentActionRequest
+                            {
+                                ToolId = currentCall.Id,
+                                Name = currentCall.Name,
+                                Type = AiAgentActionRequestType.SubAgent,
+                                Arguments = currentCall.Arguments,
+                            };
                             continue;
                         }
 
@@ -879,7 +920,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var parameters = MergeParams(context, document.Parameters, args);
             var subConversationParamsHash = call.Name + "/" + AttachmentsStorageHelper.CalculateHash(parameters.AsSpan());
             var agentIndex = document.SubAgents.FindIndex(x=>x.Hash == subConversationParamsHash);
-            ConversationDocument.SubAgentInstance instance;
+            AiSubAgentInstance instance;
             if (agentIndex != -1)
             {
                 instance = document.SubAgents[agentIndex];
@@ -888,7 +929,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             {
                 agentIndex = document.SubAgents.Count + 1;
                 string conversationId = document.Id + "/" + call.Name + "/" + agentIndex;
-                instance = new ConversationDocument.SubAgentInstance(call.Name, conversationId, subConversationParamsHash);
+                instance = new AiSubAgentInstance(call.Name, conversationId, subConversationParamsHash);
                 document.SubAgents.Add(instance);
             }
             

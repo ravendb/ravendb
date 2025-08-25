@@ -22,7 +22,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
 
     public override async ValueTask ExecuteAsync()
     {
-        using var _ = ContextPool.AllocateOperationContext(out JsonOperationContext context);
+        using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
         using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
         var options = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token.Token);
         
@@ -35,8 +35,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         ConversationDocument conversation = null;
         if (body.Document != null)
         {
-            conversation = JsonDeserializationServer.ConversationDocument(body.Document);
-            conversation.Id = "test";
+            conversation = ConversationDocument.ToDocument("test",body.Document);
         }
 
         if (conversation == null)
@@ -55,7 +54,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         return Task.FromResult("test");
     }
 
-    public override async Task WriteResponseAsync(DocumentsOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
+    protected override async Task WriteResponseAsync(DocumentsOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
     {
         var output = new DynamicJsonValue
         {

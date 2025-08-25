@@ -89,7 +89,7 @@ namespace Raven.Server.Json
 {
     internal sealed class JsonDeserializationServer : JsonDeserializationBase
     {
-        public static readonly Func<BlittableJsonReaderObject, ConversationDocument> ConversationDocument = GenerateJsonDeserializationRoutine<ConversationDocument>();
+        public static readonly Func<BlittableJsonReaderObject, AiSubAgentInstance> SubAgentInstance = GenerateJsonDeserializationRoutine<AiSubAgentInstance>();
 
         public static readonly Func<BlittableJsonReaderObject, StartTransactionsRecordingOperation.Parameters> StartTransactionsRecordingOperationParameters = GenerateJsonDeserializationRoutine<StartTransactionsRecordingOperation.Parameters>();
 

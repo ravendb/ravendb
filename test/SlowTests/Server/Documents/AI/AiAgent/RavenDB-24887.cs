@@ -232,9 +232,13 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
 
         chat.SetUserPrompt("Do you have a charger for a laptop in stock?");
         var result = await chat.RunAsync<Reply>();
+        Assert.Equal(AiConversationResult.Done, result.Status);
         chat.SetUserPrompt("Add that to my cart.");
         result = await chat.RunAsync<Reply>();
-        WaitForUserToContinueTheTest(store);
-        Assert.False(true);
+        // here we verify that we were properly called from the sub-agent 
+        Assert.NotNull(addToCartArgs);
+        // and were able to "solve" it properly
+        Assert.Equal(AiConversationResult.Done, result.Status);
+        Assert.Contains("added", result.Answer.Message);
     }
 }
