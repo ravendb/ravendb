@@ -288,9 +288,9 @@ namespace Raven.Client.Util
             #else
 
             // Pass the tcs via the state
-            return token.Register(static (object state, CancellationToken t) =>
+            return token.Register(static (state, t) =>
             {
-                ((TaskCompletionSource<object>)state).TrySetCanceled(t);
+                ((TaskCompletionSource<TResult>)state).TrySetCanceled(t);
             }, tcs);
 
             #endif
