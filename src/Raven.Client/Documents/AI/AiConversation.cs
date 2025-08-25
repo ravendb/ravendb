@@ -202,18 +202,18 @@ internal class AiConversation : IAiConversationOperations
                     // error handling here is expected to be done by the invocation based on the error strategy the user choose
                     await invocation.Invoke(ctx, action, token).ConfigureAwait(false);
                 }
-                    else if (OnUnhandledAction is { } onUnhandledAction)
-                    {
-                        await onUnhandledAction(new UnhandledActionEventArgs(this, action, token)).ConfigureAwait(false);
-            }
-                    else
-                    {
-                        throw new InvalidOperationException(
-                            $"There is no action defined for action '{action.Name}' on agent '{_agentId}' ({_conversationId}), but it was invoked by the model with: {action.Arguments}. " +
-                            $"Did you forget to call {nameof(Receive)} or {nameof(Handle)}? You can also handle unexpected action invocations using the {nameof(OnUnhandledAction)} event.");
-        }
+                else if (OnUnhandledAction is { } onUnhandledAction)
+                {
+                    await onUnhandledAction(new UnhandledActionEventArgs(this, action, token)).ConfigureAwait(false);
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"There is no action defined for action '{action.Name}' on agent '{_agentId}' ({_conversationId}), but it was invoked by the model with: {action.Arguments}. " +
+                        $"Did you forget to call {nameof(Receive)} or {nameof(Handle)}? You can also handle unexpected action invocations using the {nameof(OnUnhandledAction)} event.");
                 }
             }
+        }
 
         // We have nothing to tell the server, but still have action requests pending
         // we need to send those action requests to the caller that can handle them
