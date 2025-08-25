@@ -169,6 +169,8 @@ public class AiAgentClientApiBasics : RavenTestBase
             "chats/123",
             new AiConversationCreationOptions().AddParameter("company", "companies/90-A"));
 
+        chat.OnUnhandledAction += args => Task.CompletedTask;
+
         chat.SetUserPrompt("what goes well with my cheese for recent orders?");
 
         var r = await chat.RunAsync<AnswerSchema>();
