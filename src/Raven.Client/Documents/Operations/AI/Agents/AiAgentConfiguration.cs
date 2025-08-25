@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
@@ -124,27 +125,6 @@ public class AiAgentConfiguration : IDynamicJson
     /// </value>
     public int? MaxModelIterationsPerCall { get; set; }
 
-    internal object Find(string name)
-    {
-        foreach (AiAgentToolQuery query in Queries ?? [])
-        {
-            if(query.Name == name)
-                return query;
-        }
-        foreach (var agent in SubAgents ?? [])
-        {
-            if(agent.Identifier == name)
-                return agent;
-        }
-        foreach (AiAgentToolAction action in Actions ?? [])
-        {
-            if(action.Name == name)
-                return action;
-        }
-
-        return null;
-    }
-    
     
     public DynamicJsonValue ToJson()
     {
@@ -163,5 +143,22 @@ public class AiAgentConfiguration : IDynamicJson
             [nameof(ChatTrimming)] = ChatTrimming?.ToJson(),
             [nameof(MaxModelIterationsPerCall)] = MaxModelIterationsPerCall
         };
+    }
+
+    public void AppendCapabilities(StringBuilder sb)
+    {
+        sb.AppendLine("Capabilities:");
+        foreach (var q in Queries??[])
+        {
+            sb.Append("- ").AppendLine(q.Description);
+        }
+        foreach (var q in SubAgents??[])
+        {
+            sb.Append("- ").AppendLine(q.Description);
+        }
+        foreach (var q in Actions??[])
+        {
+            sb.Append("- ").AppendLine(q.Description);
+        }
     }
 }

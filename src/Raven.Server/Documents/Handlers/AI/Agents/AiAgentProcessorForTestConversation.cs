@@ -7,6 +7,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands.AI;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -34,7 +35,8 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         ConversationDocument conversation = null;
         if (body.Document != null)
         {
-            conversation = ConversationDocument.ToDocument("test", body.Document);
+            conversation = JsonDeserializationServer.ConversationDocument(body.Document);
+            conversation.Id = "test";
         }
 
         if (conversation == null)
@@ -53,7 +55,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         return Task.FromResult("test");
     }
 
-    public override async Task WriteResponseAsync(JsonOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
+    public override async Task WriteResponseAsync(DocumentsOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
     {
         var output = new DynamicJsonValue
         {

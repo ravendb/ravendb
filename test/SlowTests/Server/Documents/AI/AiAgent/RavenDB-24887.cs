@@ -21,6 +21,7 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
     {
         public string Message { get; set; }
     }
+    private record AddToCartArgs(string ProductId, int Quantity);
     public record Product(string Id, string Name, float Price, int QuantityInStock);
     public record Order(string Customer, Product[] Products, string Status);
     
@@ -104,7 +105,7 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
 
         var dinnerIdentifier = (await store.AI.CreateAgentAsync(
             new AiAgentConfiguration("Shop Agent", config.ConnectionStringName,
-                "You are a shop agent for an e-commerce store. Under you there are mulitple additional agents that you can invoke." +
+                "You are a shop agent for an e-commerce store. Under you there are multiple additional agents that you can invoke." +
                 " Your role is to make the customer happy.")
             {
                 Parameters = [new AiAgentParameter("customerId", "The id of the current customer")],
@@ -154,7 +155,8 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
 
         var ordersAgentId = (await store.AI.CreateAgentAsync(
             new AiAgentConfiguration("Orders Agent", config.ConnectionStringName,
-            "You are an ordering agent for an e-commerce website, help the customer as much as you can")
+            "You are an ordering agent for an e-commerce website, help the customer as much as you can. " +
+            "Make sure to return to the user any order / product IDs.")
             {
                 Queries = [new AiAgentToolQuery
                 {
@@ -167,11 +169,7 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
                 {
                     Name = "AddToCart",
                     Description = "Add an item to the cart",
-                    ParametersSampleObject = JsonConvert.SerializeObject(new
-                    {
-                        ProductId = "The id of the product to add to the cart",
-                        Quantity = 1,
-                    })
+                    ParametersSampleObject = JsonConvert.SerializeObject(new AddToCartArgs("The id of the product to add to the cart",1))
                 }],
                 Parameters = [new AiAgentParameter("customerId", "The id of the current customer")]
             },
@@ -181,7 +179,8 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
             })).Identifier;
         var productsAgentId = (await store.AI.CreateAgentAsync(
             new AiAgentConfiguration("Products Agent", config.ConnectionStringName,
-                "You are an product search agent for an e-commerce website, help the customer find the right products for them")
+                "You are an product search agent for an e-commerce website, help the customer find the right products for them." +
+                " Product information should always contain the product ID as well as textual data.")
             {
                 Queries = [new AiAgentToolQuery
                 {
@@ -200,7 +199,8 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
 
         var dinnerIdentifier = (await store.AI.CreateAgentAsync(
             new AiAgentConfiguration("Shop Agent", config.ConnectionStringName,
-                "You are a shop agent for an e-commerce store. Under you there are mulitple additional agents that you can invoke." +
+                "You are a shop agent for an e-commerce store." +
+                " Under you there are multiple additional agents that you can invoke, make sure to retain all identifiers in responses." +
                 " Your role is to make the customer happy.")
             {
                 Parameters = [new AiAgentParameter("customerId", "The id of the current customer")],
@@ -223,8 +223,18 @@ public class RavenDB_24887(ITestOutputHelper output) : RavenTestBase(output)
         var chat = store.AI.Conversation(dinnerIdentifier, "chats/",
             new AiConversationCreationOptions().AddParameter("customerId", "customers/1-A"));
 
-        chat.SetUserPrompt("I forgot to add a charger to my order. Add a charger for the laptop to my cart");
+        AddToCartArgs addToCartArgs = null;
+        chat.Handle<AddToCartArgs>("orders-agent/AddToCart", args =>
+        {
+            addToCartArgs = args;
+            return "Added to cart";
+        });
+
+        chat.SetUserPrompt("Do you have a charger for a laptop in stock?");
         var result = await chat.RunAsync<Reply>();
+        chat.SetUserPrompt("Add that to my cart.");
+        result = await chat.RunAsync<Reply>();
+        WaitForUserToContinueTheTest(store);
         Assert.False(true);
     }
 }

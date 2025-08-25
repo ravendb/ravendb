@@ -14,14 +14,28 @@ using Sparrow.Server.Json.Sync;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents;
 
-public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObject parameters)
+public class ConversationDocument
 {
-    public string Agent = agent;
+    public ConversationDocument([NotNull] string agent, BlittableJsonReaderObject parameters)
+    {
+        Agent = agent;
+        Parameters = parameters;
+    }
+
+    private ConversationDocument()
+    {
+        // for de-serialization
+    }
     
-    public BlittableJsonReaderObject Parameters = parameters;
+    public string Agent;
+    public BlittableJsonReaderObject Parameters;
     public List<BlittableJsonReaderObject> Messages = [];
     public List<string> LinkedConversations = [];
-    public Dictionary<string, int> SubAgentsIds = [];
+    
+    public record SubAgentInstance(string Agent, string ConversationId, string Hash);
+
+    public bool HasOpenCalls;
+    public List<SubAgentInstance> SubAgents = [];
     public Dictionary<string, AiAgentActionRequest> OpenActionCalls = [];
     public AiUsage TotalUsage = new AiUsage();
     public string ChangeVector;
@@ -164,18 +178,13 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     public DynamicJsonValue ToJson()
     {
-        var subAgentsIds = new DynamicJsonValue();
-        foreach (var (k, v) in SubAgentsIds)
-        {
-            subAgentsIds[k] = v;
-        }
         return new DynamicJsonValue
         {
             [nameof(Agent)] = Agent,
             [nameof(Parameters)] = Parameters,
             [nameof(Messages)] = Messages,
             [nameof(LinkedConversations)] = LinkedConversations,
-            [nameof(SubAgentsIds)] = subAgentsIds,
+            [nameof(SubAgents)] = SubAgents,
             [nameof(TotalUsage)] = TotalUsage.ToJson(),
             [nameof(OpenActionCalls)] = DynamicJsonValue.Convert(OpenActionCalls),
             [nameof(LastMessageAt)] = LastMessageAt,
@@ -196,59 +205,6 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             msg.Modifications[UsageProperty] = usage.ToJson();
         Messages.Add(msg);
         LastMessageAt = currentDate;
-    }
-
-    public static ConversationDocument ToDocument(string id, BlittableJsonReaderObject document)
-    {
-        if (document.TryGet(nameof(Agent), out string agent) == false)
-            throw new ArgumentException($"Missing Agent in '{id}' conversation document");
-        if (document.TryGet(nameof(Parameters), out BlittableJsonReaderObject parameters) == false)
-            throw new ArgumentException($"Missing Parameters in '{id}' conversation document");
-        if (document.TryGet(nameof(Messages), out BlittableJsonReaderArray messages) == false)
-            throw new ArgumentException($"Missing Messages in '{id}' conversation document");
-        if (document.TryGet(nameof(LinkedConversations), out BlittableJsonReaderArray linkedConversations) == false)
-            throw new ArgumentException($"Missing LinkedConversations in '{id}' conversation document");
-        if (document.TryGet(nameof(SubAgentsIds), out BlittableJsonReaderObject subAgentsIdsObj) == false)
-            throw new ArgumentException($"Missing SubAgentsIds in '{id}' conversation document");
-        if (document.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject usage) == false)
-            throw new ArgumentException($"AI Usage in '{id}' conversation document");
-        if (document.TryGet(nameof(OpenActionCalls), out BlittableJsonReaderObject openToolCalls) == false)
-            throw new ArgumentException($"Missing Open Tool Calls in '{id}' conversation document");
-        if (document.TryGet(nameof(LastMessageAt), out DateTime lastMessageAt) == false)
-            throw new ArgumentException($"Missing LastMessageAt in '{id}' conversation document");
-        if (document.TryGet(nameof(CreatedAt), out DateTime createAt) == false)
-            throw new ArgumentException($"Missing CreatedAt in '{id}' conversation document");
-        if (document.TryGet(nameof(Expires), out TimeSpan? expires) == false)
-            throw new ArgumentException($"Missing Expires in '{id}' conversation document");
-
-        // TODO: Why are we doing it in such a yucky manner?
-        var openTools = new Dictionary<string, AiAgentActionRequest>();
-        foreach (var callId in openToolCalls.GetPropertyNames())
-        {
-            var call = JsonDeserializationClient.ActionRequest(openToolCalls[callId] as BlittableJsonReaderObject);
-            openTools.Add(callId, call);
-        }
-        
-        var subAgentsIds = new Dictionary<string, int>();
-        BlittableJsonReaderObject.PropertyDetails prop = default;
-        for (var i = 0; i < subAgentsIdsObj.Count; i++)
-        {
-            subAgentsIdsObj.GetPropertyByIndex(i, ref prop);
-            subAgentsIds[prop.Name] = (int)prop.Value;
-        }
-
-        return new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
-        {
-            Id = id,
-            Messages = messages.Items.Select(m=>((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
-            LinkedConversations = linkedConversations.Items.Select(s => s.ToString()).ToList(),
-            SubAgentsIds = subAgentsIds,
-            TotalUsage = JsonDeserializationClient.AiUsage(usage),
-            OpenActionCalls = openTools,
-            LastMessageAt = lastMessageAt,
-            CreatedAt = createAt,
-            Expires = expires,
-        };
     }
 
     internal static List<BlittableJsonReaderObject> GenerateTools(JsonOperationContext context, AiAgentConfiguration configuration, AbstractAiAgentProcessor processor)
@@ -292,21 +248,23 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         foreach (var a in configuration.SubAgents ?? [])
         {
             AiAgentConfiguration agentConfiguration = processor.GetAiAgentConfiguration(a.Identifier);
-            var argsSchema = new DynamicJsonValue();
+            var argsSampleObject = new DynamicJsonValue();
             foreach (AiAgentParameter parameter in agentConfiguration.Parameters ?? [])
             {
-                argsSchema[parameter.Name] = parameter.Description;
+                argsSampleObject[parameter.Name] = parameter.Description;
             }
-            argsSchema["subAgentUserPrompt"] = "A prompt for an agent, explaining in concise terms what it is you are asking it to do. Required argument, MUST NOT be empty!";
-            using var args = context.ReadObject(argsSchema, "args");
+            argsSampleObject["subAgentUserPrompt"] = "A natural language prompt instructions for the sub-agent to do its work";
+            using var args = context.ReadObject(argsSampleObject, "args");
             string paramsSchema = ChatCompletionClient.GetSchemaForTool(null, args.ToString());
+            var description = new StringBuilder(a.Description).AppendLine();
+            agentConfiguration.AppendCapabilities(description);
             var tool = new DynamicJsonValue
             {
                 [ChatCompletionClient.Constants.JsonSchemaFields.Type] = "function",
                 [ChatCompletionClient.Constants.ResponseFields.Function] = new DynamicJsonValue
                 {
                     [ChatCompletionClient.Constants.ResponseFields.Name] = a.Identifier,
-                    [ChatCompletionClient.Constants.JsonSchemaFields.Description] = a.Description,
+                    [ChatCompletionClient.Constants.JsonSchemaFields.Description] = description.ToString(),
                     ["parameters"] = context.Sync.ReadForMemory(paramsSchema, "params/schema")
                 },
                 [ChatCompletionClient.Constants.JsonSchemaFields.Strict] = true

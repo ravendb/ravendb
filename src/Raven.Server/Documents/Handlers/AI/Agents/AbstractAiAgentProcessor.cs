@@ -4,10 +4,12 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Amazon.Glacier.Model;
 using JetBrains.Annotations;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.Extensions.Primitives;
@@ -24,10 +26,12 @@ using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Sparrow.Server.Json.Sync;
 using Newtonsoft.Json;
+using NuGet.Protocol;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Queries;
 using Raven.Server.Extensions;
+using Raven.Server.Json;
 using ChatConstants = Raven.Server.Documents.AI.ChatCompletionClient.Constants;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
@@ -38,7 +42,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         {
         }
 
-        private async Task<bool> TryHandleActionResponses(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument document,
+        private async Task<bool> TryHandleActionResponses(DocumentsOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument document,
             RequestBody body)
         {
             var hasActionResponse = body.ActionResponses is { Length: > 0 };
@@ -47,26 +51,74 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             if (hasActionResponse && hasUserPrompt)
                 throw new InvalidOperationException($"Cannot have a conversation '{conversationId}' with open action calls and user prompt.");
 
-            if (body.ActionResponses != null)
+            Dictionary<ConversationDocument.SubAgentInstance, List<AiAgentActionResponse>> subAgentsActions = null;
+            foreach (BlittableJsonReaderObject tool in body.ActionResponses ?? Enumerable.Empty<object>())
             {
-                foreach (BlittableJsonReaderObject tool in body.ActionResponses)
+                var t = JsonDeserializationClient.ActionResponse(tool);
+
+                var lastIndexOfSlash = t.ToolId.LastIndexOf('/'); // directing values to sub-agents
+                if (lastIndexOfSlash != -1 && int.TryParse(t.ToolId[(lastIndexOfSlash + 1)..], out var subAgentIndex))
                 {
-                    var t = JsonDeserializationClient.ActionResponse(tool);
-                    if (document.OpenActionCalls.Remove(t.ToolId) == false)
-                        throw new InvalidOperationException($"{t.ToolId} is an unknown action ID for conversation '{conversationId}'");
+                    subAgentsActions ??= [];
+                    var subAgent = document.SubAgents[subAgentIndex];
+                    t.ToolId = t.ToolId[..lastIndexOfSlash];
+                    subAgentsActions.GetOrAdd(subAgent).Add(t);
+                    continue;
+                }
+                
+                if (document.OpenActionCalls.Remove(t.ToolId) == false)
+                    throw new InvalidOperationException($"{t.ToolId} is an unknown action ID for conversation '{conversationId}'");
+
+                document.AddMessage(context, context.ReadObject(
+                    new DynamicJsonValue
+                    {
+                        ["tool_call_id"] = t.ToolId,
+                        ["role"] = "tool",
+                        ["content"] = t.Content
+                    },
+                    "user/tool"), usage: null);
+            }
+
+            document.HasOpenCalls = document.OpenActionCalls.Count > 0;
+
+            if (subAgentsActions is not null)
+            {
+                var reqs = new DynamicJsonArray();
+                var toolCallIds = new List<string>();
+                foreach (var (subAgent, responses) in subAgentsActions)
+                {
+                    toolCallIds.AddRange(responses.Select(x=>x.ToolId));
+                    reqs.Add(CreateAgentRequest(subAgent.Agent, subAgent.ConversationId, null, responses, null));
+                }
+
+                await foreach (var (requestResult, i) in ExecuteMultiRequests(context, reqs))
+                {
+                    if (requestResult.TryGet(nameof(ConversationResult<object>.Response), out BlittableJsonReaderObject agentResult) is false)
+                        throw new InvalidOperationException("Missing Results from query output");
+                    if (requestResult.TryGet(nameof(ConversationResult<object>.ActionRequests), out BlittableJsonReaderArray actionRequests) is false)
+                        throw new InvalidOperationException("Missing ActionRequests from query output");
+
+                    if (actionRequests?.Length > 0)
+                    {
+                        document.HasOpenCalls = true;
+                        continue;
+                    }
+                    if (requestResult.TryGet(nameof(ConversationResult<object>.ConversationId), out string subAgentConversationId) is false)
+                        throw new InvalidOperationException("Missing TotalUsage from query output");
 
                     document.AddMessage(context, context.ReadObject(
                         new DynamicJsonValue
                         {
-                            ["tool_call_id"] = t.ToolId,
+                            ["tool_call_id"] = toolCallIds[i],
                             ["role"] = "tool",
-                            ["content"] = t.Content
-                        },
-                        "user/tool"), usage: null);
+                            ["content"] = agentResult.ToString(),
+                            ["subAgent"] = subAgentConversationId,
+                        }, "tool-call/response"), usage: null);
+                    break;
                 }
             }
 
-            if (document.OpenActionCalls.Count > 0)
+            if (document.HasOpenCalls)
             {
                 // We have pending tool-call results from the user;
                 // skip reduction - persist the document now without history,
@@ -78,7 +130,6 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             if (hasActionResponse == false && hasUserPrompt == false)
                 throw new InvalidOperationException($"Cannot have a conversation '{conversationId}' without open action calls or user prompt.");
-
 
             if (string.IsNullOrEmpty(body.UserPrompt) == false)
             {
@@ -93,8 +144,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         }
 
 
-        public async Task HandleRequest(
-            JsonOperationContext context,
+        private async Task HandleRequest(
+            DocumentsOperationContext context,
             AiAgentConfiguration configuration,
             string conversationId,
             ConversationDocument document,
@@ -243,7 +294,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 }
                 else
                 {
-                    conversationDocument = ConversationDocument.ToDocument(conversationId, conversation.Data);
+                    conversationDocument = JsonDeserializationServer.ConversationDocument(conversation.Data);
+                    conversationDocument.Id = conversationId;
                     if (conversationDocument.Agent != agentId)
                     {
                         throw new InvalidOperationException(
@@ -435,7 +487,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             while (true)
             {
                 using var request = talker.CreateCompletionRequest();
-
+                
                 await talker.RunAsync(ContextPool,request, token);
                 talker.UpdateDocument();
 
@@ -456,7 +508,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         private async Task<BlittableJsonReaderObject> TryReduceChatSizeAsync(JsonOperationContext context, ChatCompletionClient client, AiAgentConfiguration configuration, ConversationDocument document, AiUsage aiUsage, CancellationToken token)
         {
             var reduction = configuration.ChatTrimming;
-            if (reduction == null || document.OpenActionCalls.Count > 0)
+            if (reduction == null || document.HasOpenCalls)
                 return null;
 
             TimeSpan? historyExpiration = reduction.History?.HistoryExpirationInSec == null
@@ -559,9 +611,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         {
             foreach (var call in toolCalls)
             {
-                if (configuration.Find(call.Name) is not AiAgentToolAction)
+                if (FindToolFrom(configuration, call.Name) is not AiAgentToolAction)
                     continue;
 
+                document.HasOpenCalls = true;
                 document.OpenActionCalls.Add(call.Id, new AiAgentActionRequest
                 {
                     ToolId = call.Id, 
@@ -570,22 +623,76 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 });
             }
 
-            return document.OpenActionCalls.Count > 0;
+            return document.HasOpenCalls;
         }
 
-        public virtual async Task WriteResponseAsync(JsonOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
+        private object FindToolFrom(AiAgentConfiguration self, string name)
         {
+            foreach (AiAgentToolQuery query in self.Queries ?? [])
+            {
+                if (query.Name == name)
+                    return query;
+            }
+
+            foreach (var agent in self.SubAgents ?? [])
+            {
+                if (agent.Identifier == name)
+                    return agent;
+            }
+
+            foreach (AiAgentToolAction action in self.Actions ?? [])
+            {
+                if (action.Name == name)
+                    return action;
+            }
+
+            var index = name.IndexOf('/');
+            if (index == -1)
+                return null;
+
+            var identifier = name.Substring(0, index);
+            name = name.Substring(index + 1);
+
+            var subAgent = GetAiAgentConfiguration(identifier);
+            
+            RuntimeHelpers.EnsureSufficientExecutionStack();
+            return FindToolFrom(subAgent, name);
+        }
+
+        public virtual async Task WriteResponseAsync(DocumentsOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
+        {
+            var openActions = new DynamicJsonArray();
+            using (context.OpenReadTransaction())
+            {
+                AddConversationOpenActions(context, document, openActions);
+                document.HasOpenCalls = openActions.Count > 0;
+            }
+
             var output = new DynamicJsonValue
             {
                 [nameof(ConversationResult<object>.ConversationId)] = conversationId,
                 [nameof(ConversationResult<object>.ChangeVector)] = document.ChangeVector,
                 [nameof(ConversationResult<object>.Response)] = response,
-                [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(document.OpenActionCalls.Select(t => t.Value.ToJson())),
+                [nameof(ConversationResult<object>.ActionRequests)] = openActions,
                 [nameof(ConversationResult<object>.TotalUsage)] = document.TotalUsage.ToJson()
             };
 
             await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
             context.Write(writer, output);
+        }
+
+        private void AddConversationOpenActions(DocumentsOperationContext context, ConversationDocument document, DynamicJsonArray openActions)
+        {
+            openActions.AddRange(document.OpenActionCalls.Select(x=>x.Value.ToJson()));
+            foreach (var subAgent in document.SubAgents ?? [])
+            {
+                var conversation = RequestHandler.Database.DocumentsStorage.Get(context, subAgent.ConversationId);
+                if(conversation is null) 
+                    continue;
+                var conversationDocument = JsonDeserializationServer.ConversationDocument(conversation.Data);
+                RuntimeHelpers.EnsureSufficientExecutionStack();
+                AddConversationOpenActions(context, conversationDocument, openActions);
+            }
         }
 
         public static BlittableJsonReaderObject CreateParameters(JsonOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)
@@ -641,7 +748,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             List<AiToolCall> activeToolCalls = [];
             foreach (var call in toolCalls)
             {
-                switch (cfg.Find(call.Name))
+                switch (FindToolFrom(cfg, call.Name))
                 {
                     case AiAgentToolQuery q:
                         activeToolCalls.Add(call);
@@ -659,7 +766,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                                 {
                                     ["tool_call_id"] = call.Id,
                                     ["role"] = "tool",
-                                    ["content"] = "Failure calling " + call.Id +", because: " + e.Message
+                                    ["content"] = "Failure calling " + call.Id + ", because: " + e.Message
                                 }, "tool-call/response"), usage: null);
                             continue;
                         }
@@ -671,6 +778,52 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             if (reqs.Count is 0)
                 return;
 
+            await foreach (var (requestResult, i) in ExecuteMultiRequests(context, reqs))
+            {
+                AiToolCall currentCall = activeToolCalls[i];
+                switch (FindToolFrom(cfg, currentCall.Name))
+                {
+                    case AiAgentToolQuery:
+                        if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
+                            throw new InvalidOperationException("Missing Results from query output");
+
+                        document.AddMessage(context, context.ReadObject(
+                            new DynamicJsonValue
+                            {
+                                ["tool_call_id"] = currentCall.Id,
+                                ["role"] = "tool",
+                                ["content"] = queryResult.ToString()
+                            }, "tool-call/response"), usage: null);
+                        break;
+                    case AiAgentToolSubAgent:
+                        if (requestResult.TryGet(nameof(ConversationResult<object>.Response), out BlittableJsonReaderObject agentResult) is false)
+                            throw new InvalidOperationException("Missing Results from query output");
+                        if (requestResult.TryGet(nameof(ConversationResult<object>.ActionRequests), out BlittableJsonReaderArray actionRequests) is false)
+                            throw new InvalidOperationException("Missing ActionRequests from query output");
+
+                        if (actionRequests?.Length > 0)
+                        {
+                            document.HasOpenCalls = true;
+                            continue;
+                        }
+
+                        if (requestResult.TryGet(nameof(ConversationResult<object>.ConversationId), out string conversationId) is false)
+                            throw new InvalidOperationException("Missing TotalUsage from query output");
+                        document.AddMessage(context, context.ReadObject(
+                            new DynamicJsonValue
+                            {
+                                ["tool_call_id"] = currentCall.Id,
+                                ["role"] = "tool",
+                                ["content"] = agentResult.ToString(),
+                                ["subAgent"] = conversationId,
+                            }, "tool-call/response"), usage: null);
+                        break;
+                }
+            }
+        }
+
+        private async IAsyncEnumerable<(BlittableJsonReaderObject, int)> ExecuteMultiRequests(JsonOperationContext context, DynamicJsonArray reqs)
+        {
             using (var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-agent/multi-query"))
             using (var handler = new MultiGetHandlerProcessorForPost(RequestHandler))
             using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
@@ -692,50 +845,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     if (statusCode != 200)
                         throw ExceptionDispatcher.Get(requestResult, (HttpStatusCode)statusCode);
 
-                    AiToolCall currentCall = activeToolCalls[i];
-                    switch (cfg.Find(currentCall.Name))
-                    {
-                        case AiAgentToolQuery:
-                            if (requestResult.TryGet(nameof(QueryResult.Results), out BlittableJsonReaderArray queryResult) is false)
-                                throw new InvalidOperationException("Missing Results from query output");
-
-                            document.AddMessage(context, context.ReadObject(
-                                new DynamicJsonValue
-                                {
-                                    ["tool_call_id"] = currentCall.Id,
-                                    ["role"] = "tool",
-                                    ["content"] = queryResult.ToString()
-                                }, "tool-call/response"), usage: null);
-                            break;
-                        case AiAgentToolSubAgent agent:
-                            if (requestResult.TryGet(nameof(ConversationResult<object>.Response), out BlittableJsonReaderObject agentResult) is false)
-                                throw new InvalidOperationException("Missing Results from query output");
-                            if (requestResult.TryGet(nameof(ConversationResult<object>.ActionRequests), out BlittableJsonReaderArray actionRequests) is false)
-                                throw new InvalidOperationException("Missing ActionRequests from query output");
-
-                            if (actionRequests?.Length > 0)
-                            {
-                                // we have open action calls, let's add them to the parent and continue... 
-                                foreach (BlittableJsonReaderObject requestObj in actionRequests)
-                                {
-                                    var req = JsonDeserializationClient.ActionRequest(requestObj);
-                                    toolCalls.Add(new AiToolCall(agent.Identifier + "/" + currentCall.SubAgentIndex + "/" + req.ToolId, req.Name, req.Arguments));
-                                }
-                                continue;
-                            }
-                            
-                            if (requestResult.TryGet(nameof(ConversationResult<object>.ConversationId), out string conversationId) is false)
-                                throw new InvalidOperationException("Missing TotalUsage from query output");
-                            document.AddMessage(context, context.ReadObject(
-                                new DynamicJsonValue
-                                {
-                                    ["tool_call_id"] = currentCall.Id,
-                                    ["role"] = "tool",
-                                    ["content"] = agentResult.ToString(),
-                                    ["subAgent"] = conversationId,
-                                }, "tool-call/response"), usage: null);
-                            break;
-                    }
+                    yield return (requestResult, i);
                 }
             }
         }
@@ -768,18 +878,40 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             var parameters = MergeParams(context, document.Parameters, args);
             var subConversationParamsHash = call.Name + "/" + AttachmentsStorageHelper.CalculateHash(parameters.AsSpan());
-            if (document.SubAgentsIds.TryGetValue(subConversationParamsHash, out int conversationIndex) is false)
+            var agentIndex = document.SubAgents.FindIndex(x=>x.Hash == subConversationParamsHash);
+            ConversationDocument.SubAgentInstance instance;
+            if (agentIndex != -1)
             {
-                document.SubAgentsIds[subConversationParamsHash] = conversationIndex = document.SubAgentsIds.Count + 1;
-            } 
-            call.SubAgentIndex= conversationIndex;
+                instance = document.SubAgents[agentIndex];
+            }
+            else
+            {
+                agentIndex = document.SubAgents.Count + 1;
+                string conversationId = document.Id + "/" + call.Name + "/" + agentIndex;
+                instance = new ConversationDocument.SubAgentInstance(call.Name, conversationId, subConversationParamsHash);
+                document.SubAgents.Add(instance);
+            }
+            
+            reqs.Add(CreateAgentRequest(agent.Identifier, instance.ConversationId,
+                prompt, Array.Empty<object>(), new DynamicJsonValue
+                {
+                    [nameof(AiConversationCreationOptions.Parameters)] = parameters,
+                    [nameof(AiConversationCreationOptions.ExpirationInSec)] = document.Expires switch
+                    {
+                        { } td => (int)td.TotalSeconds,
+                        null => null
+                    }
+                }));
+        }
 
+        private object CreateAgentRequest(string agent, string conversationId, string prompt, IEnumerable<object> actionResponses, DynamicJsonValue creationOptions)
+        {
             var queryString = new StringBuilder("?")
-                .Append("&conversationId=").Append(Uri.EscapeDataString(document.Id +"/sub-agents/"+ conversationIndex))
-                .Append("&agentId=").Append(Uri.EscapeDataString(agent.Identifier))
+                .Append("&conversationId=").Append(Uri.EscapeDataString(conversationId))
+                .Append("&agentId=").Append(Uri.EscapeDataString(agent))
                 .ToString();
 
-            reqs.Add(new DynamicJsonValue
+            return new DynamicJsonValue
             {
                 [nameof(GetRequest.Url)] = $"/databases/{RequestHandler.DatabaseName}/ai/agent",
                 [nameof(GetRequest.Query)] = queryString,
@@ -787,18 +919,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 [nameof(GetRequest.Content)] = new DynamicJsonValue
                 {
                     [nameof(ConversionRequestBody.UserPrompt)] = prompt,
-                    [nameof(ConversionRequestBody.ActionResponses)] = Array.Empty<object>(),
-                    [nameof(ConversionRequestBody.CreationOptions)] = new DynamicJsonValue
-                    {
-                        [nameof(AiConversationCreationOptions.Parameters)] = parameters,
-                        [nameof(AiConversationCreationOptions.ExpirationInSec)] = document.Expires switch
-                        {
-                            { } td => (int)td.TotalSeconds,
-                            null => null
-                        },
-                    }
+                    [nameof(ConversionRequestBody.ActionResponses)] = actionResponses,
+                    [nameof(ConversionRequestBody.CreationOptions)] = creationOptions
                 }
-            });
+            };
         }
 
         public virtual async Task<string> TryPersistAsync(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument conversation, BlittableJsonReaderObject history)

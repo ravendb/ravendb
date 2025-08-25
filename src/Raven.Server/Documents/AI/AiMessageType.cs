@@ -16,7 +16,4 @@ public record AiResponse(AiResponseType Type)
     public BlittableJsonReaderObject Message;
 }
 
-public record AiToolCall(string Id, string Name, string Arguments)
-{
-    public int SubAgentIndex;
-}
+public record AiToolCall(string Id, string Name, string Arguments);
