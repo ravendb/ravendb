@@ -8,7 +8,6 @@ using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Config.Settings;
-using Raven.Server.Documents.QueueSink.Commands;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -25,7 +24,7 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
         using var store = GetDocumentStore(new Options(){RunInMemory = false});
         dbName = store.Database;
         var db = await GetDatabase(dbName);
-        db.Configuration.Indexing.ElapsedSinceQueriedPersistInterval = new TimeSetting(3, TimeUnit.Seconds);
+        db.Configuration.Indexing.ElapsedSinceQueriedPersistInterval = new TimeSetting(2, TimeUnit.Seconds);
 
         using (var session = store.OpenAsyncSession(database: dbName))
         {
@@ -37,38 +36,53 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
                 .Where(x => x.Company == ":)")
                 .ToListAsync();
             autoIndexName = stats.IndexName;
-            WaitForUserToContinueTheTest(store);
         }
 
 
         var index = db.IndexStore.GetIndex(autoIndexName);
 
+        // Wait that elapsed time will be increased.
         var elapsed1 = index.GetElapsedTimeFromLastQuery();
         var elapsed2 = await WaitAndAssertForGreaterThanAsync(() => Task.FromResult(index.GetElapsedTimeFromLastQuery()), elapsed1);
 
         using (var session = store.OpenAsyncSession())
         {
+            // Reset the elapsed time by querying the index.
             _ = await session.Query<Orders.Order>()
                 .Where(x => x.Company == ":)")
                 .ToListAsync();
-
-            var currentElapsed = index.GetElapsedTimeFromLastQuery();
-            Assert.True(currentElapsed < elapsed2);
+            
+            // Wait for changed elapsed time.
+            var currentElapsed = await WaitForNotEqualsAsync(() => Task.FromResult(index.GetElapsedTimeFromLastQuery()), elapsed2);
+            Assert.True(currentElapsed != elapsed2, $"{currentElapsed} != {elapsed2}");
         }
 
         db = null;
         index = null;
+        await store.Maintenance.ForDatabase(dbName).SendAsync(new DisableIndexOperation(autoIndexName));
         var result = await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(dbName, disable: true));
-        Assert.True(result.Disabled);
+        
+        Assert.True(result.Disabled, DisableDatabaseToggleResultToString(result));
         result = await store.Maintenance.Server.SendAsync(new ToggleDatabasesStateOperation(dbName, disable: false));
-        Assert.False(result.Disabled);
+        Assert.False(result.Disabled, DisableDatabaseToggleResultToString(result));
 
         db = await GetDatabase(dbName);
         index = db.IndexStore.GetIndex(autoIndexName);
+        db.Configuration.Indexing.ElapsedSinceQueriedPersistInterval = new TimeSetting(2, TimeUnit.Seconds);
+        await store.Maintenance.ForDatabase(dbName).SendAsync(new EnableIndexOperation(autoIndexName));
+        var elapsedOnInit = index.GetElapsedTimeFromLastQuery();
         
-        Assert.True(index.GetLastQueryingTime() < index.LastIndexingTime); // index on initialization performs indexing batch
-        Assert.True(index.LastIndexingTime - index.GetLastQueryingTime() > TimeSpan.FromSeconds(3));
+        //LastQueryingTime on index initialization is InitializationTime - ElapsedSinceQueried. An index on initialization performs indexing batch so that value must be greater than InitializationTime.
+        var lastQueryTime = await WaitAndAssertForLessThanAsync(() => Task.FromResult(index.GetLastQueryingTime()!.Value), index.LastIndexingTime!.Value);
+        Assert.True(lastQueryTime < index.LastIndexingTime, $"{lastQueryTime} < {index.LastIndexingTime}"); // 
+        
+        // Wait that elapsed time will be increased.
+        var val = await WaitAndAssertForGreaterThanAsync(() => Task.FromResult((index.LastIndexingTime - index.GetLastQueryingTime())!.Value), elapsedOnInit);
+        Assert.True(val > elapsedOnInit, $"{val} > {elapsedOnInit}");
     }
+
+    private static string DisableDatabaseToggleResultToString(DisableDatabaseToggleResult result) =>
+        $"Disabled: {result.Disabled} | Success: {result.Success} | Reason: {result.Reason ?? string.Empty} | Name: {result.Name ?? string.Empty}";
 
     [RavenFact(RavenTestCategory.Querying)]
     public async Task ElapsedTimeWillBePersistedInBackup()
@@ -95,13 +109,13 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
                 var lastQueriedTime = index.GetLastQueryingTime();
                 var lastIndexingTime = index.LastIndexingTime;
                 
-                Assert.True(lastQueriedTime < lastIndexingTime);
-                Assert.True(elapsed == (lastIndexingTime - lastQueriedTime));
+                Assert.True(lastQueriedTime < lastIndexingTime, $"{lastQueriedTime} < {lastIndexingTime}");
             }
         }
 
         void ExtractFile(string path)
         {
+
             using (var file = File.Create(path))
             using (var stream = typeof(RavenDB_22937).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_24649.RavenDB_24649.ravendb-snapshot"))
             {

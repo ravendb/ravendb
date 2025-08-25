@@ -566,7 +566,13 @@ namespace FastTests
 
         protected static async Task<T> WaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable =>
             await WaitForPredicateAsync(a => a.CompareTo(val) > 0, act, timeout, interval);
+        
+        protected static async Task<T> WaitForLessThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable =>
+            await WaitForPredicateAsync(a => a.CompareTo(val) < 0, act, timeout, interval);
 
+        protected static async Task<T> WaitForNotEqualsAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable =>
+            await WaitForPredicateAsync(a => a.CompareTo(val) != 0, act, timeout, interval);
+        
         protected static async Task AssertWaitForTrueAsync(Func<Task<bool>> act, int timeout = 15000, int interval = 100)
         {
             Assert.True(await WaitForValueAsync(act, true, timeout, interval));
@@ -671,6 +677,20 @@ namespace FastTests
         {
             var actualValue = await WaitForGreaterThanAsync(act, expectedVal, timeout, interval);
             Assert.True(actualValue.CompareTo(expectedVal) > 0, $"expectedVal:{expectedVal}, actualValue: {actualValue}");
+            return actualValue;
+        }
+
+        protected static async Task<T> WaitAndAssertForLessThanAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
+        {
+            var actualValue = await WaitForLessThanAsync(act, expectedVal, timeout, interval);
+            Assert.True(actualValue.CompareTo(expectedVal) < 0, $"expectedVal:{expectedVal}, actualValue: {actualValue}");
+            return actualValue;
+        }
+        
+        protected static async Task<T> WaitAndAssertForNotEqualsAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
+        {
+            var actualValue = await WaitForNotEqualsAsync(act, expectedVal, timeout, interval);
+            Assert.True(actualValue.CompareTo(expectedVal) != 0, $"expectedVal:{expectedVal}, actualValue: {actualValue}");
             return actualValue;
         }
 
