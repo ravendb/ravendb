@@ -712,9 +712,23 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "MWoEsxOgGzl1OZarcxjlIki5ELBagYJjX/uIPHEFcxA=",
-                        Attachments: [], //FIXME
+                        Attachments: [
+                            {
+                                Name: "heart.png",
+                                Type: "image/png",
+                                Source: "FromDatabase",
+                                Data: "[Hash:'FLNK25A3VOpVPIiusBEZMwUU5mWqSZR7T2OqYF4nBfA=']",
+                            },
+                            {
+                                Name: "transactions.csv",
+                                Type: "text/plain",
+                                Source: "FromDatabase",
+                                Data: "Date,Description,Category,Amount\r\n2025-01-01,Grocery Store,food,45.32\r\n2025-01-02,Utility Bill,Ut...",
+                            },
+                        ],
                     },
                     ModelOutput: null,
+                    DocumentId: null,
                 },
                 {
                     ContextOutput: {
@@ -725,9 +739,23 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "tDRYDLQP/Q7sNmY6ZCRCcMUwwGdD1Lp05/Evybr7C0s=",
-                        Attachments: [], //FIXME
+                        Attachments: [
+                            {
+                                Name: "heart.png",
+                                Type: "image/png",
+                                Source: "FromDatabase",
+                                Data: "[Hash:'FLNK25A3VOpVPIiusBEZMwUU5mWqSZR7T2OqYF4nBfA=']",
+                            },
+                            {
+                                Name: "transactions.csv",
+                                Type: "text/plain",
+                                Source: "FromDatabase",
+                                Data: "Date,Description,Category,Amount\r\n2025-01-01,Grocery Store,food,45.32\r\n2025-01-02,Utility Bill,Ut...",
+                            },
+                        ],
                     },
                     ModelOutput: null,
+                    DocumentId: null,
                 },
             ],
         };
@@ -767,7 +795,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "MWoEsxOgGzl1OZarcxjlIki5ELBagYJjX/uIPHEFcxA=",
-                        Attachments: [], //FIXME
+                        Attachments: [],
                     },
                     ModelOutput: {
                         Usage: {
@@ -781,6 +809,7 @@ namespace Orders
                             Reason: "Spam detected",
                         },
                     },
+                    DocumentId: null,
                 },
                 {
                     ContextOutput: {
@@ -791,7 +820,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "tDRYDLQP/Q7sNmY6ZCRCcMUwwGdD1Lp05/Evybr7C0s=",
-                        Attachments: [], //FIXME
+                        Attachments: [],
                     },
                     ModelOutput: {
                         Usage: {
@@ -805,6 +834,7 @@ namespace Orders
                             Reason: "No spam found",
                         },
                     },
+                    DocumentId: null,
                 },
             ],
         };
@@ -853,7 +883,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "MWoEsxOgGzl1OZarcxjlIki5ELBagYJjX/uIPHEFcxA=",
-                        Attachments: [], //FIXME
+                        Attachments: [],
                     },
                     ModelOutput: {
                         Usage: {
@@ -867,6 +897,7 @@ namespace Orders
                             Reason: "Spam detected",
                         },
                     },
+                    DocumentId: null,
                 },
                 {
                     ContextOutput: {
@@ -877,7 +908,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "tDRYDLQP/Q7sNmY6ZCRCcMUwwGdD1Lp05/Evybr7C0s=",
-                        Attachments: [], //FIXME
+                        Attachments: [],
                     },
                     ModelOutput: {
                         Usage: {
@@ -891,6 +922,7 @@ namespace Orders
                             Reason: "No spam found",
                         },
                     },
+                    DocumentId: null,
                 },
             ],
         };

@@ -26,6 +26,7 @@ export interface AceEditorProps extends IAceEditorProps {
     setIsValid?: (isValid: boolean) => void;
     aceRef?: RefObject<ReactAce>;
     actions?: ActionItem[];
+    isFullScreenLabelHidden?: boolean;
 }
 
 function AceEditor(props: AceEditorProps) {
@@ -39,6 +40,7 @@ function AceEditor(props: AceEditorProps) {
         actions = [],
         onLoad,
         height = "200px",
+        isFullScreenLabelHidden,
         ...rest
     } = props;
 
@@ -162,7 +164,9 @@ function AceEditor(props: AceEditorProps) {
                             </div>
                         </div>
                     )}
-                    <span className="fullScreenModeLabel">Press Shift+F11 to enter full screen mode</span>
+                    {!isFullScreenLabelHidden && (
+                        <span className="fullScreenModeLabel">Press Shift+F11 to enter full screen mode</span>
+                    )}
                 </div>
                 {errorMessage && (
                     <div className="bg-faded-danger py-1 px-2">
