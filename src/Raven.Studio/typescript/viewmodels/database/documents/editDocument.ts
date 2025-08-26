@@ -179,6 +179,8 @@ class editDocument extends shardViewModelBase {
     canViewRelated: KnockoutComputed<boolean>;
     canViewCSharpClass: KnockoutComputed<boolean>;
 
+    isFullScreenEditor = ko.observable(false);
+
     collapseDocsWhenOpening = ko.observable<boolean>(false);
     isDocumentCollapsed = ko.observable<boolean>(false);
     forceFold = false;
@@ -275,11 +277,42 @@ class editDocument extends shardViewModelBase {
 
         this.setupDisableReasons();
         this.focusOnEditor();
+        
+        this.watchFullScreenCommand();
     }
     
     detached() {
         super.detached();
         this.connectedDocuments.dispose();
+    }
+
+    private watchFullScreenCommand() {
+        if (!this.docEditor?.commands) {
+            return;
+        }
+
+        this.wrapAceEditorCommand("Toggle Fullscreen", () => {
+            this.isFullScreenEditor(!this.isFullScreenEditor());
+        });
+
+        this.wrapAceEditorCommand("Exit FullScreen", () => {
+            this.isFullScreenEditor(false);
+        });
+    }
+
+    private wrapAceEditorCommand(commandName: string, callback: () => void) {
+        const command = this.docEditor.commands.byName[commandName];
+        if (!command) {
+            console.error(`Ace editor command '${commandName}' not found`);
+            return;
+        }
+
+        const originalExec = command.exec;
+        
+        command.exec = (editor: AceAjax.Editor, args?: unknown) => {
+            originalExec(editor, args);
+            callback();
+        };
     }
 
     private activateById(id: string) {
