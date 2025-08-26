@@ -13,9 +13,14 @@ namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
 public class DirectFileUploader : FileUploaderBase
 {
+    private readonly string _backupDescription;
+    protected static readonly string Description = "Description";
+
     public DirectFileUploader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, RavenLogger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken) :
         base(settings, retentionPolicyParameters, logger, backupResult, onProgress, taskCancelToken)
     {
+        var fullBackupText = settings.BackupType == BackupType.Backup ? "Full backup" : "A snapshot";
+        _backupDescription = _isFullBackup ? fullBackupText : "Incremental backup";
     }
 
     internal Stream StreamForBackupDestination(DocumentDatabase database, string folderName, string fileName)
@@ -45,7 +50,7 @@ public class DirectFileUploader : FileUploaderBase
             Key = CombinePathAndKey(remoteFolderName, folderName, fileName),
             Metadata = new Dictionary<string, string>
             {
-                { "Description", GetBackupDescription() }
+                { Description, GetBackupDescription() }
             },
             IsFullBackup = _isFullBackup,
             RetentionPolicyParameters = _retentionPolicyParameters,
@@ -57,7 +62,6 @@ public class DirectFileUploader : FileUploaderBase
 
     public virtual string GetBackupDescription()
     {
-        var fullBackupText = _settings.BackupType == BackupType.Backup ? "Full backup" : "A snapshot";
-        return _isFullBackup ? fullBackupText : "Incremental backup";
+        return _backupDescription;
     }
 }

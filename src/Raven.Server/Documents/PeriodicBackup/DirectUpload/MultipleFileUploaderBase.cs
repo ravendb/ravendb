@@ -11,14 +11,14 @@ namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
 public abstract class MultipleFileUploaderBase<T> : DirectFileUploader
 {
-    protected readonly List<T> _threads;
+    protected readonly LinkedList<T> _threads;
     protected readonly ConcurrentSet<Exception> _exceptions;
 
     protected MultipleFileUploaderBase(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, RavenLogger logger, BackupResult backupResult,
         Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken) :
         base(settings, retentionPolicyParameters, logger, backupResult, onProgress, taskCancelToken)
     {
-        _threads = new List<T>();
+        _threads = new LinkedList<T>();
         _exceptions = new ConcurrentSet<Exception>();
     }
 

@@ -204,6 +204,9 @@ namespace Raven.Server.Documents
                                 }
                                 else
                                 {
+                                    // we cannot continue the batch, need to dispose the attachment stream
+                                    await attachmentStream.DisposeAsync();
+
                                     if (Logger.IsDebugEnabled)
                                         Logger.Debug($"Timed out waiting for free slot to upload retired attachments with '{doc.LowerId}', ReadTransactionMaxOpenTimeInMs: {duration.ElapsedMilliseconds > ReadTransactionMaxOpenTimeInMs}, IsCancellationRequested: {_token.Token.IsCancellationRequested}, the upload will happen on next iteration.");
                                 }

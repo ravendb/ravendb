@@ -21,6 +21,7 @@ namespace Raven.Server.Documents.Attachments;
 public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUploadToCloudHolder>
 {
     private readonly short _concurrentThreads;
+    private readonly string _backupDescription;
     private static long _bigAttachmentSize => GetAttachmentSizeThreshold();
 
     public Action<AttachmentUploadToCloudHolder> OnSuccessAction;
@@ -30,11 +31,12 @@ public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUplo
         base(settings, retentionPolicyParameters: null, logger, backupResult: GenerateUploadResult(), onProgress: progress => { }, taskCancelToken)
     {
         _concurrentThreads = settings.ConcurrentThreads;
+        _backupDescription =  $"{nameof(AttachmentUploader)} for identifier '{_settings.TaskName}'";
     }
 
     public override string GetBackupDescription()
     {
-        return $"{nameof(AttachmentUploader)} for identifier '{_settings.TaskName}'";
+        return _backupDescription;
     }
 
     public IDictionary<string, string> GetObjectMetadata(string folderName, string objKeyName)
@@ -57,7 +59,7 @@ public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUplo
         Task task = CreateUploadTaskInternal(database, attachmentStream, objKeyName, attachmentLength);
         task.Start();
 
-        _threads.Add(new AttachmentUploadToCloudHolder(task, doc, attachmentLength));
+        _threads.AddLast(new AttachmentUploadToCloudHolder(task, doc, attachmentLength));
     }
 
     private Task CreateUploadTaskInternal(DocumentDatabase database, Stream attachmentStream, string objKeyName, long attachmentLength)
@@ -103,18 +105,20 @@ public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUplo
             // Create a timeout task for the polling interval
             await Task.Delay(512);
 
-            // Remove all completed tasks (not just the first one found)
-            for (int i = _threads.Count - 1; i >= 0; i--)
+            var current = _threads.First;
+            while (current != null)
             {
                 if (token.Token.IsCancellationRequested)
-                {
                     return false;
+
+                var next = current.Next; // Store next before potential removal
+
+                if (AssertTaskStateAndInvokeAction(current.Value))
+                {
+                    _threads.Remove(current); // O(1) operation for LinkedListNode
                 }
 
-                if (AssertTaskStateAndInvokeAction(_threads[i]))
-                {
-                    _threads.RemoveAt(i);
-                }
+                current = next;
             }
         }
 
@@ -134,7 +138,7 @@ public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUplo
             {
                 OnSuccessAction?.Invoke(task);
             }
-            else if (task.UploadTask.IsFaulted && task.UploadTask.Exception != null)
+            else if (task.UploadTask.IsFaulted)
             {
                 if (_logger.IsErrorEnabled)
                 {
@@ -142,6 +146,13 @@ public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUplo
                 }
 
                 OnExceptionAction?.Invoke(task);
+            }
+            else if (task.UploadTask.IsCanceled)
+            {
+                if (_logger.IsDebugEnabled)
+                {
+                    _logger.Debug($"Upload task of retired attachment '{task.Doc.LowerId}' with identifier '{task.Doc.Id}' was canceled.");
+                }
             }
 
             return true;

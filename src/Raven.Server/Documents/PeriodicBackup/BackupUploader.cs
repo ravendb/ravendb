@@ -52,7 +52,10 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public override void Execute()
         {
-            _threads.ForEach(x => x.Join(int.MaxValue));
+            foreach (var x in _threads)
+            {
+                x.Join(int.MaxValue);
+            }
 
             if (_exceptions.IsEmpty == false)
             {
@@ -84,7 +87,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.PutObject(key, stream, new Dictionary<string, string>
                 {
-                    { "Description", GetArchiveDescription() }
+                    { Description, GetBackupDescription() }
                 });
 
                 if (_logger.IsInfoEnabled)
@@ -139,7 +142,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.PutBlob(key, stream, new Dictionary<string, string>
                 {
-                    { "Description", GetArchiveDescription() }
+                    { Description, GetBackupDescription() }
                 });
 
                 if (_logger.IsInfoEnabled)
@@ -160,7 +163,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 var key = CombinePathAndKey(settings.RemoteFolderName);
                 client.UploadObject(key, stream, new Dictionary<string, string>
                 {
-                    { "Description", GetArchiveDescription() }
+                    { Description, GetBackupDescription() }
                 });
 
                 if (_logger.IsInfoEnabled)
@@ -240,7 +243,7 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
             }, null, ThreadNames.ForUploadBackupFile(threadName, _settings.DatabaseName, targetName, _settings.TaskName));
 
-            _threads.Add(thread);
+            _threads.AddLast(thread);
         }
 
         private void CreateDeletionTaskIfNeeded<T>(T settings, Action<T, string, string> deleteFromServer, string targetName, string folderName, string fileName)
@@ -275,17 +278,17 @@ namespace Raven.Server.Documents.PeriodicBackup
                 }
             }, null, threadInfo);
 
-            _threads.Add(thread);
+            _threads.AddLast(thread);
         }
 
-        private string GetArchiveDescription()
+        public override string GetBackupDescription()
         {
             var backupType = _settings.BackupType;
             string description;
 
             if (backupType.HasValue)
             {
-                description = GetBackupDescription();
+                description = base.GetBackupDescription();
             }
             else
             {
