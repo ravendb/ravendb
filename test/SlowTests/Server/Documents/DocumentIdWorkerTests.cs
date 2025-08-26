@@ -25,6 +25,47 @@ public class DocumentIdWorkerTests : ClusterTestBase
     [RavenTheory(RavenTestCategory.Core)]
     [InlineData(false)]
     [InlineData(true)]
+    public async Task IdWithEscapedAndControlCharacters_WhenReplicate_CanGet(bool withNonAscii)
+    {
+        var id = "A" + (char)1 + '\n';
+        if (withNonAscii)
+            id += 'Ć';
+        const int replicas = 2;
+
+        var (nodes, leader) = await CreateRaftCluster(replicas, watcherCluster:true);
+            
+        using var store = GetDocumentStore(new Options { Server = leader, ReplicationFactor = replicas, });
+        using var s1 = GetDocumentStoreForNode(store, nodes[0]);
+        using var s2 = GetDocumentStoreForNode(store, nodes[1]);
+            
+        using (var session = s1.OpenAsyncSession())
+        {
+            await session.StoreAsync(new TestObj{Prop = id}, id);
+            await session.SaveChangesAsync();
+        }
+
+        var loaded = await AssertWaitForNotNullAsync(async () =>
+        {
+            using var session = s2.OpenAsyncSession();
+            return await session.Query<TestObj>().SingleOrDefaultAsync();
+        });
+            
+        using (var session = s2.OpenAsyncSession())
+        {
+            var load = await session.LoadAsync<TestObj>(loaded.Id);
+            Assert.NotNull(load);
+        }
+        
+        using (var session = s1.OpenAsyncSession())
+        {
+            var load = await session.LoadAsync<TestObj>(id);
+            Assert.NotNull(load);
+        }
+    }
+    
+    [RavenTheory(RavenTestCategory.Core, Skip = "RavenDB-24940")]
+    [InlineData(false)]
+    [InlineData(true)]
     public async Task IdWithControlCharacters_WhenReplicate_CanGetAndDeleteByNotEscapedId(bool withNonAscii)
     {
         var id = "A" + (char)1;
@@ -38,7 +79,7 @@ public class DocumentIdWorkerTests : ClusterTestBase
         using var s1 = GetDocumentStoreForNode(store, nodes[0]);
         using var s2 = GetDocumentStoreForNode(store, nodes[1]);
             
-        using (var session = s2.OpenAsyncSession())
+        using (var session = s1.OpenAsyncSession())
         {
             await session.StoreAsync(new TestObj{Prop = id}, id);
             await session.SaveChangesAsync();
@@ -70,8 +111,7 @@ public class DocumentIdWorkerTests : ClusterTestBase
         });
     }
         
-    //TODO To modify the Skip message
-    [RavenTheory(RavenTestCategory.Core, Skip = "The client think the document is missing and returns null")]
+    [RavenTheory(RavenTestCategory.Core, Skip = "RavenDB-24940")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task IdWithControlCharacters_WhenReplicate_CanGetAndDeleteByEscapedId(bool withNonAscii)
@@ -121,8 +161,7 @@ public class DocumentIdWorkerTests : ClusterTestBase
         });
     }
         
-    //TODO To modify the Skip message
-    [RavenTheory(RavenTestCategory.Core, Skip = "The client think the document is missing and returns null")]
+    [RavenTheory(RavenTestCategory.Core, Skip = "RavenDB-24940")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task IdWithControlCharacters_WhenReplicateModification_CanGetAndDeleteByNotEscapedId(bool withNonAscii)
@@ -179,19 +218,9 @@ public class DocumentIdWorkerTests : ClusterTestBase
             Assert.Equal(0, count);
         }
     }
-        
-    private static IDocumentStore GetDocumentStoreForNode(DocumentStore store, RavenServer server)
-    {
-        return new DocumentStore
-        {
-            Database = store.Database,
-            Urls = [server.WebUrl],
-            Conventions = new DocumentConventions{DisableTopologyUpdates = true}
-        }.Initialize();
-    }
 
-    //TODO To write the Skip message
-    [RavenTheory(RavenTestCategory.Core, Skip = "The replicated document's Id is escaped")]
+
+    [RavenTheory(RavenTestCategory.Core, Skip = "RavenDB-24940")]
     [InlineData(false)]
     [InlineData(true)]
     public async Task IdWithControlCharacters_WhenGetDocumentIdFromReplicatedDocument_ShouldBeEqualToTheOriginId(bool withNonAscii)
@@ -231,5 +260,15 @@ public class DocumentIdWorkerTests : ClusterTestBase
             var user = await session.Query<User>().SingleAsync();
             Assert.Equal(id, user.Id);
         }));
+    }
+    
+    private static IDocumentStore GetDocumentStoreForNode(DocumentStore store, RavenServer server)
+    {
+        return new DocumentStore
+        {
+            Database = store.Database,
+            Urls = [server.WebUrl],
+            Conventions = new DocumentConventions{DisableTopologyUpdates = true}
+        }.Initialize();
     }
 }
