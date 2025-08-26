@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using Raven.Server.Config;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.NotificationCenter.Notifications.Details
@@ -41,7 +42,9 @@ namespace Raven.Server.NotificationCenter.Notifications.Details
 
         public static void Add(DatabaseNotificationCenter notificationCenter, string agentName, string conversationId, int tokenCount, int tokenThreshold, List<ToolCallDetails> toolCalls)
         {
-            var message = $"In conversation '{conversationId}', the AI Agent '{agentName}' sent a request with {tokenCount} tokens to the LLM, exceeding the threshold of {tokenThreshold} tokens.";
+            var configurationKey = RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold);
+            var message = $"In conversation '{conversationId}', the AI Agent '{agentName}' sent a request with {tokenCount} tokens to the LLM, exceeding the configured threshold of {tokenThreshold} tokens. " +
+                          $"You can adjust the limit by setting the '{configurationKey}' configuration value";
 
             var hasActionTools = toolCalls.Any(tc => tc.Type == ToolType.Action);
             var hasQueryTools = toolCalls.Any(tc => tc.Type == ToolType.Query);

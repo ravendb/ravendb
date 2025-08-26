@@ -2,7 +2,7 @@
 {
     public enum ToolType
     {
-        Unknown = 0,
+        Unknown,
         Action,
         Query 
     }

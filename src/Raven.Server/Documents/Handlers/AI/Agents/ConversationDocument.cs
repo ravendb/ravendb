@@ -165,8 +165,6 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             throw new ArgumentException($"Missing HistoryDocuments in '{id}' conversation document");
         if (document.TryGet(nameof(TotalUsage), out BlittableJsonReaderObject usage) == false)
             throw new ArgumentException($"AI Usage in '{id}' conversation document");
-        if (document.TryGet(nameof(CurrentUsage), out BlittableJsonReaderObject currentUsage) == false)
-            throw new ArgumentException($"AI Usage in '{id}' conversation document");
         if (document.TryGet(nameof(OpenActionCalls), out BlittableJsonReaderObject openToolCalls) == false)
             throw new ArgumentException($"Missing Open Tool Calls in '{id}' conversation document");
         if (document.TryGet(nameof(LastMessageAt), out DateTime lastMessageAt) == false)
@@ -175,7 +173,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             throw new ArgumentException($"Missing CreatedAt in '{id}' conversation document");
         if (document.TryGet(nameof(Expires), out TimeSpan? expires) == false)
             throw new ArgumentException($"Missing Expires in '{id}' conversation document");
-
+        
         var openTools = new Dictionary<string, AiAgentActionRequest>();
         foreach (var callId in openToolCalls.GetPropertyNames())
         {
@@ -183,18 +181,23 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             openTools.Add(callId, call);
         }
 
-        return new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
+        var conversation =  new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
             Id = id,
             Messages = messages.Items.Select(m=>((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
             LinkedConversations = historyDocs.Items.Select(s => s.ToString()).ToList(),
             TotalUsage = JsonDeserializationClient.AiUsage(usage),
-            CurrentUsage = JsonDeserializationClient.AiUsage(currentUsage),
             OpenActionCalls = openTools,
             LastMessageAt = lastMessageAt,
             CreatedAt = createAt,
             Expires = expires,
         };
+
+        if (document.TryGet(nameof(CurrentUsage), out BlittableJsonReaderObject currentUsageBlittable))
+        {
+            conversation.CurrentUsage = JsonDeserializationClient.AiUsage(currentUsageBlittable);
+        }
+        return conversation;
     }
 
     public static List<BlittableJsonReaderObject> GenerateTools(JsonOperationContext context, AiAgentConfiguration configuration)
@@ -271,51 +274,64 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
     public bool TryGetDetailsOfRecentToolCall(AiAgentConfiguration configuration, out List<ExceededTokenThresholdDetails.ToolCallDetails> toolCalls)
     {
         toolCalls = null;
+
+        var lastMessage = Messages.LastOrDefault();
+        if (lastMessage?.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray _) == true)
+            return false;
+
         for (var i = Messages.Count - 1; i >= 0; i--)
         {
             var m = Messages[i];
 
-            if (m.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string r) && r == ChatCompletionClient.Constants.RequestFields.RoleUserValue)
+            if (m.TryGet(ChatCompletionClient.Constants.RequestFields.Role, out string role) == false)
             {
-                break;
+                continue;
             }
 
-            if (r == ChatCompletionClient.Constants.RequestFields.RoleAssistantValue && m.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCallsArray))
+            switch (role)
             {
-                foreach (BlittableJsonReaderObject call in toolCallsArray)
-                {
-                    call.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Id, out string id);
-                    call.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Function, out BlittableJsonReaderObject function);
-                    function.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Name, out string name);
-                    function.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Arguments, out string arguments);
+                case ChatCompletionClient.Constants.RequestFields.RoleUserValue:
+                    return false;
 
-                    ToolType toolType;
-                    if (configuration.FindAction(name) != null)
+                case ChatCompletionClient.Constants.RequestFields.RoleAssistantValue:
+                    if (m.TryGet(ChatCompletionClient.Constants.ResponseFields.ToolCalls, out BlittableJsonReaderArray toolCallsArray))
                     {
-                        toolType = ToolType.Action;
-                    }
-                    else if (configuration.FindQuery(name) != null)
-                    {
-                        toolType = ToolType.Query;
-                    }
-                    else
-                    {
-                        toolType = ToolType.Unknown;
-                    }
+                        toolCalls = [];
+                        foreach (BlittableJsonReaderObject call in toolCallsArray)
+                        {
+                            call.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Id, out string id);
+                            call.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Function, out BlittableJsonReaderObject function);
+                            function.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Name, out string name);
+                            function.TryGet(ChatCompletionClient.Constants.JsonSchemaFields.Arguments, out string arguments);
 
-                    toolCalls ??= new List<ExceededTokenThresholdDetails.ToolCallDetails>();
+                            ToolType toolType = GetToolType(configuration, name);
 
-                    toolCalls.Add(new ExceededTokenThresholdDetails.ToolCallDetails
-                    {
-                        Id = id,
-                        Name = name,
-                        Type = toolType,
-                        Arguments = arguments
-                    });
-                }
+                            toolCalls.Add(new ExceededTokenThresholdDetails.ToolCallDetails
+                            {
+                                Id = id,
+                                Name = name,
+                                Type = toolType,
+                                Arguments = arguments
+                            });
+                        }
+                        return true;
+                    }
+                    break;
+
+                default:
+                    continue;
             }
         }
 
-        return toolCalls?.Count > 0;
+        return false;
+    }
+
+    private static ToolType GetToolType(AiAgentConfiguration configuration, string name)
+    {
+        if (configuration.FindAction(name) != null)
+        {
+            return ToolType.Action;
+        }
+        return configuration.FindQuery(name) != null ? ToolType.Query : ToolType.Unknown;
     }
 }

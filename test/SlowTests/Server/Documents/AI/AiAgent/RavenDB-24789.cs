@@ -4,7 +4,6 @@ using System.Text;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
-using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
@@ -28,7 +27,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false)]
         public async Task ShouldRaiseServerAlertOnExceededActionToolResponse(Options options, GenAiConfiguration config)
         {
-            options.ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold)] = "50";
+            options.ModifyDatabaseRecord = r => r.Settings[RavenConfiguration.GetKey(x => x.Ai.ToolsTokenUsageThreshold)] = "100";
 
             using var store = GetDocumentStore(options);
             await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -44,21 +43,17 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = await store.AI.CreateAgentAsync(agentConfig);
 
             var conversation = store.AI.Conversation(agent.Identifier, "chats/", creationOptions: null);
+
+            conversation.Handle<object>("get_long_text", args =>
+            {
+                var longResponse = new StringBuilder(250);
+                for (var i = 0; i < 25; i++)
+                {
+                    longResponse.Append("1234567890");
+                }
+                return longResponse.ToString();
+            });
             conversation.SetUserPrompt("Please run the tool.");
-
-            var longResponse = new StringBuilder(150);
-            for (var i = 0; i < 15; i++)
-            {
-                longResponse.Append("1234567890");
-            }
-
-            var result = await conversation.RunAsync<object>();
-            Assert.Equal(AiConversationResult.ActionRequired, result.Status);
-
-            foreach (var action in conversation.RequiredActions())
-            {
-                conversation.AddActionResponse(action.ToolId, longResponse.ToString());
-            }
 
             await conversation.RunAsync<object>();
 
@@ -143,17 +138,13 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = await store.AI.CreateAgentAsync(agentConfig);
 
             var conversation = store.AI.Conversation(agent.Identifier, "chats/", creationOptions: null);
-            conversation.SetUserPrompt("Please run all the tools.");
 
-            var result = await conversation.RunAsync<object>();
-            Assert.Equal(AiConversationResult.ActionRequired, result.Status);
-
-            var longActionResponse = "a";
-
-            foreach (var action in conversation.RequiredActions())
+            foreach (var action in agentConfig.Actions)
             {
-                conversation.AddActionResponse(action.ToolId, longActionResponse);
+                conversation.Handle<object>(action.Name, _ => "a");
             }
+
+            conversation.SetUserPrompt("Please run all the tools.");
 
             await conversation.RunAsync<object>();
 
@@ -178,25 +169,24 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agent = await store.AI.CreateAgentAsync(agentConfig);
             var conversation = store.AI.Conversation(agent.Identifier, "chats/", creationOptions: null);
 
-            conversation.SetUserPrompt("Please run the simple_tool.");
-            var result = await conversation.RunAsync<object>();
-            Assert.Equal(AiConversationResult.ActionRequired, result.Status);
-
-            foreach (var action in conversation.RequiredActions())
+            foreach (var action in agentConfig.Actions)
             {
-                conversation.AddActionResponse(action.ToolId, "This is a small response.");
+                conversation.Handle<object>(action.Name, _ => "short response");
             }
+            
+            conversation.SetUserPrompt("run the tool");
+
             await conversation.RunAsync<object>();
 
             var longUserMessage = new StringBuilder();
-            for (var i = 0; i < 5; i++)
+
+            for (var i = 0; i < 20; i++)
             {
                 longUserMessage.Append("This is a very long user message designed to exceed the token limit. ");
             }
             conversation.SetUserPrompt(longUserMessage.ToString());
 
             await conversation.RunAsync<object>();
-
             var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             using (db.NotificationCenter.GetStored(out var actions))
             {
@@ -245,7 +235,6 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         private class Product
         {
             public string Name { get; set; }
-            public string Description { get; set; }
         }
     }
 }

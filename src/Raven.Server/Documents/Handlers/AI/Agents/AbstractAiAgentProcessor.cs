@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -25,6 +23,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Queries;
+using Raven.Server.NotificationCenter.Notifications.Details;
 using ChatConstants = Raven.Server.Documents.AI.ChatCompletionClient.Constants;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
@@ -104,7 +103,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             (BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History) r;
             try
             {
-                r = await TalkAsync(context, configuration, document, token: token);
+                r = await TalkAsync(context, configuration, conversationId, document, token: token);
             }
             catch (Exception e)
             {
@@ -141,7 +140,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             (BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History) r;
             try
             {
-                r = await StreamingTalkAsync(context, configuration, document, streamPropertyPath, async (data) =>
+                r = await StreamingTalkAsync(context, configuration, conversationId, document, streamPropertyPath, async (data) =>
                 {
                     while (true)
                     {
@@ -393,27 +392,29 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> StreamingTalkAsync(
             JsonOperationContext context,
             AiAgentConfiguration configuration,
+            string conversationId,
             ConversationDocument document,
             string firstStreamPropertyPath,
             Func<Memory<byte>, Task> streaming,
             CancellationToken token = default)
         {
             using var talker = new Talker(this, context, configuration, document, firstStreamPropertyPath, streaming);
-            return await RunInternalAsync(context, configuration, document, talker, token);
+            return await RunInternalAsync(context, configuration, conversationId, document, talker, token);
         }
         
         public async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> TalkAsync(
             JsonOperationContext context,
             AiAgentConfiguration configuration,
+            string conversationId,
             ConversationDocument document,
             CancellationToken token = default)
         {
             using var talker = new Talker(this, context, configuration, document, firstStreamPropertyPath: null, streaming: null);
-            return await RunInternalAsync(context, configuration, document, talker, token);
+            return await RunInternalAsync(context, configuration, conversationId, document, talker, token);
         }
 
         private async Task<(BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History)> RunInternalAsync(
-            JsonOperationContext context, AiAgentConfiguration configuration, ConversationDocument document,
+            JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument document,
             Talker talker, CancellationToken token)
         {
             talker.Init();
@@ -425,6 +426,23 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 await talker.RunAsync(ContextPool,request, token);
                 talker.UpdateDocument();
 
+                var currentTurnTokens = talker.AiUsage.PromptTokens - document.CurrentUsage.PromptTokens;
+
+                if (currentTurnTokens > RequestHandler.Database.Configuration.Ai.ToolsTokenUsageThreshold)
+                {
+                    if (document.TryGetDetailsOfRecentToolCall(configuration, out var toolCalls))
+                    {
+                        ExceededTokenThresholdDetails.Add(
+                            RequestHandler.Database.NotificationCenter,
+                            configuration.Name,
+                            conversationId,
+                            currentTurnTokens,
+                            RequestHandler.Database.Configuration.Ai.ToolsTokenUsageThreshold,
+                            toolCalls
+                        );
+                    }
+                }
+
                 if (talker.ResponseType is AiResponseType.Result)
                     break;
 
@@ -435,6 +453,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
 
             var history = await TryReduceChatSizeAsync(context, talker.Client, configuration, document, talker.AiUsage, token);
+            document.CurrentUsage = talker.AiUsage;
 
             return (talker.Result, document, history);
         }
@@ -540,6 +559,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     "system/msg"), usage);
 
             oldChat.UpdateUsage(usage);
+            oldChat.CurrentUsage = new AiUsage();
         }
 
         private bool TryGetUserTools(JsonOperationContext context, ConversationDocument document, AiAgentConfiguration configuration, List<AiToolCall> toolCalls)
