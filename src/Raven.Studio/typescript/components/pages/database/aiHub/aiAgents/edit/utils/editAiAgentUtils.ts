@@ -104,7 +104,9 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                 Query: x.query,
                 ParametersSampleObject: x.parametersSampleObject || null,
                 ParametersSchema: x.parametersSchema || null,
+                Options: "AddToInitialContext"
             })) ?? [],
+        SubAgents: [],
         Actions:
             formData.actions?.map((x) => ({
                 Name: x.name,

@@ -20,6 +20,7 @@ export class AiAgentStubs {
                             Query: "from Products where vector.search(embedding.text(Name), $query)",
                             ParametersSampleObject: '{"query": ["term or phrase to search in the catalog"]}',
                             ParametersSchema: null,
+                            Options:"AddToInitialContext"
                         },
                         {
                             Name: "QueryRecentCategories",
@@ -27,8 +28,10 @@ export class AiAgentStubs {
                             Query: "from Categories",
                             ParametersSampleObject: "{}",
                             ParametersSchema: null,
+                            Options:"AddToInitialContext"
                         },
                     ],
+                    SubAgents: [],
                     Actions: [
                         {
                             Name: "ActionProductSearch",
