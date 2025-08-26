@@ -73,15 +73,19 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
+            var djv = new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
                 [nameof(Description)] = Description,
                 [nameof(Query)] = Query,
                 [nameof(ParametersSampleObject)] = ParametersSampleObject,
-                [nameof(ParametersSchema)] = ParametersSchema,
-                [nameof(Options)] = Options
+                [nameof(ParametersSchema)] = ParametersSchema
             };
+            
+            if (Options != null)
+                djv[nameof(Options)] = Options.ToJson();
+
+            return djv;
         }
     }
 

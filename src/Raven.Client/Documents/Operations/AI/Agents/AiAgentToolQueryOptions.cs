@@ -1,30 +1,35 @@
 ﻿using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI.Agents;
 
-[Flags]
-public enum AiAgentToolQueryOptions
+public class AiAgentToolQueryOptions : IDynamicJson
 {
     /// <summary>
-    /// Allows the model to execute the query when it needs to, based on the model's own judgement.
-    /// This is the default behavior
+    /// When true, the model is allowed to execute this query on demand based on its own judgment.
+    /// When false, the model cannot call this query (unless executed as part of initial context).
+    /// When null, server-side defaults apply.
     /// </summary>
-    AllowModelQueries,
+    public bool? AllowModelQueries { get; set; }
 
     /// <summary>
-    /// The associated query results will be sent to the model as part of the initial context.
+    /// When true, the query will be executed during the initial context build and its results provided to the model.
+    /// When false, the query will not be executed for the initial context.
+    /// When null, server-side defaults apply.
     ///
-    /// This allows us to speed up the initial response, if it is expected that the model will usually need to
-    /// call this query to do its work.
-    /// 
-    /// Requires that the query has no model-supplied parameters (but can use agent scope parameters).
-    /// 
-    /// If only <see cref="AddToInitialContext"/> is specified, this query will run *only* during initial context
-    /// and won't be callable by the model afterward.
-    ///
-    /// If <see cref="AllowModelQueries"/> is ORed with this value, then the query run both on initial context and
-    /// the model can call it afterward as well. That can be useful if the model want to see fresh changes since
-    /// the conversation started.
+    /// Notes:
+    /// - The query must not require model-supplied parameters (it may use agent-scope parameters).
+    /// - If only <see cref="AddToInitialContext"/> is true and <see cref="AllowModelQueries"/> is false, the query runs only during the initial context and is not callable by the model afterward.
+    /// - If both <see cref="AddToInitialContext"/> and <see cref="AllowModelQueries"/> are true, the query will run during the initial context and may also be invoked later by the model (e.g., to fetch fresh data).
     /// </summary>
-    AddToInitialContext,
+    public bool? AddToInitialContext { get; set; }
+
+    public DynamicJsonValue ToJson()
+    {
+        return new DynamicJsonValue
+        {
+            [nameof(AllowModelQueries)] = AllowModelQueries,
+            [nameof(AddToInitialContext)] = AddToInitialContext
+        };
+    }
 }

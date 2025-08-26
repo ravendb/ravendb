@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents;
 public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObject parameters)
 {
     public string Agent = agent;
-    
+
     public BlittableJsonReaderObject Parameters = parameters;
     public List<BlittableJsonReaderObject> Messages = [];
     public List<string> LinkedConversations = [];
@@ -33,6 +33,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
     public DateTime LastMessageAt;
     public DateTime CreatedAt = DateTime.UtcNow;
     public TimeSpan? Expires;
+
     public void Initialize(JsonOperationContext context, AiAgentConfiguration configuration)
     {
         if (Messages.Count > 0)
@@ -68,13 +69,13 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     public List<AiToolCall> InitialQueries(JsonOperationContext context, AiAgentConfiguration configuration)
     {
-        List<AiToolCall> result = null ;
-        
-        foreach (AiAgentToolQuery query in configuration.Queries ??[])
+        List<AiToolCall> result = null;
+
+        foreach (AiAgentToolQuery query in configuration.Queries ?? [])
         {
-            if(query.Options.HasFlag(AiAgentToolQueryOptions.AddToInitialContext) is false)
+            if (query.Options?.AddToInitialContext is null or false)
                 continue;
-            
+
             result ??= [];
             result.Add(new AiToolCall(Guid.NewGuid().ToString("N"), query.Name, "{}"));
         }
@@ -94,10 +95,11 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
                 [ChatCompletionClient.Constants.ResponseFields.Function] = new DynamicJsonValue
                 {
                     [ChatCompletionClient.Constants.ResponseFields.Name] = call.Name,
-                    [ChatCompletionClient.Constants.ResponseFields.Arguments] = call.Arguments 
+                    [ChatCompletionClient.Constants.ResponseFields.Arguments] = call.Arguments
                 }
             });
         }
+
         AddMessage(context, context.ReadObject(new DynamicJsonValue
         {
             [ChatCompletionClient.Constants.RequestFields.Role] = ChatCompletionClient.Constants.RequestFields.RoleAssistantValue,
@@ -109,11 +111,11 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
     private string ParametersToString(AiAgentConfiguration configuration)
     {
-        var sb = new StringBuilder("AI Agent Parameters:\n"); 
+        var sb = new StringBuilder("AI Agent Parameters:\n");
         foreach (var parameter in configuration.Parameters)
         {
-           var value = Parameters[parameter.Name];
-           sb.AppendLine($"{parameter.Name} = {value.ToString()}");
+            var value = Parameters[parameter.Name];
+            sb.AppendLine($"{parameter.Name} = {value.ToString()}");
         }
 
         return sb.ToString();
@@ -131,7 +133,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         {
             [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.AiAgentConversationCollection,
         };
-        
+
         if (Expires.HasValue)
         {
             metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(Expires.Value);
@@ -139,7 +141,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
         var conversation = ToJson();
         conversation[Constants.Documents.Metadata.Key] = metadata;
-            
+
         return context.ReadObject(conversation, "create-conversion");
     }
 
@@ -149,7 +151,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         {
             [Constants.Documents.Metadata.Collection] = Constants.Documents.Collections.AiAgentConversationHistoryCollection,
         };
-        
+
         if (expiration.HasValue)
         {
             metadata[Constants.Documents.Metadata.Expires] = DateTime.UtcNow.Add(expiration.Value);
@@ -181,7 +183,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             [nameof(CurrentUsage)] = CurrentUsage
         };
     }
-    
+
     public const string DateProperty = "date";
     public const string UsageProperty = "usage";
 
@@ -227,7 +229,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         var conversation =  new ConversationDocument(agent, parameters?.CloneOnTheSameContext())
         {
             Id = id,
-            Messages = messages.Items.Select(m=>((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
+            Messages = messages.Items.Select(m => ((BlittableJsonReaderObject)m).CloneOnTheSameContext()).ToList(),
             LinkedConversations = historyDocs.Items.Select(s => s.ToString()).ToList(),
             TotalUsage = JsonDeserializationClient.AiUsage(usage),
             OpenActionCalls = openTools,
@@ -248,9 +250,9 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         List<BlittableJsonReaderObject> tools = [];
         foreach (var q in configuration.Queries ?? [])
         {
-            if(q.Options.HasFlag(AiAgentToolQueryOptions.AllowModelQueries) is false)
+            if (q.Options is { AllowModelQueries: false })
                 continue;
-            
+
             var paramsSchema = ChatCompletionClient.GetSchemaForTool(q.ParametersSchema, q.ParametersSampleObject);
             var tool = new DynamicJsonValue
             {
@@ -265,6 +267,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             };
             tools.Add(context.ReadObject(tool, "tool"));
         }
+
         foreach (var a in configuration.Actions ?? [])
         {
             string paramsSchema = ChatCompletionClient.GetSchemaForTool(a.ParametersSchema, a.ParametersSampleObject);
