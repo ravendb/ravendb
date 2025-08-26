@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide.Context;
@@ -73,9 +72,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, Stream.Null))
                 using (context.OpenReadTransaction())
                 {
-                    var documents = Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, long.MaxValue, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector);
-                    var revisions = Database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, startEtag, long.MaxValue, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector);
-                    foreach (var doc in documents.Concat(revisions))
+                    foreach (var doc in IterateDocumentsAndRevisionsByEtag(context, startEtag))
                     {
                         HttpContext.RequestAborted.ThrowIfCancellationRequested();
                         
@@ -116,6 +113,32 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     }
                     writer.WriteEndObject();
                 }
+            }
+        }
+        
+        public IEnumerable<Document> IterateDocumentsAndRevisionsByEtag(DocumentsOperationContext context, long startEtag)
+        {
+            const DocumentFields documentFields = DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector;
+            var documents = Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, long.MaxValue, documentFields);
+            var revisions = Database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, startEtag, long.MaxValue, documentFields);
+            
+            using var documentsEnumerator = documents.GetEnumerator(); 
+            using var revisionsEnumerator = revisions.GetEnumerator(); 
+            
+            var enumerators = new List<IEnumerator<Document>>();
+            if (documentsEnumerator.MoveNext())
+                enumerators.Add(documentsEnumerator);
+            if (revisionsEnumerator.MoveNext())
+                enumerators.Add(revisionsEnumerator);
+            while (enumerators.Count > 0)
+            {
+                var current = enumerators.Count > 1 && enumerators[0].Current.Etag > enumerators[1].Current.Etag
+                    ? enumerators[1]
+                    : enumerators[0];
+
+                yield return current.Current;
+                if (current.MoveNext() == false)
+                    enumerators.Remove(current);
             }
         }
     }
