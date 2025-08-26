@@ -57,7 +57,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 var t = JsonDeserializationClient.ActionResponse(tool);
 
                 var lastIndexOfSlash = t.ToolId.LastIndexOf('/'); // directing values to sub-agents
-                if (lastIndexOfSlash != -1 && int.TryParse(t.ToolId[(lastIndexOfSlash + 1)..], out var subAgentIndex))
+                if (lastIndexOfSlash != -1 &&
+                    int.TryParse(t.ToolId[(lastIndexOfSlash + 1)..], out var subAgentIndex) &&
+                    subAgentIndex >= 0 &&
+                    subAgentIndex < document.SubAgents.Count)
                 {
                     subAgentsActions ??= [];
                     var subAgent = document.SubAgents[subAgentIndex];
@@ -109,7 +112,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     {
                         if(openAction.Type != AiAgentActionRequestType.SubAgent || 
                            openAction.Name != subAgents[i].Agent)
-                            continue;
+                            continue; // TODO: What if I have multiple open instances for the same agent
 
                         found = true;
                         document.OpenActionCalls.Remove(toolCallId);
@@ -303,7 +306,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                     if (initialQueries is not null)
                     {
                         // run initial tool calls...
-                        await HandleQueryToolCallsAsync(context, configuration, conversationDocument, initialQueries);
+                        await HandleQueryAndAgentCallsAsync(context, configuration, conversationDocument, initialQueries);
                     }
                 }
                 else
@@ -507,7 +510,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 if (talker.ResponseType is AiResponseType.Result)
                     break;
 
-                await HandleQueryToolCallsAsync(context, configuration, document, talker.ToolCalls);
+                await HandleQueryAndAgentCallsAsync(context, configuration, document, talker.ToolCalls);
 
                 if (TryGetUserTools(context, document, configuration, talker.ToolCalls))
                     break; // we need to return the user tool requests to the client, so we can continue the conversation
@@ -631,7 +634,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 {
                     ToolId = call.Id, 
                     Name = call.Name,
-                    Arguments = CreateParameters(context, call, document.Parameters).ToString()
+                    Arguments = CreateParameters(context, call, document.Parameters).ToString(),
+                    Type = AiAgentActionRequestType.UserAction
                 });
             }
 
@@ -699,6 +703,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             string toolIdPostfix,
             string actionNamePrefix)
         {
+            // In OpenActionCalls, we have both open user actions and open sub agents (that has their own user actions)
+            // we have to read directly from the sub-agents to ensure that if they were modified directly, we don't have
+            // mismatched information in the parent agent about their open status.
+            
             foreach (var (toolId, call) in document.OpenActionCalls ?? [])
             {
                 if(call.Type is not AiAgentActionRequestType.UserAction)
@@ -706,7 +714,17 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 
                 openActions.Add(new AiAgentActionRequest
                 {
+                    // potentially recursive handling here.
+                    
+                    // we add the sub-agent name as a prefix, so we'll have:
+                    // orders-agent/SendEmail or social-agent/orders-agents/SendEmail
+                    // This is meant to be set in the `Handle('orders-agent/SendEmail'...)` client code
                     Name = actionNamePrefix + call.Name,
+                    // we add toolId index at the end, so may have:
+                    // call_$ID/sub-agent-index or call_$ID/sub-agent-A-index/sub-agent-B-index, etc.
+                    // 
+                    // This is used by the _server_ code to find the index in the SubAgents array and
+                    // know where to redirect this call afterward
                     ToolId = toolId + toolIdPostfix,
                     Arguments = call.Arguments,
                     Type = call.Type,
@@ -719,7 +737,11 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 AiSubAgentInstance aiSubAgent = document.SubAgents[index];
                 var conversation = RequestHandler.Database.DocumentsStorage.Get(context, aiSubAgent.ConversationId);
                 if (conversation is null)
+                {
+                    // Do we need to remove the OpenCall here? There is an open tool call in the messages, however
+                    // probably need to error here, or maybe close the tool call with an error?
                     continue;
+                }
                 var conversationDocument = ConversationDocument.ToDocument(aiSubAgent.ConversationId, conversation.Data);
                 
                 RuntimeHelpers.EnsureSufficientExecutionStack();
@@ -777,7 +799,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
         }
         
-        private async Task HandleQueryToolCallsAsync(JsonOperationContext context, AiAgentConfiguration cfg, ConversationDocument document, List<AiToolCall> toolCalls)
+        private async Task HandleQueryAndAgentCallsAsync(JsonOperationContext context, AiAgentConfiguration cfg, ConversationDocument document, List<AiToolCall> toolCalls)
         {
             DynamicJsonArray reqs = [];
             List<AiToolCall> activeToolCalls = [];
@@ -813,6 +835,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             if (reqs.Count is 0)
                 return;
 
+            // TODO: What happens if this throws an exception?
+            // TODO: What happens if a _single_ request fails (but other works)
+            // Probably need to have the same behavior as in Handle (start without defaults).
             await foreach (var (requestResult, i) in ExecuteMultiRequests(context, reqs))
             {
                 AiToolCall currentCall = activeToolCalls[i];
@@ -838,6 +863,10 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
                         if (actionRequests?.Length > 0)
                         {
+                            // if there are _any_ action requests from the sub-agent, that means that we are waiting
+                            // for a user's response (we'll send those details to the call when we respond). 
+                            // We _intentionally_ override the existing value here - because we don't want to keep 
+                            // track of the sub-agent state, just that it has open calls. 
                             document.OpenActionCalls[currentCall.Id] = new AiAgentActionRequest
                             {
                                 ToolId = currentCall.Id,
