@@ -144,6 +144,11 @@
     <PackageReference Include="System.ServiceProcess.ServiceController" />
     <PackageReference Include="YamlDotNet" />
   </ItemGroup>
+  <!--Needed to resolve issues with copying files-->
+  <ItemGroup>
+    <PackageReference Include="System.Collections.Immutable" />
+    <PackageReference Include="System.Runtime.Loader" />
+  </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Client\Raven.Client.csproj" />
     <ProjectReference Include="..\..\src\Voron\Voron.csproj" />

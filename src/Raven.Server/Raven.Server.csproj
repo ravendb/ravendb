@@ -201,6 +201,10 @@
     <PackageReference Include="System.Security.Cryptography.ProtectedData" />
     <PackageReference Include="ZstdSharp.Port" />
   </ItemGroup>
+  <!--Needed to resolve issues with copying files-->
+  <ItemGroup>
+    <PackageReference Include="System.Runtime.Loader" />
+  </ItemGroup>
   <ItemGroup>
     <None Update="NLog.template.config">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
