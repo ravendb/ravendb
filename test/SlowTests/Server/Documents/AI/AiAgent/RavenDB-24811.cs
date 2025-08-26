@@ -48,7 +48,7 @@ public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
         var agent = new AiAgentConfiguration("my assistant", config.ConnectionStringName,
-            "Always call the 'whoami' tool before answering any queries")
+            "Always call the 'whoami' tool before answering any user prompts")
         {
             Actions = [
             new AiAgentToolAction
