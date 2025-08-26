@@ -5,6 +5,7 @@ using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Serialization;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Session;
+using Raven.Client.Documents.Subscriptions;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
 using Sparrow.Json;
@@ -14,7 +15,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
     public class NewtonsoftJsonSerializationConventions : ISerializationConventions
     {
         private BlittableJsonConverter _defaultConverter;
-        private SubscriptionBlittableJsonConverter _subscriptionBlittableJsonConverter;
         private IContractResolver _jsonContractResolver;
         private Action<JsonSerializer> _customizeJsonSerializer;
         private Action<JsonSerializer> _customizeJsonDeserializer;
@@ -29,7 +29,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         public NewtonsoftJsonSerializationConventions()
         {
             _defaultConverter = new BlittableJsonConverter(this);
-            _subscriptionBlittableJsonConverter = new SubscriptionBlittableJsonConverter(this);
             _jsonEnumerableConverter = new JsonEnumerableConverter(this);
             JsonContractResolver = new DefaultRavenContractResolver(this);
             _ignoreByRefMembers = false;
@@ -98,7 +97,6 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
         }
 
         IBlittableJsonConverter ISerializationConventions.DefaultConverter => _defaultConverter;
-        public ISubscriptionsBlittableJsonConverter SubscriptionsConverter => _subscriptionBlittableJsonConverter;
 
         public bool IgnoreByRefMembers
         {
@@ -118,6 +116,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
                 Conventions?.AssertNotFrozen();
                 _ignoreUnsafeMembers = value;
             }
+        }
+
+        public ISubscriptionsBlittableJsonConverter CreateConverter<T>(SubscriptionBatch<T> batch)
+        {
+            return new SubscriptionBlittableJsonConverter(this);
         }
 
         ISessionBlittableJsonConverter ISerializationConventions.CreateConverter(InMemoryDocumentSessionOperations session)
