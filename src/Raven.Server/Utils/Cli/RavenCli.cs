@@ -649,21 +649,18 @@ namespace Raven.Server.Utils.Cli
             }
 
             var serverAuth = false;
-            var clientAuth = false;
             foreach (var extension in cert.Extensions.OfType<X509EnhancedKeyUsageExtension>())
             {
                 foreach (var oid in extension.EnhancedKeyUsages)
                 {
                     if (oid.Value.Equals(Constants.Certificates.ServerAuthenticationOid, StringComparison.Ordinal))
                         serverAuth = true;
-                    if (oid.Value.Equals(Constants.Certificates.ClientAuthenticationOid, StringComparison.Ordinal))
-                        clientAuth = true;
                 }
             }
 
-            if (clientAuth == false || serverAuth == false)
+            if (serverAuth == false)
             {
-                WriteError($"Certificate {cert.Thumbprint} cannot be a ravendb server certificate. It does not include both Extended Key Usages: Server Authentication ({Constants.Certificates.ServerAuthenticationOid}), Client Authentication ({Constants.Certificates.ClientAuthenticationOid}).", cli);
+                WriteError($"Certificate {cert.Thumbprint} cannot be a ravendb server certificate. It does not include Extended Key Usage: Server Authentication ({Constants.Certificates.ServerAuthenticationOid}).", cli);
                 return false;
             }
 
