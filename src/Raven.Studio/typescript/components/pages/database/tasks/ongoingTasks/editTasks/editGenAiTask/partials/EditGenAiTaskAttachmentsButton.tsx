@@ -1,12 +1,23 @@
-import { useRef } from "react";
-import ReactAce from "react-ace/lib/ace";
-import AceEditor from "components/common/ace/AceEditor";
+import { useMemo } from "react";
 import useDialog from "components/common/Dialog";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
 import { GenAiAiAttachment } from "../utils/editGenAiTaskValidation";
 import genUtils from "common/generalUtils";
-import Badge from "react-bootstrap/Badge";
+import VirtualTable from "components/common/virtualTable/VirtualTable";
+import SizeGetter from "components/common/SizeGetter";
+import {
+    useReactTable,
+    getCoreRowModel,
+    getSortedRowModel,
+    getFilteredRowModel,
+    ColumnDef,
+} from "@tanstack/react-table";
+import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
+import CellValue from "components/common/virtualTable/cells/CellValue";
+import RichAlert from "components/common/RichAlert";
+import { CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
+import classNames from "classnames";
 
 export default function EditGenAiTaskAttachmentsButton({ attachments }: { attachments: GenAiAiAttachment[] }) {
     const dialog = useDialog();
@@ -25,7 +36,17 @@ export default function EditGenAiTaskAttachmentsButton({ attachments }: { attach
                     Attachments
                 </span>
             ),
-            message: <AttachmentsModalBody attachments={attachments} />,
+            message: (
+                <SizeGetter
+                    render={({ width }) => (
+                        <AttachmentsModalBody
+                            attachments={attachments}
+                            availableWidthInPx={width}
+                            hasNotFound={hasNotFound}
+                        />
+                    )}
+                />
+            ),
             modalSize: "lg",
         });
     };
@@ -45,71 +66,76 @@ export default function EditGenAiTaskAttachmentsButton({ attachments }: { attach
     );
 }
 
-function AttachmentsModalBody({ attachments }: { attachments: GenAiAiAttachment[] }) {
-    const notFound = attachments.filter((attachment) => attachment.Source === "NotFound");
-    const fromUser = attachments.filter((attachment) => attachment.Source === "FromUser");
-    const fromDatabase = attachments.filter((attachment) => attachment.Source === "FromDatabase");
+interface AttachmentsModalBodyProps {
+    attachments: GenAiAiAttachment[];
+    availableWidthInPx: number;
+    hasNotFound: boolean;
+}
+
+function AttachmentsModalBody({ attachments, availableWidthInPx, hasNotFound }: AttachmentsModalBodyProps) {
+    const sortedAttachments = useMemo(
+        () =>
+            [...attachments].sort((a, b) => {
+                if (a.Source === "NotFound" && b.Source !== "NotFound") {
+                    return -1;
+                }
+                if (a.Source !== "NotFound" && b.Source === "NotFound") {
+                    return 1;
+                }
+                return a.Name.localeCompare(b.Name);
+            }),
+        [attachments]
+    );
+
+    const columns = useMemo(() => getAttachmentsColumns(availableWidthInPx), [availableWidthInPx]);
+    const heightInPx = useMemo(() => virtualTableUtils.getHeightInPx(attachments.length, 400), [attachments.length]);
+
+    const table = useReactTable({
+        columns,
+        data: sortedAttachments,
+        getCoreRowModel: getCoreRowModel(),
+        getSortedRowModel: getSortedRowModel(),
+        getFilteredRowModel: getFilteredRowModel(),
+    });
 
     return (
-        <div className="vstack gap-2 overflow-auto" style={{ maxHeight: "500px" }}>
-            {notFound.length > 0 && (
-                <div>
-                    <div className="w-fit-content">
-                        <Badge bg="warning" className="d-flex align-items-center">
-                            <Icon icon="warning" />
-                            Not found:
-                        </Badge>
-                    </div>
-                    <div className="vstack gap-2 py-1">
-                        {notFound.map((attachment, idx) => (
-                            <AttachmentEditor key={idx} attachment={attachment} />
-                        ))}
-                    </div>
-                </div>
+        <div>
+            {hasNotFound && (
+                <RichAlert variant="warning" className="mb-2">
+                    Some attachments could not be found.
+                </RichAlert>
             )}
-            {fromUser.length > 0 && (
-                <div>
-                    <div className="w-fit-content">
-                        <Badge bg="success" className="d-flex align-items-center">
-                            <Icon icon="user" /> From user:
-                        </Badge>
-                    </div>
-                    <div className="vstack gap-2 py-1">
-                        {fromUser.map((attachment, idx) => (
-                            <AttachmentEditor key={idx} attachment={attachment} />
-                        ))}
-                    </div>
-                </div>
-            )}
-            {fromDatabase.length > 0 && (
-                <div>
-                    <div className="w-fit-content">
-                        <Badge bg="success" className="d-flex align-items-center">
-                            <Icon icon="database" /> From database:
-                        </Badge>
-                    </div>
-                    <div className="vstack gap-2 py-1">
-                        {fromDatabase.map((attachment, idx) => (
-                            <AttachmentEditor key={idx} attachment={attachment} />
-                        ))}
-                    </div>
-                </div>
-            )}
+            <VirtualTable heightInPx={heightInPx} table={table} />
         </div>
     );
 }
 
-function AttachmentEditor({ attachment }: { attachment: GenAiAiAttachment }) {
-    const aceRef = useRef<ReactAce>(null);
+const getAttachmentsColumns = (availableWidthInPx: number): ColumnDef<GenAiAiAttachment>[] => {
+    const bodyWidth = virtualTableUtils.getTableBodyWidth(availableWidthInPx);
+    const getSize = virtualTableUtils.getCellSizeProvider(bodyWidth);
 
-    return (
-        <AceEditor
-            aceRef={aceRef}
-            mode="json"
-            value={JSON.stringify(attachment, null, 4)}
-            readOnly={true}
-            height="168px"
-            actions={[{ component: <AceEditor.FullScreenAction /> }, { component: <AceEditor.ToggleNewLinesAction /> }]}
-        />
-    );
-}
+    return [
+        {
+            accessorKey: "Name",
+            cell: CellWithCopyWrapper,
+            size: getSize(20),
+        },
+        {
+            accessorKey: "Source",
+            cell: ({ getValue }) => (
+                <CellValue value={getValue()} className={classNames({ "text-warning": getValue() === "NotFound" })} />
+            ),
+            size: getSize(20),
+        },
+        {
+            accessorKey: "Type",
+            cell: CellWithCopyWrapper,
+            size: getSize(20),
+        },
+        {
+            accessorKey: "Data",
+            cell: CellWithCopyWrapper,
+            size: getSize(40),
+        },
+    ];
+};
