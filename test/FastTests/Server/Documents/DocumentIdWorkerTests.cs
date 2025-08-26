@@ -1,7 +1,5 @@
 ﻿using System.IO;
-using System.Text;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
@@ -120,39 +118,55 @@ namespace FastTests.Server.Documents
             new object[][]
             {
                 ["\0{\r\n>"], 
-                [new string('\0', AbstractPager.MaxKeySize / (JsonParserState.ControlCharacterItemSize + 1) - 2)], 
-                ['a' + new string('\r', AbstractPager.MaxKeySize / (JsonParserState.EscapePositionItemSize + 1) - 4)]
+                [new string('\0', AbstractPager.MaxKeySize / (JsonParserState.ControlCharacterItemSize + 1) - 2) + '\n'], 
+                ['a' + new string('\r', AbstractPager.MaxKeySize / (JsonParserState.EscapePositionItemSize + 1) - 4) + '\n']
             };
 
         [RavenTheory(RavenTestCategory.Core)]
         [MemberData(nameof(Ids))]
         public async Task DocumentId_WhenWrite_ShouldBeAbleToRead(string id)
         {
-            const char nonAscii = (char)(DocumentIdWorker.MaxAsciiCodePoint + 1);
+            const char nonAscii = 'Ć';
 
+            var idWithNonAscii = id + nonAscii;
+            
+            using var context = JsonOperationContext.ShortTermSingleUse();
             using var memoryStream = new MemoryStream();
 
             using (var allocator = new ByteStringContext(SharedMultipleUseFlag.None))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(allocator, id, out _, out Slice withoutAsciiSlice))
-            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(allocator, id + nonAscii, out _, out Slice withAsciiSlice))
-            using (var context = JsonOperationContext.ShortTermSingleUse())
-            await using (var writer = new AsyncBlittableJsonTextWriter(context, memoryStream))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(allocator, id, out var withoutAsciiSliceLower, out var withoutAsciiSlice))
+            using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(allocator, idWithNonAscii, out var withAsciiSliceLower, out var withAsciiSlice))
             {
                 var withoutAsciiLazyString = GetLazyStringValue(context, withoutAsciiSlice);
                 var withAsciiLazyString = GetLazyStringValue(context, withAsciiSlice);
+            
+            
+                await using (var writer = new AsyncBlittableJsonTextWriter(context, memoryStream))
+                {
+                    Assert.True(withAsciiLazyString.StartsWith(withoutAsciiLazyString));
 
-                Assert.True(withAsciiLazyString.StartsWith(withoutAsciiLazyString));
+                    writer.WriteStartObject();
+                    writer.WritePropertyName("withoutAsciiSlice");
+                    writer.WriteString(withoutAsciiLazyString);
+                    writer.WriteComma();
+                    writer.WritePropertyName("withAsciiSlice");
+                    writer.WriteString(withAsciiLazyString);
+                    writer.WriteEndObject();
+                }
 
-                writer.WriteString(withoutAsciiLazyString);
-                writer.WriteString(withAsciiLazyString);
-            }
+                memoryStream.Seek(0, SeekOrigin.Begin);
+                using (var reader = await context.ReadForMemoryAsync(memoryStream, "result"))
+                {
+                    Assert.True(reader["withoutAsciiSlice"].Equals(id));
+                    Assert.True(reader["withAsciiSlice"].Equals(idWithNonAscii));
+                }
 
-            memoryStream.Seek(0, SeekOrigin.Begin);
-            using (var reader = new StreamReader(memoryStream, Encoding.UTF8))
-            {
-                var result = await reader.ReadToEndAsync();
-                string expected = JsonConvert.DeserializeObject<string>(JsonConvert.SerializeObject(result));
-                Assert.Equal(expected, result);
+                using (DocumentIdWorker.GetSliceFromId(allocator, id, out Slice withoutAsciiSlice2))
+                using (DocumentIdWorker.GetSliceFromId(allocator, idWithNonAscii, out Slice withAsciiSlice2))
+                {
+                    Assert.Equal(withoutAsciiSliceLower, withoutAsciiSlice2, new SliceComparer());
+                    Assert.Equal(withAsciiSliceLower, withAsciiSlice2, new SliceComparer());
+                }
             }
         }
 
@@ -190,7 +204,7 @@ namespace FastTests.Server.Documents
             }
         }
 
-        unsafe LazyStringValue GetLazyStringValue(JsonOperationContext context, Slice idSlice)
+        private static unsafe LazyStringValue GetLazyStringValue(JsonOperationContext context, Slice idSlice)
         {
             return context.GetLazyStringValue(idSlice.Content.Ptr);
         }

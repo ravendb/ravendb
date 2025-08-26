@@ -56,6 +56,7 @@ namespace Raven.Server.Documents
             }
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(TransactionOperationContext<TTransaction> context,
             ReadOnlySpan<char> id, out Slice idSlice, byte? separator = null)
             where TTransaction : RavenTransaction
@@ -92,8 +93,8 @@ namespace Raven.Server.Documents
                 var ch = id[i];
                 if (ch > 127) // not ASCII, use slower mode
                 {
-                    strLength = ReadFromUnicodeKey(id, buffer, maxStrSize, separator);
-                    goto Finish;
+                    strLength = ReadFromUnicodeKey(id, buffer, maxStrSize);
+                    break;
                 }
 
                 if ((ch >= 65) && (ch <= 90))
@@ -109,28 +110,16 @@ namespace Raven.Server.Documents
                 strLength++;
             }
 
-            Finish:
             buffer.Truncate(strLength);
             return internalScope;
         }
 
-        private static int ReadFromUnicodeKey(
-            ReadOnlySpan<char> key,
-            ByteString buffer,
-            int maxByteCount,
-            byte? separator)
+        private static int ReadFromUnicodeKey(ReadOnlySpan<char> key, ByteString buffer, int maxByteCount)
         {
             var destChars = (char*)(buffer.Ptr + maxByteCount);
             for (var i = 0; i < key.Length; i++)
                 destChars[i] = char.ToLowerInvariant(key[i]);
-            var size = Encoding.GetBytes(destChars, key.Length, buffer.Ptr, maxByteCount);
-
-            if (separator != null)
-            {
-                buffer.Ptr[size] = separator.Value;
-                size++;
-            }
-            return size;
+            return Encoding.GetBytes(destChars, key.Length, buffer.Ptr, maxByteCount);
         }
 
         
