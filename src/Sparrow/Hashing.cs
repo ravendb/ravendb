@@ -242,11 +242,19 @@ namespace Sparrow
             }
         }
 
+        [StructLayout(LayoutKind.Explicit, Size = sizeof(ulong) * 4)]
         internal struct XXHash64Values
         {
+            [FieldOffset(0 * sizeof(ulong))]
             public ulong V1;
+
+            [FieldOffset(1 * sizeof(ulong))]
             public ulong V2;
+
+            [FieldOffset(2 * sizeof(ulong))]
             public ulong V3;
+
+            [FieldOffset(3 * sizeof(ulong))]
             public ulong V4;
         }
 
