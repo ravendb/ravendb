@@ -395,7 +395,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 if (exceptions is not null)
                     throw new AggregateException(exceptions);
 
-                // Remove ContextOutputs (as they’re unnecessary for the next stage)
+                // Remove ContextOutputs (as they're unnecessary for the next stage)
                 items.ForEach(item => item.ContextOutput.Attachments = null );
                 break;
             case TestStage.ApplyUpdateScript:
