@@ -59,7 +59,7 @@ export default function EditGenAiTaskAttachmentsButton({ attachments }: { attach
             size="xs"
             className="rounded-2"
         >
-            <Icon icon="preview" />
+            <Icon icon="attachment" />
             See attachments ({genUtils.formatNumberToStringFixed(attachments.length, 0)})
             {hasNotFound && <Icon icon="warning" className="ms-1" />}
         </Button>
