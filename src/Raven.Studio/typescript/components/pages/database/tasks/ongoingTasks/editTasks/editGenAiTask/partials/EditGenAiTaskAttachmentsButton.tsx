@@ -14,7 +14,7 @@ import {
     ColumnDef,
 } from "@tanstack/react-table";
 import { virtualTableUtils } from "components/common/virtualTable/utils/virtualTableUtils";
-import CellValue from "components/common/virtualTable/cells/CellValue";
+import CellValue, { CellValueWrapper } from "components/common/virtualTable/cells/CellValue";
 import RichAlert from "components/common/RichAlert";
 import { CellWithCopyWrapper } from "components/common/virtualTable/cells/CellWithCopy";
 import classNames from "classnames";
@@ -117,7 +117,10 @@ const getAttachmentsColumns = (availableWidthInPx: number): ColumnDef<GenAiAiAtt
     return [
         {
             accessorKey: "Name",
-            cell: CellWithCopyWrapper,
+            cell: ({ getValue, row }) => {
+                const isFromUser = row.getValue<string>("Source") === "FromUser";
+                return <CellValue value={isFromUser ? "" : getValue()} />;
+            },
             size: getSize(20),
         },
         {
@@ -129,7 +132,7 @@ const getAttachmentsColumns = (availableWidthInPx: number): ColumnDef<GenAiAiAtt
         },
         {
             accessorKey: "Type",
-            cell: CellWithCopyWrapper,
+            cell: CellValueWrapper,
             size: getSize(20),
         },
         {
