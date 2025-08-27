@@ -563,7 +563,7 @@ internal static class BackupUtils
             return new IdleDatabaseActivity(IdleDatabaseActivityType.WakeUpDatabase, DateTime.UtcNow);
         }
 
-        if (backupStatus.LastEtag != parameters.LastEtag)
+        if (backupStatus?.LastEtag != parameters.LastEtag)
         {
             // we have changes since last backup
             var type = nextBackup.IsFull ? "full" : "incremental";
