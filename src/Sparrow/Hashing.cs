@@ -338,6 +338,7 @@ namespace Sparrow
         
                         do
                         {
+                            // Vector256.LoadUnsafe uses vmovups, which allows memory operand to be unaligned
                             v = Vector256.Multiply(
                                 Avx512F.VL.RotateLeft(
                                     Vector256.Add(
@@ -464,6 +465,7 @@ namespace Sparrow
         
                         do
                         {
+                            // Vector256.LoadUnsafe uses vmovups, which allows memory operand to be unaligned
                             v = Vector256.Multiply(
                                 Avx512F.VL.RotateLeft(
                                     Vector256.Add(
