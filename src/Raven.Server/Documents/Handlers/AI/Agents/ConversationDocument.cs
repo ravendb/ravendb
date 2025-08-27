@@ -297,13 +297,10 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
         static bool ShouldAllowModelQueries(AiAgentToolQueryOptions options)
         {
-            if (options == null)
+            if (options?.AllowModelQueries is null)
                 return true;
             
-            if (options.AddToInitialContext is true)
-                return options.AllowModelQueries is true;;
-
-            return options.AllowModelQueries is null || options.AllowModelQueries.Value;
+            return options.AllowModelQueries.Value;
         }
     }
 
