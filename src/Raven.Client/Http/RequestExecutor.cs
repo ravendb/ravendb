@@ -49,6 +49,7 @@ namespace Raven.Client.Http
         internal static readonly TimeSpan GlobalHttpClientTimeout = TimeSpan.FromHours(12);
 
         internal static IRavenHttpClientFactory HttpClientFactory = DefaultRavenHttpClientFactory.Instance;
+        internal static Func<X509Certificate2, X509Certificate2> ExtractServerCertificateFromExtension = null;
 
         private static readonly GetStatisticsOperation BackwardCompatibilityFailureCheckOperation = new GetStatisticsOperation(debugTag: "failure=check");
         private static readonly DatabaseHealthCheckOperation FailureCheckOperation = new DatabaseHealthCheckOperation();
@@ -1474,7 +1475,14 @@ namespace Raven.Client.Http
                     }
                     else if (Certificate.HasPrivateKey)
                     {
-                        builder.Append(Certificate.FriendlyName).Append(" does not have permission to access it or is unknown. ");
+                        var extractedCertificate = ExtractServerCertificateFromExtension?.Invoke(Certificate);
+                        builder.Append(Certificate.FriendlyName).Append(" (Thumbprint: ").Append(Certificate.Thumbprint).Append(")");
+                        if (extractedCertificate != null)
+                        {
+                            builder.Append(" with embedded Server Certificate ").Append(extractedCertificate.FriendlyName)
+                                .Append(" (Thumbprint: ").Append(extractedCertificate.Thumbprint).Append(")");
+                        }
+                        builder.Append(" does not have permission to access it or is unknown. ");
                     }
                     else
                     {
