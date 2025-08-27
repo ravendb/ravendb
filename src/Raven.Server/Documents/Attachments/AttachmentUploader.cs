@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Util;
@@ -18,14 +16,14 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.Attachments;
 
-public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUploadToCloudHolder>
+public class AttachmentUploader : MultipleFileUploaderBase<AttachmentUploadToCloudHolder>
 {
     private readonly short _concurrentThreads;
     private readonly string _backupDescription;
-    private static long _bigAttachmentSize => GetAttachmentSizeThreshold();
+    private static readonly long _bigAttachmentSizeInBytes = GetAttachmentSizeThreshold();
 
-    public Action<AttachmentUploadToCloudHolder> OnSuccessAction;
-    public Action<AttachmentUploadToCloudHolder> OnExceptionAction;
+    public Action<AttachmentUploadToCloudHolder> OnSuccess;
+    public Action<AttachmentUploadToCloudHolder> OnException;
 
     public AttachmentUploader(UploaderSettings settings, RavenLogger logger, OperationCancelToken taskCancelToken) :
         base(settings, retentionPolicyParameters: null, logger, backupResult: GenerateUploadResult(), onProgress: progress => { }, taskCancelToken)
@@ -54,7 +52,7 @@ public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUplo
         }
     }
 
-    public void CreateUploadTask(DocumentDatabase database, AbstractBackgroundWorkStorage.DocumentExpirationInfo doc, Stream attachmentStream, string objKeyName, long attachmentLength, CancellationToken token)
+    public void CreateUploadTask(DocumentDatabase database, AbstractBackgroundWorkStorage.DocumentExpirationInfo doc, Stream attachmentStream, string objKeyName, long attachmentLength)
     {
         Task task = CreateUploadTaskInternal(database, attachmentStream, objKeyName, attachmentLength);
         task.Start();
@@ -64,7 +62,7 @@ public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUplo
 
     private Task CreateUploadTaskInternal(DocumentDatabase database, Stream attachmentStream, string objKeyName, long attachmentLength)
     {
-        var taskOptions = attachmentLength > _bigAttachmentSize
+        var taskOptions = attachmentLength > _bigAttachmentSizeInBytes
             ? TaskCreationOptions.LongRunning
             : TaskCreationOptions.RunContinuationsAsynchronously;
 
@@ -91,15 +89,15 @@ public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUplo
 
     public async Task<bool> WaitForFinishedTasksIfNeededAsync(Stopwatch sp, OperationCancelToken token)
     {
+        if (RetireAttachmentsSender.CanContinueBatch(_logger, sp, totalUploaded: 0, token) == false)
+            return false;
+
         if (_threads.Count < _concurrentThreads)
             return true;
 
         while (_threads.Count >= _concurrentThreads)
         {
-            if (token.Token.IsCancellationRequested)
-                return false;
-
-            if (sp.ElapsedMilliseconds > RetireAttachmentsSender.ReadTransactionMaxOpenTimeInMs)
+            if (RetireAttachmentsSender.CanContinueBatch(_logger, sp, totalUploaded: 0, token) == false)
                 return false;
 
             // Create a timeout task for the polling interval
@@ -136,7 +134,7 @@ public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUplo
         {
             if (task.UploadTask.IsCompletedSuccessfully)
             {
-                OnSuccessAction?.Invoke(task);
+                OnSuccess?.Invoke(task);
             }
             else if (task.UploadTask.IsFaulted)
             {
@@ -145,7 +143,7 @@ public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUplo
                     _logger.Error($"Upload task of retired attachment '{task.Doc.LowerId}' with identifier '{task.Doc.Id}' failed.", task.UploadTask.Exception);
                 }
 
-                OnExceptionAction?.Invoke(task);
+                OnException?.Invoke(task);
             }
             else if (task.UploadTask.IsCanceled)
             {
@@ -167,7 +165,15 @@ public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUplo
         {
             TaskCancelToken.Token.ThrowIfCancellationRequested();
 
-            AsyncHelpers.RunSync(() => t.UploadTask);
+            try
+            {
+                AsyncHelpers.RunSync(() => t.UploadTask);
+            }
+            catch
+            {
+                // we assert the task state below
+            }
+
             AssertTaskStateAndInvokeAction(t);
         }
 
@@ -177,15 +183,15 @@ public sealed class AttachmentUploader : MultipleFileUploaderBase<AttachmentUplo
     private static long GetAttachmentSizeThreshold()
     {
         if (PlatformDetails.Is32Bits)
-            return 64 * 1024 * 1024;
+            return 16 * Sparrow.Global.Constants.Size.Megabyte; // 16 MB for smaller 32-bit systems
 
         if (MemoryInformation.TotalPhysicalMemory >= new Size(64, SizeUnit.Gigabytes)) // 64+ GB RAM
-            return 512 * 1024 * 1024; // 512 MB
+            return 512 * Sparrow.Global.Constants.Size.Megabyte; // 512 MB
         else if (MemoryInformation.TotalPhysicalMemory >= new Size(32, SizeUnit.Gigabytes)) // 32+ GB RAM
-            return 256 * 1024 * 1024; // 256 MB
+            return 256 * Sparrow.Global.Constants.Size.Megabyte; // 256 MB
         else if (MemoryInformation.TotalPhysicalMemory >= new Size(16, SizeUnit.Gigabytes)) // 16+ GB RAM  
-            return 128 * 1024 * 1024; // 128 MB
+            return 128 * Sparrow.Global.Constants.Size.Megabyte; // 128 MB
         else
-            return 64 * 1024 * 1024;  // 64 MB for smaller 64-bit systems
+            return 64 * Sparrow.Global.Constants.Size.Megabyte;  // 64 MB for smaller 64-bit systems
     }
 }

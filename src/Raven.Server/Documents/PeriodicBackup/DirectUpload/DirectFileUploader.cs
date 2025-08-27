@@ -23,7 +23,7 @@ public class DirectFileUploader : FileUploaderBase
         _backupDescription = _isFullBackup ? fullBackupText : "Incremental backup";
     }
 
-    internal Stream StreamForBackupDestination(DocumentDatabase database, string folderName, string fileName)
+    internal virtual Stream StreamForBackupDestination(DocumentDatabase database, string folderName, string fileName)
     {
         switch (_destination)
         {
