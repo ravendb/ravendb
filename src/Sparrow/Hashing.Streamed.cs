@@ -64,10 +64,7 @@ namespace Sparrow
                             context.BufferSize += Alignment;
                         }
                         
-                        context.Current.V1 = v[0];
-                        context.Current.V2 = v[1];
-                        context.Current.V3 = v[2];
-                        context.Current.V4 = v[3];
+                        v.StoreUnsafe(ref context.Current.V1);
                     }
                     else
 #endif
