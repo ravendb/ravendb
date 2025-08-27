@@ -12,7 +12,7 @@ public class GenAiResultItem
 
     public ContextOutput ContextOutput { get; set; }
 
-    internal string DocId { get; set; }
+    public string DocumentId { get; set; }
 
     internal bool UpdateHash { get; set; } = true;
 
@@ -21,7 +21,8 @@ public class GenAiResultItem
         return new DynamicJsonValue
         {
             [nameof(ContextOutput)] = ContextOutput?.ToJson(),
-            [nameof(ModelOutput)] = ModelOutput?.ToJson()
+            [nameof(ModelOutput)] = ModelOutput?.ToJson(),
+            [nameof(DocumentId)] = DocumentId
         };
     }
 }

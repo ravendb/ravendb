@@ -23,6 +23,9 @@
     <None Remove="Data\legacy-counters.4.1.5.ravendbdump" />
     <None Remove="Data\RavenDB_24644\Hibernating.pdf" />
     <None Remove="Data\RavenDB_24644\Raven.pdf" />
+    <None Remove="Data\RavenDB_24648\heart.png" />
+    <None Remove="Data\RavenDB_24648\star.png" />
+    <None Remove="Data\RavenDB_24648\banana.png" />
     <None Remove="Data\RavenDB_11488\ravendb-11488-artificial-docs-not-included.ravendbdump" />
     <None Remove="Data\RavenDB-12785.ravendbdump" />
     <None Remove="Data\RavenDB_11488\ravendb-11488.ravendb-snapshot" />
@@ -85,6 +88,9 @@
     <EmbeddedResource Include="Data\oraclesql.northwind.insert.sql" />
     <EmbeddedResource Include="Data\RavenDB_24644\Hibernating.pdf" />
     <EmbeddedResource Include="Data\RavenDB_24644\Raven.pdf" />
+    <EmbeddedResource Include="Data\RavenDB_24648\heart.png" />
+    <EmbeddedResource Include="Data\RavenDB_24648\star.png" />
+    <EmbeddedResource Include="Data\RavenDB_24648\banana.png" />
     <EmbeddedResource Include="Data\RavenDB_11488\ravendb-11488-artificial-docs-not-included.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB-12785.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB-13937.ravendbdump" />

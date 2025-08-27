@@ -1,4 +1,5 @@
-﻿using Raven.Client.Util;
+﻿using System;
+using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.AI;
@@ -7,22 +8,25 @@ public class AiAttachment
 {
     public string Name { get; set; }
     public string Type { get; set; }
-    public string DataAsBase64 { get; set; }
+    public AiAttachmentSource Source { get; set; }
+    public string Data { get; set; }
 
     public AiAttachment()
     {
         // for deserialization
     }
 
-    public AiAttachment(string name, string type, string dataAsBase64)
+    public AiAttachment(string name, string type, AiAttachmentSource source, string dataAsBase64)
     {
         ValidationMethods.AssertNotNullOrEmpty(name, nameof(Name));
         ValidationMethods.AssertNotNullOrEmpty(type, nameof(Type));
-        ValidationMethods.AssertNotNullOrEmpty(dataAsBase64, nameof(DataAsBase64));
+        if (source != AiAttachmentSource.NotFound)
+            ValidationMethods.AssertNotNullOrEmpty(dataAsBase64, nameof(Data));
 
         Name = name;
         Type = type;
-        DataAsBase64 = dataAsBase64;
+        Source = source;
+        Data = dataAsBase64;
     }
 
     public DynamicJsonValue ToJson()
@@ -31,9 +35,12 @@ public class AiAttachment
         {
             [nameof(Name)] = Name,
             [nameof(Type)] = Type,
-            [nameof(DataAsBase64)] = DataAsBase64
+            [nameof(Source)] = Source,
+            [nameof(Data)] = Data
         };
 
         return json;
     }
 }
+
+public enum AiAttachmentSource { FromDatabase, FromUser, NotFound }

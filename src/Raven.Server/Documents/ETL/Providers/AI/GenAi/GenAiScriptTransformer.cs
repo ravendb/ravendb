@@ -1,8 +1,10 @@
-using System;
+﻿using System;
+using System.Buffers;
 using System.Buffers.Text;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
@@ -210,6 +212,7 @@ var ai = new AI();
                         var data = string.Empty;
                         string type = attachmentObj.GetOwnProperty(AttachmentsRequestConstants.Type).Value.AsString();
                         string filename = "unknown.name";
+                        var source = AiAttachmentSource.FromDatabase;
 
                         // TODO: we aren't being really efficient here in terms of allocations / memory
                         // but the problem is that the API itself may require large BASE64 strings, annoying 
@@ -218,36 +221,23 @@ var ai = new AI();
                             filename = attachment.Name.ToString(CultureInfo.InvariantCulture);
                             if (reference.IsNull())
                             {
-                                data = $"File '{filename}' (of type '{type}') could not be loaded: attachment not found";
-                                type = AttachmentsRequestConstants.MediaTypeTextPlain;
+                                source = AiAttachmentSource.NotFound;
                             }
                             else
                             {
-                                using var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream();
-                                if (type == AttachmentsRequestConstants.MediaTypeTextPlain)
-                                {
-                                    attachment.Stream.CopyTo(memoryStream);
-                                }
-                                else // anything but text is using BASE64
-                                {
-                                    using var transform = new ToBase64Transform();
-                                    using var cryptoStream = new CryptoStream(attachment.Stream, transform, CryptoStreamMode.Read);
-                                    cryptoStream.CopyTo(memoryStream);
-                                }
-
-                                Span<byte> readOnlySpan = memoryStream.GetBuffer();
-                                data = Encoding.ASCII.GetString(readOnlySpan[..(int)memoryStream.Length]);
+                                data = DocumentScript.DebugMode ? GetAttachmentPreview(attachment, type) : GetAttachmentDataAsBase64(attachment, type);
                             }
                         }
                         else
                         {
                             //if we arrive here we probably didn't pass through loadAttachment() function
+                            source = AiAttachmentSource.FromUser;
                             data = reference.ToString();
                             if (type != AttachmentsRequestConstants.MediaTypeTextPlain && IsBase64(data) == false)
                                 throw new InvalidOperationException($"Attachment must be loaded or base64 string (on type {type})");
                         }
 
-                        result.Attachments.Add(new AiAttachment(filename, type, data));
+                        result.Attachments.Add(new AiAttachment(filename, type, source, data));
                     }
                 }
                 _currentRun.Add(result);
@@ -255,9 +245,50 @@ var ai = new AI();
         }
     }
 
+    public static string GetAttachmentPreview(Attachment attachment, string type)
+    {
+        if (type == AttachmentsRequestConstants.MediaTypeTextPlain)
+        {
+            const int bytesSize = 100; 
+            Span<byte> bytes = stackalloc byte[bytesSize];
+            int bytesRead = attachment.Stream.Read(bytes);
+            if (bytesRead <= 0)
+                return string.Empty;
+
+            var decoder = Encoding.UTF8.GetDecoder();
+            Span<char> chars = stackalloc char[Encoding.UTF8.GetMaxCharCount(bytesSize)];
+            int read = decoder.GetChars(bytes[..bytesRead], chars, flush: false);
+            var s = new string(chars[..read]);
+
+            if (bytesRead == bytesSize)
+                return s + "...";
+
+            return s;
+        }
+
+        return $"[Hash:'{attachment.Base64Hash}']";
+    }
+
+    public static string GetAttachmentDataAsBase64(Attachment attachment, string type)
+    {
+        using var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream();
+        if (type == AttachmentsRequestConstants.MediaTypeTextPlain)
+        {
+            attachment.Stream.CopyTo(memoryStream);
+        }
+        else // anything but text is using BASE64
+        {
+            using var transform = new ToBase64Transform();
+            using var cryptoStream = new CryptoStream(attachment.Stream, transform, CryptoStreamMode.Read);
+            cryptoStream.CopyTo(memoryStream);
+        }
+
+        Span<byte> readOnlySpan = memoryStream.GetBuffer();
+        return Encoding.UTF8.GetString(readOnlySpan[..(int)memoryStream.Length]);
+    }
+
     private static bool IsBase64(string data) => string.IsNullOrEmpty(data) == false && Base64.IsValid(data);
     
-
     private static bool ShouldSendContext(string hash, string taskIdentifier, Document doc)
     {
         if (doc.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata) == false ||
