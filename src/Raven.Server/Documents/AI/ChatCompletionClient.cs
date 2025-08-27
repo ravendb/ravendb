@@ -41,6 +41,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
     private readonly string _organizationId;
     private readonly string _projectId;
     private readonly bool? _think;
+    private readonly double? _temperature;
     private readonly HttpClientCacheKey _httpClientCacheKey;
     private readonly HttpClient _client;
     private readonly IMemoryContextPool _contextPool;
@@ -63,21 +64,22 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
     public static ChatCompletionClient CreateChatCompletionClient(IMemoryContextPool contextPool, AiConnectionString connection)
     {
-        if (connection.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model, out var organizationId, out var projectId, out var think) == false)
+        if (connection.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model, out var organizationId, out var projectId, out var think, out var temperature) == false)
         {
             var connectorType = connection.GetActiveProvider();
             throw new NotSupportedException($"The specified provider (\"{connectorType.ToString()}\") is not supported.");
         }
 
-        return new ChatCompletionClient(contextPool, uri, apiKey, model, organizationId, projectId, think, ConventionsToUse);
+        return new ChatCompletionClient(contextPool, uri, apiKey, model, organizationId, projectId, think, temperature, ConventionsToUse);
     }
 
-    internal ChatCompletionClient(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, bool? think = null, DocumentConventions conventions = null)
+    internal ChatCompletionClient(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, bool? think = null, double? temperature = null, DocumentConventions conventions = null)
     {
         _model = model;
         _organizationId = organizationId;
         _projectId = projectId;
         _think = think;
+        _temperature = temperature;
 
         conventions ??= ConventionsToUse;
 
@@ -546,6 +548,14 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             writer.WriteBool(_think.Value);
         }
 
+        // Add Ollama-specific "temperature" parameter if specified
+        if (_temperature.HasValue)
+        {
+            writer.WriteComma();
+            writer.WritePropertyName(Constants.RequestFields.Temperature);
+            writer.WriteDouble(_temperature.Value);
+        }
+
         writer.WriteEndObject();
         return;
 
@@ -967,6 +977,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string Type = "type";
             public const string JsonSchema = "json_schema";
             public const string Think = "think";
+            public const string Temperature = "temperature";
             public const string ToolChoice = "tool_choice";
             public const string MaxCompletionToken = "max_completion_tokens";
 

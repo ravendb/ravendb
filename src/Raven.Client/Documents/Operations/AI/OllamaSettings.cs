@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Sparrow.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
@@ -38,6 +40,13 @@ public sealed class OllamaSettings : AbstractAiSettings
     /// </summary>
     public bool? Think { get; set; } = null;
 
+    /// <summary>
+    /// Controls randomness of the model output. Range typically [0.0, 2.0].
+    /// Higher values (e.g., 1.0+) make output more creative and diverse; lower values (e.g., 0.2) make it more deterministic.
+    /// When null, the parameter is not sent.
+    /// </summary>
+    public double? Temperature { get; set; } = null;
+
     public override void ValidateFields(List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(Uri))
@@ -62,6 +71,10 @@ public sealed class OllamaSettings : AbstractAiSettings
 
         if (Think != ollamaSettings.Think)
             differences |= AiSettingsCompareDifferences.EndpointConfiguration;
+        
+        if (Temperature.HasValue != ollamaSettings.Temperature.HasValue ||
+            (Temperature.HasValue && ollamaSettings.Temperature.HasValue && Temperature.Value.AlmostEquals(ollamaSettings.Temperature.Value) == false))
+            differences |= AiSettingsCompareDifferences.EndpointConfiguration;
 
         return differences;
     }
@@ -72,6 +85,7 @@ public sealed class OllamaSettings : AbstractAiSettings
         json[nameof(Model)] = Model;
         json[nameof(Uri)] = Uri;
         json[nameof(Think)] = Think;
+        json[nameof(Temperature)] = Temperature;
 
         return json;
     }

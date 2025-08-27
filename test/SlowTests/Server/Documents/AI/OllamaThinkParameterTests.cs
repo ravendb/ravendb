@@ -1,20 +1,19 @@
-using System.Collections.Generic;
 using System.IO;
-using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using FastTests;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.AI;
 using Raven.Server.Logging;
-using Sparrow.Logging;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Sparrow.Logging;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace FastTests
+namespace SlowTests.Server.Documents.AI
 {
     public class OllamaThinkParameterTests(ITestOutputHelper output) : RavenTestBase(output)
     {

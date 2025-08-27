@@ -110,14 +110,14 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             protected override ChatCompletionClient CreateClient(AiConnectionString connection)
             {
-                if (connection.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model, out var organizationId, out var projectId, out var think) ==
+                if (connection.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model, out var organizationId, out var projectId, out var think, out var temperature) ==
                     false)
                 {
                     var connectorType = connection.GetActiveProvider();
                     throw new NotSupportedException($"The specified provider (\"{connectorType.ToString()}\") is not supported.");
                 }
 
-                return new EvilLlm(ContextPool, uri, apiKey, model, organizationId, projectId, think, ChatCompletionClient.ConventionsToUse);
+                return new EvilLlm(ContextPool, uri, apiKey, model, organizationId, projectId, think, temperature, ChatCompletionClient.ConventionsToUse);
             }
         }
 
@@ -126,9 +126,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
         internal class EvilLlm : ChatCompletionClient
         {
-            internal EvilLlm(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, bool? think = null,
+            internal EvilLlm(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, bool? think = null, double? temperature = null,
                 DocumentConventions conventions = null) :
-                base(contextPool, "http://fake.url", apiKey: null, model, organizationId, projectId, think, conventions)
+                base(contextPool, "http://fake.url", apiKey: null, model, organizationId, projectId, think, temperature, conventions)
             {
 
             }
