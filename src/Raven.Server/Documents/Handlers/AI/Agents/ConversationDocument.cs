@@ -73,7 +73,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
 
         foreach (AiAgentToolQuery query in configuration.Queries ?? [])
         {
-            if (query.Options?.AddToInitialContext is null or false)
+            if (ShouldAddToInitialContext(query.Options) == false)
                 continue;
 
             result ??= [];
@@ -107,6 +107,14 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         }, "tools/msg"), usage: null);
 
         return result;
+        
+        static bool ShouldAddToInitialContext(AiAgentToolQueryOptions options)
+        {
+            if (options?.AddToInitialContext is null)
+                return false;
+            
+            return options.AddToInitialContext.Value;
+        }
     }
 
     private string ParametersToString(AiAgentConfiguration configuration)
@@ -250,7 +258,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         List<BlittableJsonReaderObject> tools = [];
         foreach (var q in configuration.Queries ?? [])
         {
-            if (q.Options is { AllowModelQueries: false })
+            if (ShouldAllowModelQueries(q.Options) == false)
                 continue;
 
             var paramsSchema = ChatCompletionClient.GetSchemaForTool(q.ParametersSchema, q.ParametersSampleObject);
@@ -286,6 +294,17 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
         }
 
         return tools;
+
+        static bool ShouldAllowModelQueries(AiAgentToolQueryOptions options)
+        {
+            if (options == null)
+                return true;
+            
+            if (options.AddToInitialContext is true)
+                return options.AllowModelQueries is true;;
+
+            return options.AllowModelQueries is null || options.AllowModelQueries.Value;
+        }
     }
 
     private static bool TryCreateParameterDescriptionMessage(AiAgentConfiguration configuration, out string message)
