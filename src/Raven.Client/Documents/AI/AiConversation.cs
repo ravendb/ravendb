@@ -160,8 +160,9 @@ internal class AiConversation : IAiConversationOperations
     public Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
     {
         var pathProvider = new LinqPathProvider(_aiOperations._store.Conventions);
-        var pathResult = pathProvider.GetPath(streamPropertyPath.Body);
-        return StreamAsync<TAnswer>(pathResult.Path, streamedChunksCallback, token);
+        var result = pathProvider.GetPath(streamPropertyPath.Body);
+        result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
+        return StreamAsync<TAnswer>(result.Path, streamedChunksCallback, token);
     }
 
     public async Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)

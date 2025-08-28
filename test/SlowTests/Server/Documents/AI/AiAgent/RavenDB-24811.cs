@@ -31,7 +31,7 @@ public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
 
         chat.SetUserPrompt("Give me 15 real cities names, one per line");
         var sb = new StringBuilder();
-        var result = await chat.StreamAsync<AiAgentBasics.OutputSchema>("Answer", s =>
+        var result = await chat.StreamAsync<AiAgentBasics.OutputSchema>( a=>a.Answer, s =>
         {
             sb.Append(s);
             return Task.CompletedTask;
