@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.AI;
@@ -53,8 +54,11 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         return Task.FromResult("test");
     }
 
-    public override async Task WriteResponseAsync(JsonOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
+    public override async Task WriteResponseAsync(JsonOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document, bool streaming, CancellationToken token)
     {
+        if(streaming)
+            throw new NotSupportedException("Streaming is not currently supported for tests");
+        
         var output = new DynamicJsonValue
         {
             [nameof(AiAgentTestResult.Document)] = document.ToJson(),

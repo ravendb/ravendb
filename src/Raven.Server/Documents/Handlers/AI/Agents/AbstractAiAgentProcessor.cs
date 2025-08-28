@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -36,7 +34,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
         }
 
         private async Task<bool> TryHandleActionResponses(JsonOperationContext context, AiAgentConfiguration configuration, string conversationId, ConversationDocument document,
-            RequestBody body)
+            RequestBody body, bool streaming, CancellationToken token)
         {
             var hasActionResponse = body.ActionResponses is { Length: > 0 };
             var hasUserPrompt = string.IsNullOrEmpty(body.UserPrompt) == false;
@@ -69,7 +67,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 // skip reduction - persist the document now without history,
                 // ensuring we can recover if TalkAsync fails.
                 await TryPersistAsync(context, configuration, conversationId, document, history: null);
-                await WriteResponseAsync(context, conversationId, response: null, document);
+                await WriteResponseAsync(context, conversationId, response: null, document, streaming, token);
                 return false;
             }
 
@@ -98,7 +96,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             RequestBody body,
             CancellationToken token)
         {
-            if (await TryHandleActionResponses(context, configuration, conversationId, document, body) is false)
+            if (await TryHandleActionResponses(context, configuration, conversationId, document, body, streaming: false, token) is false)
                 return;
 
             (BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History) r;
@@ -112,7 +110,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
 
             conversationId = await TryPersistAsync(context, configuration, conversationId, r.Document, r.History);
-            await WriteResponseAsync(context, conversationId, r.Response, r.Document);
+            await WriteResponseAsync(context, conversationId, r.Response, r.Document, streaming: false, token);
         }
 
         private static readonly byte[] ResultPrefix = "event: result\ndata: "u8.ToArray();
@@ -128,7 +126,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             RequestBody body,
             CancellationToken token)
         {
-            if (await TryHandleActionResponses(context, configuration, conversationId, document, body) is false)
+            if (await TryHandleActionResponses(context, configuration, conversationId, document, body, streaming: true, token) is false)
                 return;
 
             var streamPropertyPath = RequestHandler.GetStringQueryString("streamPropertyPath");
@@ -176,11 +174,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
 
             conversationId = await TryPersistAsync(context, configuration, conversationId, r.Document, r.History);
-            await responseStream.WriteAsync(ResultPrefix, token);
-            await WriteResponseAsync(context, conversationId, r.Response, r.Document); // can have no new lines here
-            await responseStream.WriteAsync(TwoNewLinesEnd, token); // \n\n for end of message
-            await responseStream.FlushAsync(token);
+            await WriteResponseAsync(context, conversationId, r.Response, r.Document, streaming: true, token);
         }
+
 
         public override async ValueTask ExecuteAsync()
         {
@@ -556,7 +552,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             return document.OpenActionCalls.Count > 0;
         }
 
-        public virtual async Task WriteResponseAsync(JsonOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
+        public virtual async Task WriteResponseAsync(JsonOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document, bool streaming, CancellationToken token)
         {
             var output = new DynamicJsonValue
             {
@@ -567,8 +563,16 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 [nameof(ConversationResult<object>.TotalUsage)] = document.TotalUsage.ToJson()
             };
 
-            await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
-            context.Write(writer, output);
+            using var json = context.ReadObject(output, "ai-agent/output");
+
+            var responseStream = RequestHandler.ResponseBodyStream();
+            if(streaming)
+                await responseStream.WriteAsync(ResultPrefix, token);
+            
+            await context.WriteAsync(responseStream, json, token); // single line here
+
+            if (streaming)
+                await responseStream.WriteAsync(TwoNewLinesEnd, token); // \n\n for end of message
         }
 
         public static BlittableJsonReaderObject CreateParameters(JsonOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)
