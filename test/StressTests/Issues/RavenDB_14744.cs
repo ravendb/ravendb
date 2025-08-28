@@ -40,7 +40,7 @@ namespace StressTests.Issues
             {
                 foreach (var server in nodes)
                 {
-                    server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
+                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
                 }
 
                 using (var store = GetDocumentStore(new Options
@@ -86,7 +86,7 @@ namespace StressTests.Issues
             {
                 foreach (var server in nodes)
                 {
-                    server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = false;
+                    server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
                 }
             }
         }

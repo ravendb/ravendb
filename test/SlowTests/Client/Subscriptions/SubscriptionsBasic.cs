@@ -1418,8 +1418,8 @@ namespace SlowTests.Client.Subscriptions
             });
 
             using var store = GetDocumentStore(new Options { Server = server, RunInMemory = false });
-            using var dispose = new DisposableAction(() => server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = false);
-            server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
+            using var dispose = new DisposableAction(() => server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false);
+            server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
 
             var db = await GetDatabase(server, store.Database);
             var subsId = await store.Subscriptions.CreateAsync(new SubscriptionCreationOptions { Query = "from Users", Name = Guid.NewGuid().ToString() });

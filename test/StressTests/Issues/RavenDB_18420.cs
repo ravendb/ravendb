@@ -31,7 +31,7 @@ public class RavenDB_18420 : RavenTestBase
                 [RavenConfiguration.GetKey(x => x.Core.RunInMemory)] = "false",
             }
         });
-        server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
+        server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
         try
         {
             var backupPath = NewDataPath(forceCreateDir: true);
@@ -94,7 +94,7 @@ public class RavenDB_18420 : RavenTestBase
         }
         finally
         {
-            server.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = false;
+            server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
         }
     }
 }

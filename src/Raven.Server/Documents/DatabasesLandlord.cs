@@ -52,8 +52,6 @@ namespace Raven.Server.Documents
         private readonly ServerStore _serverStore;
 
         // used in ServerWideBackupStress
-        internal bool SkipShouldContinueDisposeCheck = false;
-        internal Action<(DocumentDatabase Database, string caller)> AfterDatabaseCreation;
         internal SemaphoreSlim _databaseSemaphore;
         internal TimeSpan _concurrentDatabaseLoadTimeout;
         internal int _dueTimeOnRetry = 60_000;
@@ -99,12 +97,13 @@ namespace Raven.Server.Documents
             internal Action BeforeActualDelete = null;
             internal Action<DocumentDatabase> OnBeforeDocumentDatabaseInitialization;
             internal ManualResetEventSlim RescheduleDatabaseWakeupMre = null;
-            internal bool ShouldFetchIdleStateImmediately = false;
+            internal bool SkipIncreasingLastWorkTimeBasedOnDatabaseSize = false;
             internal Action<Exception, string> OnFailedRescheduleNextScheduledActivity;
             internal bool PreventNodePromotion = false;
             internal Func<ServerStore, Task> BeforeHandleClusterTransactionOnDatabaseChanged;
             internal Action DelayNotifyFeaturesAboutStateChange;
             internal ManualResetEventSlim AfterDatabaseRemovedFromIdle = null;
+            internal bool SkipShouldContinueDisposeCheck = false;
         }
 
         private async Task HandleClusterDatabaseChanged(string databaseName, long index, string type, ClusterDatabaseChangeType changeType, object changeState)
@@ -1218,7 +1217,7 @@ namespace Raven.Server.Documents
 
         public DateTime LastWork(DocumentDatabase resource)
         {
-            if (ForTestingPurposes is { ShouldFetchIdleStateImmediately: true })
+            if (ForTestingPurposes?.SkipIncreasingLastWorkTimeBasedOnDatabaseSize == true )
                 return resource.LastAccessTime;
 
             // This allows us to increase the time large databases will be held in memory
@@ -1512,10 +1511,11 @@ namespace Raven.Server.Documents
             if (idleDatabaseActivity.DateTime.HasValue == false)
                 return true;
 
-            if (SkipShouldContinueDisposeCheck)
+            if (ForTestingPurposes?.SkipShouldContinueDisposeCheck == true)
                 return true;
 
-            // if we have a small value, simply don't dispose the database.
+            // Unloading and then loading a database can use a lot of resources.
+            // Therefore, we don't want to unload the database unless we're sure it will be loaded again soon.
             return idleDatabaseActivity.DueTime > TimeSpan.FromMinutes(5).TotalMilliseconds;
         }
 

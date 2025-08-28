@@ -64,8 +64,8 @@ public class RavenDB_20084 : ClusterTestBase
             Assert.True(onGoingTaskBackup is { LastFullBackup: not null });
             var expectedTime = onGoingTaskBackup.NextBackup.DateTime;
 
-            leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().ShouldFetchIdleStateImmediately = true;
-            leaderServer.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
+            leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
+            leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
 
             using (leaderServer.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext serverStoreContext))
             using (serverStoreContext.OpenReadTransaction())
@@ -78,8 +78,8 @@ public class RavenDB_20084 : ClusterTestBase
                 Assert.Equal(1, leaderServer.ServerStore.IdleDatabases.Count);
 
                 // No longer forcing the idle state for the database
-                leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().ShouldFetchIdleStateImmediately = false;
-                leaderServer.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = false;
+                leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = false;
+                leaderServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
 
                 // Awaiting the next backup event to verify that the '/database' endpoint provides an updated value for the last incremental backup timestamp
                 using var client = new HttpClient().WithConventions(leaderStore.Conventions);
