@@ -117,7 +117,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     throw new NotSupportedException($"The specified provider (\"{connectorType.ToString()}\") is not supported.");
                 }
 
-                return new EvilLlm(ContextPool, uri, apiKey, model, organizationId, projectId, think, temperature, ChatCompletionClient.ConventionsToUse);
+                return new EvilLlm(ContextPool, uri, apiKey, model, organizationId, projectId, new ChatCompletionClient.ChatCompletionClientOptions { Think = think, Temperature = temperature }, ChatCompletionClient.ConventionsToUse);
             }
         }
 
@@ -126,9 +126,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
         internal class EvilLlm : ChatCompletionClient
         {
-            internal EvilLlm(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, bool? think = null, double? temperature = null,
+            internal EvilLlm(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, ChatCompletionClient.ChatCompletionClientOptions options = null,
                 DocumentConventions conventions = null) :
-                base(contextPool, "http://fake.url", apiKey: null, model, organizationId, projectId, think, temperature, conventions)
+                base(contextPool, "http://fake.url", apiKey: null, model, organizationId, projectId, options, conventions)
             {
 
             }

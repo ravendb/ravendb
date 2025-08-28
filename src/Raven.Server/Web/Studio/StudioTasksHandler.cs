@@ -367,7 +367,7 @@ namespace Raven.Server.Web.Studio
                 }
 
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
-                using (var chat = new ChatCompletionClient(ServerStore.ContextPool, uri, apiKey, model: null, organization, project, think, temperature))
+                using (var chat = new ChatCompletionClient(ServerStore.ContextPool, uri, apiKey, model: null, organization, project, new ChatCompletionClient.ChatCompletionClientOptions { Think = think, Temperature = temperature }))
                 {
                     await chat.ProxyModelsAsync(HttpContext.Response, cts.Token);
                 }
