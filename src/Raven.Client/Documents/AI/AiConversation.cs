@@ -1,15 +1,15 @@
-﻿using System;
+﻿using Raven.Client.Extensions;
+using Sparrow.Json.Sync;
+using System;
 using System.Collections.Generic;
 using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Sparrow.Json;
-using Sparrow.Json.Sync;
 
 namespace Raven.Client.Documents.AI;
 
@@ -159,10 +159,7 @@ internal class AiConversation : IAiConversationOperations
 #if FEATURE_AI_AGENT_STREAMING_SUPPORT
     public Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
     {
-        var pathProvider = new LinqPathProvider(_aiOperations._store.Conventions);
-        var result = pathProvider.GetPath(streamPropertyPath.Body);
-        result.Path = result.Path.Substring(result.Path.IndexOf('.') + 1);
-        return StreamAsync<TAnswer>(result.Path, streamedChunksCallback, token);
+        return StreamAsync<TAnswer>(streamPropertyPath.ToPropertyPath(_aiOperations._store.Conventions), streamedChunksCallback, token);
     }
 
     public async Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
