@@ -26,6 +26,7 @@ import Form from "react-bootstrap/Form";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { Icon } from "components/common/Icon";
 
 type AmazonSqsEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskAmazonSqsEtlInfo>;
 
@@ -84,6 +85,10 @@ export function AmazonSqsEtlPanel(props: AmazonSqsEtlPanelProps & ICanShowTransf
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
+                    <span>
+                        <Icon icon="amazon-sqs-etl" />
+                        Amazon SQS ETL
+                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -98,6 +103,7 @@ export function AmazonSqsEtlPanel(props: AmazonSqsEtlPanelProps & ICanShowTransf
                         onTaskOperation={onTaskOperation}
                         toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
+                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>

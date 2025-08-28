@@ -19,38 +19,52 @@ import { useNewOngoingTasks } from "components/pages/database/tasks/shared/share
 import { EmptySet } from "components/common/EmptySet";
 import { AddNewOngoingTaskAboutView } from "components/pages/database/tasks/ongoingTasks/partials/AddNewOngoingTaskAboutView";
 
-export default function AddNewOngoingTask() {
+interface AddNewOngoingTaskProps {
+    isAiOnly: boolean;
+}
+
+export default function AddNewOngoingTask({ queryParams }: ReactQueryParamsProps<AddNewOngoingTaskProps>) {
+    const isAiOnly = queryParams?.isAiOnly ?? false;
+
     const { forCurrentDatabase, appUrl } = useAppUrls();
     const { filteredTasks, categoryList, searchText, selectedCategories, setSearchText, setSelectedCategories } =
-        useNewOngoingTasks();
+        useNewOngoingTasks({ isAiOnly });
 
     const serverWideTasksUrl = appUrl.forServerWideTasks();
     const ongoingTasksUrl = forCurrentDatabase.ongoingTasksUrl();
+    const aiTasksUrl = forCurrentDatabase.aiTasks();
 
     return (
         <div className="content-margin add-new-ongoing-task">
             <div className="d-flex justify-content-between">
-                <AboutViewHeading title="Add a database task" icon="tasks" iconAddon="plus" marginBottom={4} />
-                <div className="d-flex align-items-start gap-3">
-                    <Button
-                        size="sm"
-                        target="_blank"
-                        href={serverWideTasksUrl}
-                        title="Go to the Server-Wide Tasks view"
-                        variant="link"
-                    >
-                        <Icon icon="server-wide-tasks" />
-                        Server-Wide Tasks
-                    </Button>
-                    <AddNewOngoingTaskAboutView />
-                </div>
+                <AboutViewHeading
+                    title={isAiOnly ? "Add AI task" : "Add a database task"}
+                    icon="tasks"
+                    iconAddon="plus"
+                    marginBottom={4}
+                />
+                {!isAiOnly && (
+                    <div className="d-flex align-items-start gap-3">
+                        <Button
+                            size="sm"
+                            target="_blank"
+                            href={serverWideTasksUrl}
+                            title="Go to the Server-Wide Tasks view"
+                            variant="link"
+                        >
+                            <Icon icon="server-wide-tasks" />
+                            Server-Wide Tasks
+                        </Button>
+                        <AddNewOngoingTaskAboutView />
+                    </div>
+                )}
             </div>
-            <Button href={ongoingTasksUrl} className="rounded-pill" variant="secondary">
+            <Button href={isAiOnly ? aiTasksUrl : ongoingTasksUrl} className="rounded-pill" variant="secondary">
                 <Icon icon="arrow-left" />
-                Back to ongoing tasks
+                {isAiOnly ? "Back to AI Tasks" : "Back to ongoing tasks"}
             </Button>
-            <Row className="d-flex row-gap-2 mt-3">
-                <Col className="mb-2">
+            <Row className="d-flex row-gap-2 my-3">
+                <Col>
                     <div className="flex-grow">
                         <div className="small-label ms-1 mb-1">Search by name</div>
                         <div className="clearable-input">
@@ -73,24 +87,28 @@ export default function AddNewOngoingTask() {
                         </div>
                     </div>
                 </Col>
-                <Col xs="auto">
-                    <MultiCheckboxToggle
-                        inputItems={categoryList}
-                        label="Filter by category"
-                        selectedItems={selectedCategories}
-                        setSelectedItems={(x) => setSelectedCategories(x)}
-                        selectAll
-                        selectAllLabel="Select All"
-                    />
-                </Col>
+                {!isAiOnly && (
+                    <Col xs="auto">
+                        <MultiCheckboxToggle
+                            inputItems={categoryList}
+                            label="Filter by category"
+                            selectedItems={selectedCategories}
+                            setSelectedItems={(x) => setSelectedCategories(x)}
+                            selectAll
+                            selectAllLabel="Select All"
+                        />
+                    </Col>
+                )}
             </Row>
             {filteredTasks.length > 0 ? (
                 filteredTasks.map((category, index) => (
                     <div className="pb-2" key={index}>
-                        <HrHeader>
-                            <Icon icon={category.categoryIcon} />
-                            {category.categoryName}
-                        </HrHeader>
+                        {!isAiOnly && (
+                            <HrHeader>
+                                <Icon icon={category.categoryIcon} />
+                                {category.categoryName}
+                            </HrHeader>
+                        )}
                         <div className="d-grid gap-3 ongoing-tasks-grid">
                             {category.tasks.map((task, idx) => (
                                 <div key={idx}>
@@ -107,7 +125,7 @@ export default function AddNewOngoingTask() {
     );
 }
 
-type TaskCardVariant = "Replication" | "Backups" | "Subscriptions" | "ETL" | "Sink";
+type TaskCardVariant = "AI" | "Replication" | "Backups" | "Subscriptions" | "ETL" | "Sink";
 
 export interface TaskItemProps {
     title: string;
@@ -159,7 +177,7 @@ function TaskItem({
                     <div className="align-self-center">
                         <Icon icon={iconName} className="task-icon fs-2" />
                     </div>
-                    <div className="d-flex flex-column gap-1">
+                    <div className="d-flex flex-column align-self-center gap-1">
                         <div className="d-flex align-items-center gap-2">
                             <h4 className="mb-0">{title}</h4>
                             {counterBadge}

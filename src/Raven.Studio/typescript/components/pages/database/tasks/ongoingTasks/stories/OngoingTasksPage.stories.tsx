@@ -17,6 +17,24 @@ export default {
     },
 } satisfies Meta;
 
+export const FullView: StoryObj<{ isAiOnly: boolean }> = {
+    render: (props) => {
+        commonInit();
+
+        const { tasksService } = mockServices;
+
+        tasksService.withGetTasks();
+        tasksService.withGetEtlProgress();
+        tasksService.withGetExternalReplicationProgress();
+        tasksService.withGetInternalReplicationProgress();
+
+        return <OngoingTasksPage isAiOnly={props.isAiOnly} />;
+    },
+    args: {
+        isAiOnly: false,
+    },
+};
+
 export const EmptyView: StoryObj = {
     render: () => {
         commonInit();
@@ -37,21 +55,6 @@ export const EmptyView: StoryObj = {
         tasksService.withGetInternalReplicationProgress((dto) => {
             dto.Results = [];
         });
-
-        return <OngoingTasksPage />;
-    },
-};
-
-export const FullView: StoryObj = {
-    render: () => {
-        commonInit();
-
-        const { tasksService } = mockServices;
-
-        tasksService.withGetTasks();
-        tasksService.withGetEtlProgress();
-        tasksService.withGetExternalReplicationProgress();
-        tasksService.withGetInternalReplicationProgress();
 
         return <OngoingTasksPage />;
     },

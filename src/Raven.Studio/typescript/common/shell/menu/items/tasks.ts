@@ -79,7 +79,7 @@ function getTasksMenuItem(appUrls: computedAppUrls) {
             title: 'Add new ongoing task',
             nav: false,
             css: "icon-plus",
-            dynamicHash: appUrls.addNewOngoingTaskUrl,
+            dynamicHash: appUrls.addNewOngoingTask(false),
             itemRouteToHighlight: 'databases/tasks/addNewOngoingTasks',
         }),
         new leafMenuItem({

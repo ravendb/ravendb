@@ -62,6 +62,7 @@ class appUrl {
         editRabbitMqSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditRabbitMqSink(appUrl.currentDatabase(), taskId)),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
+        addNewOngoingTask: (isAiOnly: boolean) => ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase(), isAiOnly)),
         importDatabaseFromFileUrl: ko.pureComputed(() => appUrl.forImportDatabaseFromFile(appUrl.currentDatabase())),
         importCollectionFromCsv: ko.pureComputed(() => appUrl.forImportCollectionFromCsv(appUrl.currentDatabase())),
         importDatabaseFromSql: ko.pureComputed(() => appUrl.forImportFromSql(appUrl.currentDatabase())),
@@ -71,7 +72,6 @@ class appUrl {
         sampleDataUrl: ko.pureComputed(() => appUrl.forSampleData(appUrl.currentDatabase())),
         backupsUrl: ko.pureComputed(() => appUrl.forBackups(appUrl.currentDatabase())),
         ongoingTasksUrl: ko.pureComputed(() => appUrl.forOngoingTasks(appUrl.currentDatabase())),
-        addNewOngoingTaskUrl: ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase())),
         editExternalReplicationTaskUrl: ko.pureComputed(() => appUrl.forEditExternalReplication(appUrl.currentDatabase())),
         editReplicationHubTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationHub(appUrl.currentDatabase())),
         editReplicationSinkTaskUrl: ko.pureComputed(() => appUrl.forEditReplicationSink(appUrl.currentDatabase())),
@@ -600,9 +600,10 @@ class appUrl {
         return "#databases/tasks/ongoingTasks?" + databasePart;
     }
     
-    static forAddNewOngoingTasks(db: database | string): string {
+    static forAddNewOngoingTasks(db: database | string, isAiOnly: boolean): string {
         const databasePart = appUrl.getEncodedDbPart(db);
-        return "#databases/tasks/addNewOngoingTasks?" + databasePart;
+        const isAiOnlyPart = isAiOnly ? "&isAiOnly=true" : "";
+        return "#databases/tasks/addNewOngoingTasks?" + databasePart + isAiOnlyPart;
     }
 
     static forEditExternalReplication(db: database | string, taskId?: number): string {
