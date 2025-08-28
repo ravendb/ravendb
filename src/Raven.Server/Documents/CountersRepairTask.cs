@@ -24,7 +24,7 @@ public class CountersRepairTask
     private readonly CancellationToken _cancellationToken;
     private readonly Logger _logger;
 
-    public static string Completed = string.Empty;
+    public static string Completed = "Completed";
 
     public CountersRepairTask(DocumentDatabase database, CancellationToken databaseShutdown)
     {
@@ -146,7 +146,7 @@ public class CountersRepairTask
         }
     }
 
-    public static bool IsBase64String(LazyStringValue lsv)
+    internal static bool IsBase64String(LazyStringValue lsv)
     {
         foreach (var c in lsv)
         {
