@@ -981,7 +981,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string OpenAiProject = "OpenAI-Project";
             public const string MediaTypeApplicationJson = "application/json";
 
-            public const string DefaultRelativeUri = "/v1/chat/completions";
+            public const string DefaultRelativeUri = "v1/chat/completions";
             public const string ModelsUri = "/v1/models";
             public const string AuthorizationApiKeyProperty = "Bearer";
             
