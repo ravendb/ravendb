@@ -82,8 +82,20 @@ public class CountersRepairTask
                                 {
                                     data.TryGet(Values, out BlittableJsonReaderObject counterValues);
                                     data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames);
+                                    data.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
 
-                                    if (counterValues.Count == counterNames.Count)
+                                    bool dbIdsCorruption = false;
+                                    foreach (var item in dbIds)
+                                    {
+                                        var lsv = item as LazyStringValue;
+                                        if (IsBase64String(lsv) == false)
+                                        {
+                                            dbIdsCorruption = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (dbIdsCorruption == false && counterValues.Count == counterNames.Count)
                                     {
                                         var counterValuesPropertyNames = counterValues.GetSortedPropertyNames();
                                         var counterNamesPropertyNames = counterNames.GetSortedPropertyNames();
@@ -134,6 +146,27 @@ public class CountersRepairTask
         }
     }
 
+    public static bool IsBase64String(LazyStringValue lsv)
+    {
+        foreach (var c in lsv)
+        {
+            bool validChar =
+                c is >= 'A' and <= 'Z' ||
+                c is >= 'a' and <= 'z' ||
+                c is >= '0' and <= '9' ||
+                c == '+' || 
+                c == '/' || 
+                c == '=';
+
+            if (validChar) 
+                continue;
+            
+            return false;
+        }
+
+        return true;
+    }
+
     private void MarkAsCompleted()
     {
         using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
@@ -150,6 +183,7 @@ public class CountersRepairTask
         foreach (var docId in docIds)
         {
             numOfCounterGroupsFixed += FixCountersForDocument(context, docId);
+            context.DocumentDatabase.DocumentsStorage.DocumentPut.Recreate<DocumentPutAction.RecreateCounters>(context, docId);
         }
 
         var lastProcessedKey = hasMore ? docIds[^1] : Completed;
@@ -166,6 +200,7 @@ public class CountersRepairTask
         Table writeTable = default;
         int numOfCounterGroupFixed = 0;
         CollectionName collectionName = default;
+        List<IDisposable> memoryScopes = new();
         try
         {
             var table = new Table(_database.DocumentsStorage.CountersStorage.CountersSchema, context.Transaction.InnerTransaction);
@@ -184,14 +219,36 @@ public class CountersRepairTask
 
                     data.TryGet(Values, out BlittableJsonReaderObject counterValues);
                     data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames);
+                    data.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
+
+                    bool corruptedDbIds = false;
+                    bool corruptedNames = false;
+
+                    for (int i = 0; i < dbIds.Length; i++)
+                    {
+                        var lsv = dbIds[i] as LazyStringValue;
+                        if (IsBase64String(lsv) == false)
+                        {
+                            corruptedDbIds = true;
+                            dbIds.Modifications ??= new DynamicJsonArray();
+                            dbIds.Modifications.RemoveAt(i);
+                        }
+                    }
 
                     if (counterValues.Count == counterNames.Count)
                     {
                         var counterValuesPropertyNames = counterValues.GetSortedPropertyNames();
                         var counterNamesPropertyNames = counterNames.GetSortedPropertyNames();
-                        if (counterValuesPropertyNames.SequenceEqual(counterNamesPropertyNames))
-                            continue;
+                        if (counterValuesPropertyNames.SequenceEqual(counterNamesPropertyNames) == false)
+                        {
+                            corruptedNames = true;
+                        }
                     }
+
+                    if (corruptedDbIds == false && corruptedNames == false)
+                        continue;
+
+                    data.Modifications = new DynamicJsonValue(data);
 
                     if (collection == null)
                     {
@@ -201,33 +258,76 @@ public class CountersRepairTask
                         writeTable = _database.DocumentsStorage.CountersStorage.GetOrCreateTable(context.Transaction.InnerTransaction, _database.DocumentsStorage.CountersStorage.CountersSchema, collectionName, CollectionTableType.CounterGroups);
                     }
 
-                    BlittableJsonReaderObject.PropertyDetails prop = default;
-                    var originalNames = new DynamicJsonValue();
-
-                    for (int i = 0; i < counterValues.Count; i++)
+                    if (corruptedNames)
                     {
-                        counterValues.GetPropertyByIndex(i, ref prop);
+                        BlittableJsonReaderObject.PropertyDetails prop = default;
+                        var originalNames = new DynamicJsonValue();
 
-                        var lowerCasedCounterName = prop.Name;
-                        if (counterNames.TryGet(lowerCasedCounterName, out string counterNameToUse) == false)
+                        for (int i = 0; i < counterValues.Count; i++)
                         {
-                            // CounterGroup document is corrupted - missing counter name
-                            allNames ??= _database.DocumentsStorage.CountersStorage.GetCountersForDocument(context, documentId).ToList();
-                            var location = allNames.BinarySearch(lowerCasedCounterName, StringComparer.OrdinalIgnoreCase);
+                            counterValues.GetPropertyByIndex(i, ref prop);
 
-                            // if we don't have the counter name in its original casing - we'll use the lowered-case name instead
-                            counterNameToUse = location < 0
-                                ? lowerCasedCounterName
-                                : allNames[location];
+                            var lowerCasedCounterName = prop.Name;
+                            if (counterNames.TryGet(lowerCasedCounterName, out string counterNameToUse) == false)
+                            {
+                                // CounterGroup document is corrupted - missing counter name
+                                allNames ??= _database.DocumentsStorage.CountersStorage.GetCountersForDocument(context, documentId).ToList();
+                                var location = allNames.BinarySearch(lowerCasedCounterName, StringComparer.OrdinalIgnoreCase);
+
+                                // if we don't have the counter name in its original casing - we'll use the lowered-case name instead
+                                counterNameToUse = location < 0
+                                    ? lowerCasedCounterName
+                                    : allNames[location];
+                            }
+
+                            originalNames[lowerCasedCounterName] = counterNameToUse;
                         }
 
-                        originalNames[lowerCasedCounterName] = counterNameToUse;
+                        data.Modifications[CounterNames] = originalNames;
                     }
 
-                    data.Modifications = new DynamicJsonValue(data)
+                    if (corruptedDbIds)
                     {
-                        [CounterNames] = originalNames
-                    };
+                        BlittableJsonReaderObject.PropertyDetails prop = default;
+
+                        for (int i = 0; i < counterValues.Count; i++)
+                        {
+                            counterValues.GetPropertyByIndex(i, ref prop);
+                            if (prop.Value is not BlittableJsonReaderObject.RawBlob blob) 
+                                continue;
+                            
+                            // remove badDbId entries from blob
+                            var existingCountOfValues = blob.Length / SizeOfCounterValues;
+                            if (existingCountOfValues <= dbIds.Modifications.Removals[0])  
+                                continue; // counter is not affected by these dbId removals
+
+                            var numOfDbIdRemovals = dbIds.Modifications.Removals.Count; 
+                            var newCountOfValues = existingCountOfValues - numOfDbIdRemovals;
+
+                            memoryScopes.Add(context.Allocator.Allocate(newCountOfValues * SizeOfCounterValues, out var newVal));
+
+                            var currentIndex = 0;
+                            for (var index = 0; index < existingCountOfValues; index++)
+                            {
+                                if (dbIds.Modifications.Removals.Contains(index))
+                                    continue; // this dbId is corrupted, skip it
+
+                                var existingValue = &((CounterValues*)blob.Address)[index];
+                                var newEntry = (CounterValues*)newVal.Ptr + currentIndex;
+
+                                newEntry->Value = existingValue->Value;
+                                newEntry->Etag = existingValue->Etag;
+
+                                currentIndex++;
+                            }
+
+                            blob.Address = newVal.Ptr;
+                            blob.Length = newVal.Length;
+
+                            counterValues.Modifications ??= new DynamicJsonValue(counterValues);
+                            counterValues.Modifications[prop.Name] = blob;
+                        }
+                    }
 
                     using (var old = data)
                     {
@@ -268,6 +368,10 @@ public class CountersRepairTask
         finally
         {
             collection?.Dispose();
+            foreach (var scope in memoryScopes)
+            {
+                scope.Dispose();
+            }
         }
 
         return numOfCounterGroupFixed;
