@@ -324,6 +324,11 @@ namespace Raven.Server.Documents.Replication.Senders
             {
                 AssertNotIncrementalTimeSeriesForLegacyReplication(item);
             }
+
+            if (_parent.SupportedFeatures.Replication.RetiredAttachments == false)
+            {
+                AssertNotRetiredAttachmentsForLegacyReplication(item);
+            }
         }
 
         private void AssertNotTimeSeriesForLegacyReplication(ReplicationBatchItem item)
@@ -417,6 +422,31 @@ namespace Raven.Server.Documents.Replication.Senders
                     Log.Info(message);
 
                 throw new LegacyReplicationViolationException(message);
+            }
+        }
+
+        private void AssertNotRetiredAttachmentsForLegacyReplication(ReplicationBatchItem item)
+        {
+            if (item.Type != ReplicationBatchItem.ReplicationItemType.Attachment)
+                return;
+            switch (item)
+            {
+                case AttachmentReplicationItem attachment:
+                    if (attachment.Flags == RetiredAttachmentFlags.Retired)
+                    {
+                        var message = $"Replication '{_parent.FromToString}' found an item of type 'AttachmentReplicationItem' to replicate to {_parent.Destination.FromString()}, " +
+                                      $"while we are in legacy mode (downgraded our replication version to match the destination). " +
+                                      $"Can't send Retired-Attachments in legacy mode, destination {_parent.Destination.FromString()} does not support Retired-Attachments feature. Stopping replication.";
+
+                        if (Log.IsInfoEnabled)
+                            Log.Info(message);
+
+                        throw new LegacyReplicationViolationException(message);
+                    }
+
+                    break;
+                default:
+                    return;
             }
         }
 
