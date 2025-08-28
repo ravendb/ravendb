@@ -32,6 +32,18 @@ $translate-hover-x: 100%;
 }
 
 $variants: (
+    AI: (
+        border-color: map-get(colors.$task-colors, "ai"),
+        before-gradient: linear-gradient(
+                102deg,
+                rgba(map-get(colors.$task-colors, "ai"), 0.3) 0%,
+                rgba(map-get(colors.$task-colors, "ai"), 0.2) 33%,
+                rgba(123, 81, 255, 0.1) 66%,
+                rgba(123, 81, 255, 0) 91.78%
+            ),
+        before-transform: translateX(50%),
+        before-hover-transform: translateX($translate-hover-x),
+    ),
     Replication: (
         border-color: map-get(colors.$task-colors, "replication"),
         before-gradient: linear-gradient(
@@ -41,11 +53,6 @@ $variants: (
             ),
         before-transform: translateX($translate-before-hover-x),
         before-hover-transform: translateX($translate-hover-x),
-        after-gradient: linear-gradient(
-                135deg,
-                rgba(map-get(colors.$task-colors, "replication"), 1),
-                rgba(map-get(colors.$task-colors, "replication"), 1)
-            ),
         icon-color: map-get(colors.$task-colors, "replication"),
     ),
     Backups: (
@@ -57,11 +64,6 @@ $variants: (
             ),
         before-transform: translateX($translate-before-hover-x),
         before-hover-transform: translateX($translate-hover-x),
-        after-gradient: linear-gradient(
-                135deg,
-                rgba(map-get(colors.$task-colors, "backups"), 1),
-                rgba(map-get(colors.$task-colors, "backups"), 1)
-            ),
         icon-color: map-get(colors.$task-colors, "backups"),
     ),
     Subscriptions: (
@@ -73,11 +75,6 @@ $variants: (
             ),
         before-transform: translateX($translate-before-hover-x),
         before-hover-transform: translateX($translate-hover-x),
-        after-gradient: linear-gradient(
-                135deg,
-                rgba(map-get(colors.$task-colors, "subscriptions"), 1),
-                rgba(map-get(colors.$task-colors, "subscriptions"), 1)
-            ),
         icon-color: map-get(colors.$task-colors, "subscriptions"),
     ),
     ETL: (
@@ -89,11 +86,6 @@ $variants: (
             ),
         before-transform: translateX($translate-before-hover-x),
         before-hover-transform: translateX($translate-hover-x),
-        after-gradient: linear-gradient(
-                135deg,
-                rgba(map-get(colors.$task-colors, "etl"), 1),
-                rgba(map-get(colors.$task-colors, "etl"), 1)
-            ),
         icon-color: map-get(colors.$task-colors, "etl"),
     ),
     Sink: (
@@ -105,11 +97,6 @@ $variants: (
             ),
         before-transform: translateX($translate-before-hover-x),
         before-hover-transform: translateX($translate-hover-x),
-        after-gradient: linear-gradient(
-                135deg,
-                rgba(map-get(colors.$task-colors, "sink"), 1),
-                rgba(map-get(colors.$task-colors, "sink"), 1)
-            ),
         icon-color: map-get(colors.$task-colors, "sink"),
     ),
 );
@@ -153,5 +140,16 @@ $variants: (
 
     @media (min-width: sizes.$screen-lg) {
         grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
+.variant-AI {
+    i {
+        &::before {
+            background: colors.$ai-gradient;
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
     }
 }

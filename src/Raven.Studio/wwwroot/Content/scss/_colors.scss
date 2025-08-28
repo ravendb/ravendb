@@ -530,6 +530,7 @@ $row-even-bg-var: var(--row-even-bg);
 $hover-filter-var: var(--hover-filter);
 
 $task-colors: (
+    "ai": $color-4-1,
     "replication": $link-color,
     "backups": $color-1-1,
     "subscriptions": $color-2-1,

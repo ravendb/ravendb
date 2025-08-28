@@ -21,6 +21,7 @@ type DatabaseType = "sharded" | "cluster" | "singleNode";
 
 interface AddNewOngoingTaskStoryArgs {
     databaseType: DatabaseType;
+    isAiOnly: boolean;
 }
 
 export const Default: StoryObj<AddNewOngoingTaskStoryArgs> = {
@@ -28,9 +29,10 @@ export const Default: StoryObj<AddNewOngoingTaskStoryArgs> = {
     render: (props) => {
         commonInit(props);
 
-        return <AddNewOngoingTask />;
+        return <AddNewOngoingTask queryParams={{ isAiOnly: props.isAiOnly }} />;
     },
     args: {
+        isAiOnly: false,
         databaseType: "sharded",
     },
 };

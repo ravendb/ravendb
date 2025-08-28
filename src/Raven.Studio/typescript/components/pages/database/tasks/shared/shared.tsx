@@ -392,7 +392,7 @@ interface OngoingTasksCategory {
     tasks: TaskItemProps[];
 }
 
-export function useNewOngoingTasks() {
+export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean }) {
     const db = useAppSelector(databaseSelectors.activeDatabase);
     const isSharded = db.isSharded;
     const [tasks] = useReducer(ongoingTasksReducer, db, ongoingTasksReducerInitializer);
@@ -406,9 +406,11 @@ export function useNewOngoingTasks() {
     const hasElasticSearchEtl = useAppSelector(licenseSelectors.statusValue("HasElasticSearchEtl"));
     const hasKafkaEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasSqlEtl = useAppSelector(licenseSelectors.statusValue("HasSqlEtl"));
+    const hasSnowflakeEtl = useAppSelector(licenseSelectors.statusValue("HasSnowflakeEtl"));
     const hasOlapEtl = useAppSelector(licenseSelectors.statusValue("HasOlapEtl"));
     const hasRabbitMqEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasAzureQueueStorageEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
+    const hasAmazonSqsEtl = useAppSelector(licenseSelectors.statusValue("HasQueueEtl"));
     const hasKafkaSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
@@ -447,7 +449,22 @@ export function useNewOngoingTasks() {
 
     const disableReasonForShardedDb = isSharded ? "Not supported in sharded databases" : null;
 
-    const ongoingTasks: OngoingTasksCategory[] = [
+    let ongoingTasks: OngoingTasksCategory[] = [
+        {
+            categoryName: "AI",
+            categoryIcon: "ai",
+            tasks: [
+                {
+                    title: "Embeddings Generation",
+                    description: "Automatically generate embeddings from your document content.",
+                    iconName: "ai-etl",
+                    variant: "AI",
+                    target: "EmbeddingsGeneration",
+                    disableReason: disableReasonForShardedDb,
+                    link: forCurrentDatabase.editEmbeddingsGenerationTaskUrl(),
+                },
+            ],
+        },
         {
             categoryName: "Replication",
             categoryIcon: "replication",
@@ -576,6 +593,17 @@ export function useNewOngoingTasks() {
                     link: forCurrentDatabase.editSqlEtlTaskUrl(),
                 },
                 {
+                    title: "Snowflake ETL",
+                    description:
+                        "Extract and transform data from selected documents and write it to a Snowflake database.",
+                    iconName: "snowflake-etl",
+                    variant: "ETL",
+                    target: "SnowflakeETL",
+                    licenseBadge: "Enterprise",
+                    showLicenseBadge: !hasSnowflakeEtl,
+                    link: forCurrentDatabase.editSnowflakeEtlTaskUrl(),
+                },
+                {
                     title: "OLAP ETL",
                     description:
                         "Extract and transform data from selected documents and export it as Parquet files to the specified destination.",
@@ -610,6 +638,17 @@ export function useNewOngoingTasks() {
                     showLicenseBadge: !hasAzureQueueStorageEtl,
                     link: forCurrentDatabase.editAzureQueueStorageEtlTaskUrl(),
                 },
+                {
+                    title: "Amazon SQS ETL",
+                    description: "Extract and transform data from selected documents and send it to Amazon SQS queues.",
+                    iconName: "amazon-sqs-etl",
+                    variant: "ETL",
+                    target: "AmazonSqsETL",
+                    disableReason: disableReasonForShardedDb,
+                    licenseBadge: "Enterprise",
+                    showLicenseBadge: !hasAmazonSqsEtl,
+                    link: forCurrentDatabase.editAmazonSqsEtlTaskUrl(),
+                },
             ],
         },
         {
@@ -643,6 +682,10 @@ export function useNewOngoingTasks() {
             ],
         },
     ];
+
+    if (isAiOnly) {
+        ongoingTasks = ongoingTasks.filter((x) => x.categoryName === "AI");
+    }
 
     function getCategoryCount(category: OngoingTasksCategory["categoryName"]) {
         return ongoingTasks.find((x) => x.categoryName === category)?.tasks.length ?? 0;
@@ -683,6 +726,7 @@ export function useNewOngoingTasks() {
         });
 
     const categoryList: InputItem[] = [
+        { value: "AI", label: "AI", count: getCategoryCount("AI") },
         { value: "Replication", label: "Replication", count: getCategoryCount("Replication") },
         { value: "Backups", label: "Backups", count: getCategoryCount("Backups") },
         { value: "Subscriptions", label: "Subscriptions", count: getCategoryCount("Subscriptions") },
