@@ -67,7 +67,8 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 // skip reduction - persist the document now without history,
                 // ensuring we can recover if TalkAsync fails.
                 await TryPersistAsync(context, configuration, conversationId, document, history: null);
-                await WriteResponseAsync(context, conversationId, response: null, document, streaming, token);
+                await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
+                WriteResponse(context, writer, conversationId, document, response: null);
                 return false;
             }
 
@@ -110,13 +111,9 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
 
             conversationId = await TryPersistAsync(context, configuration, conversationId, r.Document, r.History);
-            await WriteResponseAsync(context, conversationId, r.Response, r.Document, streaming: false, token);
+            await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
+            WriteResponse(context, writer, conversationId, r.Document, r.Response);
         }
-
-        private static readonly byte[] ResultPrefix = "event: result\ndata: "u8.ToArray();
-        private static readonly byte[] DataPrefix = "data: "u8.ToArray();
-        private static readonly byte[] TwoNewLinesEnd = "\n\n"u8.ToArray();
-        private static readonly byte[] NewLinePostfix = "\n"u8.ToArray();
 
         public async Task HandleStreamingRequest(
             JsonOperationContext context,
@@ -135,37 +132,17 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             var feature = HttpContext.Features.Get<IHttpResponseBodyFeature>();
             feature?.DisableBuffering();
 
-            await using var responseStream = RequestHandler.ResponseBodyStream();
+            await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
+
             (BlittableJsonReaderObject Response, ConversationDocument Document, BlittableJsonReaderObject History) r;
             try
             {
                 r = await StreamingTalkAsync(context, configuration, document, streamPropertyPath, async (data) =>
                 {
-                    while (true)
-                    {
-                        int nextLineBreak = data.Span.IndexOf((byte)'\n');
-                        int length = nextLineBreak >= 0 ? nextLineBreak : data.Length;
-
-                        await responseStream.WriteAsync(DataPrefix, token);
-                        await responseStream.WriteAsync(data[..length], token);
-                        await responseStream.WriteAsync(NewLinePostfix, token);
-
-                        if (nextLineBreak is -1) // wrote the entire thing, no line breaks
-                            break;
-
-                        data = data[(length + 1)..];
-                        if (data.IsEmpty is false)
-                            continue;
-
-                        // means that we had a line break in the end, so let's emit that
-                        await responseStream.WriteAsync(DataPrefix, token);
-                        await responseStream.WriteAsync(NewLinePostfix, token);
-                        break;
-                    }
-
-                    // becomes the blank new line indicating we are done with this message
-                    await responseStream.WriteAsync(NewLinePostfix, token);
-                    await responseStream.FlushAsync(token);
+                    using LazyStringValue s = context.GetLazyString(data.Span, longLived: false);
+                    writer.WriteString(s);
+                    writer.WriteRawString("\r\n"u8);
+                    await writer.FlushAsync(token);
                 }, token: token);
             }
             catch (Exception e)
@@ -174,7 +151,22 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
 
             conversationId = await TryPersistAsync(context, configuration, conversationId, r.Document, r.History);
-            await WriteResponseAsync(context, conversationId, r.Response, r.Document, streaming: true, token);
+            var response = r.Response;
+            WriteResponse(context, writer, conversationId, document, response);
+        }
+
+        public void WriteResponse(JsonOperationContext context, AsyncBlittableJsonTextWriter writer,
+            string conversationId, ConversationDocument document,
+            BlittableJsonReaderObject response)
+        {
+            context.Write(writer, new DynamicJsonValue
+            {
+                [nameof(ConversationResult<object>.ConversationId)] = conversationId,
+                [nameof(ConversationResult<object>.ChangeVector)] = document.ChangeVector,
+                [nameof(ConversationResult<object>.Response)] = response,
+                [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(document.OpenActionCalls.Select(t => t.Value.ToJson())),
+                [nameof(ConversationResult<object>.TotalUsage)] = document.TotalUsage.ToJson()
+            });
         }
 
 
@@ -550,29 +542,6 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             }
 
             return document.OpenActionCalls.Count > 0;
-        }
-
-        public virtual async Task WriteResponseAsync(JsonOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document, bool streaming, CancellationToken token)
-        {
-            var output = new DynamicJsonValue
-            {
-                [nameof(ConversationResult<object>.ConversationId)] = conversationId,
-                [nameof(ConversationResult<object>.ChangeVector)] = document.ChangeVector,
-                [nameof(ConversationResult<object>.Response)] = response,
-                [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(document.OpenActionCalls.Select(t => t.Value.ToJson())),
-                [nameof(ConversationResult<object>.TotalUsage)] = document.TotalUsage.ToJson()
-            };
-
-            using var json = context.ReadObject(output, "ai-agent/output");
-
-            var responseStream = RequestHandler.ResponseBodyStream();
-            if(streaming)
-                await responseStream.WriteAsync(ResultPrefix, token);
-            
-            await context.WriteAsync(responseStream, json, token); // single line here
-
-            if (streaming)
-                await responseStream.WriteAsync(TwoNewLinesEnd, token); // \n\n for end of message
         }
 
         public static BlittableJsonReaderObject CreateParameters(JsonOperationContext context, AiToolCall call, BlittableJsonReaderObject parameters)

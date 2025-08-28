@@ -54,23 +54,6 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         return Task.FromResult("test");
     }
 
-    public override async Task WriteResponseAsync(JsonOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document, bool streaming, CancellationToken token)
-    {
-        if(streaming)
-            throw new NotSupportedException("Streaming is not currently supported for tests");
-        
-        var output = new DynamicJsonValue
-        {
-            [nameof(AiAgentTestResult.Document)] = document.ToJson(),
-            [nameof(AiAgentTestResult.Response)] = response,
-            [nameof(AiAgentTestResult.ActionRequests)] = new DynamicJsonArray(document.OpenActionCalls.Select(t => t.Value.ToJson())),
-            [nameof(AiAgentTestResult.Usage)] = document.TotalUsage.ToJson()
-        };
-
-        await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
-        context.Write(writer, output);
-    }
-
     public class AiAgentTestResult
     {
         public BlittableJsonReaderObject Document;

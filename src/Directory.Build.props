@@ -24,9 +24,6 @@
   <PropertyGroup Condition="'$(TargetFramework)' == 'net6.0' OR '$(TargetFramework)' == 'net7.0' OR '$(TargetFramework)' == 'net8.0'">
     <DefineConstants>$(DefineConstants);NETCOREAPP;FEATURE_DATEONLY_TIMEONLY_SUPPORT;FEATURE_ZSTD_SUPPORT</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(TargetFramework)' == 'netstandard2.0' OR '$(TargetFramework)' == 'netstandard2.1' OR '$(TargetFramework)' == 'net8.0'">
-    <DefineConstants>$(DefineConstants);FEATURE_AI_AGENT_STREAMING_SUPPORT</DefineConstants>
-  </PropertyGroup>
   <PropertyGroup Condition="'$(RuntimeIdentifier)' == ''">
     <IsAnyOS>true</IsAnyOS>
     <IsLinux64>false</IsLinux64>

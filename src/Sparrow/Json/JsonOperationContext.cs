@@ -524,6 +524,14 @@ namespace Sparrow.Json
             }
         }
 
+        public unsafe LazyStringValue GetLazyString(Span<byte> span, bool longLived)
+        {
+            fixed (byte* p = span)
+            {
+                return GetLazyString(p, span.Length, longLived);
+            }
+        }
+
         public unsafe LazyStringValue GetLazyString(byte* ptr, int size, bool longLived = false)
         {
             var state = new JsonParserState();
