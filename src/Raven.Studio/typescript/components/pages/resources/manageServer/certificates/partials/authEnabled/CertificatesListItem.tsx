@@ -40,6 +40,9 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     const { reportEvent } = useEventsCollector();
 
     const serverCertificateThumbprint = useAppSelector(certificatesSelectors.serverCertificateThumbprint);
+    const serverCertificateForCommunicationThumbprint = useAppSelector(
+        certificatesSelectors.serverCertificateForCommunicationThumbprint
+    );
     const serverCertificateSetupMode = useAppSelector(certificatesSelectors.serverCertificateSetupMode);
     const serverCertificateRenewalDate = useAppSelector(certificatesSelectors.serverCertificateRenewalDate);
     const clientCertificateThumbprint = useAppSelector(accessManagerSelectors.clientCertificateThumbprint);
@@ -48,14 +51,15 @@ export default function CertificatesListItem({ certificate }: CertificatesListIt
     const state = certificatesUtils.getState(certificate.NotAfter);
     const clearance = certificatesUtils.getClearance(certificate.SecurityClearance);
     const isServerCert = certificate.Thumbprints.includes(serverCertificateThumbprint);
+    const isServerCertForCommunication = certificate.Thumbprints.includes(serverCertificateForCommunicationThumbprint);
     const isCurrentBrowserCert = certificate.Thumbprints.includes(clientCertificateThumbprint);
     const has2fa = certificate.HasTwoFactor ?? false;
 
     const canBeAutomaticallyRenewed = isServerCert && serverCertificateSetupMode === "LetsEncrypt";
-    const canEdit = !isServerCert && state !== "Expired";
-    const canClone = !isServerCert;
+    const canEdit = !isServerCert && !isServerCertForCommunication && state !== "Expired";
+    const canClone = !isServerCert && !isServerCertForCommunication;
     const canDelete = (() => {
-        if (isServerCert) {
+        if (isServerCert || isServerCertForCommunication) {
             return false;
         }
         if (!isClusterAdminOrClusterNode && clearance === "Admin") {
