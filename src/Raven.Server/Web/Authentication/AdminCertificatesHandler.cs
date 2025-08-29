@@ -551,6 +551,14 @@ namespace Raven.Server.Web.Authentication
                         writer.WritePropertyName("LoadedServerCert");
                         writer.WriteString(Server.Certificate.ServerCertificate?.Thumbprint);
                         writer.WriteComma();
+
+                        if (IsClientCertificateDifferentFromServerCertificate())
+                        {
+                            writer.WritePropertyName("LoadedServerCertForCommunication");
+                            writer.WriteString(Server.Certificate.ClientCertificate?.Thumbprint);
+                            writer.WriteComma();
+                        }
+
                         writer.WriteArray("WellKnownAdminCerts", wellKnown);
                         writer.WriteComma();
                         writer.WriteArray("WellKnownIssuers", Server.WellKnownIssuers?.Select(x => x.Thumbprint) ?? Array.Empty<string>());
