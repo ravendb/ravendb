@@ -59,6 +59,7 @@ class certificates extends viewModelBase {
     certificates = ko.observableArray<unifiedCertificateDefinition>();
     
     serverCertificateThumbprint = ko.observable<string>();
+    serverCertificateForCommunicationThumbprint = ko.observable<string>();
     clientCertificateThumbprint = ko.observable<string>();
     
     serverCertificateSetupMode = ko.observable<Raven.Server.Commercial.SetupMode>();
@@ -655,6 +656,7 @@ class certificates extends viewModelBase {
                 });
                 
                 this.serverCertificateThumbprint(certificatesInfo.LoadedServerCert);
+                this.serverCertificateForCommunicationThumbprint(certificatesInfo.LoadedServerCertForCommunication);
                 this.clientCertificateThumbprint(accessManager.clientCertificateThumbprint());
                 
                 secondaryCertificates.forEach(cert => {
@@ -777,7 +779,7 @@ class certificates extends viewModelBase {
     
     canEdit(model: unifiedCertificateDefinition) {
         return ko.pureComputed(() => {
-            if (_.includes(model.Thumbprints, this.serverCertificateThumbprint())) {
+            if (_.includes(model.Thumbprints, this.serverCertificateThumbprint()) || _.includes(model.Thumbprints, this.serverCertificateForCommunicationThumbprint())) {
                 return false;
             }
 
@@ -795,7 +797,7 @@ class certificates extends viewModelBase {
                 return false;
             }
             
-            if (_.includes(model.Thumbprints, this.serverCertificateThumbprint())) {
+            if (_.includes(model.Thumbprints, this.serverCertificateThumbprint()) || _.includes(model.Thumbprints, this.serverCertificateForCommunicationThumbprint())) {
                 return false;
             }
             
