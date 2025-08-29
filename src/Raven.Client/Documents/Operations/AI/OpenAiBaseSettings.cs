@@ -104,7 +104,8 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
         if (Dimensions.HasValue)
             json[nameof(Dimensions)] = Dimensions.Value;
 
-        json[nameof(Temperature)] = Temperature;
+        if (Temperature.HasValue)
+            json[nameof(Temperature)] = Temperature;
 
         return json;
     }
