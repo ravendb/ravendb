@@ -50,7 +50,7 @@ namespace Sparrow
                     if (context.BufferSize + size >= Alignment)
                     {
 #if NET8_0_OR_GREATER
-                    if (Avx512F.VL.IsSupported)
+                    if (AdvInstructionSet.X86.IsSupportedAvx512Basic)
                     {
                         Vector256<ulong> v = Vector256.LoadUnsafe(ref context.Current.V1);
                         while (buffer <= limit)

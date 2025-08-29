@@ -328,7 +328,7 @@ namespace Sparrow
                     Unsafe.SkipInit(out ulong v4);
 
 #if NET8_0_OR_GREATER
-                    if (Avx512F.VL.IsSupported)
+                    if (AdvInstructionSet.X86.IsSupportedAvx512Basic)
                     {
                         Vector256<ulong> v = Vector256.Create(
                             seed + XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_2,
@@ -455,7 +455,7 @@ namespace Sparrow
                     Unsafe.SkipInit(out ulong v4);
 
 #if NET8_0_OR_GREATER
-                    if (Avx512F.VL.IsSupported)
+                    if (AdvInstructionSet.X86.IsSupportedAvx512Basic)
                     {
                         Vector256<ulong> v = Vector256.Create(
                             seed + XXHash64Constants.PRIME64_1 + XXHash64Constants.PRIME64_2,
