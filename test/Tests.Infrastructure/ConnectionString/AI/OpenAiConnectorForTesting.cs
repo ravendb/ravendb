@@ -41,7 +41,7 @@ internal static class OpenAiConnectorHelper
         return new AiConnectionString
         {
             ModelType = modelType,
-            OpenAiSettings = new OpenAiSettings(apiKey, Endpoint, model)
+            OpenAiSettings = new OpenAiSettings(apiKey, Endpoint, model) { Temperature = 0 }
         };
     }
 }

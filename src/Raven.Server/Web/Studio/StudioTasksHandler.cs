@@ -352,10 +352,12 @@ namespace Raven.Server.Web.Studio
                         apiKey = request.OpenAiSettings.ApiKey;
                         organization = request.OpenAiSettings.OrganizationId;
                         project = request.OpenAiSettings.ProjectId;
+                        temperature = request.OpenAiSettings.Temperature;
                         break;
                     case AiConnectorType.AzureOpenAi:
                         uri = request.AzureOpenAiSettings.Endpoint;
                         apiKey = request.AzureOpenAiSettings.ApiKey;
+                        temperature = request.AzureOpenAiSettings.Temperature;
                         break;
                     case AiConnectorType.Ollama:
                         uri = request.OllamaSettings.Uri;

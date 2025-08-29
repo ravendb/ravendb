@@ -54,6 +54,9 @@ public sealed class OllamaSettings : AbstractAiSettings
 
         if (string.IsNullOrWhiteSpace(Model))
             errors.Add($"Value of `{nameof(Model)}` field cannot be empty.");
+        
+        if (Temperature is < 0d)
+            errors.Add($"Value of `{nameof(Temperature)}` field must be non-negative.");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)

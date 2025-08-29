@@ -5,7 +5,7 @@ namespace Raven.Client.Documents.Operations.AI;
 
 public sealed class AzureOpenAiSettings : OpenAiBaseSettings
 {
-    public AzureOpenAiSettings(string apiKey, string endpoint, string model, string deploymentName, int? dimensions = null) : base(apiKey, endpoint, model, dimensions)
+    public AzureOpenAiSettings(string apiKey, string endpoint, string model, string deploymentName, int? dimensions = null, double? temperature = null) : base(apiKey, endpoint, model, dimensions, temperature)
     {
         DeploymentName = deploymentName;
     }

@@ -1,17 +1,19 @@
 ﻿using System.Collections.Generic;
+using Sparrow.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
 public abstract class OpenAiBaseSettings : AbstractAiSettings
 {
-    protected OpenAiBaseSettings(string apiKey, string endpoint, string model, int? dimensions = null)
+    protected OpenAiBaseSettings(string apiKey, string endpoint, string model, int? dimensions = null, double? temperature = null)
 
     {
         ApiKey = apiKey;
         Endpoint = endpoint;
         Model = model;
         Dimensions = dimensions;
+        Temperature = temperature;
     }
 
     protected OpenAiBaseSettings()
@@ -39,6 +41,13 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
     /// </summary>
     public int? Dimensions { get; set; }
 
+    /// <summary>
+    /// Controls randomness of the model output. Range typically [0.0, 2.0].
+    /// Higher values (e.g., 1.0+) make output more creative and diverse; lower values (e.g., 0.2) make it more deterministic.
+    /// When null, the parameter is not sent.
+    /// </summary>
+    public double? Temperature { get; set; } = null;
+
     public override void ValidateFields(List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(ApiKey))
@@ -52,6 +61,9 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
 
         if (Dimensions is <= 0)
             errors.Add($"Value of `{nameof(Dimensions)}` field must be positive.");
+
+        if (Temperature is < 0d)
+            errors.Add($"Value of `{nameof(Temperature)}` field must be non-negative.");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
@@ -73,6 +85,10 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
         if (Dimensions != openAiSettings.Dimensions)
             differences |= AiSettingsCompareDifferences.EmbeddingDimensions;
 
+        if (Temperature.HasValue != openAiSettings.Temperature.HasValue ||
+            (Temperature.HasValue && openAiSettings.Temperature.HasValue && Temperature.Value.AlmostEquals(openAiSettings.Temperature.Value) == false))
+            differences |= AiSettingsCompareDifferences.EndpointConfiguration;
+
         return differences;
     }
 
@@ -87,6 +103,8 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
 
         if (Dimensions.HasValue)
             json[nameof(Dimensions)] = Dimensions.Value;
+
+        json[nameof(Temperature)] = Temperature;
 
         return json;
     }
