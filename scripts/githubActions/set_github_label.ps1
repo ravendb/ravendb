@@ -1,41 +1,23 @@
 param(
+    [Parameter(Mandatory = $true)]
     [string] $owner,
+    [Parameter(Mandatory = $true)]
     [string] $repo,
+    [Parameter(Mandatory = $true)]
     [string] $pullRequestId,
-    [string] $label
+    [Parameter(Mandatory = $true)]
+    [string[]] $labels
 )
 
-$ErrorActionPreference = "Stop"
-[Net.ServicePointManager]::Expect100Continue = $true;
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12;
+$uri = "https://api.github.com/repos/$owner/$repo/issues/$pullRequestId/labels"
 
-$IGNORED_LABEL = "future";
+$body = @{ labels = $labels } | ConvertTo-Json -Compress
 
-function Invoke-JsonHttpPost($url, $text) {
-    Write-Host "[INFO] POSTing to $url"
+Write-Host "Request body: $body"
 
-    $webRequest = [System.Net.WebRequest]::Create($url)
-    $webRequest.ContentType = "application/json"
-    $PostStr = [System.Text.Encoding]::Default.GetBytes($text)
-    $webRequest.ContentLength = $PostStr.Length
-    $webRequest.Headers["Authorization"] = "token $env:GITHUB_TOKEN"
-    $webRequest.UserAgent = "custom";
-    $webRequest.PreAuthenticate = $true
-    $webRequest.Method = "POST"
-    
-    $requestStream = $webRequest.GetRequestStream()
-    $requestStream.Write($PostStr, 0, $PostStr.length)
-    $requestStream.Close()
-    
-    $resp = $webRequest.GetResponse();
-    $rs = $resp.GetResponseStream();
-    [System.IO.StreamReader] $sr = New-Object System.IO.StreamReader -argumentList $rs;
-    [string] $results = $sr.ReadToEnd();
-    
-    Write-Host "[INFO] response:"
-    Write-Host $results;
-    return;
-}
-
-Write-Host "[INFO] Adding label `"$label`" to pull request #$pullRequestId"
-Invoke-JsonHttpPost "https://api.github.com/repos/$owner/$repo/issues/$pullRequestId/labels" "[`"$label`"]"
+Invoke-RestMethod -Method Put -Uri $uri -Verbose -Headers @{
+  Authorization = "Bearer $env:GITHUB_TOKEN"
+  Accept        = "application/vnd.github+json"
+  "User-Agent"  = "$owner-$repo-labeler"
+  "X-GitHub-Api-Version" = "2022-11-28"
+} -Body $body -ContentType 'application/json'

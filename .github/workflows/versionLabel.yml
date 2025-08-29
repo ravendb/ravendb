@@ -4,22 +4,95 @@ on:
   pull_request_target
 
 jobs:
-
   labels:
     name: Label
     runs-on: windows-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Parse Label
+
+      - name: Parse Labels (merged)
+        shell: pwsh
         run: |
-          $label="${{ github.event.pull_request.base.ref }}".split("/")[-1]
-          echo "newLabel=$label" >> $env:GITHUB_ENV
-      - name: Set Label
+          $branch = "${{ github.event.pull_request.base.ref }}"
+          $labels = New-Object System.Collections.Generic.List[string]
+
+          if ($branch -like 'release/*') {
+            # release labels
+            $labels.Add('release')
+
+            $parts = $branch.Split('/')
+
+            if ($parts.Length -ge 2 -and $parts[1] -ieq 'custom') {
+              $labels.Add('custom')
+            }
+
+            # Find a segment starting with v that looks like a version
+            $versionSeg = $parts | Where-Object { $_ -match '^v\d+(\.\d+)*' } | Select-Object -First 1
+            if ($versionSeg) {
+              # Only keep the leading vX.Y (e.g., v5.4-net60-... -> v5.4)
+              if ($versionSeg -match '^(v\d+\.\d+)') {
+                $labels.Add($Matches[1])
+              } elseif ($versionSeg -match '^(v\d+)$') {
+                $labels.Add($Matches[1])
+              }
+            }
+          }
+          elseif ($branch -like 'v*' -or $branch -like 'feature/*') {
+            # old behavior: single label = last path segment
+            $label = $branch.Split('/')[-1]
+            if (-not [string]::IsNullOrWhiteSpace($label)) {
+              $labels.Add($label)
+            }
+          }
+
+          $unique = $labels | Select-Object -Unique
+          $labelStr = ($unique) -join ','
+          echo "labelsToApply=$labelStr" >> $env:GITHUB_ENV
+
+      - name: Set Labels
+        if: env.labelsToApply != ''
         env:
           githubOwner: ${{ github.event.pull_request.base.repo.owner.login }}
           repoName: ${{ github.event.repository.name }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMPlus_ReadyToRunExcludeList: 'System.Security.Cryptography.X509Certificates'
           Raven_Enable_Per_Test_Logging: 'true'
-        if: contains(github.event.pull_request.labels.*.name, env.newLabel) == false && (startsWith( github.event.pull_request.base.ref, 'v' ) || startsWith( github.event.pull_request.base.ref, 'feature' ))
-        run: ./scripts/githubActions/set_github_label.ps1 -owner ${{env.githubOwner}} -repo ${{env.repoName}} -pullRequestId ${{ github.event.pull_request.number }} -label ${{env.newLabel}}
+        shell: pwsh
+        run: |
+          $json = @'
+            ${{ toJson(github.event.pull_request.labels.*.name) }}
+          '@
+          $existing = @()
+          if (-not [string]::IsNullOrWhiteSpace($json)) {
+              $parsed = $null
+              try {
+                  $parsed = $json | ConvertFrom-Json
+              } catch {
+                  $parsed = @()
+              }
+
+              if ($null -ne $parsed) {
+                  switch ($parsed.GetType().Name) {
+                      'Object[]' { $existing = @($parsed | ForEach-Object { $_.ToString() }) }
+                      'String'   { $existing = @("$parsed") }
+                      default    { $existing = @() }
+                  }
+              }
+          }
+          Write-Host "Existing labels: $existing"
+
+          $labels = $env:labelsToApply.Split(',') | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique
+
+          $toAdd = @($labels | Where-Object { $existing -notcontains $_ })
+          if ($toAdd.Count -eq 0) {
+              Write-Host "No new labels to add."
+              exit 0
+          }
+
+          Write-Host "Adding labels: $toAdd"
+
+          ./scripts/githubActions/set_github_label.ps1 `
+            -owner ${{env.githubOwner}} `
+            -repo ${{env.repoName}} `
+            -pullRequestId ${{ github.event.pull_request.number }} `
+            -labels $toAdd
