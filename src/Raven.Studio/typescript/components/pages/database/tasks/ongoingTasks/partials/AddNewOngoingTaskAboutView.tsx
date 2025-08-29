@@ -21,6 +21,7 @@ export function AddNewOngoingTaskAboutView() {
                         <li className="mt-1">
                             Available categories include:
                             <ul className="mt-1">
+                                <li>AI</li>
                                 <li>Replication</li>
                                 <li>Backups</li>
                                 <li>Subscriptions</li>

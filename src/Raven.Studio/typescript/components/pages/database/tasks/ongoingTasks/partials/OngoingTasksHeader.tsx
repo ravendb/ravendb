@@ -189,7 +189,7 @@ function getFilterByStatusOptions(
         (x) => x.shared.taskType === "KafkaQueueSink" || x.shared.taskType === "RabbitQueueSink"
     ).length;
 
-    const aiCount = state.tasks.filter((x) => x.shared.taskType === "EmbeddingsGeneration").length;
+    const aiCount = state.tasks.filter((x) => ["GenAi", "EmbeddingsGeneration"].includes(x.shared.taskType)).length;
     const internalReplicationCount = hasInternalReplication ? 1 : 0;
     const replicationHubCount = state.replicationHubs.length;
     const replicationSinkCount = state.tasks.filter((x) => x.shared.taskType === "PullReplicationAsSink").length;

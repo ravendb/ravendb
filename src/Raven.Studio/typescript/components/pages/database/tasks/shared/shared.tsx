@@ -414,6 +414,7 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
     const hasKafkaSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasRabbitMqSink = useAppSelector(licenseSelectors.statusValue("HasQueueSink"));
     const hasPeriodicBackups = useAppSelector(licenseSelectors.statusValue("HasPeriodicBackup"));
+    const hasGenAi = useAppSelector(licenseSelectors.statusValue("HasGenAi"));
     const subscriptionsServerLimit = useAppSelector(licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerCluster"));
     const subscriptionsDatabaseLimit = useAppSelector(
         licenseSelectors.statusValue("MaxNumberOfSubscriptionsPerDatabase")
@@ -454,6 +455,17 @@ export function useNewOngoingTasks({ isAiOnly = false }: { isAiOnly?: boolean })
             categoryName: "AI",
             categoryIcon: "ai",
             tasks: [
+                {
+                    title: "GenAI",
+                    description: "Analyze and enrich your documents using an LLM.",
+                    iconName: "genai",
+                    variant: "AI",
+                    target: "GenAi",
+                    showLicenseBadge: !hasGenAi,
+                    licenseBadge: "Enterprise AI",
+                    disableReason: disableReasonForShardedDb,
+                    link: forCurrentDatabase.editGenAiTaskUrl(),
+                },
                 {
                     title: "Embeddings Generation",
                     description: "Automatically generate embeddings from your document content.",

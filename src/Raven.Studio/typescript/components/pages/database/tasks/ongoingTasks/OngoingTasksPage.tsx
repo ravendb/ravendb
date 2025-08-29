@@ -214,7 +214,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
         hubDefinitions,
     } = filteredTasks;
 
-    const ai = [...embeddingsGenerations];
+    const ai = [...genAiTasks, ...embeddingsGenerations];
 
     const replications = [...externalReplications, ...replicationSinks, ...hubDefinitions];
 
@@ -247,7 +247,7 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
     const filteredDatabaseTaskIds = Object.values(filteredWithoutReplicationHubs)
         .flat()
         .filter((x) => !x.shared.serverWide)
-        .filter((x) => !isAiOnly || ["EmbeddingsGeneration"].includes(x.shared.taskType))
+        .filter((x) => !isAiOnly || ["GenAi", "EmbeddingsGeneration"].includes(x.shared.taskType))
         .map((x) => x.shared.taskId);
 
     const [selectedTaskIds, setSelectedTaskIds] = useState<number[]>(filteredDatabaseTaskIds);
@@ -455,6 +455,15 @@ export function OngoingTasksPage({ isAiOnly = false }: OngoingTasksPageProps) {
                                     </HrHeader>
                                 )}
 
+                                {genAiTasks.map((x) => (
+                                    <GenAiPanel
+                                        {...sharedPanelProps}
+                                        key={taskKey(x.shared)}
+                                        data={x}
+                                        onToggleDetails={startTrackingEtlProgress}
+                                        showItemPreview={showItemPreview}
+                                    />
+                                ))}
                                 {embeddingsGenerations.map((x) => (
                                     <EmbeddingsGenerationPanel
                                         {...sharedPanelProps}
@@ -708,7 +717,8 @@ function filterOngoingTask(sharedInfo: OngoingTaskSharedInfo, filter: OngoingTas
         return true;
     }
 
-    const isAiTypeMatching = filter.types.includes("AI") && sharedInfo.taskType === "EmbeddingsGeneration";
+    const isAiTypeMatching =
+        filter.types.includes("AI") && ["GenAi", "EmbeddingsGeneration"].includes(sharedInfo.taskType);
 
     const isReplicationTypeMatching =
         filter.types.includes("Replication") &&

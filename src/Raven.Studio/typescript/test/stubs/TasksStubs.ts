@@ -23,6 +23,7 @@ import InternalReplicationTaskProgress = Raven.Server.Documents.Replication.Stat
 import ReplicationProcessProgress = Raven.Server.Documents.Replication.Stats.ReplicationProcessProgress;
 import OngoingTaskSnowflakeEtl = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskSnowflakeEtl;
 import EmbeddingsGeneration = Raven.Client.Documents.Operations.OngoingTasks.EmbeddingsGeneration;
+import GenAi = Raven.Client.Documents.Operations.OngoingTasks.GenAi;
 
 export class TasksStubs {
     static getTasksList(): OngoingTasksResult {
@@ -32,6 +33,7 @@ export class TasksStubs {
 
         return {
             OngoingTasks: [
+                TasksStubs.getGenAi(),
                 TasksStubs.getEmbeddingsGeneration(),
                 TasksStubs.getRavenEtl(),
                 TasksStubs.getSql(),
@@ -298,6 +300,54 @@ export class TasksStubs {
             LastSentEtag: 1,
             LastDatabaseEtag: 1,
             SourceDatabaseChangeVector: "A:1-1DY5O5W9RUCDrntDONmNmw",
+        };
+    }
+
+    static getGenAi(): GenAi {
+        return {
+            TaskId: 523,
+            TaskType: "GenAi",
+            ResponsibleNode: TasksStubs.getResponsibleNode(),
+            TaskState: "Enabled",
+            TaskConnectionStatus: "Active",
+            TaskName: "GenAITask",
+            MentorNode: null,
+            PinToMentorNode: false,
+            Error: null,
+            ConnectionStringName: "for-gen",
+            Configuration: {
+                Name: "GenAITask",
+                TaskId: 523,
+                Disabled: false,
+                EtlType: "GenAi",
+                ConnectionStringName: "for-gen",
+                MentorNode: null,
+                PinToMentorNode: false,
+                AllowEtlOnNonEncryptedChannel: false,
+                Transforms: [
+                    {
+                        Name: "GenAi-transform-script",
+                        Script: "for(const comment of this.Comments)\r\n{\r\n    ai.genContext({\r\n        Text: `Blog post topic: ${this.Topic}. Comment: ${comment.Text}`, \r\n        AuthorName: comment.Author,\r\n        CommentId: comment.Id\r\n    });\r\n}",
+                        Collections: ["Posts"],
+                        ApplyToAllDocuments: false,
+                        DocumentIdPostfix: null,
+                        Disabled: false,
+                    },
+                ],
+                Identifier: "genaitask",
+                Collection: "Posts",
+                Prompt: "Check if the following blog post comment is spam or not. A spam comment typically includes irrelevant or promotional content, excessive links, misleading information, or is written with the intent to manipulate search rankings or advertise products/services. Consider the language, intent, and relevance of the comment to the blog post topic. ",
+                SampleObject:
+                    '{\r\n    "IsCommentSpam": true,\r\n    "Reason": "Concise reason for why this comment was marked as spam or ham"\r\n}',
+                JsonSchema: "",
+                UpdateScript:
+                    'const idx = this.Comments.findIndex(comment => comment.Id == $input.CommentId);\r\nif ($output.IsCommentSpam) {\r\n    this.Comments.splice(idx, 1);\r\n    const newDocument = { "comment": $input.Text, "@metadata": { "@collection": "spamComments"} };\r\n    put(id(this) +"/spam/", newDocument);\r\n}',
+                GenAiTransformation: {
+                    Script: "for(const comment of this.Comments)\r\n{\r\n    ai.genContext({\r\n        Text: `Blog post topic: ${this.Topic}. Comment: ${comment.Text}`, \r\n        AuthorName: comment.Author,\r\n        CommentId: comment.Id\r\n    });\r\n}",
+                },
+                MaxConcurrency: 4,
+            },
+            ChangeVector: null,
         };
     }
 
