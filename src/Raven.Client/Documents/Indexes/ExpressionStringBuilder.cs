@@ -17,6 +17,7 @@ using Newtonsoft.Json;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Extensions;
 using Raven.Client.Util;
+using Type = System.Type;
 
 namespace Raven.Client.Documents.Indexes
 {
@@ -1731,6 +1732,18 @@ namespace Raven.Client.Documents.Indexes
                         return node; // we don't do casting on the server
                     }
 
+                    if (node.Method.DeclaringType == typeof(Array) && node.Method.Name == "Empty")
+                    {
+                        if (CheckIfAnonymousType(node.Type.GetElementType()) == false && TypeExistsOnServer(node.Type.GetElementType()))
+                        {
+                            Out($"new {ConvertTypeToCSharpKeyword(node.Type.GetElementType(), out _)}[0]");
+                        }
+                        else
+                            Out("new DynamicArray(new dynamic[0])");
+                        
+                        return node;
+                    }
+                    
                     Out(node.Method.DeclaringType.Name);
                     Out(".");
                 }
@@ -2025,6 +2038,10 @@ namespace Raven.Client.Documents.Indexes
                 VisitType(node.Type);
                 Out("(");
             }
+            else if (IsEmptyCollection(node))
+            {
+                Out("DynamicArray(new dynamic[0]");
+            }
             else
             {
                 Out("{");
@@ -2062,7 +2079,10 @@ namespace Raven.Client.Documents.Indexes
                 Visit(argument);
             }
 
-            Out(TypeExistsOnServer(node.Type) ? ")" : "}");
+            if (TypeExistsOnServer(node.Type) || IsEmptyCollection(node))
+                Out(")");
+            else
+                Out("}");
 
             return node;
 
@@ -2077,6 +2097,22 @@ namespace Raven.Client.Documents.Indexes
                 }
 
                 return isEnum;
+            }
+
+            bool IsCollection(Type type)
+            {
+                if (type.IsArray)
+                    return true;
+
+                if (typeof(System.Collections.IEnumerable).IsAssignableFrom(type))
+                    return true;
+
+                return false;
+            }
+
+            bool IsEmptyCollection(NewExpression node)
+            {
+                return IsCollection(node.Type) && node.Arguments.Count == 0;
             }
         }
 
@@ -2134,6 +2170,13 @@ namespace Raven.Client.Documents.Indexes
             switch (node.NodeType)
             {
                 case ExpressionType.NewArrayInit:
+                    if (node.Expressions.Count == 0 && TypeExistsOnServer(node.Type) == false)
+                    {
+                        Out("new DynamicArray(new dynamic[0])");
+                        
+                        return node;
+                    }
+                    
                     Out("new ");
                     OutputAppropriateArrayType(node);
                     Out("[]");
@@ -2141,6 +2184,17 @@ namespace Raven.Client.Documents.Indexes
                     return node;
 
                 case ExpressionType.NewArrayBounds:
+                    if (TypeExistsOnServer(node.Type) == false && node.Expressions.Any(exp => exp is ConstantExpression constantExpression && constantExpression.Value is int v && v == 0))
+                    {
+                        Out("new DynamicArray(new dynamic");
+                        
+                        VisitExpressions('[', node.Expressions, ']');
+                        
+                        Out(")");
+                        
+                        return node;
+                    }
+
                     if (TypeExistsOnServer(node.Type))
                         Out("new " + node.Type.GetElementType());
                     else
