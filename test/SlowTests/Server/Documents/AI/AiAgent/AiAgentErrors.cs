@@ -11,6 +11,7 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Client.Exceptions.Documents;
+using Raven.Client.Extensions;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -284,13 +285,29 @@ public class AiAgentErrors : RavenTestBase
 
     private class QuestionOutputSchema
     {
-        public static QuestionOutputSchema Instance = new();
+        public static QuestionOutputSchema Instance = new()
+        {
+            Answer = "Combined answer of the answers for the questions ",
+            RefusedToAnswer = false,
+            RelevantQuestionsIds = ["The questions ids relevant to the query or response"]
+        };
 
-        public string Answer = "Combined answer of the answers for the questions ";
+        public string Answer;
 
-        public bool RefusedToAnswer = false;
+        public bool RefusedToAnswer;
 
-        public List<string> RelevantQuestionsIds = ["The questions ids relevant to the query or response"];
+        public List<string> RelevantQuestionsIds;
+
+        public override string ToString()
+        {
+            var s = $"Answer: {Answer}, RefusedToAnswer: {RefusedToAnswer}";
+            if (RelevantQuestionsIds.IsNullOrEmpty() == false)
+            {
+                s += $", RelevantQuestionsIds: {string.Join(",", RelevantQuestionsIds)}";
+            }
+            return s;
+        }
+
     }
 
     private class Question
@@ -360,7 +377,7 @@ public class AiAgentErrors : RavenTestBase
         var aviv = r.Answer;
         Assert.Equal(AiConversationResult.Done, r.Status);
         Assert.NotNull(aviv.Answer);
-        Assert.False(aviv.RefusedToAnswer);
+        Assert.False(aviv.RefusedToAnswer, aviv.ToString());
 
         chat.SetUserPrompt("Can you answer Karmel questions?");
         r = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
@@ -368,7 +385,7 @@ public class AiAgentErrors : RavenTestBase
         var karmel = r.Answer;
         Assert.Equal(AiConversationResult.Done, r.Status);
         Assert.NotNull(karmel.Answer);
-        Assert.False(karmel.RefusedToAnswer);
+        Assert.False(karmel.RefusedToAnswer, karmel.ToString());
 
         chat.SetUserPrompt("Can you answer Shahar questions?");
         r = await chat.RunAsync<QuestionOutputSchema>(CancellationToken.None);
@@ -376,7 +393,7 @@ public class AiAgentErrors : RavenTestBase
         var shahar = r.Answer;
         Assert.Equal(AiConversationResult.Done, r.Status);
         Assert.NotNull(shahar.Answer);
-        Assert.True(shahar.RefusedToAnswer);
+        Assert.True(shahar.RefusedToAnswer, shahar.ToString());
     }
 
 

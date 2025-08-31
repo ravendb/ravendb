@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Net;
+using System.Net.Http;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI
 {
@@ -30,6 +32,22 @@ namespace Raven.Server.Documents.AI
         }
         public UnexpectedResponseException(string message, Exception e) : base(message, e)
         {
+        }
+
+        public static UnexpectedResponseException Create(string message, HttpResponseMessage response, BlittableJsonReaderObject content, Exception e = null)
+            => Create(message, response, content.ToString(), e);
+
+        public static UnexpectedResponseException Create(string message, HttpResponseMessage response, string content, Exception e = null)
+        {
+            return new UnexpectedResponseException(
+                $"{message}.{Environment.NewLine}" +
+                $"Status Code: {response.StatusCode}{Environment.NewLine}" +
+                $"Response:{Environment.NewLine}{response}{Environment.NewLine}" +
+                $"Content:{Environment.NewLine}{content}",
+                e)
+            {
+                RequestId = ChatCompletionClient.GetRequestId(response.Headers)
+            };
         }
     }
 

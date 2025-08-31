@@ -369,7 +369,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         {
             if (responseContent.TryGet(Constants.ResponseFields.Choices, out BlittableJsonReaderArray choices) == false || choices.Length == 0)
             {
-                throw new UnexpectedResponseException("No choices in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+                throw UnexpectedResponseException.Create(message: "No choices in response", response, responseContent);
             }
 
             _choice0 = (BlittableJsonReaderObject)choices[0];
@@ -377,11 +377,11 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             if (_choice0.TryGet(Constants.ResponseFields.Message, out Message) == false ||
                 Message.TryGet(Constants.ResponseFields.Content, out _content) == false)
             {
-                throw new UnexpectedResponseException("No message/content property in choice: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+                throw UnexpectedResponseException.Create(message: "No message/content property in choice", response, responseContent);
             }
 
             if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson) == false)
-                throw new UnexpectedResponseException("No choices property in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+                throw UnexpectedResponseException.Create(message: "No usage in response content", response, responseContent);
 
             usage.UpdateFrom(usageJson);
         }
@@ -401,10 +401,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                     call.TryGet(Constants.ResponseFields.Function, out BlittableJsonReaderObject function) is false ||
                     function.TryGet(Constants.ResponseFields.Name, out string name) is false ||
                     function.TryGet(Constants.ResponseFields.Arguments, out string args) is false)
-                    throw new UnexpectedResponseException("Invalid function call: " + call)
-                    {
-                        RequestId = GetRequestId(response.Headers)
-                    };
+                    throw UnexpectedResponseException.Create(message: "Invalid function call: " + call, response, responseContent);
                 toolCalls.Add(new AiToolCall(callId, name, args));
             }
 
@@ -613,6 +610,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
         {
             await responseStream.CopyToAsync(ms, token);
+            var contentLength = (int)ms.Position;
             ms.Position = 0;
             try
             {
@@ -621,11 +619,8 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             catch (Exception e)
             {
                 ms.Position = 0;
-                string content = Encoding.UTF8.GetString(ms.GetMemory().Span);
-                throw new UnexpectedResponseException($"Got unrecognized response from the server: {content}. {response.StatusCode}", e)
-                {
-                    RequestId = GetRequestId(response.Headers)
-                };
+                string content = Encoding.UTF8.GetString(ms.GetMemory().Span[..contentLength]);
+                throw UnexpectedResponseException.Create(message: "Received an unrecognized response from the server", response, content, e);
             }
         }
     }
@@ -637,20 +632,14 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         var reqId = GetRequestId(headers);
 
         if (responseContent.TryGet(Constants.ResponseFields.Error, out BlittableJsonReaderObject errBjo) is false || errBjo.TryGet(Constants.ResponseFields.Message, out string message) is false)
-            throw new UnexpectedResponseException("Unexpected response: " + responseContent)
-            {
-                RequestId = reqId
-            };
+            throw UnexpectedResponseException.Create(message: "Unexpected response", response, responseContent);
 
         switch (response.StatusCode)
         {
             case HttpStatusCode.TooManyRequests:
 
                 if (errBjo.TryGet(Constants.ResponseFields.ErrorType, out string type) == false)
-                    throw new UnexpectedResponseException($"No type specified (status {HttpStatusCode.TooManyRequests}): " + responseContent)
-                    {
-                        RequestId = reqId
-                    };
+                    throw UnexpectedResponseException.Create(message: "No type specified", response, responseContent);
 
                 switch (type)
                 {
@@ -711,7 +700,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         }
     }
 
-    private static string GetRequestId(HttpResponseHeaders headers)
+    internal static string GetRequestId(HttpResponseHeaders headers)
     {
         if (headers.TryGetValues(Constants.Headers.RequestId, out var values) == false || values.IsNullOrEmpty())
         {
