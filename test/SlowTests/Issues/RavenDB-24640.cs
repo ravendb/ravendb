@@ -58,12 +58,14 @@ namespace SlowTests.Issues
 
                 var s = new ConcurrentSet<string>();
 
-                worker.AfterAcknowledgment += async batch =>
+                worker.AfterAcknowledgment += batch =>
                 {
                     foreach (var i in batch.Items)
                     {
                         s.Add(i.Result.Name);
                     }
+
+                    return Task.CompletedTask;
                 };
                 _ = worker
                     .Run(async batch =>
