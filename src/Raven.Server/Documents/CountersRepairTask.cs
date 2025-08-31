@@ -95,13 +95,8 @@ public class CountersRepairTask
                                         }
                                     }
 
-                                    if (dbIdsCorruption == false && counterValues.Count == counterNames.Count)
-                                    {
-                                        var counterValuesPropertyNames = counterValues.GetSortedPropertyNames();
-                                        var counterNamesPropertyNames = counterNames.GetSortedPropertyNames();
-                                        if (counterValuesPropertyNames.SequenceEqual(counterNamesPropertyNames))
-                                            continue;
-                                    }
+                                    if (dbIdsCorruption == false && AreCounterNamesCorrupted(counterValues, counterNames) == false)
+                                        continue;
                                 }
 
                                 // Document is corrupted; add to list and break to skip remaining CounterGroups of current document
@@ -167,6 +162,35 @@ public class CountersRepairTask
         return true;
     }
 
+    private static bool AreCounterNamesCorrupted(BlittableJsonReaderObject values, BlittableJsonReaderObject names)
+    {
+        if (values.Count != names.Count)
+            return true;
+
+        // Same count — verify the sets match
+        var v = values.GetSortedPropertyNames();
+        var n = names.GetSortedPropertyNames();
+        return v.SequenceEqual(n) == false;
+    }
+
+    private static bool PruneCorruptedDbIds(BlittableJsonReaderArray dbIds)
+    {
+        if (dbIds == null)
+            return false;
+
+        for (int i = 0; i < dbIds.Length; i++)
+        {
+            var lsv = dbIds[i] as LazyStringValue;
+            if (IsBase64String(lsv)) 
+                continue;
+            
+            dbIds.Modifications ??= new DynamicJsonArray();
+            dbIds.Modifications.RemoveAt(i);
+        }
+
+        return dbIds.Modifications != null;
+    }
+
     private void MarkAsCompleted()
     {
         using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext writeCtx))
@@ -221,29 +245,8 @@ public class CountersRepairTask
                     data.TryGet(CounterNames, out BlittableJsonReaderObject counterNames);
                     data.TryGet(DbIds, out BlittableJsonReaderArray dbIds);
 
-                    bool corruptedDbIds = false;
-                    bool corruptedNames = false;
-
-                    for (int i = 0; i < dbIds.Length; i++)
-                    {
-                        var lsv = dbIds[i] as LazyStringValue;
-                        if (IsBase64String(lsv) == false)
-                        {
-                            corruptedDbIds = true;
-                            dbIds.Modifications ??= new DynamicJsonArray();
-                            dbIds.Modifications.RemoveAt(i);
-                        }
-                    }
-
-                    if (counterValues.Count == counterNames.Count)
-                    {
-                        var counterValuesPropertyNames = counterValues.GetSortedPropertyNames();
-                        var counterNamesPropertyNames = counterNames.GetSortedPropertyNames();
-                        if (counterValuesPropertyNames.SequenceEqual(counterNamesPropertyNames) == false)
-                        {
-                            corruptedNames = true;
-                        }
-                    }
+                    bool corruptedDbIds = PruneCorruptedDbIds(dbIds);
+                    bool corruptedNames = AreCounterNamesCorrupted(counterValues, counterNames);
 
                     if (corruptedDbIds == false && corruptedNames == false)
                         continue;
