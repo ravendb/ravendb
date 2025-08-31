@@ -366,6 +366,16 @@ namespace SlowTests.Issues
                 {
                     var db = await GetDocumentDatabaseInstanceFor(store, databaseName);
 
+                    // wait for FixCounters tool to complete
+                    Assert.True(await WaitForValueAsync(() =>
+                    {
+                        using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                        using (context.OpenReadTransaction())
+                        {
+                            return DocumentsStorage.ReadLastFixedCounterKey(context.Transaction.InnerTransaction) == CountersRepairTask.Completed;
+                        }
+                    }, expectedVal: true, timeout: 10_000));
+
                     // verify that counters data is not corrupted - no bad dbIds
                     var countersStorage = db.DocumentsStorage.CountersStorage;
                     using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
