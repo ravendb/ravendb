@@ -385,7 +385,7 @@ namespace SlowTests.Issues
                 {
                     var readTable = new Table(CountersSchema, context.Transaction.InnerTransaction);
                     TableValueReader tvr;
-                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                     {
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
@@ -490,7 +490,7 @@ namespace SlowTests.Issues
                 {
                     var readTable = new Table(CountersSchema, context.Transaction.InnerTransaction);
                     TableValueReader tvr;
-                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                     {
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
@@ -625,7 +625,7 @@ namespace SlowTests.Issues
                 {
                     var readTable = new Table(CountersSchema, context.Transaction.InnerTransaction);
                     TableValueReader tvr;
-                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                     {
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
@@ -752,7 +752,7 @@ namespace SlowTests.Issues
                 {
                     var readTable = new Table(CountersSchema, context.Transaction.InnerTransaction);
                     TableValueReader tvr;
-                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                     {
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
@@ -810,7 +810,7 @@ namespace SlowTests.Issues
                 foreach (var id in docIdsToCorrupt)
                 {
                     TableValueReader tvr;
-                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                     {
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
@@ -893,7 +893,7 @@ namespace SlowTests.Issues
                 }
                 else
                 {
-                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                     {
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }

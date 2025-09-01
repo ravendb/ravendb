@@ -120,7 +120,7 @@ namespace SlowTests.Issues
         {
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
-            using (DocumentIdWorker.GetSliceFromId(context, id, out var idSlice))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out var idSlice))
             using (db.DocumentsStorage.RevisionsStorage.GetKeyPrefix(context, idSlice, out Slice prefixSlice))
             using (RevisionsStorage.GetKeyWithEtag(context, idSlice, endEtag, out var compoundPrefix))
             {
@@ -151,7 +151,7 @@ namespace SlowTests.Issues
         {
             using (db.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             using (context.OpenReadTransaction())
-            using (DocumentIdWorker.GetSliceFromId(context, id, out var idSlice))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out var idSlice))
             using (db.DocumentsStorage.RevisionsStorage.GetKeyPrefix(context, idSlice, out Slice prefixSlice))
             {
                 var table = new Table(RevisionsStorage.RevisionsSchema, context.Transaction.InnerTransaction);

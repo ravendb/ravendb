@@ -29,17 +29,17 @@ namespace Raven.Server.Documents
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(
-            TransactionOperationContext<TTransaction> context, string id, out Slice idSlice,
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLoweredIdSliceFromId<TTransaction>(
+            TransactionOperationContext<TTransaction> context, string id, out Slice lowerIdSlice,
             byte? separator = null)
             where TTransaction : RavenTransaction
         {
-            return GetSliceFromId(context, id.AsSpan(), out idSlice, separator);
+            return GetLoweredIdSliceFromId(context, id.AsSpan(), out lowerIdSlice, separator);
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(
-            TransactionOperationContext<TTransaction> context, LazyStringValue id, out Slice idSlice,
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLoweredIdSliceFromId<TTransaction>(
+            TransactionOperationContext<TTransaction> context, LazyStringValue id, out Slice lowerIdSlice,
             byte? separator = null)
             where TTransaction : RavenTransaction
         {
@@ -52,19 +52,19 @@ namespace Raven.Server.Documents
             {
                 if(id.Size > 0)
                     charCount = Encodings.Utf8.GetChars(id.Buffer, id.Size, pChars, tempBuffer.Length);
-                return GetSliceFromId(context, new Span<char>(pChars, charCount), out idSlice, separator);
+                return GetLoweredIdSliceFromId(context, new Span<char>(pChars, charCount), out lowerIdSlice, separator);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId<TTransaction>(TransactionOperationContext<TTransaction> context,
-            ReadOnlySpan<char> id, out Slice idSlice, byte? separator = null)
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLoweredIdSliceFromId<TTransaction>(TransactionOperationContext<TTransaction> context,
+            ReadOnlySpan<char> id, out Slice lowerIdSlice, byte? separator = null)
             where TTransaction : RavenTransaction
         {
-            return GetSliceFromId(context.Allocator, id, out idSlice, separator);
+            return GetLoweredIdSliceFromId(context.Allocator, id, out lowerIdSlice, separator);
         }
         
-        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetSliceFromId(ByteStringContext context, ReadOnlySpan<char> id, out Slice idSlice, byte? separator = null)
+        public static ByteStringContext<ByteStringMemoryCache>.InternalScope GetLoweredIdSliceFromId(ByteStringContext context, ReadOnlySpan<char> id, out Slice lowerIdSlice, byte? separator = null)
         {
             if (_jsonParserState == null)
                 _jsonParserState = new JsonParserState();
@@ -86,7 +86,7 @@ namespace Raven.Server.Documents
                 + (separator != null ? 1 : 0),
                 out var buffer);
 
-            idSlice = new Slice(buffer);
+            lowerIdSlice = new Slice(buffer);
 
             for (var i = 0; i < id.Length; i++)
             {

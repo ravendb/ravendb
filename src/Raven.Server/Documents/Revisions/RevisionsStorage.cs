@@ -714,7 +714,7 @@ namespace Raven.Server.Documents.Revisions
 
         public void DeleteAllRevisionsFor(DocumentsOperationContext context, string id, bool skipForceCreated, ref bool moreWork)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerIdPrefix))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerIdPrefix))
             using (GetKeyPrefix(context, lowerIdPrefix, out Slice prefixSlice))
             {
                 var collectionName = GetCollectionFor(context, prefixSlice);
@@ -745,7 +745,7 @@ namespace Raven.Server.Documents.Revisions
 
         public long DeleteRevisionsFor(DocumentsOperationContext context, string id, bool fromDelete = false)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice lowerIdPrefix))
             {
                 var collectionName = GetCollectionFor(context, lowerIdPrefix);
@@ -1625,7 +1625,7 @@ namespace Raven.Server.Documents.Revisions
 
         public Document GetRevisionBefore(DocumentsOperationContext context, string id, DateTime max)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             using (GetLastKey(context, lowerId, out Slice lastKey))
             {
@@ -1657,7 +1657,7 @@ namespace Raven.Server.Documents.Revisions
         {
             var foundAfter = false;
 
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             using (GetLastKey(context, lowerId, out Slice lastKey))
             {
@@ -1972,7 +1972,7 @@ namespace Raven.Server.Documents.Revisions
         {
             moreWork = false;
 
-            using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out var lowerId))
             using (GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
             {
                 var collectionName = GetCollectionFor(context, lowerIdPrefix);
@@ -2021,7 +2021,7 @@ namespace Raven.Server.Documents.Revisions
 
         internal bool AdoptOrphanedFor(DocumentsOperationContext context, string id, DocumentFlags additionalFlags = DocumentFlags.None)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out var lowerId))
             using (GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
             {
                 var collectionName = GetCollectionFor(context, lowerIdPrefix);
@@ -2337,7 +2337,7 @@ namespace Raven.Server.Documents.Revisions
                     }
                     else
                     {
-                        using (DocumentIdWorker.GetSliceFromId(context, document.Id, out Slice lowerId))
+                        using (DocumentIdWorker.GetLoweredIdSliceFromId(context, document.Id, out Slice lowerId))
                         {
                             var etag = documentsStorage.GenerateNextEtag();
                             var changeVector = documentsStorage.ConflictsStorage.GetMergedConflictChangeVectorsAndDeleteConflicts(context, lowerId, etag);
@@ -2406,7 +2406,7 @@ namespace Raven.Server.Documents.Revisions
 
         public long GetRevisionsCount(DocumentsOperationContext context, string id)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
                 return GetRevisionsCount(context, prefixSlice);
@@ -2421,7 +2421,7 @@ namespace Raven.Server.Documents.Revisions
 
         public (Document[] Revisions, long Count) GetRevisions(DocumentsOperationContext context, string id, long start, long take)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
             using (GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             using (GetLastKey(context, lowerId, out var lastKey))
             {

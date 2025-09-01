@@ -408,7 +408,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         {
             string collection = null;
 
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out Slice lowerId))
             {
                 var docsTable = new Table(DocsSchema, step.ReadTx);
                 if (docsTable.ReadByKey(lowerId, out var tvr))
@@ -427,7 +427,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
             var collectionName = new CollectionName(collection);
 
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
             {
                 var maxNumberOfCountersPerGroup = Math.Max(32, 2048 / (dbIds.Count * 32 + 1)); // rough estimate
                 var orderedKeys = allCountersBatch.OrderBy(x => x.Key).ToList();

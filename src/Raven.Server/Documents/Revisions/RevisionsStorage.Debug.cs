@@ -61,7 +61,7 @@ namespace Raven.Server.Documents.Revisions
             internal void DeleteLastRevisionFor(DocumentsOperationContext context, string id, string collection)
             {
                 var collectionName = new CollectionName(collection);
-                using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
+                using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out var lowerId))
                 using (_parent.GetKeyPrefix(context, lowerId, out var lowerIdPrefix))
                 using (GetKeyWithEtag(context, lowerId, etag: long.MaxValue, out var compoundPrefix))
                 {

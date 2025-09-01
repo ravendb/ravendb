@@ -1,6 +1,7 @@
 ﻿using Raven.Client;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
+using Voron;
 using Voron.Data.Tables;
 
 namespace Raven.Server.Documents
@@ -29,10 +30,15 @@ namespace Raven.Server.Documents
                     if (table.FindByIndex(index, etag, out var reader) == false) 
                         return false;
                     
-                    var doc = _storage.TableValueToDocument(context, ref reader, DocumentFields.LowerId);
-                    _storage.Delete(context, doc.LowerId, DocumentFlags.None);
+                    var doc = _storage.TableValueToDocument(context, ref reader, DocumentFields.LowerId | DocumentFields.Id);
+                    bool isDelete;
+                    using (Slice.From(context.Allocator, doc.LowerId.AsReadOnlySpan(), out var lowerId))
+                    {
+                        var result = _storage.Delete(context, lowerId, doc.Id, null);
+                        isDelete = result.HasValue;
+                    }
                     tx.Commit();
-                    return true;
+                    return isDelete;
                 }
             }
         }

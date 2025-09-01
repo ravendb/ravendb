@@ -52,7 +52,7 @@ namespace FastTests.Server.Documents
                 {
                     const string str = "Person@1";
 
-                    using (DocumentIdWorker.GetSliceFromId(ctx, str, out var lowerId))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(ctx, str, out var lowerId))
                     {
                         Assert.Equal(str.ToLower(), lowerId.ToString());
                     }
@@ -66,7 +66,7 @@ namespace FastTests.Server.Documents
             using var ctx = DocumentsOperationContext.ShortTermSingleUse(null);
             const string str = "";
             var lazyString = ctx.GetLazyString(str);
-            using (DocumentIdWorker.GetSliceFromId(ctx, lazyString, out var lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(ctx, lazyString, out var lowerId))
             {
                 Assert.Equal(str.ToLower(), lowerId.ToString());
             }
@@ -82,7 +82,7 @@ namespace FastTests.Server.Documents
                 {
                     const string str = "Person@יפתח";
 
-                    using (DocumentIdWorker.GetSliceFromId(ctx, str, out var lowerId))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(ctx, str, out var lowerId))
                     {
                         Assert.Equal(str.ToLower(), lowerId.ToString());
                     }
@@ -99,7 +99,7 @@ namespace FastTests.Server.Documents
                 using (database.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx))
                 {
                     var before = ctx.AllocatedMemory;
-                    using (DocumentIdWorker.GetSliceFromId(ctx, "Person@יפתח", out var lowerId))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(ctx, "Person@יפתח", out var lowerId))
                     {
                     }
                     var after = ctx.AllocatedMemory;
@@ -161,8 +161,8 @@ namespace FastTests.Server.Documents
                     Assert.True(reader["withAsciiSlice"].Equals(idWithNonAscii));
                 }
 
-                using (DocumentIdWorker.GetSliceFromId(allocator, id, out Slice withoutAsciiSlice2))
-                using (DocumentIdWorker.GetSliceFromId(allocator, idWithNonAscii, out Slice withAsciiSlice2))
+                using (DocumentIdWorker.GetLoweredIdSliceFromId(allocator, id, out Slice withoutAsciiSlice2))
+                using (DocumentIdWorker.GetLoweredIdSliceFromId(allocator, idWithNonAscii, out Slice withAsciiSlice2))
                 {
                     Assert.Equal(withoutAsciiSliceLower, withoutAsciiSlice2, new SliceComparer());
                     Assert.Equal(withAsciiSliceLower, withAsciiSlice2, new SliceComparer());

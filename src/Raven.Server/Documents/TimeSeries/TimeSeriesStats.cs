@@ -336,7 +336,7 @@ namespace Raven.Server.Documents.TimeSeries
         public IEnumerable<string> GetTimeSeriesNamesForDocumentOriginalCasing(DocumentsOperationContext context, string docId)
         {
             var table = new Table(TimeSeriesStatsSchema, context.Transaction.InnerTransaction);
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator))
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(documentKeyPrefix, Slices.Empty, 0))
                 {
@@ -441,7 +441,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope CombinePolicyNameAndTicks(DocumentsOperationContext context, string policy, long ticks, out Slice key, out Slice policyNameSlice)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, policy, out policyNameSlice, SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, policy, out policyNameSlice, SpecialChars.RecordSeparator))
             {
                 var size = policyNameSlice.Size + sizeof(long);
                 var scope = context.Allocator.Allocate(size, out var str);

@@ -58,7 +58,7 @@ namespace Raven.Server.Documents.TimeSeries
 
         public void Initialize()
         {
-            _internalScopesToDispose.Add(DocumentIdWorker.GetSliceFromId(_context, DocId, out DocumentKeyPrefix, SpecialChars.RecordSeparator)); // documentId/
+            _internalScopesToDispose.Add(DocumentIdWorker.GetLoweredIdSliceFromId(_context, DocId, out DocumentKeyPrefix, SpecialChars.RecordSeparator)); // documentId/
             _internalScopesToDispose.Add(DocumentIdWorker.GetLower(_context.Allocator, Name, out LowerTimeSeriesName));
 
             var keyBufferSize = DocumentKeyPrefix.Size + LowerTimeSeriesName.Size + 1 /* separator */ + sizeof(long) /*  segment start */;

@@ -2628,7 +2628,7 @@ namespace SlowTests.Client.Attachments
             using (context2.OpenReadTransaction())
             using (context3.OpenReadTransaction())
             {
-                using (DocumentIdWorker.GetSliceFromId(context1, "users/1", out Slice docIdSlice))
+                using (DocumentIdWorker.GetLoweredIdSliceFromId(context1, "users/1", out Slice docIdSlice))
                 {
                     var attachments1 = db1.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context1, docIdSlice).ToList();
                     var attachments2 = db2.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context2, docIdSlice).ToList();
@@ -3013,7 +3013,7 @@ namespace SlowTests.Client.Attachments
             using (context2.OpenReadTransaction())
             using (context3.OpenReadTransaction())
             {
-                using (DocumentIdWorker.GetSliceFromId(context1, "users/1", out Slice docIdSlice))
+                using (DocumentIdWorker.GetLoweredIdSliceFromId(context1, "users/1", out Slice docIdSlice))
                 {
                     var attachments1 = db1.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context1, docIdSlice).ToList();
                     var attachments2 = db2.DocumentsStorage.AttachmentsStorage.GetAttachmentDetailsForDocument(context2, docIdSlice).ToList();

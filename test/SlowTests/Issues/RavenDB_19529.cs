@@ -108,7 +108,7 @@ public class RavenDB_19529 : ReplicationTestBase
             var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
             using (context.OpenReadTransaction())
-            using (DocumentIdWorker.GetSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
             {
                 Assert.True(database.DocumentsStorage.ForTestingPurposesOnly().IsDocumentCompressed(context, lowerDocumentId, out var isLargeValue));
                 Assert.True(isLargeValue);
@@ -154,7 +154,7 @@ public class RavenDB_19529 : ReplicationTestBase
             var database = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
             using (context.OpenReadTransaction())
-            using (DocumentIdWorker.GetSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
             {
                 Assert.True(database.DocumentsStorage.ForTestingPurposesOnly().IsDocumentCompressed(context, lowerDocumentId, out var isLargeValue));
                 Assert.True(isLargeValue);
@@ -218,7 +218,7 @@ public class RavenDB_19529 : ReplicationTestBase
             var database = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(storeDst.Database);
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
             using (context.OpenReadTransaction())
-            using (DocumentIdWorker.GetSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
             {
                 Assert.True(database.DocumentsStorage.ForTestingPurposesOnly().IsDocumentCompressed(context, lowerDocumentId, out var isLargeValue));
                 Assert.True(isLargeValue);
@@ -274,7 +274,7 @@ public class RavenDB_19529 : ReplicationTestBase
 
             using (var context = DocumentsOperationContext.ShortTermSingleUse(database))
             using (context.OpenReadTransaction())
-            using (DocumentIdWorker.GetSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, specificSizeAndContentDocumentId, out Slice lowerDocumentId))
             {
                 Assert.False(database.DocumentsStorage.ForTestingPurposesOnly().IsDocumentCompressed(context, lowerDocumentId, out var isLargeValue));
                 Assert.True(isLargeValue);

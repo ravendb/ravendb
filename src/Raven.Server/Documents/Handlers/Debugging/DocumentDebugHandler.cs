@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Globalization;
 using System.IO;
 using System.Threading.Tasks;
@@ -62,57 +63,94 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public async Task ScanCorruptedIds()
         {
             var startEtag = GetIntValueQueryString("startEtag", required: false) ?? 0;
-            var corruptedCount = GetIntValueQueryString("corruptedCount", required: false) ?? 1024;
+            var resultCount = GetIntValueQueryString("resultCount", required: false) ?? 1024;
+            var maxBatchTimeInSec = GetIntValueQueryString("maxBatchTimeInSec", required: false) ?? 60;
             
-            var corrupted = new List<string>();
-            long? lastEtag = null;
+            var wrongEscapedPositionsIds = new List<string>();
+            var unescapedControlCharacterIds = new List<string>();
+            long lastEtag = startEtag;
+            var scannedDocuments = 0;
+            var maxBatchTime = TimeSpan.FromSeconds(maxBatchTimeInSec);
             
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, Stream.Null))
-                using (context.OpenReadTransaction())
                 {
-                    foreach (var doc in IterateDocumentsAndRevisionsByEtag(context, startEtag))
+                    var timeout = Stopwatch.StartNew();
+                    while (resultCount > 0)
                     {
-                        HttpContext.RequestAborted.ThrowIfCancellationRequested();
-                        
-                        using (doc)
+                        timeout.Restart();
+                        using (context.OpenReadTransaction())
                         {
-                            try
+                            foreach (var doc in IterateDocumentsAndRevisionsByEtag(context, lastEtag))
                             {
-                                writer.WriteString(doc.Id);
-                            }
-                            catch (Exception)
-                            {
-                                corrupted.Add($"Id: '{doc.Id}', LowerId: '{doc.LowerId}', ChangeVector: '{doc.ChangeVector}', Etag: '{doc.Etag}', Flags: '{doc.Flags}'");
+                                HttpContext.RequestAborted.ThrowIfCancellationRequested();
 
-                                if (corruptedCount-- <= 0)
+                                ++scannedDocuments;
+                                using (doc)
                                 {
-                                    lastEtag = doc.Etag;
-                                    break;
+                                    unsafe
+                                    {
+                                        using var cloned = context.GetLazyString(doc.LowerId.Buffer, doc.LowerId.Size, longLived: false);
+                                        if (cloned.Length > doc.LowerId.Length)
+                                        {
+                                            AddToResult(unescapedControlCharacterIds, doc);
+                                            resultCount--;
+                                        }
+                                    }
+
+                                    try
+                                    {
+                                        writer.WriteString(doc.Id);
+                                    }
+                                    catch (Exception)
+                                    {
+                                        AddToResult(wrongEscapedPositionsIds, doc);
+                                        resultCount--;
+                                    }
+
+                                    if (resultCount <= 0 || timeout.Elapsed > maxBatchTime)
+                                    {
+                                        lastEtag = doc.Etag;
+                                        break;
+                                    }
                                 }
                             }
+                            break;
                         }
                     }
                 }
-            
+
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, ResponseBodyStream()))
                 {
                     writer.WriteStartObject();
-                    writer.WriteArray("CorruptedDocuments", corrupted);
+                    writer.WriteArray("WrongEscapedPositionsIds", wrongEscapedPositionsIds);
                     writer.WriteComma();
-                    if (lastEtag.HasValue)
+                    writer.WriteArray("UnescapedControlCharacterIds", unescapedControlCharacterIds);
+                    writer.WriteComma();
+                    if (lastEtag > 0)
                     {
                         writer.WritePropertyName("LastEtag");
-                        writer.WriteInteger(lastEtag.Value);
+                        writer.WriteInteger(lastEtag);
                     }
                     else
                     {
                         writer.WritePropertyName("AllScanned");
                         writer.WriteBool(true);
                     }
+                    writer.WriteComma();
+                    writer.WritePropertyName("ScannedDocuments");
+                    writer.WriteInteger(scannedDocuments);
                     writer.WriteEndObject();
                 }
+            }
+
+            return;
+
+            void AddToResult(List<string> list, Document doc)
+            {
+                list.Add(
+                    $"Id: '{doc.Id}', LowerId: '{doc.LowerId}', ChangeVector: '{doc.ChangeVector}', Etag: '{doc.Etag}', Flags: '{doc.Flags}'");
             }
         }
         

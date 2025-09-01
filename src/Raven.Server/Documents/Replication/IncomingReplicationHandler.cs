@@ -1394,7 +1394,7 @@ namespace Raven.Server.Documents.Replication
                                         }
                                         else
                                         {
-                                            using (DocumentIdWorker.GetSliceFromId(context, doc.Id, out Slice keySlice))
+                                            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, doc.Id, out Slice keySlice))
                                             {
                                                 database.DocumentsStorage.Delete(
                                                     context, keySlice, doc.Id, null,
