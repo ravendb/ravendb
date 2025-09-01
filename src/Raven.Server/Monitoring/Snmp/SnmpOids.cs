@@ -105,6 +105,18 @@ namespace Raven.Server.Monitoring.Snmp
             [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of open file descriptors for Server (Linux only)")]
             public const string ProcessOpenFileDescriptors = "1.5.5";
+
+            [SnmpDataType(SnmpType.OctetString)]
+            [Description("Load average over 1 minute for OS (Linux only)")]
+            public const string ProcessLoadAverage1M = "1.5.6.1";
+
+            [SnmpDataType(SnmpType.OctetString)]
+            [Description("Load average over 5 minutes for OS (Linux only)")]
+            public const string ProcessLoadAverage5M = "1.5.6.2";
+
+            [SnmpDataType(SnmpType.OctetString)]
+            [Description("Load average over 15 minutes for OS (Linux only)")]
+            public const string ProcessLoadAverage15M = "1.5.6.3";
             
             [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server allocated memory in MB")]
