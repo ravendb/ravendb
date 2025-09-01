@@ -1744,6 +1744,20 @@ namespace Raven.Client.Documents.Indexes
                         return node;
                     }
                     
+                    if (node.Method.DeclaringType == typeof(Enumerable) && node.Method.Name == "Empty")
+                    {
+                        var elementType = node.Type.GetGenericArguments()[0];
+                        
+                        if (CheckIfAnonymousType(elementType) == false && TypeExistsOnServer(elementType))
+                        {
+                            Out($"new {ConvertTypeToCSharpKeyword(elementType, out _)}[0]");
+                        }
+                        else
+                            Out("new DynamicArray(new dynamic[0])");
+
+                        return node;
+                    }
+                    
                     Out(node.Method.DeclaringType.Name);
                     Out(".");
                 }

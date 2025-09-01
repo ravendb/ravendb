@@ -26,6 +26,7 @@ public class RavenDB_24028 : RavenTestBase
             await store.ExecuteIndexAsync(new MyIndex());
             await store.ExecuteIndexAsync(new MyIndexKnownTypesArrays());
             await store.ExecuteIndexAsync(new MyIndexKnownTypesLists());
+            await store.ExecuteIndexAsync(new MyIndexKnownTypesEnumerables());
             
             using (var session = store.OpenSession())
             {
@@ -66,11 +67,15 @@ public class RavenDB_24028 : RavenTestBase
 
                 let e7 = document.AnyId != null ? AttachmentsFor(document) : new List<AttachmentName>()
                 let e8 = document.AnyId == null ? new List<AttachmentName>() : AttachmentsFor(document)
+                
+                let e9 = document.AnyId != null ? AttachmentsFor(document) : Enumerable.Empty<AttachmentName>()
+                let e10 = document.AnyId == null ? Enumerable.Empty<AttachmentName>() : AttachmentsFor(document)
 
-                let e9 = new AttachmentName[0]
-                let e10 = new AttachmentName[] { }
-                let e11 = Array.Empty<AttachmentName>()
-                let e12 = new List<AttachmentName>()
+                let e11 = new AttachmentName[0]
+                let e12 = new AttachmentName[] { }
+                let e13 = Array.Empty<AttachmentName>()
+                let e14 = new List<AttachmentName>()
+                let e15 = Enumerable.Empty<AttachmentName>()
 
                 select new
                 {
@@ -108,6 +113,15 @@ public class RavenDB_24028 : RavenTestBase
                         .Where(a => a.ContentType == "application/pdf")
                         .ToList(),
                     l12 = e12
+                        .Where(a => a.ContentType == "application/pdf")
+                        .ToList(),
+                    l13 = e13
+                        .Where(a => a.ContentType == "application/pdf")
+                        .ToList(),
+                    l14 = e13
+                        .Where(a => a.ContentType == "application/pdf")
+                        .ToList(),
+                    l15 = e15
                         .Where(a => a.ContentType == "application/pdf")
                         .ToList()
                 };
@@ -237,6 +251,39 @@ public class RavenDB_24028 : RavenTestBase
                 });
             
             StoreAllFields(FieldStorage.Yes);
+        }
+    }
+
+    private class MyIndexKnownTypesEnumerables : AbstractMultiMapIndexCreationTask
+    {
+        public MyIndexKnownTypesEnumerables()
+        {
+            AddMap<TestDocument>(documents => from document in documents
+                let e = document.AnyId != null ? Enumerable.Repeat("abc", 1) : Enumerable.Empty<string>()
+                select new 
+                {
+                    l = e
+                        .Where(a => a.StartsWith("application/pdf"))
+                        .ToList(),
+                });
+            
+            AddMap<TestDocument>(documents => from document in documents
+                let e = document.AnyId == null ? Enumerable.Empty<string>() : Enumerable.Repeat("abc", 1)
+                select new 
+                {
+                    l = e
+                        .Where(a => a.StartsWith("application/pdf"))
+                        .ToList(),
+                });
+            
+            AddMap<TestDocument>(documents => from document in documents
+                let e = Enumerable.Empty<string>()
+                select new 
+                {
+                    l = e
+                        .Where(a => a.StartsWith("application/pdf"))
+                        .ToList(),
+                });
         }
     }
 }
