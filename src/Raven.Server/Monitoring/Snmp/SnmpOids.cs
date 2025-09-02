@@ -107,16 +107,16 @@ namespace Raven.Server.Monitoring.Snmp
             public const string ProcessOpenFileDescriptors = "1.5.5";
 
             [SnmpDataType(SnmpType.OctetString)]
-            [Description("Load average over 1 minute for OS (Linux only)")]
-            public const string ProcessLoadAverage1M = "1.5.6.1";
+            [Description("Load average over 1 minute for Machine (Linux only)")]
+            public const string MachineLoadAverage1M = "1.5.6.1";
 
             [SnmpDataType(SnmpType.OctetString)]
-            [Description("Load average over 5 minutes for OS (Linux only)")]
-            public const string ProcessLoadAverage5M = "1.5.6.2";
+            [Description("Load average over 5 minutes for Machine (Linux only)")]
+            public const string MachineLoadAverage5M = "1.5.6.2";
 
             [SnmpDataType(SnmpType.OctetString)]
-            [Description("Load average over 15 minutes for OS (Linux only)")]
-            public const string ProcessLoadAverage15M = "1.5.6.3";
+            [Description("Load average over 15 minutes for Machine (Linux only)")]
+            public const string MachineLoadAverage15M = "1.5.6.3";
             
             [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server allocated memory in MB")]

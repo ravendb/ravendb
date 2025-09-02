@@ -6,11 +6,11 @@ using Sparrow.Platform;
 
 namespace Raven.Server.Monitoring.Snmp.Objects.Server
 {
-    public abstract class ProcessLoadAverageBase : ScalarObjectBase<Gauge32>
+    public abstract class MachineLoadAverageBase : ScalarObjectBase<Gauge32>
     {
         private readonly int _index; // 0-based index: 0 => 1m, 1 => 5m, 2 => 15m
 
-        protected ProcessLoadAverageBase(string oid, int index) : base(oid)
+        protected MachineLoadAverageBase(string oid, int index) : base(oid)
         {
             _index = index;
         }
