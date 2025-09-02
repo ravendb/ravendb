@@ -14,6 +14,7 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.AI;
+using Raven.Server.Documents.AI.Settings;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Web;
 using Sparrow.Json;
@@ -44,7 +45,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     [
                         new OrderLine
                         {
-                            ProductName = "this is my order", 
+                            ProductName = "this is my order",
                             Quantity = 2
                         }
                     ]
@@ -57,7 +58,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     [
                         new OrderLine
                         {
-                            ProductName = "this is a secret", 
+                            ProductName = "this is a secret",
                             Quantity = 2
                         }
                     ]
@@ -110,27 +111,26 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             protected override ChatCompletionClient CreateClient(AiConnectionString connection)
             {
-                if (connection.TryGetParameters(out var uri, out var apiKey, out var model, out var organizationId, out var projectId, out var think, out var temperature) ==
-                    false)
+                if (AbstractChatCompletionClientSettings.TryGetParameters(connection, out var settings) == false)
                 {
                     var connectorType = connection.GetActiveProvider();
                     throw new NotSupportedException($"The specified provider (\"{connectorType.ToString()}\") is not supported.");
                 }
 
-                return new EvilLlm(ContextPool, uri, apiKey, model, organizationId, projectId, new ChatCompletionClient.ChatCompletionClientOptions { Think = think, Temperature = temperature }, ChatCompletionClient.ConventionsToUse);
+                settings.BaseUri = "http://fake.url";
+                return new EvilLlm(ContextPool, settings, ChatCompletionClient.ConventionsToUse);
             }
         }
 
         public class FakeDatabaseRequestHandler : DatabaseRequestHandler
         {
         }
+
         internal class EvilLlm : ChatCompletionClient
         {
-            internal EvilLlm(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, ChatCompletionClient.ChatCompletionClientOptions options = null,
-                DocumentConventions conventions = null) :
-                base(contextPool, "http://fake.url", apiKey: null, model, organizationId, projectId, options, conventions)
+            internal EvilLlm(IMemoryContextPool contextPool, AbstractChatCompletionClientSettings settings, DocumentConventions conventions = null)
+                : base(contextPool, settings, conventions)
             {
-
             }
 
             protected override async Task<HttpResponseMessage> SendRequestAsync(HttpRequestMessage request, CancellationToken token)
@@ -159,6 +159,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
         public static string CreateMockResponse(string content) =>
             $"{{\"id\": \"chatcmpl-C1olOxqfiaBhqmb5IrRmlckmdUTla\",\"object\": \"chat.completion\",\"created\": 1754549498,\"model\": \"gpt-4o-2024-08-06\",\"choices\": [{{\"index\": 0,\"message\": {{\"role\": \"assistant\",\"content\": \'{{\"Answer\":{content}}}\',\"refusal\": null,\"annotations\": []}},\"logprobs\": null,\"finish_reason\": \"done\"}}],\"usage\": {{\"prompt_tokens\": 268,\"completion_tokens\": 16,\"total_tokens\": 284,\"prompt_tokens_details\": {{\"cached_tokens\": 0,\"audio_tokens\": 0}},\"completion_tokens_details\": {{\"reasoning_tokens\": 0,\"audio_tokens\": 0,\"accepted_prediction_tokens\": 0,\"rejected_prediction_tokens\": 0}}}},\"service_tier\": \"default\",\"system_fingerprint\": \"fp_07871e2ad8\"}}";
+
         public static string MockToolResponse =
             "{\"id\": \"chatcmpl-C1olOxqfiaBhqmb5IrRmlckmdUTla\",\"object\": \"chat.completion\",\"created\": 1754549498,\"model\": \"gpt-4o-2024-08-06\",\"choices\": [{\"index\": 0,\"message\": {\"role\": \"assistant\",\"content\": null,\"tool_calls\": [{\"id\": \"call_hfJlPcKhQ4uaElhBETgHTuCq\",\"type\": \"function\",\"function\": {\"name\": \"RecentOrder\",\"arguments\": \"{\\\"company\\\":[\\\"companies/2-A\\\"]}\"}}],\"refusal\": null,\"annotations\": []},\"logprobs\": null,\"finish_reason\": \"tool_calls\"}],\"usage\": {\"prompt_tokens\": 268,\"completion_tokens\": 16,\"total_tokens\": 284,\"prompt_tokens_details\": {\"cached_tokens\": 0,\"audio_tokens\": 0},\"completion_tokens_details\": {\"reasoning_tokens\": 0,\"audio_tokens\": 0,\"accepted_prediction_tokens\": 0,\"rejected_prediction_tokens\": 0}},\"service_tier\": \"default\",\"system_fingerprint\": \"fp_07871e2ad8\"}";
     }

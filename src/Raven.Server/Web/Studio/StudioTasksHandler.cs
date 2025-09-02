@@ -10,6 +10,7 @@ using Raven.Server.Config;
 using Raven.Server.Config.Categories;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents.AI;
+using Raven.Server.Documents.AI.Settings;
 using Raven.Server.Documents.ETL.Providers.ElasticSearch;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.Indexes.IndexMerging;
@@ -339,37 +340,24 @@ namespace Raven.Server.Web.Studio
 
                 var request = JsonDeserializationServer.AiModelsRequest(json);
 
-                string uri;
-                string apiKey = null;
-                string organization = null;
-                string project = null;
-                bool? think = null;
-                double? temperature = null;
+                AbstractChatCompletionClientSettings settings = null;
                 switch (request.ConnectorType)
                 {
                     case AiConnectorType.OpenAi:
-                        uri = request.OpenAiSettings.Endpoint;
-                        apiKey = request.OpenAiSettings.ApiKey;
-                        organization = request.OpenAiSettings.OrganizationId;
-                        project = request.OpenAiSettings.ProjectId;
-                        temperature = request.OpenAiSettings.Temperature;
+                        settings = new OpenAiChatCompletionClientSettings(request.OpenAiSettings);
                         break;
                     case AiConnectorType.AzureOpenAi:
-                        uri = request.AzureOpenAiSettings.Endpoint;
-                        apiKey = request.AzureOpenAiSettings.ApiKey;
-                        temperature = request.AzureOpenAiSettings.Temperature;
+                        settings = new AzureOpenAiChatCompletionClientSettings(request.AzureOpenAiSettings);
                         break;
                     case AiConnectorType.Ollama:
-                        uri = request.OllamaSettings.Uri;
-                        think = request.OllamaSettings.Think;
-                        temperature = request.OllamaSettings.Temperature;
+                        settings = new OllamaChatCompletionClientSettings(request.OllamaSettings);
                         break;
                     default:
                         throw new NotSupportedException($"Unsupported connector type: {request.ConnectorType}");
                 }
 
                 using (var cts = new CancellationTokenSource(TimeSpan.FromSeconds(15)))
-                using (var chat = new ChatCompletionClient(ServerStore.ContextPool, uri, apiKey, model: null, organization, project, new ChatCompletionClient.ChatCompletionClientOptions { Think = think, Temperature = temperature }))
+                using (var chat = new ChatCompletionClient(ServerStore.ContextPool, settings))
                 {
                     await chat.ProxyModelsAsync(HttpContext.Response, cts.Token);
                 }

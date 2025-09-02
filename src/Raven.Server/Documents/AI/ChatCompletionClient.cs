@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -22,7 +21,7 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Http;
 using Raven.Client.Json;
-using Raven.Server.Documents.ETL.Providers.AI;
+using Raven.Server.Documents.AI.Settings;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Json;
 using Raven.Server.Utils;
@@ -36,22 +35,12 @@ namespace Raven.Server.Documents.AI;
 
 internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClientForTesting
 {
-    internal sealed class ChatCompletionClientOptions
-    {
-        public bool? Think { get; init; }
-        public double? Temperature { get; init; }
-    }
-    
     public static readonly string EmptySchema = GetSchemaFromSampleObject("{}");
 
-    private readonly string _model;
-    private readonly string _organizationId;
-    private readonly string _projectId;
-    private readonly ChatCompletionClientOptions _options;
+    private readonly AbstractChatCompletionClientSettings _settings;
     private readonly HttpClientCacheKey _httpClientCacheKey;
     private readonly HttpClient _client;
     private readonly IMemoryContextPool _contextPool;
-    private readonly string _apiKey;
 
     public static readonly DocumentConventions ConventionsToUse = new DocumentConventions
     {
@@ -70,34 +59,24 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
     public static ChatCompletionClient CreateChatCompletionClient(IMemoryContextPool contextPool, AiConnectionString connection)
     {
-        if (connection.TryGetParameters(out var uri, out var apiKey, out var model, out var organizationId, out var projectId, out var think, out var temperature) == false)
+        if (AbstractChatCompletionClientSettings.TryGetParameters(connection, out var settings) == false)
         {
             var connectorType = connection.GetActiveProvider();
             throw new NotSupportedException($"The specified provider (\"{connectorType.ToString()}\") is not supported.");
         }
 
-        var options = new ChatCompletionClientOptions
-        {
-            Think = think,
-            Temperature = temperature
-        };
-
-        return new ChatCompletionClient(contextPool, uri, apiKey, model, organizationId, projectId, options, ConventionsToUse);
+        return new ChatCompletionClient(contextPool, settings, ConventionsToUse);
     }
 
-    internal ChatCompletionClient(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, ChatCompletionClientOptions options = null, DocumentConventions conventions = null)
+    internal ChatCompletionClient(IMemoryContextPool contextPool, AbstractChatCompletionClientSettings settings, DocumentConventions conventions = null)
     {
-        _model = model;
-        _organizationId = organizationId;
-        _projectId = projectId;
-        _options = options;
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
         conventions ??= ConventionsToUse;
 
+        var baseUri = settings.BaseUri;
         if (baseUri.EndsWith("/") == false)
-        {
             baseUri += "/";
-        }
 
         _httpClientCacheKey = HttpClientCacheKey.Create(conventions.UseHttpDecompression,
             conventions.HasExplicitlySetDecompressionUsage, conventions.HttpPooledConnectionLifetime,
@@ -110,9 +89,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         });
 
         _contextPool = contextPool;
-        _apiKey = apiKey;
     }
-
 
     private struct ToolCallState
     {
@@ -522,8 +499,8 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         bool streaming,
         string schema)
     {
-        if (_model is null)
-            throw new ArgumentNullException(nameof(_model));
+        if (_settings.Model is null)
+            throw new ArgumentNullException(nameof(_settings.Model));
 
         var content = new BlittableJsonContent(async stream =>
         {
@@ -545,7 +522,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         {
             Method = HttpMethod.Post,
             Content = content,
-            RequestUri = new Uri(Constants.RequestFields.DefaultRelativeUri, UriKind.Relative)
+            RequestUri = new Uri(_settings.GetRelativeCompletionUri(), UriKind.Relative)
         };
 
         return request;
@@ -556,7 +533,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         writer.WriteStartObject();
 
         writer.WritePropertyName(Constants.RequestFields.Model);
-        writer.WriteString(_model);
+        writer.WriteString(_settings.Model);
         writer.WriteComma();
 
         List<LazyStringValue> filterProperties = [ctx.GetLazyString(ConversationDocument.DateProperty), ctx.GetLazyString(ConversationDocument.UsageProperty)];
@@ -605,22 +582,8 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             writer.WriteEndObject();
         }
 
-        // Add Ollama-specific "think" parameter if specified
-        if (_options?.Think.HasValue == true)
-        {
-            writer.WriteComma();
-            writer.WritePropertyName(Constants.RequestFields.Think);
-            writer.WriteBool(_options.Think.Value);
-        }
-
-        // Add Ollama-specific "temperature" parameter if specified
-        if (_options?.Temperature.HasValue == true)
-        {
-            writer.WriteComma();
-            writer.WritePropertyName(Constants.RequestFields.Temperature);
-            writer.WriteDouble(_options.Temperature.Value);
-        }
-
+        _settings.HandleCompletionRequestPayload(writer);
+        
         writer.WriteEndObject();
         return;
 
@@ -638,7 +601,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         using var request = new HttpRequestMessage
         {
             Method = HttpMethod.Get,
-            RequestUri = new Uri(Constants.RequestFields.ModelsUri, UriKind.Relative)
+            RequestUri = new Uri(_settings.GetRelativeModelsUri(), UriKind.Relative)
         };
 
         AddDefaultHeaders(request);
@@ -653,13 +616,9 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
     private void AddDefaultHeaders(HttpRequestMessage request)
     {
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(Constants.RequestFields.MediaTypeApplicationJson));
-        request.Headers.Authorization = string.IsNullOrEmpty(_apiKey) ? null : new AuthenticationHeaderValue(Constants.RequestFields.AuthorizationApiKeyProperty, _apiKey);
+        request.Headers.Authorization = string.IsNullOrEmpty(_settings.ApiKey) ? null : new AuthenticationHeaderValue(Constants.RequestFields.AuthorizationApiKeyProperty, _settings.ApiKey);
 
-        if (string.IsNullOrEmpty(_organizationId) == false)
-            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiOrganization, _organizationId);
-
-        if (string.IsNullOrEmpty(_projectId) == false)
-            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiProject, _projectId);
+        _settings.AddHeaders(request);
     }
 
     public async Task<BlittableJsonReaderObject> GetResponseContentAsync(JsonOperationContext context, HttpResponseMessage response, CancellationToken token)
@@ -979,7 +938,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string ErrorTypeInsufficientQuota = "insufficient_quota";
             public const string ErrorTypeTokens = "tokens";
             public const string ErrorTypeRequests = "requests";
-
+            
             public const string Index = "index";
             public const string Id = "id";
             public const string Type = "type";
@@ -1048,14 +1007,10 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
             // HTTP headers
             public const string HeaderContentType = "Content-Type";
-            public const string OpenAiOrganization = "OpenAI-Organization";
-            public const string OpenAiProject = "OpenAI-Project";
             public const string MediaTypeApplicationJson = "application/json";
-
-            public const string DefaultRelativeUri = "v1/chat/completions";
-            public const string ModelsUri = "v1/models";
+            
             public const string AuthorizationApiKeyProperty = "Bearer";
-
+            
             public const string Stream = "stream";
             public const string StreamOptions = "stream_options";
             public const string IncludeUsage = "include_usage";
@@ -1078,6 +1033,6 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             public const string MediaTypeImagePng = "image/png";
             public const string MediaTypeImageGif = "image/gif";
             public const string MediaTypeImageWebp = "image/webp";
-        }
     }
+}
 }
