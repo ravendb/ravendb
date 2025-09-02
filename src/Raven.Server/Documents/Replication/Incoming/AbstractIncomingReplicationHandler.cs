@@ -408,7 +408,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                 var item = ReplicationBatchItem.ReadTypeAndInstantiate(reader);
                 item.ReadChangeVectorAndMarker();
-                item.Read(context, allocator, stats);
+                item.Read(context, allocator, stats, SupportedFeatures.Replication);
 
                 data.ReplicatedItems[i] = item;
             }

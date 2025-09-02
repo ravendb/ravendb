@@ -663,7 +663,7 @@ namespace Raven.Server.Documents.Replication.Senders
                     // we will dispose item.Value when we are done with writing the stream
                     using (Slice.From(documentsContext.Allocator, item.Value.ChangeVector, out var cv))
                     {
-                        item.Value.Write(cv, _stream, _tempBuffer, stats);
+                        item.Value.Write(cv, _stream, _tempBuffer, stats, _parent.SupportedFeatures.Replication);
                     }
                 }
                 else
@@ -671,7 +671,7 @@ namespace Raven.Server.Documents.Replication.Senders
                     using (item.Value)
                     using (Slice.From(documentsContext.Allocator, item.Value.ChangeVector, out var cv))
                     {
-                        item.Value.Write(cv, _stream, _tempBuffer, stats);
+                        item.Value.Write(cv, _stream, _tempBuffer, stats, _parent.SupportedFeatures.Replication);
                     }
                 }
             }

@@ -2,6 +2,7 @@
 using System.Globalization;
 using System.IO;
 using Raven.Client.Documents.Attachments;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Client.Util;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
@@ -44,7 +45,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                                      + (RetireAtUtc == null ? 0 : sizeof(long)) // size of RetireAtUtc
                                      + sizeof(int) // size of Flags
                                      + sizeof(int) + //  size of RetireIdentifier
-                                     +RetireIdentifier.Size;
+                                     + RetireIdentifier.Size;
 
         public long StreamSize => sizeof(byte) + // type
 
@@ -102,7 +103,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public override long AssertChangeVectorSize() => Size;
 
-        public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
+        public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats,
+            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication)
         {
             fixed (byte* pTemp = tempBuffer)
             {
@@ -130,36 +132,47 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Base64Hash.CopyTo(pTemp + tempBufferPos);
                 tempBufferPos += Base64Hash.Size;
 
-                *(long*)(pTemp + tempBufferPos) = AttachmentSize;
-                tempBufferPos += sizeof(long);
-                if (RetireAtUtc.HasValue)
-                {
-                    *(long*)(pTemp + tempBufferPos) = RetireAtUtc.Value.Ticks;
-                    tempBufferPos += sizeof(long);
-                }
-                else
-                {
-                    *(long*)(pTemp + tempBufferPos) = -1L;
-                    tempBufferPos += sizeof(long);
-                }
-
-                *(RetiredAttachmentFlags*)(pTemp + tempBufferPos) = Flags;
-                tempBufferPos += sizeof(RetiredAttachmentFlags);
-
-                *(int*)(pTemp + tempBufferPos) = RetireIdentifier.Size;
-                tempBufferPos += sizeof(int);
-                if (RetireIdentifier.Size != 0)
-                {
-                    Memory.Copy(pTemp + tempBufferPos, RetireIdentifier.Content.Ptr, RetireIdentifier.Size);
-                    tempBufferPos += RetireIdentifier.Size;
-                }
+                tempBufferPos = WriteRetireAttachmentsProperties(supportedFeaturesReplication, pTemp, tempBufferPos);
 
                 stream.Write(tempBuffer, 0, tempBufferPos);
                 stats.RecordAttachmentOutput(Size);
             }
         }
 
-        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
+        private unsafe int WriteRetireAttachmentsProperties(TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication, byte* pTemp, int tempBufferPos)
+        {
+            if (supportedFeaturesReplication.RetiredAttachments == false)
+                return tempBufferPos;
+
+            *(long*)(pTemp + tempBufferPos) = AttachmentSize;
+            tempBufferPos += sizeof(long);
+            if (RetireAtUtc.HasValue)
+            {
+                *(long*)(pTemp + tempBufferPos) = RetireAtUtc.Value.Ticks;
+                tempBufferPos += sizeof(long);
+            }
+            else
+            {
+                *(long*)(pTemp + tempBufferPos) = -1L;
+                tempBufferPos += sizeof(long);
+            }
+
+            *(RetiredAttachmentFlags*)(pTemp + tempBufferPos) = Flags;
+            tempBufferPos += sizeof(RetiredAttachmentFlags);
+
+            *(int*)(pTemp + tempBufferPos) = RetireIdentifier.Size;
+            tempBufferPos += sizeof(int);
+            if (RetireIdentifier.Size != 0)
+            {
+                Memory.Copy(pTemp + tempBufferPos, RetireIdentifier.Content.Ptr, RetireIdentifier.Size);
+                tempBufferPos += RetireIdentifier.Size;
+            }
+
+            return tempBufferPos;
+        }
+
+        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats,
+            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication)
         {
             using (stats.For(ReplicationOperation.Incoming.AttachmentRead))
             {
@@ -172,21 +185,29 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 var base64HashSize = *Reader.ReadExactly(sizeof(byte));
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
 
-                AttachmentSize = *(long*)Reader.ReadExactly(sizeof(long));
-                var ticks = *(long*)Reader.ReadExactly(sizeof(long));
-                if (ticks != -1)
-                    RetireAtUtc = new DateTime(ticks, DateTimeKind.Utc);
-
-                Flags = *(RetiredAttachmentFlags*)Reader.ReadExactly(sizeof(RetiredAttachmentFlags)) | RetiredAttachmentFlags.None;
-                size = *(int*)Reader.ReadExactly(sizeof(int));
-
-                if (size == 0)
+                if (supportedFeaturesReplication.RetiredAttachments)
                 {
-                    RetireIdentifier = Slices.Empty;
+                    AttachmentSize = *(long*)Reader.ReadExactly(sizeof(long));
+                    var ticks = *(long*)Reader.ReadExactly(sizeof(long));
+                    if (ticks != -1)
+                        RetireAtUtc = new DateTime(ticks, DateTimeKind.Utc);
+
+                    Flags = *(RetiredAttachmentFlags*)Reader.ReadExactly(sizeof(RetiredAttachmentFlags)) | RetiredAttachmentFlags.None;
+                    size = *(int*)Reader.ReadExactly(sizeof(int));
+
+                    if (size == 0)
+                    {
+                        RetireIdentifier = Slices.Empty;
+                    }
+                    else
+                    {
+                        ToDispose(Slice.From(allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out RetireIdentifier));
+                    }
                 }
                 else
                 {
-                    ToDispose(Slice.From(allocator, Reader.ReadExactly(size), size, ByteStringType.Immutable, out RetireIdentifier));
+                    Flags = RetiredAttachmentFlags.None;
+                    RetireIdentifier = Slices.Empty;
                 }
 
                 stats.RecordAttachmentRead(Size);
@@ -238,6 +259,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
 
                 var streamLength = *(long*)Reader.ReadExactly(sizeof(long));
+                AttachmentSize = streamLength;
                 Stream = attachmentStreamsTempFile.StartNewStream();
                 Reader.ReadExactly(streamLength, Stream);
                 Stream.Flush();

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication.Incoming;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide;
@@ -44,9 +45,11 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
 
         public abstract long AssertChangeVectorSize();
 
-        public abstract void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats);
+        public abstract void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats,
+            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication);
 
-        public abstract void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats);
+        public abstract void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats,
+            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication);
 
         protected abstract ReplicationBatchItem CloneInternal(JsonOperationContext context, ByteStringContext allocator);
 

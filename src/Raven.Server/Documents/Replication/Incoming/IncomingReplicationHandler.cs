@@ -12,7 +12,6 @@ using Raven.Client.Exceptions.Documents;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Config;
-using Raven.Server.Documents.ETL.Providers.Raven;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
@@ -316,7 +315,48 @@ namespace Raven.Server.Documents.Replication.Incoming
                 _isInternal = isInternal;
             }
 
-            protected virtual ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item, List<IDisposable> disposables)
+            protected ChangeVector PreProcessItem(DocumentsOperationContext context, ReplicationBatchItem item)
+            {
+                PreProcessAttachments(context, item);
+
+                return PreProcessItemInternal(context, item);
+            }
+
+            protected void PreProcessAttachments(DocumentsOperationContext context, ReplicationBatchItem item)
+            {
+                if (_replicationInfo.SupportedFeatures.Replication.RetiredAttachments == false)
+                {
+                    switch (item)
+                    {
+                        case AttachmentReplicationItem attachmentReplicationItem:
+
+                            var gotStream = false;
+                            if (_replicationInfo.ReplicatedAttachmentStreams != null && _replicationInfo.ReplicatedAttachmentStreams.TryGetValue(attachmentReplicationItem.Base64Hash, out var attachmentStream))
+                            {
+                                // we populated the Stream Size to AttachmentSize when we received the attachment stream
+                                attachmentReplicationItem.AttachmentSize = attachmentStream.AttachmentSize;
+                                gotStream = true;
+                            }
+
+                            if (gotStream == false)
+                            {
+                                var attachmentSize = AttachmentsStorage.GetAttachmentStreamLength(context, attachmentReplicationItem.Base64Hash);
+                                if (attachmentSize != -1)
+                                {
+                                    attachmentReplicationItem.AttachmentSize = attachmentSize;
+                                    gotStream = true;
+                                }
+                            }
+
+                            // this is a serious issue, we have an attachment without a stream, the Replication Task will throw in such case, later
+                            Debug.Assert(gotStream == true, "gotStream == true");
+
+                            break;
+                    }
+                }
+            }
+
+            protected virtual ChangeVector PreProcessItemInternal(DocumentsOperationContext context, ReplicationBatchItem item)
             {
                 return context.GetChangeVector(item.ChangeVector).Order;
             }
@@ -368,7 +408,7 @@ namespace Raven.Server.Documents.Replication.Incoming
 
                         operationsCount++;
 
-                        var changeVectorToMerge = PreProcessItem(context, item, toDispose);
+                        var changeVectorToMerge = PreProcessItem(context, item);
 
                         var incomingChangeVector = context.GetChangeVector(item.ChangeVector);
                         var changeVectorVersion = incomingChangeVector.Version;

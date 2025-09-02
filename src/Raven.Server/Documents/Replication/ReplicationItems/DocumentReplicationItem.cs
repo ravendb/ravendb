@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Globalization;
 using System.IO;
+using Raven.Client.ServerWide.Tcp;
 using Raven.Server.Documents.Replication.Stats;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -97,7 +98,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             return size;
         }
 
-        public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats)
+        public override unsafe void Write(Slice changeVector, Stream stream, byte[] tempBuffer, OutgoingReplicationStatsScope stats,
+            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication)
         {
             fixed (byte* pTemp = tempBuffer)
             {
@@ -170,7 +172,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             }
         }
 
-        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats)
+        public override unsafe void Read(JsonOperationContext context, ByteStringContext allocator, IncomingReplicationStatsScope stats,
+            TcpConnectionHeaderMessage.SupportedFeatures.ReplicationFeatures supportedFeaturesReplication)
         {
             var scope = Type == ReplicationItemType.Document ?
                 stats.For(ReplicationOperation.Incoming.DocumentRead, start: false) :

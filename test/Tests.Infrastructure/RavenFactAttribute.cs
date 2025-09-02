@@ -70,7 +70,19 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
         get => Requires.HasFlag(RavenServiceRequirement.AmazonSqs);
         set => Requires = value ? Requires | RavenServiceRequirement.AmazonSqs : Requires & ~RavenServiceRequirement.AmazonSqs;
     }
-    
+
+    public bool AwsRequired
+    {
+        get => Requires.HasFlag(RavenServiceRequirement.Aws);
+        set => Requires = value ? Requires | RavenServiceRequirement.Aws : Requires & ~RavenServiceRequirement.Aws;
+    }
+
+    public bool AzureRequired
+    {
+        get => Requires.HasFlag(RavenServiceRequirement.Azure);
+        set => Requires = value ? Requires | RavenServiceRequirement.Azure : Requires & ~RavenServiceRequirement.Azure;
+    }
+
     public override string Skip
     {
         get
@@ -112,6 +124,12 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
             return skip;
 
         if (serviceRequirement.HasFlag(RavenServiceRequirement.MySql) && ShouldSkipMySql(out skip))
+            return skip;
+
+        if (serviceRequirement.HasFlag(RavenServiceRequirement.Aws) && ShouldSkipAws(out skip))
+            return skip;
+
+        if (serviceRequirement.HasFlag(RavenServiceRequirement.Azure) && ShouldSkipAzure(out skip))
             return skip;
 
         return null;
@@ -192,6 +210,16 @@ public class RavenFactAttribute : FactAttribute, ITraitAttribute
     private static bool ShouldSkipAmazonSqs(out string skipMessage)
     {
         return AmazonSqsHelper.ShouldSkip(out skipMessage);
+    }
+
+    private static bool ShouldSkipAws(out string skipMessage)
+    {
+        return AmazonS3RetryFactAttribute.ShouldSkip(out skipMessage);
+    }
+
+    private static bool ShouldSkipAzure(out string skipMessage)
+    {
+        return AzureRetryFactAttribute.ShouldSkip(out skipMessage);
     }
 
     internal static bool ShouldSkipLicense(out string skipMessage)

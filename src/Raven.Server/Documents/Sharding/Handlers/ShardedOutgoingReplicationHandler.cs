@@ -113,7 +113,7 @@ namespace Raven.Server.Documents.Sharding.Handlers
             {
                 using (Slice.From(context.Allocator, item.ChangeVector, out var cv))
                 {
-                    item.Write(cv, _stream, _tempBuffer, stats);
+                    item.Write(cv, _stream, _tempBuffer, stats, SupportedFeatures.Replication);
                 }
 
                 _lastEtag = item.Etag;

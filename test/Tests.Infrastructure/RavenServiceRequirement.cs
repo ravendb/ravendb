@@ -58,4 +58,15 @@ public enum RavenServiceRequirement
     /// Test requires MySQL.
     /// </summary>
     MySql = 1 << 8,
+
+    /// <summary>
+    /// Test requires AWS services.
+    /// </summary>
+    Aws = 1 << 9,
+
+    /// <summary>
+    /// Test requires Azure services.
+    /// </summary>
+    Azure = 1 << 10,
+
 }
