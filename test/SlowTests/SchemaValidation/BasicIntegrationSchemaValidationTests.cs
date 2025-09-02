@@ -27,7 +27,6 @@ using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
-using SchemaValidator = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidator;
 using SVC = Raven.Server.Documents.SchemaValidation.SchemaValidatorConstants;
 
 namespace SlowTests.SchemaValidation;
@@ -71,10 +70,10 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         Assert.ThrowsAny<ArgumentException>(() => _ = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator() },
-                { "testobjs", new SchemaValidator() },
+                { "TestObjs", new SchemaDefinition() },
+                { "testobjs", new SchemaDefinition() },
             }
         });
 
@@ -123,9 +122,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -158,9 +157,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -192,9 +191,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -234,9 +233,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -271,9 +270,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -317,9 +316,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await source.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -352,9 +351,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await destination.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -386,9 +385,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await source.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -432,9 +431,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await destination.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -499,9 +498,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await destination.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -549,9 +548,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -602,9 +601,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await destination.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -649,9 +648,9 @@ public class BasicIntegrationSchemaValidationTests : ReplicationTestBase
         var configuration = new SchemaValidationConfiguration
         {
             Disabled = false,
-            ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+            ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
             {
-                { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
             }
         };
         await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));

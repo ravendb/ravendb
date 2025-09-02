@@ -24,11 +24,11 @@ public class SchemaValidationBasicTests : RavenTestBase
         {
             await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
             {
-                ValidatorsPerCollection = new Dictionary<string, SchemaValidator>()
+                ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>()
                 {
-                    {"Users", new SchemaValidator
+                    {"Users", new SchemaDefinition
                     {
-                        SchemaDefinition = schemaData
+                        Schema = schemaData
                     }}
                 }
             }));

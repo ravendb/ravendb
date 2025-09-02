@@ -72,7 +72,6 @@ namespace Sparrow.Json
             using (var writer = new BlittableJsonTextWriter(_context, stream))
             {
                 writer.WriteObject(this);
-                writer.Flush();
             }
         }
         
