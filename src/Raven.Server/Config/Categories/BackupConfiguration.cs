@@ -95,6 +95,12 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Backup.MoveToNewResponsibleNodeGracePeriodInMin", ConfigurationEntryScope.ServerWideOnly)]
         public TimeSetting MoveToNewResponsibleNodeGracePeriod { get; set; }
 
+        [Description("Number of days to keep backup groups in history. The most recent full backup is always preserved. A backup group (full backup and its incrementals) is removed when its full backup age exceeds this period.")]
+        [DefaultValue(30)]
+        [TimeUnit(TimeUnit.Days)]
+        [ConfigurationEntry("Backup.BackupHistoryRetentionPeriodInDays", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+        public TimeSetting BackupHistoryRetentionPeriod { get; set; }
+
         public override void Initialize(IConfigurationRoot settings, HashSet<string> settingsNames, IConfigurationRoot serverWideSettings, HashSet<string> serverWideSettingsNames, ResourceType type, string resourceName)
         {
             base.Initialize(settings, settingsNames, serverWideSettings, serverWideSettingsNames, type, resourceName);
