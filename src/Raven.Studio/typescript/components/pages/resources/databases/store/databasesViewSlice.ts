@@ -131,6 +131,9 @@ export const databasesViewSlice = createSlice({
         builder.addCase(fetchDatabase.fulfilled, (state, action) => {
             const { nodeTag } = action.meta.arg;
 
+            const orchestratorsToUpdate: OrchestratorLocalInfo[] = [];
+            const databasesToUpdate: DatabaseLocalInfo[] = [];
+
             action.payload.Orchestrators.forEach((orchestrator) => {
                 const newEntity = toOrchestratorLocalInfo(orchestrator, nodeTag);
 
@@ -140,7 +143,7 @@ export const databasesViewSlice = createSlice({
                 );
 
                 if (!existingInfo || JSON.stringify(existingInfo) !== JSON.stringify(newEntity)) {
-                    orchestratorInfoAdapter.setOne(state.orchestratorDetailedInfo, newEntity);
+                    orchestratorsToUpdate.push(newEntity);
                 }
             });
 
@@ -152,9 +155,17 @@ export const databasesViewSlice = createSlice({
                     databaseInfoAdapter.selectId(newEntity)
                 );
                 if (!existingInfo || JSON.stringify(existingInfo) !== JSON.stringify(newEntity)) {
-                    databaseInfoAdapter.setOne(state.databaseDetailedInfo, newEntity);
+                    databasesToUpdate.push(newEntity);
                 }
             });
+
+            if (orchestratorsToUpdate.length > 0) {
+                orchestratorInfoAdapter.setMany(state.orchestratorDetailedInfo, orchestratorsToUpdate);
+            }
+
+            if (databasesToUpdate.length > 0) {
+                databaseInfoAdapter.setMany(state.databaseDetailedInfo, databasesToUpdate);
+            }
         });
 
         builder.addCase(fetchDatabases.fulfilled, (state, action) => {
@@ -171,6 +182,9 @@ export const databasesViewSlice = createSlice({
                 };
             }
 
+            const orchestratorsToUpdate: OrchestratorLocalInfo[] = [];
+            const databasesToUpdate: DatabaseLocalInfo[] = [];
+
             action.payload.Orchestrators.forEach((orchestrator) => {
                 const newEntity = toOrchestratorLocalInfo(orchestrator, nodeTag);
 
@@ -180,7 +194,7 @@ export const databasesViewSlice = createSlice({
                 );
 
                 if (!existingInfo || JSON.stringify(existingInfo) !== JSON.stringify(newEntity)) {
-                    orchestratorInfoAdapter.setOne(state.orchestratorDetailedInfo, newEntity);
+                    orchestratorsToUpdate.push(newEntity);
                 }
             });
 
@@ -192,9 +206,17 @@ export const databasesViewSlice = createSlice({
                     databaseInfoAdapter.selectId(newEntity)
                 );
                 if (!existingInfo || JSON.stringify(existingInfo) !== JSON.stringify(newEntity)) {
-                    databaseInfoAdapter.setOne(state.databaseDetailedInfo, newEntity);
+                    databasesToUpdate.push(newEntity);
                 }
             });
+
+            if (orchestratorsToUpdate.length > 0) {
+                orchestratorInfoAdapter.setMany(state.orchestratorDetailedInfo, orchestratorsToUpdate);
+            }
+
+            if (databasesToUpdate.length > 0) {
+                databaseInfoAdapter.setMany(state.databaseDetailedInfo, databasesToUpdate);
+            }
         });
 
         builder.addCase(fetchDatabases.rejected, (state, action) => {

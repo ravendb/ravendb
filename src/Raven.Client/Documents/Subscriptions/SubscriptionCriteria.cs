@@ -23,6 +23,9 @@ namespace Raven.Client.Documents.Subscriptions
         public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
     }
 
+    /// <summary>
+    /// Options for creating a subscription using a typed predicate, projection and includes.
+    /// </summary>
     public sealed class PredicateSubscriptionCreationOptions : ISubscriptionCreationOptions
     {
         public string Name { get; set; }
@@ -46,6 +49,9 @@ namespace Raven.Client.Documents.Subscriptions
         }
     }
 
+    /// <summary>
+    /// Options for creating a subscription using raw RQL and connection parameters.
+    /// </summary>
     public class SubscriptionCreationOptions : ISubscriptionCreationOptions
     {
         public string Name { get; set; }
@@ -57,6 +63,9 @@ namespace Raven.Client.Documents.Subscriptions
         public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
     }
 
+    /// <summary>
+    /// Strongly-typed helper for creating subscription options with predicate, projection and includes.
+    /// </summary>
     public sealed class SubscriptionCreationOptions<T>
     {
         public string Name { get; set; }
@@ -70,6 +79,11 @@ namespace Raven.Client.Documents.Subscriptions
 
         public ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
 
+        /// <summary>
+        /// Builds concrete <see cref="SubscriptionCreationOptions"/> from the typed options using the provided conventions.
+        /// </summary>
+        /// <param name="conventions">The document conventions to use when translating the typed options into an RQL subscription.</param>
+        /// <returns>A populated <see cref="SubscriptionCreationOptions"/>.</returns>
         public SubscriptionCreationOptions ToSubscriptionCreationOptions(DocumentConventions conventions)
         {
             SubscriptionCreationOptions subscriptionCreationOptions = new SubscriptionCreationOptions
@@ -86,6 +100,9 @@ namespace Raven.Client.Documents.Subscriptions
         }
     }
 
+    /// <summary>
+    /// Options for updating an existing subscription, including toggles that track whether values were set.
+    /// </summary>
     public class SubscriptionUpdateOptions : SubscriptionCreationOptions
     {
         public long? Id { get; set; }
@@ -120,6 +137,9 @@ namespace Raven.Client.Documents.Subscriptions
         internal bool DisabledWasSet { get; set; }
     }
 
+    /// <summary>
+    /// Represents a pair of document states: the previous and the current version, used when including revisions in subscriptions.
+    /// </summary>
     public sealed class Revision<T> where T : class
     {
         public T Previous;

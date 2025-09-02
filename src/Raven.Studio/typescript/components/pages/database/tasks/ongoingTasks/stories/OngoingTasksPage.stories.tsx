@@ -7,7 +7,7 @@ import { mockStore } from "test/mocks/store/MockStore";
 import { commonInit } from "components/pages/database/tasks/ongoingTasks/stories/common";
 
 export default {
-    title: "Pages/Tasks/Ongoing Tasks",
+    title: "Pages/Tasks/Ongoing Tasks/Ongoing Tasks Page",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
     parameters: {
         design: {
@@ -16,6 +16,24 @@ export default {
         },
     },
 } satisfies Meta;
+
+export const FullView: StoryObj<{ isAiOnly: boolean }> = {
+    render: (props) => {
+        commonInit();
+
+        const { tasksService } = mockServices;
+
+        tasksService.withGetTasks();
+        tasksService.withGetEtlProgress();
+        tasksService.withGetExternalReplicationProgress();
+        tasksService.withGetInternalReplicationProgress();
+
+        return <OngoingTasksPage isAiOnly={props.isAiOnly} />;
+    },
+    args: {
+        isAiOnly: false,
+    },
+};
 
 export const EmptyView: StoryObj = {
     render: () => {
@@ -37,21 +55,6 @@ export const EmptyView: StoryObj = {
         tasksService.withGetInternalReplicationProgress((dto) => {
             dto.Results = [];
         });
-
-        return <OngoingTasksPage />;
-    },
-};
-
-export const FullView: StoryObj = {
-    render: () => {
-        commonInit();
-
-        const { tasksService } = mockServices;
-
-        tasksService.withGetTasks();
-        tasksService.withGetEtlProgress();
-        tasksService.withGetExternalReplicationProgress();
-        tasksService.withGetInternalReplicationProgress();
 
         return <OngoingTasksPage />;
     },

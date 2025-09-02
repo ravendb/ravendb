@@ -158,6 +158,8 @@ export interface AiConnection extends ConnectionBase {
         uri?: string;
         think?: boolean;
         embeddingsMaxConcurrentBatches?: number;
+        isSetTemperature?: boolean;
+        temperature?: number;
     };
     embeddedSettings?: {
         embeddingsMaxConcurrentBatches?: number;

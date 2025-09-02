@@ -397,6 +397,8 @@ export function mapAiConnectionsFromDto(
                     uri: connection.OllamaSettings?.Uri,
                     think: connection.OllamaSettings?.Think,
                     embeddingsMaxConcurrentBatches: connection.OllamaSettings?.EmbeddingsMaxConcurrentBatches,
+                    isSetTemperature: connection.OllamaSettings?.Temperature != null,
+                    temperature: connection.OllamaSettings?.Temperature,
                 },
                 embeddedSettings: {
                     embeddingsMaxConcurrentBatches: connection.EmbeddedSettings?.EmbeddingsMaxConcurrentBatches,

@@ -4,7 +4,7 @@ import { rtlRender } from "test/rtlTestUtils";
 import { within } from "@testing-library/dom";
 import React from "react";
 
-const containerTestId = "kafka-sinks";
+const containerTestId = "sinks";
 
 describe("Kafka Sink", function () {
     it("can render enabled", async () => {
@@ -13,7 +13,7 @@ describe("Kafka Sink", function () {
         const { screen, fireClick } = rtlRender(<Story />);
         const container = within(await screen.findByTestId(containerTestId));
 
-        expect(await container.findByText(/KAFKA SINK/)).toBeInTheDocument();
+        expect(await container.findByText(/KAFKA SINK/i)).toBeInTheDocument();
         expect(await container.findByText(/Enabled/)).toBeInTheDocument();
         expect(container.queryByText(/Disabled/)).not.toBeInTheDocument();
 

@@ -2,16 +2,6 @@
 @use "Content/scss/colors";
 @use "Content/scss/sizes";
 
-.ongoing-tasks-page {
-    .icon-ai-etl::before,
-    .icon-genai::before {
-        background: colors.$ai-gradient;
-        background-clip: text;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-    }
-}
-
 .change-vector-popover {
     .change-vector-grid {
         display: grid;
@@ -125,13 +115,6 @@
                     background-color 0.05s sizes.$global-easing,
                     color 0.05s !important;
                 color: colors.$white;
-
-                .icon-ai-etl::before {
-                    background: colors.$white;
-                    background-clip: text;
-                    -webkit-background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                }
             }
         }
     }

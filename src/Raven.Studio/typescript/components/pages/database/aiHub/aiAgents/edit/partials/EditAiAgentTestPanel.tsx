@@ -22,6 +22,7 @@ import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { compareSets } from "common/typeUtils";
 import AiAgentParametersDropdown from "../../partials/AiAgentParametersDropdown";
+import classNames from "classnames";
 
 interface EditAiAgentTestPanelProps {
     testForm: UseFormReturn<TestAiAgentFormData>;
@@ -46,6 +47,7 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
     const messages = useAppSelector(editAiAgentSelectors.testMessages);
     const runTestState = useAppSelector(editAiAgentSelectors.runTestState);
     const isWaitingForActionToolSubmit = useAppSelector(editAiAgentSelectors.isWaitingForActionToolSubmit);
+    const isTestPinned = useAppSelector(editAiAgentSelectors.isTestPinned);
 
     const hasLatestParameters = compareSets(
         editFormValues.parameters?.map((x) => x.name) ?? [],
@@ -118,7 +120,7 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
 
     return (
         <>
-            <div className="panel-bg-2 p-3 border-bottom border-secondary hstack justify-content-between">
+            <div className="panel-bg-2 p-3 border-bottom border-secondary d-flex flex-wrap justify-content-between gap-2">
                 <h3 className="m-0">
                     <Icon icon="test" color="primary" />
                     Test agent
@@ -128,7 +130,7 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
                         </PopoverWithHoverWrapper>
                     )}
                 </h3>
-                <div className="hstack gap-2">
+                <div className="d-flex gap-2 flex-wrap flex-grow justify-content-end">
                     <Button
                         variant="primary"
                         size="sm"
@@ -159,6 +161,14 @@ export default function EditAiAgentTestPanel({ testForm, editForm, allQueriesNam
                         className="rounded-pill"
                     >
                         <Icon icon="close" /> Close
+                    </Button>
+                    <Button
+                        variant="link"
+                        size="sm"
+                        onClick={() => dispatch(editAiAgentActions.isTestPinnedSet(!isTestPinned))}
+                        className={classNames({ "text-reset": !isTestPinned })}
+                    >
+                        <Icon icon={isTestPinned ? "pinned" : "pin"} margin="m-0" />
                     </Button>
                 </div>
             </div>

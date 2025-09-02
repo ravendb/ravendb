@@ -57,7 +57,7 @@ public class RavenDB_22105 : RabbitMqQueueSinkTestBase
 
         // Try to idle a database
 
-        landlord.SkipShouldContinueDisposeCheck = true;
+        landlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
 
         var database = await GetDatabase(store.Database);
         database.ResetIdleTime();

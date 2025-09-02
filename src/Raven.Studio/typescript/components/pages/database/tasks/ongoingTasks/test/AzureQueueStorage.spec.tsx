@@ -6,7 +6,7 @@ import React from "react";
 
 import { selectors } from "./selectors";
 
-const containerTestId = "azure-queue-storage-etls";
+const containerTestId = "etls";
 
 describe("Azure Queue Storage ETL", function () {
     it("can render disabled and not completed", async () => {
@@ -15,7 +15,7 @@ describe("Azure Queue Storage ETL", function () {
         const { screen, fireClick } = rtlRender(<Story disabled completed={false} />);
         const container = within(await screen.findByTestId(containerTestId));
 
-        expect(await container.findByText(/AZURE QUEUE STORAGE ETL/)).toBeInTheDocument();
+        expect(await container.findByText(/AZURE QUEUE STORAGE ETL/i)).toBeInTheDocument();
         expect(await container.findByText(/Disabled/, { selector: "button" })).toBeInTheDocument();
         expect(container.queryByText(/Enabled/)).not.toBeInTheDocument();
 

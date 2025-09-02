@@ -11,7 +11,7 @@ import { MockedValue } from "test/mocks/services/AutoMockService";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 
 export default {
-    title: "Pages/Database/Tasks/Ongoing tasks/Azure Queue Storage",
+    title: "Pages/Tasks/Ongoing tasks/Azure Queue Storage",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 
@@ -69,7 +69,7 @@ export const Default: StoryObj<AzureQueueStorageProps> = {
         databaseType: { control: "radio", options: ["sharded", "cluster", "singleNode"] },
     },
     play: async ({ canvas }) => {
-        const container = within(await canvas.findByTestId("azure-queue-storage-etls"));
+        const container = within(await canvas.findByTestId("etls"));
         await userEvent.click(await container.findByTitle(/Click for details/));
     },
 };

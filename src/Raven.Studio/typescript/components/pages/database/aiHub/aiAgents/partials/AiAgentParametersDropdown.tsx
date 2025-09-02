@@ -21,7 +21,7 @@ export default function AiAgentParametersDropdown({ parameters, isCompact = fals
             <Dropdown.Toggle
                 title="Parameters"
                 variant="outline-secondary"
-                className="rounded-pill text-reset"
+                className="rounded-pill"
                 as={CustomDropdownToggle}
                 isCaretHidden={isCompact}
             >

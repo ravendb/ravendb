@@ -234,6 +234,9 @@ public class RavenDB_24407 : RavenTestBase
             agent.Identifier,
             "chats/",
             creationOptions: null);
+        
+        chat.OnUnhandledAction += args => Task.CompletedTask;
+        
         chat.SetUserPrompt("what goes well with my cheese for recent orders?");
         var r = await chat.RunAsync<OutputSampleObject>(CancellationToken.None);
         Assert.Equal(AiConversationResult.ActionRequired, r.Status);

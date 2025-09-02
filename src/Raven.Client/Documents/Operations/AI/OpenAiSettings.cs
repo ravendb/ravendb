@@ -7,7 +7,7 @@ namespace Raven.Client.Documents.Operations.AI;
 /// </summary>
 public sealed class OpenAiSettings : OpenAiBaseSettings
 {
-    public OpenAiSettings(string apiKey, string endpoint, string model, string organizationId = null, string projectId = null, int? dimensions = null) : base(apiKey, endpoint, model, dimensions)
+    public OpenAiSettings(string apiKey, string endpoint, string model, string organizationId = null, string projectId = null, int? dimensions = null, double? temperature = null) : base(apiKey, endpoint, model, dimensions, temperature)
     {
         OrganizationId = organizationId;
         ProjectId = projectId;

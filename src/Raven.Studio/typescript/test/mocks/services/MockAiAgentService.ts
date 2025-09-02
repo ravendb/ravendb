@@ -1,8 +1,13 @@
 import AiAgentService from "components/services/AiAgentService";
-import { AutoMockService } from "test/mocks/services/AutoMockService";
+import { AutoMockService, MockedValue } from "test/mocks/services/AutoMockService";
+import { AiAgentStubs } from "test/stubs/AiAgentStubs";
 
 export default class MockAiAgentService extends AutoMockService<AiAgentService> {
     constructor() {
         super(new AiAgentService());
+    }
+
+    withAiAgents(dto?: MockedValue<GetAiAgentResultDto>) {
+        return this.mockResolvedValue(this.mocks.getAiAgents, dto, AiAgentStubs.getAiAgents());
     }
 }

@@ -221,7 +221,7 @@ const schema = yupObjectSchema<FormData>({
         }),
     connectorType: yup.string<FormData["connectorType"]>().nullable().required(),
     modelType: yup.string<Raven.Client.Documents.Operations.AI.AiModelType>().nullable().required(),
-    azureOpenAiSettings: yup.object({
+    azureOpenAiSettings: yupObjectSchema<FormData["azureOpenAiSettings"]>({
         apiKey: yup
             .string()
             .nullable()
@@ -253,7 +253,7 @@ const schema = yupObjectSchema<FormData>({
         dimensions: yup.number().nullable().integer().positive(),
         embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
     }),
-    googleSettings: yup.object({
+    googleSettings: yupObjectSchema<FormData["googleSettings"]>({
         aiVersion: yup.string<Raven.Client.Documents.Operations.AI.GoogleAIVersion>().nullable(),
         apiKey: yup
             .string()
@@ -272,7 +272,7 @@ const schema = yupObjectSchema<FormData>({
         dimensions: yup.number().nullable().integer().positive(),
         embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
     }),
-    huggingFaceSettings: yup.object({
+    huggingFaceSettings: yupObjectSchema<FormData["huggingFaceSettings"]>({
         apiKey: yup
             .string()
             .nullable()
@@ -290,7 +290,7 @@ const schema = yupObjectSchema<FormData>({
             }),
         embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
     }),
-    ollamaSettings: yup.object({
+    ollamaSettings: yupObjectSchema<FormData["ollamaSettings"]>({
         model: yup
             .string()
             .nullable()
@@ -306,11 +306,22 @@ const schema = yupObjectSchema<FormData>({
                 then: (schema) => schema.trim().required(),
             }),
         embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
+        think: yup.boolean().nullable(),
+        isSetTemperature: yup.boolean().nullable(),
+        temperature: yup
+            .number()
+            .nullable()
+            .min(0)
+            .max(2)
+            .when("isSetTemperature", {
+                is: true,
+                then: (schema) => schema.required(),
+            }),
     }),
-    embeddedSettings: yup.object({
+    embeddedSettings: yupObjectSchema<FormData["embeddedSettings"]>({
         embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
     }),
-    openAiSettings: yup.object({
+    openAiSettings: yupObjectSchema<FormData["openAiSettings"]>({
         apiKey: yup
             .string()
             .nullable()
@@ -337,7 +348,7 @@ const schema = yupObjectSchema<FormData>({
         dimensions: yup.number().nullable().integer().positive(),
         embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
     }),
-    mistralAiSettings: yup.object({
+    mistralAiSettings: yupObjectSchema<FormData["mistralAiSettings"]>({
         apiKey: yup
             .string()
             .nullable()
@@ -377,29 +388,31 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 deploymentName: null,
                 dimensions: null,
                 embeddingsMaxConcurrentBatches: null,
-            },
+            } satisfies Required<FormData["azureOpenAiSettings"]>,
             googleSettings: {
                 aiVersion: null,
                 apiKey: null,
                 model: null,
                 dimensions: null,
                 embeddingsMaxConcurrentBatches: null,
-            },
+            } satisfies Required<FormData["googleSettings"]>,
             huggingFaceSettings: {
                 apiKey: null,
                 endpoint: null,
                 model: null,
                 embeddingsMaxConcurrentBatches: null,
-            },
+            } satisfies Required<FormData["huggingFaceSettings"]>,
             ollamaSettings: {
                 model: null,
                 uri: null,
                 embeddingsMaxConcurrentBatches: null,
                 think: null,
-            },
+                isSetTemperature: false,
+                temperature: null,
+            } satisfies Required<FormData["ollamaSettings"]>,
             embeddedSettings: {
                 embeddingsMaxConcurrentBatches: null,
-            },
+            } satisfies Required<FormData["embeddedSettings"]>,
             openAiSettings: {
                 apiKey: null,
                 endpoint: null,
@@ -408,13 +421,13 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 projectId: null,
                 dimensions: null,
                 embeddingsMaxConcurrentBatches: null,
-            },
+            } satisfies Required<FormData["openAiSettings"]>,
             mistralAiSettings: {
                 apiKey: null,
                 endpoint: null,
                 model: null,
                 embeddingsMaxConcurrentBatches: null,
-            },
+            } satisfies Required<FormData["mistralAiSettings"]>,
         };
     }
 

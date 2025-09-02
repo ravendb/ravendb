@@ -6,7 +6,7 @@ import React from "react";
 
 import { selectors } from "./selectors";
 
-const containerTestId = "kafka-etls";
+const containerTestId = "etls";
 
 describe("Kafka ETL", function () {
     it("can render disabled and not completed", async () => {
@@ -14,7 +14,7 @@ describe("Kafka ETL", function () {
 
         const { screen, fireClick } = rtlRender(<Story completed={false} />);
         const container = within(await screen.findByTestId(containerTestId));
-        expect(await container.findByText(/KAFKA ETL/)).toBeInTheDocument();
+        expect(await container.findByText(/KAFKA ETL/i)).toBeInTheDocument();
         expect(await container.findByText(/Disabled/, { selector: "button" })).toBeInTheDocument();
         expect(container.queryByText(/Enabled/)).not.toBeInTheDocument();
 

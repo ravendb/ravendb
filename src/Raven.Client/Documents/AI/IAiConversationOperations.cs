@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -26,7 +27,7 @@ public interface IAiConversationOperations
     /// <param name="action">A function that processes the arguments and returns the result.</param>
     /// <param name="aiHandleError">An optional strategy for handling errors during execution.</param>
     void Handle<TArgs>(string actionName, Func<TArgs, object> action, AiHandleErrorStrategy aiHandleError = AiHandleErrorStrategy.SendErrorsToModel) where TArgs : class;
-    
+
     /// <summary>
     /// Registers an asynchronous handler for an action tool.
     /// </summary>
@@ -90,6 +91,47 @@ public interface IAiConversationOperations
     /// </list>
     /// </returns>
     Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(CancellationToken token = default);
+
+    /// <summary>
+    /// Asynchronously executes one “turn” of the conversation, streaming the specified property's value for immediate feedback.
+    /// Sends the current prompt, processes any required actions, and awaits the agent’s reply while invoking the callback with streamed values.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="streamPropertyPath">The property of the response to stream.</param>
+    /// <param name="streamedChunksCallback">
+    /// A callback function invoked with streamed value of the specified property.
+    /// Must be a simple string property, *strongly* recommended that it would be the first one defined in the schema.
+    /// </param>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    /// <returns>
+    /// A <see cref="Task{AiAnswer}"/> containing an <see cref="AiAnswer{TAnswer}"/> indicating the outcome of the turn:
+    /// <list type="bullet">
+    /// <item><see cref="AiConversationResult.ActionRequired"/> if the agent requires further interaction (e.g., pending tool requests).</item>
+    /// <item><see cref="AiConversationResult.Done"/> if the conversation has completed and a final answer is available.</item>
+    /// </list>
+    /// </returns>
+    Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default);
+
+    /// <summary>
+    /// Asynchronously executes one “turn” of the conversation, streaming the specified property's value for immediate feedback.
+    /// Sends the current prompt, processes any required actions, and awaits the agent’s reply while invoking the callback with streamed values.
+    /// </summary>
+    /// <typeparam name="TAnswer">The expected type of the content response.</typeparam>
+    /// <param name="streamPropertyPath">The property of the response to stream.</param>
+    /// <param name="streamedChunksCallback">
+    /// A callback function invoked with streamed value of the specified property.
+    /// Must be a simple string property, *strongly* recommended that it would be the first one defined in the schema.
+    /// </param>
+    /// <param name="token">A <see cref="CancellationToken"/> used to cancel the operation.</param>
+    /// <returns>
+    /// A <see cref="Task{AiAnswer}"/> containing an <see cref="AiAnswer{TAnswer}"/> indicating the outcome of the turn:
+    /// <list type="bullet">
+    /// <item><see cref="AiConversationResult.ActionRequired"/> if the agent requires further interaction (e.g., pending tool requests).</item>
+    /// <item><see cref="AiConversationResult.Done"/> if the conversation has completed and a final answer is available.</item>
+    /// </list>
+    /// </returns>
+    Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback,
+        CancellationToken token = default);
 
     /// <summary>
     /// Synchronously executes one turn of the conversation.
@@ -158,10 +200,34 @@ public interface IAiConversationOperations
     /// The text of the user’s message.
     /// </param>
     void SetUserPrompt(string userPrompt);
+
+    /// <summary>
+    /// This is called if the model invoked an action that has no register handler using
+    /// <see cref="Handle"/> or <see cref="Receive"/>. If there is no event handler for
+    /// this event and an unexpected action is raised by the model, and exception will
+    /// be thrown.
+    ///
+    /// You can also access all the actions that require answers using the <see cref="RequiredActions"/> method.
+    /// </summary>
+    event Func<UnhandledActionEventArgs, Task> OnUnhandledAction;
 }
 
 public enum AiHandleErrorStrategy
 {
     SendErrorsToModel,
     RaiseImmediately
+}
+
+public class UnhandledActionEventArgs
+{
+    internal UnhandledActionEventArgs(IAiConversationOperations sender, AiAgentActionRequest action, CancellationToken token)
+    {
+        Sender = sender;
+        Action = action;
+        Token = token;
+    }
+
+    public IAiConversationOperations Sender { get; private set; }
+    public AiAgentActionRequest Action { get; private set; }
+    public CancellationToken Token { get; private set; }
 }

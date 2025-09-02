@@ -21,6 +21,8 @@ import { FormRangeProps } from "react-bootstrap/FormRange";
 import { InputType } from "../../../typings/_studio/react-bootstrap";
 import useUniqueId from "hooks/useUniqueId";
 import { FormGroupProps as ReactBootstrapFormGroupsProps } from "react-bootstrap/FormGroup";
+import useBoolean from "components/hooks/useBoolean";
+import { FilterOptionOption } from "react-select/dist/declarations/src/filters";
 
 type FormElementProps<TFieldValues extends FieldValues, TName extends FieldPath<TFieldValues>> = Omit<
     ControllerProps<TFieldValues, TName>,
@@ -326,19 +328,40 @@ export function FormSelectAutocomplete<
         control: props.control,
     });
 
-    const onInputChange = (value: string, action: InputActionMeta) => {
+    const { value: isInitialOpen, setValue: setIsInitialOpen } = useBoolean(false);
+
+    const valueAccessor = props.getOptionValue ?? ((option: any) => option.value);
+
+    const handleFilterOption = (option: FilterOptionOption<Option>, inputValue: string) => {
+        if (isInitialOpen) {
+            return true;
+        }
+
+        return valueAccessor(option).trim().toLowerCase().includes(inputValue.trim().toLowerCase());
+    };
+
+    const handleInputChange = (value: string, action: InputActionMeta) => {
         if (action?.action !== "input-blur" && action?.action !== "menu-close") {
             onChange(value);
+            setIsInitialOpen(false);
         }
+    };
+
+    const handleFocus = (e: React.FocusEvent<HTMLInputElement, Element>) => {
+        e.target.selectionStart = value?.length ?? 0;
+        setIsInitialOpen(true);
     };
 
     return (
         <FormSelectCreatable<Option, IsMulti, Group, TFieldValues, TName>
             inputValue={value ?? ""}
-            onInputChange={onInputChange}
+            onInputChange={handleInputChange}
             components={{ Input: InputNotHidden }}
             tabSelectsValue
             controlShouldRenderValue={false}
+            filterOption={handleFilterOption}
+            onFocus={handleFocus}
+            blurInputOnSelect
             {...props}
         />
     );

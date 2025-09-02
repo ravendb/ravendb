@@ -34,6 +34,9 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Loads the specified ids.
         /// </summary>
+        /// <typeparam name="T">The type of the entities to load</typeparam>
+        /// <param name="ids">The ids of the entities to load</param>
+        /// <returns>Lazy operation that will load the entities when executed</returns>
         Lazy<Dictionary<string, T>> ILazySessionOperations.Load<T>(IEnumerable<string> ids)
         {
             return Lazily.Load<T>(ids, null);
@@ -42,6 +45,10 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Loads the specified ids and a function to call when it is evaluated
         /// </summary>
+        /// <typeparam name="T">The type of the entities to load</typeparam>
+        /// <param name="ids">The ids of the entities to load</param>
+        /// <param name="onEval">Function to call when the lazy operation is evaluated</param>
+        /// <returns>Lazy operation that will load the entities when executed</returns>
         Lazy<Dictionary<string, T>> ILazySessionOperations.Load<T>(IEnumerable<string> ids, Action<Dictionary<string, T>> onEval)
         {
             return LazyLoadInternal(ids.ToArray(), new string[0], onEval);
@@ -50,9 +57,9 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Loads the specified id.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="id">The id.</param>
-        /// <returns></returns>
+        /// <typeparam name="T">The type of the entity to load</typeparam>
+        /// <param name="id">The id of the entity to load</param>
+        /// <returns>Lazy operation that will load the entity when executed</returns>
         Lazy<T> ILazySessionOperations.Load<T>(string id)
         {
             return Lazily.Load(id, (Action<T>)null);
@@ -61,6 +68,10 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Loads the specified id and a function to call when it is evaluated
         /// </summary>
+        /// <typeparam name="T">The type of the entity to load</typeparam>
+        /// <param name="id">The id of the entity to load</param>
+        /// <param name="onEval">Function to call when the lazy operation is evaluated</param>
+        /// <returns>Lazy operation that will load the entity when executed</returns>
         Lazy<T> ILazySessionOperations.Load<T>(string id, Action<T> onEval)
         {
             if (string.IsNullOrWhiteSpace(id))

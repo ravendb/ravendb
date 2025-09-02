@@ -11,6 +11,7 @@ using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Extensions;
 using Tests.Infrastructure;
+using Voron.Util;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -29,6 +30,13 @@ namespace SlowTests.Issues
 
             // Setup Db
             var nodes = await CreateMyCluster();
+
+            using var dispose = new DisposableAction(() =>
+            {
+                foreach (var node in nodes)
+                    node.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = false;
+            });
+
             var firstServer = nodes[0]; // leader
             var secondServer = nodes[1]; // no leader
 
@@ -123,7 +131,7 @@ namespace SlowTests.Issues
 
             foreach (var node in nodes)
             {
-                node.ServerStore.DatabasesLandlord.SkipShouldContinueDisposeCheck = true;
+                node.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipShouldContinueDisposeCheck = true;
             }
 
             return nodes;

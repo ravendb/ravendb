@@ -1069,5 +1069,10 @@ namespace Sparrow.Json.Parsing
             var last = _elements.LastOrDefault();
             return last?.ToString() ?? string.Empty;
         }
+
+        public  OnStringReadDelegate OnStringRead
+        {
+            set { throw new NotSupportedException(); }
+        }
     }
 }

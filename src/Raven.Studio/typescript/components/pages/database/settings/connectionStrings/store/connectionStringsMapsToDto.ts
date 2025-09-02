@@ -246,6 +246,9 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       Uri: connection.ollamaSettings.uri,
                       Think: connection.ollamaSettings.think,
                       EmbeddingsMaxConcurrentBatches: connection.ollamaSettings.embeddingsMaxConcurrentBatches,
+                      Temperature: connection.ollamaSettings.isSetTemperature
+                          ? connection.ollamaSettings.temperature
+                          : null,
                   }
                 : null,
         EmbeddedSettings:

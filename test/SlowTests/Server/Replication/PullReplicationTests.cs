@@ -764,8 +764,8 @@ namespace SlowTests.Server.Replication
 
             }))
             {
-                sinkServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().ShouldFetchIdleStateImmediately = true;
-                hubServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().ShouldFetchIdleStateImmediately = true;
+                sinkServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
+                hubServer.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
 
                 await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(name));
                 using (var s2 = hub.OpenSession())
@@ -915,7 +915,7 @@ namespace SlowTests.Server.Replication
 
                 Assert.True(WaitForDocument(hub, "foo/bar/228", timeout * 5), hub.Identifier);
 
-                server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().ShouldFetchIdleStateImmediately = true;
+                server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
 
                 var dic = new Dictionary<IdleDatabaseStatistics, int>();
                 Assert.True(WaitForValue( () =>

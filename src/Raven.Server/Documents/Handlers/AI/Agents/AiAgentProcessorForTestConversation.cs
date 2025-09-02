@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.AI;
@@ -51,20 +52,6 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
     {
         // In test mode, we don't persist the conversation document
         return Task.FromResult("test");
-    }
-
-    public override async Task WriteResponseAsync(JsonOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
-    {
-        var output = new DynamicJsonValue
-        {
-            [nameof(AiAgentTestResult.Document)] = document.ToJson(),
-            [nameof(AiAgentTestResult.Response)] = response,
-            [nameof(AiAgentTestResult.ActionRequests)] = new DynamicJsonArray(document.OpenActionCalls.Select(t => t.Value.ToJson())),
-            [nameof(AiAgentTestResult.Usage)] = document.TotalUsage.ToJson()
-        };
-
-        await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
-        context.Write(writer, output);
     }
 
     public class AiAgentTestResult

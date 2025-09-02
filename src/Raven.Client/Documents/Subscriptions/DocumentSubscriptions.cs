@@ -25,12 +25,20 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Subscriptions
 {
+    /// <summary>
+    /// Entry point for working with RavenDB document subscriptions from the client.
+    /// Provides methods to create, open, query, update, enable/disable and delete subscriptions.
+    /// </summary>
     public sealed class DocumentSubscriptions : IDisposable
     {
         private readonly DocumentStore _store;
         private readonly ConcurrentSet<IAsyncDisposable> _subscriptions = new ConcurrentSet<IAsyncDisposable>();
         internal static string IncludeRevisionsRQL = "(Revisions = true)";
 
+        /// <summary>
+        /// Initializes a new instance bound to a specific document store.
+        /// </summary>
+        /// <param name="store">The document store to use for all subscription operations.</param>
         public DocumentSubscriptions(IDocumentStore store)
         {
             _store = (DocumentStore)store;
@@ -307,9 +315,9 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Create a data subscription in a database. The subscription will expose all documents that match the specified subscription options for a given type.
         /// </summary>
-        /// <param name="options"></param>
-        /// <param name="database"></param>
-        /// <returns>Subscription object</returns>
+        /// <param name="options">Subscription creation options that include the RQL query and other settings.</param>
+        /// <param name="database">Optional database name. If not specified, uses the default database from the store.</param>
+        /// <returns>The created subscription name.</returns>
         public string Create(SubscriptionCreationOptions options, string database = null)
         {
             return AsyncHelpers.RunSync(() => CreateAsync(options, database));
@@ -318,7 +326,10 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// It creates a data subscription in a database. The subscription will expose all documents that match the specified subscription options.
         /// </summary>
-        /// <returns>Created subscription name.</returns>
+        /// <param name="options">Subscription creation options that include the RQL query and other settings.</param>
+/// <param name="database">Optional database name. If not specified, uses the default database from the store.</param>
+/// <param name="token">Cancellation token.</param>
+/// <returns>The created subscription name.</returns>
         public async Task<string> CreateAsync(SubscriptionCreationOptions options, string database = null, CancellationToken token = default)
         {
             if (options == null)
@@ -400,6 +411,11 @@ namespace Raven.Client.Documents.Subscriptions
         /// It downloads a list of all existing subscriptions in a database.
         /// </summary>
         /// <returns>Existing subscriptions' configurations.</returns>
+        /// <param name="start">Zero-based index to start from.</param>
+        /// <param name="take">Maximum number of subscriptions to return.</param>
+        /// <param name="database">Optional database name. If not specified, uses the default database from the store.</param>
+        /// <param name="token">Cancellation token.</param>
+        /// <returns>A list of subscription states.</returns>
         public async Task<List<SubscriptionState>> GetSubscriptionsAsync(int start, int take, string database = null, CancellationToken token = default)
         {
             database = _store.GetDatabase(database);
@@ -444,7 +460,7 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <param name="subscriptionName">Subscription name as received from the server</param>
         /// <param name="database">Database where the subscription resides</param>
-        /// <returns></returns>
+        /// <returns>The subscription state.</returns>
         public SubscriptionState GetSubscriptionState(string subscriptionName, string database = null)
         {
             return AsyncHelpers.RunSync(() => GetSubscriptionStateAsync(subscriptionName, database));
@@ -455,7 +471,8 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         /// <param name="subscriptionName">Subscription name as received from the server</param>
         /// <param name="database">Database where the subscription resides</param>
-        /// <returns></returns>
+        /// <param name="token">Cancellation token.</param>
+/// <returns>The subscription state.</returns>
         public async Task<SubscriptionState> GetSubscriptionStateAsync(string subscriptionName, string database = null, CancellationToken token = default)
         {
             if (string.IsNullOrEmpty(subscriptionName))
@@ -533,8 +550,8 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Force server to close all current client subscription connections to the server
         /// </summary>
-        /// <param name="id"></param>
-        /// <param name="database"></param>
+        /// <param name="name">The subscription name.</param>
+        /// <param name="database">Optional database name. If not specified, uses the default database from the store.</param>
         public void DropConnection(string name, string database = null)
         {
             AsyncHelpers.RunSync(() => DropConnectionAsync(name, database));
@@ -543,8 +560,9 @@ namespace Raven.Client.Documents.Subscriptions
         /// <summary>
         /// Force server to close all current client subscription connections to the server
         /// </summary>
-        /// <param name="id"></param>
-        /// <param name="database"></param>
+        /// <param name="name">The subscription name.</param>
+        /// <param name="database">Optional database name. If not specified, uses the default database from the store.</param>
+        /// <param name="token">Cancellation token.</param>
         public async Task DropConnectionAsync(string name, string database = null, CancellationToken token = default)
         {
             database = _store.GetDatabase(database);
@@ -557,11 +575,22 @@ namespace Raven.Client.Documents.Subscriptions
             }
         }
 
+        /// <summary>
+        /// Enables a previously disabled subscription.
+        /// </summary>
+        /// <param name="name">The subscription name.</param>
+        /// <param name="database">Optional database name. If not specified, uses the default database from the store.</param>
         public void Enable(string name, string database = null)
         {
             AsyncHelpers.RunSync(() => EnableAsync(name, database));
         }
 
+        /// <summary>
+        /// Enables a previously disabled subscription.
+        /// </summary>
+        /// <param name="name">The subscription name.</param>
+        /// <param name="database">Optional database name. If not specified, uses the default database from the store.</param>
+        /// <param name="token">Cancellation token.</param>
         public Task EnableAsync(string name, string database = null, CancellationToken token = default)
         {
             database = _store.GetDatabase(database);
@@ -569,11 +598,22 @@ namespace Raven.Client.Documents.Subscriptions
             return _store.Maintenance.ForDatabase(database).SendAsync(operation, token);
         }
 
+        /// <summary>
+        /// Disables a subscription without deleting it.
+        /// </summary>
+        /// <param name="name">The subscription name.</param>
+        /// <param name="database">Optional database name. If not specified, uses the default database from the store.</param>
         public void Disable(string name, string database = null)
         {
             AsyncHelpers.RunSync(() => DisableAsync(name, database));
         }
 
+        /// <summary>
+        /// Disables a subscription without deleting it.
+        /// </summary>
+        /// <param name="name">The subscription name.</param>
+        /// <param name="database">Optional database name. If not specified, uses the default database from the store.</param>
+        /// <param name="token">Cancellation token.</param>
         public Task DisableAsync(string name, string database = null, CancellationToken token = default)
         {
             database = _store.GetDatabase(database);

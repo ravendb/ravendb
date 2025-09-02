@@ -6,8 +6,15 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Session
 {
+    /// <summary>
+    /// Abstract base class for advanced session extensions
+    /// </summary>
     public abstract class AdvancedSessionExtensionBase
     {
+        /// <summary>
+        /// Initializes a new instance of the AdvancedSessionExtensionBase class
+        /// </summary>
+        /// <param name="session">The in-memory document session operations</param>
         protected AdvancedSessionExtensionBase(InMemoryDocumentSessionOperations session)
         {
             Session = session;
@@ -27,6 +34,11 @@ namespace Raven.Client.Documents.Session
         protected Dictionary<(string, CommandType, string), ICommandData> DeferredCommandsDictionary { get; }
         internal DocumentsById DocumentsById { get; }
 
+        /// <summary>
+        /// Defer commands to be executed on SaveChanges()
+        /// </summary>
+        /// <param name="command">Command to be executed</param>
+        /// <param name="commands">Array of commands to be executed</param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void Defer(ICommandData command, params ICommandData[] commands)
         {

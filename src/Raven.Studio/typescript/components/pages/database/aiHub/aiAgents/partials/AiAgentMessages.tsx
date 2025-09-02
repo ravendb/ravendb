@@ -23,6 +23,7 @@ import queryCriteria from "models/database/query/queryCriteria";
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import { useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import AiTokensUsagePopoverBody from "components/common/AiTokensUsagePopoverBody";
 
 type ToolQuery = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolQuery;
 type ToolAction = Raven.Client.Documents.Operations.AI.Agents.AiAgentToolAction;
@@ -303,25 +304,12 @@ function AgentMessage({
                     <div className="hstack text-muted">
                         <PopoverWithHoverWrapper
                             message={
-                                <div>
-                                    <div className="hstack justify-content-between gap-3">
-                                        <span>Prompt tokens</span>
-                                        <span>{genUtils.formatAiTokens(agentMessage.usage.PromptTokens)}</span>
-                                    </div>
-                                    <div className="hstack justify-content-between gap-3">
-                                        <span>Completion tokens</span>
-                                        <span>{genUtils.formatAiTokens(agentMessage.usage.CompletionTokens)}</span>
-                                    </div>
-                                    <div className="hstack justify-content-between gap-3">
-                                        <span>Cached tokens</span>
-                                        <span>{genUtils.formatAiTokens(agentMessage.usage.CachedTokens)}</span>
-                                    </div>
-                                    <hr className="my-1" />
-                                    <div className="hstack justify-content-between gap-3">
-                                        <span>Total tokens used</span>
-                                        <span>{genUtils.formatAiTokens(agentMessage.usage.TotalTokens)}</span>
-                                    </div>
-                                </div>
+                                <AiTokensUsagePopoverBody
+                                    prompt={agentMessage.usage.PromptTokens}
+                                    completion={agentMessage.usage.CompletionTokens}
+                                    cached={agentMessage.usage.CachedTokens}
+                                    total={agentMessage.usage.TotalTokens}
+                                />
                             }
                         >
                             <Icon icon="info" />

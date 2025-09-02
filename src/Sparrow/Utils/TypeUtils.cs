@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using Sparrow.Json;
+using Sparrow.Json.Parsing;
 
 namespace Sparrow.Utils
 {
@@ -42,14 +43,15 @@ namespace Sparrow.Utils
                 return false;
 
             //prevent infinite loops
-            if (visited.Contains(obj))
+            if (!visited.Add(obj))
                 return false;
-
-            visited.Add(obj);
 
             var type = obj.GetType();
 
-            if (type.IsPointer || type.IsEnum || type.IsCOMObject || type.IsValueType || type == typeof(string)) //obviously not what we are looking for
+            if (type.IsPointer || type.IsEnum || type.IsCOMObject || 
+                type.IsValueType ||
+                type == typeof(string) || 
+                type.Assembly == typeof(object).Assembly) //obviously not what we are looking for
                 return false;
 
             if (obj is BlittableJsonReaderObject || obj is BlittableJsonReaderArray)

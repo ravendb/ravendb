@@ -812,7 +812,7 @@ class genUtils {
             return "0";
         }
 
-        return genUtils.formatNumberToStringFixed(tokens, 0);
+        return Number(tokens).toLocaleString();
     }
 
     static getNestedField(object: any, path: string) {

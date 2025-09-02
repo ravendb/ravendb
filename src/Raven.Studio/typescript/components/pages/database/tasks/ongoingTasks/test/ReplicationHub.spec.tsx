@@ -5,7 +5,7 @@ import { within } from "@testing-library/dom";
 
 import React from "react";
 
-const containerTestId = "replication-hubs";
+const containerTestId = "replications";
 
 describe("Replication Hub", function () {
     it("can render hub w/o connections", async () => {
@@ -13,7 +13,8 @@ describe("Replication Hub", function () {
 
         const { screen, fireClick } = rtlRender(<Story />);
         const container = within(await screen.findByTestId(containerTestId));
-        expect(await container.findByRole("heading", { name: /Replication Hub/ })).toBeInTheDocument();
+        expect(await container.findByRole("heading", { name: "Replication", level: 5 })).toBeInTheDocument();
+        expect(await container.findByText(/Replication Hub/)).toBeInTheDocument();
         expect(await container.findByText(/Enabled/, { selector: "button" })).toBeInTheDocument();
         expect(container.queryByText(/Disabled/, { selector: "button" })).not.toBeInTheDocument();
 
@@ -29,7 +30,8 @@ describe("Replication Hub", function () {
 
         const { screen, fireClick } = rtlRender(<Story />);
         const container = within(await screen.findByTestId(containerTestId));
-        expect(await container.findByRole("heading", { name: /Replication Hub/ })).toBeInTheDocument();
+        expect(await container.findByRole("heading", { name: "Replication", level: 5 })).toBeInTheDocument();
+        expect(await container.findByText(/Replication Hub/)).toBeInTheDocument();
         expect(await container.findByText(/Enabled/, { selector: "button" })).toBeInTheDocument();
         expect(container.queryByText(/Disabled/)).not.toBeInTheDocument();
 

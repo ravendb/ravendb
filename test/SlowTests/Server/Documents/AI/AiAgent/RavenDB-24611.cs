@@ -57,6 +57,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agentId = (await store.AI.CreateAgentAsync(agent, ChefOutputSchema.Instance)).Identifier;
 
             var chat = store.AI.Conversation(agentId, "chats/", creationOptions: null);
+            chat.OnUnhandledAction += args => Task.CompletedTask;
             chat.SetUserPrompt("recommend me what to eat for launch, based on my recent orders and tell me where to but it from based on the restaurant I have ordered from");
             var result = await chat.RunAsync<ChefOutputSchema>(CancellationToken.None);
 
@@ -106,7 +107,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
         public async Task Concurrency_When_Resuming_Same_Conversation(Options options, GenAiConfiguration config)
         {
             using var store = await GetClusterStoreAsync(options);
@@ -159,6 +160,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             var agentId = (await store.AI.CreateAgentAsync(agent, OutputSchema.Instance)).Identifier;
 
             var starter = store.AI.Conversation(agentId, "chats/", creationOptions: null);
+            starter.OnUnhandledAction += args => Task.CompletedTask;
             starter.SetUserPrompt(
                 "Please use ProductSearch to find the top 5 cheeses, " +
                 "then use RecentOrder to fetch my last 10 orders and answer.");
@@ -175,6 +177,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             resume1.AddActionResponse(
                 actions[0].ToolId,
                 new { });
+            resume1.OnUnhandledAction += args => Task.CompletedTask;
             var afterFirst = await resume1.RunAsync<OutputSchema>(CancellationToken.None);
 
             Assert.Equal(AiConversationResult.ActionRequired, afterFirst.Status);
@@ -183,6 +186,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             Assert.NotEqual(staleCv, cvAfterFirst);
 
             var resume2 = store.AI.Conversation(agentId, starter.Id, creationOptions: null, staleCv);
+            resume2.OnUnhandledAction += args => Task.CompletedTask;
+
             resume2.AddActionResponse(
                 actions[1].ToolId,
                 new { });

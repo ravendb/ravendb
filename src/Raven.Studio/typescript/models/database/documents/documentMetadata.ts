@@ -211,7 +211,7 @@ class documentMetadata {
         const metaPropsToRemove = ["@id", "@change-vector", "@last-modified", "@attachments", "@counters", "@timeseries"];
 
         if (isClonedDocument) {
-            metaPropsToRemove.push("@flags");
+            metaPropsToRemove.push("@flags", "@archived");
         }
 
         for (const property in metaDto) {

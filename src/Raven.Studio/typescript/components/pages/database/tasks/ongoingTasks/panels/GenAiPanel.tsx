@@ -116,6 +116,10 @@ export function GenAiPanel(props: GenAiPanelProps & ICanShowTransformationScript
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
+                    <span>
+                        <Icon icon="genai" />
+                        GenAI
+                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -130,6 +134,7 @@ export function GenAiPanel(props: GenAiPanelProps & ICanShowTransformationScript
                         onTaskOperation={onTaskOperation}
                         toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
+                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>

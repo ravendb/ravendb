@@ -385,7 +385,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                                 }
 
                                 if (step.DocumentsStorage.CountersStorage.MergeCounterIfNeeded(context, localCounters, ref prop, putCountersData.DbIdsHolder, sourceDbIds, sourceCounterNames, originalNames, documentId,
-                                        out _, out var changeType) == false)
+                                        out _, out var changeType, out _) == false)
                                 {
                                     continue;
                                 }
