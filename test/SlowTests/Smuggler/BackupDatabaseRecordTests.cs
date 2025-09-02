@@ -264,9 +264,9 @@ namespace SlowTests.Smuggler
                     var configuration = new SchemaValidationConfiguration
                     {
                         Disabled = false,
-                        ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+                        ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
                         {
-                            { "TestObjs", new SchemaValidator { SchemaDefinition = "{\"properties\":{\"Prop\":{\"maxLength\":3}}}" } }
+                            { "TestObjs", new SchemaDefinition { Schema = "{\"properties\":{\"Prop\":{\"maxLength\":3}}}" } }
                         }
                     };
                     await store1.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -354,7 +354,7 @@ namespace SlowTests.Smuggler
                     Assert.NotNull(record.SchemaValidation);
                     Assert.False(record.SchemaValidation.Disabled);
                     Assert.True(record.SchemaValidation.ValidatorsPerCollection.ContainsKey("TestObjs"));
-                    Assert.NotNull(record.SchemaValidation.ValidatorsPerCollection["TestObjs"].SchemaDefinition);                    
+                    Assert.NotNull(record.SchemaValidation.ValidatorsPerCollection["TestObjs"].Schema);                    
                 }
             }
             finally
@@ -1015,17 +1015,17 @@ namespace SlowTests.Smuggler
 
                     await store1.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
                     {
-                        ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+                        ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
                         {
-                            { "TestObjs", new SchemaValidator { SchemaDefinition = "{\"properties\":{\"Prop\":{\"maxLength\":3}}}" } }
+                            { "TestObjs", new SchemaDefinition { Schema = "{\"properties\":{\"Prop\":{\"maxLength\":3}}}" } }
                         }
                     }));
                         
                     await store2.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(new SchemaValidationConfiguration
                     {
-                        ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+                        ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
                         {
-                            { "TestObj2s", new SchemaValidator { SchemaDefinition = "{\"properties\":{\"Prop2\":{\"maxLength\":3}}}" } }
+                            { "TestObj2s", new SchemaDefinition { Schema = "{\"properties\":{\"Prop2\":{\"maxLength\":3}}}" } }
                         }
                     }));
                     
@@ -1145,9 +1145,9 @@ namespace SlowTests.Smuggler
                     Assert.NotNull(record.SchemaValidation.ValidatorsPerCollection);
                     Assert.Equal(2, record.SchemaValidation.ValidatorsPerCollection.Count);
                     Assert.True(record.SchemaValidation.ValidatorsPerCollection.ContainsKey("TestObjs"));
-                    Assert.Equal("{\"properties\":{\"Prop\":{\"maxLength\":3}}}", record.SchemaValidation.ValidatorsPerCollection["TestObjs"].SchemaDefinition);
+                    Assert.Equal("{\"properties\":{\"Prop\":{\"maxLength\":3}}}", record.SchemaValidation.ValidatorsPerCollection["TestObjs"].Schema);
                     Assert.True(record.SchemaValidation.ValidatorsPerCollection.ContainsKey("TestObj2s"));
-                    Assert.Equal("{\"properties\":{\"Prop2\":{\"maxLength\":3}}}", record.SchemaValidation.ValidatorsPerCollection["TestObj2s"].SchemaDefinition);
+                    Assert.Equal("{\"properties\":{\"Prop2\":{\"maxLength\":3}}}", record.SchemaValidation.ValidatorsPerCollection["TestObj2s"].Schema);
                 }
             }
             finally
@@ -1372,9 +1372,9 @@ namespace SlowTests.Smuggler
                     var configuration = new SchemaValidationConfiguration
                     {
                         Disabled = false,
-                        ValidatorsPerCollection = new Dictionary<string, SchemaValidator>
+                        ValidatorsPerCollection = new Dictionary<string, SchemaDefinition>
                         {
-                            { "TestObjs", new SchemaValidator { SchemaDefinition = schemaDefinition.ToString() } }
+                            { "TestObjs", new SchemaDefinition { Schema = schemaDefinition.ToString() } }
                         }
                     };
                     await store.Maintenance.SendAsync(new ConfigureSchemaValidationOperation(configuration));
@@ -1505,7 +1505,7 @@ namespace SlowTests.Smuggler
                     Assert.NotNull(record.SchemaValidation);
                     Assert.False(record.SchemaValidation.Disabled);
                     Assert.True(record.SchemaValidation.ValidatorsPerCollection.ContainsKey("TestObjs"));
-                    Assert.NotNull(record.SchemaValidation.ValidatorsPerCollection["TestObjs"].SchemaDefinition);
+                    Assert.NotNull(record.SchemaValidation.ValidatorsPerCollection["TestObjs"].Schema);
                 }
             }
         }

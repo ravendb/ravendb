@@ -42,17 +42,17 @@ public class SchemaValidatorCache : IDisposable
 
         Dictionary<string, SchemaValidator> newSchemaValidators = null;
         
-        foreach ((string collection, Client.Documents.Operations.SchemaValidation.SchemaValidator validator) in configuration.ValidatorsPerCollection)
+        foreach ((string collection, Client.Documents.Operations.SchemaValidation.SchemaDefinition validator) in configuration.ValidatorsPerCollection)
         {
             if (_schemaValidatorsPerCollection.TryGetValue(collection, out var existingValidator)
-                && validator.SchemaDefinition.Equals(existingValidator.SchemaDefinition))
+                && validator.Schema.Equals(existingValidator.SchemaDefinition))
                 continue;
 
-            var schemaValidator = new SchemaValidator(validator.Disabled) { SchemaDefinition = validator.SchemaDefinition };
+            var schemaValidator = new SchemaValidator(validator.Disabled) { SchemaDefinition = validator.Schema };
 
             try
             {
-                var blittable = _context.Value.Sync.ReadForMemory(validator.SchemaDefinition, "schema-validation");
+                var blittable = _context.Value.Sync.ReadForMemory(validator.Schema, "schema-validation");
                 EnsureMetadataIsValid(ref blittable);
                 schemaValidator.Init(blittable);
             }
