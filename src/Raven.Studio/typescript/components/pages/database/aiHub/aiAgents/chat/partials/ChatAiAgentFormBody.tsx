@@ -12,6 +12,10 @@ import { AiAgentToolCall } from "../../utils/aiAgentsTypes";
 import { chatAiAgentSelectors, chatAiAgentActions } from "../store/chatAiAgentSlice";
 import { ChatAiAgentFormData } from "../utils/chatAiAgentValidation";
 import ChatAiAgentPersistenceSection from "./ChatAiAgentPersistenceSection";
+import RichAlert from "components/common/RichAlert";
+import Button from "react-bootstrap/Button";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppUrls } from "components/hooks/useAppUrls";
 
 interface ChatAiAgentFormBodyProps {
     height: number;
@@ -25,6 +29,8 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
 
     const messagesPanelRef = useRef<HTMLDivElement>(null);
 
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const conversationId = useAppSelector(chatAiAgentSelectors.conversationId);
     const hasScroll = useAppSelector(chatAiAgentSelectors.hasScroll);
     const messages = useAppSelector(chatAiAgentSelectors.messages);
     const config = useAppSelector(chatAiAgentSelectors.config);
@@ -32,6 +38,10 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
     const document = useAppSelector(chatAiAgentSelectors.document);
     const isLoading = useAppSelector(chatAiAgentSelectors.isLoading);
     const isWaitingForActionToolSubmit = useAppSelector(chatAiAgentSelectors.isWaitingForActionToolSubmit);
+    const isDocumentDeleted = useAppSelector(chatAiAgentSelectors.isDocumentDeleted);
+    const isDocumentChanged = useAppSelector(chatAiAgentSelectors.isDocumentChanged);
+
+    const { appUrl } = useAppUrls();
 
     const { control, handleSubmit } = useFormContext<ChatAiAgentFormData>();
 
@@ -58,6 +68,13 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
             });
         }
     }, [messages.length]);
+
+    const handleRefreshDocument = async () => {
+        await dispatch(chatAiAgentActions.getDocument({ databaseName, id: conversationId })).unwrap();
+        dispatch(chatAiAgentActions.isDocumentChangedSet(false));
+    };
+
+    const isPromptDisabled = isLoading || isWaitingForActionToolSubmit || isDocumentDeleted || isDocumentChanged;
 
     return (
         <>
@@ -112,6 +129,27 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
             {!isHistory && (
                 <div className="d-flex justify-content-center mt-3 px-3 pb-3">
                     <div className="w-100" style={{ maxWidth: "800px" }}>
+                        {isDocumentChanged && !isDocumentDeleted && (
+                            <RichAlert variant="warning" className="p-1 mb-2">
+                                This document has been updated. To see the latest version in chat,{" "}
+                                <Button variant="link" className="p-0 text-warning" onClick={handleRefreshDocument}>
+                                    click here to refresh
+                                </Button>
+                                .
+                            </RichAlert>
+                        )}
+                        {isDocumentDeleted && (
+                            <RichAlert variant="warning" className="p-1 mb-2">
+                                This document has been deleted,{" "}
+                                <a
+                                    href={appUrl.forDocuments("@conversations", databaseName)}
+                                    className="text-warning text-decoration-none"
+                                >
+                                    click here to see the recent conversations
+                                </a>
+                                .
+                            </RichAlert>
+                        )}
                         <div className="position-relative">
                             <FormInput
                                 type="textarea"
@@ -127,7 +165,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                                         handleSubmit(handleSend)();
                                     }
                                 }}
-                                disabled={isLoading || isWaitingForActionToolSubmit}
+                                disabled={isPromptDisabled}
                             />
                             {formValues.prompt && (
                                 <ButtonWithSpinner
@@ -135,7 +173,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                                     variant="secondary"
                                     icon="arrow-up"
                                     isSpinning={isLoading}
-                                    disabled={isLoading || isWaitingForActionToolSubmit}
+                                    disabled={isPromptDisabled}
                                     className="position-absolute rounded-pill"
                                     style={{ right: "10px", bottom: "10px", zIndex: 5 }}
                                 />

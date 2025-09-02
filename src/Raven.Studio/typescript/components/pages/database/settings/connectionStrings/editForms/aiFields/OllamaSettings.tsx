@@ -1,5 +1,5 @@
 import { FlexGrow } from "components/common/FlexGrow";
-import { FormInput, FormLabel, FormSelect, FormSelectAutocomplete } from "components/common/Form";
+import { FormCheckbox, FormInput, FormLabel, FormSelect, FormSelectAutocomplete } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import {
     ConnectionFormData,
@@ -16,11 +16,13 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 import { SelectOption } from "components/common/select/Select";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
+import InputGroup from "react-bootstrap/InputGroup";
+import { useEffect } from "react";
 
 type FormData = ConnectionFormData<AiConnection>;
 
 export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control, trigger } = useFormContext<FormData>();
+    const { control, trigger, watch, setValue } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
@@ -36,6 +38,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             Model: formValues.ollamaSettings.model,
             Uri: formValues.ollamaSettings.uri,
             Think: formValues.ollamaSettings.think,
+            Temperature: formValues.ollamaSettings.isSetTemperature ? formValues.ollamaSettings.temperature : null,
         });
     });
 
@@ -65,6 +68,17 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
         [formValues.ollamaSettings.uri, formValues.ollamaSettings.think],
         300
     );
+
+    // Reset temperature when isSetTemperature is disabled
+    useEffect(() => {
+        const { unsubscribe } = watch((values, { name }) => {
+            if (name === "ollamaSettings.isSetTemperature" && !values.ollamaSettings.isSetTemperature) {
+                setValue("ollamaSettings.temperature", null, { shouldValidate: true });
+            }
+        });
+
+        return () => unsubscribe();
+    }, [setValue, watch]);
 
     return (
         <>
@@ -102,6 +116,39 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                         </PopoverWithHoverWrapper>
                     </FormLabel>
                     <FormSelect control={control} name="ollamaSettings.think" options={thinkOptions} />
+                </div>
+            )}
+            {formValues.modelType === "Chat" && (
+                <div className="mb-2">
+                    <FormLabel>
+                        Temperature
+                        <PopoverWithHoverWrapper
+                            message={
+                                <>
+                                    Controls randomness of the model output. Range typically [0.0, 2.0].
+                                    <br />
+                                    <br />
+                                    Higher values (e.g., 1.0+) make output more creative and diverse.
+                                    <br />
+                                    Lower values (e.g., 0.2) make it more deterministic.
+                                </>
+                            }
+                        >
+                            <Icon icon="info" color="info" margin="ms-1" />
+                        </PopoverWithHoverWrapper>
+                    </FormLabel>
+                    <InputGroup>
+                        <div className="toggle-field-checkbox">
+                            <FormCheckbox control={control} name="ollamaSettings.isSetTemperature" color="primary" />
+                        </div>
+                        <FormInput
+                            type="number"
+                            control={control}
+                            name="ollamaSettings.temperature"
+                            placeholder="e.g. 0.4"
+                            disabled={!formValues.ollamaSettings.isSetTemperature}
+                        />
+                    </InputGroup>
                 </div>
             )}
             {formValues.modelType === "TextEmbeddings" && <EmbeddingsMaxConcurrentBatches baseName="ollamaSettings" />}

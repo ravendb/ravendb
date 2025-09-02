@@ -93,7 +93,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
                     var conv = new ConversationDocument(agent.Name, parameters: parameters);
                     conv.Initialize(context, agent);
-                    var r = await processor.TalkAsync(context, agent, conv, CancellationToken.None);
+                    var r = await processor.TalkAsync(context, agent, conv.Id, conv, CancellationToken.None);
                     var response = r.Response.ToString();
 
                     Assert.Contains("my order", response);
@@ -110,14 +110,14 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             protected override ChatCompletionClient CreateClient(AiConnectionString connection)
             {
-                if (connection.TryGetParametersForGenAiTesting(out var uri, out var apiKey, out var model, out var organizationId, out var projectId, out var think) ==
+                if (connection.TryGetParameters(out var uri, out var apiKey, out var model, out var organizationId, out var projectId, out var think, out var temperature) ==
                     false)
                 {
                     var connectorType = connection.GetActiveProvider();
                     throw new NotSupportedException($"The specified provider (\"{connectorType.ToString()}\") is not supported.");
                 }
 
-                return new EvilLlm(ContextPool, uri, apiKey, model, organizationId, projectId, think, ChatCompletionClient.ConventionsToUse);
+                return new EvilLlm(ContextPool, uri, apiKey, model, organizationId, projectId, new ChatCompletionClient.ChatCompletionClientOptions { Think = think, Temperature = temperature }, ChatCompletionClient.ConventionsToUse);
             }
         }
 
@@ -126,9 +126,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
         internal class EvilLlm : ChatCompletionClient
         {
-            internal EvilLlm(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, bool? think = null,
+            internal EvilLlm(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, ChatCompletionClient.ChatCompletionClientOptions options = null,
                 DocumentConventions conventions = null) :
-                base(contextPool, "http://fake.url", apiKey: null, model, organizationId, projectId, think, conventions)
+                base(contextPool, "http://fake.url", apiKey: null, model, organizationId, projectId, options, conventions)
             {
 
             }

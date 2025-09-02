@@ -254,6 +254,10 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
+                    <span>
+                        <Icon icon="subscriptions" />
+                        Subscription
+                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -268,6 +272,7 @@ export function SubscriptionPanel(props: SubscriptionPanelProps) {
                         onTaskOperation={onTaskOperation}
                         toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
+                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>

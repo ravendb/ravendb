@@ -213,7 +213,7 @@ public sealed class AiConnectionString : ConnectionString
                (AbstractAiSettings)MistralAiSettings;
     }
 
-    internal bool TryGetParametersForGenAiTesting(out string uri, out string apiKey, out string model, out string organizationId, out string projectId, out bool? think)
+    internal bool TryGetParameters(out string uri, out string apiKey, out string model, out string organizationId, out string projectId, out bool? think, out double? temperature)
     {
         uri = null;
         apiKey = null;
@@ -221,6 +221,7 @@ public sealed class AiConnectionString : ConnectionString
         organizationId = null;
         projectId = null;
         think = null;
+        temperature = null;
 
         switch (ModelType)
         {
@@ -241,11 +242,19 @@ public sealed class AiConnectionString : ConnectionString
                 model = OpenAiSettings.Model;
                 organizationId = OpenAiSettings.OrganizationId;
                 projectId = OpenAiSettings.ProjectId;
+                temperature = OpenAiSettings.Temperature;
+                return true;
+            case AiConnectorType.AzureOpenAi:
+                uri = AzureOpenAiSettings.Endpoint;
+                apiKey = AzureOpenAiSettings.ApiKey;
+                model = AzureOpenAiSettings.Model;
+                temperature = AzureOpenAiSettings.Temperature;
                 return true;
             case AiConnectorType.Ollama:
                 uri = OllamaSettings.Uri; 
                 model = OllamaSettings.Model;
                 think = OllamaSettings.Think;
+                temperature = OllamaSettings.Temperature;
                 return true;
         }
 

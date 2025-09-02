@@ -35,10 +35,34 @@ namespace Raven.Client.Documents.Conventions
     /// <inheritdoc cref="DocumentationUrls.Session.Options.Conventions"/>
     public sealed class DocumentConventions : Client.Conventions
     {
+        /// <summary>
+        /// Delegate for custom query translation, allowing custom handling of LINQ expressions during query processing.
+        /// </summary>
+        /// <param name="provider">The LINQ path provider</param>
+        /// <param name="expression">The expression to translate</param>
+        /// <returns>The translation result</returns>
         public delegate LinqPathProvider.Result CustomQueryTranslator(LinqPathProvider provider, Expression expression);
 
+        /// <summary>
+        /// Delegate for converting query values to string format for use in RQL queries.
+        /// </summary>
+        /// <typeparam name="T">The type of value to convert</typeparam>
+        /// <param name="fieldName">The name of the field</param>
+        /// <param name="value">The value to convert</param>
+        /// <param name="forRange">Whether this conversion is for a range query</param>
+        /// <param name="strValue">The output string value</param>
+        /// <returns>True if conversion was successful, false otherwise</returns>
         public delegate bool TryConvertValueForQueryDelegate<in T>(string fieldName, T value, bool forRange, out string strValue);
 
+        /// <summary>
+        /// Delegate for converting query values to object format for use in RQL queries.
+        /// </summary>
+        /// <typeparam name="T">The type of value to convert</typeparam>
+        /// <param name="fieldName">The name of the field</param>
+        /// <param name="value">The value to convert</param>
+        /// <param name="forRange">Whether this conversion is for a range query</param>
+        /// <param name="objValue">The output object value</param>
+        /// <returns>True if conversion was successful, false otherwise</returns>
         public delegate bool TryConvertValueToObjectForQueryDelegate<in T>(string fieldName, T value, bool forRange, out object objValue);
 
 #if NETCOREAPP3_1_OR_GREATER
@@ -1132,6 +1156,12 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
+        /// <summary>
+        /// Registers a custom query translator for a specific member expression, allowing custom handling of LINQ expressions during query translation.
+        /// </summary>
+        /// <typeparam name="T">The type containing the member to translate</typeparam>
+        /// <param name="member">Expression pointing to the member that needs custom translation</param>
+        /// <param name="translator">The custom translator function to handle the member expression</param>
         public void RegisterCustomQueryTranslator<T>(Expression<Func<T, object>> member, CustomQueryTranslator translator)
         {
             AssertNotFrozen();
@@ -1237,6 +1267,13 @@ namespace Raven.Client.Documents.Conventions
             return AsyncHelpers.RunSync(() => GenerateDocumentIdAsync(databaseName, entity));
         }
 
+        /// <summary>
+        /// Asynchronously generates a document ID for the specified entity. Uses registered ID conventions for the entity type,
+        /// or falls back to the default AsyncDocumentIdGenerator.
+        /// </summary>
+        /// <param name="databaseName">Name of the database</param>
+        /// <param name="entity">The entity for which to generate an ID</param>
+        /// <returns>A task containing the generated document ID</returns>
         public Task<string> GenerateDocumentIdAsync(string databaseName, object entity)
         {
             var type = entity.GetType();
@@ -1319,6 +1356,13 @@ namespace Raven.Client.Documents.Conventions
             return (DocumentConventions)MemberwiseClone();
         }
 
+        /// <summary>
+        /// Determines the range type for a given .NET type, which is used for range queries and sorting.
+        /// Returns Long for numeric integer types, Double for floating-point types, or None for other types.
+        /// Custom range types can be registered via RegisterQueryValueConverter.
+        /// </summary>
+        /// <param name="type">The .NET type to get the range type for</param>
+        /// <returns>The range type for the specified type</returns>
         public RangeType GetRangeType(Type type)
         {
             var nonNullable = Nullable.GetUnderlyingType(type);
@@ -1404,8 +1448,22 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
+        /// <summary>
+        /// Default convention that determines whether the property name converter should be applied to a member.
+        /// Returns false for members from System or Microsoft namespaces, true for all other members.
+        /// </summary>
+        /// <param name="member">The member to check</param>
+        /// <returns>True if the property name converter should be applied, false otherwise</returns>
         public static bool DefaultShouldApplyPropertyNameConverter(MemberInfo member) => (member.DeclaringType?.Namespace?.StartsWith("System") == true ||
                                                                                             member.DeclaringType?.Namespace?.StartsWith("Microsoft") == true) == false;
+        
+        /// <summary>
+        /// Default method for transforming collection names to document ID prefixes.
+        /// Simple names (one or fewer uppercase letters) are converted to lowercase,
+        /// while names with multiple uppercase letters preserve their casing.
+        /// </summary>
+        /// <param name="collectionName">The collection name to transform</param>
+        /// <returns>The transformed document ID prefix</returns>
         public static string DefaultTransformCollectionNameToDocumentIdPrefix(string collectionName)
         {
             var count = collectionName.Count(char.IsUpper);
@@ -1417,8 +1475,26 @@ namespace Raven.Client.Documents.Conventions
             return collectionName;
         }
 
+        /// <summary>
+        /// Default method for finding the property name to use in index definitions. 
+        /// Concatenates the path and property name, replacing array notation and dots with underscores.
+        /// </summary>
+        /// <param name="indexedType">The type being indexed</param>
+        /// <param name="indexedName">The name of the index</param>
+        /// <param name="path">The current path in the object hierarchy</param>
+        /// <param name="prop">The property name</param>
+        /// <returns>The property name to use in the index definition</returns>
         public static string DefaultFindPropertyNameForIndex(Type indexedType, string indexedName, string path, string prop) => (path + prop).Replace("[].", "_").Replace(".", "_");
 
+        /// <summary>
+        /// Default method for finding the property name to use in dynamic index definitions.
+        /// Simply concatenates the path and property name without modification.
+        /// </summary>
+        /// <param name="indexedType">The type being indexed</param>
+        /// <param name="indexedName">The name of the index</param>
+        /// <param name="path">The current path in the object hierarchy</param>
+        /// <param name="prop">The property name</param>
+        /// <returns>The property name to use in the dynamic index definition</returns>
         public static string DefaultFindPropertyNameForDynamicIndex(Type indexedType, string indexedName, string path, string prop) => path + prop;
 
         private static IEnumerable<MemberInfo> GetPropertiesForType(Type type)
@@ -1431,6 +1507,11 @@ namespace Raven.Client.Documents.Conventions
                     yield return propertyInfo;
         }
 
+        /// <summary>
+        /// Registers a query method converter that allows custom handling of method calls in LINQ queries.
+        /// This enables translation of custom methods into RQL (Raven Query Language) expressions.
+        /// </summary>
+        /// <param name="converter">The query method converter to register</param>
         public void RegisterQueryMethodConverter(QueryMethodConverter converter)
         {
             AssertNotFrozen();
@@ -1482,6 +1563,12 @@ namespace Raven.Client.Documents.Conventions
             return false;
         }
 
+        /// <summary>
+        /// Registers a query value converter for a specific type, allowing custom conversion of values 
+        /// when they are used in query expressions. The converter transforms values to string format for RQL.
+        /// </summary>
+        /// <typeparam name="T">The type to register the converter for</typeparam>
+        /// <param name="converter">The converter function that handles the transformation</param>
         public void RegisterQueryValueConverter<T>(TryConvertValueForQueryDelegate<T> converter)
         {
             AssertNotFrozen();
@@ -1532,6 +1619,13 @@ namespace Raven.Client.Documents.Conventions
             }
         }
 
+        /// <summary>
+        /// Registers a query value converter for a specific type along with its associated range type.
+        /// This allows custom conversion of values in query expressions and specifies how the type should be handled in range queries.
+        /// </summary>
+        /// <typeparam name="T">The type to register the converter for</typeparam>
+        /// <param name="converter">The converter function that handles the transformation</param>
+        /// <param name="rangeType">The range type to associate with this type for range queries</param>
         public void RegisterQueryValueConverter<T>(TryConvertValueToObjectForQueryDelegate<T> converter, RangeType rangeType)
         {
             RegisterQueryValueConverter(converter);

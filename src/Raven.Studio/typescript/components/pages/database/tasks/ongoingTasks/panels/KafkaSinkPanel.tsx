@@ -24,6 +24,7 @@ import Form from "react-bootstrap/Form";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { Icon } from "components/common/Icon";
 
 type KafkaSinkPanelProps = BaseOngoingTaskPanelProps<OngoingTaskKafkaSinkInfo>;
 
@@ -73,6 +74,10 @@ export function KafkaSinkPanel(props: KafkaSinkPanelProps) {
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
+                    <span>
+                        <Icon icon="kafka-sink" />
+                        Kafka Sink
+                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -87,6 +92,7 @@ export function KafkaSinkPanel(props: KafkaSinkPanelProps) {
                         onTaskOperation={onTaskOperation}
                         toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
+                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>

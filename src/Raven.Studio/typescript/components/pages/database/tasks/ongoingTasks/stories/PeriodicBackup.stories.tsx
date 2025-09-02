@@ -11,7 +11,7 @@ import { MockedValue } from "test/mocks/services/AutoMockService";
 import OngoingTasksResult = Raven.Server.Web.System.OngoingTasksResult;
 
 export default {
-    title: "Pages/Database/Tasks/Ongoing tasks/Period Backup",
+    title: "Pages/Tasks/Ongoing tasks/Period Backup",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 

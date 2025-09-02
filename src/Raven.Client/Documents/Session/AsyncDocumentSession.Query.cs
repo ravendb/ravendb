@@ -7,6 +7,12 @@ namespace Raven.Client.Documents.Session
 {
     public partial class AsyncDocumentSession
     {
+        /// <summary>
+        /// Queries the index specified by <typeparamref name="TIndexCreator" /> using Linq.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <typeparam name="TIndexCreator">The type of the index creator.</typeparam>
+        /// <returns>A queryable instance for the specified index</returns>
         public IRavenQueryable<T> Query<T, TIndexCreator>() where TIndexCreator : AbstractCommonApiForIndexes, new()
         {
             var index = IndexMetadataCache.GetIndexMetadataCacheItem<TIndexCreator>();
@@ -14,6 +20,14 @@ namespace Raven.Client.Documents.Session
             return Query<T>(index.IndexName, null, index.IsMapReduce);
         }
 
+        /// <summary>
+        /// Queries the specified index using Linq.
+        /// </summary>
+        /// <typeparam name="T">The result of the query</typeparam>
+        /// <param name="indexName">Name of the index (mutually exclusive with collectionName)</param>
+        /// <param name="collectionName">Name of the collection (mutually exclusive with indexName)</param>
+        /// <param name="isMapReduce">Whether we are querying a map/reduce index (modify how we treat identifier properties)</param>
+        /// <returns>A queryable instance for the specified index or collection</returns>
         public IRavenQueryable<T> Query<T>(string indexName = null, string collectionName = null, bool isMapReduce = false)
         {
             var type = typeof(T);
@@ -61,6 +75,11 @@ namespace Raven.Client.Documents.Session
             return new AsyncDocumentQuery<T>(this, indexName, collectionName, isGroupBy: isMapReduce);
         }
 
+        /// <summary>
+        /// Creates a new Raven query inspector for the specified type
+        /// </summary>
+        /// <typeparam name="S">The type to create the query inspector for</typeparam>
+        /// <returns>A new RavenQueryInspector instance</returns>
         public RavenQueryInspector<S> CreateRavenQueryInspector<S>()
         {
             return new RavenQueryInspector<S>();

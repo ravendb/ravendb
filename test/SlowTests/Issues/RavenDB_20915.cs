@@ -35,7 +35,7 @@ public class RavenDB_20915 : RavenTestBase
                 await session.SaveChangesAsync(); // update last work time
             }
 
-            Server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().ShouldFetchIdleStateImmediately = true;
+            Server.ServerStore.DatabasesLandlord.ForTestingPurposesOnly().SkipIncreasingLastWorkTimeBasedOnDatabaseSize = true;
 
             Assert.False(WaitForValue(() => Server.ServerStore.DatabasesLandlord.DatabasesCache.TryGetValue(store.Database, out _), false));
         }

@@ -238,7 +238,7 @@ public class AiAgentErrors : RavenTestBase
 
         // Raven.Client.Exceptions.RavenException: Raven.Server.Documents.AI.UnsuccessfulRequestException: The model `gpt-4oxyz` does not exist or you do not have access to it
         var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
-        Assert.Contains("The model `gpt-4oxyz` does not exist or you do not have access to it", e.Message);
+        Assert.Contains($"The model `{config.Connection.OpenAiSettings.Model}` does not exist or you do not have access to it", e.Message);
     }
 
     [RavenTheory(RavenTestCategory.Ai)]

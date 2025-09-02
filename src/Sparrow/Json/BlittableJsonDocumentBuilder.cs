@@ -76,15 +76,20 @@ namespace Sparrow.Json
             {
                 UsageMode.None => reader switch
                 {
-                    ObjectJsonParser => ReadInternal<WriteNone, ObjectJsonParser>,
-                    UnmanagedJsonParser => ReadInternal<WriteNone, UnmanagedJsonParser>,
-                    _ => ReadInternal<WriteNone, IJsonParser>
+                    ObjectJsonParser => ReadInternal<WriteNone, ObjectJsonParser, NoStreaming>,
+                    UnmanagedJsonParser => ReadInternal<WriteNone, UnmanagedJsonParser, NoStreaming>,
+                    _ => ReadInternal<WriteNone, IJsonParser, NoStreaming>
+                },
+                UsageMode.ForStreaming => reader switch
+                {
+                    UnmanagedJsonParser => ReadInternal<WriteNone, UnmanagedJsonParser, WithStreaming>,
+                    _ => throw new NotSupportedException(),
                 },
                 _ => reader switch
                 {
-                    ObjectJsonParser => ReadInternal<WriteFull, ObjectJsonParser>,
-                    UnmanagedJsonParser => ReadInternal<WriteFull, UnmanagedJsonParser>,
-                    _ => ReadInternal<WriteFull, IJsonParser>
+                    ObjectJsonParser => ReadInternal<WriteFull, ObjectJsonParser, NoStreaming>,
+                    UnmanagedJsonParser => ReadInternal<WriteFull, UnmanagedJsonParser, NoStreaming>,
+                    _ => ReadInternal<WriteFull, IJsonParser, NoStreaming>
                 }
             };
         }
@@ -177,9 +182,12 @@ namespace Sparrow.Json
             base.Dispose();
         }
 
-        private unsafe bool ReadInternal<TWriteStrategy, TJsonParser>() 
+        public (string Name, Action<UnmanagedWriteBuffer> Handler) PropertyToWatchForStreaming; 
+
+        private bool ReadInternal<TWriteStrategy, TJsonParser, TStreamBehavior>() 
             where TWriteStrategy : IWriteStrategy
             where TJsonParser : IJsonParser
+            where TStreamBehavior : IStreamingBehavior 
         {
             CachedProperties.PropertyName fakeProperty = null;
 
@@ -220,6 +228,19 @@ namespace Sparrow.Json
                                 if (state.CurrentTokenType == JsonParserToken.String)
                                 {
                                     var property = CreateLazyStringValueFromParserState();
+
+                                    if(typeof(TStreamBehavior) == typeof(WithStreaming) && property.Equals(PropertyToWatchForStreaming.Name))
+                                    {
+                                        Action<UnmanagedWriteBuffer> handler = PropertyToWatchForStreaming.Handler;
+                                        reader.OnStringRead = (buffer, partial) =>
+                                        {
+                                            handler(buffer);
+                                            if (partial is false) // we are done...
+                                                reader.OnStringRead = null;
+                                        };
+                                        PropertyToWatchForStreaming = default; // we only do that for the _first_ property that match the name
+                                    }
+                                    
                                     currentState.CurrentProperty = _context.CachedProperties.GetProperty(property);
                                     currentState.MaxPropertyId = Math.Max(currentState.MaxPropertyId, currentState.CurrentProperty.PropertyId);
                                     currentState.State = ContinuationState.ReadPropertyValue;
@@ -597,9 +618,15 @@ namespace Sparrow.Json
         {
             throw new InvalidStartOfObjectException("Expected start of object, but got " + _state.CurrentTokenType + _reader.GenerateErrorState());
         }
+        
+        private interface IStreamingBehavior{}
+
+        private struct NoStreaming : IStreamingBehavior{}
+        
+        private struct WithStreaming : IStreamingBehavior{}
 
         private interface IWriteStrategy { }
-
+        
         private struct WriteFull : IWriteStrategy { }
 
         private struct WriteNone : IWriteStrategy { }
@@ -705,7 +732,8 @@ namespace Sparrow.Json
             ValidateDouble = 1,
             CompressStrings = 2,
             CompressSmallStrings = 4,
-            ToDisk = ValidateDouble | CompressStrings
+            ToDisk = ValidateDouble | CompressStrings,
+            ForStreaming = 32
         }
 
         public struct WriteToken(int position, BlittableJsonToken token)

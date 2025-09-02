@@ -62,6 +62,7 @@ class appUrl {
         editRabbitMqSink: (taskId?: number) => ko.pureComputed(() => appUrl.forEditRabbitMqSink(appUrl.currentDatabase(), taskId)),
         query: (indexName?: string) => ko.pureComputed(() => appUrl.forQuery(appUrl.currentDatabase(), indexName)),
         terms: (indexName?: string) => ko.pureComputed(() => appUrl.forTerms(indexName, appUrl.currentDatabase())),
+        addNewOngoingTask: (isAiOnly: boolean) => ko.pureComputed(() => appUrl.forAddNewOngoingTasks(appUrl.currentDatabase(), isAiOnly)),
         importDatabaseFromFileUrl: ko.pureComputed(() => appUrl.forImportDatabaseFromFile(appUrl.currentDatabase())),
         importCollectionFromCsv: ko.pureComputed(() => appUrl.forImportCollectionFromCsv(appUrl.currentDatabase())),
         importDatabaseFromSql: ko.pureComputed(() => appUrl.forImportFromSql(appUrl.currentDatabase())),
@@ -597,6 +598,12 @@ class appUrl {
     static forOngoingTasks(db: database | string): string {
         const databasePart = appUrl.getEncodedDbPart(db);
         return "#databases/tasks/ongoingTasks?" + databasePart;
+    }
+    
+    static forAddNewOngoingTasks(db: database | string, isAiOnly: boolean): string {
+        const databasePart = appUrl.getEncodedDbPart(db);
+        const isAiOnlyPart = isAiOnly ? "&isAiOnly=true" : "";
+        return "#databases/tasks/addNewOngoingTasks?" + databasePart + isAiOnlyPart;
     }
 
     static forEditExternalReplication(db: database | string, taskId?: number): string {

@@ -230,6 +230,8 @@ namespace Sparrow.Json
             if (_string != null)
                 return string.Equals(_string, other, StringComparison.Ordinal);
 
+            if (other is null)
+                return false;
 
             var buffer = GetLazyStringTempComparisonBuffer(other.Length);
             fixed (char* pOther = other)

@@ -130,7 +130,7 @@ namespace Raven.Server.Routing
                             if (conLifetime != null)
                             {
                                 var msg = $"Connection {context.Connection.RemoteIpAddress}:{context.Connection.RemotePort} closed. Was used with: " +
-                                 $"with certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
+                                 $"certificate '{feature.Certificate?.Subject} ({feature.Certificate?.Thumbprint})', status: {feature.StatusForAudit}, " +
                                  $"databases: [{string.Join(", ", feature.AuthorizedDatabases.Keys)}]";
 
                                 CancellationTokenRegistration cancellationTokenRegistration = default;

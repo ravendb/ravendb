@@ -7,7 +7,7 @@ import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/s
 import { userEvent } from "@storybook/test";
 
 export default {
-    title: "Pages/Database/Tasks/Ongoing tasks/Internal Replication",
+    title: "Pages/Tasks/Ongoing tasks/Internal Replication",
     decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 

@@ -46,7 +46,11 @@ namespace Tests.Infrastructure
         {
             get
             {
-                return CloudAttributeHelper.TestIsMissingCloudCredentialEnvironmentVariable(EnvVariableMissing, AzureCredentialEnvironmentVariable, ParsingError, _azureSettings);
+                if (string.IsNullOrEmpty(base.Skip) == false)
+                    return base.Skip;
+
+                ShouldSkip(out var skipMessage);
+                return skipMessage;
             }
 
             set => base.Skip = value;

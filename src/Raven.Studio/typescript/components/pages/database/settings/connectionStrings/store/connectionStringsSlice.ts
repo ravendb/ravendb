@@ -20,7 +20,7 @@ import { accessManagerSelectors } from "components/common/shell/accessManagerSli
 import DatabaseUtils from "components/utils/DatabaseUtils";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 
-export type ConnectionStringsViewContext = "connectionStrings" | "aiConnectionStrings";
+export type ConnectionStringsViewContext = "connectionStrings" | "aiConnectionStrings" | "aiTask";
 
 interface ConnectionStringsState {
     loadStatus: loadStatus;

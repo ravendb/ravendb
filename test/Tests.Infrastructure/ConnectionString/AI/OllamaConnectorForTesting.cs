@@ -7,10 +7,12 @@ public class EmbeddingsOllamaConnectorForTesting : AbstractEmbeddingsConnectorFo
 {
     public const string Model = "phi:latest";
     public const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_OLLAMA_EMB_URI";
+
     public EmbeddingsOllamaConnectorForTesting()
     {
         RequiredEnvironmentVariables = [EnvironmentVariable];
     }
+
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama);
 
     protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.TextEmbeddings, EnvironmentVariable);
@@ -20,10 +22,12 @@ public class GenAiOllamaConnectorForTesting : AbstractGenAiConnectorForTesting<G
 {
     public const string Model = "llama3.2:latest";
     public const string EnvironmentVariable = "RAVEN_AI_INTEGRATION_OLLAMA_CHAT_URI";
+
     public GenAiOllamaConnectorForTesting()
     {
         RequiredEnvironmentVariables = [EnvironmentVariable];
     }
+
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Ollama);
 
     protected override AiConnectionString CreateAiConnectionStringImpl() => OllamaConnectorHelper.CreateAiConnectionString(Model, AiModelType.Chat, EnvironmentVariable);
@@ -38,7 +42,7 @@ internal static class OllamaConnectorHelper
         return new AiConnectionString
         {
             ModelType = modelType,
-            OllamaSettings = new OllamaSettings(uri, model)
+            OllamaSettings = new OllamaSettings(uri, model) { Temperature = 0 }
         };
     }
 }

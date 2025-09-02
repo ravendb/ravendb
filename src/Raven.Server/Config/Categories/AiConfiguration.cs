@@ -50,4 +50,9 @@ public sealed class AiConfiguration : ConfigurationCategory
     [ConfigurationEntry("Ai.Agent.Trimming.Summarization.SummarizationResultPrefix", ConfigurationEntryScope.ServerWideOrPerDatabase)]
     public string SummarizationResultPrefix { get; set; }
 
+
+    [Description("The recommanded token threshold for a tool response to the LLM. If the response exceeds this threshold, a notification will be raised.")]
+    [DefaultValue(10_000)]
+    [ConfigurationEntry("Ai.Agent.Tools.TokenUsageThreshold", ConfigurationEntryScope.ServerWideOrPerDatabase)]
+    public int ToolsTokenUsageThreshold { get; set; }
 }

@@ -4,12 +4,12 @@ namespace Tests.Infrastructure
 {
     internal class CloudAttributeHelper
     {
-        public static string TestIsMissingCloudCredentialEnvironmentVariable(bool envVariableMissing, string environmentVariable, string parsingError, BackupSettings settings)
+        public static string TestIsMissingCloudCredentialEnvironmentVariable(bool envVariableMissing, string environmentVariable, string parsingError, BackupSettings settings, bool skipIsRunningOnCI = false)
         {
             if (RavenTestHelper.SkipIntegrationTests)
                 return RavenTestHelper.SkipIntegrationMessage;
 
-            if (RavenTestHelper.IsRunningOnCI)
+            if (skipIsRunningOnCI == false && RavenTestHelper.IsRunningOnCI) 
                 return null;
 
             if (envVariableMissing)

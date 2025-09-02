@@ -18,6 +18,8 @@ interface EditAiAgentState {
     isWaitingForActionToolSubmit: boolean;
     hasScroll: boolean;
     isDocumentExpirationEnabled: loadableData<boolean>;
+    isDocumentDeleted: boolean;
+    isDocumentChanged: boolean;
 }
 
 const initialState: EditAiAgentState = {
@@ -30,6 +32,8 @@ const initialState: EditAiAgentState = {
     isWaitingForActionToolSubmit: false,
     hasScroll: false,
     isDocumentExpirationEnabled: createIdleState(),
+    isDocumentDeleted: false,
+    isDocumentChanged: false,
 };
 
 export const chatAiAgentSlice = createSlice({
@@ -54,6 +58,12 @@ export const chatAiAgentSlice = createSlice({
         hasScrollSet: (state, action: PayloadAction<boolean>) => {
             state.hasScroll = action.payload;
         },
+        isDocumentDeletedSet: (state, action: PayloadAction<boolean>) => {
+            state.isDocumentDeleted = action.payload;
+        },
+        isDocumentChangedSet: (state, action: PayloadAction<boolean>) => {
+            state.isDocumentChanged = action.payload;
+        },
         reset: () => initialState,
     },
     extraReducers: (builder) => {
@@ -75,6 +85,7 @@ export const chatAiAgentSlice = createSlice({
             })
             .addCase(getDocument.fulfilled, (state, action) => {
                 state.document = createSuccessState(action.payload);
+                state.isDocumentChanged = false;
 
                 const messages: AiAgentMessage[] = action.payload.Messages.map((x: AiAgentDocMessage) =>
                     aiAgentsUtils.mapMessageFromDoc(x)
@@ -208,4 +219,6 @@ export const chatAiAgentSelectors = {
     isWaitingForActionToolSubmit: (state: RootState) => state.chatAiAgent.isWaitingForActionToolSubmit,
     hasScroll: (state: RootState) => state.chatAiAgent.hasScroll,
     isDocumentExpirationEnabled: (state: RootState) => state.chatAiAgent.isDocumentExpirationEnabled,
+    isDocumentDeleted: (state: RootState) => state.chatAiAgent.isDocumentDeleted,
+    isDocumentChanged: (state: RootState) => state.chatAiAgent.isDocumentChanged,
 };

@@ -14,7 +14,7 @@ namespace SlowTests.Voron.CompactTrees
         [InlineDataWithRandomSeed(500000, 4096)]
         [InlineDataWithRandomSeed(100000, 1024)]
         [InlineDataWithRandomSeed(10000, 64)]
-        public void RandomUpsertsWithoutRemoves(int treeSize, int transactionSize, int randomSeed)
+        public void RandomUpsertsWithoutRemoves(int treeSize, int transactionSize = 10000, int randomSeed = 1337)
         {
             var currentState = new Dictionary<long, long>();
             var keys = new List<long>();
@@ -81,7 +81,8 @@ namespace SlowTests.Voron.CompactTrees
         [InlineDataWithRandomSeed(500000, 4096)]
         [InlineDataWithRandomSeed(100000, 1024)]
         [InlineDataWithRandomSeed(10000, 64)]
-        public void RandomUpsertsWithRemoves(int treeSize, int transactionSize, int randomSeed)
+        [InlineData(500000, 4096, 2002966381)]
+        public void RandomUpsertsWithRemoves(int treeSize, int transactionSize = 10000, int randomSeed = 1337)
         {
             var currentState = new Dictionary<long, long>();
             var currentKeys = new List<long>();

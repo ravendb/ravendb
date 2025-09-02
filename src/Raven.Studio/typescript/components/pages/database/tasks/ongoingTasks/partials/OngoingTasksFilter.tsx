@@ -6,7 +6,7 @@ import React from "react";
 import Form from "react-bootstrap/Form";
 import Button from "react-bootstrap/Button";
 
-export type OngoingTaskFilterType = "Replication" | "ETL" | "Sink" | "Backup" | "Subscription";
+export type OngoingTaskFilterType = "AI" | "Replication" | "ETL" | "Sink" | "Backup" | "Subscription";
 
 export interface OngoingTasksFilterCriteria {
     searchText: string;
@@ -18,6 +18,7 @@ interface OngoingTasksFilterProps {
     setFilter: (x: OngoingTasksFilterCriteria) => void;
     filterByStatusOptions: InputItem<OngoingTaskFilterType>[];
     tasksCount: number;
+    isAiOnly?: boolean;
 }
 
 export default function OngoingTasksFilter(props: OngoingTasksFilterProps) {
@@ -47,7 +48,7 @@ export default function OngoingTasksFilter(props: OngoingTasksFilterProps) {
                     <Form.Control
                         type="text"
                         accessKey="/"
-                        placeholder="e.g. MyPeriodicBackupTask"
+                        placeholder="e.g. Embeddings Generation"
                         title="Filter ongoing tasks"
                         className="filtering-input"
                         value={filter.searchText}
@@ -62,17 +63,19 @@ export default function OngoingTasksFilter(props: OngoingTasksFilterProps) {
                     )}
                 </div>
             </div>
-            <div>
-                <MultiCheckboxToggle
-                    inputItems={filterByStatusOptions}
-                    label="Filter by type"
-                    selectedItems={filter.types}
-                    setSelectedItems={onSearchStatusesChange}
-                    selectAll
-                    selectAllLabel="All"
-                    selectAllCount={tasksCount}
-                />
-            </div>
+            {!props.isAiOnly && (
+                <div>
+                    <MultiCheckboxToggle
+                        inputItems={filterByStatusOptions}
+                        label="Filter by type"
+                        selectedItems={filter.types}
+                        setSelectedItems={onSearchStatusesChange}
+                        selectAll
+                        selectAllLabel="All"
+                        selectAllCount={tasksCount}
+                    />
+                </div>
+            )}
         </div>
     );
 }

@@ -1,5 +1,8 @@
-﻿using System;
+﻿using Raven.Client.Extensions;
+using Sparrow.Json.Sync;
+using System;
 using System.Collections.Generic;
+using System.Linq.Expressions;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,7 +10,6 @@ using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Client.Exceptions;
 using Raven.Client.Util;
 using Sparrow.Json;
-using Sparrow.Json.Sync;
 
 namespace Raven.Client.Documents.AI;
 
@@ -84,7 +86,7 @@ internal class AiConversation : IAiConversationOperations
 
         _actionResponses.Add(new AiAgentActionResponse
         {
-            ToolId = toolId, 
+            ToolId = toolId,
             Content = actionResponse
         });
     }
@@ -106,7 +108,7 @@ internal class AiConversation : IAiConversationOperations
         Handle<TArgs>(actionName, (_, token) => action(token), aiHandleError);
     }
 
-    public void Handle<TArgs>(string actionName, Func<AiAgentActionRequest,TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError)
+    public void Handle<TArgs>(string actionName, Func<AiAgentActionRequest, TArgs, Task<object>> action, AiHandleErrorStrategy aiHandleError)
         where TArgs : class
     {
         Receive<TArgs>(actionName, (request, args) =>
@@ -118,11 +120,11 @@ internal class AiConversation : IAiConversationOperations
         }, aiHandleError);
     }
 
-    public void Handle<TArgs>(string actionName, Func<AiAgentActionRequest,TArgs, object> action, AiHandleErrorStrategy aiHandleError) where TArgs : class
+    public void Handle<TArgs>(string actionName, Func<AiAgentActionRequest, TArgs, object> action, AiHandleErrorStrategy aiHandleError) where TArgs : class
     {
         Receive<TArgs>(actionName, (request, args) =>
         {
-            var result =  action(request, args);
+            var result = action(request, args);
             AddActionResponse(request.ToolId, result);
             return Task.CompletedTask;
         }, aiHandleError);
@@ -154,37 +156,69 @@ internal class AiConversation : IAiConversationOperations
 
     public AiAnswer<TAnswer> Run<TAnswer>() => AsyncHelpers.RunSync(() => RunAsync<TAnswer>());
 
+    public Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
+    {
+        return StreamAsync<TAnswer>(streamPropertyPath.ToPropertyPath(_aiOperations._store.Conventions), streamedChunksCallback, token);
+    }
+
+    public async Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
+    {
+        while (true)
+        {
+            var r = await RunAsyncInternal<TAnswer>(streamPropertyPath, streamedChunksCallback, token).ConfigureAwait(false);
+            if (await HandleServerReplyAsync(r, token).ConfigureAwait(false))
+                return r;
+        }
+    }
+
     public async Task<AiAnswer<TAnswer>> RunAsync<TAnswer>(CancellationToken token = default)
     {
         while (true)
         {
-            var r = await RunAsyncInternal<TAnswer>(token).ConfigureAwait(false);
-            if (r.Status == AiConversationResult.Done)
+            var r = await RunAsyncInternal<TAnswer>(streamPropertyPath: null, streamedChunksCallback: null, token).ConfigureAwait(false);
+            if (await HandleServerReplyAsync(r, token).ConfigureAwait(false))
                 return r;
-
-            if (_actionRequests.Count == 0)
-                throw new InvalidOperationException($"There are no action requests to process, but Status was {r.Status}, should not be possible.");
-
-            using (_aiOperations.AllocateOperationContext(out JsonOperationContext ctx))
-            {
-                foreach (var action in _actionRequests)
-                {
-                    if (_invocations.TryGetValue(action.Name, out var invocation))
-                    {
-                        // error handling here is expected to be done by the invocation based on the error strategy the user choose
-                        await invocation.Invoke(ctx, action, token).ConfigureAwait(false);
-                    }
-                }
-            }
-
-            // We have nothing to tell the server, but still have action requests pending
-            // we need to send those action requests to the caller that can handle them
-            if (_actionResponses.Count == 0)
-                return r; // note - this has ActionsRequired status
         }
     }
 
-    private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(CancellationToken token = default)
+    private async Task<bool> HandleServerReplyAsync<TAnswer>(AiAnswer<TAnswer> r, CancellationToken token)
+    {
+        if (r.Status == AiConversationResult.Done)
+            return true;
+
+        if (_actionRequests.Count == 0)
+            throw new InvalidOperationException($"There are no action requests to process, but Status was {r.Status}, should not be possible.");
+
+        using (_aiOperations.AllocateOperationContext(out JsonOperationContext ctx))
+        {
+            foreach (var action in _actionRequests)
+            {
+                if (_invocations.TryGetValue(action.Name, out var invocation))
+                {
+                    // error handling here is expected to be done by the invocation based on the error strategy the user choose
+                    await invocation.Invoke(ctx, action, token).ConfigureAwait(false);
+                }
+                else if (OnUnhandledAction is { } onUnhandledAction)
+                {
+                    await onUnhandledAction(new UnhandledActionEventArgs(this, action, token)).ConfigureAwait(false);
+                }
+                else
+                {
+                    throw new InvalidOperationException(
+                        $"There is no action defined for action '{action.Name}' on agent '{_agentId}' ({_conversationId}), but it was invoked by the model with: {action.Arguments}. " +
+                        $"Did you forget to call {nameof(Receive)} or {nameof(Handle)}? You can also handle unexpected action invocations using the {nameof(OnUnhandledAction)} event.");
+                }
+            }
+        }
+
+        // We have nothing to tell the server, but still have action requests pending
+        // we need to send those action requests to the caller that can handle them
+        return _actionResponses.Count == 0;
+    }
+
+    public event Func<UnhandledActionEventArgs, Task> OnUnhandledAction;
+
+    private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
     {
         if (
             // if this is null, it is the first time we call RunAsync, so we are going to the server to get the pending actions
@@ -198,7 +232,7 @@ internal class AiConversation : IAiConversationOperations
             };
         }
 
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _userPrompt, _actionResponses, _options, _changeVector);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _userPrompt, _actionResponses, _options, _changeVector, streamPropertyPath, streamedChunksCallback);
 
         try
         {
@@ -209,7 +243,7 @@ internal class AiConversation : IAiConversationOperations
 
             return new AiAnswer<TAnswer>
             {
-                Answer = r.Response, 
+                Answer = r.Response,
                 Status = _actionRequests.Count > 0 ? AiConversationResult.ActionRequired : AiConversationResult.Done
             };
         }
@@ -230,10 +264,10 @@ internal class AiConversation : IAiConversationOperations
         where TActionParametersSchema : class
     {
         private readonly AiConversation _conversation;
-        private readonly Func<AiAgentActionRequest,TActionParametersSchema, Task> _asyncAction;
+        private readonly Func<AiAgentActionRequest, TActionParametersSchema, Task> _asyncAction;
         private readonly AiHandleErrorStrategy _errorStrategy;
 
-        public AiActionContext(AiConversation conversation, Func<AiAgentActionRequest,TActionParametersSchema, Task> asyncAction, AiHandleErrorStrategy errorStrategy)
+        public AiActionContext(AiConversation conversation, Func<AiAgentActionRequest, TActionParametersSchema, Task> asyncAction, AiHandleErrorStrategy errorStrategy)
         {
             _conversation = conversation;
             _asyncAction = asyncAction;
@@ -262,7 +296,7 @@ internal class AiConversation : IAiConversationOperations
         {
             try
             {
-                await _asyncAction.Invoke(actionRequest,args).ConfigureAwait(false);
+                await _asyncAction.Invoke(actionRequest, args).ConfigureAwait(false);
             }
             catch (Exception e) when (_errorStrategy is AiHandleErrorStrategy.SendErrorsToModel)
             {

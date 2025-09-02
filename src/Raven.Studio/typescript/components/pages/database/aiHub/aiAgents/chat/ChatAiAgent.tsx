@@ -3,137 +3,38 @@ import { useAppUrls } from "components/hooks/useAppUrls";
 import { useAppDispatch, useAppSelector } from "components/store";
 import router from "plugins/router";
 import { chatAiAgentActions, chatAiAgentSelectors } from "./store/chatAiAgentSlice";
-import { useEffect } from "react";
 import { Icon } from "components/common/Icon";
 import ChatAiAgentInfoHub from "./partials/ChatAiAgentInfoHub";
-import { FormProvider, useForm, useWatch } from "react-hook-form";
-import { ChatAiAgentFormData, chatAiAgentYupResolver } from "./utils/chatAiAgentValidation";
-import { tryHandleSubmit } from "components/utils/common";
-import { AiAgentToolCall } from "../utils/aiAgentsTypes";
+import { FormProvider } from "react-hook-form";
 import SizeGetter from "components/common/SizeGetter";
 import { Switch } from "components/common/Checkbox";
 import Button from "react-bootstrap/Button";
 import classNames from "classnames";
-import { useAsyncCallback } from "react-async-hook";
-import { TimeInSeconds } from "common/constants/timeInSeconds";
 import { LoadError } from "components/common/LoadError";
 import { LoadingView } from "components/common/LoadingView";
-import { useServices } from "components/hooks/useServices";
-import { licenseSelectors } from "components/common/shell/licenseSlice";
-import { defaultItemsToProcess } from "components/pages/database/settings/documentExpiration/DocumentExpiration";
 import ChatAiAgentFormBody from "./partials/ChatAiAgentFormBody";
 import AiAgentParametersDropdown from "../partials/AiAgentParametersDropdown";
+import useChatAiAgent, { ChatAiAgentQueryParams } from "./hooks/useChatAiAgent";
+import genUtils from "common/generalUtils";
+import Badge from "react-bootstrap/Badge";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import AiTokensUsagePopoverBody from "components/common/AiTokensUsagePopoverBody";
+import AiAgentLinkedConversationsDropdown from "../partials/AiAgentLinkedConversationsDropdown";
 
-interface QueryParams {
-    agentId: string;
-    conversationId: string;
-    isHistory: boolean;
-}
+export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<ChatAiAgentQueryParams>) {
+    const { handleSend, reloadForm, handleNewChat, chatForm, asyncGetDefaultValues, handleSubmit, runChat } =
+        useChatAiAgent(queryParams);
 
-export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<QueryParams>) {
     const dispatch = useAppDispatch();
     const { appUrl } = useAppUrls();
-    const { databasesService } = useServices();
 
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const config = useAppSelector(chatAiAgentSelectors.config);
     const isRawData = useAppSelector(chatAiAgentSelectors.isRawData);
-    const isDocumentExpirationEnabled = useAppSelector(chatAiAgentSelectors.isDocumentExpirationEnabled);
-    const isCommunityLicense = useAppSelector(licenseSelectors.licenseType) === "Community";
     const document = useAppSelector(chatAiAgentSelectors.document);
+    const conversationId = useAppSelector(chatAiAgentSelectors.conversationId);
 
-    // Reset store on unmount
-    useEffect(() => {
-        return () => {
-            dispatch(chatAiAgentActions.reset());
-        };
-    }, []);
-
-    const asyncGetDefaultValues = useAsyncCallback<ChatAiAgentFormData>(async () => {
-        const isDocumentExpirationEnabled = await dispatch(
-            chatAiAgentActions.getIsDocumentExpirationEnabled(databaseName)
-        ).unwrap();
-
-        dispatch(chatAiAgentActions.conversationIdSet(queryParams?.conversationId));
-
-        const config = await dispatch(
-            chatAiAgentActions.getConfig({ databaseName, id: queryParams?.agentId })
-        ).unwrap();
-
-        if (queryParams?.conversationId) {
-            dispatch(chatAiAgentActions.getDocument({ databaseName, id: queryParams?.conversationId }));
-        }
-
-        return {
-            prompt: "",
-            parameters: config.Parameters.map((x) => ({ name: x.Name, value: "" })),
-            isEnableDocumentExpiration: !isDocumentExpirationEnabled,
-            isDocumentExpireInCustomizeEnabled: false,
-            persistenceConversationIdPrefix: "",
-            persistenceExpiresInSeconds: TimeInSeconds.Day * 30,
-        };
-    });
-
-    const areParametersRequired = !window.location.href.includes("conversationId");
-
-    const chatForm = useForm<ChatAiAgentFormData>({
-        resolver: chatAiAgentYupResolver,
-        defaultValues: asyncGetDefaultValues.execute,
-        context: {
-            areParametersRequired,
-        },
-    });
-
-    const reloadForm = async () => {
-        const result = await asyncGetDefaultValues.execute();
-        chatForm.reset(result);
-    };
-
-    const { control, handleSubmit, setValue } = chatForm;
-
-    const formValues = useWatch({
-        control,
-    });
-
-    const runChat = async (toolCallParameters?: AiAgentToolCall[]) => {
-        await dispatch(
-            chatAiAgentActions.runChat({
-                databaseName,
-                formValues,
-                toolCallParameters,
-                isDocumentExpirationEnabled: isDocumentExpirationEnabled.data,
-            })
-        ).unwrap();
-
-        setValue("prompt", "");
-    };
-
-    const handleSend = async () => {
-        return tryHandleSubmit(async () => {
-            if (
-                queryParams?.conversationId == null &&
-                isDocumentExpirationEnabled.status === "success" &&
-                !isDocumentExpirationEnabled.data &&
-                formValues.isEnableDocumentExpiration
-            ) {
-                await databasesService.saveExpirationConfiguration(databaseName, {
-                    Disabled: false,
-                    DeleteFrequencyInSec: isCommunityLicense ? minimumCommunityDeleteFrequencyInSec : null,
-                    MaxItemsToProcess: defaultItemsToProcess,
-                });
-            }
-
-            runChat();
-        });
-    };
-
-    const handleNewChat = () => {
-        dispatch(chatAiAgentActions.conversationIdSet(null));
-        dispatch(chatAiAgentActions.messagesSet([]));
-        dispatch(chatAiAgentActions.documentSet(null));
-        dispatch(chatAiAgentActions.isWaitingForActionToolSubmitSet(false));
-        setValue("prompt", "");
-    };
+    const title = config.data?.Name ?? "AI Agent";
 
     if (!queryParams?.agentId) {
         router.navigate(appUrl.forAiAgents(databaseName));
@@ -151,9 +52,12 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     return (
         <div className="h-100 vstack">
             <div className="hstack justify-content-between align-items-start px-3 pt-3">
-                <h2 className="text-truncate w-50 mb-3" title={config.data?.Name}>
-                    <Icon icon="ai-agents" /> {config.data?.Name ?? "AI Agent"}{" "}
-                </h2>
+                <div className="hstack gap-2 w-50 mb-3 align-items-center">
+                    <h2 className="text-truncate m-0" title={title}>
+                        <Icon icon="ai-agents" /> {title}
+                    </h2>
+                    {document.data?.TotalUsage && <TotalUsageBadge usage={document.data.TotalUsage} />}
+                </div>
                 <ChatAiAgentInfoHub />
             </div>
             <div className="hstack mb-2 justify-content-between px-3">
@@ -166,6 +70,15 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                     >
                         <Icon icon="plus" /> New chat
                     </Button>
+                    {conversationId && (
+                        <a
+                            href={appUrl.forEditDoc(conversationId, databaseName)}
+                            className="btn btn-secondary rounded-pill"
+                            target="_blank"
+                        >
+                            <Icon icon="document" /> Edit document
+                        </a>
+                    )}
                     <a className="btn btn-secondary rounded-pill" href={appUrl.forAiAgents(databaseName)}>
                         <Icon icon="cancel" /> Cancel
                     </a>
@@ -180,6 +93,9 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
                         Raw data
                     </Switch>
                     {document.data?.Parameters && <AiAgentParametersDropdown parameters={document.data.Parameters} />}
+                    {document.data?.LinkedConversations && (
+                        <AiAgentLinkedConversationsDropdown linkedConversations={document.data.LinkedConversations} />
+                    )}
                 </div>
             </div>
 
@@ -210,4 +126,23 @@ export default function ChatAiAgent({ queryParams }: ReactQueryParamsProps<Query
     );
 }
 
-const minimumCommunityDeleteFrequencyInSec = TimeInSeconds.Day * 36;
+function TotalUsageBadge({ usage }: { usage: Raven.Client.Documents.Operations.AI.AiUsage }) {
+    return (
+        <Badge bg="info" pill>
+            <PopoverWithHoverWrapper
+                placement="bottom"
+                message={
+                    <AiTokensUsagePopoverBody
+                        prompt={usage.PromptTokens}
+                        completion={usage.CompletionTokens}
+                        cached={usage.CachedTokens}
+                        total={usage.TotalTokens}
+                    />
+                }
+            >
+                <Icon icon="info" />
+            </PopoverWithHoverWrapper>
+            Tokens used: {genUtils.formatAiTokens(usage.TotalTokens)}
+        </Badge>
+    );
+}

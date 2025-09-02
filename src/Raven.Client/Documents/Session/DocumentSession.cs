@@ -34,29 +34,29 @@ namespace Raven.Client.Documents.Session
         public IAdvancedSessionOperations Advanced => this;
 
         /// <summary>
-        /// Access the eager operations
+        /// Access the eager session operations for loading entities immediately
         /// </summary>
         public IEagerSessionOperations Eagerly => this;
 
         /// <summary>
-        /// Access the lazy operations
+        /// Access the lazy session operations for deferred loading of entities
         /// </summary>
         public ILazySessionOperations Lazily => this;
 
         /// <summary>
-        /// Access the attachments operations
+        /// Access the attachments operations for this session
         /// </summary>
         public IAttachmentsSessionOperations Attachments => _attachments ?? (_attachments = new DocumentSessionAttachments(this));
         private IAttachmentsSessionOperations _attachments;
 
-        /// <summary>        
-        /// Access the revisions operations
+        /// <summary>
+        /// Access the revisions operations for this session
         /// </summary>
         public IRevisionsSessionOperations Revisions => _revisions ?? (_revisions = new DocumentSessionRevisions(this));
         private IRevisionsSessionOperations _revisions;
 
         /// <summary>
-        /// Access to cluster wide transaction operations
+        /// Access the cluster-wide transaction operations for this session
         /// </summary>
         public IClusterTransactionOperations ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionOperations(this));
         private IClusterTransactionOperations _clusterTransaction;
@@ -111,8 +111,8 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Check if document exists without loading it
         /// </summary>
-        /// <param name="id">Document id.</param>
-        /// <returns></returns>
+        /// <param name="id">Document id</param>
+        /// <returns>true if the document exists; otherwise, false</returns>
         public bool Exists(string id)
         {
             if (id == null)

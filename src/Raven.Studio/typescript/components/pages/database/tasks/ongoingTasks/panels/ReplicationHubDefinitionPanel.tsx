@@ -24,6 +24,7 @@ import Form from "react-bootstrap/Form";
 import { EmptySet } from "components/common/EmptySet";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
 import { useAppSelector } from "components/store";
+import { Icon } from "components/common/Icon";
 
 interface ReplicationHubPanelProps extends BaseOngoingTaskPanelProps<OngoingTaskHubDefinitionInfo> {
     connectedSinks: OngoingTaskReplicationHubInfo[];
@@ -83,6 +84,10 @@ export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
+                    <span>
+                        <Icon icon="pull-replication-hub" />
+                        Replication Hub
+                    </span>
                     <OngoingTaskStatus
                         task={data}
                         canEdit={canEdit}
@@ -96,6 +101,7 @@ export function ReplicationHubDefinitionPanel(props: ReplicationHubPanelProps) {
                         onTaskOperation={onTaskOperation}
                         toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
+                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>

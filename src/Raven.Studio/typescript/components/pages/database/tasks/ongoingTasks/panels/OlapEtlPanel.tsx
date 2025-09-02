@@ -27,6 +27,7 @@ import Form from "react-bootstrap/Form";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppSelector } from "components/store";
 import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import { Icon } from "components/common/Icon";
 
 type OlapEtlPanelProps = BaseOngoingTaskPanelProps<OngoingTaskOlapEtlInfo>;
 
@@ -89,6 +90,10 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
                     <OngoingTaskName task={data} canEdit={canEdit} editUrl={editUrl} />
                 </RichPanelInfo>
                 <RichPanelActions>
+                    <span>
+                        <Icon icon="olap-etl" />
+                        OLAP ETL
+                    </span>
                     <OngoingTaskResponsibleNode task={data} />
                     <OngoingTaskStatus
                         task={data}
@@ -103,6 +108,7 @@ export function OlapEtlPanel(props: OlapEtlPanelProps & ICanShowTransformationSc
                         onTaskOperation={onTaskOperation}
                         toggleDetails={toggleDetails}
                         isDeleting={isDeleting(data.shared.taskId)}
+                        isDetailsOpen={detailsVisible}
                     />
                 </RichPanelActions>
             </RichPanelHeader>

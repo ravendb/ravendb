@@ -13,6 +13,10 @@ using Sparrow.Logging;
 
 namespace Raven.Client.Documents.Subscriptions
 {
+    /// <summary>
+    /// Client-side worker that connects to a subscription and processes incoming document batches.
+    /// Use DocumentStore.Subscriptions.GetSubscriptionWorker to create instances.
+    /// </summary>
     public sealed class SubscriptionWorker<T> : AbstractSubscriptionWorker<SubscriptionBatch<T>, T> where T : class
     {
         private readonly DocumentStore _store;

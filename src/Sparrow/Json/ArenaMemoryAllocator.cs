@@ -435,7 +435,7 @@ namespace Sparrow.Json
             }
         }
     }
-
+    
     public sealed unsafe class AllocatedMemoryData
     {
         public int SizeInBytes;
@@ -444,6 +444,36 @@ namespace Sparrow.Json
         public JsonOperationContext Parent;
         public NativeMemory.ThreadStats AllocatingThread;
 
+        private MemoryManager _memoryManager;
+
+        public Memory<byte> AsMemory()
+        {
+            _memoryManager ??= new(this);
+            return _memoryManager.Memory;
+        }
+        
+        private class MemoryManager(AllocatedMemoryData parent) : MemoryManager<byte>
+        {
+            protected override void Dispose(bool disposing)
+            {
+                
+            }
+
+            public override Span<byte> GetSpan()
+            {
+                return new Span<byte>(parent.Address, parent.SizeInBytes);
+            }
+
+            public override MemoryHandle Pin(int elementIndex = 0)
+            {
+                return default;
+            }
+
+            public override void Unpin()
+            {
+            }
+        }
+        
         public AllocatedMemoryData(byte* address, int sizeInBytes)
         {
             SizeInBytes = sizeInBytes;

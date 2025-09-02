@@ -20,7 +20,7 @@ public class AiUsage : IDynamicJsonValueConvertible
         CompletionTokens += completionTokens;
         TotalTokens += totalTokens;
 
-        if (json.TryGet("prompt_tokens_details", out BlittableJsonReaderObject promptDetails))
+        if (json.TryGet("prompt_tokens_details", out BlittableJsonReaderObject promptDetails) && promptDetails != null)
         {
             if (promptDetails.TryGet("cached_tokens", out int cachedTokens))
                 CachedTokens += cachedTokens;

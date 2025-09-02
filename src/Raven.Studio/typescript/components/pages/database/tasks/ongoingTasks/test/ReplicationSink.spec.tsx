@@ -5,7 +5,7 @@ import { within } from "@testing-library/dom";
 import React from "react";
 import { selectors } from "components/pages/database/tasks/ongoingTasks/test/selectors";
 
-const containerTestId = "replication-sinks";
+const containerTestId = "replications";
 
 describe("Replication Sink", function () {
     it("can render enabled", async () => {
@@ -13,7 +13,8 @@ describe("Replication Sink", function () {
 
         const { screen, fireClick } = rtlRender(<Story />);
         const container = within(await screen.findByTestId(containerTestId));
-        expect(await container.findByRole("heading", { name: /Replication Sink/ })).toBeInTheDocument();
+        expect(await container.findByRole("heading", { name: "Replication", level: 5 })).toBeInTheDocument();
+        expect(await container.findByText(/Replication Sink/)).toBeInTheDocument();
         expect(await container.findByText(/Enabled/)).toBeInTheDocument();
         expect(container.queryByText(/Disabled/)).not.toBeInTheDocument();
 

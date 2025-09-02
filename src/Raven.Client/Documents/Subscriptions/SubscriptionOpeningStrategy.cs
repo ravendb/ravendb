@@ -28,6 +28,9 @@ namespace Raven.Client.Documents.Subscriptions
         /// </summary>
         WaitForFree,
 
+        /// <summary>
+        /// Allows multiple consumers to process the same subscription concurrently (when server supports it).
+        /// </summary>
         Concurrent
     }
 }

@@ -22,16 +22,17 @@ interface AboutViewHeadingProps {
     title: string;
     icon: IconName;
     licenseBadgeText?: LicenseBadgeText;
+    iconAddon?: IconName;
     marginBottom?: number;
     className?: string;
 }
 
 const AboutViewHeading = (props: AboutViewHeadingProps) => {
-    const { title, icon, licenseBadgeText, marginBottom, className } = props;
+    const { title, icon, iconAddon, licenseBadgeText, marginBottom, className } = props;
 
     return (
         <h2 className={classNames("d-flex align-items-center gap-1 flex-wrap", `mb-${marginBottom ?? 5}`, className)}>
-            <Icon icon={icon} /> {title}{" "}
+            <Icon icon={icon} addon={iconAddon} /> {title}{" "}
             {licenseBadgeText != null && <LicenseRestrictedBadge licenseRequired={licenseBadgeText} />}
         </h2>
     );

@@ -1113,3 +1113,7 @@ interface AiModelsRequestDto {
     OllamaSettings?: Pick<Raven.Client.Documents.Operations.AI.OllamaSettings, "Uri" | "Think">;
     OpenAiSettings?: Pick<Raven.Client.Documents.Operations.AI.OpenAiSettings, "Endpoint" | "ApiKey" | "OrganizationId" | "ProjectId">;
 }
+
+interface GetAiAgentResultDto {
+    AiAgents: Raven.Client.Documents.Operations.AI.Agents.AiAgentConfiguration[];
+}

@@ -14,6 +14,8 @@ namespace Raven.Server.NotificationCenter.Notifications
         QueueSink_ConsumeError,
         QueueSink_ConsumerCreationError,
 
+        AiAgent_ExceededTokenThreshold,
+
         SqlEtl_ConnectionError,
         SqlEtl_ProviderError,
         

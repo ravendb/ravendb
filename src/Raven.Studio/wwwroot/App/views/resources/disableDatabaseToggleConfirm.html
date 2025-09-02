@@ -24,13 +24,15 @@
                 <strong data-bind="text: databases.length"></strong>
                 databases
                 <br />
-                <ul class="databases-list margin-top-xs" data-bind="foreach: databases">
-                    <li class="force-text-wrap"><i class="icon-database text-primary"></i>
-                        <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-encryption text-success"></i></small>
-                        <small title="This database is not encrypted" data-bind="visible: !isEncrypted"><i class="icon-unlock text-muted"></i></small>
-                        <strong data-bind="text: name"></strong>
-                    </li>
-                </ul>
+                <div style="max-height: 290px; overflow-y: auto;">
+                    <ul class="databases-list margin-top-xs" data-bind="foreach: databases">
+                        <li class="force-text-wrap"><i class="icon-database text-primary"></i>
+                            <small title="This database is encrypted" data-bind="visible: isEncrypted"><i class="icon-encryption text-success"></i></small>
+                            <small title="This database is not encrypted" data-bind="visible: !isEncrypted"><i class="icon-unlock text-muted"></i></small>
+                            <strong data-bind="text: name"></strong>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
         <div class="modal-footer">
