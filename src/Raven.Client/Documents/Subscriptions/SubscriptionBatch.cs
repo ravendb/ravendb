@@ -64,7 +64,7 @@ namespace Raven.Client.Documents.Subscriptions
         private List<BlittableJsonReaderObject> _timeSeriesIncludes;
         private bool _sessionOpened = false;
 
-        private readonly ISubscriptionsBlittableJsonConverter _converter;
+        private ISubscriptionsBlittableJsonConverter _converter;
 
         public IDocumentSession OpenSession()
         {
@@ -204,7 +204,6 @@ namespace Raven.Client.Documents.Subscriptions
             _logger = logger;
 
             _generateEntityIdOnTheClient = new GenerateEntityIdOnTheClient(_requestExecutor.Conventions, entity => throw new InvalidOperationException("Shouldn't be generating new ids here"));
-            _converter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
         }
 
         internal string Initialize(BatchFromServer batch)
@@ -214,6 +213,7 @@ namespace Raven.Client.Documents.Subscriptions
             _includes = batch.Includes;
             _counterIncludes = batch.CounterIncludes;
             _timeSeriesIncludes = batch.TimeSeriesIncludes;
+            _converter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
 
             Items.Capacity = Math.Max(Items.Capacity, batch.Messages.Count);
             Items.Clear();
