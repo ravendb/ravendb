@@ -999,7 +999,7 @@ namespace Voron.Data.Tables
             }
         }
 
-        private void AddValueToDynamicIndex(long id, DynamicKeyIndexDef dynamicKeyIndexDef, Tree indexTree, Slice newVal, TreeNodeFlags flags)
+        internal void AddValueToDynamicIndex(long id, DynamicKeyIndexDef dynamicKeyIndexDef, Tree indexTree, Slice newVal, TreeNodeFlags flags)
         {
             if (dynamicKeyIndexDef.SupportDuplicateKeys == false)
             {

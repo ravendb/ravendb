@@ -34,58 +34,71 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             var processed = 0L;
             var done = false;
 
-            while (done == false)
+            var dynamicIndex = Attachments.AttachmentsSchemaBase.DynamicKeyIndexes[Attachments.AttachmentsFlagAndHashSlice];
+
+            // we need to remove the dynamic index so we can remove the old value for which we are missing an entry inside the dynamic index
+            Attachments.AttachmentsSchemaBase.DynamicKeyIndexes.Remove(Attachments.AttachmentsFlagAndHashSlice);
+
+            try
             {
-                using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                while (done == false)
                 {
-                    context.TransactionMarkerOffset = (short)step.WriteTx.LowLevelTransaction.Id;
-                    var commit = false;
-                    var readTable = step.ReadTx.OpenTable(Attachments.AttachmentsSchemaBase, Attachments.AttachmentsMetadataSlice);
-                    if (readTable != null)
+                    using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                     {
-                        Table writeTable = step.WriteTx.OpenTable(Attachments.AttachmentsSchemaBase, Attachments.AttachmentsMetadataSlice);
-                        var streamsTree = step.ReadTx.ReadTree(Attachments.AttachmentsSlice);
-
-                        foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, skip))
+                        context.TransactionMarkerOffset = (short)step.WriteTx.LowLevelTransaction.Id;
+                        var commit = false;
+                        var readTable = step.ReadTx.OpenTable(Attachments.AttachmentsSchemaBase, Attachments.AttachmentsMetadataSlice);
+                        if (readTable != null)
                         {
-                            using (TableValueReaderUtil.CloneTableValueReader(context, read))
+                            Table writeTable = step.WriteTx.OpenTable(Attachments.AttachmentsSchemaBase, Attachments.AttachmentsMetadataSlice);
+                            var streamsTree = step.ReadTx.ReadTree(Attachments.AttachmentsSlice);
+
+                            foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, skip))
                             {
-                                Attachment attachmentOld = TableValueToAttachmentOld(context, streamsTree, ref read.Reader, out var scope);
-
-                                using (scope)
-                                using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out var pkSlice))
+                                using (TableValueReaderUtil.CloneTableValueReader(context, read))
                                 {
-                                    TableSchema.DynamicKeyIndexDef dynamicIndex = Attachments.AttachmentsSchemaBase.DynamicKeyIndexes[Attachments.AttachmentsFlagAndHashSlice];
+                                    Attachment attachmentOld = TableValueToAttachmentOld(context, streamsTree, ref read.Reader, out var scope);
 
-                                    // we need to remove the dynamic index so we can remove the old value for which we are missing an entry inside the dynamic index
-                                    Attachments.AttachmentsSchemaBase.DynamicKeyIndexes.Remove(Attachments.AttachmentsFlagAndHashSlice);
-                                    writeTable.DeleteByKey(pkSlice);
+                                    using (scope)
+                                    using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out var pkSlice))
+                                    {
+                                        writeTable.DeleteByKey(pkSlice);
 
-                                    // now we add the dynamic index back, so we can add the new value and dynamic index will be updated
-                                    Attachments.AttachmentsSchemaBase.DynamicKeyIndexes.Add(Attachments.AttachmentsFlagAndHashSlice, dynamicIndex);
-                                    writeTable.Insert(tvb);
+                                        var id = writeTable.Insert(tvb);
+
+                                        using (dynamicIndex.GetValue(writeTable._tx, tvb, out Slice newVal))
+                                        {
+                                            var indexTree = writeTable.GetTree(dynamicIndex);
+                                            writeTable.AddValueToDynamicIndex(id, dynamicIndex, indexTree, newVal, TreeNodeFlags.Data);
+                                        }
+                                    }
+                                }
+
+                                if (++processed >= NumberOfAttachmentsToMigrateInSingleTransaction)
+                                {
+                                    skip += processed;
+                                    processed = 0;
+                                    commit = true;
+                                    break;
                                 }
                             }
 
-                            if (++processed >= NumberOfAttachmentsToMigrateInSingleTransaction)
+                            if (commit)
                             {
-                                skip += processed;
-                                processed = 0;
-                                commit = true;
-                                break;
+                                step.Commit(context);
+                                step.RenewTransactions();
+                                continue;
                             }
-                        }
 
-                        if (commit)
-                        {
-                            step.Commit(context);
-                            step.RenewTransactions();
-                            continue;
+                            done = true;
                         }
-
-                        done = true;
                     }
                 }
+            }
+            finally
+            {
+                // now we add the populated dynamic index back
+                Attachments.AttachmentsSchemaBase.DynamicKeyIndexes.Add(Attachments.AttachmentsFlagAndHashSlice, dynamicIndex);
             }
 
             return true;
