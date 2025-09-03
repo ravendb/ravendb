@@ -3,22 +3,38 @@ using Raven.Client.Documents.Indexes.Vector;
 
 namespace Raven.Client
 {
+    /// <summary>
+    /// Contains constants used throughout the RavenDB client library.
+    /// This static class provides categorized collections of constants for various RavenDB operations.
+    /// </summary>
     public static class Constants
     {
+        /// <summary>
+        /// Contains constants related to JSON processing and serialization.
+        /// </summary>
         public sealed class Json
         {
             private Json()
             {
             }
 
+            /// <summary>
+            /// Contains field names used in JSON serialization.
+            /// </summary>
             public sealed class Fields
             {
                 private Fields()
                 {
                 }
 
+                /// <summary>
+                /// The JSON field name used to specify the type information for polymorphic serialization.
+                /// </summary>
                 public const string Type = "$type";
 
+                /// <summary>
+                /// The JSON field name used to specify values in JSON collections.
+                /// </summary>
                 public const string Values = "$values";
             }
         }
@@ -34,62 +50,140 @@ namespace Raven.Client
             public const string ShardNumber = "shardNumber";
         }
 
+        /// <summary>
+        /// Contains HTTP header names used in RavenDB client-server communication.
+        /// </summary>
         public sealed class Headers
         {
             private Headers()
             {
             }
 
+            /// <summary>
+            /// HTTP header name for request timestamp.
+            /// </summary>
             public const string RequestTime = "Request-Time";
 
+            /// <summary>
+            /// HTTP header name for server startup timestamp.
+            /// </summary>
             public const string ServerStartupTime = "Server-Startup-Time";
 
+            /// <summary>
+            /// HTTP header name for triggering topology refresh.
+            /// </summary>
             public const string RefreshTopology = "Refresh-Topology";
 
+            /// <summary>
+            /// HTTP header name for topology etag.
+            /// </summary>
             public const string TopologyEtag = "Topology-Etag";
 
+            /// <summary>
+            /// HTTP header name for cluster topology etag.
+            /// </summary>
             public const string ClusterTopologyEtag = "Cluster-Topology-Etag";
 
+            /// <summary>
+            /// HTTP header name for client configuration etag.
+            /// </summary>
             public const string ClientConfigurationEtag = "Client-Configuration-Etag";
 
+            /// <summary>
+            /// HTTP header name for the last known cluster transaction index.
+            /// </summary>
             public const string LastKnownClusterTransactionIndex = "Known-Raft-Index";
 
+            /// <summary>
+            /// HTTP header name for database cluster transaction identifier.
+            /// </summary>
             public const string DatabaseClusterTransactionId = "Database-Cluster-Tx-Id";
 
+            /// <summary>
+            /// HTTP header name for triggering client configuration refresh.
+            /// </summary>
             public const string RefreshClientConfiguration = "Refresh-Client-Configuration";
 
+            /// <summary>
+            /// HTTP header name for entity tag (ETag).
+            /// </summary>
             public const string Etag = "ETag";
 
+            /// <summary>
+            /// HTTP header name for RavenDB client version.
+            /// </summary>
             public const string ClientVersion = "Raven-Client-Version";
 
+            /// <summary>
+            /// HTTP header name for RavenDB server version.
+            /// </summary>
             public const string ServerVersion = "Raven-Server-Version";
 
+            /// <summary>
+            /// HTTP header name for RavenDB Studio version.
+            /// </summary>
             public const string StudioVersion = "Raven-Studio-Version";
 
+            /// <summary>
+            /// HTTP header name for conditional request matching.
+            /// </summary>
             public const string IfMatch = "If-Match";
 
+            /// <summary>
+            /// HTTP header name for conditional request non-matching.
+            /// </summary>
             public const string IfNoneMatch = "If-None-Match";
 
+            /// <summary>
+            /// HTTP header name for transfer encoding.
+            /// </summary>
             public const string TransferEncoding = "Transfer-Encoding";
 
+            /// <summary>
+            /// HTTP header name for content encoding.
+            /// </summary>
             public const string ContentEncoding = "Content-Encoding";
 
+            /// <summary>
+            /// HTTP header name for accept encoding.
+            /// </summary>
             public const string AcceptEncoding = "Accept-Encoding";
 
+            /// <summary>
+            /// HTTP header name for content disposition.
+            /// </summary>
             public const string ContentDisposition = "Content-Disposition";
 
+            /// <summary>
+            /// HTTP header name for content type.
+            /// </summary>
             public const string ContentType = "Content-Type";
 
+            /// <summary>
+            /// HTTP header name for content length.
+            /// </summary>
             public const string ContentLength = "Content-Length";
 
+            /// <summary>
+            /// HTTP header name for request origin.
+            /// </summary>
             public const string Origin = "Origin";
 
+            /// <summary>
+            /// Prefix used for incremental time series headers.
+            /// </summary>
             public const string IncrementalTimeSeriesPrefix = "INC:";
 
             internal const string Sharded = "Sharded";
 
+            /// <summary>
+            /// HTTP header name for attachment hash.
+            /// </summary>
             public const string AttachmentHash = "Attachment-Hash";
 
+            /// <summary>
+            /// HTTP header name for attachment size.
+            /// </summary>
             public const string AttachmentSize = "Attachment-Size";
 
             internal const string DatabaseMissing = "Database-Missing";
@@ -114,20 +208,32 @@ namespace Raven.Client
             }
         }
 
+        /// <summary>
+        /// Contains platform-specific constants for different operating systems.
+        /// </summary>
         public sealed class Platform
         {
             private Platform()
             {
             }
 
+            /// <summary>
+            /// Contains Windows-specific constants and limitations.
+            /// </summary>
             public sealed class Windows
             {
                 private Windows()
                 {
                 }
 
+                /// <summary>
+                /// Maximum path length supported on Windows.
+                /// </summary>
                 public static readonly int MaxPath = short.MaxValue;
 
+                /// <summary>
+                /// Reserved file names that cannot be used on Windows.
+                /// </summary>
                 internal static readonly string[] ReservedFileNames = {
                     "con",
                     "prn",
@@ -155,25 +261,44 @@ namespace Raven.Client
                 };
             }
 
+            /// <summary>
+            /// Contains Linux-specific constants and limitations.
+            /// </summary>
             public sealed class Linux
             {
                 private Linux()
                 {
                 }
 
+                /// <summary>
+                /// Maximum path length supported on Linux.
+                /// </summary>
                 public const int MaxPath = 4096;
 
+                /// <summary>
+                /// Maximum file name length supported on Linux.
+                /// </summary>
                 public const int MaxFileNameLength = 230;
             }
         }
 
+        /// <summary>
+        /// Contains constants related to certificate management.
+        /// </summary>
         public sealed class Certificates
         {
             private Certificates()
             {
             }
 
+            /// <summary>
+            /// The prefix used for certificate identifiers.
+            /// </summary>
             public const string Prefix = "certificates/";
+            
+            /// <summary>
+            /// Maximum number of certificates allowed with the same hash.
+            /// </summary>
             public const int MaxNumberOfCertsWithSameHash = 5;
         }
 
@@ -194,6 +319,9 @@ namespace Raven.Client
             public const string StudioId = "DatabaseSettings/Studio";
         }
 
+        /// <summary>
+        /// Contains constants related to RavenDB configuration.
+        /// </summary>
         public sealed class Configuration
         {
             private Configuration()
@@ -205,85 +333,187 @@ namespace Raven.Client
                 internal const string IndexingStaticSearchEngineType = "Indexing.Static.SearchEngineType";
             }
 
+            /// <summary>
+            /// Configuration identifier for client settings.
+            /// </summary>
             public const string ClientId = "Configuration/Client";
 
+            /// <summary>
+            /// Configuration identifier for studio settings.
+            /// </summary>
             public const string StudioId = "Configuration/Studio";
         }
 
+        /// <summary>
+        /// Contains constants related to RavenDB counters.
+        /// </summary>
         public static class Counters
         {
+            /// <summary>
+            /// Special identifier for all counters in a document.
+            /// </summary>
             public const string All = "@all_counters";
         }
 
+        /// <summary>
+        /// Contains constants related to RavenDB time series.
+        /// </summary>
         public static class TimeSeries
         {
             internal const string SelectFieldName = "timeseries";
             internal const string QueryFunction = "__timeSeriesQueryFunction";
 
+            /// <summary>
+            /// Special identifier for all time series in a document.
+            /// </summary>
             public const string All = "@all_timeseries";
         }
 
+        /// <summary>
+        /// Contains constants related to RavenDB documents, collections, and metadata.
+        /// </summary>
         public sealed class Documents
         {
             private Documents()
             {
             }
 
+            /// <summary>
+            /// The prefix used for database names in RavenDB.
+            /// </summary>
             public const string Prefix = "db/";
 
+            /// <summary>
+            /// The maximum allowed length for a database name.
+            /// </summary>
             public const int MaxDatabaseNameLength = 128;
 
+            /// <summary>
+            /// Defines special states for subscription change vectors.
+            /// </summary>
             public enum SubscriptionChangeVectorSpecialStates
             {
+                /// <summary>
+                /// Indicates that the change vector should not be changed.
+                /// </summary>
                 DoNotChange,
+                /// <summary>
+                /// Indicates that the subscription should start from the last document.
+                /// </summary>
                 LastDocument,
+                /// <summary>
+                /// Indicates that the subscription should start from the beginning of time.
+                /// </summary>
                 BeginningOfTime
             }
 
+            /// <summary>
+            /// Contains constants for document metadata field names.
+            /// </summary>
             public sealed class Metadata
             {
                 private Metadata()
                 {
                 }
 
+                /// <summary>
+                /// Metadata field name for graph edges.
+                /// </summary>
                 public const string Edges = "@edges";
 
+                /// <summary>
+                /// Metadata field name for document collection.
+                /// </summary>
                 public const string Collection = "@collection";
 
+                /// <summary>
+                /// Metadata field name for query projections.
+                /// </summary>
                 public const string Projection = "@projection";
 
+                /// <summary>
+                /// Metadata field name for the metadata key.
+                /// </summary>
                 public const string Key = "@metadata";
 
+                /// <summary>
+                /// Metadata field name for document identifier.
+                /// </summary>
                 public const string Id = "@id";
 
+                /// <summary>
+                /// Metadata field name for conflict information.
+                /// </summary>
                 public const string Conflict = "@conflict";
 
+                /// <summary>
+                /// Property name for document identifier in objects.
+                /// </summary>
                 public const string IdProperty = "Id";
 
+                /// <summary>
+                /// Metadata field name for document flags.
+                /// </summary>
                 public const string Flags = "@flags";
 
+                /// <summary>
+                /// Metadata field name for document attachments.
+                /// </summary>
                 public const string Attachments = "@attachments";
 
+                /// <summary>
+                /// Metadata field name for document counters.
+                /// </summary>
                 public const string Counters = "@counters";
 
+                /// <summary>
+                /// Metadata field name for document time series.
+                /// </summary>
                 public const string TimeSeries = "@timeseries";
 
+                /// <summary>
+                /// Metadata field name for time series with named values.
+                /// </summary>
                 public const string TimeSeriesNamedValues = "@timeseries-named-values";
 
+                /// <summary>
+                /// Metadata field name for revision counters snapshot.
+                /// </summary>
                 public const string RevisionCounters = "@counters-snapshot";
 
+                /// <summary>
+                /// Metadata field name for revision time series snapshot.
+                /// </summary>
                 public const string RevisionTimeSeries = "@timeseries-snapshot";
 
+                /// <summary>
+                /// Metadata field name for legacy attachment metadata.
+                /// </summary>
                 public const string LegacyAttachmentsMetadata = "@legacy-attachment-metadata";
 
+                /// <summary>
+                /// Metadata field name for index score.
+                /// </summary>
                 public const string IndexScore = "@index-score";
 
+                /// <summary>
+                /// Metadata field name for spatial query results.
+                /// </summary>
                 public const string SpatialResult = "@spatial";
 
+                /// <summary>
+                /// Metadata field name for last modified timestamp.
+                /// </summary>
                 public const string LastModified = "@last-modified";
 
+                /// <summary>
+                /// Metadata field name for the .NET CLR type information.
+                /// </summary>
                 public const string RavenClrType = "Raven-Clr-Type";
 
+                /// <summary>
+                /// Metadata field name for document change vector.
+                /// </summary>
                 public const string ChangeVector = "@change-vector";
 
                 public const string Expires = "@expires";
