@@ -32,10 +32,6 @@
     <None Remove="Data\RavenDB_13291\collection-with-counter-word-4.1.5-nightly.ravendb-snapshot" />
     <None Remove="Data\RavenDB_13468\counters-snapshot-document.json" />
     <None Remove="Data\RavenDB_13468\counters.test.4.1.6.ravendb-snapshot" />
-    <None Remove="Data\RavenDB_13512\counters.test.4.1.6.ravendb-full-backup" />
-    <None Remove="Data\RavenDB_13512\Incremental\17.ravendb-full-backup" />
-    <None Remove="Data\RavenDB_13512\Incremental\18-01.ravendb-incremental-backup" />
-    <None Remove="Data\RavenDB_13512\Incremental\18.ravendb-incremental-backup" />
     <None Remove="Data\RavenDB-13937.ravendbdump" />
     <None Remove="Data\RavenDB_13759\Auto_Orders_ByOrderedAt.zip" />
     <None Remove="Data\RavenDB_13759\Orders_ByOrderBy.zip" />
@@ -97,14 +93,6 @@
     <EmbeddedResource Include="Data\RavenDB-13937.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_10958.txt" />
     <EmbeddedResource Include="Data\RavenDB_10958.json" />
-    <EmbeddedResource Include="Data\mssql.northwind.create.sql" />
-    <EmbeddedResource Include="Data\mssql.northwind.insert.sql" />
-    <EmbeddedResource Include="Data\mysql.northwind.create.sql" />
-    <EmbeddedResource Include="Data\mysql.northwind.insert.sql" />
-    <EmbeddedResource Include="Data\mssql.basic.create.sql" />
-    <EmbeddedResource Include="Data\mssql.basic.insert.sql" />
-    <EmbeddedResource Include="Data\mysql.basic.create.sql" />
-    <EmbeddedResource Include="Data\mysql.basic.insert.sql" />
     <EmbeddedResource Include="Data\RavenDB_16328\MyAnalyzer.cs" />
     <EmbeddedResource Include="Data\RavenDB_14939\MyAnalyzer.cs" />
     <EmbeddedResource Include="Data\RavenDB_15159\12119.smaps.gz" />
@@ -147,10 +135,6 @@
     <EmbeddedResource Include="Data\RavenDB_13291\collection-with-counter-word-4.1.5-nightly.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_13468\counters-snapshot-document.json" />
     <EmbeddedResource Include="Data\RavenDB_13468\counters.test.4.1.6.ravendb-snapshot" />
-    <EmbeddedResource Include="Data\RavenDB_13512\counters.test.4.1.6.ravendb-full-backup" />
-    <EmbeddedResource Include="Data\RavenDB_13512\Incremental\17.ravendb-full-backup" />
-    <EmbeddedResource Include="Data\RavenDB_13512\Incremental\18-01.ravendb-incremental-backup" />
-    <EmbeddedResource Include="Data\RavenDB_13512\Incremental\18.ravendb-incremental-backup" />
     <EmbeddedResource Include="Data\RavenDB_13759\Auto_Orders_ByOrderedAt.zip" />
     <EmbeddedResource Include="Data\RavenDB_13759\Orders_ByOrderBy.zip" />
     <EmbeddedResource Include="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data-2.zip" />
@@ -192,7 +176,6 @@
     <EmbeddedResource Include="Data\RavenDB_21263\revisionsWithLargeChangeVector-oldDatabaseVersion.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_21263\test1111-emptySupportedFeatures.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_21263\test1111-withoutSupportedFeatures.ravendbdump" />
-    <EmbeddedResource Include="MailingList\Everett\DocumentWithBytes.txt" />
     <EmbeddedResource Include="Data\RavenDB_22200\OneDamagedBucket.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <EmbeddedResource Include="Smuggler\Data\Document_Without_Attachment_Stream.ravendbdump" />
