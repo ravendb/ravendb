@@ -81,29 +81,29 @@ internal sealed class AlphanumericalComparer
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private static (uint BytesUsed, uint CharUsed) ReadCharacter(ReadOnlySpan<byte> str, uint offset, Span<char> charactersBuffer)
         {
-            var currentCharacter = Unsafe.Add(ref MemoryMarshal.GetReference(str), offset);
-            if ((uint)currentCharacter <= 0b0111_1111)
+            var firstByte = Unsafe.Add(ref MemoryMarshal.GetReference(str), offset);
+            if ((uint)firstByte <= 0b0111_1111)
             {
-                charactersBuffer[0] = (char)currentCharacter;
+                charactersBuffer[0] = (char)firstByte;
                 return (1, 1);
             }
 
-            uint bytesUsed = ReadCharacterUtf8(str, offset, charactersBuffer, out uint charUsed);
+            uint bytesUsed = ReadCharacterUtf8(firstByte, str, offset, charactersBuffer, out uint charUsed);
             return (bytesUsed, charUsed);
         }
 
-        private static uint ReadCharacterUtf8(ReadOnlySpan<byte> str, uint offset, Span<char> charactersBuffer, out uint charUsed)
+        private static uint ReadCharacterUtf8(byte firstByte, ReadOnlySpan<byte> str, uint offset, Span<char> charactersBuffer, out uint charUsed)
         {
             var decoder = Decoder ??= Encoding.UTF8.GetDecoder();
 
             //Numbers and ASCII are always 1 so we will pay the price only in case of UTF-8 characters.
             //http://www.unicode.org/versions/Unicode9.0.0/ch03.pdf#page=54
-            var (byteLengthOfCharacter, charNeededToEncodeCharacters) = Unsafe.Add(ref MemoryMarshal.GetReference(str), offset) switch
+            var (byteLengthOfCharacter, charNeededToEncodeCharacters) = firstByte switch
             {
                 <= 0b0111_1111 => (1, 1), /* 1 byte sequence: 0b0xxxxxxxx */
-                <= 0b1101_1111 => (2, Encoding.UTF8.GetCharCount(str.Slice((int)offset, 2))), /* 2 byte sequence: 0b110xxxxxx */
-                <= 0b1110_1111 => (3, Encoding.UTF8.GetCharCount(str.Slice((int)offset, 3))), /* 0b1110xxxx: 3 bytes sequence */
-                <= 0b1111_0111 => (4, Encoding.UTF8.GetCharCount(str.Slice((int)offset, 4))), /* 0b11110xxx: 4 bytes sequence */
+                <= 0b1101_1111 => (2, 1), /* 2 byte sequence: 0b110xxxxxx */
+                <= 0b1110_1111 => (3, 1), /* 0b1110xxxx: 3 bytes sequence */
+                <= 0b1111_0111 => (4, 2), /* 0b11110xxx: 4 bytes sequence */
                 _ => throw new InvalidDataException($"Characters should be between 1 and 4 bytes long and cannot match the specified sequence. This is invalid code.")
             };
 
