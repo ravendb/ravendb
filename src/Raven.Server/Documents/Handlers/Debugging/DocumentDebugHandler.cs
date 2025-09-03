@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -58,20 +59,20 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 writer.WriteEndObject();
             }
         }
-        
+
         [RavenAction("/databases/*/debug/documents/scan-corrupted-ids", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
         public async Task ScanCorruptedIds()
         {
             var startEtag = GetIntValueQueryString("startEtag", required: false) ?? 0;
             var resultCount = GetIntValueQueryString("resultCount", required: false) ?? 1024;
             var maxBatchTimeInSec = GetIntValueQueryString("maxBatchTimeInSec", required: false) ?? 60;
-            
+
             var wrongEscapedPositionsIds = new List<string>();
             var unescapedControlCharacterIds = new List<string>();
             long lastEtag = startEtag;
             var scannedDocuments = 0;
             var maxBatchTime = TimeSpan.FromSeconds(maxBatchTimeInSec);
-            
+
             using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
             {
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, Stream.Null))
@@ -116,6 +117,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                                     }
                                 }
                             }
+
                             break;
                         }
                     }
@@ -138,6 +140,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                         writer.WritePropertyName("AllScanned");
                         writer.WriteBool(true);
                     }
+
                     writer.WriteComma();
                     writer.WritePropertyName("ScannedDocuments");
                     writer.WriteInteger(scannedDocuments);
@@ -153,31 +156,114 @@ namespace Raven.Server.Documents.Handlers.Debugging
                     $"Id: '{doc.Id}', LowerId: '{doc.LowerId}', ChangeVector: '{doc.ChangeVector}', Etag: '{doc.Etag}', Flags: '{doc.Flags}'");
             }
         }
-        
-        public IEnumerable<Document> IterateDocumentsAndRevisionsByEtag(DocumentsOperationContext context, long startEtag)
+
+        private IEnumerable<Document> IterateDocumentsAndRevisionsByEtag(DocumentsOperationContext context, long startEtag)
         {
             const DocumentFields documentFields = DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector;
             var documents = Database.DocumentsStorage.GetDocumentsFrom(context, startEtag, 0, long.MaxValue, documentFields);
             var revisions = Database.DocumentsStorage.RevisionsStorage.GetRevisionsFrom(context, startEtag, long.MaxValue, documentFields);
-            
-            using var documentsEnumerator = documents.GetEnumerator(); 
-            using var revisionsEnumerator = revisions.GetEnumerator(); 
-            
-            var enumerators = new List<IEnumerator<Document>>();
-            if (documentsEnumerator.MoveNext())
-                enumerators.Add(documentsEnumerator);
-            if (revisionsEnumerator.MoveNext())
-                enumerators.Add(revisionsEnumerator);
-            while (enumerators.Count > 0)
-            {
-                var current = enumerators.Count > 1 && enumerators[0].Current.Etag > enumerators[1].Current.Etag
-                    ? enumerators[1]
-                    : enumerators[0];
 
-                yield return current.Current;
-                if (current.MoveNext() == false)
-                    enumerators.Remove(current);
+            using var documentsEnumerator = documents.GetEnumerator();
+            using var revisionsEnumerator = revisions.GetEnumerator();
+
+            var mergedEnumerator = new MergedEnumerator<Document>(DocumentsEtagComparer.Instance);
+            mergedEnumerator.AddEnumerator(documentsEnumerator);
+            mergedEnumerator.AddEnumerator(revisionsEnumerator);
+            
+            while (mergedEnumerator.MoveNext())
+            {
+                yield return mergedEnumerator.Current;
             }
+        }
+
+        private class MergedEnumerator<T> : IEnumerator<T>
+        {
+            private readonly IComparer<T> _comparer;
+            private readonly List<IEnumerator<T>> _workEnumerators = new();
+            private T _currentItem;
+
+            private IEnumerator<T> _currentEnumerator;
+
+            public MergedEnumerator(IComparer<T> comparer)
+            {
+                _comparer = comparer;
+            }
+
+            public void AddEnumerator(IEnumerator<T> enumerator)
+            {
+                if (enumerator == null)
+                    return;
+
+                if (enumerator.MoveNext())
+                {
+                    _workEnumerators.Add(enumerator);
+                }
+                else
+                {
+                    enumerator.Dispose();
+                }
+            }
+
+            public bool MoveNext()
+            {
+                if (_currentEnumerator != null)
+                {
+                    if (_currentEnumerator.MoveNext() == false)
+                    {
+                        using (_currentEnumerator)
+                        {
+                            _workEnumerators.Remove(_currentEnumerator);
+                            _currentEnumerator = null;
+                        }
+                    }
+                }
+
+                if (_workEnumerators.Count == 0)
+                    return false;
+
+                _currentEnumerator = _workEnumerators[0];
+                for (var index = 1; index < _workEnumerators.Count; index++)
+                {
+                    if (_comparer.Compare(_workEnumerators[index].Current, _currentEnumerator.Current) < 0)
+                    {
+                        _currentEnumerator = _workEnumerators[index];
+                    }
+                }
+
+                _currentItem = _currentEnumerator.Current;
+
+                return true;
+            }
+
+            public void Reset()
+            {
+                throw new NotSupportedException();
+            }
+
+            object IEnumerator.Current => Current;
+
+            public T Current => _currentItem;
+
+            public void Dispose()
+            {
+                foreach (var workEnumerator in _workEnumerators)
+                {
+                    workEnumerator.Dispose();
+                }
+
+                _workEnumerators.Clear();
+            }
+        }
+        
+        private class DocumentsEtagComparer : IComparer<Document>
+        {
+            public static readonly DocumentsEtagComparer Instance = new();
+
+            private DocumentsEtagComparer()
+            {
+            }
+
+            public int Compare(Document x, Document y) => x.Etag.CompareTo(y.Etag);
         }
     }
 }
