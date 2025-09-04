@@ -133,7 +133,8 @@ loadToOrders(partitionBy(key),
 
             var store2 = stores.First(s => s != store);
 
-            var newResponsible = WaitForNewResponsibleNode(store2, task.TaskId, OngoingTaskType.OlapEtl, mentorTag);
+            var newResponsible = WaitForNewResponsibleNode(store2, task.TaskId, OngoingTaskType.OlapEtl, mentorTag, timeout : (int)timeout.TotalMilliseconds);
+            Assert.True(newResponsible != null, $"new responsible node was not selected in time (waited for {timeout}). cluster debug info :" + await AddClusterDebugLogsToErrorMessage());
             var newResponsibleNode = cluster.Nodes.Single(s => s.ServerStore.NodeTag == newResponsible);
             etlDone = await WaitForEtlAsync(newResponsibleNode, dbName, (n, statistics) => statistics.LoadSuccesses != 0);
 
@@ -206,6 +207,13 @@ loadToOrders(partitionBy(key),
                 .AppendLine("Debug info from the new responsible node:")
                 .AppendLine(newStats);
 
+            return sb.ToString();
+        }
+
+        private async Task<string> AddClusterDebugLogsToErrorMessage()
+        {
+            var sb = new StringBuilder();
+            await GetClusterDebugLogsAsync(sb);
             return sb.ToString();
         }
 
