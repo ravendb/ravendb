@@ -33,6 +33,7 @@ namespace Corax.Querying;
 
 public sealed unsafe partial class IndexSearcher : IDisposable
 {
+    internal static readonly long BitmapMemoryRequiredThresholdInBytes = new Size(32, SizeUnit.Megabytes).GetValue(SizeUnit.Bytes);
     internal readonly Transaction _transaction;
     private Dictionary<string, Slice> _dynamicFieldNameMapping;
 
@@ -58,6 +59,7 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private long? _lastEntryId;
 
+    
     public long LastEntryId
     {
         get

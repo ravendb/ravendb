@@ -15,58 +15,32 @@ public unsafe struct DeduplicationMatch<TInner> : IQueryMatch
 {
     private TInner _inner;
     private readonly GrowableHashSet<long> _hashset;
-    private BitArray _bitmap;
+    private GrowableBitArray _bitmap;
     private readonly delegate*<ref DeduplicationMatch<TInner>, Span<long>, int> _fillFunc;
 
-    private unsafe struct BitArray : IDisposable
-    {
-        private ulong* _bits;
-        private IDisposable _memoryScope;
-#if DEBUG
-        public bool IsValid = true;
-#endif
-        public BitArray(IndexSearcher indexSearcher, int numberOfEntriesPossible)
-        {
-            var numberOfUlongsToAllocate = numberOfEntriesPossible / 64 + (numberOfEntriesPossible % 64 == 0 ? 0 : 1);
-            _memoryScope = indexSearcher.Allocator.Allocate(numberOfUlongsToAllocate * sizeof(ulong), out ByteString memory);
-            memory.ToSpan<ulong>().Clear();
-            _bits = (ulong*)memory.Ptr;
-#if DEBUG
-            IsValid = true;
-#endif
-        }
-
-        public bool Add(long id)
-        {
-            var mask = 1UL << (int)(id & 63);
-            var bucket = _bits + (int)(id >> 6);
-            var result = *bucket & mask;
-            *bucket |= mask;
-            return result == 0;
-        }
-
-        public void Dispose()
-        {
-#if DEBUG
-            IsValid = false;
-#endif
-            _memoryScope.Dispose();
-        }
-    }
+    
 
     public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
 
+
     public DeduplicationMatch(IndexSearcher indexSearcher, TInner inner, bool forceHashSet)
     {
-        if (indexSearcher.LastEntryId + 1 <= int.MaxValue && forceHashSet == false)
-        {
-            _bitmap = new BitArray(indexSearcher, (int)indexSearcher.LastEntryId + 1);
-            _fillFunc = &FillViaBitmap;
-        }
-        else
+        long maxBitId = indexSearcher.LastEntryId;
+        long numberOfEntries = indexSearcher.NumberOfEntries; // ensure not zero
+        var bitmapMemoryRequiredInBytes = maxBitId / 64;
+        var entriesMemoryRequiredInBytes = numberOfEntries / 64;
+
+        // If the bitmap is big enough and actually only around 1.5% entries exist, we will use a HashSet instead.
+        if (bitmapMemoryRequiredInBytes > IndexSearcher.BitmapMemoryRequiredThresholdInBytes 
+            && entriesMemoryRequiredInBytes < (bitmapMemoryRequiredInBytes >> 6) || forceHashSet)
         {
             _hashset = new GrowableHashSet<long>();
             _fillFunc = &FillViaHashSet;
+        }
+        else
+        {
+            _bitmap = new GrowableBitArray(indexSearcher.Allocator, (int)indexSearcher.LastEntryId);
+            _fillFunc = &FillViaBitmap;
         }
 
         _inner = inner;
