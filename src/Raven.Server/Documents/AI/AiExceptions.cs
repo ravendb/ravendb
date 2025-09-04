@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net;
 using System.Net.Http;
+using System.Text;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI
@@ -39,12 +40,13 @@ namespace Raven.Server.Documents.AI
 
         public static UnexpectedResponseException Create(string message, HttpResponseMessage response, string content, Exception e = null)
         {
-            return new UnexpectedResponseException(
-                $"{message}.{Environment.NewLine}" +
-                $"Status Code: {response.StatusCode}{Environment.NewLine}" +
-                $"Response:{Environment.NewLine}{response}{Environment.NewLine}" +
-                $"Content:{Environment.NewLine}{content}",
-                e)
+            var sb = new StringBuilder();
+            sb.Append(message).AppendLine(".")
+                .Append("Status Code: ").Append(response.StatusCode).AppendLine()
+                .AppendLine("Response:").AppendLine(response.ToString())
+                .AppendLine("Content:").AppendLine(content);
+
+            return new UnexpectedResponseException(sb.ToString(), e)
             {
                 RequestId = ChatCompletionClient.GetRequestId(response.Headers)
             };
