@@ -117,7 +117,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                     throw new NotSupportedException($"The specified provider (\"{connectorType.ToString()}\") is not supported.");
                 }
 
-                settings.BaseUri = "http://fake.url";
+                settings.SetBaseUri("http://fake.url");
                 return new EvilLlm(ContextPool, settings, ChatCompletionClient.ConventionsToUse);
             }
         }

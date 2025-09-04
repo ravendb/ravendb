@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.AI.Settings;
 
 internal abstract class AbstractChatCompletionClientSettings
 {
-    public string BaseUri { get; internal set; }
+    private string _baseUri;
     
     public string ApiKey { get; }
     
@@ -15,34 +15,33 @@ internal abstract class AbstractChatCompletionClientSettings
 
     protected AbstractChatCompletionClientSettings(string baseUri, string apiKey, string model)
     {
-        BaseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
+        _baseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
         ApiKey = apiKey;
         Model = model;
     }
 
-    public abstract void HandleCompletionRequestPayload(AsyncBlittableJsonTextWriter writer);
-
-    protected static class Constants
+    internal void SetBaseUri(string baseUri)
     {
-        public static class RequestFields
-        {
-            public const string Think = "think";
-            public const string Temperature = "temperature";
-        }
-
-        public static class Headers
-        {
-            public const string OpenAiOrganization = "OpenAI-Organization";
-            public const string OpenAiProject = "OpenAI-Project";
-        }
+        _baseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
     }
+
+    public virtual Uri GetBaseUri()
+    {
+        var baseUri = _baseUri;
+        if (baseUri.EndsWith("/") == false)
+            baseUri += "/";
+
+        return new Uri(baseUri);
+    }
+
+    public abstract void HandleCompletionRequestPayload(AsyncBlittableJsonTextWriter writer);
 
     public virtual void AddHeaders(HttpRequestMessage request)
     {
     }
 
     public virtual string GetRelativeCompletionUri() => "v1/chat/completions";
-    
+
     public virtual string GetRelativeModelsUri() => "v1/models";
     
     internal static bool TryGetParameters(AiConnectionString connectionString, out AbstractChatCompletionClientSettings settings)
@@ -74,5 +73,20 @@ internal abstract class AbstractChatCompletionClientSettings
         }
 
         return false;
+    }
+    
+    protected static class Constants
+    {
+        public static class RequestFields
+        {
+            public const string Think = "think";
+            public const string Temperature = "temperature";
+        }
+
+        public static class Headers
+        {
+            public const string OpenAiOrganization = "OpenAI-Organization";
+            public const string OpenAiProject = "OpenAI-Project";
+        }
     }
 }

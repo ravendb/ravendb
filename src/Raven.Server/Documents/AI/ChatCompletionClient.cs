@@ -22,6 +22,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Http;
 using Raven.Client.Json;
 using Raven.Server.Documents.AI.Settings;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Json;
 using Raven.Server.Utils;
@@ -74,18 +75,16 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         conventions ??= ConventionsToUse;
 
-        var baseUri = settings.BaseUri;
-        if (baseUri.EndsWith("/") == false)
-            baseUri += "/";
+        var baseUri = settings.GetBaseUri();
 
         _httpClientCacheKey = HttpClientCacheKey.Create(conventions.UseHttpDecompression,
             conventions.HasExplicitlySetDecompressionUsage, conventions.HttpPooledConnectionLifetime,
             conventions.HttpPooledConnectionIdleTimeout, conventions.GlobalHttpClientTimeout,
-            baseUri, conventions.ConfigureHttpMessageHandler);
+            baseUri.ToString(), conventions.ConfigureHttpMessageHandler);
 
         _client = DefaultRavenHttpClientFactory.Instance.GetHttpClient(_httpClientCacheKey, handler => new HttpClient(handler)
         {
-            BaseAddress = new Uri(baseUri),
+            BaseAddress = baseUri
         });
 
         _contextPool = contextPool;
