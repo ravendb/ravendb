@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="RavenDB_3286.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Net.Http;
+﻿using System.Net.Http;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

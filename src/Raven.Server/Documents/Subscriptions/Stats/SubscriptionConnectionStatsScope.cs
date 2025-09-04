@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="SubscriptionConnectionStatsScope.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Linq;
+﻿using System.Linq;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Server.Utils.Stats;

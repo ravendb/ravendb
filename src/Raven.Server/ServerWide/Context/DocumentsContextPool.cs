@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="DocumentsContextPool.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using Raven.Server.Documents;
+﻿using Raven.Server.Documents;
 using Sparrow.Json;
 
 namespace Raven.Server.ServerWide.Context

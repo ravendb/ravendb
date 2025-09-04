@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenDB_3145.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Exceptions;
 using Tests.Infrastructure;
 using Xunit;

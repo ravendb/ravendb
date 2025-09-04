@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="SomeIssue.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.IO;
+﻿using System.IO;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;
