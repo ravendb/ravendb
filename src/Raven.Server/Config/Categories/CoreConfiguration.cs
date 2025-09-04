@@ -85,9 +85,9 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("LetsEncrypt.AcmeProfile", ConfigurationEntryScope.ServerWideOnly)]
         public string AcmeProfile { get; set; }
         
-        [Description("Number of days before expiration when the server should automatically renew server certificates.\n")]
+        [Description("Number of days before expiration when the server should automatically renew server certificates.")]
         [DefaultValue(20)]
-        [ConfigurationEntry("AcmeDaysToRenewBeforeExpiration", ConfigurationEntryScope.ServerWideOnly)]
+        [ConfigurationEntry("LetsEncrypt.DaysToRenewCertBeforeExpiration", ConfigurationEntryScope.ServerWideOnly)]
         public int AcmeDaysToRenewBeforeExpiration { get; set; }
         
         [Description("Indicates if we should throw an exception if any index could not be opened")]
