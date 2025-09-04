@@ -19,6 +19,8 @@ using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.ServerWide.Context;
 using SlowTests.Client.Attachments;
+using Sparrow.Server;
+using Sparrow.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -27,8 +29,6 @@ namespace SlowTests.Server.Documents.Attachments
 {
     public class S3RetiredAttachmentsSlowTests : RetiredAttachmentsS3Base
     {
-        //TODO: egor add retired attachment => delete config => replication should throw
-
         public S3RetiredAttachmentsSlowTests(ITestOutputHelper output) : base(output)
         {
         }
@@ -1278,6 +1278,74 @@ namespace SlowTests.Server.Documents.Attachments
                     var stats22 = store2.Maintenance.Send(new GetDetailedStatisticsOperation());
                     Assert.Equal(0, stats22.CountOfRetiredAttachments);
                     Assert.Equal(0, stats22.CountOfAttachments);
+                }
+            }
+        }
+
+        [AmazonS3RetryTheory]
+        [InlineData(1, 3)]
+        public async Task ExternalReplicateRetiredAttachmentFromRegularToShrdDatabase_ShouldThrow(int attachmentsCount, int size)
+        {
+            DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Egor, DevelopmentHelper.Severity.Minor, "Change/Remove this test when RavenDB-24148 is implemented");
+            using (var regularStore = GetDocumentStore())
+            using (var shardedStore = Sharding.GetDocumentStore())
+            {
+                await using (var holder = CreateCloudSettings())
+                {
+                    // Setup retired attachments configuration for regular store
+                    var identifier = await PutRetireAttachmentsConfiguration(regularStore, Settings);
+
+                    // Create documents and attachments in regular store
+                    int docsCount = GetDocsAndAttachmentCount(attachmentsCount, out int attachmentsPerDoc);
+                    var ids = new List<(string Id, string Collection)>();
+                    await CreateDocs(regularStore, docsCount, ids);
+                    await PopulateDocsWithRandomAttachments(regularStore, identifier, size, ids, attachmentsPerDoc);
+
+                    // Get database instance and retire attachments
+                    var regularDatabase = await GetDocumentDatabaseInstanceFor(regularStore);
+
+                    // Move time forward and retire attachments
+                    regularDatabase.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
+                    await regularDatabase.RetireAttachmentsSender.RetireAttachments(int.MaxValue, int.MaxValue);
+
+                    // Verify attachments are retired in cloud
+                    var cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, attachmentsCount, 15_000);
+                    GetStorageAttachmentsMetadataFromAllAttachments(regularDatabase, Settings);
+                    await AssertAllRetiredAttachments(regularStore, cloudObjects, size, identifier);
+
+                    var mre = new AsyncManualResetEvent();
+                    Exception ex = null;
+                    await foreach (var db in Sharding.GetShardsDocumentDatabaseInstancesFor(shardedStore))
+                    {
+                        db.ReplicationLoader.ForTestingPurposesOnly().OnIncomingReplicationHandlerFailure += (exception) =>
+                        {
+                            if (exception is AggregateException ae)
+                            {
+                                exception = ae.InnerException;
+                            }
+
+                            if (exception == null)
+                                return;
+
+                            if (exception is NotSupportedException nse)
+                            {
+                                if (nse.Message.Contains("Replicating retired attachments to sharded database is not supported"))
+                                {
+                                    // yes
+                                    ex = nse;
+                                    mre.Set();
+                                }
+                            }
+                        };
+                    }
+
+                    // Setup external replication from regular to sharded store
+                    await SetupReplicationAsync(regularStore, shardedStore);
+
+                    Assert.True(await mre.WaitAsync(TimeSpan.FromSeconds(15)));
+                    Assert.NotNull(ex);
+                    Assert.Equal(typeof(NotSupportedException), ex.GetType());
+                    Assert.Equal("Replicating retired attachments to sharded database is not supported.", ex.Message);
                 }
             }
         }

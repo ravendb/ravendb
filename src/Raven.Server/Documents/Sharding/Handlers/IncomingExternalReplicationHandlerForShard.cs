@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Collections.Generic;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Server.Documents.Replication;
 using Raven.Server.Documents.Replication.Incoming;
@@ -42,6 +42,18 @@ namespace Raven.Server.Documents.Sharding.Handlers
 
             protected override ChangeVector PreProcessItemInternal(DocumentsOperationContext context, ReplicationBatchItem item)
             {
+                switch (item)
+                {
+                    case AttachmentReplicationItem attachmentReplicationItem:
+
+                        if (attachmentReplicationItem.Flags == RetiredAttachmentFlags.Retired)
+                        {
+                            throw new NotSupportedException("Replicating retired attachments to sharded database is not supported.");
+                        }
+
+                        break;
+                }
+
                 var changeVector = context.GetChangeVector(item.ChangeVector);
                 var result = _database.DocumentsStorage.GetNewChangeVector(context);
 

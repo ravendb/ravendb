@@ -42,12 +42,17 @@ namespace InterversionTests
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Attachments | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux, AwsRequired = true)]
         public async Task CannotReplicateRetiredAttachmentsToOld()
         {
+            await CannotReplicateRetiredAttachmentsToOldInternal(InterversionTestOptions.Default);
+        }
+
+        private async Task CannotReplicateRetiredAttachmentsToOldInternal(InterversionTestOptions ops)
+        {
             var version = Server62Version;
 
             var settings = Etl.GetS3Settings(nameof(AttachmentsTests), $"{Guid.NewGuid()}");
 
             await using (DeleteObjects(settings))
-            using (var oldStore = await GetDocumentStoreAsync(version))
+            using (var oldStore = await GetDocumentStoreAsync(version, ops))
             using (var store = GetDocumentStore())
             {
                 await CannotRetiredAttachmentsToOldInternal(settings, store);
@@ -67,6 +72,12 @@ namespace InterversionTests
                 Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Any(x => x.GetType() == typeof(LegacyReplicationViolationException))), "replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Any(x => x.GetType() == typeof(LegacyReplicationViolationException)))");
                 Assert.True(replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Select(x => x.Message).Any(x => x.Contains("found an item of type 'AttachmentReplicationItem' to replicate"))), "replicationLoader.OutgoingFailureInfo.Any(ofi => ofi.Value.Errors.Select(x => x.Message).Any(x => x.Contains('found an item of type 'AttachmentReplicationItem' to replicate')))");
             }
+        }
+
+        [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Attachments | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux, AwsRequired = true)]
+        public async Task CannotReplicateRetiredAttachmentsToOldSharded()
+        {
+            await CannotReplicateRetiredAttachmentsToOldInternal(InterversionTestOptions.Sharded);
         }
 
         [RavenMultiplatformFact(RavenTestCategory.Interversion | RavenTestCategory.Attachments | RavenTestCategory.Replication, RavenPlatform.Windows | RavenPlatform.Linux, AwsRequired = true)]
