@@ -56,6 +56,21 @@ public sealed unsafe partial class IndexSearcher : IDisposable
 
     private EntryIdPaginationSupportStatus? _entryIdPaginationSupportStatus;
 
+    private long? _lastEntryId;
+
+    public long LastEntryId
+    {
+        get
+        {
+            if (_lastEntryId is null)
+            {
+                _lastEntryId = _metadataTree?.ReadInt64(Constants.IndexWriter.LastEntryIdSlice) ?? 0;
+            }
+
+            return _lastEntryId.Value;
+        }
+    }
+
     public EntryIdPaginationSupportStatus EntryIdPaginationSupportStatus
     {
         get
@@ -574,11 +589,9 @@ public sealed unsafe partial class IndexSearcher : IDisposable
         return new IncludeNonExistingMatch<TInner>(this, inner, field, forward);
     }
 
-    public DeduplicationMatch<TInner> DeduplicationMatch<TInner>(in TInner inner)
-    where TInner : IQueryMatch
-    {
-        return new DeduplicationMatch<TInner>(inner);
-    }
+    public DeduplicationMatch<TInner> DeduplicationMatch<TInner>(in TInner inner, bool forceHashset = false) 
+        where TInner : IQueryMatch 
+        => new(this, inner, forceHashset);
     
     private void InitializeSpecialTermsMarkers()
     {
