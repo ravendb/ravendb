@@ -26,13 +26,13 @@ public unsafe struct DeduplicationMatch<TInner> : IQueryMatch
     public DeduplicationMatch(IndexSearcher indexSearcher, TInner inner, bool forceHashSet)
     {
         long maxBitId = indexSearcher.LastEntryId;
-        long numberOfEntries = indexSearcher.NumberOfEntries; // ensure not zero
-        var bitmapMemoryRequiredInBytes = maxBitId / 64;
-        var entriesMemoryRequiredInBytes = numberOfEntries / 64;
+        long numberOfEntries = indexSearcher.NumberOfEntries;
+        var bitmapMemoryRequiredInBytes = (maxBitId / 64) / sizeof(ulong);
+        var entriesMemoryRequiredInBytes = (numberOfEntries / 64) / sizeof(ulong);
 
         // If the bitmap is big enough and actually only around 1.5% entries exist, we will use a HashSet instead.
         if (bitmapMemoryRequiredInBytes > IndexSearcher.BitmapMemoryRequiredThresholdInBytes 
-            && entriesMemoryRequiredInBytes < (bitmapMemoryRequiredInBytes >> 6) || forceHashSet)
+            && entriesMemoryRequiredInBytes < (bitmapMemoryRequiredInBytes / 64) || bitmapMemoryRequiredInBytes > Voron.Global.Constants.Size.Gigabyte ||forceHashSet)
         {
             _hashset = new GrowableHashSet<long>();
             _fillFunc = &FillViaHashSet;

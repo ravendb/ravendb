@@ -30,7 +30,7 @@ public sealed class GrowableHashSet<TItem>
     {
         _comparer = comparer;
         _hashSetsBucket = null;
-        _maxSizePerCollection = maxSizePerCollection ?? int.MaxValue;
+        _maxSizePerCollection = maxSizePerCollection ?? (1 << 27); // 134M items
         CreateNewHashSet();
     }
 
