@@ -293,8 +293,8 @@ namespace Raven.Client.Util
         {
             GC.SuppressFinalize(this);
 
-            _stream.Dispose();
             base.Dispose(disposing);
+            _stream.Dispose();
 
             _readCts?.Dispose();
             _writeCts?.Dispose();
@@ -312,8 +312,8 @@ namespace Raven.Client.Util
 #else
             GC.SuppressFinalize(this);
 
-            await _stream.DisposeAsync().ConfigureAwait(false);
             await base.DisposeAsync().ConfigureAwait(false);
+            await _stream.DisposeAsync().ConfigureAwait(false);
 
             _readCts?.Dispose();
             _writeCts?.Dispose();
