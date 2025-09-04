@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using Voron;
+using Voron.Data.Containers;
 using Voron.Data.Lookups;
 using Voron.Util;
 
@@ -22,7 +24,8 @@ public partial class IndexWriter
 
         private IndexTermDumper _dumper;
 
-        private ContextBoundNativeList<long> _pagesToPrefetch;
+        private ContextBoundNativeList<long> _postingListPagesProcessingBuffer;
+        private ContextBoundNativeList<LookupTreeOperationJob> _jobs;
 
         private int _offsetAdjustment;
         private long _curPage;
@@ -40,8 +43,9 @@ public partial class IndexWriter
             _fieldTree.InitializeCursorState();
 
             _dumper = new IndexTermDumper(_writer._fieldsTree, _fieldName);
-            _pagesToPrefetch = new(_writer._entriesAllocator);
-
+            _postingListPagesProcessingBuffer = new(_writer._entriesAllocator);
+            _jobs = new(_writer._entriesAllocator);
+            
             _writer._entriesToTermsTracker.ClearEntriesForTerm();
             _tmpBuf = tmpBuf;
             _numberOfTermsToProcess = typeof(Int64LookupKey) == typeof(TLookupKey) ? _indexedField.Longs.Count : indexedField.Doubles.Count;
@@ -50,7 +54,8 @@ public partial class IndexWriter
         public void Dispose()
         {
             _dumper.Dispose();
-            _pagesToPrefetch.Dispose();
+            _postingListPagesProcessingBuffer.Dispose();
+            _jobs.Dispose();
         }
 
         public void InsertNumericalField(CancellationToken token)
@@ -75,20 +80,27 @@ public partial class IndexWriter
                     var treeChanged = _fieldTree.CheckTreeStructureChanges();
                     _offsetAdjustment = 0;
                     int read = _fieldTree.BulkUpdateStart(keys, postingListIds, pageOffsets, out _curPage);
-                    FieldInserterHelper.PrefetchContainerPages(_writer, ref _pagesToPrefetch, postingListIds[..read]);
+                    FieldInserterHelper.PrefetchPostingListsPagesAndPrepareOrderedPostingListProcessingList(_writer, ref _postingListPagesProcessingBuffer, postingListIds[..read]);
+                    _jobs.ResetAndEnsureCapacity(read);
+                    _jobs.Count = read;
 
-                    int idX = 0;
-                    for (; idX < read; idX++)
+                    int idX;
+                    for (idX = 0; idX < read; idX++)
                     {
-                        ref var entries = ref _indexedField.Storage.GetAsRef(entriesOffsets[idX]);
-                        ProcessSingleEntry(ref entries, ref keys[idX], sortedTerms[idX], postingListIds[idX], pageOffsets[idX]);
+                        //We will process the containers by page ID, keeping in mind that a page can contain multiple entries.
+                        //The posting lists will be processed in page order; however, the lookup tree will be updated in term order.
+                        //Singles / new items are processed at the end. 
+                        var offset = (int)(_postingListPagesProcessingBuffer[idX] & FieldInserterHelper.OffsetMask);
+                        
+                        
+                        ref var entries = ref _indexedField.Storage.GetAsRef(entriesOffsets[offset]);
+                        _jobs[offset] = ProcessSingleEntry(ref entries, ref keys[offset], sortedTerms[offset], postingListIds[offset], pageOffsets[offset]);
                         entries.Dispose(_writer._entriesAllocator);
-
-                        if (treeChanged.Changed)
-                        {
-                            idX++; // we need to skip the currently processed
-                            break;
-                        }
+                    }
+                    
+                    for (idX = 0; idX < read; idX++)
+                    {
+                        ProcessLookupOperation(_jobs[idX], ref keys[idX], treeChanged, pageOffsets[idX], sortedTerms[idX]);
                     }
 
                     keys = keys[idX..];
@@ -104,12 +116,12 @@ public partial class IndexWriter
             _writer._entriesToTermsTracker.CommitCurrentDataFor(_fieldName);
         }
 
-        private void ProcessSingleEntry(ref EntriesModifications entries, ref TLookupKey key, TKey term, long postingListId, int pageOffset)
+        private LookupTreeOperationJob ProcessSingleEntry(ref EntriesModifications entries, ref TLookupKey key, TKey term, long postingListId, int pageOffset)
         {
             bool termFound = postingListId != Constants.IndexSearcher.InvalidId;
             Debug.Assert(termFound || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
             _writer._entriesToTermsTracker.InsertEntries(entries, key.ToLong());
-
+            LookupTreeOperationJob result;
             if (entries.HasChanges)
             {
                 long termId;
@@ -119,8 +131,7 @@ public partial class IndexWriter
                         throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {_indexedField.Name}! This is a bug.");
 
                     _writer.CreatePostingListForNewTerm(ref entries, _tmpBuf, out termId);
-                    _dumper.WriteAddition(term, termId);
-                    _fieldTree.BulkUpdateSet(ref key, termId, _curPage, pageOffset, ref _offsetAdjustment);
+                    result = new (AddEntriesToTermResult.UpdateTermId, termId);
                 }
                 else
                 {
@@ -130,26 +141,26 @@ public partial class IndexWriter
                         case AddEntriesToTermResult.UpdateTermId:
                             if (termId != postingListId)
                                 _dumper.WriteRemoval(term, postingListId);
-                            _dumper.WriteAddition(term, termId);
-                            _fieldTree.BulkUpdateSet(ref key, termId, _curPage, pageOffset, ref _offsetAdjustment);
+                            result = new (AddEntriesToTermResult.UpdateTermId, termId);
                             break;
                         case AddEntriesToTermResult.RemoveTermId:
-                            if (_fieldTree.BulkUpdateRemove(ref key, _curPage, pageOffset, ref _offsetAdjustment, out long oldValue) == false)
-                            {
-                                _dumper.WriteRemoval(term, termId);
-                                ThrowTriedToDeleteTermThatDoesNotExists(term, _fieldName);
-                            }
-
-                            _dumper.WriteRemoval(term, oldValue);
+                            result = new LookupTreeOperationJob(AddEntriesToTermResult.RemoveTermId, termId);
                             _writer._numberOfTermModifications--;
                             break;
                         case AddEntriesToTermResult.NothingToDo:
+                            result = new(AddEntriesToTermResult.NothingToDo, -1L);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException(entriesToTermResult.ToString());
                     }
                 }
             }
+            else
+            {
+                result = new LookupTreeOperationJob(AddEntriesToTermResult.NothingToDo, -1L);
+            }
+            
+            return result;
         }
         
         private void PrepareNumericalFieldBatch(
@@ -183,6 +194,42 @@ public partial class IndexWriter
             pageOffsets = _buffers.PageOffsets.AsSpan(start: 0, length: max);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ProcessLookupOperation(in LookupTreeOperationJob job, ref TLookupKey key, in Lookup<TLookupKey>.TreeStructureChanged treeChanged, int pageOffset, TKey term)
+        {
+            switch (job.Operation, TreeChanged: treeChanged.Changed)
+            {
+                case (AddEntriesToTermResult.UpdateTermId, TreeChanged: false):
+                    _fieldTree.BulkUpdateSet(ref key, job.TermId, _curPage, pageOffset, ref _offsetAdjustment);
+                    _dumper.WriteAddition(term, job.TermId);
+                    break;
+                case (AddEntriesToTermResult.UpdateTermId, TreeChanged: true):
+                    _fieldTree.Add(key, job.TermId);
+                    _dumper.WriteAddition(term, job.TermId);
+                    break;
+                case (AddEntriesToTermResult.RemoveTermId, TreeChanged: false):
+                {
+                    if (_fieldTree.BulkUpdateRemove(ref key, _curPage, pageOffset, ref _offsetAdjustment, out long oldValue) == false)
+                    {
+                        _dumper.WriteRemoval(term, job.TermId);
+                        ThrowTriedToDeleteTermThatDoesNotExists(term, _indexedField.Name);
+                    }
+                    _dumper.WriteRemoval(term, oldValue);
+                    break;
+                }
+                case (AddEntriesToTermResult.RemoveTermId, TreeChanged: true):
+                {
+                    if (_fieldTree.TryRemove(key, out long oldValue) == false)
+                    {
+                        _dumper.WriteRemoval(term, job.TermId);
+                        ThrowTriedToDeleteTermThatDoesNotExists(term, _indexedField.Name);
+                    }
+                    _dumper.WriteRemoval(term, oldValue);
+                    break;
+                }
+            }
+        }
+        
         private FieldBuffers<TKey, TLookupKey> GetBuffers()
         {
             if (typeof(TLookupKey) == typeof(Int64LookupKey))

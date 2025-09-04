@@ -11,6 +11,7 @@ using System.Text;
 using Sparrow;
 using Sparrow.Server;
 using Sparrow.Server.Binary;
+using Sparrow.Server.Platform.Posix;
 using Voron.Data.Lookups;
 using Voron.Exceptions;
 using Voron.Global;
@@ -1280,6 +1281,8 @@ namespace Voron.Data.Containers
             return *(long*)pagePointer;
         }
 
+        
+        
         public static Span<byte> GetMutable(LowLevelTransaction llt, long id)
         {
             if (id <= 0)
@@ -1301,6 +1304,29 @@ namespace Voron.Data.Containers
             var pagePointer= page.Pointer;
             int size = metadata.Get(ref pagePointer);
             return new Span<byte>(pagePointer, size);
+        }
+        
+        public static void GetMutable(LowLevelTransaction llt, long id, out Item item)
+        {
+            if (id <= 0)
+                throw new InvalidOperationException("Got an invalid container id: " + id);
+
+            var (pageNum, offset) = Math.DivRem(id, Constants.Storage.PageSize);
+            var page = llt.ModifyPage(pageNum);
+
+            if (page.IsOverflow)
+            {
+                Debug.Assert(page.IsOverflow);
+                item = new Item(page, page.DataPointer, page.OverflowSize);
+                return;
+            }
+
+            var container = new Container(page);
+            var itemMetadata = container.MetadataFor(OffsetToIndex(offset));
+            Debug.Assert(itemMetadata.IsFree == false);
+            byte* pagePointer = page.Pointer;
+            var size = itemMetadata.Get(ref pagePointer);
+            item = new Item(page, pagePointer, size);
         }
 
         public static void Get(LowLevelTransaction llt, long id, out Item item)
@@ -1393,6 +1419,9 @@ namespace Voron.Data.Containers
 
         public readonly struct Item
         {
+            public static readonly Item Invalid = new Item(default, null, 0);
+            public bool IsInvalid => _ptr == null;
+            
             private readonly Page _page;
             private readonly byte* _ptr;
             public readonly int Length;
