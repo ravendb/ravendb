@@ -25,6 +25,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.Util;
@@ -32,7 +33,6 @@ using Raven.Server.Config;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Indexes;
 using Raven.Server.Documents.PeriodicBackup;
-using Raven.Server.Exceptions;
 using Raven.Server.Extensions;
 using Raven.Server.Json;
 using Raven.Server.Routing;
@@ -1346,7 +1346,7 @@ namespace Raven.Server.Smuggler.Documents
                     }
                     catch (Exception e)
                     {
-                        throw new SmugglerException(
+                        throw new RavenException(
                             $"Failed to write document {document.Id}. LowerId: {document.LowerId}, Etag: {document.Etag}, ChangeVector: {document.ChangeVector}", e);
                     }
                 }
