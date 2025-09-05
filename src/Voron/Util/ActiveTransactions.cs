@@ -244,7 +244,7 @@ namespace Voron.Util
             for (int i = 0; i < copy.Length; i++)
             {
                 var item = copy[i].Value;
-                if (item != null || item == InvalidLowLevelTransaction)
+                if (item != null && item != InvalidLowLevelTransaction)
                 {
                     if (val > item.Id)
                         val = item.Id;
