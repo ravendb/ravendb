@@ -609,6 +609,14 @@ namespace Raven.Server.Config.Categories
         [ConfigurationEntry("Indexing.Corax.Static.ComplexFieldIndexingBehavior", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
         public CoraxComplexFieldIndexingBehavior CoraxStaticIndexComplexFieldIndexingBehavior { get; protected set; }
 
+        [Description("Interval of saving elapsed time from last query in an idle index")]
+        [DefaultValue(10)]
+        [MinValue(1)]
+        [TimeUnit(TimeUnit.Minutes)]
+        [IndexUpdateType(IndexUpdateType.None)]
+        [ConfigurationEntry("Indexing.ElapsedSinceQueriedPersistIntervalInMin", ConfigurationEntryScope.ServerWideOrPerDatabaseOrPerIndex)]
+        public TimeSetting ElapsedSinceQueriedPersistInterval { get; set; }
+        
         [Description("The default minimum similarity for vector search (0.0f - 1.0f, default is 0f)")]
         [DefaultValue(0f)]
         [IndexUpdateType(IndexUpdateType.None)]

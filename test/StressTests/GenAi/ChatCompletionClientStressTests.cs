@@ -68,7 +68,7 @@ public class ChatCompletionClientStressTests : RavenTestBase
 
             context = sb.ToString();
 
-            await Assert.ThrowsAsync<TooManyTokensException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, default));
+            await Assert.ThrowsAsync<TooManyTokensException>(() => client.CompleteAsync(prompt, context, defaultJsonSchema, null, default));
         }
     }
 
@@ -89,7 +89,7 @@ public class ChatCompletionClientStressTests : RavenTestBase
             var tasks = new List<Task>();
             for (int i = 0; i < 20_000; i++)
             {
-                var t = client.CompleteAsync(prompt, context, defaultJsonSchema, default);
+                var t = client.CompleteAsync(prompt, context, defaultJsonSchema, null, default);
                 tasks.Add(t);
             }
             await Task.WhenAll(tasks);

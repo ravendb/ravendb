@@ -15,7 +15,7 @@ $body = @{ labels = $labels } | ConvertTo-Json -Compress
 
 Write-Host "Request body: $body"
 
-Invoke-RestMethod -Method Put -Uri $uri -Verbose -Headers @{
+Invoke-RestMethod -Method Post -Uri $uri -Verbose -Headers @{
   Authorization = "Bearer $env:GITHUB_TOKEN"
   Accept        = "application/vnd.github+json"
   "User-Agent"  = "$owner-$repo-labeler"

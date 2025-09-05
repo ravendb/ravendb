@@ -361,7 +361,7 @@ namespace Raven.Server.ServerWide.Maintenance
         private static void FillIndexInfo(Index index, QueryOperationContext context, DateTime now, DatabaseStatusReport report)
         {
             var stats = index.GetIndexingState(context);
-            var lastQueried = GetLastQueryInfo(index, now);
+            var lastQueried = GetLastQueryInfo(index);
 
             //We might have old version of this index with the same name
             report.LastIndexStats[index.Name] = new DatabaseStatusReport.ObservedIndexStatus
@@ -377,13 +377,9 @@ namespace Raven.Server.ServerWide.Maintenance
             };
         }
 
-        private static TimeSpan? GetLastQueryInfo(Index index, DateTime now)
+        private static TimeSpan GetLastQueryInfo(Index index)
         {
-            TimeSpan? lastQueried = null;
-            var lastQueryingTime = index.GetLastQueryingTime();
-            if (lastQueryingTime.HasValue)
-                lastQueried = now - lastQueryingTime;
-            return lastQueried;
+            return index.GetElapsedTimeFromLastQuery();
         }
 
         private static void FillDocumentsInfo(DatabaseStatusReport prevDatabaseReport, DocumentDatabase dbInstance, DatabaseStatusReport report,

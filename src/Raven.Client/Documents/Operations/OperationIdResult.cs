@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="OperationIdResult.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-namespace Raven.Client.Documents.Operations
+﻿namespace Raven.Client.Documents.Operations
 {
     public sealed class OperationIdResult<TResult> : OperationIdResult
     {

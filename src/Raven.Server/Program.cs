@@ -58,6 +58,8 @@ namespace Raven.Server
             RequestExecutor.HttpClientFactory = useLegacyHttpClientFactory
                 ? DefaultRavenHttpClientFactory.Instance
                 : RavenServerHttpClientFactory.Instance;
+            
+            RequestExecutor.ExtractServerCertificateFromExtension = CertificateUtils.ExtractServerCertificateFromExtension;
 
             NativeMemory.GetCurrentUnmanagedThreadId = () => (ulong)Pal.rvn_get_current_thread_id();
             ZstdLib.CreateDictionaryException = message => new VoronErrorException(message);

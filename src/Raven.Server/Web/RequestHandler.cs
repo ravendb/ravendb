@@ -746,7 +746,7 @@ namespace Raven.Server.Web
                     allowedOrigin = requestedOrigin;
                     break;
                 case CorsMode.Cluster:
-                    if (serverStore.Server.Certificate.Certificate == null || IsOriginAllowed(requestedOrigin, serverStore))
+                    if (serverStore.Server.Certificate.ServerCertificate == null || IsOriginAllowed(requestedOrigin, serverStore))
                         allowedOrigin = requestedOrigin;
                     break;
             }

@@ -177,6 +177,7 @@ namespace FastTests
             }
 
             RequestExecutor.RemoteCertificateValidationCallback += (sender, cert, chain, errors) => true;
+            RequestExecutor.ExtractServerCertificateFromExtension = CertificateUtils.ExtractServerCertificateFromExtension;
 
             var configuration = RavenConfiguration.CreateForTesting("Tests", ResourceType.Server);
             configuration.Initialize();

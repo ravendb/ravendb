@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="DatabaseOpenedCount.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics.Metrics;
 using Google.Protobuf.WellKnownTypes;
 using Lextm.SharpSnmpLib;

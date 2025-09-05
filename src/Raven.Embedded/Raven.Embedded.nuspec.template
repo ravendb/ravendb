@@ -4,8 +4,8 @@
         <id>RavenDB.Embedded</id>
         <version>7.1.0-custom-71</version>
         <title>RavenDB Embedded</title>
-        <authors>Hibernating Rhinos</authors>
-        <owners>Hibernating Rhinos</owners>
+        <authors>RavenDB</authors>
+        <owners>RavenDB</owners>
         <license type="file">LICENSE.txt</license>
         <projectUrl>https://ravendb.net/</projectUrl>
         <icon>icon.png</icon>

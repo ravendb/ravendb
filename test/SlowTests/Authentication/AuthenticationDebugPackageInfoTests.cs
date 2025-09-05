@@ -134,10 +134,10 @@ namespace SlowTests.Authentication
             SecurityClearance securityClearance, string[] shouldContain)
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(),
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(),
                 SecurityClearance.ClusterAdmin);
 
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, databaseAccesses, securityClearance);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, databaseAccesses, securityClearance);
 
             using var store = GetDocumentStore(new Options { AdminCertificate = adminCert, ClientCertificate = userCert, ModifyDatabaseName = s => dbName });
             var requestExecutor = store.GetRequestExecutor(store.Database);
@@ -185,10 +185,10 @@ namespace SlowTests.Authentication
             DoNotReuseServer();
             var databaseName = GetDatabaseName();
             var certs = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certs.ServerCertificate.Value, certs.ClientCertificate1.Value,
+            var adminCert = Certificates.RegisterClientCertificate(certs.ServerCertificateForCommunication.Value, certs.ClientCertificate1.Value,
                 new Dictionary<string, DatabaseAccess>(),
                 SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certs.ServerCertificate.Value, certs.ClientCertificate2.Value,
+            var userCert = Certificates.RegisterClientCertificate(certs.ServerCertificateForCommunication.Value, certs.ClientCertificate2.Value,
                 new Dictionary<string, DatabaseAccess>() { [databaseName] = DatabaseAccess.ReadWrite }, SecurityClearance.Operator);
 
             using (var store = GetDocumentStore(new Options() { ClientCertificate = userCert, AdminCertificate = adminCert, ModifyDatabaseName = _ => databaseName }))
@@ -219,10 +219,10 @@ namespace SlowTests.Authentication
             DoNotReuseServer();
             var databaseName = GetDatabaseName();
             var certs = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certs.ServerCertificate.Value, certs.ClientCertificate1.Value,
+            var adminCert = Certificates.RegisterClientCertificate(certs.ServerCertificateForCommunication.Value, certs.ClientCertificate1.Value,
                 new Dictionary<string, DatabaseAccess>(),
                 SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certs.ServerCertificate.Value, certs.ClientCertificate2.Value,
+            var userCert = Certificates.RegisterClientCertificate(certs.ServerCertificateForCommunication.Value, certs.ClientCertificate2.Value,
                 new Dictionary<string, DatabaseAccess>() { [databaseName] = DatabaseAccess.ReadWrite }, SecurityClearance.ValidUser);
 
             using (var store = GetDocumentStore(new Options()
@@ -252,9 +252,9 @@ namespace SlowTests.Authentication
             DoNotReuseServer();
             var databaseName = GetDatabaseName();
             var certs = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certs.ServerCertificate.Value, certs.ClientCertificate1.Value,
+            var adminCert = Certificates.RegisterClientCertificate(certs.ServerCertificateForCommunication.Value, certs.ClientCertificate1.Value,
                 new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certs.ServerCertificate.Value, certs.ClientCertificate2.Value,
+            var userCert = Certificates.RegisterClientCertificate(certs.ServerCertificateForCommunication.Value, certs.ClientCertificate2.Value,
                 new Dictionary<string, DatabaseAccess>() { [databaseName] = DatabaseAccess.Admin }, SecurityClearance.ValidUser);
 
             using (var store = GetDocumentStore(new Options()

@@ -32,7 +32,7 @@ using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Replication
 {
-    public abstract class AbstractReplicationLoader<TContextPool, TOperationContext> : IDisposable 
+    public abstract class AbstractReplicationLoader<TContextPool, TOperationContext> : IDisposable
         where TContextPool : JsonContextPoolBase<TOperationContext>
         where TOperationContext : JsonOperationContext
     {
@@ -65,7 +65,7 @@ namespace Raven.Server.Documents.Replication
             _server = serverStore;
             _logger = RavenLogManager.Instance.GetLoggerForDatabase(GetType(), databaseName);
         }
-        
+
         internal TestingStuff ForTestingPurposes;
 
         internal TestingStuff ForTestingPurposesOnly()
@@ -127,6 +127,7 @@ namespace Raven.Server.Documents.Replication
 
                 return false;
             }
+
             return true;
         }
 
@@ -234,7 +235,7 @@ namespace Raven.Server.Documents.Replication
                 case InternalReplication _:
                 case ExternalReplication _:
                     authorizationInfo = null;
-                    return _server.Server.Certificate.Certificate;
+                    return _server.Server.Certificate.ClientCertificate;
 
                 case PullReplicationAsSink sink:
                     authorizationInfo = new TcpConnectionHeaderMessage.AuthorizationInfo
@@ -250,7 +251,7 @@ namespace Raven.Server.Documents.Replication
                     };
 
                     if (sink.CertificateWithPrivateKey == null)
-                        return _server.Server.Certificate.Certificate;
+                        return _server.Server.Certificate.ClientCertificate;
 
                     var certBytes = Convert.FromBase64String(sink.CertificateWithPrivateKey);
 

@@ -12,7 +12,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
 
         protected override void AssertCanExecute()
         {
-            if (RequestHandler.ServerStore.Server.Certificate?.Certificate == null)
+            if (RequestHandler.ServerStore.Server.Certificate?.ServerCertificate == null)
                 throw new BadRequestException("This endpoint requires secured server.");
 
             RequestHandler.ServerStore.LicenseManager.AssertCanAddPullReplicationAsHub();

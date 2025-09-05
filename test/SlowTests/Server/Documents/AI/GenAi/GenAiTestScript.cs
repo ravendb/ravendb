@@ -746,7 +746,7 @@ for (const comment of this.Comments)
 
                 testGenAiScript.Input.Add(new GenAiResultItem
                 {
-                    DocId = id,
+                    DocumentId = id,
                     ContextOutput = new ContextOutput
                     {
                         Context = contextObject, 
@@ -868,7 +868,7 @@ for (const comment of this.Comments)
                     // arrange the input for the next test-stage
                     dja.Add(new DynamicJsonValue
                     {
-                        [nameof(GenAiResultItem.DocId)] = id,
+                        [nameof(GenAiResultItem.DocumentId)] = id,
                         [nameof(GenAiResultItem.ContextOutput)] = new DynamicJsonValue
                         {
                             [nameof(GenAiResultItem.ContextOutput.Context)] = new DynamicJsonValue
@@ -933,7 +933,7 @@ for (const comment of this.Comments)
 
                     dja.Add(new DynamicJsonValue
                     {
-                        [nameof(GenAiResultItem.DocId)] = id,
+                        [nameof(GenAiResultItem.DocumentId)] = id,
                         [nameof(GenAiResultItem.ContextOutput)] = new DynamicJsonValue
                         {
                             [nameof(GenAiResultItem.ContextOutput.AiHash)] = hash,

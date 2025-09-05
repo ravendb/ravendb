@@ -17,8 +17,10 @@ interface EditGenAiTaskState {
     sourceView: EditAiTaskSourceView;
     currentStep: EditGenAiTaskStepId;
     connectionStringTest: loadableData<Raven.Server.Web.System.NodeConnectionTestResult>;
-    contextTest: loadableData<string[]>;
-    modelInputTest: loadableData<string[]>;
+    contextTest: loadableData<
+        { value: string; attachments?: Raven.Server.Documents.ETL.Providers.AI.AiAttachment[] }[]
+    >;
+    modelInputTest: loadableData<{ value: string }[]>;
     modelUsage: loadableData<ModelUsage>;
     updateScriptTest: loadableData<string>;
     updateScriptDocumentInput: loadableData<string>;
@@ -123,9 +125,10 @@ export const editGenAiTaskSlice = createSlice({
                 state.isTestOpen = true;
 
                 state.contextTest = createSuccessState(
-                    action.payload.Results.map((x) =>
-                        x.ContextOutput ? JSON.stringify(x.ContextOutput.Context, null, 4) : null
-                    )
+                    action.payload.Results.map((x) => ({
+                        value: x.ContextOutput ? JSON.stringify(x.ContextOutput.Context, null, 4) : null,
+                        attachments: x.ContextOutput?.Attachments,
+                    }))
                 );
             })
             .addCase(testModelInput.pending, (state) => {
@@ -141,9 +144,9 @@ export const editGenAiTaskSlice = createSlice({
                 state.isTestOpen = true;
 
                 state.modelInputTest = createSuccessState(
-                    action.payload.Results.map((x) =>
-                        x.ModelOutput ? JSON.stringify(x.ModelOutput.Output, null, 4) : null
-                    )
+                    action.payload.Results.map((x) => ({
+                        value: x.ModelOutput ? JSON.stringify(x.ModelOutput.Output, null, 4) : null,
+                    }))
                 );
 
                 let totalTokens = 0;

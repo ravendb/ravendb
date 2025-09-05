@@ -1088,8 +1088,9 @@ type CertificateDto = Partial<Raven.Client.ServerWide.Operations.Certificates.Ce
 type CertificatesResponseDto = {
     Certificates: CertificateDto[],
     LoadedServerCert: string,
+    LoadedServerCertForCommunication?: string,
     WellKnownAdminCerts: string[],
-    WellKnownIssuers: string[]
+    WellKnownIssuers: string[],
 }
 
 interface TrafficWatchPostgresChange extends Raven.Client.Documents.Changes.TrafficWatchChangeBase {

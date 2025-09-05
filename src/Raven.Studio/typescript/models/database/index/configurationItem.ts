@@ -52,6 +52,9 @@ class configurationItem {
         "Indexing.Corax.VectorSearch.DefaultNumberOfCandidatesForQuerying",
         "Indexing.Corax.VectorSearch.OrderByScoreAutomatically",
         "Indexing.Corax.VectorSearch.MaximumConcurrentBatchesForHnswAcceleration",
+        "Indexing.Corax.UnmanagedAllocationsBatchSizeLimitInMb",
+        "Indexing.ElapsedSinceQueriedPersistIntervalInMin"
+        
         // "Indexing.Static.SearchEngineType" - ignoring as we have dedicated widget to set that
         /*
             Obsolete keys:

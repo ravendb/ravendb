@@ -62,7 +62,7 @@ namespace Raven.Server.Documents.ETL
 
             DocumentScript.ScriptEngine.SetValue(Transformation.LoadTo, new ClrFunction(DocumentScript.ScriptEngine, Transformation.LoadTo, LoadToFunctionTranslator));
 
-            foreach (var collection in LoadToDestinations)
+            foreach (var collection in LoadToDestinations ?? [])
             {
                 var name = Transformation.LoadTo + collection;
                 DocumentScript.ScriptEngine.SetValue(name, new ClrFunction(DocumentScript.ScriptEngine, name,
@@ -141,21 +141,47 @@ namespace Raven.Server.Documents.ETL
             var attachmentName = args[0].AsString();
             var loadAttachmentReference = CreateLoadAttachmentReference(attachmentName);
 
+            Attachment attachment = null;
             if ((Current.Document.Flags & DocumentFlags.HasAttachments) == DocumentFlags.HasAttachments)
             {
-                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(Context, Current.DocumentId, attachmentName, AttachmentType.Document, null);
-
-                if (attachment == null)
-                    return JsValue.Null;
-
-                AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
+                attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(
+                    Context, Current.DocumentId, attachmentName, AttachmentType.Document, changeVector: null);
             }
-            else
+
+            // If not found – try to materialize according to policy
+            if (attachment == null)
             {
-                return JsValue.Null;
+                switch (MissingAttachmentOnLoadPolicy)
+                {
+                    case MissingAttachmentPolicy.ReturnNull:
+                        return JsValue.Null;
+
+                    case MissingAttachmentPolicy.ReturnEmpty:
+                        // If the attachment does not exist, its key is represented by a new instance of JsNull.
+                        // This ensures JavaScript receives a null value when the attachment is missing - allowing the user to handle the case explicitly (e.g., if (!attachment) { ... })
+                        // while still having access to the attachment's name after (we can extract it by the key - which is a NEW INSTANCE of JsNull).
+                        loadAttachmentReference = (JsNull)Activator.CreateInstance(typeof(JsNull), nonPublic: true);
+                        attachment = new Attachment
+                        {
+                            Name = Context.GetLazyString(attachmentName)
+                        };
+                        break;
+                    default:
+                        throw new InvalidOperationException(
+                            $"Unexpected MissingAttachmentPolicy '{MissingAttachmentOnLoadPolicy}'. Only ReturnNull and ReturnEmpty are supported.");
+                }
             }
 
+            AddLoadedAttachment(loadAttachmentReference, attachmentName, attachment);
             return loadAttachmentReference;
+        }
+
+        protected virtual MissingAttachmentPolicy MissingAttachmentOnLoadPolicy => MissingAttachmentPolicy.ReturnNull;
+
+        public enum MissingAttachmentPolicy
+        {
+            ReturnNull,
+            ReturnEmpty
         }
 
         private static JsValue CreateLoadAttachmentReference(string attachmentName)

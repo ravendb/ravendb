@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="Andrew.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Linq;
 using System.Threading;
 using FastTests;

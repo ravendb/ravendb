@@ -22,10 +22,12 @@ public class RavenDB_19951 : RavenTestBase
     {
     }
 
-    [RavenFact(RavenTestCategory.Security)]
-    public async Task CanSetupTOTPWithoutLimits()
+    [RavenTheory(RavenTestCategory.Security)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CanSetupTOTPWithoutLimits(bool wiht2Eku)
     {
-        TestCertificatesHolder certificates = WithStore(out DocumentStore store);
+        TestCertificatesHolder certificates = WithStore(wiht2Eku, out DocumentStore store);
         string key = TwoFactorAuthentication.GenerateSecret();
         await store.Maintenance.Server.SendAsync(
             new PutClientCertificateOperation("test",
@@ -52,18 +54,20 @@ public class RavenDB_19951 : RavenTestBase
         }
     }
 
-    private TestCertificatesHolder WithStore(out DocumentStore store)
+    private TestCertificatesHolder WithStore(bool with2Eku, out DocumentStore store)
     {
-        var certificates = Certificates.SetupServerAuthentication();
-        store = GetDocumentStore(new Options {ClientCertificate = certificates.ServerCertificate.Value});
+        var certificates = Certificates.SetupServerAuthentication(with2Eku: with2Eku);
+        store = GetDocumentStore(new Options {ClientCertificate = certificates.ServerCertificateForCommunication.Value});
         Assert.NotNull(store.Certificate);
         return certificates;
     }
 
-    [RavenFact(RavenTestCategory.Security)]
-    public async Task CanSetupTOTPWithLimits()
+    [RavenTheory(RavenTestCategory.Security)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CanSetupTOTPWithLimits(bool with2Eku)
     {
-        TestCertificatesHolder certificates = WithStore(out DocumentStore store);
+        TestCertificatesHolder certificates = WithStore(with2Eku, out DocumentStore store);
         
         string key = TwoFactorAuthentication.GenerateSecret();
         await store.Maintenance.Server.SendAsync(
@@ -92,10 +96,12 @@ public class RavenDB_19951 : RavenTestBase
     }
     
     
-    [RavenFact(RavenTestCategory.Security)]
-    public async Task CannotAccessServerAfterLogout()
+    [RavenTheory(RavenTestCategory.Security)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CannotAccessServerAfterLogout(bool with2Eku)
     {
-        TestCertificatesHolder certificates = WithStore(out DocumentStore store);
+        TestCertificatesHolder certificates = WithStore(with2Eku, out DocumentStore store);
         
         string key = TwoFactorAuthentication.GenerateSecret();
         store.Maintenance.Server.Send(
@@ -131,10 +137,12 @@ public class RavenDB_19951 : RavenTestBase
         }
     }
     
-    [RavenFact(RavenTestCategory.Security)]
-    public async Task NewOtpOverridesOld()
+    [RavenTheory(RavenTestCategory.Security)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task NewOtpOverridesOld(bool with2Eku)
     {
-        TestCertificatesHolder certificates = WithStore(out DocumentStore store);
+        TestCertificatesHolder certificates = WithStore(with2Eku, out DocumentStore store);
         
         string key = TwoFactorAuthentication.GenerateSecret();
         
@@ -164,10 +172,12 @@ public class RavenDB_19951 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Security)]
-    public async Task Disable2FAWorksProperly()
+    [RavenTheory(RavenTestCategory.Security)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Disable2FAWorksProperly(bool with2Eku)
     {
-        TestCertificatesHolder certificates = WithStore(out DocumentStore store);
+        TestCertificatesHolder certificates = WithStore(with2Eku, out DocumentStore store);
         
         string key = TwoFactorAuthentication.GenerateSecret();
         
@@ -182,10 +192,12 @@ public class RavenDB_19951 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Security)]
-    public async Task DoNotOutputAuthenticationKeyInCertificatesResponse()
+    [RavenTheory(RavenTestCategory.Security)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task DoNotOutputAuthenticationKeyInCertificatesResponse(bool with2Eku)
     {
-        TestCertificatesHolder certificates = WithStore(out DocumentStore store);
+        TestCertificatesHolder certificates = WithStore(with2Eku, out DocumentStore store);
         
         string key = TwoFactorAuthentication.GenerateSecret();
         
@@ -214,10 +226,12 @@ public class RavenDB_19951 : RavenTestBase
         }
     }
     
-    [RavenFact(RavenTestCategory.Security)]
-    public async Task CantAccessWhenCodeIsInvalid()
+    [RavenTheory(RavenTestCategory.Security)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task CantAccessWhenCodeIsInvalid(bool with2Eku)
     {
-        TestCertificatesHolder certificates = WithStore(out DocumentStore store);
+        TestCertificatesHolder certificates = WithStore(with2Eku, out DocumentStore store);
         
         string key = TwoFactorAuthentication.GenerateSecret();
         
@@ -239,10 +253,12 @@ public class RavenDB_19951 : RavenTestBase
         }
     }
 
-    [RavenFact(RavenTestCategory.Security)]
-    public async Task EditCertificateDoesntOverrideTwoFactorConfig()
+    [RavenTheory(RavenTestCategory.Security)]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task EditCertificateDoesntOverrideTwoFactorConfig(bool with2Eku)
     {
-        TestCertificatesHolder certificates = WithStore(out DocumentStore store);
+        TestCertificatesHolder certificates = WithStore(with2Eku, out DocumentStore store);
         
         string key = TwoFactorAuthentication.GenerateSecret();
         
@@ -273,7 +289,7 @@ public class RavenDB_19951 : RavenTestBase
     public async Task CanAccessWhoAmIWithBadCertificate()
     {
         var certificates = Certificates.SetupServerAuthentication();
-        var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+        var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
         var userCert = certificates.ClientCertificate2.Value;
 
         using (var store = GetDocumentStore(new Options

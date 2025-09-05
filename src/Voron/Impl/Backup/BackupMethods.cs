@@ -1,9 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="Backup.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-namespace Voron.Impl.Backup
+﻿namespace Voron.Impl.Backup
 {
     public static class BackupMethods
     {

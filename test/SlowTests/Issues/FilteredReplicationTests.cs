@@ -42,13 +42,13 @@ namespace SlowTests.Issues
             var certificates = Certificates.SetupServerAuthentication();
             using var hooper = GetDocumentStore(new Options
             {
-                ClientCertificate = certificates.ServerCertificate.Value,
-                AdminCertificate = certificates.ServerCertificate.Value
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value
             });
             using var bert = GetDocumentStore(new Options
             {
-                ClientCertificate = certificates.ServerCertificate.Value,
-                AdminCertificate = certificates.ServerCertificate.Value
+                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+                AdminCertificate = certificates.ServerCertificateForCommunication.Value
             });
 
             using (var s = hooper.OpenAsyncSession())
@@ -169,7 +169,7 @@ namespace SlowTests.Issues
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var storeA = GetDocumentStore(new Options
@@ -199,7 +199,7 @@ namespace SlowTests.Issues
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var storeA = GetDocumentStore(new Options
@@ -245,7 +245,7 @@ namespace SlowTests.Issues
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var storeA = GetDocumentStore(new Options
@@ -304,7 +304,7 @@ namespace SlowTests.Issues
             var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
             var dbNameB = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var storeA = GetDocumentStore(new Options
@@ -454,7 +454,7 @@ namespace SlowTests.Issues
             var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
             var dbNameB = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var storeA = GetDocumentStore(new Options
@@ -605,7 +605,7 @@ namespace SlowTests.Issues
             var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
             var dbNameB = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var storeA = GetDocumentStore(new Options
@@ -724,7 +724,7 @@ namespace SlowTests.Issues
         public async Task PickupConfigurationChangesOnTheFly()
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var hubStore = GetDocumentStore(new Options
@@ -803,7 +803,7 @@ namespace SlowTests.Issues
         public async Task Sinks_should_not_update_hubs_change_vector()
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var hubStore = GetDocumentStore(new Options
@@ -951,7 +951,7 @@ namespace SlowTests.Issues
         public async Task Sinks_should_not_update_hubs_change_vector2()
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var hubStore = GetDocumentStore(new Options
@@ -1116,7 +1116,7 @@ namespace SlowTests.Issues
         public async Task Sinks_should_not_update_hubs_change_vector3()
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var hubStore = GetDocumentStore(new Options
@@ -1360,7 +1360,7 @@ namespace SlowTests.Issues
             var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
             var dbNameB = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var storeA = GetDocumentStore(new Options
@@ -1431,7 +1431,7 @@ namespace SlowTests.Issues
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var storeA = GetDocumentStore(new Options
@@ -1466,7 +1466,7 @@ namespace SlowTests.Issues
         {
             var certificates = Certificates.SetupServerAuthentication();
             var dbNameA = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var storeA = GetDocumentStore(new Options
@@ -1506,16 +1506,16 @@ namespace SlowTests.Issues
             {
                 Server = hubLeader,
                 ReplicationFactor = 2,
-                AdminCertificate = hubCertificates.ServerCertificate.Value,
-                ClientCertificate = hubCertificates.ServerCertificate.Value,
+                AdminCertificate = hubCertificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = hubCertificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => dbNameA,
                 CreateDatabase = true
             });
 
             using var sink = GetDocumentStore(new Options
             {
-                AdminCertificate = hubCertificates.ServerCertificate.Value,
-                ClientCertificate = hubCertificates.ServerCertificate.Value,
+                AdminCertificate = hubCertificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = hubCertificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => dbNameB
             });
 
@@ -1629,16 +1629,16 @@ namespace SlowTests.Issues
             {
                 Server = hubLeader,
                 ReplicationFactor = 2,
-                AdminCertificate = hubCertificates.ServerCertificate.Value,
-                ClientCertificate = hubCertificates.ServerCertificate.Value,
+                AdminCertificate = hubCertificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = hubCertificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => dbNameA,
                 CreateDatabase = true
             });
 
             using var sink = GetDocumentStore(new Options
             {
-                AdminCertificate = hubCertificates.ServerCertificate.Value,
-                ClientCertificate = hubCertificates.ServerCertificate.Value,
+                AdminCertificate = hubCertificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = hubCertificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => dbNameB
             });
 
@@ -1696,7 +1696,7 @@ namespace SlowTests.Issues
 
             Assert.True(await WaitForDocumentInClusterAsync<User>
                 (hubNodes, dbNameA, usersDocId1, u => u.Name == "Grisha", 
-                    timeout: TimeSpan.FromSeconds(30), certificate: hubCertificates.ServerCertificate.Value));
+                    timeout: TimeSpan.FromSeconds(30), certificate: hubCertificates.ServerCertificateForCommunication.Value));
 
             const int age = 38;
             using (var session = hub.OpenAsyncSession())
@@ -1775,16 +1775,16 @@ namespace SlowTests.Issues
             {
                 Server = hubLeader,
                 ReplicationFactor = 2,
-                AdminCertificate = hubCertificates.ServerCertificate.Value,
-                ClientCertificate = hubCertificates.ServerCertificate.Value,
+                AdminCertificate = hubCertificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = hubCertificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => dbNameA,
                 CreateDatabase = true
             });
 
             using var sink = GetDocumentStore(new Options
             {
-                AdminCertificate = hubCertificates.ServerCertificate.Value,
-                ClientCertificate = hubCertificates.ServerCertificate.Value,
+                AdminCertificate = hubCertificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = hubCertificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => dbNameB
             });
 
@@ -1898,16 +1898,16 @@ namespace SlowTests.Issues
             {
                 Server = hubLeader,
                 ReplicationFactor = 2,
-                AdminCertificate = hubCertificates.ServerCertificate.Value,
-                ClientCertificate = hubCertificates.ServerCertificate.Value,
+                AdminCertificate = hubCertificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = hubCertificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => dbNameA,
                 CreateDatabase = true
             });
 
             using var sink = GetDocumentStore(new Options
             {
-                AdminCertificate = hubCertificates.ServerCertificate.Value,
-                ClientCertificate = hubCertificates.ServerCertificate.Value,
+                AdminCertificate = hubCertificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = hubCertificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => dbNameB
             });
 

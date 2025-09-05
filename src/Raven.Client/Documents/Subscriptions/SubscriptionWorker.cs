@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="SubscriptionWorker.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Security.Cryptography.X509Certificates;
+﻿using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 using Raven.Client.Extensions;
 using Raven.Client.Http;

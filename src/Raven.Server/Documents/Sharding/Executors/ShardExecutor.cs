@@ -122,7 +122,7 @@ namespace Raven.Server.Documents.Sharding.Executors
                 requestExecutors[shardNumber] = new Lazy<RequestExecutor>(() => RequestExecutor.CreateForShard(
                     urls,
                     ShardHelper.ToShardName(_databaseName, shardNumber),
-                    ServerStore.Server.Certificate.Certificate,
+                    ServerStore.Server.Certificate.ClientCertificate,
                     Conventions));
             }
 

@@ -58,7 +58,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             var chat = store.AI.Conversation(agentId, "chats/", creationOptions: null);
             chat.OnUnhandledAction += args => Task.CompletedTask;
-            chat.SetUserPrompt("recommend me what to eat for launch, based on my recent orders and tell me where to but it from based on the restaurant I have ordered from");
+            chat.SetUserPrompt("run the tool and tell me where did I ordered pizza margarita from?");
             var result = await chat.RunAsync<ChefOutputSchema>(CancellationToken.None);
 
             if (result.Status == AiConversationResult.ActionRequired)
@@ -82,7 +82,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             }
 
             Assert.Equal(AiConversationResult.Done, result.Status);
-            Assert.NotNull(result.Answer);
+            Assert.Contains("Pizza Hat".ToLower(), result.Answer.Answer.ToString().ToLower());
         }
 
         [RavenTheory(RavenTestCategory.Ai)]

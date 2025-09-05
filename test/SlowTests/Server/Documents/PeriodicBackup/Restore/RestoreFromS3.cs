@@ -194,8 +194,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -329,8 +329,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true,
                 Path = NewDataPath()
@@ -397,8 +397,8 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             var s3Settings = GetS3Settings();
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = result.Certificates.ServerCertificate.Value,
-                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
                 ModifyDatabaseName = s => result.DatabaseName,
                 ModifyDatabaseRecord = record => record.Encrypted = true
             }))

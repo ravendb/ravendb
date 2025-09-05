@@ -1,9 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="ParentPageAction.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-#if VALIDATE
+﻿#if VALIDATE
 using System.Diagnostics;
 using System.Linq;
 #endif

@@ -123,7 +123,7 @@ namespace Raven.Server.Web.Authentication
         {
             ValidateCertificateDefinition(certificate, serverStore);
 
-            if (serverStore.Server.Certificate?.Certificate == null)
+            if (serverStore.Server.Certificate?.ServerCertificate == null)
             {
                 var keys = new[]
                 {
@@ -137,7 +137,8 @@ namespace Raven.Server.Web.Authentication
             }
 
             // this creates a client certificate which is signed by the current server certificate
-            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, serverStore.Server.Certificate, out var clientCertBytes,
+            var selfSignedCertificate = CertificateUtils.CreateSelfSignedClientCertificate(certificate.Name, serverStore.Server.Certificate.ServerCertificate,
+                serverStore.Server.Certificate.PrivateKey.Key, out var clientCertBytes,
                 certificate.NotAfter ?? DateTime.UtcNow.Date.AddYears(5));
 
             var newCertDef = new CertificateDefinition
@@ -274,16 +275,16 @@ namespace Raven.Server.Web.Authentication
 
             foreach (var x509Certificate in collection)
             {
-                if (serverStore.Server.Certificate.Certificate?.Thumbprint != null && serverStore.Server.Certificate.Certificate.Thumbprint.Equals(x509Certificate.Thumbprint))
+                if (serverStore.Server.Certificate.ServerCertificate?.Thumbprint != null && serverStore.Server.Certificate.ServerCertificate.Thumbprint.Equals(x509Certificate.Thumbprint))
                     throw new InvalidOperationException($"You are trying to import the same server certificate ({x509Certificate.Thumbprint}) as the one which is already loaded. This is not supported.");
 
-                if (x509Certificate.Issuer != x509Certificate.Subject)
+                if (x509Certificate.Issuer != x509Certificate.GetDisplayName())
                     issuers.Add(x509Certificate.Issuer);
             }
 
             foreach (var x509Certificate in collection)
             {
-                if (issuers.Contains(x509Certificate.Subject))
+                if (issuers.Contains(x509Certificate.GetDisplayName()))
                     continue;
 
                 var currentCertDef = new CertificateDefinition
@@ -484,23 +485,44 @@ namespace Raven.Server.Web.Authentication
                     {
                         const string serverCertificateName = "Server Certificate";
                         // The server cert is not part of the local state or the cluster certificates, we add it to the list separately
-                        if ((name == null || name == serverCertificateName) && Server.Certificate.Certificate != null)
+                        if ((name == null || name == serverCertificateName) && Server.Certificate.ServerCertificate != null)
                         {
                             var serverCertDef = new CertificateDefinition
                             {
                                 Name = serverCertificateName,
-                                Certificate = Convert.ToBase64String(Server.Certificate.Certificate.Export(X509ContentType.Cert)),
+                                Certificate = Convert.ToBase64String(Server.Certificate.ServerCertificate.Export(X509ContentType.Cert)),
                                 Permissions = new Dictionary<string, DatabaseAccess>(),
                                 SecurityClearance = SecurityClearance.ClusterNode,
-                                Thumbprint = Server.Certificate.Certificate.Thumbprint,
-                                PublicKeyPinningHash = Server.Certificate.Certificate.GetPublicKeyPinningHash(),
-                                NotAfter = Server.Certificate.Certificate.NotAfter,
-                                NotBefore = Server.Certificate.Certificate.NotBefore
+                                Thumbprint = Server.Certificate.ServerCertificate.Thumbprint,
+                                PublicKeyPinningHash = Server.Certificate.ServerCertificate.GetPublicKeyPinningHash(),
+                                NotAfter = Server.Certificate.ServerCertificate.NotAfter,
+                                NotBefore = Server.Certificate.ServerCertificate.NotBefore
                             };
 
                             var serverCert = context.ReadObject(serverCertDef.ToJson(metadataOnly), "Server/Certificate/Definition");
 
-                            certificateList.TryAdd(Server.Certificate.Certificate?.Thumbprint, serverCert);
+                            certificateList.TryAdd(Server.Certificate.ServerCertificate?.Thumbprint, serverCert);
+
+                            var certificateForCommunication = Server.Certificate.ClientCertificate;
+                            if (IsClientCertificateDifferentFromServerCertificate())
+                            {
+                                var serverCertForCommunicationDef = new CertificateDefinition
+                                {
+                                    Name = "Server Certificate for communication " + ServerStore.NodeTag,
+                                    Certificate = Convert.ToBase64String(certificateForCommunication.Export(X509ContentType.Cert)),
+                                    Permissions = new Dictionary<string, DatabaseAccess>(),
+                                    SecurityClearance = SecurityClearance.ClusterNode,
+                                    Thumbprint = certificateForCommunication.Thumbprint,
+                                    PublicKeyPinningHash = certificateForCommunication.GetPublicKeyPinningHash(),
+                                    NotAfter = certificateForCommunication.NotAfter,
+                                    NotBefore = certificateForCommunication.NotBefore
+                                };
+
+                                var serverCertForCommunication = context.ReadObject(serverCertForCommunicationDef.ToJson(metadataOnly),
+                                    "ServerClient/Certificate/Definition");
+
+                                certificateList.TryAdd(certificateForCommunication.Thumbprint, serverCertForCommunication);
+                            }
                         }
 
                         GetAllRegisteredCertificates(context, certificateList, includeSecondary, name, metadataOnly);
@@ -522,8 +544,16 @@ namespace Raven.Server.Web.Authentication
                         writer.WriteArray(context, "Results", certificateList.ToArray(), (w, c, cert) => c.Write(w, cert.Value));
                         writer.WriteComma();
                         writer.WritePropertyName("LoadedServerCert");
-                        writer.WriteString(Server.Certificate.Certificate?.Thumbprint);
+                        writer.WriteString(Server.Certificate.ServerCertificate?.Thumbprint);
                         writer.WriteComma();
+
+                        if (IsClientCertificateDifferentFromServerCertificate())
+                        {
+                            writer.WritePropertyName("LoadedServerCertForCommunication");
+                            writer.WriteString(Server.Certificate.ClientCertificate?.Thumbprint);
+                            writer.WriteComma();
+                        }
+
                         writer.WriteArray("WellKnownAdminCerts", wellKnown);
                         writer.WriteComma();
                         writer.WriteArray("WellKnownIssuers", Server.WellKnownIssuers?.Select(x => x.Thumbprint) ?? Array.Empty<string>());
@@ -640,6 +670,8 @@ namespace Raven.Server.Web.Authentication
                 return;
             }
 
+            clientCert = RavenServer.GetCertificateForAuthorization(clientCert);
+
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
             using (ctx.OpenReadTransaction())
             {
@@ -653,23 +685,40 @@ namespace Raven.Server.Web.Authentication
 
                     var wellKnown = ServerStore.Configuration.Security.WellKnownAdminCertificates;
 
-                    if (clientCert.Equals(Server.Certificate.Certificate))
+                    if (Server.IsServerCertificate(clientCert))
                     {
-                        if (Server.Certificate.Certificate != null)
+                        if (Server.Certificate.ServerCertificate != null)
                         {
                             var serverCertDef = new CertificateDefinition
                             {
                                 Name = "Server Certificate",
-                                Certificate = Convert.ToBase64String(Server.Certificate.Certificate.Export(X509ContentType.Cert)),
+                                Certificate = Convert.ToBase64String(Server.Certificate.ServerCertificate.Export(X509ContentType.Cert)),
                                 Permissions = new Dictionary<string, DatabaseAccess>(),
                                 SecurityClearance = SecurityClearance.ClusterNode,
-                                Thumbprint = Server.Certificate.Certificate.Thumbprint,
-                                PublicKeyPinningHash = Server.Certificate.Certificate.GetPublicKeyPinningHash(),
-                                NotAfter = Server.Certificate.Certificate.NotAfter,
-                                NotBefore = Server.Certificate.Certificate.NotBefore
+                                Thumbprint = Server.Certificate.ServerCertificate.Thumbprint,
+                                PublicKeyPinningHash = Server.Certificate.ServerCertificate.GetPublicKeyPinningHash(),
+                                NotAfter = Server.Certificate.ServerCertificate.NotAfter,
+                                NotBefore = Server.Certificate.ServerCertificate.NotBefore
                             };
 
                             certificate = ctx.ReadObject(serverCertDef.ToJson(), "Server/Certificate/Definition");
+                        }
+
+                        if (IsClientCertificateDifferentFromServerCertificate())
+                        {
+                            var serverClientCertDef = new CertificateDefinition
+                            {
+                                Name = "Server Certificate For Communication " + ServerStore.NodeTag,
+                                Certificate = Convert.ToBase64String(Server.Certificate.ClientCertificate.Export(X509ContentType.Cert)),
+                                Permissions = new Dictionary<string, DatabaseAccess>(),
+                                SecurityClearance = SecurityClearance.ClusterNode,
+                                Thumbprint = Server.Certificate.ClientCertificate.Thumbprint,
+                                PublicKeyPinningHash = Server.Certificate.ClientCertificate.GetPublicKeyPinningHash(),
+                                NotAfter = Server.Certificate.ClientCertificate.NotAfter,
+                                NotBefore = Server.Certificate.ClientCertificate.NotBefore
+                            };
+
+                            certificate = ctx.ReadObject(serverClientCertDef.ToJson(), "ServerClient/Certificate/Definition");
                         }
                     }
                     else if (wellKnown != null && wellKnown.Contains(clientCert.Thumbprint, StringComparer.OrdinalIgnoreCase))
@@ -717,6 +766,11 @@ namespace Raven.Server.Web.Authentication
                     ctx.Write(writer, certificateDJV);
                 }
             }
+        }
+
+        private bool IsClientCertificateDifferentFromServerCertificate()
+        {
+            return Server.Certificate.ClientCertificate != null && Server.Certificate.ClientCertificate.Thumbprint != Server.Certificate.ServerCertificate?.Thumbprint;
         }
 
         [RavenAction("/admin/certificates/edit", "POST", AuthorizationStatus.Operator)]
@@ -806,13 +860,14 @@ namespace Raven.Server.Web.Authentication
         [RavenAction("/admin/certificates/export", "GET", AuthorizationStatus.Operator)]
         public async Task GetClusterCertificates()
         {
-            if (Server.Certificate.Certificate == null)
+            if (Server.Certificate.ServerCertificate == null)
                 return;
 
             var collection = new X509Certificate2Collection();
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
             {
-                CertificateLoaderUtil.Import(collection, Server.Certificate.Certificate.Export(X509ContentType.Cert));
+                // exporting server cert probably because of ETL or Replication so client cert is needed
+                CertificateLoaderUtil.Import(collection, Server.Certificate.ServerCertificate.Export(X509ContentType.Cert));
 
                 if (ServerStore.CurrentRachisState != RachisState.Passive)
                 {
@@ -853,6 +908,21 @@ namespace Raven.Server.Web.Authentication
             HttpContext.Response.ContentType = "application/octet-stream";
 
             await HttpContext.Response.Body.WriteAsync(pfx, 0, pfx.Length);
+        }
+        
+        [RavenAction("/admin/certificates/for-communication/export", "GET", AuthorizationStatus.Operator)]
+        public async Task GetServerCertificateForCommunication()
+        {
+            if (Server.Certificate.ClientCertificate == null)
+                return;
+
+            var bytes = Server.Certificate.ClientCertificate.Export(X509ContentType.Cert);
+
+            var contentDisposition = "attachment; filename=ServerCertificateForCommunication.crt";
+            HttpContext.Response.Headers["Content-Disposition"] = contentDisposition;
+            HttpContext.Response.ContentType = "application/octet-stream";
+
+            await HttpContext.Response.Body.WriteAsync(bytes, 0, bytes.Length);
         }
 
         [RavenAction("/admin/certificates/mode", "GET", AuthorizationStatus.ClusterAdmin)]
@@ -979,7 +1049,7 @@ namespace Raven.Server.Web.Authentication
             if (ServerStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
                 throw new InvalidOperationException("This server wasn't set up using the Let's Encrypt setup mode.");
 
-            if (Server.Certificate.Certificate == null)
+            if (Server.Certificate.ServerCertificate == null)
                 throw new InvalidOperationException("The server certificate is not loaded.");
 
             var (_, renewalDate) = Server.CalculateRenewalDate(Server.Certificate, false);
@@ -1002,7 +1072,7 @@ namespace Raven.Server.Web.Authentication
                 if (ServerStore.Configuration.Core.SetupMode != SetupMode.LetsEncrypt)
                     throw new InvalidOperationException("Cannot force renew for this server certificate. This server wasn't set up using the Let's Encrypt setup mode.");
 
-                if (Server.Certificate.Certificate == null)
+                if (Server.Certificate.ServerCertificate == null)
                     throw new InvalidOperationException("Cannot force renew this Let's Encrypt server certificate. The server certificate is not loaded.");
 
                 if (RavenLogManager.Instance.IsAuditEnabled)
@@ -1026,7 +1096,7 @@ namespace Raven.Server.Web.Authentication
                 }
                 catch (Exception e)
                 {
-                    throw new InvalidOperationException($"Failed to force renew the Let's Encrypt server certificate for domain: {Server.Certificate.Certificate.GetNameInfo(X509NameType.SimpleName, false)}", e);
+                    throw new InvalidOperationException($"Failed to force renew the Let's Encrypt server certificate for domain: {Server.Certificate.ServerCertificate.GetNameInfo(X509NameType.SimpleName, false)}", e);
                 }
             }
 
@@ -1045,7 +1115,7 @@ namespace Raven.Server.Web.Authentication
 
                 var replaceImmediately = GetBoolValueQueryString("replaceImmediately", required: false) ?? false;
 
-                if (Server.Certificate.Certificate == null)
+                if (Server.Certificate.ServerCertificate == null)
                     throw new InvalidOperationException("Failed to trigger a certificate refresh cycle. The server certificate is not loaded.");
 
                 try
@@ -1230,7 +1300,7 @@ namespace Raven.Server.Web.Authentication
 
                             // In the beginning of 4.0 we had the server certificate stored together with all the other certs (in the local state and in the cluster).
                             // If it's the case now, we make sure not to transfer it to the cluster.
-                            if (certificateDefinition.Thumbprint == ServerStore.Server.Certificate.Certificate.Thumbprint)
+                            if (certificateDefinition.Thumbprint == ServerStore.Server.Certificate.ServerCertificate.Thumbprint)
                                 continue;
 
                             var (newIndex, _) = await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(localStateKey, certificateDefinition, $"{raftRequestId}/{localStateKey}"));

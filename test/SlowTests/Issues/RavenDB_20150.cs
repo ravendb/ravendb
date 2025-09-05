@@ -63,6 +63,7 @@ public class RavenDB_20150 : ClusterTestBase
             //run periodic backup on other database server
             var config = Backup.CreateBackupConfiguration(backupPath, incrementalBackupFrequency: "0 0 1 * *");
             var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
+            await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.TaskId, databaseServers, timeout: TimeSpan.FromSeconds(10));
 
             foreach (var dbServer in databaseServers)
             {

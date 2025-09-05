@@ -78,7 +78,7 @@ namespace BenchmarkTests
             if (Encrypted)
             {
                 var certificates = Certificates.GenerateAndSaveSelfSignedCertificate();
-                adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value,
+                adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value,
                     certificates.ClientCertificate1.Value,
                     new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin,
                     Server);
@@ -136,7 +136,7 @@ namespace BenchmarkTests
             options.ModifyDatabaseRecord = record => record.Settings.Remove(RavenConfiguration.GetKey(x => x.Core.RunInMemory));
 
             if (Encrypted)
-                options.ClientCertificate = Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificate.Value;
+                options.ClientCertificate = Certificates.GenerateAndSaveSelfSignedCertificate().ServerCertificateForCommunication.Value;
 
             return base.GetDocumentStore(options, caller);
         }

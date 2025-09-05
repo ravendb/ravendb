@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="StartsWithSearch.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using FastTests;
+﻿using FastTests;
 using Tests.Infrastructure;
 using Voron;
 using Xunit;

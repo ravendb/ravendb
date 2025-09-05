@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="DocumentReplication.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Threading;
+﻿using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Commands;
