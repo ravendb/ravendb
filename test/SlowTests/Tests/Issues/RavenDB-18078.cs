@@ -1,10 +1,4 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="UsingDynamicQueryWithLocalServer.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Queries.Highlighting;
@@ -129,4 +123,3 @@ public class RavenDB18078 : RavenTestBase
         }
     }
 }
-

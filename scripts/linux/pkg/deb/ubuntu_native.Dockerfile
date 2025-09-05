@@ -10,7 +10,7 @@ RUN apt update \
     && apt-get -y dist-upgrade \
     && apt install -y curl wget apt-transport-https 
 
-ENV DEBEMAIL=support@ravendb.net DEBFULLNAME="Hibernating Rhinos LTD" 
+ENV DEBEMAIL=support@ravendb.net DEBFULLNAME="RavenDB LTD" 
 ENV DEB_ARCHITECTURE="" DOTNET_RUNTIME_VERSION="" DOTNET_DEPS_VERSION=""
 ENV RAVEN_PLATFORM="" RAVEN_ARCH=""
 ENV TARBALL_CACHE_DIR="/cache"

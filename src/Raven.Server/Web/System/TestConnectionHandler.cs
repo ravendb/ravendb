@@ -41,7 +41,7 @@ namespace Raven.Server.Web.System
                 // test the connection from the remote node to this one
                 if (bidirectional == true && result.Success)
                 {
-                    using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(url, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+                    using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(url, ServerStore.Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
                     {
                         result = await ServerStore.TestConnectionFromRemote(requestExecutor, context, url);
                     }
@@ -58,7 +58,7 @@ namespace Raven.Server.Web.System
 
             using (server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext ctx))
             {
-                using var tcpSocketResult = await TcpUtils.ConnectSecuredTcpSocket(tcpConnectionInfo, server.Certificate.Certificate, server.CipherSuitesPolicy,
+                using var tcpSocketResult = await TcpUtils.ConnectSecuredTcpSocket(tcpConnectionInfo, server.Certificate.ClientCertificate, server.CipherSuitesPolicy,
                     TcpConnectionHeaderMessage.OperationTypes.TestConnection,
                     NegotiateWithRemote, ctx, timeout, negLogs, token);
             }

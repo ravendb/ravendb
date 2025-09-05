@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="EntityWithStack.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;

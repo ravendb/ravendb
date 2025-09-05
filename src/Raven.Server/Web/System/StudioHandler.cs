@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="Studio.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -391,7 +385,7 @@ namespace Raven.Server.Web.System
             HttpContext.Response.Headers["X-XSS-Protection"] = "1; mode=block";
             HttpContext.Response.Headers["X-Content-Type-Options"] = "nosniff";
 
-            var isSecuredServer = ServerStore.Server.Certificate?.Certificate != null;
+            var isSecuredServer = ServerStore.Server.Certificate?.ServerCertificate != null;
 
             if (isSecuredServer && Server.Configuration.Security.DisableHsts == false)
             {

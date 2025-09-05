@@ -4,6 +4,7 @@
     <Authors>Hibernating Rhinos</Authors>
     <TargetFramework>net9.0</TargetFramework>
     <RuntimeFrameworkVersion>9.0.8</RuntimeFrameworkVersion>
+    <Authors>RavenDB</Authors>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Server</AssemblyName>
     <OutputType>Exe</OutputType>

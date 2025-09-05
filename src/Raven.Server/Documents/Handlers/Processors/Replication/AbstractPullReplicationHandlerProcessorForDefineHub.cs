@@ -32,7 +32,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Replication
         {
             _pullReplication = JsonDeserializationClient.PullReplicationDefinition(configuration);
 
-            _pullReplication.Validate(RequestHandler.ServerStore.Server.Certificate?.Certificate != null);
+            _pullReplication.Validate(RequestHandler.ServerStore.Server.Certificate?.ServerCertificate != null);
             var updatePullReplication = new UpdatePullReplicationAsHubCommand(RequestHandler.DatabaseName, raftRequestId)
             {
                 Definition = _pullReplication

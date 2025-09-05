@@ -2,9 +2,8 @@ import { Column, SortDirection } from "@tanstack/react-table";
 import classNames from "classnames";
 import { HStack } from "components/common/utilities/HStack";
 import { Icon } from "components/common/Icon";
-import { useMemo, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import Form from "react-bootstrap/Form";
-
 import Button from "react-bootstrap/Button";
 import Dropdown from "react-bootstrap/Dropdown";
 import { CustomDropdownToggle } from "components/common/Dropdown";
@@ -17,6 +16,17 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
         () => _.debounce((value: string) => column.setFilterValue(value), 300),
         [column]
     );
+
+    const filterInputRef = useRef<HTMLInputElement>(null);
+
+    const handleFilterDropdownToggle = (isOpen: boolean) => {
+        if (isOpen) {
+            // Wait for the dropdown to be opened
+            setTimeout(() => {
+                filterInputRef.current?.focus();
+            }, 100);
+        }
+    };
 
     const handleFilterChange = (value: string) => {
         setLocalFilter(value);
@@ -69,7 +79,7 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                 </div>
             )}
             {column.getCanFilter() && (
-                <Dropdown>
+                <Dropdown onToggle={handleFilterDropdownToggle}>
                     <Dropdown.Toggle
                         title="Column settings"
                         as={CustomDropdownToggle}
@@ -88,6 +98,7 @@ export default function VirtualTableColumnSettings<T>({ column }: { column: Colu
                             <FormLabel className="small-label">Filter column</FormLabel>
                             <div className="clearable-input">
                                 <Form.Control
+                                    ref={filterInputRef}
                                     type="text"
                                     placeholder="Search..."
                                     value={localFilter}

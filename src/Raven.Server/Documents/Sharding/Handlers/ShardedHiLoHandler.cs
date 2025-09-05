@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="ShardedHiLoHandler.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Sharding.Handlers.Processors.HiLo;
 using Raven.Server.Routing;
 

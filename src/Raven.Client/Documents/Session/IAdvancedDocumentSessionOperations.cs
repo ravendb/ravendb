@@ -1,10 +1,4 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="IAdvancedDocumentSessionOperations.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Commands.Batches;
@@ -29,23 +23,70 @@ namespace Raven.Client.Documents.Session
         /// </summary>
         IDictionary<string, object> ExternalState { get; }
 
+        /// <summary>
+        ///     Gets the current session node
+        /// </summary>
+        /// <returns>Task that returns the current server node being used by this session</returns>
         Task<ServerNode> GetCurrentSessionNode();
         
+        /// <summary>
+        ///     Gets the request executor associated with this session
+        /// </summary>
         RequestExecutor RequestExecutor { get; }
+        
+        /// <summary>
+        ///     Gets the JSON operation context for this session
+        /// </summary>
         JsonOperationContext Context { get; }
 
+        /// <summary>
+        ///     Gets the session information for this session
+        /// </summary>
         SessionInfo SessionInfo { get; }
         
+        /// <summary>
+        /// Occurs before an entity is stored in the session
+        /// </summary>
         event EventHandler<BeforeStoreEventArgs> OnBeforeStore;
+        
+        /// <summary>
+        /// Occurs after changes have been saved to the server
+        /// </summary>
         event EventHandler<AfterSaveChangesEventArgs> OnAfterSaveChanges;
+        
+        /// <summary>
+        /// Occurs before an entity is marked for deletion
+        /// </summary>
         event EventHandler<BeforeDeleteEventArgs> OnBeforeDelete;
+        
+        /// <summary>
+        /// Occurs before a query is executed
+        /// </summary>
         event EventHandler<BeforeQueryEventArgs> OnBeforeQuery;
 
+        /// <summary>
+        /// Occurs before an entity is converted to a document
+        /// </summary>
         event EventHandler<BeforeConversionToDocumentEventArgs> OnBeforeConversionToDocument;
+        
+        /// <summary>
+        /// Occurs after an entity has been converted to a document
+        /// </summary>
         event EventHandler<AfterConversionToDocumentEventArgs> OnAfterConversionToDocument;
+        
+        /// <summary>
+        /// Occurs before a document is converted to an entity
+        /// </summary>
         event EventHandler<BeforeConversionToEntityEventArgs> OnBeforeConversionToEntity;
+        
+        /// <summary>
+        /// Occurs after a document has been converted to an entity
+        /// </summary>
         event EventHandler<AfterConversionToEntityEventArgs> OnAfterConversionToEntity;
 
+        /// <summary>
+        /// Occurs when the session is being disposed
+        /// </summary>
         event EventHandler<SessionDisposingEventArgs> OnSessionDisposing;
 
         /// <summary>
@@ -199,9 +240,12 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Overwrite the existing transaction mode for the current session.
         /// </summary>
-        /// <param name="mode"></param>
+        /// <param name="mode">The transaction mode to set</param>
         void SetTransactionMode(TransactionMode mode);
 
+        /// <summary>
+        ///     Gets the JSON converter for this session
+        /// </summary>
         ISessionBlittableJsonConverter JsonConverter { get; }
     }
 }

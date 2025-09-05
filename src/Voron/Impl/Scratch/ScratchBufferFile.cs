@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="ScratchBufferFile.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -43,7 +37,7 @@ namespace Voron.Impl.Scratch
 
         public long LastUsedPage => _lastUsedPage;
 
-        public ScratchBufferFile(Pager scratchPager,  Pager.State scratchPagerState, int scratchNumber)
+        public ScratchBufferFile(Pager scratchPager, Pager.State scratchPagerState, int scratchNumber)
         {
             _scratchPager = scratchPager;
             _scratchPagerState = scratchPagerState;
@@ -92,7 +86,7 @@ namespace Voron.Impl.Scratch
         }
 
         internal (Pager, Pager.State) GetPagerAndState() => (_scratchPager, _scratchPagerState);
-        
+
         public Pager Pager => _scratchPager;
 
         public int Number => _scratchNumber;
@@ -112,8 +106,8 @@ namespace Voron.Impl.Scratch
         public PageFromScratchBuffer Allocate(LowLevelTransaction tx, int numberOfPages, int sizeToAllocate, long pageNumber, Page previousVersion)
         {
             _scratchPager.EnsureContinuous(ref _scratchPagerState, _lastUsedPage, sizeToAllocate);
-            
-            var result = new PageFromScratchBuffer(this,_scratchPagerState, tx.Id, _lastUsedPage, pageNumber, previousVersion, sizeToAllocate, numberOfPages);
+
+            var result = new PageFromScratchBuffer(this, _scratchPagerState, tx.Id, _lastUsedPage, pageNumber, previousVersion, sizeToAllocate, numberOfPages);
 
             _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(_lastUsedPage, result);
@@ -144,7 +138,7 @@ namespace Voron.Impl.Scratch
             _scratchPager.UnprotectPageRange(freePageBySizePointer, freePageBySizeSize, true);
 #endif
 
-            result = new PageFromScratchBuffer(this, _scratchPagerState, tx.Id,val.Page, pageNumber, previousVersion, size, numberOfPages);
+            result = new PageFromScratchBuffer(this, _scratchPagerState, tx.Id, val.Page, pageNumber, previousVersion, size, numberOfPages);
 
             _allocatedPagesCount += numberOfPages;
             _allocatedPages.Add(val.Page, result);
@@ -160,7 +154,7 @@ namespace Voron.Impl.Scratch
         {
             return Free(tx, tx.Id, page);
         }
-        
+
         public bool Free(LowLevelTransaction tx, long asOfTxId, long page)
         {
 #if VALIDATE
@@ -180,7 +174,7 @@ namespace Voron.Impl.Scratch
                 }
             }
 #endif
-            
+
             if (_allocatedPages.TryGetValue(page, out PageFromScratchBuffer value) == false)
             {
                 ThrowInvalidFreeOfUnusedPage(page);
@@ -214,7 +208,7 @@ namespace Voron.Impl.Scratch
 
             _txIdAfterWhichLatestFreePagesBecomeAvailable = asOfTxId;
 
-            return NumberOfAllocations == 0; 
+            return NumberOfAllocations == 0;
         }
 
         public ref Pager.State GetStateRef() => ref _scratchPagerState;
@@ -242,9 +236,9 @@ namespace Voron.Impl.Scratch
 
             var shrinked = value with
             {
-                NumberOfPages = newNumberOfPages, 
+                NumberOfPages = newNumberOfPages,
                 PreviousVersion = value.PreviousVersion
-            }; 
+            };
 
             _allocatedPages.Add(shrinked.PositionInScratchBuffer, shrinked);
 
@@ -317,28 +311,12 @@ namespace Voron.Impl.Scratch
         {
             if (_allocatedPages.TryGetValue(positionInScratchBuffer, out var allocated) is false)
                 return;
-            
-            if(allocated.PageNumberInDataFile != pageNumberInDataFile || 
-               allocated.NumberOfPages != numberOfPages)
+
+            if (allocated.PageNumberInDataFile != pageNumberInDataFile ||
+                allocated.NumberOfPages != numberOfPages)
                 throw new InvalidOperationException(
                     $"Failed to verify page {pageNumberInDataFile} when reading scratch page {positionInScratchBuffer}, values different!" +
                     $"Page: {pageNumberInDataFile} vs. {allocated.PageNumberInDataFile} ({numberOfPages} vs {allocated.NumberOfPages})!");
-
-        }
-
-        [Conditional("DEBUG")]
-        public void AssertNoPagesAllocatedInTransactionOlderThan(long txId)
-        {
-            foreach (PageFromScratchBuffer p in _allocatedPages.Values)
-            {
-                if (p.AllocatedInTransaction < txId)
-                {
-                    var message =
-                        $"Found page #{p.PageNumberInDataFile} allocated in tx {p.AllocatedInTransaction} (scratch {p.File.Number}, pos in scratch: {p.PositionInScratchBuffer}) while we freed up to tx {txId}";
-
-                    throw new InvalidOperationException(message);
-                }
-            }
         }
     }
 }

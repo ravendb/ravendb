@@ -36,7 +36,7 @@ public class SnmpMibWriter : IAsyncDisposable
     {
         var now = DateTime.UtcNow;
 
-        await _writer.WriteLineAsync($"-- Copyright (C) {now.Year} Hibernating Rhinos, Ltd.  All Rights Reserved.");
+        await _writer.WriteLineAsync($"-- Copyright (C) {now.Year} RavenDB, Ltd.  All Rights Reserved.");
         await _writer.WriteLineAsync();
 
         await _writer.WriteLineAsync("RAVENDB-MIB DEFINITIONS ::= BEGIN");
@@ -45,7 +45,7 @@ public class SnmpMibWriter : IAsyncDisposable
         await WriteImportsAsync();
         await WriteModuleAsync(now);
 
-        await WriteObjectIdentifierAsync("hibernatingRhinos", "enterprises", "45751");
+        await WriteObjectIdentifierAsync("ravendb", "enterprises", "45751");
         await WriteObjectIdentifierAsync("server", "ravendb", "1");
         await WriteObjectIdentifierAsync("databases", "server", "5");
 
@@ -97,7 +97,7 @@ public class SnmpMibWriter : IAsyncDisposable
     {
         await _writer.WriteLineAsync("ravendb MODULE-IDENTITY");
         await _writer.WriteLineAsync($"    LAST-UPDATED \"{now:yyyyMMddHHmm}Z\"");
-        await _writer.WriteLineAsync("    ORGANIZATION \"Hibernating Rhinos Ltd\"");
+        await _writer.WriteLineAsync("    ORGANIZATION \"RavenDB Ltd\"");
         await _writer.WriteLineAsync("    CONTACT-INFO \"https://ravendb.net/contact\"");
         await _writer.WriteLineAsync($"    DESCRIPTION \"MIB for the RavenDB {RavenVersionAttribute.Instance.FullVersion}\"");
         await _writer.WriteLineAsync($"    REVISION \"{now:yyyyMMddHHmm}Z\"");

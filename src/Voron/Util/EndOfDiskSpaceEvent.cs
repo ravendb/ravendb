@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="EndOfDiskSpaceEvent.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Runtime.ExceptionServices;
+﻿using System.Runtime.ExceptionServices;
 using Sparrow;
 using Sparrow.Server.Utils;
 

@@ -93,9 +93,12 @@ loadTo(""Orders"", partitionBy(key),
                 }
 
                 // delete task
-                store.Maintenance.Send(new DeleteOngoingTaskOperation(result.TaskId, OngoingTaskType.OlapEtl));
+                var deleteTaskResult = store.Maintenance.Send(new DeleteOngoingTaskOperation(result.TaskId, OngoingTaskType.OlapEtl));
                 var ongoingTask = store.Maintenance.Send(new GetOngoingTaskInfoOperation(result.TaskId, OngoingTaskType.OlapEtl));
                 Assert.Null(ongoingTask);
+
+                // wait for RemoveEtlProcessStateCommand to complete (executed after DeleteOngoingTaskCommand)
+                await Server.ServerStore.Cluster.WaitForIndexNotification(deleteTaskResult.RaftCommandIndex + 1);
 
                 using (Server.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
                 using (context.OpenReadTransaction())

@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="AsyncDocumentSession.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
@@ -77,6 +71,11 @@ namespace Raven.Client.Documents.Session
             return lazyValue;
         }
 
+        /// <summary>
+        /// Executes all pending lazy operations asynchronously
+        /// </summary>
+        /// <param name="token">The cancellation token</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains response time information</returns>
         public async Task<ResponseTimeInformation> ExecuteAllPendingLazyOperationsAsync(CancellationToken token = default(CancellationToken))
         {
             using (AsyncTaskHolder())
@@ -202,6 +201,11 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Loads the specified ids and a function to call when it is evaluated
         /// </summary>
+        /// <typeparam name="T">The type of the entities to load</typeparam>
+        /// <param name="ids">The ids of the entities to load</param>
+        /// <param name="onEval">Function to call when the lazy operation is evaluated</param>
+        /// <param name="token">The cancellation token</param>
+        /// <returns>Lazy operation that will load the entities when executed</returns>
         public Lazy<Task<Dictionary<string, T>>> LoadAsync<T>(IEnumerable<string> ids, Action<Dictionary<string, T>> onEval, CancellationToken token = new CancellationToken())
         {
             return LazyAsyncLoadInternal(ids.ToArray(), new string[0], onEval, token);
@@ -210,6 +214,11 @@ namespace Raven.Client.Documents.Session
         /// <summary>
         /// Loads the specified id and a function to call when it is evaluated
         /// </summary>
+        /// <typeparam name="T">The type of the entity to load</typeparam>
+        /// <param name="id">The id of the entity to load</param>
+        /// <param name="onEval">Function to call when the lazy operation is evaluated</param>
+        /// <param name="token">The cancellation token</param>
+        /// <returns>Lazy operation that will load the entity when executed</returns>
         public Lazy<Task<T>> LoadAsync<T>(string id, Action<T> onEval, CancellationToken token = new CancellationToken())
         {
             if (string.IsNullOrWhiteSpace(id))
@@ -222,6 +231,15 @@ namespace Raven.Client.Documents.Session
             return AddLazyOperation(lazyLoadOperation, onEval, token);
         }
 
+        /// <summary>
+        /// Internal method to lazily load entities with includes asynchronously
+        /// </summary>
+        /// <typeparam name="T">The type of the entities to load</typeparam>
+        /// <param name="ids">The ids of the entities to load</param>
+        /// <param name="includes">The includes to apply during loading</param>
+        /// <param name="onEval">Function to call when the lazy operation is evaluated</param>
+        /// <param name="token">The cancellation token</param>
+        /// <returns>Lazy operation that will load the entities when executed</returns>
         public Lazy<Task<Dictionary<string, T>>> LazyAsyncLoadInternal<T>(string[] ids, string[] includes, Action<Dictionary<string, T>> onEval, CancellationToken token = default(CancellationToken))
         {
             if (CheckIfIdAlreadyIncluded(ids, includes))

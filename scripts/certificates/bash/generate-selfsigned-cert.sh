@@ -51,7 +51,7 @@ openssl req -new -x509 \
     -extensions extensions \
     -config "$CERT_CONF" \
     -addext "subjectAltName = DNS:$CERT_NAME" \
-    -subj "/C=IL/ST=Haifa/L=Hadera/O=Hibernating Rhinos/CN=$CERT_NAME"
+    -subj "/C=IL/ST=Haifa/L=Hadera/O=RavenDB/CN=$CERT_NAME"
 
 if openssl pkcs12 -export -passout "pass:$PASSPHRASE" -passin "pass:$PASSPHRASE" -out "$PFX_CERT" -inkey "$PRIVATE_KEY" -in "$CRT_CERT"; then
     echo "Generated:"

@@ -65,9 +65,13 @@ namespace SlowTests.Server.Documents.AI.AiAgent
                 return Task.CompletedTask;
             };
 
-            chat.SetUserPrompt("what kind of milk do you have? Call the ProductSearch tool to figure it out");
+            chat.SetUserPrompt("Call ProductSearch tool to figure out what kind of milk do you have?");
 
             var result = await chat.RunAsync<OutputSchema>(CancellationToken.None);
+            if ((AiConversationResult.ActionRequired == result.Status) == false)
+            {
+                Output.WriteLine(result.Answer.Answer);
+            }
             Assert.Equal(AiConversationResult.ActionRequired, result.Status);
             Assert.Equal("ProductSearch", action);
         }

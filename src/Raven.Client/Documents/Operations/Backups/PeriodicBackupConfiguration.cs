@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="PeriodicBackupConfiguration.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Diagnostics;
 using Raven.Client.ServerWide;
 using Sparrow.Json;

@@ -67,10 +67,10 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                     if (item.UpdateHash == false)
                         continue;
                     
-                    ref var tuple = ref CollectionsMarshal.GetValueRefOrAddDefault(hashes, item.DocId, out var exists);
+                    ref var tuple = ref CollectionsMarshal.GetValueRefOrAddDefault(hashes, item.DocumentId, out var exists);
                     if (exists is false)
                     {
-                        Document document = GetCurrentDocument(context, item.DocId);
+                        Document document = GetCurrentDocument(context, item.DocumentId);
                         if (document is null)
                             continue; // document was probably deleted while we talked to the model, skipping this
 
@@ -88,7 +88,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                     try
                     {
                         var documentInstance = (BlittableObjectInstance)runner.Translate(context, tuple.Doc).AsObject();
-                        using (var scriptResult = runner.Run(context, context, "execute", item.DocId, [documentInstance, args]))
+                        using (var scriptResult = runner.Run(context, context, "execute", item.DocumentId, [documentInstance, args]))
                         using (var old = tuple.Doc.Data)
                         {
                             tuple.Doc.Data = scriptResult.TranslateToObject(context);
@@ -98,12 +98,12 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
                     {
                         // do not update metadata hash, log error, raise alert
                         tuple.Hashes.Remove(item.ContextOutput.AiHash);
-                        var msg = $"Failed to apply update script for context in document '{item.DocId}'. " +
+                        var msg = $"Failed to apply update script for context in document '{item.DocumentId}'. " +
                                   $"Context was: {item.ContextOutput.Context}{Environment.NewLine}" +
                                   $"Error: {e}";
 
                         statsScope.UpdateFailures++;
-                        _statistics.RecordPartialLoadError(msg, item.DocId);
+                        _statistics.RecordPartialLoadError(msg, item.DocumentId);
                         
                         if (_logger.IsWarnEnabled)
                             _logger.Warn(msg);
@@ -134,7 +134,7 @@ internal sealed class GenAiBatchPatchCommand : DocumentMergedTransactionCommand
             ["input"] = item.ContextOutput.Context
         };
 
-        return context.ReadObject(djv, item.DocId);
+        return context.ReadObject(djv, item.DocumentId);
     }
 
     internal static BlittableJsonReaderObject UpdateHashesInMetadata(string id, BlittableJsonReaderObject doc, string taskIdentifier, List<string> allHashes, DocumentsOperationContext context)

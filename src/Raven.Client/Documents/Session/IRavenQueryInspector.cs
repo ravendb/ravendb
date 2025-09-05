@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="IRavenQueryInspector.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using Raven.Client.Documents.Queries;
+﻿using Raven.Client.Documents.Queries;
 
 namespace Raven.Client.Documents.Session
 {

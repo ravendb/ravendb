@@ -1,4 +1,4 @@
-﻿using FastTests.Voron;
+using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron.Data.CompactTrees;
 using Voron.Impl;

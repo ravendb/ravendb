@@ -727,7 +727,7 @@ namespace Tests.Infrastructure
             bool useReservedPorts = false,
             [CallerMemberName] string caller = null)
         {
-            var result = await CreateRaftClusterInternalAsync(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: false, customSettings, customSettingsList, watcherCluster, useReservedPorts, caller);
+            var result = await CreateRaftClusterInternalAsync(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: false, commonCustomSettings: customSettings, customSettingsList: customSettingsList, watcherCluster: watcherCluster, useReservedPorts: useReservedPorts, caller: caller);
             return (result.Nodes, result.Leader);
         }
 
@@ -738,9 +738,11 @@ namespace Tests.Infrastructure
             IDictionary<string, string> customSettings = null,
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false,
-            bool useReservedPorts = false)
+            bool useReservedPorts = false,
+            TestCertificatesHolder testCertificatesHolder = null,
+            bool with2Eku = true)
         {
-            return CreateRaftClusterInternalAsync(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, customSettings, customSettingsList, watcherCluster, useReservedPorts);
+            return CreateRaftClusterInternalAsync(numberOfNodes, shouldRunInMemory, leaderIndex, useSsl: true, commonCustomSettings: customSettings, customSettingsList: customSettingsList, watcherCluster: watcherCluster, useReservedPorts: useReservedPorts, testCertificatesHolder: testCertificatesHolder, with2Eku: with2Eku);
         }
 
         protected async Task<(RavenServer Leader, Dictionary<RavenServer, ProxyServer> Proxies)> CreateRaftClusterWithProxiesAsync(
@@ -825,7 +827,9 @@ namespace Tests.Infrastructure
             List<IDictionary<string, string>> customSettingsList = null,
             bool watcherCluster = false,
             bool useReservedPorts = false,
-            [CallerMemberName] string caller = null)
+            TestCertificatesHolder testCertificatesHolder = null,
+            [CallerMemberName] string caller = null,
+            bool with2Eku = true)
         {
             string[] allowedNodeTags = { "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z" };
             var actualLeaderIndex = leaderIndex;
@@ -872,7 +876,7 @@ namespace Tests.Infrastructure
                 {
                     serverUrl ??= UseFiddlerUrl($"https://127.0.0.1:{port}");
                     if (customSettings.TryGetValue(RavenConfiguration.GetKey(x => x.Core.SetupMode), out var setupMode) == false || setupMode != nameof(SetupMode.LetsEncrypt))
-                        certificates = Certificates.SetupServerAuthentication(customSettings, serverUrl);
+                    certificates = Certificates.SetupServerAuthentication(customSettings, serverUrl, testCertificatesHolder, with2Eku: with2Eku);
                 }
                 else
                 {
@@ -1014,14 +1018,14 @@ namespace Tests.Infrastructure
             return false;
         }
 
-        protected Dictionary<string, string> GetServerSettingsForPort(bool useSsl, out string serverUrl, out TestCertificatesHolder certificates)
+        protected Dictionary<string, string> GetServerSettingsForPort(bool useSsl, out string serverUrl, out TestCertificatesHolder certificates, bool with2Eku = true)
         {
             var customSettings = new Dictionary<string, string>();
 
             if (useSsl)
             {
                 serverUrl = UseFiddlerUrl("https://127.0.0.1:0");
-                certificates = Certificates.SetupServerAuthentication(customSettings, serverUrl);
+                certificates = Certificates.SetupServerAuthentication(customSettings, serverUrl, with2Eku: with2Eku);
             }
             else
             {

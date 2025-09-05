@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="AnalyzerPerField.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using FastTests;
+﻿using FastTests;
 using Lucene.Net.Analysis;
 using Xunit;
 using Raven.Client.Documents.Indexes;

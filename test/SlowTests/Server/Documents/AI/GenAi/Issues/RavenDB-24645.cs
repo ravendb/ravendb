@@ -1,0 +1,212 @@
+﻿using System;
+using System.Diagnostics;
+using System.IO;
+using FastTests;
+using Newtonsoft.Json;
+using Raven.Client.Documents.Operations.AI;
+using Raven.Client.Documents.Operations.ConnectionStrings;
+using Tests.Infrastructure;
+using Xunit;
+using Xunit.Abstractions;
+using Task = System.Threading.Tasks.Task;
+
+namespace SlowTests.Server.Documents.AI.GenAi.Issues
+{
+    public class RavenDB_24645(ITestOutputHelper output) : RavenTestBase(output)
+    {
+        public record Item(ImageDescription ImageDescription = null);
+
+        public record ImageDescription(string Description, bool SafeForWork, string[] Tags);
+
+        private const string NonEmptyAnswerHint =
+            " ;Always provide a valid structured response matching the schema (if you have no answer or an empty answer - please return default values instead)";
+
+        private const string FormatScript = @"
+ai.genContext({})
+    .withExpected(loadAttachment('image.Actual'));
+";
+
+        private const string Image = "image.";
+
+        private const string FirstItemId = "items/1";
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Png", "jpeg" })]
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Png", "webp" })]
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Png", "gif" })]
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Png", "png" })]
+
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Jpeg", "png" })]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Jpeg", "webp" })]
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Jpeg", "gif" })]
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Jpeg", "jpeg" })]
+
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Webp", "png" })]
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Webp", "jpeg" })]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Webp", "gif" })]
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Webp", "webp" })]
+
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Gif", "png" })]
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Gif", "jpeg" })]
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Gif", "webp" })]
+        // [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "Gif", "gif" })]
+
+        public async Task CanUseImageWithTheWrongFormat(Options options, GenAiConfiguration config, string expectedFormat, string actualFormat)
+        {
+            using var store = GetDocumentStore(options);
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+            config.Prompt = "Describe the following images" + NonEmptyAnswerHint;
+            config.Collection = "Items";
+            config.SampleObject = JsonConvert.SerializeObject(new
+            {
+                ImageDescription = new
+                {
+                    Description = "Detailed description of the image",
+                    SafeForWork = true,
+                    Tags = new[]
+                    {
+                        "matching tags for the image"
+                    }
+                }
+            });
+            config.UpdateScript = @"this.ImageDescription = $output.ImageDescription;";
+            config.GenAiTransformation = new GenAiTransformation
+            {
+                Script = FormatScript
+                    .Replace("Expected" , expectedFormat)
+                    .Replace("Actual", actualFormat)
+            };
+            await store.Maintenance.SendAsync(new AddGenAiOperation(config));
+        
+            var etl = Etl.WaitForEtlToComplete(store);
+            var marker = new ImageDescription("None" + Guid.NewGuid(), false, new string[] { "None" });
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Item(marker), FirstItemId);
+                await using var file1 = GetEmbeddedImgStream(actualFormat);
+        
+                session.Advanced.Attachments.Store(FirstItemId, Image+actualFormat, file1);
+                await session.SaveChangesAsync();
+            }
+            Assert.True(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30)));
+        
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            Assert.False(ValidateErrorNotification(db, string.Empty));
+            using (var session = store.OpenAsyncSession())
+            {
+                var item1 = await session.LoadAsync<Item>(FirstItemId);
+                Assert.NotNull(item1.ImageDescription);
+                Assert.Contains("heart", item1.ImageDescription.Description.ToLower());
+                Assert.False(item1.ImageDescription.Description == marker.Description);
+            }
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "png" })]
+        public async Task CanUseImageActualName(Options options, GenAiConfiguration config, string format)
+        {
+            using var store = GetDocumentStore(options);
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            config.Prompt = "Describe the following images" + NonEmptyAnswerHint;
+            config.Collection = "Items";
+            config.SampleObject = JsonConvert.SerializeObject(new
+            {
+                ImageDescriptions = new[]
+                {
+                    new { Description = "Detailed description of the image", SafeForWork = true, Tags = new[] { "matching tags for the image" } }
+                }
+            });
+            config.UpdateScript = @"this.ImageDescriptions = $output.ImageDescriptions;";
+            config.GenAiTransformation = new GenAiTransformation { Script = @"
+ai.genContext({})
+    .withPng('image.png');
+" };
+
+            await store.Maintenance.SendAsync(new AddGenAiOperation(config));
+            var etl = Etl.WaitForEtlToComplete(store);
+            var marker = new ImageDescription("None" + Guid.NewGuid(), false, new string[] { "None" });
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Item(marker), FirstItemId);
+                await using var file1 = GetEmbeddedImgStream(format);
+
+                session.Advanced.Attachments.Store(FirstItemId, "image.png", file1);
+                await session.SaveChangesAsync();
+            }
+            etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30));
+
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            Assert.True(ValidateErrorNotification(db, $"Attachment must be loaded or base64 string (on type image/png)"));
+        }
+
+        [RavenTheory(RavenTestCategory.Ai)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Data = new object[] { "png" })]
+        public async Task ShouldNotifyOnInvalidImage(Options options, GenAiConfiguration config, string format)
+        {
+            using var store = GetDocumentStore(options);
+            await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
+
+            config.Prompt = "Describe the following images" + NonEmptyAnswerHint;
+            config.Collection = "Items";
+            config.SampleObject = JsonConvert.SerializeObject(new
+            {
+                ImageDescriptions = new[]
+                {
+                    new { Description = "Detailed description of the image", SafeForWork = true, Tags = new[] { "matching tags for the image" } }
+                }
+            });
+            config.UpdateScript = @"this.ImageDescriptions = $output.ImageDescriptions;";
+
+            config.GenAiTransformation = new GenAiTransformation { Script = @"
+const att = loadAttachment('image.png');
+
+ai.genContext({})
+    .withPng(att);
+" };
+
+            await store.Maintenance.SendAsync(new AddGenAiOperation(config));
+
+            var etl = Etl.WaitForEtlToComplete(store);
+
+            var marker = new ImageDescription("None" + Guid.NewGuid(), false, new string[] { "None" });
+            var markerArr = new ImageDescription[] { marker };
+
+            using (var session = store.OpenAsyncSession())
+            {
+                await session.StoreAsync(new Item(marker), FirstItemId);
+                var notValidBase64Att = GetEmbeddedImgBytes(format);
+                notValidBase64Att[0] = 0xFF;
+                using var file1 = new MemoryStream(notValidBase64Att);
+
+                session.Advanced.Attachments.Store(FirstItemId, "image.png", file1);
+                await session.SaveChangesAsync();
+            }
+            Assert.False(etl.Wait(TimeSpan.FromSeconds(Debugger.IsAttached ? 1200 : 30)));
+
+            var db = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database);
+            Assert.True(ValidateErrorNotification(db, "You uploaded an unsupported image."));
+        }
+
+        private static Stream GetEmbeddedImgStream(string format)
+        {
+            var asm = typeof(RavenDB_24645).Assembly;
+            var resourceName = "SlowTests.Data.RavenDB_24645.heart." + format;
+
+            var stream = asm.GetManifestResourceStream(resourceName);
+            if (stream == null)
+                throw new FileNotFoundException($"Embedded resource not found: {resourceName}\n" +
+                                                "Check Build Action = Embedded Resource and the path/casing.");
+
+            return stream;
+        }
+
+        private static byte[] GetEmbeddedImgBytes(string format)
+        {
+            using var s = GetEmbeddedImgStream(format);
+            using var ms = new MemoryStream();
+            s.CopyTo(ms);
+            return ms.ToArray();
+        }
+    }
+}

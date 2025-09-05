@@ -21,17 +21,19 @@ namespace StressTests.Server.Replication
         {
         }
 
-        [RavenFact(RavenTestCategory.Core)]
-        public async Task PullExternalReplicationWithCertificateShouldWork()
+        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task PullExternalReplicationWithCertificateShouldWork(bool with2Eku)
         {
             var hubSettings = new ConcurrentDictionary<string, string>();
             var sinkSettings = new ConcurrentDictionary<string, string>();
 
             var hubCertificates = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
-            var hubCerts = Certificates.SetupServerAuthentication(hubSettings, certificates: hubCertificates);
+            var hubCerts = Certificates.SetupServerAuthentication(hubSettings, certificates: hubCertificates, with2Eku: with2Eku);
 
             var sinkCertificates = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: false);
-            var sinkCerts = Certificates.SetupServerAuthentication(sinkSettings, certificates: sinkCertificates);
+            var sinkCerts = Certificates.SetupServerAuthentication(sinkSettings, certificates: sinkCertificates, with2Eku: with2Eku);
 
             var hubDB = GetDatabaseName();
             var sinkDB = GetDatabaseName();
@@ -46,13 +48,13 @@ namespace StressTests.Server.Replication
 
             using (var hubStore = GetDocumentStore(new Options
             {
-                ClientCertificate = hubCerts.ServerCertificate.Value,
+                ClientCertificate = hubCerts.ServerCertificateForCommunication.Value,
                 Server = hubServer,
                 ModifyDatabaseName = _ => hubDB
             }))
             using (var sinkStore = GetDocumentStore(new Options
             {
-                ClientCertificate = sinkCerts.ServerCertificate.Value,
+                ClientCertificate = sinkCerts.ServerCertificateForCommunication.Value,
                 Server = sinkServer,
                 ModifyDatabaseName = _ => sinkDB
             }))
