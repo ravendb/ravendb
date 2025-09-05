@@ -26,8 +26,7 @@ namespace Sparrow.Collections
         private readonly int _bufferMask;
         private readonly Cell[] _buffer;
 
-        private long _enqueuePos;
-        private long _dequeuePos;
+        private PaddedPositions _positions;
 
         static LockFreeRingBuffer()
         {
@@ -65,7 +64,7 @@ namespace Sparrow.Collections
         /// </summary>
         public bool TryEnqueue(in T item)
         {
-            long pos = Volatile.Read(ref _enqueuePos);
+            long pos = Volatile.Read(ref _positions.Enqueue);
             ref Cell cell = ref _buffer[pos & _bufferMask];
 
             while (true)
@@ -75,7 +74,7 @@ namespace Sparrow.Collections
 
                 if (dif == 0)
                 {
-                    if (Interlocked.CompareExchange(ref _enqueuePos, pos + 1, pos) == pos)
+                    if (Interlocked.CompareExchange(ref _positions.Enqueue, pos + 1, pos) == pos)
                         break;
                 }
                 else if (dif < 0)
@@ -84,7 +83,7 @@ namespace Sparrow.Collections
                     return false;
                 }
 
-                pos = Volatile.Read(ref _enqueuePos);
+                pos = Volatile.Read(ref _positions.Enqueue);
                 cell = ref _buffer[pos & _bufferMask];
             }
 
@@ -99,7 +98,7 @@ namespace Sparrow.Collections
         /// </summary>
         public bool TryDequeue(out T item)
         {
-            long pos = Volatile.Read(ref _dequeuePos);
+            long pos = Volatile.Read(ref _positions.Dequeue);
             ref Cell cell = ref _buffer[pos & _bufferMask];
 
             while (true)
@@ -109,7 +108,7 @@ namespace Sparrow.Collections
 
                 if (dif == 0)
                 {
-                    if (Interlocked.CompareExchange(ref _dequeuePos, pos + 1, pos) == pos)
+                    if (Interlocked.CompareExchange(ref _positions.Dequeue, pos + 1, pos) == pos)
                         break;
                 }
                 else if (dif < 0)
@@ -119,7 +118,7 @@ namespace Sparrow.Collections
                     return false;
                 }
 
-                pos = Volatile.Read(ref _dequeuePos);
+                pos = Volatile.Read(ref _positions.Dequeue);
                 cell = ref _buffer[pos & _bufferMask];
             }
 
@@ -135,10 +134,10 @@ namespace Sparrow.Collections
         {
             get
             {
-                long currentEnqueuePos = Volatile.Read(ref _enqueuePos);
+                long currentEnqueuePos = Volatile.Read(ref _positions.Enqueue);
                 Cell enqueueCell = _buffer[currentEnqueuePos & _bufferMask];
 
-                long currentDequeuePos = Volatile.Read(ref _dequeuePos);
+                long currentDequeuePos = Volatile.Read(ref _positions.Dequeue);
                 Cell dequeueCell = _buffer[currentDequeuePos & _bufferMask];
 
                 return (int) (Volatile.Read(ref enqueueCell.Sequence) - Volatile.Read(ref dequeueCell.Sequence));
@@ -152,7 +151,7 @@ namespace Sparrow.Collections
         {
             get
             {
-                long currentDequeuePos = Volatile.Read(ref _dequeuePos);
+                long currentDequeuePos = Volatile.Read(ref _positions.Dequeue);
                 Cell cell = _buffer[currentDequeuePos & _bufferMask];
                 return (Volatile.Read(ref cell.Sequence) - (currentDequeuePos + 1)) < 0;
             }
@@ -165,10 +164,26 @@ namespace Sparrow.Collections
         {
             get
             {
-                long currentEnqueuePos = Volatile.Read(ref _enqueuePos);
+                long currentEnqueuePos = Volatile.Read(ref _positions.Enqueue);
                 Cell cell = _buffer[currentEnqueuePos & _bufferMask];
                 return (Volatile.Read(ref cell.Sequence) - currentEnqueuePos) < 0;
             }
         }
+    }
+    
+    /// <summary>
+    /// Keep queue and dequeue positions padded along the cache lines.
+    /// When padded, the enqueuer does not trash the dequeuer and vice versa.
+    /// </summary>
+    [StructLayout(LayoutKind.Explicit, Size = 3 * CacheLine)]
+    internal struct PaddedPositions
+    {
+        private const int CacheLine = 64;
+        
+        [FieldOffset(CacheLine)]
+        public long Enqueue;
+        
+        [FieldOffset(CacheLine * 2)]
+        public long Dequeue;
     }
 }
