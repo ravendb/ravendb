@@ -504,7 +504,7 @@ namespace Raven.Server.Commercial
                                                     "Either setup manually by editing the 'settings.json' file or delete the existing cluster, restart the server and try running setup again." +
                                                     Environment.NewLine +
                                                     "Existing cluster nodes " + JsonConvert.SerializeObject(allNodes, Formatting.Indented)
-                                                    );
+                );
             }
         }
 
@@ -613,9 +613,9 @@ namespace Raven.Server.Commercial
             CancellationToken token)
         {
             var progress = new SetupProgressAndResult(tuple =>
-                {
-                    if (Logger is { IsInfoEnabled: true })
-                        Logger.Info(tuple.Message, tuple.Exception);
+            {
+                if (Logger is { IsInfoEnabled: true })
+                    Logger.Info(tuple.Message, tuple.Exception);
             }) { Processed = 0, Total = 4 };
 
             try
@@ -727,17 +727,17 @@ namespace Raven.Server.Commercial
                         ZipOnly = true,
                         OnWriteSettingsJsonLocally = indentedJson => SettingsZipFileHelper.WriteSettingsJsonLocally(serverStore.Configuration.ConfigPath, indentedJson),
                         OnGetCertificatePath = certificateFileName =>
-                {
-                    return serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ??
-                       Path.Combine(AppContext.BaseDirectory, certificateFileName);
-                },
+                        {
+                            return serverStore.Configuration.GetSetting(RavenConfiguration.GetKey(x => x.Core.SetupResultingServerCertificatePath)) ??
+                                   Path.Combine(AppContext.BaseDirectory, certificateFileName);
+                        },
                         OnPutServerWideStudioConfigurationValues = async studioEnvironment =>
-                    {
+                        {
                             var res = await serverStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(
                                 new ServerWideStudioConfiguration { Disabled = false, Environment = studioEnvironment }, RaftIdGenerator.DontCareId));
 
-                        await serverStore.Cluster.WaitForIndexNotification(res.Index);
-                    },
+                            await serverStore.Cluster.WaitForIndexNotification(res.Index);
+                        },
                         Token = token
                     });
                 }
@@ -775,8 +775,7 @@ namespace Raven.Server.Commercial
         {
             try
             {
-                serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm,
-                    "During setup wizard, " + "making sure there is no cluster from previous installation.");
+                await serverStore.Engine.SetNewStateAsync(RachisState.Passive, null, serverStore.Engine.CurrentCommittedState.Term, "During setup wizard, " + "making sure there is no cluster from previous installation.");
             }
             catch (Exception e)
             {
@@ -889,7 +888,7 @@ namespace Raven.Server.Commercial
                 if (PlatformDetails.RunningOnPosix)
                 {
                     PosixHelper.EnsureRWPermissionsForOwnerAndGroup(certPath);
-            }
+                }
             }
             catch (Exception e)
             {
@@ -947,20 +946,19 @@ namespace Raven.Server.Commercial
         }
 
         private static async Task CompleteUnsecuredConfigurationForNewNode(
-          Action<IOperationProgress> onProgress,
-          SetupProgressAndResult progress,
-          ContinueSetupInfo continueSetupInfo,
-          BlittableJsonReaderObject settingsJsonObject,
-          ServerStore serverStore,
-          string firstNodeTag,
-          Dictionary<string, string> otherNodesUrls,
-          License license,
-          JsonOperationContext context)
+            Action<IOperationProgress> onProgress,
+            SetupProgressAndResult progress,
+            ContinueSetupInfo continueSetupInfo,
+            BlittableJsonReaderObject settingsJsonObject,
+            ServerStore serverStore,
+            string firstNodeTag,
+            Dictionary<string, string> otherNodesUrls,
+            License license,
+            JsonOperationContext context)
         {
             try
             {
-                serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm,
-                    "During setup wizard, " + "making sure there is no cluster from previous installation.");
+                serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentCommittedState.Term, "During setup wizard, " + "making sure there is no cluster from previous installation.");
             }
             catch (Exception e)
             {
@@ -1077,8 +1075,7 @@ namespace Raven.Server.Commercial
                 {
                     try
                     {
-                        serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm,
-                            "During setup wizard, " + "making sure there is no cluster from previous installation.");
+                        serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentCommittedState.Term, "During setup wizard, " + "making sure there is no cluster from previous installation.");
                     }
                     catch (Exception e)
                     {
@@ -1129,61 +1126,60 @@ namespace Raven.Server.Commercial
                            Path.Combine(AppContext.BaseDirectory, certificateFileName);
                 },
                 OnPutServerWideStudioConfigurationValues = async studioEnvironment =>
-                    {
-                        var res = await serverStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(
-                            new ServerWideStudioConfiguration { Disabled = false, Environment = studioEnvironment }, RaftIdGenerator.DontCareId));
+                {
+                    var res = await serverStore.PutValueInClusterAsync(new PutServerWideStudioConfigurationCommand(
+                        new ServerWideStudioConfiguration { Disabled = false, Environment = studioEnvironment }, RaftIdGenerator.DontCareId));
 
-                        await serverStore.Cluster.WaitForIndexNotification(res.Index);
-                    },
+                    await serverStore.Cluster.WaitForIndexNotification(res.Index);
+                },
                 OnBeforeAddingNodesToCluster = async (publicServerUrl, localNodeTag) =>
-                        {
-                            try
-                            {
-                        serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentTerm,
-                            "During setup wizard, " + "making sure there is no cluster from previous installation.");
-                            }
-                            catch (Exception e)
-                            {
-                                throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
-                            }
+                {
+                    try
+                    {
+                        serverStore.Engine.SetNewState(RachisState.Passive, null, serverStore.Engine.CurrentCommittedState.Term, "During setup wizard, " + "making sure there is no cluster from previous installation.");
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException("Failed to delete previous cluster topology during setup.", e);
+                    }
 
-                            await serverStore.EnsureNotPassiveAsync(publicServerUrl, setupInfo.LocalNodeTag);
+                    await serverStore.EnsureNotPassiveAsync(publicServerUrl, setupInfo.LocalNodeTag);
 
-                            await DeleteAllExistingCertificates(serverStore);
+                    await DeleteAllExistingCertificates(serverStore);
 
-                            if (setupMode == SetupMode.LetsEncrypt)
-                            {
-                                await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
-                                await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
-                            }
+                    if (setupMode == SetupMode.LetsEncrypt)
+                    {
+                        await serverStore.EnsureNotPassiveAsync(skipLicenseActivation: true);
+                        await serverStore.LicenseManager.ActivateAsync(setupInfo.License, RaftIdGenerator.DontCareId);
+                    }
 
-                            serverStore.HasFixedPort = setupInfo.NodeSetupInfos[localNodeTag].Port != 0;
-                        },
+                    serverStore.HasFixedPort = setupInfo.NodeSetupInfos[localNodeTag].Port != 0;
+                },
                 PutCertificateInCluster = async (selfSignedCertificate, newCertDef) =>
-                            {
-                                try
-                                {
+                {
+                    try
+                    {
                         var res = await serverStore.PutValueInClusterAsync(new PutCertificateCommand(selfSignedCertificate.Thumbprint, newCertDef,
                             RaftIdGenerator.DontCareId));
-                                    await serverStore.Cluster.WaitForIndexNotification(res.Index);
-                                }
-                                catch (Exception e)
-                                {
+                        await serverStore.Cluster.WaitForIndexNotification(res.Index);
+                    }
+                    catch (Exception e)
+                    {
                         throw new InvalidOperationException(
                             $"Failed to to put certificate in cluster. self signed certificate thumbprint'{selfSignedCertificate.Thumbprint}'.", e);
-                                }
-                            },
+                    }
+                },
                 AddNodeToCluster = async nodeTag =>
-                        {
-                            try
-                            {
-                                await serverStore.AddNodeToClusterAsync(setupInfo.NodeSetupInfos[nodeTag].PublicServerUrl, nodeTag, validateNotInTopology: false, token: token);
-                            }
-                            catch (Exception e)
-                            {
-                                throw new InvalidOperationException($"Failed to add node '{nodeTag}' to the cluster.", e);
-                            }
-                        },
+                {
+                    try
+                    {
+                        await serverStore.AddNodeToClusterAsync(setupInfo.NodeSetupInfos[nodeTag].PublicServerUrl, nodeTag, validateNotInTopology: false, token: token);
+                    }
+                    catch (Exception e)
+                    {
+                        throw new InvalidOperationException($"Failed to add node '{nodeTag}' to the cluster.", e);
+                    }
+                },
                 RegisterClientCertInOs = (onProgressCopy, progressCopy, clientCert) => CertificateUtils.RegisterClientCertInOs(onProgressCopy, progressCopy, clientCert)
             });
         }

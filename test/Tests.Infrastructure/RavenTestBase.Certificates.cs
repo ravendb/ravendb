@@ -158,7 +158,7 @@ public partial class RavenTestBase
                 X509Certificate2 serverCertificate;
                 try
                 {
-                    serverCertificate = CertificateHelper.CreateCertificateFromPfx(certBytes, (string)null, X509KeyStorageFlags.UserKeySet);
+                    serverCertificate = CertificateHelper.CreateCertificateFromPfx(certBytes, (string)null, X509KeyStorageFlags.UserKeySet | CertificateLoaderUtil.FlagsForExport);
                 }
                 catch (Exception e)
                 {
@@ -190,7 +190,7 @@ public partial class RavenTestBase
                         try
                         {
                             File.WriteAllBytes(serverCertificateForCommunicationPath, serverClientCertBytes);
-            }
+                        }
                         catch (Exception e)
                         {
                             throw new InvalidOperationException("Failed to write the test certificate to a temp file." +

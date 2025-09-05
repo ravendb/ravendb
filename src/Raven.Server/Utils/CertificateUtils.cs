@@ -521,7 +521,7 @@ namespace Raven.Server.Utils
                 new AsymmetricCipherKeyPair(readCertificate.GetPublicKey(), kp.Private),
                 issuerCertBytes: serverCertBytes);
 
-            var clientCertificate = CertificateLoaderUtil.CreateCertificate(clientCertBytes, null, CertificateLoaderUtil.FlagsForPersist);
+            var clientCertificate = CertificateLoaderUtil.CreateCertificateFromPfx(clientCertBytes, null, CertificateLoaderUtil.FlagsForPersist);
             return clientCertificate;
         }
 
@@ -541,7 +541,7 @@ namespace Raven.Server.Utils
                     // Create a certificate from the raw data
                     var rawData = octetString.GetOctets();
                     ValidateNoPrivateKeyInServerCert(rawData);
-                    var certificateFromExtension = CertificateLoaderUtil.CreateCertificate(rawData);
+                    var certificateFromExtension = CertificateLoaderUtil.CreateCertificateFromPfx(rawData);
                     return certificateFromExtension;
                 }
             }
