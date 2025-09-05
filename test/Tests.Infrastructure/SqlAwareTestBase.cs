@@ -129,7 +129,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        internal static DisposableAction WithSqlDatabase(MigrationProvider provider, out string connectionString, out string schemaName, string dataSet = "northwind", bool includeData = true)
+        internal DisposableAction WithSqlDatabase(MigrationProvider provider, out string connectionString, out string schemaName, string dataSet = "northwind", bool includeData = true)
         {
             switch (provider)
             {
@@ -151,7 +151,7 @@ namespace Tests.Infrastructure
             }
         }
 
-        private static DisposableAction WithMsSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
+        private DisposableAction WithMsSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
             databaseName = "SqlTest_" + Guid.NewGuid();
             connectionString = MsSqlConnectionString.Instance.VerifiedConnectionString.Value + $";Initial Catalog={databaseName}";
@@ -176,7 +176,7 @@ namespace Tests.Infrastructure
                 {
                     dbConnection.Open();
 
-                    var assembly = Assembly.GetExecutingAssembly();
+                    var assembly = GetType().Assembly;
 
                     var textStreamReader = new StreamReader(assembly.GetManifestResourceStream("SlowTests.Data.mssql." + dataSet + ".create.sql"));
                     var commands = textStreamReader.ReadToEnd().Split(" GO ");
@@ -254,7 +254,7 @@ namespace Tests.Infrastructure
             return new MySqlConnector.MySqlConnection(connectionString);
         }
 
-        private static DisposableAction WithMySqlDatabase(out string connectionString, out string databaseName, string dataSet, MigrationProvider provider, bool includeData = true)
+        private DisposableAction WithMySqlDatabase(out string connectionString, out string databaseName, string dataSet, MigrationProvider provider, bool includeData = true)
         {
             databaseName = "sql_test_" + Guid.NewGuid();
             var rawConnectionString = MySqlConnectionString.Instance.VerifiedConnectionString.Value;
@@ -282,7 +282,7 @@ namespace Tests.Infrastructure
                 {
                     dbConnection.Open();
 
-                    var assembly = Assembly.GetExecutingAssembly();
+                    var assembly = GetType().Assembly;
 
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
@@ -324,7 +324,7 @@ namespace Tests.Infrastructure
             });
         }
 
-        private static DisposableAction WithNpgSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
+        private DisposableAction WithNpgSqlDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
             databaseName = "npgSql_test_" + Guid.NewGuid();
             var rawConnectionString = NpgSqlConnectionString.Instance.VerifiedConnectionString.Value;
@@ -349,7 +349,7 @@ namespace Tests.Infrastructure
                 {
                     // ConnectionString with DB
                     dbConnection.Open();
-                    var assembly = Assembly.GetExecutingAssembly();
+                    var assembly = GetType().Assembly;
 
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
@@ -399,7 +399,7 @@ namespace Tests.Infrastructure
             });
         }
 
-        private static DisposableAction WithOracleDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
+        private DisposableAction WithOracleDatabase(out string connectionString, out string databaseName, string dataSet, bool includeData = true)
         {
             databaseName = "C##" + Guid.NewGuid();
             var pass = "pass";
@@ -434,7 +434,7 @@ namespace Tests.Infrastructure
                 {
                     // ConnectionString with DB
                     dbConnection.Open();
-                    var assembly = Assembly.GetExecutingAssembly();
+                    var assembly = GetType().Assembly;
                     using (var dbCommand = dbConnection.CreateCommand())
                     {
                         dbCommand.CommandTimeout = CommandTimeout;

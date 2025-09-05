@@ -13,7 +13,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_22426 : RavenTestBase
+public class RavenDB_22426 : SqlAwareTestBase
 {
     private const string EtlScript = @"
         var updatedDto = {
@@ -33,7 +33,7 @@ public class RavenDB_22426 : RavenTestBase
     {
         using (var store = GetDocumentStore())
         {
-            using (SqlAwareTestBase.WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
+            using (WithSqlDatabase(MigrationProvider.MsSQL, out var connectionString, out string schemaName, dataSet: null, includeData: false))
             {
                 CreateRdbmsSchema(connectionString);
 
