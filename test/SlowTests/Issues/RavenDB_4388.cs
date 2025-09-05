@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenDB_4388.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Threading;
+﻿using System.Threading;
 using FastTests;
 using Tests.Infrastructure;
 using Xunit;

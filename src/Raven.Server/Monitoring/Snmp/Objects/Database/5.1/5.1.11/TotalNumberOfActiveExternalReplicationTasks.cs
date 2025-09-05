@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="DatabaseOpenedCount.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using Raven.Client.ServerWide;
+﻿using Raven.Client.ServerWide;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 

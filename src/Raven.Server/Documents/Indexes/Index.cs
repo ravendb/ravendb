@@ -3371,7 +3371,7 @@ namespace Raven.Server.Documents.Indexes
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
                         if (queryContext.AreTransactionsOpened() == false)
-                            queryContext.OpenReadTransaction();
+                            resultToFill.ReadTransactionDispose = queryContext.OpenReadTransaction();
 
                         // we have to open read tx for mapResults _after_ we open index tx
 
@@ -3384,6 +3384,8 @@ namespace Raven.Server.Documents.Indexes
                             isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag, cutoffEtag?.CompareExchangeReferenceEtag);
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
+                                resultToFill.ReadTransactionDispose?.Dispose();
+                                resultToFill.ReadTransactionDispose = null;
                                 queryContext.CloseTransaction();
 
                                 Debug.Assert(query.WaitForNonStaleResultsTimeout != null);

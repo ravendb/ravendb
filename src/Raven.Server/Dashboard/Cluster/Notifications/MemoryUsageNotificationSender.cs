@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="MemoryUsageNotificationSender.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Threading;
 using Raven.Client.Util;
 using Raven.Server.NotificationCenter;

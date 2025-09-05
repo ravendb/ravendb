@@ -30,7 +30,6 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
 
     public override async ValueTask ExecuteAsync()
     {
-
         using (var webSocket = await HttpContext.WebSockets.AcceptWebSocketAsync())
         using (var token = RequestHandler.CreateHttpRequestBoundOperationToken())
         {
@@ -66,7 +65,7 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
         {
             using (var connection = new ProxyWebSocketConnection(webSocket, remoteNodeUrl, remoteEndpointUrl, ServerStore.ContextPool, token.Token))
             {
-                await connection.Establish(RequestHandler.Server.Certificate?.Certificate);
+                await connection.Establish(RequestHandler.Server.Certificate?.ClientCertificate);
 
                 await connection.RelayData();
             }

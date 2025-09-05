@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="AdminMonitoringHandler.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading.Tasks;
 using Raven.Server.Documents;
 using Raven.Server.Monitoring;

@@ -27,6 +27,7 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
@@ -156,6 +157,18 @@ namespace FastTests
 
         protected internal virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
+            if (options?.ClientCertificate != null && SecretProtection.HasCertificateClientAuthEnhancedKeyUsage(options.ClientCertificate) == false)
+            {
+                throw new InvalidOperationException($"The {nameof(options.ClientCertificate)} must have the Client Authentication Enhanced Key Usage." +
+                                                    " Are you supplying 'Server Certificate' instead of 'Server Certificate for Communication'?");
+            }
+            
+            if (options?.AdminCertificate != null && SecretProtection.HasCertificateClientAuthEnhancedKeyUsage(options.AdminCertificate) == false)
+            {
+                throw new InvalidOperationException($"The {nameof(options.AdminCertificate)} must have the Client Authentication Enhanced Key Usage." +
+                                                    " Are you supplying 'Server Certificate' instead of 'Server Certificate for Communication'?");
+            }
+            
             DocumentStore adminStore = null;
             try
             {

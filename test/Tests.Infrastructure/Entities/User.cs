@@ -1,9 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="User.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-namespace Raven.Tests.Core.Utils.Entities
+﻿namespace Raven.Tests.Core.Utils.Entities
 {
     public class User
     {

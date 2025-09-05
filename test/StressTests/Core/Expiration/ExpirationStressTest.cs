@@ -1,10 +1,4 @@
-﻿//-----------------------------------------------------------------------
-// <copyright file="Expiration.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using SlowTests.Server.Documents.Expiration;
 using Tests.Infrastructure;
 using Xunit;

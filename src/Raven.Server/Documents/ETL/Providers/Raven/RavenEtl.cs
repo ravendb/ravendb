@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
 
         private static RequestExecutor CreateNewRequestExecutor(RavenEtlConfiguration configuration, ServerStore serverStore)
         {
-            var certificate = serverStore.Server.Certificate.Certificate;
+            var certificate = serverStore.Server.Certificate.ClientCertificate;
 
             if (certificate != null && configuration.UsingEncryptedCommunicationChannel() == false && configuration.AllowEtlOnNonEncryptedChannel)
             {

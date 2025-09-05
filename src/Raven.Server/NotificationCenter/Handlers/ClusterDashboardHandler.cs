@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="ClusterDashboardHandler.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.IO;
 using System.Net.WebSockets;
 using System.Threading.Tasks;
@@ -63,7 +57,7 @@ namespace Raven.Server.NotificationCenter.Handlers
 
                         using (var connection = new ProxyWebSocketConnection(webSocket, remoteNodeUrl, $"/admin/cluster-dashboard/remote/watch?thumbprint={currentCert?.Thumbprint}", ServerStore.ContextPool, ServerStore.ServerShutdown))
                         {
-                            await connection.Establish(Server.Certificate?.Certificate);
+                            await connection.Establish(Server.Certificate?.ClientCertificate);
 
                             await connection.RelayData();
                         }

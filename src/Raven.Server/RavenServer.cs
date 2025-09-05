@@ -31,6 +31,11 @@ using OpenTelemetry;
 using OpenTelemetry.Exporter;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Resources;
+using Org.BouncyCastle.Asn1.X509;
+using Org.BouncyCastle.Crypto;
+using Org.BouncyCastle.Pkcs;
+using Org.BouncyCastle.Security;
+using Raven.Client;
 using Raven.Client.Documents.Changes;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.Replication;
@@ -78,6 +83,7 @@ using Sparrow.Utils;
 using Voron;
 using DateTime = System.DateTime;
 using Raven.Server.Monitoring.OpenTelemetry;
+using Constants = Raven.Server.Monitoring.OpenTelemetry.Constants;
 
 namespace Raven.Server
 {
@@ -250,9 +256,9 @@ namespace Raven.Server
 
                     options.ConfigureEndpointDefaults(listenOptions => listenOptions.Protocols = Configuration.Http.Protocols);
 
-                    if (Certificate.Certificate != null)
+                    if (Certificate.ServerCertificate != null)
                     {
-                        _httpsConnectionMiddleware = new HttpsConnectionMiddleware(this, options, Certificate.Certificate);
+                        _httpsConnectionMiddleware = new HttpsConnectionMiddleware(this, options, Certificate.ServerCertificate);
 
                         foreach (var address in ListenEndpoints.Addresses)
                         {
@@ -331,11 +337,24 @@ namespace Raven.Server
                 var serverAddressesFeature = _webHost.ServerFeatures.Get<IServerAddressesFeature>();
                 WebUrl = GetWebUrl(serverAddressesFeature.Addresses.First()).TrimEnd('/');
 
-                if (Certificate.Certificate != null)
+                _tcpListenerStatus = StartTcpListener(ListenToNewTcpConnection);
+
+                try
+                {
+                    ServerStore.Initialize();
+                }
+                catch (Exception e)
+                {
+                    if (Logger.IsOperationsEnabled)
+                        Logger.Operations("Could not open the server store", e);
+                    throw;
+                }
+
+                if (Certificate.ClientCertificate != null)
                 {
                     try
                     {
-                        AssertServerCanContactItselfWhenAuthIsOn(Certificate.Certificate)
+                        AssertServerCanContactItselfWhenAuthIsOn(Certificate.ClientCertificate)
                             .IgnoreUnobservedExceptions()
                             // here we wait a bit, just enough so for normal servers
                             // we'll be successful, but not enough to hang the server
@@ -359,24 +378,11 @@ namespace Raven.Server
                         RedirectsHttpTrafficToHttps();
                     }
 
-                    SecretProtection.AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(Certificate.Certificate, Certificate.Certificate.Export(X509ContentType.Cert), Configuration.Security.CertificatePassword);
+                    SecretProtection.AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(Certificate.ServerCertificate, Certificate.ServerCertificate.Export(X509ContentType.Cert), Configuration.Security.CertificatePassword);
                 }
 
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"Initialized Server... {WebUrl}");
-
-                _tcpListenerStatus = StartTcpListener(ListenToNewTcpConnection);
-
-                try
-                {
-                    ServerStore.Initialize();
-                }
-                catch (Exception e)
-                {
-                    if (Logger.IsOperationsEnabled)
-                        Logger.Operations("Could not open the server store", e);
-                    throw;
-                }
 
                 ServerStore.TriggerDatabases();
 
@@ -553,10 +559,10 @@ namespace Raven.Server
 
         private void UpdateCertificateExpirationAlert()
         {
-            var remainingDays = (Certificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
+            var remainingDays = (Certificate.ServerCertificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
             if (remainingDays <= 0)
             {
-                string msg = $"The server certificate has expired on {Certificate.Certificate.NotAfter.ToShortDateString()}.";
+                string msg = $"The server certificate has expired on {Certificate.ServerCertificate.NotAfter.ToShortDateString()}.";
 
                 if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
                 {
@@ -568,9 +574,9 @@ namespace Raven.Server
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations(msg);
             }
-            else if (remainingDays <= 20)
+            else if (remainingDays <= Configuration.Core.AcmeDaysToRenewBeforeExpiration)
             {
-                string msg = $"The server certificate will expire on {Certificate.Certificate.NotAfter.ToShortDateString()}. There are only {(int)remainingDays} days left for renewal.";
+                string msg = $"The server certificate will expire on {Certificate.ServerCertificate.NotAfter.ToShortDateString()}. There are only {(int)remainingDays} days left for renewal.";
 
                 if (Configuration.Core.SetupMode == SetupMode.LetsEncrypt)
                 {
@@ -606,7 +612,7 @@ namespace Raven.Server
 
             try
             {
-                AssertServerCanContactItselfWhenAuthIsOn(Certificate.Certificate)
+                AssertServerCanContactItselfWhenAuthIsOn(Certificate.ClientCertificate)
                     .IgnoreUnobservedExceptions()
                     // here we wait a bit, just enough so for normal servers
                     // we'll be successful, but not enough to hang the server
@@ -627,7 +633,7 @@ namespace Raven.Server
             catch (Exception exception)
             {
                 if (Logger.IsOperationsEnabled)
-                    Logger.Operations($"Failed to check the expiration date of the new server certificate '{Certificate.Certificate?.Subject} ({Certificate.Certificate?.Thumbprint})'", exception);
+                    Logger.Operations($"Failed to check the expiration date of the new server certificate '{Certificate.ServerCertificate?.GetDisplayName()} ({Certificate.ServerCertificate?.Thumbprint})'", exception);
             }
         }
 
@@ -1031,7 +1037,7 @@ namespace Raven.Server
                     if (Logger.IsOperationsEnabled)
                         Logger.Operations($"When setting the certificate, validating that the server can authenticate with itself using {url}.");
 
-                    // Using the server certificate as a client certificate to test if we can talk to ourselves
+                    // Using the client certificate generated from the server certificate to test if we can talk to ourselves
                     httpMessageHandler.ClientCertificates.Add(certificateCertificate);
                     using (var client = new RavenHttpClient(httpMessageHandler)
                     {
@@ -1099,7 +1105,7 @@ namespace Raven.Server
             var cert2 = HttpsConnectionMiddleware.ConvertToX509Certificate2(cert);
 
             // We trust ourselves
-            if (cert2?.Thumbprint == Certificate?.Certificate?.Thumbprint)
+            if (IsServerCertificate(cert2))
                 return true;
 
             // self-signed is acceptable only if we have the same issuer as the remote certificate
@@ -1109,7 +1115,7 @@ namespace Raven.Server
                     ? chain.ChainElements[1].Certificate
                     : chain.ChainElements[0].Certificate;
 
-                if (issuer?.Thumbprint == Certificate?.Certificate?.Thumbprint)
+                if (issuer?.Thumbprint == Certificate?.ServerCertificate?.Thumbprint)
                     return true;
             }
 
@@ -1148,7 +1154,7 @@ namespace Raven.Server
             // confirm they got it (or if there are less than 3 days to spare).
 
             var currentCertificate = Certificate;
-            if (currentCertificate.Certificate == null)
+            if (currentCertificate.ServerCertificate == null)
             {
                 return false; // shouldn't happen, but just in case
             }
@@ -1207,9 +1213,9 @@ namespace Raven.Server
                     throw new InvalidOperationException("Tried to load certificate as part of refresh check, but got an error!", e);
                 }
 
-                if (newCertificate.Certificate.Thumbprint != currentCertificate.Certificate.Thumbprint)
+                if (newCertificate.ServerCertificate.Thumbprint != currentCertificate.ServerCertificate.Thumbprint)
                 {
-                    HttpsConnectionMiddleware.EnsureCertificateIsAllowedForServerAuth(newCertificate.Certificate);
+                    HttpsConnectionMiddleware.EnsureCertificateIsAllowedForServerAuth(newCertificate.ServerCertificate);
 
                     if (Interlocked.CompareExchange(ref Certificate, newCertificate, currentCertificate) == currentCertificate)
                         ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
@@ -1271,13 +1277,13 @@ namespace Raven.Server
         {
             try
             {
-                var certHolder = ServerStore.Secrets.LoadCertificateWithExecutable(
+                var (certificate, _) = ServerStore.Secrets.LoadCertificateWithExecutable(
                     Configuration.Security.CertificateRenewExec,
                     Configuration.Security.CertificateRenewExecArguments,
                     ServerStore.GetLicenseType(),
                     ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
-                return CertificateLoaderUtil.CreateCertificate(certHolder.Certificate.Export(X509ContentType.Pfx), flags: CertificateLoaderUtil.FlagsForPersist);
+                return CertificateLoaderUtil.CreateCertificate(certificate.Export(X509ContentType.Pfx), flags: CertificateLoaderUtil.FlagsForPersist);
             }
             catch (Exception e)
             {
@@ -1340,7 +1346,7 @@ namespace Raven.Server
                 // We don't want an alert here, this happens frequently.
                 if (Logger.IsOperationsEnabled)
                     Logger.Operations(
-                        $"Renew check: still have time left to renew the server certificate with thumbprint `{currentCertificate.Certificate.Thumbprint}`, estimated renewal date: {renewalDate}");
+                        $"Renew check: still have time left to renew the server certificate with thumbprint `{currentCertificate.ServerCertificate.Thumbprint}`, estimated renewal date: {renewalDate}");
                 return null;
             }
 
@@ -1405,13 +1411,13 @@ namespace Raven.Server
             if (forceRenew)
                 return (true, DateTime.UtcNow.Date);
 
-            var remainingDays = (currentCertificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
-            if (remainingDays <= 20)
+            var remainingDays = (currentCertificate.ServerCertificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
+            if (remainingDays <= ServerStore.Configuration.Core.AcmeDaysToRenewBeforeExpiration)
             {
                 return (true, DateTime.UtcNow.Date);
             }
 
-            var firstPossibleDate = currentCertificate.Certificate.NotAfter.ToUniversalTime().AddDays(-30);
+            var firstPossibleDate = currentCertificate.ServerCertificate.NotAfter.ToUniversalTime().AddDays(-30);
 
             // We can do this because saturday is last in the DayOfWeek enum
             var daysUntilSaturday = DayOfWeek.Saturday - firstPossibleDate.DayOfWeek;
@@ -1437,32 +1443,32 @@ namespace Raven.Server
             {
                 SecretProtection.ValidateCertificateBeforeReplacement(newCertificate, password, ServerStore.GetLicenseType(), ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
-                if (Certificate.Certificate.Thumbprint == newCertificate.Thumbprint)
+                if (Certificate.ServerCertificate.Thumbprint == newCertificate.Thumbprint)
                 {
                     if (Logger.IsOperationsEnabled)
                     {
-                        Logger.Operations($"The new certificate matches the current one. No further steps needed. {Certificate.Certificate.GetBasicCertificateInfo()}");
+                        Logger.Operations($"The new certificate matches the current one. No further steps needed. {Certificate.ServerCertificate.GetBasicCertificateInfo()}");
                     }
                     return;
                 }
 
                 if (Logger.IsOperationsEnabled)
                 {
-                    Logger.Operations($"Starting certificate replication. current:'{Certificate.Certificate.GetBasicCertificateInfo()}', new:'{newCertificate.GetBasicCertificateInfo()}'");
+                    Logger.Operations($"Starting certificate replication. current:'{Certificate.ServerCertificate.GetBasicCertificateInfo()}', new:'{newCertificate.GetBasicCertificateInfo()}'");
                 }
 
                 // During replacement of a cluster certificate, we must have both the new and the old server certificates registered in the server store.
                 // This is needed for trust in the case where a node replaced its own certificate while another node still runs with the old certificate.
                 // Since both nodes use different certificates, they will only trust each other if the certs are registered in the server store.
                 // When the certificate replacement is finished throughout the cluster, we will delete both these entries.
-                await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Certificate.Certificate.Thumbprint,
+                await ServerStore.PutValueInClusterAsync(new PutCertificateCommand(Certificate.ServerCertificate.Thumbprint,
                     new CertificateDefinition
                     {
-                        Certificate = Convert.ToBase64String(Certificate.Certificate.Export(X509ContentType.Cert)),
-                        Thumbprint = Certificate.Certificate.Thumbprint,
-                        PublicKeyPinningHash = Certificate.Certificate.GetPublicKeyPinningHash(),
-                        NotAfter = Certificate.Certificate.NotAfter,
-                        NotBefore = Certificate.Certificate.NotBefore,
+                        Certificate = Convert.ToBase64String(Certificate.ServerCertificate.Export(X509ContentType.Cert)),
+                        Thumbprint = Certificate.ServerCertificate.Thumbprint,
+                        PublicKeyPinningHash = Certificate.ServerCertificate.GetPublicKeyPinningHash(),
+                        NotAfter = Certificate.ServerCertificate.NotAfter,
+                        NotBefore = Certificate.ServerCertificate.NotBefore,
                         Name = "Old Server Certificate - can delete",
                         SecurityClearance = SecurityClearance.ClusterNode
                     }, $"{raftRequestId}/put-old-certificate"));
@@ -1557,7 +1563,7 @@ namespace Raven.Server
                                                     $"but the Security.Certificate.LetsEncrypt.Email configuration setting is: {Configuration.Security.CertificateLetsEncryptEmail}. " +
                                                     "There is a mismatch, therefore cannot automatically renew the Lets Encrypt certificate. Please contact support.");
 
-            var hosts = CertificateUtils.GetCertificateAlternativeNames(existing.Certificate).ToArray();
+            var hosts = CertificateUtils.GetCertificateAlternativeNames(existing.ServerCertificate).ToArray();
 
             // cloud: *.free.iftah.ravendb.cloud => we extract the domain free.iftah
             // normal: *.iftah.development.run => we extract the domain iftah
@@ -1661,20 +1667,25 @@ namespace Raven.Server
                     throw new InvalidOperationException($"Invalid certificate configuration. The configuration property '{RavenConfiguration.GetKey(x => x.Security.CertificateExec)}' has been deprecated since RavenDB 4.2, please use '{RavenConfiguration.GetKey(x => x.Security.CertificateLoadExec)}' along with '{RavenConfiguration.GetKey(x => x.Security.CertificateRenewExec)}' and '{RavenConfiguration.GetKey(x => x.Security.CertificateChangeExec)}'.");
                 }
 
+                X509Certificate2 serverCertificate = null;
+                AsymmetricKeyEntry privateKey = null;
                 if (string.IsNullOrEmpty(Configuration.Security.CertificatePath) == false)
-                    return ServerStore.Secrets.LoadCertificateFromPath(
+                    (serverCertificate, privateKey) = ServerStore.Secrets.LoadCertificateFromPath(
                         Configuration.Security.CertificatePath,
                         Configuration.Security.CertificatePassword,
                         ServerStore.GetLicenseType(),
                         ServerStore.Configuration.Security.CertificateValidationKeyUsages);
                 if (string.IsNullOrEmpty(Configuration.Security.CertificateLoadExec) == false)
-                    return ServerStore.Secrets.LoadCertificateWithExecutable(
+                    (serverCertificate, privateKey) = ServerStore.Secrets.LoadCertificateWithExecutable(
                         Configuration.Security.CertificateLoadExec,
                         Configuration.Security.CertificateLoadExecArguments,
                         ServerStore.GetLicenseType(),
                         ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
+                if (serverCertificate == null)
                 return null;
+                
+                return new CertificateUtils.CertificateHolder(serverCertificate, privateKey);
             }
             catch (Exception e)
             {
@@ -1871,7 +1882,7 @@ namespace Raven.Server
             {
                 authenticationStatus.Status = AuthenticationStatus.NotYetValid;
             }
-            else if (certificate.Equals(Certificate.Certificate))
+            else if (IsServerCertificate(certificate))
             {
                 authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
             }
@@ -1888,7 +1899,7 @@ namespace Raven.Server
                     if (AreCertificateSansValid(certificate))
                     {
                         authLogMessage =
-                            $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.Subject} ({certificate.Thumbprint})' which is not registered in the cluster. " +
+                            $"Connection from {GetRemoteAddress(connectionInfo)} with new certificate '{certificate.GetDisplayName()} ({certificate.Thumbprint})' which is not registered in the cluster. " +
                             "Allowing the connection based on the certificate's *issuer* which is trusted by the cluster and valid SAN matching server domain. " +
                             $"Registering the new certificate explicitly based on permissions of existing certificate '{issuer}'. Security Clearance: {AuthenticationStatus.ClusterAdmin}";
                         authenticationStatus.Status = AuthenticationStatus.ClusterAdmin;
@@ -2485,7 +2496,7 @@ namespace Raven.Server
                     await RespondToTcpConnection(stream, context, $"Not supporting version {header.OperationVersion} for {header.Operation}", TcpConnectionStatus.TcpVersionMismatch, supported);
                 }
 
-                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, header, tcpClient, out var err, out TcpConnectionStatus statusResult);
+                bool authSuccessful = TryAuthorize(Configuration, tcp.Stream, tcp.Certificate, header, tcpClient, out var err, out TcpConnectionStatus statusResult);
                 //At this stage the error is not relevant.
 
                 if (header.LicensedFeatures != null)
@@ -2677,6 +2688,8 @@ namespace Raven.Server
 
             HttpsConnectionMiddleware.EnsureCertificateIsAllowedForServerAuth(certificate);
 
+            SecretProtection.AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(certificate, rawBytes, password);
+
             if (Interlocked.CompareExchange(ref Certificate, newCertHolder, certificateHolder) == certificateHolder)
             {
                 ServerCertificateChanged?.Invoke(this, EventArgs.Empty);
@@ -2842,7 +2855,7 @@ namespace Raven.Server
 
         internal async Task<(Stream Stream, X509Certificate2 Certificate)> AuthenticateAsServerIfSslNeeded(Stream stream)
         {
-            if (Certificate.Certificate != null)
+            if (Certificate.ServerCertificate != null)
             {
                 var sslStream = new SslStream(stream, false, (sender, certificate, chain, errors) =>
                         // it is fine that the client doesn't have a cert, we just care that they
@@ -2856,7 +2869,7 @@ namespace Raven.Server
 
                 await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
                 {
-                    ServerCertificateContext = Certificate.CertificateContext,
+                    ServerCertificateContext = Certificate.ServerCertificateContext,
                     ClientCertificateRequired = true,
                     CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
                     EncryptionPolicy = EncryptionPolicy.RequireEncryption,
@@ -2864,13 +2877,35 @@ namespace Raven.Server
                     CipherSuitesPolicy = CipherSuitesPolicy
                 });
 
-                return (sslStream, HttpsConnectionMiddleware.ConvertToX509Certificate2(sslStream.RemoteCertificate));
+                var certificate = HttpsConnectionMiddleware.ConvertToX509Certificate2(sslStream.RemoteCertificate);
+                certificate = GetCertificateForAuthorization(certificate);
+
+                return (sslStream, certificate);
             }
 
             return (stream, null);
         }
 
-        private bool TryAuthorize(RavenConfiguration configuration, Stream stream, TcpConnectionHeaderMessage header, TcpClient tcpClient, out string msg, out TcpConnectionStatus statusResult)
+        internal static X509Certificate2 GetCertificateForAuthorization(X509Certificate2 certificate)
+        {
+            if (certificate == null || SecretProtection.HasCertificateServerAuthEnhancedKeyUsage(certificate))
+                return certificate;
+            
+            var extractedCertificate = CertificateUtils.ExtractServerCertificateFromExtension(certificate);
+
+            if (extractedCertificate != null && extractedCertificate.GetPublicKeyPinningHash() == certificate.GetPublicKeyPinningHash())
+                return extractedCertificate;
+
+            return certificate;
+        }
+
+        private bool TryAuthorize(RavenConfiguration configuration,
+            Stream stream,
+            X509Certificate2 certificate,
+            TcpConnectionHeaderMessage header,
+            TcpClient tcpClient,
+            out string msg,
+            out TcpConnectionStatus statusResult)
         {
             msg = null;
             if (header.ServerId != null && header.ServerId != ServerStore.ServerId.ToString())
@@ -2892,7 +2927,6 @@ namespace Raven.Server
                 return false;
             }
 
-            var certificate = (X509Certificate2)sslStream.RemoteCertificate;
             var auth = AuthenticateConnectionCertificate(certificate, tcpClient);
 
             switch (auth.Status)
@@ -3213,6 +3247,13 @@ namespace Raven.Server
                 if (socket != null)
                     socket.Close();
             }
+        }
+
+        public bool IsServerCertificate(X509Certificate2 certificate)
+        {
+            var serverCertificate = Certificate?.ServerCertificate;
+            
+            return serverCertificate != null && certificate.Equals(serverCertificate);
         }
 
         public bool CertificateHasWellKnownIssuer(X509Certificate2 cert, out string issuer)

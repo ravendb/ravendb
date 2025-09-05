@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="DocumentSession.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Net;
 using Raven.Client.Documents.Commands;
 using Sparrow.Json;

@@ -4,6 +4,7 @@ using System.Net;
 using System.Text;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Web
@@ -62,7 +63,7 @@ namespace Raven.Server.Web
             sb.Append(RequestIp);
             sb.Append(", ");
             if (clientCert != null) 
-                sb.Append($"CN={clientCert.Subject} [{clientCert.Thumbprint}], ");
+                sb.Append($"CN={clientCert.GetDisplayName()} [{clientCert.Thumbprint}], ");
             else
                 sb.Append("no certificate, ");
 

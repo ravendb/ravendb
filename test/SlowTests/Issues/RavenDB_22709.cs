@@ -332,7 +332,7 @@ namespace SlowTests.Issues
 
         private X509Certificate2 RegisterClientCertificate((List<RavenServer> Nodes, RavenServer Leader, TestCertificatesHolder Certificates) cluster)
         {
-            return Certificates.RegisterClientCertificate(cluster.Certificates.ServerCertificate.Value, cluster.Certificates
+            return Certificates.RegisterClientCertificate(cluster.Certificates.ServerCertificateForCommunication.Value, cluster.Certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: cluster.Leader);
         }
 

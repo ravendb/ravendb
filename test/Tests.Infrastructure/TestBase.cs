@@ -173,6 +173,7 @@ namespace FastTests
             }
 
             RequestExecutor.RemoteCertificateValidationCallback += (sender, cert, chain, errors) => true;
+            RequestExecutor.ExtractServerCertificateFromExtension = CertificateUtils.ExtractServerCertificateFromExtension;
 
             TrafficWatchToLog.Instance.UpdateConfiguration(RavenConfiguration.Default.TrafficWatch);
             EventListenerToLog.Instance.UpdateConfiguration(new EventListenerToLog.EventListenerConfiguration

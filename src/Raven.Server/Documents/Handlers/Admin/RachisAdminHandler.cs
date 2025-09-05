@@ -335,7 +335,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             Client.ServerWide.Commands.NodeInfo nodeInfo;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(nodeUrl, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(nodeUrl, Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
             {
                 requestExecutor.DefaultTimeout = ServerStore.Engine.OperationTimeout;
 
@@ -441,7 +441,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
 
                         // if it's the same server certificate as our own, we don't want to add it to the cluster
-                        if (certificate.Thumbprint != Server.Certificate.Certificate.Thumbprint)
+                        // also we don't want to add client cert used by server, each node has it's own in local state only 
+                        if (Server.IsServerCertificate(certificate) == false)
                         {
                             using (ctx.OpenReadTransaction())
                             {
@@ -483,7 +484,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
                         nodeTag = possibleNode.HasUrl ? possibleNode.NodeTag : null;
 
-                        if (certificate != null && certificate.Thumbprint != Server.Certificate.Certificate.Thumbprint)
+                        if (certificate != null && Server.IsServerCertificate(certificate) == false)
                         {
                             var modifiedServerCert = JsonDeserializationServer.CertificateDefinition(ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint));
 
@@ -722,7 +723,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
 
                         var cmd = new RemoveEntryFromRaftLogCommand(index);
-                        using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(node.Value, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+                        using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(node.Value, Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
                         {
                             await requestExecutor.ExecuteAsync(cmd, context);
                             nodeList.AddRange(cmd.Result);

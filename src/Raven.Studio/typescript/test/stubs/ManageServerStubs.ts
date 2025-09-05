@@ -480,8 +480,25 @@ export class ManageServerStubs {
                     PublicKeyPinningHash: "tYDktnF7XEos5gOGMC4t4eBi5MDSAHDpFqX1rV9oLCE=",
                     HasTwoFactor: false,
                 },
+                {
+                    Name: "Server Certificate for communication A",
+                    Thumbprint: "JF61904E1926ED2EDD5BB4BA8BC34742960B7100",
+                    SecurityClearance: "ClusterNode",
+                    Permissions: {},
+                    NotAfter: moment()
+                        .add(2 as const, "years")
+                        .format(),
+                    NotBefore: moment()
+                        .add(-10 as const, "days")
+                        .format(),
+                    CollectionSecondaryKeys: [],
+                    CollectionPrimaryKey: "",
+                    PublicKeyPinningHash: "zyaqn9MDYitTWCf+oGwvu+GG9xqyxzZoZLANt5F/BL4=",
+                    HasTwoFactor: false,
+                },
             ],
             LoadedServerCert: "BCD2B71A3021A644E94768CCEFF7BE56E2006144",
+            LoadedServerCertForCommunication: "JF61904E1926ED2EDD5BB4BA8BC34742960B7100",
             WellKnownAdminCerts: ["AdminCerts1", "AdminCerts2"],
             WellKnownIssuers: ["Issuers1", "Issuers2"],
         };

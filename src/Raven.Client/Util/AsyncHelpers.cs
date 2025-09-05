@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="AsyncHelpers.cs" company="Hibernating Rhinos LTD">
-//      Copyright (coffee) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;

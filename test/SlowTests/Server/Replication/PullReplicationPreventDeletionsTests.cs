@@ -33,7 +33,7 @@ namespace SlowTests.Server.Replication
         public async Task PreventDeletionsOnHubForAttachments()
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -174,7 +174,7 @@ namespace SlowTests.Server.Replication
         public async Task PreventDeletionOnHubSinkCompromised()
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -309,7 +309,7 @@ namespace SlowTests.Server.Replication
         public async Task DeleteWhenAcceptSinkDeletionsFlagOff()
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -420,7 +420,7 @@ namespace SlowTests.Server.Replication
         public async Task PreventDeletionsOnHub()
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -542,7 +542,7 @@ namespace SlowTests.Server.Replication
         public async Task EnsureArtificialDocsAreSkippedOnReplication_17795(RavenTestParameters config)
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");
@@ -661,7 +661,7 @@ namespace SlowTests.Server.Replication
         public async Task MakeSureDeletionsRevisionsDontReplicate()
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             var hubDatabase = GetDatabaseName("HUB");

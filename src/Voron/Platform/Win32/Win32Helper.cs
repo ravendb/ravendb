@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="Win32Helper.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow.Utils;

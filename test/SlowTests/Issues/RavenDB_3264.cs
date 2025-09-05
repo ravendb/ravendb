@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="RavenDB_3264.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using FastTests;
+﻿using FastTests;
 using Raven.Server.Documents;
 using Raven.Server.Documents.Patch;
 using Raven.Server.ServerWide.Context;

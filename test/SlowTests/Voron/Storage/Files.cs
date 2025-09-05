@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="Files.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.IO;
+﻿using System.IO;
 using Raven.Server.Utils;
 using Tests.Infrastructure;
 using Voron;

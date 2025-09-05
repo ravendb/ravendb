@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
@@ -18,6 +19,8 @@ using Org.BouncyCastle.Utilities;
 using Org.BouncyCastle.Utilities.Encoders;
 using Org.BouncyCastle.X509;
 using Org.BouncyCastle.X509.Extension;
+using Raven.Client;
+using Raven.Client.Util;
 using Raven.Client.Util;
 using Raven.Server.Commercial;
 using Raven.Server.Config.Categories;
@@ -362,22 +365,37 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public static CertificateUtils.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source, X509Certificate2 loadedCertificate, byte[] rawBytes, string password, LicenseType licenseType, bool validateCertKeyUsages, SetupProgressAndResult progress = null)
+        public static CertificateUtils.CertificateHolder ValidateCertificateAndCreateCertificateHolder(string source,
+            X509Certificate2 serverCertificate,
+            byte[] rawBytes,
+            string password,
+            LicenseType licenseType,
+            bool validateCertKeyUsages,
+            SetupProgressAndResult progress = null)
+        {
+            AsymmetricKeyEntry privateKey = ValidateServerCertificate(source, serverCertificate, rawBytes, password, licenseType, validateCertKeyUsages, progress);
+
+            return new CertificateUtils.CertificateHolder(serverCertificate, privateKey);
+        }
+
+        public static AsymmetricKeyEntry ValidateServerCertificate(string source,
+            X509Certificate2 loadedCertificate,
+            byte[] rawBytes,
+            string password,
+            LicenseType licenseType,
+            bool validateCertKeyUsages,
+            SetupProgressAndResult progress = null)
         {
             ValidateExpiration(source, loadedCertificate, licenseType, progress: progress);
 
             ValidatePrivateKey(source, password, rawBytes, out var privateKey, progress);
 
-            ValidateKeyUsages(source, loadedCertificate, validateCertKeyUsages, progress);
-
-            AddCertificateChainToTheUserCertificateAuthorityStoreAndCleanExpiredCerts(loadedCertificate, rawBytes, password, progress);
-
-            return new CertificateUtils.CertificateHolder(loadedCertificate, privateKey, Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)));
+            ValidateServerKeyUsages(source, loadedCertificate, validateCertKeyUsages, progress);
+            return privateKey;
         }
 
-        public static void ValidateKeyUsages(string source, X509Certificate2 loadedCertificate, bool validateKeyUsages, SetupProgressAndResult progress = null)
+        public static void ValidateServerKeyUsages(string source, X509Certificate2 loadedCertificate, bool validateKeyUsages, SetupProgressAndResult progress = null)
         {
-            var clientCert = false;
             var serverCert = false;
             var keyUsages = false;
 
@@ -385,7 +403,7 @@ namespace Raven.Server.ServerWide
             {
                 if (extension is X509KeyUsageExtension kue)
                 {
-                    if (kue.KeyUsages.HasFlag(X509KeyUsageFlags.DigitalSignature) && kue.KeyUsages.HasFlag(X509KeyUsageFlags.KeyEncipherment))
+                    if (kue.KeyUsages.HasFlag(X509KeyUsageFlags.DigitalSignature))
                         keyUsages = true;
                 }
 
@@ -395,10 +413,7 @@ namespace Raven.Server.ServerWide
                     {
                         switch (usage.Value)
                         {
-                            case "1.3.6.1.5.5.7.3.2":
-                                clientCert = true;
-                                break;
-                            case "1.3.6.1.5.5.7.3.1":
+                            case Constants.Certificates.ServerAuthenticationOid:
                                 serverCert = true;
                                 break;
                         }
@@ -406,7 +421,7 @@ namespace Raven.Server.ServerWide
                 }
             }
 
-            var shouldThrow = clientCert == false || serverCert == false;
+            var shouldThrow = serverCert == false;
             if (validateKeyUsages && keyUsages == false)
                 shouldThrow = true;
 
@@ -418,11 +433,9 @@ namespace Raven.Server.ServerWide
             if (validateKeyUsages && keyUsages == false)
             {
                 sb.AppendLine("- Key Usage: DigitalSignature");
-                sb.AppendLine("- Key Usage: KeyEncipherment");
             }
 
-            sb.AppendLine("- Enhanced Key Usage: Client Authentication (Oid 1.3.6.1.5.5.7.3.2)");
-            sb.AppendLine("- Enhanced Key Usage: Server Authentication (Oid 1.3.6.1.5.5.7.3.1)");
+            sb.AppendLine($"- Enhanced Key Usage: Server Authentication (Oid {Constants.Certificates.ServerAuthenticationOid})");
 
             var msg = sb.ToString();
 
@@ -433,10 +446,58 @@ namespace Raven.Server.ServerWide
             throw new EncryptionException(msg);
         }
 
+        public static bool HasCertificateClientAuthEnhancedKeyUsage(X509Certificate2 certificate)
+        {
+            if (certificate == null)
+                return false;
+
+            foreach (var extension in certificate.Extensions)
+            {
+                if (extension is X509EnhancedKeyUsageExtension ekue) //Enhanced Key Usage extension
+                {
+                    foreach (var usage in ekue.EnhancedKeyUsages)
+                    {
+                        switch (usage.Value)
+                        {
+                            case Constants.Certificates.ClientAuthenticationOid:
+                                return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+        
+        public static bool HasCertificateServerAuthEnhancedKeyUsage(X509Certificate2 certificate)
+        {
+            if (certificate == null)
+                return false;
+            
+            foreach (var extension in certificate.Extensions)
+            {
+                if (extension is X509EnhancedKeyUsageExtension ekue) //Enhanced Key Usage extension
+                {
+                    foreach (var usage in ekue.EnhancedKeyUsages)
+                    {
+                        switch (usage.Value)
+                        {
+                            case Constants.Certificates.ServerAuthenticationOid:
+                                return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
 #if !RVN
 
-
-        public CertificateUtils.CertificateHolder LoadCertificateWithExecutable(string executable, string args, LicenseType licenseType, bool certificateValidationKeyUsages)
+        public (X509Certificate2 Certificate, AsymmetricKeyEntry PrivateKey) LoadCertificateWithExecutable(string executable,
+            string args,
+            LicenseType licenseType,
+            bool certificateValidationKeyUsages)
         {
             Process process;
 
@@ -509,21 +570,20 @@ namespace Raven.Server.ServerWide
 
             var rawData = ms.ToArray();
             X509Certificate2 loadedCertificate;
-            AsymmetricKeyEntry privateKey;
             try
             {
                 // may need to send this over the cluster, so use exportable here
                 loadedCertificate = CertificateLoaderUtil.CreateCertificate(rawData, (string)null, CertificateLoaderUtil.FlagsForExport);
                 ValidateExpiration(executable, loadedCertificate, licenseType, throwOnExpired: false);
-                ValidatePrivateKey(executable, null, rawData, out privateKey);
-                ValidateKeyUsages(executable, loadedCertificate, certificateValidationKeyUsages);
+                ValidatePrivateKey(executable, null, rawData, out var privateKey);
+                ValidateServerKeyUsages(executable, loadedCertificate, certificateValidationKeyUsages);
+                
+                return (loadedCertificate, privateKey);
             }
             catch (Exception e)
             {
                 throw new InvalidOperationException($"Got invalid certificate via {executable} {args}", e);
             }
-
-            return new CertificateUtils.CertificateHolder(loadedCertificate, privateKey, Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)));
         }
 
         public void NotifyExecutableOfCertificateChange(string executable, string args, string newCertificateBase64)
@@ -710,15 +770,20 @@ namespace Raven.Server.ServerWide
                 // and it exploded with thousands of certificates. This caused ssl handshakes to fail on that machine, because it would timeout when
                 // trying to match one of these certs to validate the chain.
 
-                if (loadedCertificate.SubjectName.Name == null)
-                    return;
-
+                IEnumerable<X509Certificate2> existingCerts;
+                if (string.IsNullOrEmpty(loadedCertificate.SubjectName.Name))
+                {
+                    existingCerts = userIntermediateStore.Certificates.Where(x => x.GetDisplayName() == loadedCertificate.GetDisplayName()).ToList();;
+                }
+                else
+                {
                 var cnValue = loadedCertificate.SubjectName.Name.StartsWith("CN=", StringComparison.OrdinalIgnoreCase)
                     ? loadedCertificate.SubjectName.Name.Substring(3)
                     : loadedCertificate.SubjectName.Name;
+                    existingCerts = userIntermediateStore.Certificates.Find(X509FindType.FindBySubjectName, cnValue, false);
+                }
 
                 var utcNow = DateTime.UtcNow;
-                var existingCerts = userIntermediateStore.Certificates.Find(X509FindType.FindBySubjectName, cnValue, false);
                 foreach (var c in existingCerts)
                 {
                     if (c.NotAfter.ToUniversalTime() > utcNow && c.NotBefore.ToUniversalTime() < utcNow)
@@ -751,7 +816,10 @@ namespace Raven.Server.ServerWide
             }
         }
 
-        public CertificateUtils.CertificateHolder LoadCertificateFromPath(string path, string password, LicenseType licenseType, bool certificateValidationKeyUsages)
+        public (X509Certificate2 Certificate, AsymmetricKeyEntry PrivateKey) LoadCertificateFromPath(string path,
+            string password,
+            LicenseType licenseType,
+            bool certificateValidationKeyUsages)
         {
             try
             {
@@ -765,9 +833,9 @@ namespace Raven.Server.ServerWide
 
                 ValidatePrivateKey(path, password, rawData, out var privateKey);
 
-                ValidateKeyUsages(path, loadedCertificate, certificateValidationKeyUsages);
+                ValidateServerKeyUsages(path, loadedCertificate, certificateValidationKeyUsages);
 
-                return new CertificateUtils.CertificateHolder(loadedCertificate, privateKey, Convert.ToBase64String(loadedCertificate.Export(X509ContentType.Cert)));
+                return (loadedCertificate, privateKey);
             }
             catch (Exception e)
             {
@@ -781,7 +849,7 @@ namespace Raven.Server.ServerWide
 
             ValidatePrivateKey("ValidateCertificateBeforeReplacement", password, certificate.Export(X509ContentType.Pkcs12), out _);
             
-            ValidateKeyUsages("ValidateCertificateBeforeReplacement", certificate, certificateValidationKeyUsages);
+            ValidateServerKeyUsages("ValidateCertificateBeforeReplacement", certificate, certificateValidationKeyUsages);
         }
 
         internal static void ValidatePrivateKey(string source, string certificatePassword, byte[] rawData, out AsymmetricKeyEntry pk, SetupProgressAndResult progress = null)

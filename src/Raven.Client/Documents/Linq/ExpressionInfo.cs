@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="ExpressionInfo.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Reflection;
 
 namespace Raven.Client.Documents.Linq

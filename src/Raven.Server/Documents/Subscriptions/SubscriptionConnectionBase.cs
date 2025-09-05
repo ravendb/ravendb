@@ -182,8 +182,8 @@ namespace Raven.Server.Documents.Subscriptions
         }
 
         internal virtual async Task HandleBatchStatusAsync<TState, TConnection>(
-            TState state, SubscriptionBatchStatus status, 
-            Stopwatch sendingCurrentBatchStopwatch, 
+            TState state, SubscriptionBatchStatus status,
+            Stopwatch sendingCurrentBatchStopwatch,
             SubscriptionConnectionInUse markInUse,
             SubscriptionBatchStatsScope batchScope) where TState : AbstractSubscriptionConnectionsState<TConnection, TIncludesCommand>
             where TConnection : SubscriptionConnectionBase<TIncludesCommand>
@@ -265,7 +265,6 @@ namespace Raven.Server.Documents.Subscriptions
 
             if (sendingCurrentBatchStopwatch.Elapsed >= ISubscriptionConnection.HeartbeatTimeout)
                 await SendHeartBeatAsync($"Didn't find any documents to send and more then {ISubscriptionConnection.HeartbeatTimeout.TotalMilliseconds}ms passed");
-
         }
 
         protected virtual void OnError(Exception e) { }
@@ -522,14 +521,14 @@ namespace Raven.Server.Documents.Subscriptions
                 if (subscription.ArchivedDataProcessingBehavior is null)
                 {
                     // from 5.x version
-                    subscription.ArchivedDataProcessingBehavior = _subscriptions.GetDefaultArchivedDataProcessingBehavior();  
+                    subscription.ArchivedDataProcessingBehavior = _subscriptions.GetDefaultArchivedDataProcessingBehavior();
                 }
 
                 var whoseTaskIsIt = _subscriptions.GetSubscriptionResponsibleNode(context, subscription);
                 if (whoseTaskIsIt == null && record.DeletionInProgress.ContainsKey(ServerStore.NodeTag))
                     throw new DatabaseDoesNotExistException(
                         $"Stopping subscription '{name}' on node {ServerStore.NodeTag}, because database '{DatabaseName}' is being deleted.");
-                
+
                 if (record.IsDisabled)
                     throw new DatabaseDisabledException($"Stopping subscription '{name}' on node {ServerStore.NodeTag}, because database '{DatabaseName}' is disabled.");
 
@@ -582,10 +581,10 @@ namespace Raven.Server.Documents.Subscriptions
                     }
 
                     throw new SubscriptionDoesNotBelongToNodeException(
-                        $"Subscription with id '{id}' and name '{name}' can't be processed on current node ({ServerStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
-                        whoseTaskIsIt,
-                        databaseTopologyAvailabilityExplanation, id)
-                    { RegisterConnectionDurationInTicks = registerConnectionDurationInTicks };
+                            $"Subscription with id '{id}' and name '{name}' can't be processed on current node ({ServerStore.NodeTag}), because it belongs to {whoseTaskIsIt}",
+                            whoseTaskIsIt,
+                            databaseTopologyAvailabilityExplanation, id)
+                        { RegisterConnectionDurationInTicks = registerConnectionDurationInTicks };
                 }
 
                 if (subscription.Disabled || _subscriptions.DisableSubscriptionTasks)
@@ -719,72 +718,72 @@ namespace Raven.Server.Documents.Subscriptions
                         });
                         break;
                     case SubscriptionDoesNotBelongToNodeException subscriptionDoesNotBelongException:
+                    {
+                        if (string.IsNullOrEmpty(subscriptionDoesNotBelongException.AppropriateNode) == false)
                         {
-                            if (string.IsNullOrEmpty(subscriptionDoesNotBelongException.AppropriateNode) == false)
+                            try
                             {
-                                try
+                                using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
+                                using (ctx.OpenReadTransaction())
                                 {
-                                    using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-                                    using (ctx.OpenReadTransaction())
+                                    // check that the subscription exists on AppropriateNode
+                                    var clusterTopology = ServerStore.GetClusterTopology(ctx);
+                                    using (var requester = ClusterRequestExecutor.CreateForShortTermUse(
+                                               clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode),
+                                               ServerStore.Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
                                     {
-                                        // check that the subscription exists on AppropriateNode
-                                        var clusterTopology = ServerStore.GetClusterTopology(ctx);
-                                        using (var requester = ClusterRequestExecutor.CreateForShortTermUse(
-                                                   clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode),
-                                                   ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
-                                        {
-                                            await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
-                                        }
+                                        await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
                                     }
                                 }
-                                catch
-                                {
-                                    // we let the client try to connect to AppropriateNode
-                                }
                             }
-
-                            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Redirecting subscription client to different server"));
-                            if (_logger.IsInfoEnabled)
+                            catch
                             {
-                                _logger.Info("Subscription does not belong to current node", ex);
+                                // we let the client try to connect to AppropriateNode
                             }
-
-                            await WriteJsonAsync(new DynamicJsonValue
-                            {
-                                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                                [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
-                                [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                                [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
-                                [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
-                                {
-                                    [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
-                                    [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] = ServerStore.NodeTag,
-                                    [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RegisterConnectionDurationInTicks)] =
-                                        subscriptionDoesNotBelongException.RegisterConnectionDurationInTicks,
-                                    [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
-                                        new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue { [item.Key] = item.Value }))
-                                }
-                            });
-                            break;
                         }
-                    case SubscriptionChangeVectorUpdateConcurrencyException:
+
+                        AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Redirecting subscription client to different server"));
+                        if (_logger.IsInfoEnabled)
                         {
-                            AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
-                                $"Subscription change vector update concurrency error, reporting to '{ClientUri}'"));
-                            if (_logger.IsInfoEnabled)
-                            {
-                                _logger.Info("Subscription change vector update concurrency error", ex);
-                            }
-
-                            await WriteJsonAsync(new DynamicJsonValue
-                            {
-                                [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
-                                [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect),
-                                [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
-                                [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
-                            });
-                            break;
+                            _logger.Info("Subscription does not belong to current node", ex);
                         }
+
+                        await WriteJsonAsync(new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.Redirect),
+                            [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                            [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString(),
+                            [nameof(SubscriptionConnectionServerMessage.Data)] = new DynamicJsonValue
+                            {
+                                [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RedirectedTag)] = subscriptionDoesNotBelongException.AppropriateNode,
+                                [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.CurrentTag)] = ServerStore.NodeTag,
+                                [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.RegisterConnectionDurationInTicks)] =
+                                    subscriptionDoesNotBelongException.RegisterConnectionDurationInTicks,
+                                [nameof(SubscriptionConnectionServerMessage.SubscriptionRedirectData.Reasons)] =
+                                    new DynamicJsonArray(subscriptionDoesNotBelongException.Reasons.Select(item => new DynamicJsonValue { [item.Key] = item.Value }))
+                            }
+                        });
+                        break;
+                    }
+                    case SubscriptionChangeVectorUpdateConcurrencyException:
+                    {
+                        AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info,
+                            $"Subscription change vector update concurrency error, reporting to '{ClientUri}'"));
+                        if (_logger.IsInfoEnabled)
+                        {
+                            _logger.Info("Subscription change vector update concurrency error", ex);
+                        }
+
+                        await WriteJsonAsync(new DynamicJsonValue
+                        {
+                            [nameof(SubscriptionConnectionServerMessage.Type)] = nameof(SubscriptionConnectionServerMessage.MessageType.ConnectionStatus),
+                            [nameof(SubscriptionConnectionServerMessage.Status)] = nameof(SubscriptionConnectionServerMessage.ConnectionStatus.ConcurrencyReconnect),
+                            [nameof(SubscriptionConnectionServerMessage.Message)] = ex.Message,
+                            [nameof(SubscriptionConnectionServerMessage.Exception)] = ex.ToString()
+                        });
+                        break;
+                    }
                     case LicenseLimitException:
                         await WriteJsonAsync(new DynamicJsonValue
                         {
@@ -1004,11 +1003,11 @@ namespace Raven.Server.Documents.Subscriptions
             switch (clientReply.Type)
             {
                 case SubscriptionConnectionClientMessage.MessageType.Acknowledge:
-                    {
-                        AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Got acknowledge from client."));
-                        await OnClientAckAsync(clientReply.ChangeVector);
-                        break;
-                    }
+                {
+                    AddToStatusDescription(CreateStatusMessage(ConnectionStatus.Info, "Got acknowledge from client."));
+                    await OnClientAckAsync(clientReply.ChangeVector);
+                    break;
+                }
                 //precaution, should not reach this case...
                 case SubscriptionConnectionClientMessage.MessageType.DisposedNotification:
                     CancellationTokenSource.Cancel();
@@ -1083,7 +1082,6 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected virtual void DisposeInternal()
         {
-
             using (_copiedBuffer.ReleaseBuffer)
             {
                 try

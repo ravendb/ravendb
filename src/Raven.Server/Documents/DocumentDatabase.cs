@@ -1954,7 +1954,7 @@ namespace Raven.Server.Documents
         private Lazy<RequestExecutor> CreateRequestExecutor() =>
             new(
                 () => RequestExecutor.CreateForProxy(new[] { ServerStore.Configuration.Core.GetNodeHttpServerUrl(ServerStore.Server.WebUrl) }, Name,
-                    ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
+                    ServerStore.Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer), LazyThreadSafetyMode.ExecutionAndPublication);
 
         internal void HandleNonDurableFileSystemError(object sender, NonDurabilitySupportEventArgs e)
         {

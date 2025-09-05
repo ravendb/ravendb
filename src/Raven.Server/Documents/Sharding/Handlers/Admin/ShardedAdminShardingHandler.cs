@@ -196,7 +196,7 @@ namespace Raven.Server.Documents.Sharding.Handlers.Admin
 
         private async Task<bool> AssertNoDocumentsStartingWithAsync(JsonOperationContext context, string prefix, string[] urls, string database = null)
         {
-            using (var requestExecutor = RequestExecutor.CreateForServer(urls, database ?? DatabaseName, ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = RequestExecutor.CreateForServer(urls, database ?? DatabaseName, ServerStore.Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
             {
                 var command = new GetDocumentsCommand(requestExecutor.Conventions, startWith: prefix,
                     startAfter: null, matches: null, exclude: null, start: 0, pageSize: 1, metadataOnly: false);

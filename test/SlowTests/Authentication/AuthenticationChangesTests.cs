@@ -19,13 +19,14 @@ namespace SlowTests.Authentication
         }
 
         [RavenTheory(RavenTestCategory.ChangesApi | RavenTestCategory.Certificates)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public async Task ChangesWithAuthentication(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public async Task ChangesWithAuthentication(Options options, bool with2Eku)
         {
-            var certificates = Certificates.SetupServerAuthentication();
+            var certificates = Certificates.SetupServerAuthentication(with2Eku: with2Eku);
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.ReadWrite
             });

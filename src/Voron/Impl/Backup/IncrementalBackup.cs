@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="IncrementalBackup.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using Sparrow.Binary;
+﻿using Sparrow.Binary;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;

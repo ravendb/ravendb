@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="PutResult.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-namespace Raven.Client.Documents.Indexes
+﻿namespace Raven.Client.Documents.Indexes
 {
     public sealed class PutIndexResult
     {

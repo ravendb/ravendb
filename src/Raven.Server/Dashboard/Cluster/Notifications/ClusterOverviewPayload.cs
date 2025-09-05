@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="ClusterOverviewPayload.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
 using Sparrow.Json.Parsing;

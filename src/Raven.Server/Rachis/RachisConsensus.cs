@@ -93,7 +93,7 @@ namespace Raven.Server.Rachis
             StateMachine.EnsureNodeRemovalOnDeletion(context, term, nodeTag);
         }
 
-        public override X509Certificate2 ClusterCertificate => _serverStore.Server.Certificate?.Certificate;
+        public override X509Certificate2 ClusterCertificate => _serverStore.Server.Certificate?.ClientCertificate;
         public override ServerStore ServerStore => _serverStore;
 
         public override bool ShouldSnapshot(Slice slice, RootObjectType type)
