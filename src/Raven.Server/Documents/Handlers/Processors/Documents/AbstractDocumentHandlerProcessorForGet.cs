@@ -212,6 +212,7 @@ internal abstract class
             ? getDocumentsByIdImplAsyncTask.Result 
             : await getDocumentsByIdImplAsyncTask;
 
+        using var _ = result.ReadTransaction;
 
         if (result.StatusCode == HttpStatusCode.NotFound)
         {
@@ -335,8 +336,9 @@ internal abstract class
     {
         var getDocuments = GetDocumentsImplAsync(context, etag, startsWith, changeVector);
         var result = getDocuments.IsCompletedSuccessfully ? getDocuments.Result : await getDocuments;
-        
-        
+
+        using var _ = result.ReadTransaction;
+
         if (changeVector == result.Etag)
         {
             HttpContext.Response.StatusCode = (int)HttpStatusCode.NotModified;
@@ -537,6 +539,8 @@ internal abstract class
         public string Etag { get; set; }
 
         public HttpStatusCode StatusCode { get; set; } = HttpStatusCode.OK;
+
+        public DocumentsTransaction ReadTransaction;
     }
 
     protected sealed class DocumentsResult
@@ -548,6 +552,8 @@ internal abstract class
         public ShardedPagingContinuation ContinuationToken { get; set; }
 
         public string Etag { get; set; }
+
+        public DocumentsTransaction ReadTransaction;
     }
 
     protected sealed class StartsWithParams

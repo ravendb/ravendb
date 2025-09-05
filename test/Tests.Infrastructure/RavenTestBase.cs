@@ -27,11 +27,13 @@ using Raven.Client.Util;
 using Raven.Server;
 using Raven.Server.Config;
 using Raven.Server.Documents;
+using Raven.Server.ServerWide;
 using Raven.Server.Documents.Handlers;
 using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;
@@ -156,6 +158,18 @@ namespace FastTests
 
         protected internal virtual DocumentStore GetDocumentStore(Options options = null, [CallerMemberName] string caller = null)
         {
+            if (options?.ClientCertificate != null && SecretProtection.HasCertificateClientAuthEnhancedKeyUsage(options.ClientCertificate) == false)
+            {
+                throw new InvalidOperationException($"The {nameof(options.ClientCertificate)} must have the Client Authentication Enhanced Key Usage." +
+                                                    " Are you supplying 'Server Certificate' instead of 'Server Certificate for Communication'?");
+            }
+            
+            if (options?.AdminCertificate != null && SecretProtection.HasCertificateClientAuthEnhancedKeyUsage(options.AdminCertificate) == false)
+            {
+                throw new InvalidOperationException($"The {nameof(options.AdminCertificate)} must have the Client Authentication Enhanced Key Usage." +
+                                                    " Are you supplying 'Server Certificate' instead of 'Server Certificate for Communication'?");
+            }
+            
             DocumentStore adminStore = null;
             try
             {
@@ -566,7 +580,13 @@ namespace FastTests
 
         protected static async Task<T> WaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable =>
             await WaitForPredicateAsync(a => a.CompareTo(val) > 0, act, timeout, interval);
+        
+        protected static async Task<T> WaitForLessThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable =>
+            await WaitForPredicateAsync(a => a.CompareTo(val) < 0, act, timeout, interval);
 
+        protected static async Task<T> WaitForNotEqualsAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable =>
+            await WaitForPredicateAsync(a => a.CompareTo(val) != 0, act, timeout, interval);
+        
         protected static async Task AssertWaitForTrueAsync(Func<Task<bool>> act, int timeout = 15000, int interval = 100)
         {
             Assert.True(await WaitForValueAsync(act, true, timeout, interval));
@@ -671,6 +691,20 @@ namespace FastTests
         {
             var actualValue = await WaitForGreaterThanAsync(act, expectedVal, timeout, interval);
             Assert.True(actualValue.CompareTo(expectedVal) > 0, $"expectedVal:{expectedVal}, actualValue: {actualValue}");
+            return actualValue;
+        }
+
+        protected static async Task<T> WaitAndAssertForLessThanAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
+        {
+            var actualValue = await WaitForLessThanAsync(act, expectedVal, timeout, interval);
+            Assert.True(actualValue.CompareTo(expectedVal) < 0, $"expectedVal:{expectedVal}, actualValue: {actualValue}");
+            return actualValue;
+        }
+        
+        protected static async Task<T> WaitAndAssertForNotEqualsAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
+        {
+            var actualValue = await WaitForNotEqualsAsync(act, expectedVal, timeout, interval);
+            Assert.True(actualValue.CompareTo(expectedVal) != 0, $"expectedVal:{expectedVal}, actualValue: {actualValue}");
             return actualValue;
         }
 
@@ -1244,6 +1278,29 @@ namespace FastTests
                 ms.Seek(0, SeekOrigin.Begin);
 
                 return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
+            }
+        }
+
+        public static bool ValidateErrorNotification(DocumentDatabase db, string err, string id = null)
+        {
+            using (db.NotificationCenter.GetStored(out var actions))
+            {
+                var jsonAlerts = actions.ToList();
+                if (jsonAlerts.Count == 0)
+                    return false;
+                var bjro = jsonAlerts.First().Json;
+
+                if (bjro.TryGet("Details", out BlittableJsonReaderObject details) &&
+                    details.TryGet("Errors", out BlittableJsonReaderArray errors) &&
+                    errors.Length > 0)
+                {
+                    var firstErr = errors.First() as BlittableJsonReaderObject;
+                    return firstErr != null &&
+                           (id == null || (firstErr.TryGet("DocumentId", out string documentId) && documentId == id)) &&
+                           firstErr.TryGet("Error", out string error) && error.Contains(err);
+                }
+
+                return false;
             }
         }
     }

@@ -10,9 +10,10 @@ import { useAppDispatch, useAppSelector } from "components/store";
 import classNames from "classnames";
 import AceEditor from "components/common/ace/AceEditor";
 import ReactAce from "react-ace";
+import EditGenAiTaskAttachmentsButton from "./EditGenAiTaskAttachmentsButton";
 
 interface EditGenAiTaskFormVirtualListProps {
-    fields: FieldArrayWithId<EditGenAiTaskFormData>[];
+    fields: FieldArrayWithId<EditGenAiTaskFormData, "playgroundContexts" | "playgroundModelOutputs">[];
     name: Extract<FieldPath<EditGenAiTaskFormData>, "playgroundContexts" | "playgroundModelOutputs">;
     isReadOnly: boolean;
     handleRemove: (index: number) => void;
@@ -85,13 +86,16 @@ export default function EditGenAiTaskFormVirtualList({
                                     isReadOnly={isReadOnly}
                                     handleRemove={handleRemove}
                                 />
-                                <Badge
-                                    bg="secondary"
-                                    style={{ position: "absolute", bottom: 10, right: 40 }}
-                                    title={getTooltipText()}
-                                >
-                                    {field.idx != null ? field.idx + 1 : "?"}
-                                </Badge>
+                                <div style={{ position: "absolute", bottom: 10, right: 40 }} className="d-flex gap-1">
+                                    <EditGenAiTaskAttachmentsButton attachments={field.attachments} />
+                                    <Badge
+                                        bg="secondary"
+                                        title={getTooltipText()}
+                                        className="d-flex align-items-center"
+                                    >
+                                        {field.idx != null ? field.idx + 1 : "?"}
+                                    </Badge>
+                                </div>
                             </div>
                         </div>
                     );
@@ -129,6 +133,7 @@ function Editor({ index, name, isReadOnly, handleRemove }: EditorProps) {
                       }
                     : null,
             ]}
+            isFullScreenLabelHidden
         />
     );
 }

@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="IAttachmentsSessionOperationsAsync.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Operations.Attachments;

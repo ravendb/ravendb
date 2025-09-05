@@ -14,6 +14,7 @@ using Polly;
 using Polly.Retry;
 using Raven.Client.Http;
 using Raven.Client.Util;
+using Raven.Server.Commercial.SetupWizard;
 using Raven.Server.Utils;
 using Sparrow.Platform;
 
@@ -283,10 +284,10 @@ namespace Raven.Server.Commercial
             } while (true);
         }
 
-        public async Task<Dictionary<string, string>> NewOrder(string[] hostnames, CancellationToken token = default(CancellationToken))
+        public async Task<Dictionary<string, string>> NewOrder(string[] hostnames, string profile = null, CancellationToken token = default(CancellationToken))
         {
             _challenges.Clear();
-            var (order, response) = await SendAsync<Order>(HttpMethod.Post, _directory.NewOrder, new Order
+            var dto = new Order
             {
                 Expires = DateTime.UtcNow.AddDays(2),
                 Identifiers = hostnames.Select(hostname => new OrderIdentifier
@@ -294,7 +295,13 @@ namespace Raven.Server.Commercial
                     Type = "dns",
                     Value = hostname
                 }).ToArray()
-            }, token);
+            };
+
+            if (string.IsNullOrEmpty(profile) == false)
+            {
+                dto.Profile = profile;
+            }
+            var (order, response) = await SendAsync<Order>(HttpMethod.Post, _directory.NewOrder, dto, token);
 
             if (order.Status != "pending" && order.Status != "ready")
                 throw new InvalidOperationException("Created new order and expected status 'pending' or 'ready', but got: " + order.Status + Environment.NewLine +
@@ -371,7 +378,7 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public async Task<(X509Certificate2 Cert, RSA PrivateKey)> GetCertificate(RSA existingKey = null, CancellationToken token = default(CancellationToken))
+        public async Task<(X509Certificate2 Cert, RSA PrivateKey)> GetCertificate(RSA existingKey = null, string acmeProfile = null, CancellationToken token = default(CancellationToken))
         {
             var key = existingKey ?? new RSACryptoServiceProvider(4096);
 
@@ -455,7 +462,9 @@ namespace Raven.Server.Commercial
                     break;
             }
 
-            _cache.CachedCerts[_currentOrder.Identifiers[0].Value] = new CertificateCache
+            var cacheCertKey = LetsEncryptSetupUtils.GetCertCacheKey(acmeProfile, _currentOrder.Identifiers[0].Value);
+
+            _cache.CachedCerts[cacheCertKey] = new CertificateCache
             {
                 Cert = pem,
                 Private = blob
@@ -489,10 +498,10 @@ namespace Raven.Server.Commercial
             }
         }
 
-        public bool TryGetCachedCertificate(string host, out CachedCertificateResult value)
+        public bool TryGetCachedCertificate(string certCacheKey, out CachedCertificateResult value)
         {
             value = null;
-            if (_cache.CachedCerts.TryGetValue(host, out var cache) == false)
+            if (_cache.CachedCerts.TryGetValue(certCacheKey, out var cache) == false)
             {
                 return false;
             }
@@ -522,9 +531,9 @@ namespace Raven.Server.Commercial
             return _directory.Meta.TermsOfService;
         }
 
-        public void ResetCachedCertificate(IEnumerable<string> hostsToRemove)
+        public void ResetCachedCertificate(IEnumerable<string> certCacheKeysToRemove)
         {
-            foreach (var host in hostsToRemove)
+            foreach (var host in certCacheKeysToRemove)
             {
                 _cache.CachedCerts.Remove(host);
             }
@@ -780,6 +789,9 @@ namespace Raven.Server.Commercial
 
             [JsonProperty("certificate")]
             public Uri Certificate { get; set; }
+            
+            [JsonProperty("profile")]
+            public string Profile { get; set; }
         }
 
         private sealed class OrderIdentifier

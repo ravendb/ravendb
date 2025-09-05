@@ -48,10 +48,12 @@ public class RavenDB_19101: RavenTestBase
         public override bool IsReadRequest => true;
      }
 
-    [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.Certificates)]
-    public void CheckIfCertificateNameIsReturned()
+    [RavenTheory(RavenTestCategory.Indexes | RavenTestCategory.Certificates)]
+    [InlineData(false)]
+    [InlineData(true)]
+    public void CheckIfCertificateNameIsReturned(bool with2Eku)
     {
-        var certificates = Certificates.SetupServerAuthentication();
+        var certificates = Certificates.SetupServerAuthentication(with2Eku: with2Eku);
         var dbName = GetDatabaseName();
         var adminCert = Certificates.RegisterClientCertificate(certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 

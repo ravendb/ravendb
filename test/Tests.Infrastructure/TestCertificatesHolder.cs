@@ -12,6 +12,8 @@ namespace FastTests
     {
         private readonly Func<string> _getServerCertificatePath;
 
+        private readonly Func<string> _getServerCertificateForCommunicationPath;
+
         private readonly Func<string> _getClientCertificate1Path;
 
         private readonly Func<string> _getClientCertificate2Path;
@@ -20,6 +22,8 @@ namespace FastTests
 
         private string _serverCertificatePath;
 
+        private string _serverCertificateForCommunicationPath;
+
         private string _clientCertificate1Path;
 
         private string _clientCertificate2Path;
@@ -27,6 +31,8 @@ namespace FastTests
         private string _clientCertificate3Path;
 
         public readonly Lazy<TrackingX509Certificate2> ServerCertificate;
+
+        public readonly Lazy<TrackingX509Certificate2> ServerCertificateForCommunication;
 
         public readonly Lazy<TrackingX509Certificate2> ClientCertificate1;
 
@@ -115,6 +121,17 @@ namespace FastTests
                 return _serverCertificatePath;
             }
         }
+        
+        public string ServerCertificateForCommunicationPath
+        {
+            get
+            {
+                if (_serverCertificateForCommunicationPath == null)
+                    _serverCertificateForCommunicationPath = _getServerCertificateForCommunicationPath();
+
+                return _serverCertificateForCommunicationPath;
+            }
+        }
 
         public string ClientCertificate1Path
         {
@@ -149,9 +166,14 @@ namespace FastTests
             }
         }
 
-        public TestCertificatesHolder(string serverCertificatePath, string clientCertificate1Path, string clientCertificate2Path, string clientCertificate3Path)
+        public TestCertificatesHolder(string serverCertificatePath,
+            string serverCertificateForCommunicationPath,
+            string clientCertificate1Path,
+            string clientCertificate2Path,
+            string clientCertificate3Path)
         {
             _getServerCertificatePath = () => serverCertificatePath;
+            _getServerCertificateForCommunicationPath = () => serverCertificateForCommunicationPath;
             _getClientCertificate1Path = () => clientCertificate1Path;
             _getClientCertificate2Path = () => clientCertificate2Path;
             _getClientCertificate3Path = () => clientCertificate3Path;
@@ -168,6 +190,18 @@ namespace FastTests
                 }
             });
 
+            ServerCertificateForCommunication = new Lazy<TrackingX509Certificate2>(() =>
+            {
+                try
+                {
+                    return new TrackingX509Certificate2(ServerCertificateForCommunicationPath, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
+                }
+                catch (CryptographicException e)
+                {
+                    throw new CryptographicException($"Failed to load the test server certificate for communication from {ServerCertificateForCommunicationPath}.", e);
+                }
+            });
+
             ClientCertificate1 = CreateLazy(() => ClientCertificate1Path, 1);
             ClientCertificate2 = CreateLazy(() => ClientCertificate2Path, 2);
             ClientCertificate3 = CreateLazy(() => ClientCertificate3Path, 3);
@@ -179,6 +213,14 @@ namespace FastTests
             {
                 var path = getTemporaryFileName();
                 File.Copy(parent.ServerCertificatePath, path, true);
+
+                return path;
+            };
+            
+            _getServerCertificateForCommunicationPath = () =>
+            {
+                var path = getTemporaryFileName();
+                File.Copy(parent.ServerCertificateForCommunicationPath, path, true);
 
                 return path;
             };
@@ -216,6 +258,18 @@ namespace FastTests
                 catch (CryptographicException e)
                 {
                     throw new CryptographicException($"Failed to load the test server certificate from {ServerCertificatePath}.", e);
+                }
+            });
+            
+            ServerCertificateForCommunication = new Lazy<TrackingX509Certificate2>(() =>
+            {
+                try
+                {
+                    return new TrackingX509Certificate2(ServerCertificateForCommunicationPath, (string)null, X509KeyStorageFlags.MachineKeySet | CertificateLoaderUtil.FlagsForExport);
+                }
+                catch (CryptographicException e)
+                {
+                    throw new CryptographicException($"Failed to load the test server certificate for communication from {ServerCertificateForCommunicationPath}.", e);
                 }
             });
 

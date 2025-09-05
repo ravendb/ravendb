@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="DatabaseOpenedCount.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using Lextm.SharpSnmpLib;
+﻿using Lextm.SharpSnmpLib;
 using Raven.Server.Documents;
 using Raven.Server.Monitoring.OpenTelemetry;
 using Raven.Server.ServerWide;

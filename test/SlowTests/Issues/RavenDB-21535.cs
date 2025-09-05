@@ -24,7 +24,7 @@ namespace SlowTests.Issues
             var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
 
             var clientKeyPair = CertificateGenerator.GenerateRSAKeyPair();
-            var client = CertificateGenerator.GenerateSignedClientCertificate(ca, caKeyPair, LocalDomainName, 1, clientKeyPair, []);
+            var client = CertificateGenerator.GenerateSignedClientServerCertificate(ca, caKeyPair, LocalDomainName, 1, clientKeyPair, []);
 
             var server = GetNewServer(new ServerCreationOptions
                 {
@@ -54,7 +54,7 @@ namespace SlowTests.Issues
             var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
 
             var clientKeyPair = CertificateGenerator.GenerateRSAKeyPair();
-            var client = CertificateGenerator.GenerateSignedClientCertificate(ca, caKeyPair, "admin", 1, clientKeyPair, [san]);
+            var client = CertificateGenerator.GenerateSignedClientServerCertificate(ca, caKeyPair, "admin", 1, clientKeyPair, [san]);
 
             var server = GetNewServer(new ServerCreationOptions
                 {
@@ -84,7 +84,7 @@ namespace SlowTests.Issues
             var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
 
             var clientKeyPair = CertificateGenerator.GenerateRSAKeyPair();
-            var client = CertificateGenerator.GenerateSignedClientCertificate(ca, caKeyPair, "admin", 1, clientKeyPair, [san]);
+            var client = CertificateGenerator.GenerateSignedClientServerCertificate(ca, caKeyPair, "admin", 1, clientKeyPair, [san]);
 
             var server = GetNewServer(new ServerCreationOptions
                 {
@@ -109,7 +109,7 @@ namespace SlowTests.Issues
             var caBase64 = Convert.ToBase64String(ca.Export(X509ContentType.Cert));
 
             var clientKeyPair = CertificateGenerator.GenerateRSAKeyPair();
-            var client = CertificateGenerator.GenerateSignedClientCertificate(ca, caKeyPair, "admin", 1, clientKeyPair, [LocalDomainName]);
+            var client = CertificateGenerator.GenerateSignedClientServerCertificate(ca, caKeyPair, "admin", 1, clientKeyPair, [LocalDomainName]);
 
             var server = GetNewServer(new ServerCreationOptions
                 {

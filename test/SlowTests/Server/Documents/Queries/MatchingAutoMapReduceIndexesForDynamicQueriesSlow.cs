@@ -56,7 +56,7 @@ namespace SlowTests.Server.Documents.Queries
 
             add_index(definition);
 
-            get_index(definition.Name)._indexStorage.UpdateStats(SystemTime.UtcNow, new IndexingRunStats
+            get_index(definition.Name)._indexStorage.UpdateStats(SystemTime.UtcNow, TimeSpan.Zero, new IndexingRunStats
             {
                 MapAttempts = 1000,
                 MapSuccesses = 1000,

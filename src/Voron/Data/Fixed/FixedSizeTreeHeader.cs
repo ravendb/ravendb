@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="FixedSizeTreeHeader.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace Voron.Data.Fixed
 {

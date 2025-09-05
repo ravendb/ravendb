@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="SubscriptionBatchRunStats.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-namespace Raven.Server.Documents.Subscriptions.Stats
+﻿namespace Raven.Server.Documents.Subscriptions.Stats
 {
     public sealed class SubscriptionBatchRunStats
     {

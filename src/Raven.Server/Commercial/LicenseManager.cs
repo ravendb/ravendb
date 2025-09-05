@@ -414,7 +414,7 @@ namespace Raven.Server.Commercial
 
         private async Task<Client.ServerWide.Commands.NodeInfo> GetNodeInfo(string nodeUrl, TransactionOperationContext ctx)
         {
-            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(nodeUrl, _serverStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(nodeUrl, _serverStore.Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
             {
                 var infoCmd = new GetNodeInfoCommand(TimeSpan.FromSeconds(15));
 
@@ -1093,11 +1093,11 @@ namespace Raven.Server.Commercial
             DateTime certificateNotBefore = new();
             DateTime certificateNotAfter = new();
             X509Certificate2 certificate = null;
-            if (_serverStore.Server.Certificate.Certificate != null)
+            if (_serverStore.Server.Certificate.ServerCertificate != null)
             {
-                certificateNotBefore = _serverStore.Server.Certificate.Certificate.NotBefore.ToUniversalTime();
-                certificateNotAfter = _serverStore.Server.Certificate.Certificate.NotAfter.ToUniversalTime();
-                certificate = _serverStore.Server.Certificate.Certificate;
+                certificateNotBefore  = _serverStore.Server.Certificate.ServerCertificate.NotBefore.ToUniversalTime(); 
+                certificateNotAfter  = _serverStore.Server.Certificate.ServerCertificate.NotAfter.ToUniversalTime(); 
+                certificate = _serverStore.Server.Certificate.ServerCertificate;
             }
 
             var clusterSize = GetClusterSize();

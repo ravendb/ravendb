@@ -143,6 +143,7 @@ namespace rvn
                 var certPass = ConfigureCertPassword(cmd);
                 var generateHelmValues = ConfigureGenerateValues(cmd);
                 var acmeUrl = ConfigureAcmeUrl(cmd);
+                var acmeProfile = ConfigureAcmeProfile(cmd);
 
                 cmd.OnExecuteAsync(async token =>
                 {
@@ -153,6 +154,7 @@ namespace rvn
                     var certPassTuple = certPass.Value() ?? Environment.GetEnvironmentVariable("RVN_CERT_PASS");
                     var generateHelmValuesVal = generateHelmValues.HasValue() ? generateHelmValues.Value() is null ? "values.yaml": generateHelmValues.Value() : null;
                     var acmeUrlVal = acmeUrl.Value();
+                    var acmeProfileVal = acmeProfile.Value();
 
                     return await CreateSetupPackage(new CreateSetupPackageParameters
                     {
@@ -163,6 +165,7 @@ namespace rvn
                         CertificatePath = certPathVal,
                         CertPassword = certPassTuple,
                         AcmeUrl = acmeUrlVal,
+                        AcmeProfile = acmeProfileVal,
                         HelmValuesOutputPath = generateHelmValuesVal,
                         Progress = new SetupProgressAndResult(tuple =>
                         {
@@ -625,6 +628,13 @@ namespace rvn
         {
             var opt = cmd.Option("--acme-url", "Specify acme url to use (default: 'https://acme-v02.api.letsencrypt.org/directory')", CommandOptionType.SingleValue);
             opt.DefaultValue = "https://acme-v02.api.letsencrypt.org/directory";
+            return opt;
+        }
+        
+        private static CommandOption ConfigureAcmeProfile(CommandLineApplication cmd)
+        {
+            var opt = cmd.Option("--acme-profile", "Specify acme profile to use (default: '')", CommandOptionType.SingleValue);
+            opt.DefaultValue = string.Empty;
             return opt;
         }
 

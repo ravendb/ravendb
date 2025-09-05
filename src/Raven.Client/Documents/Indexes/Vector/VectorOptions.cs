@@ -9,10 +9,17 @@ namespace Raven.Client.Documents.Indexes.Vector;
 /// </summary>
 public class VectorOptions
 {
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VectorOptions"/> class.
+    /// </summary>
     public VectorOptions()
     {
     }
     
+    /// <summary>
+    /// Initializes a new instance of the <see cref="VectorOptions"/> class by copying values from another instance.
+    /// </summary>
+    /// <param name="options">The VectorOptions instance to copy from.</param>
     public VectorOptions(VectorOptions options)
     {
         Dimensions = options.Dimensions;
@@ -51,8 +58,14 @@ public class VectorOptions
     /// </summary>
     public VectorEmbeddingType DestinationEmbeddingType { get; set; }
 
+    /// <summary>
+    /// Gets or sets the number of candidate vectors to consider during indexing for graph construction.
+    /// </summary>
     public int? NumberOfCandidatesForIndexing { get; set; }
     
+    /// <summary>
+    /// Gets or sets the number of edges (connections) each node in the vector graph should have.
+    /// </summary>
     public int? NumberOfEdges { get; set; }
     
     [Conditional("DEBUG")]
@@ -69,6 +82,12 @@ public class VectorOptions
         PortableExceptions.ThrowIf<InvalidOperationException>(NumberOfCandidatesForIndexing <= 0, "Number of candidate nodes has to be positive.");
     }
     
+    /// <summary>
+    /// Compares two VectorOptions instances for equality.
+    /// </summary>
+    /// <param name="left">The first VectorOptions instance to compare.</param>
+    /// <param name="right">The second VectorOptions instance to compare.</param>
+    /// <returns>True if the instances are equal; otherwise, false.</returns>
     public static bool Equals(VectorOptions left, VectorOptions right)
     {
         if (left is null && right is null)
@@ -77,6 +96,11 @@ public class VectorOptions
         return left?.Equals(right) ?? false;
     }
     
+    /// <summary>
+    /// Determines whether the specified object is equal to the current VectorOptions instance.
+    /// </summary>
+    /// <param name="obj">The object to compare with the current instance.</param>
+    /// <returns>True if the specified object is equal to the current instance; otherwise, false.</returns>
     public override bool Equals(object obj)
     {
         if (ReferenceEquals(null, obj))
@@ -96,6 +120,10 @@ public class VectorOptions
                && options.NumberOfCandidatesForIndexing == NumberOfCandidatesForIndexing;
     }
 
+    /// <summary>
+    /// Returns the hash code for this VectorOptions instance.
+    /// </summary>
+    /// <returns>A 32-bit signed integer hash code.</returns>
     public override int GetHashCode()
     {
         unchecked

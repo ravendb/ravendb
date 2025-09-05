@@ -1174,7 +1174,7 @@ namespace Raven.Server.ServerWide
                     {
                         [nameof(CertificateReplacement.Certificate)] = cert,
                         [nameof(CertificateReplacement.Thumbprint)] = x509Certificate.Thumbprint,
-                        [nameof(CertificateReplacement.OldThumbprint)] = serverStore.Server.Certificate.Certificate.Thumbprint,
+                        [nameof(CertificateReplacement.OldThumbprint)] = serverStore.Server.Certificate.ServerCertificate.Thumbprint,
                         [nameof(CertificateReplacement.Confirmations)] = 0,
                         [nameof(CertificateReplacement.Replaced)] = 0,
                         [nameof(CertificateReplacement.ReplaceImmediately)] = replaceImmediately

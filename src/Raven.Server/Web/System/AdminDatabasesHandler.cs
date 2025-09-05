@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="AdminDatabasesHandler.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -1344,7 +1338,7 @@ namespace Raven.Server.Web.System
                 nodesUrls = ServerStore.GetClusterTopology(context).AllNodes.Values.ToArray();
             }
 
-            using (var requestExecutor = RequestExecutor.CreateForServer(nodesUrls, database, Server.Certificate.Certificate, DocumentConventions.Default))
+            using (var requestExecutor = RequestExecutor.CreateForServer(nodesUrls, database, Server.Certificate.ClientCertificate, DocumentConventions.Default))
             using (requestExecutor.ContextPool.AllocateOperationContext(out var context))
             {
                 var cmd = new ValidateUnusedIdsCommand(

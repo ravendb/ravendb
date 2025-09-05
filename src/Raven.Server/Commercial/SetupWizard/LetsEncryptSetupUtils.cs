@@ -11,7 +11,12 @@ namespace Raven.Server.Commercial.SetupWizard;
 
 public static class LetsEncryptSetupUtils
 {
-        public static async Task<byte[]> Setup(SetupInfo setupInfo,  SetupProgressAndResult progress, bool registerTcpDnsRecords, string acmeUrl, CancellationToken token)
+        public static async Task<byte[]> Setup(SetupInfo setupInfo,
+            SetupProgressAndResult progress,
+            bool registerTcpDnsRecords,
+            string acmeUrl,
+            string acmeProfile,
+            CancellationToken token)
         {
             progress.Processed++;
             progress?.AddInfo("Setting up RavenDB in Let's Encrypt security mode.");
@@ -29,7 +34,7 @@ public static class LetsEncryptSetupUtils
             (string Challenge, LetsEncryptClient.CachedCertificateResult CachedCertificateResult) challengeResult;
             try
             {
-                challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, token);
+                challengeResult = await InitialLetsEncryptChallenge(setupInfo, acmeClient, acmeProfile, token);
 
                 progress?.AddInfo(challengeResult.Challenge != null
                     ? "Successfully received challenge(s) information from Let's Encrypt."
@@ -81,7 +86,7 @@ public static class LetsEncryptSetupUtils
             progress?.AddInfo($"Successfully updated DNS record(s) and challenge(s) in {setupInfo.Domain.ToLower()}.{setupInfo.RootDomain.ToLower()}");
             progress?.AddInfo("Completing Let's Encrypt challenge(s)...");
 
-           await CertificateUtils.CompleteAuthorizationAndGetCertificate(new CompleteAuthorizationAndGetCertificateParameters
+            await CertificateUtils.CompleteAuthorizationAndGetCertificate(new CompleteAuthorizationAndGetCertificateParameters
             {
                 OnValidationSuccessful = () =>
                 {
@@ -93,7 +98,7 @@ public static class LetsEncryptSetupUtils
                 Client = acmeClient,
                 ChallengeResult = challengeResult,
                 Token = token
-            });
+            }, acmeProfile);
 
             progress.Processed++;
             progress?.AddInfo("Successfully acquired certificate from Let's Encrypt.");
@@ -132,19 +137,20 @@ public static class LetsEncryptSetupUtils
             }
         }
 
-        public static async Task<(string Challenge, LetsEncryptClient.CachedCertificateResult CachedCertificateResult)> InitialLetsEncryptChallenge(
-            SetupInfo setupInfo,
+        public static async Task<(string Challenge, LetsEncryptClient.CachedCertificateResult CachedCertificateResult)> InitialLetsEncryptChallenge(SetupInfo setupInfo,
             LetsEncryptClient client,
+            string profile,
             CancellationToken token)
         {
             try
             {
                 var host = (setupInfo.Domain + "." + setupInfo.RootDomain).ToLowerInvariant();
                 var wildcardHost = "*." + host;
-                if (client.TryGetCachedCertificate(wildcardHost, out var certBytes))
+                var certCacheKey = GetCertCacheKey(profile, wildcardHost);
+                if (client.TryGetCachedCertificate(certCacheKey, out var certBytes))
                     return (null, certBytes);
 
-                var result = await client.NewOrder(new[] {wildcardHost}, token);
+                var result = await client.NewOrder(new[] {wildcardHost}, profile, token);
 
                 result.TryGetValue(host, out var challenge);
                 // we may already be authorized for this?
@@ -154,5 +160,10 @@ public static class LetsEncryptSetupUtils
             {
                 throw new InvalidOperationException("Failed to receive challenge(s) information from Let's Encrypt.", e);
             }
+        }
+        
+        public static string GetCertCacheKey(string profile, string host)
+        {
+            return (string.IsNullOrEmpty(profile) ? string.Empty : (profile + "_")) + host;
         }
 }

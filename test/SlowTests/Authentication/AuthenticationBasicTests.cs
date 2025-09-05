@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="CanAuthenticate.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
@@ -48,9 +42,8 @@ namespace SlowTests.Authentication
         {
         }
 
-        public X509Certificate2 CreateAndPutExpiredClientCertificate(string serverCertPath, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser)
+        public X509Certificate2 CreateAndPutExpiredClientCertificate(string serverCertPath, X509Certificate2 serverCertificateForCommunication, Dictionary<string, DatabaseAccess> permissions, SecurityClearance clearance = SecurityClearance.ValidUser)
         {
-            var serverCertificate = new X509Certificate2(serverCertPath, (string)null, X509KeyStorageFlags.MachineKeySet);
             var serverCertificateHolder = new SecretProtection(
                 new SecurityConfiguration()).LoadCertificateFromPath(
                 serverCertPath,
@@ -58,12 +51,12 @@ namespace SlowTests.Authentication
                 Server.ServerStore.GetLicenseType(),
                 Server.ServerStore.Configuration.Security.CertificateValidationKeyUsages);
 
-            var clientCertificate = CertificateUtils.CreateSelfSignedExpiredClientCertificate("expired client cert", serverCertificateHolder);
+            var clientCertificate = CertificateUtils.CreateSelfSignedExpiredClientCertificate("expired client cert", serverCertificateHolder.Certificate, serverCertificateHolder.PrivateKey.Key);
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = serverCertificate,
-                ClientCertificate = serverCertificate
+                AdminCertificate = serverCertificateForCommunication,
+                ClientCertificate = serverCertificateForCommunication
             }))
             {
                 var requestExecutor = store.GetRequestExecutor();
@@ -79,13 +72,14 @@ namespace SlowTests.Authentication
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CanGetDocWithValidPermission(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetDocWithValidPermission(Options options, bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.ReadWrite
             });
@@ -107,13 +101,14 @@ namespace SlowTests.Authentication
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.Single)]
-        public void CanGetAttachmentWithValidPermission(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.Single)]
+        public void CanGetAttachmentWithValidPermission(Options options, bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.Read
             });
@@ -144,8 +139,8 @@ namespace SlowTests.Authentication
 
             var certificates = SetupServerAuthentication(Certificates, customSettings);
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.ReadWrite
             });
@@ -173,13 +168,14 @@ namespace SlowTests.Authentication
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CanReachOperatorEndpointWithOperatorPermission(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanReachOperatorEndpointWithOperatorPermission(Options options, bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
 
             options.AdminCertificate = adminCert;
             options.ClientCertificate = userCert;
@@ -193,13 +189,14 @@ namespace SlowTests.Authentication
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CannotReachOperatorEndpointWithoutOperatorPermission(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CannotReachOperatorEndpointWithoutOperatorPermission(Options options, bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.ReadWrite
             });
@@ -219,13 +216,14 @@ namespace SlowTests.Authentication
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CanReachDatabaseAdminEndpointWithDatabaseAdminPermission(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanReachDatabaseAdminEndpointWithDatabaseAdminPermission(Options options, bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.Admin
             });
@@ -252,13 +250,14 @@ namespace SlowTests.Authentication
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CannotReachDatabaseAdminEndpointWithoutDatabaseAdminPermission(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CannotReachDatabaseAdminEndpointWithoutDatabaseAdminPermission(Options options, bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.ReadWrite
             });
@@ -283,16 +282,18 @@ namespace SlowTests.Authentication
             }
         }
 
-        [RavenFact(RavenTestCategory.Security)]
-        public void CanOnlyGetRelevantDbsAccordingToPermissions()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CanOnlyGetRelevantDbsAccordingToPermissions(bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
             var dbName1 = GetDatabaseName();
             var dbName2 = GetDatabaseName();
 
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.Admin,
                 [dbName1] = DatabaseAccess.ReadWrite
@@ -338,14 +339,15 @@ namespace SlowTests.Authentication
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CannotGetDocWithInvalidPermission(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CannotGetDocWithInvalidPermission(Options options, bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
             var otherDbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [otherDbName] = DatabaseAccess.ReadWrite
             });
@@ -375,10 +377,12 @@ namespace SlowTests.Authentication
             });
         }
 
-        [RavenFact(RavenTestCategory.Security)]
-        public void CannotGetCertificateWithInvalidDbNamePermission()
+        [RavenTheory(RavenTestCategory.Certificates)]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void CannotGetCertificateWithInvalidDbNamePermission(bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
             var e = Assert.Throws<RavenException>(() =>
             {
@@ -392,13 +396,14 @@ namespace SlowTests.Authentication
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CannotGetDocWithExpiredCertificate(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CannotGetDocWithExpiredCertificate(Options options, bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = CreateAndPutExpiredClientCertificate(certificates.ServerCertificatePath, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = CreateAndPutExpiredClientCertificate(certificates.ServerCertificatePath, certificates.ServerCertificateForCommunication.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.ReadWrite
             });
@@ -458,8 +463,8 @@ namespace SlowTests.Authentication
             const string certificateName = "Client&Certificate 2";
 
             var certificates = SetupServerAuthentication(Certificates);
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, certificateName: "ClientCertificate1");
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, certificateName: "ClientCertificate1");
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 ["SomeName"] = DatabaseAccess.ReadWrite
             }, certificateName: certificateName);
@@ -565,7 +570,7 @@ namespace SlowTests.Authentication
             const string certificateName = "ClientCertificate";
 
             var certificates = SetupServerAuthentication(Certificates);
-            var serverCert = certificates.ServerCertificate.Value;
+            var serverCert = certificates.ServerCertificateForCommunication.Value;
             var permissions = new Dictionary<string, DatabaseAccess>();
 
             var adminCert = Certificates.RegisterClientCertificate(serverCert, certificates.ClientCertificate1.Value, permissions, SecurityClearance.ClusterAdmin, certificateName: certificateName);
@@ -607,13 +612,14 @@ namespace SlowTests.Authentication
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CanGetDocWith_Read_Permission(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CanGetDocWith_Read_Permission(Options options, bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.Read
             });
@@ -654,13 +660,14 @@ namespace SlowTests.Authentication
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CannotPutDocWith_Read_Permission_MultiGet(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CannotPutDocWith_Read_Permission_MultiGet(Options options, bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.Read
             });
@@ -699,13 +706,14 @@ namespace SlowTests.Authentication
         }
 
         [RavenTheory(RavenTestCategory.Certificates)]
-        [RavenData(DatabaseMode = RavenDatabaseMode.All)]
-        public void CannotPutDocWith_Read_Permission(Options options)
+        [RavenData(true, DatabaseMode = RavenDatabaseMode.All)]
+        [RavenData(false, DatabaseMode = RavenDatabaseMode.All)]
+        public void CannotPutDocWith_Read_Permission(Options options, bool with2Eku)
         {
-            var certificates = SetupServerAuthentication(Certificates);
+            var certificates = SetupServerAuthentication(Certificates, with2Eku: with2Eku);
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName] = DatabaseAccess.Read
             });
@@ -720,7 +728,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        internal static TestCertificatesHolder SetupServerAuthentication(CertificatesTestBase certificatesBase, Dictionary<string, string> customSettings = null, string serverUrl = null, TestCertificatesHolder certificates = null)
+        internal static TestCertificatesHolder SetupServerAuthentication(CertificatesTestBase certificatesBase, Dictionary<string, string> customSettings = null, string serverUrl = null, TestCertificatesHolder certificates = null, bool with2Eku = true)
         {
             customSettings ??= new Dictionary<string, string>();
 
@@ -728,7 +736,7 @@ namespace SlowTests.Authentication
             customSettings[RavenConfiguration.GetKey(x => x.Licensing.CanForceUpdate)] = "false";
             customSettings[RavenConfiguration.GetKey(x => x.Licensing.CanRenew)] = "false";
 
-            return certificatesBase.SetupServerAuthentication(customSettings, serverUrl, certificates);
+            return certificatesBase.SetupServerAuthentication(customSettings, serverUrl, certificates, with2Eku: with2Eku);
         }
 
         private static void StoreSampleDoc(DocumentStore store, string docName)
@@ -745,5 +753,4 @@ namespace SlowTests.Authentication
         }
     }
 }
-
 

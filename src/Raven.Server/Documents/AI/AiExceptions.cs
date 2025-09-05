@@ -1,5 +1,8 @@
 ﻿using System;
 using System.Net;
+using System.Net.Http;
+using System.Text;
+using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI
 {
@@ -21,6 +24,16 @@ namespace Raven.Server.Documents.AI
     {
         public string Refusal;
         public string FinishReason;
+
+        public static void Throw(string refusal, string responseContent, string finishReason, string requestId)
+        {
+            throw new RefusedToAnswerException($"The request was refused by the model: '{refusal}', response content: {responseContent}")
+            {
+                Refusal = refusal,
+                FinishReason = finishReason,
+                RequestId = requestId
+            };
+        }
     }
 
     public sealed class UnexpectedResponseException : AiException
@@ -30,6 +43,23 @@ namespace Raven.Server.Documents.AI
         }
         public UnexpectedResponseException(string message, Exception e) : base(message, e)
         {
+        }
+
+        public static UnexpectedResponseException Create(string message, HttpResponseMessage response, BlittableJsonReaderObject content, Exception e = null)
+            => Create(message, response, content.ToString(), e);
+
+        public static UnexpectedResponseException Create(string message, HttpResponseMessage response, string content, Exception e = null)
+        {
+            var sb = new StringBuilder();
+            sb.Append(message).AppendLine(".")
+                .Append("Status Code: ").Append(response.StatusCode).AppendLine()
+                .AppendLine("Response:").AppendLine(response.ToString())
+                .AppendLine("Content:").AppendLine(content);
+
+            return new UnexpectedResponseException(sb.ToString(), e)
+            {
+                RequestId = ChatCompletionClient.GetRequestId(response.Headers)
+            };
         }
     }
 

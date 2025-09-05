@@ -8,9 +8,10 @@ import { editGenAiTaskActions, editGenAiTaskSelectors } from "../store/editGenAi
 import ReactAce from "react-ace";
 import { EditGenAiTaskFormData } from "../utils/editGenAiTaskValidation";
 import { FieldPath } from "react-hook-form";
+import EditGenAiTaskAttachmentsButton from "./EditGenAiTaskAttachmentsButton";
 
 interface EditGenAiTaskReadOnlyVirtualListProps {
-    data: string[];
+    data: { value: string; attachments?: Raven.Server.Documents.ETL.Providers.AI.AiAttachment[] }[];
     name: Extract<FieldPath<EditGenAiTaskFormData>, "playgroundContexts" | "playgroundModelOutputs">;
 }
 
@@ -69,14 +70,17 @@ export default function EditGenAiTaskReadOnlyVirtualList({ data, name }: EditGen
                             onMouseLeave={() => dispatch(editGenAiTaskActions.hoverIndexSet(null))}
                         >
                             <div style={{ position: "relative" }}>
-                                <Editor key={virtualRow.key} value={entry} />
-                                <Badge
-                                    bg="secondary"
-                                    style={{ position: "absolute", bottom: 10, right: 40 }}
-                                    title={getTooltipText()}
-                                >
-                                    {virtualRow.index + 1}
-                                </Badge>
+                                <Editor key={virtualRow.key} value={entry.value} />
+                                <div style={{ position: "absolute", bottom: 10, right: 40 }} className="d-flex gap-1">
+                                    <EditGenAiTaskAttachmentsButton attachments={entry.attachments} />
+                                    <Badge
+                                        bg="secondary"
+                                        title={getTooltipText()}
+                                        className="d-flex align-items-center"
+                                    >
+                                        {virtualRow.index + 1}
+                                    </Badge>
+                                </div>
                             </div>
                         </div>
                     );
@@ -100,6 +104,7 @@ function Editor({ value }: EditorProps) {
             value={value}
             readOnly={true}
             actions={[{ component: <AceEditor.FullScreenAction /> }]}
+            isFullScreenLabelHidden
         />
     );
 }

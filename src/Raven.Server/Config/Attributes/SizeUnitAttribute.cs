@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="SizeUnitAttribute.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using Sparrow;
 
 namespace Raven.Server.Config.Attributes

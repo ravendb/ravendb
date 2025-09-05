@@ -18,4 +18,5 @@ public sealed class CreateSetupPackageParameters
     public bool RegisterTcpDnsRecords;
     public string AcmeUrl;
     public CancellationToken CancellationToken;
+    public string AcmeProfile;
 }

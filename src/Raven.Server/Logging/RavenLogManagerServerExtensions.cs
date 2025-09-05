@@ -222,7 +222,7 @@ internal static class RavenLogManagerServerExtensions
     {
         if (databaseName == null)
             throw new ArgumentNullException(nameof(databaseName));
-        if (indexName == null) 
+        if (indexName == null)
             throw new ArgumentNullException(nameof(indexName));
 
         return AuditLoggers.GetOrAdd($"{databaseName}/{indexName}", r =>
@@ -536,7 +536,7 @@ internal static class RavenLogManagerServerExtensions
         if (RavenLogManager.Instance.IsAuditEnabled)
         {
             var auditLog = RavenLogManager.Instance.GetAuditLoggerForServer();
-            auditLog.Audit($"Server started up, listening to {string.Join(", ", configuration.Core.ServerUrls)} with certificate {server.Certificate?.Certificate?.Subject} ({server.Certificate?.Certificate?.Thumbprint}), public url: {configuration.Core.PublicServerUrl}");
+            auditLog.Audit($"Server started up, listening to {string.Join(", ", configuration.Core.ServerUrls)} with certificate {server.Certificate?.ServerCertificate?.Subject} ({server.Certificate?.ServerCertificate?.Thumbprint}), public url: {configuration.Core.PublicServerUrl}");
         }
 
         return;

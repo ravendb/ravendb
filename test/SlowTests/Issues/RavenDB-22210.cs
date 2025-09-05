@@ -129,9 +129,9 @@ public class RavenDB_22210 : RavenTestBase
         var intermediate2 = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, $"{IntermediateName}-{suffix}-2", 2, intermediate2Kp);
 
         var clientKp = CertificateGenerator.GenerateRSAKeyPair();
-        var client = CertificateGenerator.GenerateSignedClientCertificate(intermediate, intermediateKp, $"{ClientName}-{suffix}", 1, clientKp);
+        var client = CertificateGenerator.GenerateSignedClientServerCertificate(intermediate, intermediateKp, $"{ClientName}-{suffix}", 1, clientKp);
 
-        var client2 = CertificateGenerator.GenerateSignedClientCertificate(intermediate2, intermediate2Kp, $"{ClientRenewedName}-{suffix}", 1, clientKp);
+        var client2 = CertificateGenerator.GenerateSignedClientServerCertificate(intermediate2, intermediate2Kp, $"{ClientRenewedName}-{suffix}", 1, clientKp);
 
         return (ca, intermediate, intermediate2, client, client2);
     }
@@ -154,9 +154,9 @@ public class RavenDB_22210 : RavenTestBase
         var intermediate2 = CertificateGenerator.GenerateIntermediateCACertificate(ca2, ca2Kp, $"{IntermediateName}-{suffix}-2", 2, intermediate2Kp);
 
         var clientKp = CertificateGenerator.GenerateRSAKeyPair();
-        var client = CertificateGenerator.GenerateSignedClientCertificate(intermediate, intermediateKp, $"{ClientName}-{suffix}", 1, clientKp);
+        var client = CertificateGenerator.GenerateSignedClientServerCertificate(intermediate, intermediateKp, $"{ClientName}-{suffix}", 1, clientKp);
 
-        var client2 = CertificateGenerator.GenerateSignedClientCertificate(intermediate2, intermediate2Kp, $"{ClientRenewedName}-{suffix}", 1, clientKp);
+        var client2 = CertificateGenerator.GenerateSignedClientServerCertificate(intermediate2, intermediate2Kp, $"{ClientRenewedName}-{suffix}", 1, clientKp);
 
         return (ca, ca2, intermediate, intermediate2, client, client2);
     }
@@ -171,8 +171,8 @@ public class RavenDB_22210 : RavenTestBase
         var intermediate = CertificateGenerator.GenerateIntermediateCACertificate(ca, caKp, $"{IntermediateName}-{suffix}", 2, intermediateKp);
 
         var clientKp = CertificateGenerator.GenerateRSAKeyPair();
-        var client = CertificateGenerator.GenerateSignedClientCertificate(intermediate, intermediateKp, $"{ClientName}-{suffix}", 1, clientKp);
-        var client2 = CertificateGenerator.GenerateSignedClientCertificate(intermediate, intermediateKp, $"{ClientRenewedName}-{suffix}", 1, clientKp);
+        var client = CertificateGenerator.GenerateSignedClientServerCertificate(intermediate, intermediateKp, $"{ClientName}-{suffix}", 1, clientKp);
+        var client2 = CertificateGenerator.GenerateSignedClientServerCertificate(intermediate, intermediateKp, $"{ClientRenewedName}-{suffix}", 1, clientKp);
 
         return (ca, intermediate, client, client2);
     }

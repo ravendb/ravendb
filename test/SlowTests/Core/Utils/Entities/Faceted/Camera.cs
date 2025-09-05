@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="Event.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+ï»¿using System;
 using System.Collections.Generic;
 
 namespace SlowTests.Core.Utils.Entities.Faceted
@@ -25,7 +19,7 @@ namespace SlowTests.Core.Utils.Entities.Faceted
 
         public override string ToString()
         {
-            return $"{Id,3}: {DateOfListing} {Manufacturer,10} {Model} - £{Cost:0.00} {Zoom:0.0}X zoom, {Megapixels:0.0} megapixels, [{(AdvancedFeatures == null ? "" : String.Join(", ", AdvancedFeatures))}]";
+            return $"{Id,3}: {DateOfListing} {Manufacturer,10} {Model} - ï¿½{Cost:0.00} {Zoom:0.0}X zoom, {Megapixels:0.0} megapixels, [{(AdvancedFeatures == null ? "" : String.Join(", ", AdvancedFeatures))}]";
         }
 
         public override bool Equals(object obj)

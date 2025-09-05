@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <Description>Raven.Server is the database server for RavenDB</Description>
-    <Authors>Hibernating Rhinos</Authors>
+    <Authors>RavenDB</Authors>
     <TargetFramework>net8.0</TargetFramework>
     <RuntimeFrameworkVersion>8.0.19</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>

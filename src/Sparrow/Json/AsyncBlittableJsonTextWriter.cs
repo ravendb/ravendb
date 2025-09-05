@@ -84,14 +84,14 @@ namespace Sparrow.Json
             DisposeInternal();
 
             // PERF: Check if flush completed synchronously to avoid async state machine
-            var flushTask = FlushAsync();
+            var flushTask = FlushAsync(_cancellationToken);
             if (flushTask.IsCompletedSuccessfully)
             {
                 // Fast synchronous path
                 var bytesWritten = flushTask.Result;
                 if (bytesWritten > 0)
                 {
-                    var outputFlushTask = _outputStream.FlushAsync();
+                    var outputFlushTask = _outputStream.FlushAsync(_cancellationToken);
                     if (outputFlushTask.IsCompleted)
                     {
                         outputFlushTask.GetAwaiter().GetResult();
@@ -115,7 +115,7 @@ namespace Sparrow.Json
         {
             var bytesWritten = await flushTask.ConfigureAwait(false);
             if (bytesWritten > 0)
-                await _outputStream.FlushAsync().ConfigureAwait(false);
+                await _outputStream.FlushAsync(_cancellationToken).ConfigureAwait(false);
 
             await DisposeStreamAsync().ConfigureAwait(false);
         }
