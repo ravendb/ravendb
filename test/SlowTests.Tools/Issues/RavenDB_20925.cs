@@ -1,19 +1,16 @@
-﻿using System.Collections.Generic;
-using System;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
 using FastTests;
 using Raven.Client.ServerWide.Operations.Logs;
 using Raven.Embedded;
-using Raven.Server.Config;
-using Sparrow.Json;
-using Sparrow.Json.Parsing;
 using Sparrow.Logging;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues;
+namespace SlowTests.Tools.Issues;
 
 public class RavenDB_20925 : RavenTestBase
 {

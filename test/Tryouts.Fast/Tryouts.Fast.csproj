@@ -1,11 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.20</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.19</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyName>Tryouts</AssemblyName>
+    <AssemblyName>Tryouts.Fast</AssemblyName>
     <OutputType>Exe</OutputType>
-    <PackageId>Tryouts</PackageId>
+    <PackageId>Tryouts.Fast</PackageId>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
     <DefineConstants>$(DefineConstants);IsAnyOS</DefineConstants>
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -68,8 +68,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
-    <ProjectReference Include="..\RachisTests\RachisTests.csproj" />
-    <ProjectReference Include="..\SlowTests\SlowTests.csproj" />
+    <ProjectReference Include="..\FastTests\FastTests.csproj" />
   </ItemGroup>
 
   <Target Name="PlatformMessage" AfterTargets="Build">

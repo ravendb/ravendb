@@ -18,7 +18,7 @@ using Xunit;
 using Xunit.Abstractions;
 using static Raven.Server.Documents.Schemas.Attachments;
 
-namespace SlowTests.Issues
+namespace SlowTests.Tools.Issues
 {
     public class RavenDB_8451 : RavenTestBase
     {

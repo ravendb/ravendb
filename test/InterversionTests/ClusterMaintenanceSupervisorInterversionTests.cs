@@ -12,7 +12,6 @@ using Raven.Client.Http;
 using Raven.Client.ServerWide.Commands;
 using Raven.Server.Config;
 using Raven.Server.Extensions;
-using SlowTests.Server.Documents.PeriodicBackup;
 using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
@@ -96,7 +95,7 @@ public class ClusterMaintenanceSupervisorInterversionTests : MixedClusterTestBas
             // Creating compare exchange values and tombstones
             await currentVersionStore.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/1", 1, 0));
             await currentVersionStore.Operations.SendAsync(new PutCompareExchangeValueOperation<int>("cx/2", 1, 0));
-            await RavenDB_11139.CreateCompareExchangeTombstone(currentVersionStore, "cx/3");
+            await CreateCompareExchangeTombstone(currentVersionStore, "cx/3");
 
             await AssertCompareExchangeCounts(currentVersionStore, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2);
             await AssertCompareExchangeCounts(store628, expectedTombstonesNumber: 1, expectedCompareExchangeNumber: 2);
@@ -149,5 +148,11 @@ public class ClusterMaintenanceSupervisorInterversionTests : MixedClusterTestBas
 
         Assert.True(expectedTombstonesNumber == actualTombstonesNumber, $"Tombstones check failed. Expected: {expectedTombstonesNumber}, Actual: {actualTombstonesNumber}.");
         Assert.True(expectedCompareExchangeNumber == actualCompareExchangeNumber, $"Values check failed. Expected: {expectedCompareExchangeNumber}, Actual: {actualCompareExchangeNumber}.");
+    }
+    
+    internal static async Task CreateCompareExchangeTombstone(DocumentStore documentStore, string key)
+    {
+        var res = await documentStore.Operations.SendAsync(new PutCompareExchangeValueOperation<int>(key, 1, 0));
+        await documentStore.Operations.SendAsync(new DeleteCompareExchangeValueOperation<int>(key, res.Index));
     }
 }

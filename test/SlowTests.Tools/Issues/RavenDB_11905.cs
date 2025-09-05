@@ -11,7 +11,7 @@ using Voron.Recovery;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Issues
+namespace SlowTests.Tools.Issues
 {
     public class RavenDB_11905 : RavenTestBase
     {

@@ -8,7 +8,7 @@ using SlowTests.Core.Utils.Entities;
 using Tests.Infrastructure;
 using Xunit;
 
-namespace SlowTests.Issues
+namespace SlowTests.Tools.Issues
 {
     public abstract class Abstract_RavenDB_17980 : RavenTestDriver
     {

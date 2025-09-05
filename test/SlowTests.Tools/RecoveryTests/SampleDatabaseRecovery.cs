@@ -8,7 +8,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.RecoveryTests
+namespace SlowTests.Tools.RecoveryTests
 {
     public class SampleDatabaseRecovery : RecoveryTestBase
     {

@@ -20,7 +20,7 @@ using Xunit;
 using Xunit.Abstractions;
 using LogLevel = Sparrow.Logging.LogLevel;
 
-namespace SlowTests.SparrowTests;
+namespace SlowTests.Tools.SparrowTests;
 
 public class ModifyConfigurationTests : RavenTestBase
 {
