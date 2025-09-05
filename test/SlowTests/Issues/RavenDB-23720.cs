@@ -4,7 +4,6 @@ using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents.Handlers.Processors.Indexes;
-using SlowTests.Server.Documents.AI.Embeddings;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

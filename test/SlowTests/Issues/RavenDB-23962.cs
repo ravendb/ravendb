@@ -4,7 +4,6 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Documents;
 using Raven.Server.Documents.AI.Embeddings;
 using Raven.Server.ServerWide.Context;
-using SlowTests.Server.Documents.AI.Embeddings;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;

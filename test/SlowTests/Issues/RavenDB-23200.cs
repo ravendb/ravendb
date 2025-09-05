@@ -4,7 +4,6 @@ using System.Linq;
 using FastTests;
 using Raven.Client.Documents.Indexes;
 using SlowTests.Core.Utils.Entities;
-using SlowTests.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

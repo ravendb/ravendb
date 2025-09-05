@@ -20,6 +20,7 @@ using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Commands;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -831,7 +832,7 @@ for (const comment of this.Comments)
 
                 // create context objects
                 var bjro = store.Conventions.Serialization.DefaultConverter.ToBlittable(testGenAiScript, context);
-                var cmd = new GenAiTestCmd(DocumentConventions.DefaultForServer, bjro);
+                var cmd = new GenAiTestCommand(DocumentConventions.DefaultForServer, bjro);
                 using var requestExecutor = store.GetRequestExecutor();
                 await requestExecutor.ExecuteAsync(cmd, context);
 
@@ -894,7 +895,7 @@ for (const comment of this.Comments)
                     bjro = context.ReadObject(bjro, id);
                 }
 
-                cmd = new GenAiTestCmd(DocumentConventions.DefaultForServer, bjro);
+                cmd = new GenAiTestCommand(DocumentConventions.DefaultForServer, bjro);
                 await requestExecutor.ExecuteAsync(cmd, context);
 
                 result = cmd.Result;
@@ -964,7 +965,7 @@ for (const comment of this.Comments)
                     bjro = context.ReadObject(bjro, id);
                 }
 
-                cmd = new GenAiTestCmd(DocumentConventions.DefaultForServer, bjro);
+                cmd = new GenAiTestCommand(DocumentConventions.DefaultForServer, bjro);
                 await requestExecutor.ExecuteAsync(cmd, context);
 
                 result = cmd.Result;
@@ -1075,7 +1076,7 @@ for (const comment of this.Comments)
 
                 bjro = context.ReadObject(bjro, id);
 
-                var cmd = new GenAiTestCmd(DocumentConventions.DefaultForServer, bjro);
+                var cmd = new GenAiTestCommand(DocumentConventions.DefaultForServer, bjro);
                 using var requestExecutor = store.GetRequestExecutor();
                 await requestExecutor.ExecuteAsync(cmd, context);
 
@@ -1726,37 +1727,6 @@ if($output.Blocked)
                     Assert.True(usage.CompletionTokens > 0);
                 }
             }
-        }
-    }
-
-    internal class GenAiTestCmd : RavenCommand<BlittableJsonReaderObject>
-    {
-        private readonly DocumentConventions _conventions;
-        private readonly BlittableJsonReaderObject _testScript;
-        public override bool IsReadRequest => true;
-
-        public GenAiTestCmd(DocumentConventions conventions, BlittableJsonReaderObject testScript)
-        {
-            _conventions = conventions;
-            _testScript = testScript;
-        }
-
-        public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
-        {
-            url = $"{node.Url}/databases/{node.Database}/admin/ai/gen-ai/test";
-
-            var request = new HttpRequestMessage
-            {
-                Method = HttpMethod.Post,
-                Content = new BlittableJsonContent(async stream => await ctx.WriteAsync(stream, _testScript).ConfigureAwait(false), _conventions)
-            };
-
-            return request;
-        }
-
-        public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
-        {
-            Result = response;
         }
     }
 }

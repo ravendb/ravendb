@@ -11,6 +11,7 @@
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Include="..\..\src\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />
+    <Compile Remove="Issues\**" />
   </ItemGroup>
   <ItemGroup Condition="'$(OS)' != 'Windows_NT'">
     <Compile Include="..\..\src\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
@@ -63,6 +64,7 @@
     <None Remove="Data\RavenDB_24797\24797_counters_test.ravendb-snapshot" />
     <None Remove="Smuggler\Data\DocumentWithRevisions.ravendbdump" />
     <None Remove="Smuggler\Data\RevisionsWithoutADocument.ravendbdump" />
+    <None Remove="Issues\**" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Tests.Infrastructure\CommonTestsAssemblyInfo.cs" Link="Properties\CommonTestsAssemblyInfo.cs" />
@@ -135,6 +137,7 @@
     <EmbeddedResource Include="Data\RavenDB_14548\debug-package - Node [A].zip" />
     <None Remove="Data\RavenDB_14548\debug-package - Cluster Wide.zip" />
     <EmbeddedResource Include="Data\RavenDB_14548\debug-package - Cluster Wide.zip" />
+    <EmbeddedResource Remove="Issues\**" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
@@ -224,6 +227,7 @@
     <Folder Include="Server\Basic" />
     <Folder Include="Server\Documents\AI\Embeddings\QueryEmbeddingsBatchTest\" />
     <Folder Include="Server\Documents\Notifications" />
+    <Folder Include="Utils\Attributes\" />
   </ItemGroup>
   <ItemGroup>
     <None Update="SchemaUpgrade\Issues\DocumentsVersion\schema_999\headers.one">

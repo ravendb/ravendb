@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -8,21 +9,23 @@ using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup.Aws;
+using Raven.Server.Documents.PeriodicBackup.Restore;
 using Raven.Server.ServerWide.Context;
 using Raven.Tests.Core.Utils.Entities;
-using Tests.Infrastructure;
 using Tests.Infrastructure.Entities;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.PeriodicBackup.Restore
+namespace Tests.Infrastructure
 {
-    public abstract class RestoreFromS3 : CloudBackupTestBase
+    public abstract class RestoreFromS3TestBase : CloudBackupTestBase
     {
         private readonly bool _isCustom;
         private readonly string _remoteFolderName;
+        
+        private const string CollectionName = "Orders";
 
-        protected RestoreFromS3(ITestOutputHelper output, bool isCustom = false) : base(output)
+        protected RestoreFromS3TestBase(ITestOutputHelper output, bool isCustom = false) : base(output)
         {
             _isCustom = isCustom;
             _remoteFolderName = GetRemoteFolder(GetType().Name);
@@ -465,6 +468,62 @@ namespace SlowTests.Server.Documents.PeriodicBackup.Restore
             }
 
             return settings;
+        }
+        
+        protected async Task DeleteObjects(S3Settings s3Settings, string additionalTable = null)
+        {
+            if (s3Settings == null)
+                return;
+
+            await DeleteObjects(s3Settings, prefix: $"{s3Settings.RemoteFolderName}/{CollectionName}", delimiter: string.Empty);
+
+            if (additionalTable == null)
+                return;
+
+            await DeleteObjects(s3Settings, prefix: $"{s3Settings.RemoteFolderName}/{additionalTable}", delimiter: string.Empty);
+        }
+
+        protected async Task DeleteObjects(S3Settings s3Settings, string prefix, string delimiter, bool listFolder = false)
+        {
+            if (s3Settings == null)
+                return;
+
+            try
+            {
+                using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+                using (var s3Client = new RavenAwsS3Client(s3Settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
+                {
+                    var cloudObjects = await s3Client.ListObjectsAsync(prefix, delimiter, listFolder);
+                    if (cloudObjects.FileInfoDetails.Count == 0)
+                        return;
+
+                    if (listFolder == false)
+                    {
+                        var pathsToDelete = cloudObjects.FileInfoDetails.Select(x => x.FullPath).ToList();
+                        s3Client.DeleteMultipleObjects(pathsToDelete);
+                        return;
+                    }
+
+                    var filesToDelete = await ListAllFilesInFolders(s3Client, cloudObjects);
+                    s3Client.DeleteMultipleObjects(filesToDelete);
+                }
+            }
+            catch (Exception)
+            {
+                // ignored
+            }
+        }
+        
+        private static async Task<List<string>> ListAllFilesInFolders(RavenAwsS3Client s3Client, ListObjectsResult cloudObjects)
+        {
+            var files = new List<string>();
+            foreach (var folder in cloudObjects.FileInfoDetails)
+            {
+                var objectsInFolder = await s3Client.ListObjectsAsync(prefix: folder.FullPath, delimiter: string.Empty, listFolders: false);
+                files.AddRange(objectsInFolder.FileInfoDetails.Select(fi => fi.FullPath));
+            }
+
+            return files;
         }
 
         public override void Dispose()

@@ -31,7 +31,7 @@ namespace SlowTests.Sharding.Issues
         {
             using (var store = Sharding.GetDocumentStore())
             {
-                await using (var stream = typeof(RavenDB_10404).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_22200.OneDamagedBucket.ravendbdump"))
+                await using (var stream = typeof(RavenDB_22200).Assembly.GetManifestResourceStream("SlowTests.Data.RavenDB_22200.OneDamagedBucket.ravendbdump"))
                 {
                     var operation = await store.Smuggler.ImportAsync(new DatabaseSmugglerImportOptions(), stream, CancellationToken.None);
                     await operation.WaitForCompletionAsync(TimeSpan.FromMinutes(1));

@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -19,8 +21,6 @@ using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Documents.Operations.Replication;
 using Raven.Server.Documents;
 using Raven.Server.NotificationCenter.Notifications;
-using SlowTests.Server.Documents.AI;
-using SlowTests.Server.Replication;
 using Xunit;
 using Xunit.Abstractions;
 using User = SlowTests.Core.Utils.Entities.User;
@@ -196,7 +196,7 @@ namespace SlowTests.Issues
             using (var sink = GetDocumentStore())
             {
                 var hubCreationTaskId = (await hub.Maintenance.ForDatabase(hub.Database).SendAsync(new PutPullReplicationAsHubOperation(taskName)));
-                var sinkCreationTaskId = (await PullReplicationTests.SetupPullReplicationAsync(taskName, sink, hub));
+                var sinkCreationTaskId = (await SetupPullReplicationAsync(taskName, sink, hub));
 
                 // Documents creation
                 var documentCreationTasks = new Task[DocumentsCount];
@@ -571,6 +571,32 @@ namespace SlowTests.Issues
                 var detail = blockingTombstonesDetails[0];
                 Assert.Equal(1, detail.NumberOfTombstones);
             }
+        }
+        
+        private static Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, params DocumentStore[] hub)
+        {
+            return SetupPullReplicationAsync(remoteName, sink, null, hub);
+        }
+
+        private static async Task<List<ModifyOngoingTaskResult>> SetupPullReplicationAsync(string remoteName, DocumentStore sink, X509Certificate2 certificate, params DocumentStore[] hub)
+        {
+            var tasks = new List<Task<ModifyOngoingTaskResult>>();
+            var resList = new List<ModifyOngoingTaskResult>();
+            foreach (var store in hub)
+            {
+                var pull = new PullReplicationAsSink(store.Database, $"ConnectionString-{store.Database}", remoteName) { Url = sink.Urls[0] };
+                if (certificate != null)
+                {
+                    pull.CertificateWithPrivateKey = Convert.ToBase64String(certificate.Export(X509ContentType.Pfx));
+                }
+                tasks.Add(AddWatcherToReplicationTopology(sink, pull, store.Urls));
+            }
+            await Task.WhenAll(tasks);
+            foreach (var task in tasks)
+            {
+                resList.Add(await task);
+            }
+            return resList;
         }
 
         private class UserByName : AbstractIndexCreationTask<User>

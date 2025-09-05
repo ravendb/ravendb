@@ -4,7 +4,6 @@ using FastTests;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Session;
 using Raven.Client.Http;
-using SlowTests.Bugs.Caching;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -23,7 +22,7 @@ namespace SlowTests.Issues
             using DocumentStore store = GetDocumentStore();
 
             RequestExecutor requestExecutor = store.GetRequestExecutor();
-            UseCachingInLazyTests.TestObj entity = new UseCachingInLazyTests.TestObj();
+            TestObj entity = new TestObj();
             using (IAsyncDocumentSession session = store.OpenAsyncSession())
             {
                 await session.StoreAsync(entity);
@@ -32,7 +31,7 @@ namespace SlowTests.Issues
 
             using (IAsyncDocumentSession session = store.OpenAsyncSession())
             {
-                _ = await session.LoadAsync<UseCachingInLazyTests.TestObj>(entity.Id);
+                _ = await session.LoadAsync<TestObj>(entity.Id);
             }
 
             using (IAsyncDocumentSession session = store.OpenAsyncSession())
@@ -41,7 +40,7 @@ namespace SlowTests.Issues
                 {
                     long reBefore = requestExecutor.NumberOfServerRequests;
                     int sessionBefore = session.Advanced.NumberOfRequests;
-                    _ = await session.LoadAsync<UseCachingInLazyTests.TestObj>(entity.Id);
+                    _ = await session.LoadAsync<TestObj>(entity.Id);
                     long reForLoad = requestExecutor.NumberOfServerRequests - reBefore; // We took the value from cache
                     int sessionForLoad = session.Advanced.NumberOfRequests - sessionBefore;
                     RavenTestHelper.AssertAll(() => $"reBefore:{reBefore}, reForLoad:{reForLoad}, sessionBefore:{sessionBefore}, sessionForLoad:{sessionForLoad}",
@@ -49,6 +48,12 @@ namespace SlowTests.Issues
                         () => Assert.Equal(0, reForLoad)); // We took it from the cache
                 }
             }
+        }
+        
+        private class TestObj
+        {
+            public string Id { get; set; }
+            public string LargeContent { get; set; }
         }
     }
 }

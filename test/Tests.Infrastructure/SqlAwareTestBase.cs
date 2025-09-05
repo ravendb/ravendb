@@ -1,13 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.Common;
-using Microsoft.Data.SqlClient;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading;
 using FastTests;
+using Microsoft.Data.SqlClient;
 using Npgsql;
 using Oracle.ManagedDataAccess.Client;
 using Raven.Server.SqlMigration;
@@ -17,7 +17,7 @@ using Tests.Infrastructure.ConnectionString;
 using Xunit.Abstractions;
 using DisposableAction = Raven.Client.Util.DisposableAction;
 
-namespace SlowTests.Server.Documents.Migration
+namespace Tests.Infrastructure
 {
     public abstract class SqlAwareTestBase : RavenTestBase
     {

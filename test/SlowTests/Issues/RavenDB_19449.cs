@@ -5,7 +5,6 @@ using FastTests;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
 using Raven.Server.Utils;
-using SlowTests.Corax;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -45,7 +44,7 @@ public class RavenDB_19449 : RavenTestBase
     
     private static Stream? GetFile(string name)
     {
-        var assembly = typeof(IndexBackwardCompatibilityAndPersistence).Assembly;
-        return assembly.GetManifestResourceStream($"SlowTests.Data.{nameof(RavenDB_19449)}." + name);
+        var assembly = typeof(RavenDB_19449).Assembly;
+        return assembly.GetManifestResourceStream($"SlowTests.Issues.Data.{nameof(RavenDB_19449)}." + name);
     }
 }

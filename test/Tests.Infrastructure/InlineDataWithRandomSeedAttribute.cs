@@ -4,13 +4,13 @@ using System.Reflection;
 using System.Threading;
 using Xunit.Sdk;
 
-namespace SlowTests.Utils
+namespace Tests.Infrastructure
 {
-    public sealed class InlineDataWithRandomSeed : DataAttribute
+    public sealed class InlineDataWithRandomSeedAttribute : DataAttribute
     {
         private static int _runs;
 
-        public InlineDataWithRandomSeed(params object[] dataValues)
+        public InlineDataWithRandomSeedAttribute(params object[] dataValues)
         {
             DataValues = dataValues ?? new object[] { null };
         }

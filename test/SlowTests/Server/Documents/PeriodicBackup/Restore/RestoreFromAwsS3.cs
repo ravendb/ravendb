@@ -9,7 +9,7 @@ using Xunit.Abstractions;
 
 namespace SlowTests.Server.Documents.PeriodicBackup.Restore
 {
-    public class RestoreFromAwsS3 : RestoreFromS3
+    public class RestoreFromAwsS3 : RestoreFromS3TestBase
     {
         public RestoreFromAwsS3(ITestOutputHelper output) : base(output)
         {

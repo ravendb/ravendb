@@ -14,8 +14,6 @@ using Raven.Server.Config;
 using Raven.Server.Documents.PeriodicBackup.Aws;
 using Raven.Server.ServerWide;
 using SlowTests.Core.Utils.Entities;
-using SlowTests.Server.Documents.ETL.Olap;
-using SlowTests.Server.Documents.PeriodicBackup.Restore;
 using Sparrow;
 using Sparrow.Backups;
 using Tests.Infrastructure;
@@ -26,7 +24,7 @@ using S3StorageClass = Raven.Client.Documents.Operations.Backups.S3StorageClass;
 
 namespace SlowTests.Issues;
 
-public class RavenDB_23846 : RestoreFromS3
+public class RavenDB_23846 : RestoreFromS3TestBase
 {
     private static readonly BackupConfiguration DefaultBackupConfiguration;
 
@@ -103,7 +101,7 @@ public class RavenDB_23846 : RestoreFromS3
         }
         finally
         {
-            await S3Tests.DeleteObjects(s3Settings);
+            await DeleteObjects(s3Settings);
         }
     }
 
@@ -258,7 +256,7 @@ public class RavenDB_23846 : RestoreFromS3
         }
         finally
         {
-            await S3Tests.DeleteObjects(s3Settings);   
+            await DeleteObjects(s3Settings);   
         }
     }
 

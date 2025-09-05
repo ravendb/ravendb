@@ -1,5 +1,4 @@
 ﻿using Raven.Client.Documents.Operations.OngoingTasks;
-using SlowTests.Server.Documents.AI.Embeddings;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

@@ -5,7 +5,6 @@ using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Exceptions;
-using SlowTests.Server.Documents.AI.Embeddings;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

@@ -109,7 +109,7 @@ namespace RachisTests.DatabaseCluster
                 }
 
                 // we need to deploy the index before bringing the node down
-                await WaitForRollingIndex(store.Database, index.IndexName, Servers);
+                await Indexes.WaitForRollingIndexAsync(store.Database, index.IndexName, Servers);
                 await DisposeServerAndWaitForFinishOfDisposalAsync(Servers[1]);
                 using (var session = store.OpenAsyncSession())
                 {
@@ -2315,35 +2315,6 @@ namespace RachisTests.DatabaseCluster
 
                 rehab = await GetRehabCount(store, name);
                 Assert.Equal(1, rehab);
-            }
-        }
-        
-        public static async Task<Index> WaitForRollingIndex(string database, string name, RavenServer server)
-        {
-            var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-
-            while (true)
-            {
-                await Task.Delay(250);
-
-                try
-                {
-                    var index = db.IndexStore.GetIndex(name);
-                    if (index == null)
-                        continue;
-                    return index;
-                }
-                catch (PendingRollingIndexException)
-                {
-                }
-            }
-        }
-        
-        public static async Task WaitForRollingIndex(string database, string name, List<RavenServer> servers)
-        {
-            foreach (var server in servers)
-            {
-                await WaitForRollingIndex(database, name, server);
             }
         }
     }

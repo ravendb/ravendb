@@ -8,8 +8,7 @@ using Raven.Client.Documents.Operations.Indexes;
 using Raven.Client.Documents.Queries.Facets;
 using Xunit.Abstractions;
 
-
-namespace SlowTests
+namespace Tests.Infrastructure
 {
     public abstract class FacetTestBase : RavenTestBase
     {

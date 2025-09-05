@@ -16,7 +16,7 @@ namespace SlowTests.Issues
         public string Language { get; set; }
     }
 
-    class Index : AbstractIndexCreationTask<MyEntity>
+    public class Index : AbstractIndexCreationTask<MyEntity>
     {
         private readonly string _indexName;
 

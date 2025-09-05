@@ -9,10 +9,7 @@ using Newtonsoft.Json.Linq;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes.Vector;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.ConnectionStrings;
-using Raven.Client.Documents.Operations.ETL;
-using Raven.Client.Documents.Operations.OngoingTasks;
 using Raven.Client.Extensions.Streams;
 using Raven.Client.Util;
 using Raven.Server.Documents;
@@ -25,7 +22,7 @@ using Sparrow.Threading;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.AI.Embeddings;
+namespace Tests.Infrastructure;
 
 public abstract class EmbeddingsGenerationTestBase(ITestOutputHelper output) : RavenTestBase(output)
 {

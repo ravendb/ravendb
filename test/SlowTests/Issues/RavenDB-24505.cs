@@ -7,8 +7,8 @@ using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi.Test;
 using Raven.Server.ServerWide.Context;
-using SlowTests.Server.Documents.AI.GenAi;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Commands;
 using Xunit;
 using Xunit.Abstractions;
 #pragma warning disable SKEXP0001
@@ -35,7 +35,7 @@ namespace SlowTests.Issues
             {
                 var testGenAiScript = new TestGenAiScript { Configuration = configuration };
                 var bjro = store.Conventions.Serialization.DefaultConverter.ToBlittable(testGenAiScript, context);
-                var cmd = new GenAiTestScript.GenAiTestCmd(DocumentConventions.DefaultForServer, bjro);
+                var cmd = new GenAiTestCommand(DocumentConventions.DefaultForServer, bjro);
 
                 using var requestExecutor = store.GetRequestExecutor();
                 var error = await Assert.ThrowsAsync<RavenException>(async () => await requestExecutor.ExecuteAsync(cmd, context));

@@ -7,7 +7,7 @@ using Raven.Server.Config;
 using Raven.Server.ServerWide;
 using Xunit.Abstractions;
 
-namespace SlowTests.Server.Documents.PeriodicBackup
+namespace Tests.Infrastructure
 {
     public abstract class CloudBackupTestBase : RavenTestBase
     {

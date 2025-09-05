@@ -4,7 +4,7 @@ using System.Linq;
 using System.Reflection;
 using Xunit.Sdk;
 
-namespace SlowTests.Utils.Attributes
+namespace Tests.Infrastructure
 {
     public class CriticalCulturesAttribute : DataAttribute
     {

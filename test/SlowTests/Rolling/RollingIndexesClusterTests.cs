@@ -10,7 +10,6 @@ using Orders;
 using Raven.Client;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
-using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations;
@@ -1085,35 +1084,6 @@ namespace SlowTests.Rolling
             }
 
             public override string IndexName => nameof(MyRollingIndex);
-        }
-
-        public static async Task<Index> WaitForRollingIndex(string database, string name, RavenServer server)
-        {
-            var db = await server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(database);
-
-            while (true)
-            {
-                await Task.Delay(250);
-
-                try
-                {
-                    var index = db.IndexStore.GetIndex(name);
-                    if (index == null)
-                        continue;
-                    return index;
-                }
-                catch (PendingRollingIndexException)
-                {
-                }
-            }
-        }
-
-        public static async Task WaitForRollingIndex(string database, string name, List<RavenServer> servers)
-        {
-            foreach (var server in servers)
-            {
-                await WaitForRollingIndex(database, name, server);
-            }
         }
     }
 }

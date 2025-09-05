@@ -1779,7 +1779,7 @@ namespace SlowTests.Smuggler
 
         private static Stream GetDump(string name)
         {
-            var assembly = typeof(RavenDB_9912).Assembly;
+            var assembly = typeof(BackupDatabaseRecordTests).Assembly;
             return assembly.GetManifestResourceStream("SlowTests.Data." + name);
         }
 

@@ -3,12 +3,15 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.Subscriptions;
 using Raven.Server;
 using Raven.Server.Config;
+using Raven.Server.Documents;
+using Raven.Server.Documents.Patch;
 using Raven.Server.Documents.TcpHandlers;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Core.AdminConsole;
 using Sparrow.Server;
 using Tests.Infrastructure;
 using Xunit;
@@ -75,7 +78,7 @@ namespace SlowTests.Issues
                 Assert.False(configuration.Server.DisableTcpCompression);
 
                 // modify configuration
-                AdminJsConsoleTests.ExecuteScript(serverToDisableOn, database: null, "server.Configuration.Server.DisableTcpCompression = true;");
+                ExecuteScript(serverToDisableOn, database: null, "server.Configuration.Server.DisableTcpCompression = true;");
                 Assert.True(configuration.Server.DisableTcpCompression);
 
                 await SetupReplicationAsync(srcStore, dstStore2);
@@ -281,6 +284,19 @@ namespace SlowTests.Issues
                     }
                 }
             }
+        }
+        
+        internal static JToken ExecuteScript(RavenServer server, DocumentDatabase database, string script)
+        {
+            var result = new AdminJsConsole(server, database).ApplyScript(new AdminJsScript
+            (
+                script
+            ));
+
+            Assert.NotNull(result);
+            var token = JsonConvert.DeserializeObject<JObject>(result).GetValue("Result");
+            Assert.NotNull(token);
+            return token;
         }
     }
 }

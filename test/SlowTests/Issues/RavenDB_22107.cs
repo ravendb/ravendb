@@ -8,9 +8,9 @@ using Raven.Client.Http;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.Handlers.Processors.Replication;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Sharding.Replication;
 using Sparrow.Json;
 using Tests.Infrastructure;
+using Tests.Infrastructure.Operations;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -42,7 +42,7 @@ namespace SlowTests.Issues
                 await EnsureReplicatingAsync(store2, store1);
 
                 var db = await GetDocumentDatabaseInstanceForAsync(store1, options.DatabaseMode, "users/1");
-                var replicationActiveConnections = await store1.Maintenance.ForDatabase(db.Name).SendAsync(new ShardedExternalReplicationTests.GetReplicationActiveConnectionsInfoOperation());
+                var replicationActiveConnections = await store1.Maintenance.ForDatabase(db.Name).SendAsync(new GetReplicationActiveConnectionsInfoOperation());
 
                 var expectedConnectionsCount = options.DatabaseMode == RavenDatabaseMode.Single ? 1 : 3;
                 Assert.NotNull(replicationActiveConnections.IncomingConnections);

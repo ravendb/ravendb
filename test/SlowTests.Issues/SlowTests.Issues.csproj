@@ -1,10 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <TargetFramework>net8.0</TargetFramework>
-    <RuntimeFrameworkVersion>8.0.20</RuntimeFrameworkVersion>
+    <RuntimeFrameworkVersion>8.0.19</RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <AssemblyName>StressTests</AssemblyName>
-    <PackageId>StressTests</PackageId>
+    <AssemblyName>SlowTests.Issues</AssemblyName>
+    <PackageId>SlowTests.Issues</PackageId>
+    <RootNamespace>SlowTests</RootNamespace>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
     <CodeAnalysisRuleSet>..\..\RavenDB.ruleset</CodeAnalysisRuleSet>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
@@ -16,24 +17,35 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\SlowTests\Issues\**\*.*">
+      <Link>Issues\%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </Compile>
+    <Compile Include="..\SlowTests\Utils\CompareExchangeTombstonCleanerTestHelper.cs">
+      <Link>Utils\CompareExchangeTombstonCleanerTestHelper.cs</Link>
+    </Compile>
+    <EmbeddedResource Include="..\SlowTests\Data\RavenDB_19449\RavenDB_19449.zip">
+      <Link>Data\RavenDB_19449\RavenDB_19449.zip</Link>
+    </EmbeddedResource>
+    <Compile Include="..\Tests.Infrastructure\CommonTestsAssemblyInfo.cs" Link="Properties\CommonTestsAssemblyInfo.cs" />
     <Compile Include="..\..\src\CommonAssemblyInfo.cs" Link="Properties\CommonAssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Corax\Bugs\Terms.log.gz" />
-    <EmbeddedResource Include="Data\RavenDB_22498\AutoIndexes.SlowTests.json.gz" />
-    <EmbeddedResource Include="Voron\Data\*.txt" />
     <Content Include="..\xunit.runner.json" Link="xunit.runner.json">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\RachisTests\RachisTests.csproj" />
-    <ProjectReference Include="..\SlowTests.Issues\SlowTests.Issues.csproj" />
-    <ProjectReference Include="..\SlowTests\SlowTests.csproj" />
+    <ProjectReference Include="..\..\src\Raven.Server\Raven.Server.csproj" />
+    <ProjectReference Include="..\FastTests\FastTests.csproj" />
+    <ProjectReference Include="..\Tests.Infrastructure\Tests.Infrastructure.csproj" />
   </ItemGroup>
   <ItemGroup>
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="FubarDev.FtpServer" />
+    <PackageReference Include="FubarDev.FtpServer.FileSystem.DotNet" />
+    <PackageReference Include="FubarDev.FtpServer.FileSystem.InMemory" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="System.DirectoryServices.Protocols" />
     <PackageReference Include="xunit.runner.visualstudio">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers</IncludeAssets>
