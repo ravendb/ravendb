@@ -83,7 +83,7 @@ public unsafe struct TermsReader : IDisposable
         _pagesToPrefetch.Count = ids.Length;
         _termsLocation.CopyTo(_pagesToPrefetch.ToSpan(), startFrom: 0);
         
-        if (AdvInstructionSet.IsAcceleratedVector512)
+        if (AdvInstructionSet.IsAcceleratedVector128)
         {
             var N = Vector512<long>.Count;
             for (; idX + N < _pagesToPrefetch.Count; idX += N)
@@ -91,26 +91,6 @@ public unsafe struct TermsReader : IDisposable
                 var ptr = _pagesToPrefetch.RawItems + idX;
                 var containers = Vector512.Load(ptr);
                 Vector512.ShiftRightArithmetic(containers, pageSizeShift).Store(ptr);
-            }
-        }
-        else if (AdvInstructionSet.IsAcceleratedVector256)
-        {
-            var N = Vector256<long>.Count;
-            for (; idX + N < _pagesToPrefetch.Count; idX += N)
-            {
-                var ptr = _pagesToPrefetch.RawItems + idX;
-                var containers = Vector256.Load(ptr);
-                Vector256.ShiftRightArithmetic(containers, pageSizeShift).Store(ptr);
-            }
-        }
-        else if (AdvInstructionSet.IsAcceleratedVector128)
-        {
-            var N = Vector128<long>.Count;
-            for (; idX + N < _pagesToPrefetch.Count; idX += N)
-            {
-                var ptr = _pagesToPrefetch.RawItems + idX;
-                var containers = Vector128.Load(ptr);
-                Vector128.ShiftRightArithmetic(containers, pageSizeShift).Store(ptr);
             }
         }
 

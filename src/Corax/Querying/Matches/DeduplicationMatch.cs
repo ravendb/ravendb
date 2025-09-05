@@ -17,22 +17,18 @@ public unsafe struct DeduplicationMatch<TInner> : IQueryMatch
     private readonly GrowableHashSet<long> _hashset;
     private GrowableBitArray _bitmap;
     private readonly delegate*<ref DeduplicationMatch<TInner>, Span<long>, int> _fillFunc;
-
-    
-
     public DuplicatesOccurrence DuplicatesOccurrenceStatus => DuplicatesOccurrence.NotPossible;
-
 
     public DeduplicationMatch(IndexSearcher indexSearcher, TInner inner, bool forceHashSet)
     {
-        long maxBitId = indexSearcher.LastEntryId;
+        long maxBitId = (indexSearcher.LastEntryId + 1);
         long numberOfEntries = indexSearcher.NumberOfEntries;
-        var bitmapMemoryRequiredInBytes = (maxBitId / 64) / sizeof(ulong);
-        var entriesMemoryRequiredInBytes = (numberOfEntries / 64) / sizeof(ulong);
+        var bitmapMemoryRequiredInBytes = (maxBitId / 64 + (maxBitId % 64 != 0).ToInt32()) * sizeof(ulong);
+        var entriesMemoryRequiredInBytes = (numberOfEntries / 64 + (numberOfEntries % 64 != 0).ToInt32()) * sizeof(ulong);
 
         // If the bitmap is big enough and actually only around 1.5% entries exist, we will use a HashSet instead.
         if (bitmapMemoryRequiredInBytes > IndexSearcher.BitmapMemoryRequiredThresholdInBytes 
-            && entriesMemoryRequiredInBytes < (bitmapMemoryRequiredInBytes / 64) || bitmapMemoryRequiredInBytes > Voron.Global.Constants.Size.Gigabyte ||forceHashSet)
+            && entriesMemoryRequiredInBytes < (bitmapMemoryRequiredInBytes / 64) || forceHashSet)
         {
             _hashset = new GrowableHashSet<long>();
             _fillFunc = &FillViaHashSet;
@@ -71,6 +67,7 @@ public unsafe struct DeduplicationMatch<TInner> : IQueryMatch
         int read;
         ref var startBuffer = ref MemoryMarshal.GetReference(matches);
         ref var inner = ref match._inner;
+        
         do
         {
             read = inner.Fill(matches);
@@ -81,9 +78,11 @@ public unsafe struct DeduplicationMatch<TInner> : IQueryMatch
                 newResults += match._bitmap.Add(currentId).ToInt32();
             }
         } while (read > 0 && newResults == 0);
+        // We fetch data until we encounter the first unseen document(s). Duplicates are uncommon,
+        // and often we don't need the exact number of results. It's better to let the caller decide
+        // whether to continue, since it has better knowledge of the query.
 
-
-        // No more results. Can safely dispose the bit array.
+        // No more results. We can dispose the bitmap.
         if (read == 0)
             match._bitmap.Dispose();
 
@@ -106,7 +105,11 @@ public unsafe struct DeduplicationMatch<TInner> : IQueryMatch
                 newResults += match._hashset.Add(currentId).ToInt32();
             }
         } while (read > 0 && newResults == 0);
-
+        // We fetch data until we encounter the first unseen document(s). Duplicates are uncommon,
+        // and often we don't need the exact number of results. It's better to let the caller decide
+        // whether to continue, since it has better knowledge of the query.
+        
+        
         return newResults;
     }
 
