@@ -35,7 +35,7 @@ namespace Raven.Client.Documents.Operations.Attachments
         /// <param name="name">The name of the attachment.</param>
         /// <param name="stream">The stream containing the binary content of the attachment.</param>
         /// <param name="contentType">The MIME type of the attachment (optional).</param>
-        /// <param name="retireAt">The date to upload the attachment to cloud</param>
+        /// <param name="retireParameters">The parameters for retiring the attachment.</param>
         /// <param name="changeVector">An optional change vector for concurrency control.</param>
         public PutAttachmentOperation(string documentId, string name, Stream stream, string contentType = null, RetireAttachmentParameters retireParameters = null, string changeVector = null)
         {

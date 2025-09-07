@@ -10,10 +10,20 @@ using Sparrow.Json;
 
 namespace Raven.Client.Documents.Operations.Attachments.Retired
 {
+    /// <summary>
+    /// Represents a maintenance operation to configure the retired attachments feature in RavenDB.
+    /// This operation allows setting up automatic retirement of attachments to external storage destinations.
+    /// </summary>
     public sealed class ConfigureRetiredAttachmentsOperation : IMaintenanceOperation<ConfigureRetireAttachmentsOperationResult>
     {
         private readonly RetiredAttachmentsConfiguration _configuration;
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ConfigureRetiredAttachmentsOperation"/> class.
+        /// </summary>
+        /// <param name="configuration">The configuration settings for retired attachments. Cannot be null.</param>
+        /// <exception cref="ArgumentNullException">Thrown when <paramref name="configuration"/> is null.</exception>
+        /// <exception cref="InvalidOperationException">Thrown when the configuration validation fails.</exception>
         public ConfigureRetiredAttachmentsOperation(RetiredAttachmentsConfiguration configuration)
         {
             if (configuration == null)
@@ -23,6 +33,12 @@ namespace Raven.Client.Documents.Operations.Attachments.Retired
             _configuration = configuration;
         }
 
+        /// <summary>
+        /// Gets the command that will be executed to configure retired attachments.
+        /// </summary>
+        /// <param name="conventions">The document conventions to use for the request.</param>
+        /// <param name="ctx">The JSON operation context for serialization.</param>
+        /// <returns>A <see cref="RavenCommand{T}"/> that configures retired attachments and returns the operation result.</returns>
         public RavenCommand<ConfigureRetireAttachmentsOperationResult> GetCommand(DocumentConventions conventions, JsonOperationContext ctx)
         {
             return new ConfigureAttachmentsRetireCommand(conventions, _configuration);
