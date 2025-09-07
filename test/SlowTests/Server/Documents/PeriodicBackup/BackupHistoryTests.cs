@@ -45,7 +45,7 @@ public class BackupHistoryTests : ClusterTestBase
         var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1", name: taskName);
         var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
         var taskId = result.TaskId;
-        await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(taskId);
+        await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(taskId, nodes: [Server]);
 
         var fullBackupStatus = await Backup.RunBackupAndReturnStatusAsync(Server, taskId, store, isFullBackup: true);
         var incrementalBackupStatus = await Backup.RunBackupAndReturnStatusAsync(Server, taskId, store, isFullBackup: false);
@@ -142,7 +142,7 @@ public class BackupHistoryTests : ClusterTestBase
         var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1", name: taskName);
         var result = await store.Maintenance.SendAsync(new UpdatePeriodicBackupOperation(config));
         var taskId = result.TaskId;
-        await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(taskId);
+        await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(taskId, nodes: [Server]);
 
         var documentDatabase = await Server.ServerStore.DatabasesLandlord.TryGetOrCreateResourceStore(store.Database).ConfigureAwait(false);
         documentDatabase.PeriodicBackupRunner.ForTestingPurposesOnly().SimulateFailedBackup = true;
@@ -212,7 +212,7 @@ public class BackupHistoryTests : ClusterTestBase
             {
                 var config = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1", name: $"BackupTask_{store.Database}_{j}");
                 var result = store.Maintenance.Send(new UpdatePeriodicBackupOperation(config));
-                await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(result.TaskId);
+                await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(result.TaskId, nodes: [server]);
                 taskIds.Add(result.TaskId);
             }
 
@@ -301,14 +301,14 @@ public class BackupHistoryTests : ClusterTestBase
             var firstBackupConfiguration = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1", mentorNode: Server.ServerStore.NodeTag, name: $"BackupTask_{store.Database}_1");
             var firstResult = store.Maintenance.Send(new UpdatePeriodicBackupOperation(firstBackupConfiguration));
             var firstTaskId = firstResult.TaskId;
-            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(firstTaskId);
+            await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(firstTaskId, nodes: [Server]);
 
             var expectedBackupHistory  = await RunBackupsAccordingPlan(firstBackupPlan, Server, firstTaskId, store);
 
             var secondBackupConfiguration = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1", mentorNode: Server.ServerStore.NodeTag, name: $"BackupTask_{store.Database}_2");
             var secondResult = store.Maintenance.Send(new UpdatePeriodicBackupOperation(secondBackupConfiguration));
             var secondTaskId = secondResult.TaskId;
-            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(secondTaskId);
+            await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(secondTaskId, nodes: [Server]);
 
             await RunBackupsAccordingPlan(secondBackupPlan, Server, secondTaskId, store, expectedBackupHistory);
 
@@ -348,14 +348,14 @@ public class BackupHistoryTests : ClusterTestBase
             var firstBackupConfiguration = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1", mentorNode: Server.ServerStore.NodeTag, name: $"BackupTask_{store.Database}_1");
             var firstResult = store.Maintenance.Send(new UpdatePeriodicBackupOperation(firstBackupConfiguration));
             var firstTaskId = firstResult.TaskId;
-            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(firstTaskId);
+            await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(firstTaskId, nodes: [Server]);
 
             var expectedBackupHistory  = await RunBackupsAccordingPlan(firstBackupPlan, Server, firstTaskId, store);
 
             var secondBackupConfiguration = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1", mentorNode: Server.ServerStore.NodeTag, name: $"BackupTask_{store.Database}_2");
             var secondResult = store.Maintenance.Send(new UpdatePeriodicBackupOperation(secondBackupConfiguration));
             var secondTaskId = secondResult.TaskId;
-            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(secondTaskId);
+            await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(secondTaskId, nodes: [Server]);
 
             await RunBackupsAccordingPlan(secondBackupPlan, Server, secondTaskId, store, expectedBackupHistory);
 
@@ -397,14 +397,14 @@ public class BackupHistoryTests : ClusterTestBase
             var firstBackupConfiguration = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1", mentorNode: Server.ServerStore.NodeTag, name: $"BackupTask_{store.Database}_1");
             var firstResult = store.Maintenance.Send(new UpdatePeriodicBackupOperation(firstBackupConfiguration));
             var firstTaskId = firstResult.TaskId;
-            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(firstTaskId);
+            await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(firstTaskId, nodes: [Server]);
 
             var expectedBackupHistory  = await RunBackupsAccordingPlan(firstBackupPlan, Server, firstTaskId, store);
 
             var secondBackupConfiguration = Backup.CreateBackupConfiguration(backupPath, fullBackupFrequency: "0 0 1 1 1", mentorNode: Server.ServerStore.NodeTag, name: $"BackupTask_{store.Database}_2");
             var secondResult = store.Maintenance.Send(new UpdatePeriodicBackupOperation(secondBackupConfiguration));
             var secondTaskId = secondResult.TaskId;
-            await Cluster.WaitForRaftIndexToBeAppliedInClusterAsync(secondTaskId);
+            await Cluster.WaitForRaftIndexToBeAppliedOnClusterNodesAsync(secondTaskId, nodes: [Server]);
 
             await RunBackupsAccordingPlan(secondBackupPlan, Server, secondTaskId, store, expectedBackupHistory);
 
@@ -477,18 +477,20 @@ public class BackupHistoryTests : ClusterTestBase
     {
         var client = store.GetRequestExecutor().HttpClient;
 
-        var baseUrl = $"{store.Urls.First()}/databases/{parameters.DatabaseName}/admin/backup/history";
+        var baseUrl = $"{store.Urls.First()}/periodic-backup/history";
 
         var builder = new UriBuilder(baseUrl);
 
         var query = HttpUtility.ParseQueryString(string.Empty);
+
+        query["database"] = parameters.DatabaseName;
 
         if (parameters.TaskId != 0)
             query["taskId"] = parameters.TaskId.ToString();
         if (parameters.FullBackupId != 0)
             query["fullBackupTicks"] = parameters.FullBackupId.ToString();
         if (parameters.IncludeIncrementals == false)
-            query["includeIncrementals"] = "false";
+            query["includeIncrementals"] = false.ToString();
 
         builder.Query = query.ToString() ?? string.Empty;
 
@@ -514,7 +516,7 @@ public class BackupHistoryTests : ClusterTestBase
     private static BackupResult GetBackupResultFromEndpoint(JsonOperationContext context, DocumentStore store, string databaseName, long taskId, DateTime createdAt)
     {
         var client = store.GetRequestExecutor().HttpClient;
-        var response = AsyncHelpers.RunSync(() => client.GetAsync($"{store.Urls.First()}/databases/{databaseName}/admin/backup/result?taskId={taskId}&id={createdAt.Ticks}"));
+        var response = AsyncHelpers.RunSync(() => client.GetAsync($"{store.Urls.First()}/periodic-backup/result?database={databaseName}&taskId={taskId}&id={createdAt.Ticks}"));
         string result = response.Content.ReadAsStringAsync().Result;
 
         var resultBjro = context.Sync.ReadForMemory(result, "Result");
