@@ -25,6 +25,20 @@ namespace Raven.Server.Web.System
                 await processor.ExecuteAsync();
         }
 
+        [RavenAction("/periodic-backup/result", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetBackupResult()
+        {
+            using (var processor = new BackupDatabaseHandlerProcessorForGetBackupResult(this))
+                await processor.ExecuteAsync();
+        }
+
+        [RavenAction("/periodic-backup/history", "GET", AuthorizationStatus.ValidUser, EndpointType.Read)]
+        public async Task GetBackupHistory()
+        {
+            using (var processor = new BackupDatabaseHandlerProcessorForGetBackupHistory(this))
+                await processor.ExecuteAsync();
+        }
+
         [RavenAction("/admin/debug/periodic-backup/timers", "GET", AuthorizationStatus.Operator)]
         public async Task GetAllPeriodicBackupsTimers()
         {
