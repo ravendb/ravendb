@@ -160,7 +160,7 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         {
             var (documentId, name) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(item.AttachmentTombstone.Key);
 
-            _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null, fromEtl: true, RetiredAttachmentFlags.None));
+            _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null));
         }
 
         public void AddCounter(JsValue instance, JsValue counterReference)
