@@ -4,9 +4,7 @@ import { FormProvider, SubmitHandler, useForm, useWatch } from "react-hook-form"
 import { Icon } from "components/common/Icon";
 import { ConnectionFormData, EditConnectionStringFormProps, AiConnection } from "../connectionStringsTypes";
 import { yupResolver } from "@hookform/resolvers/yup";
-import * as yup from "yup";
 import ConnectionStringUsedByTasks from "./shared/ConnectionStringUsedByTasks";
-import { yupObjectSchema } from "components/utils/yupUtils";
 import { SelectOptionWithIcon, SingleValueWithIcon } from "components/common/select/Select";
 import RichAlert from "components/common/RichAlert";
 import OptionalLabel from "components/common/OptionalLabel";
@@ -22,7 +20,7 @@ import TaskUtils from "components/utils/TaskUtils";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { connectionStringSelectors } from "../store/connectionStringsSlice";
 import { useAppSelector } from "components/store";
-import { ConnectionStringsNameContext, connectionStringsUtils } from "../connectionStringsUtils";
+import { ConnectionStringsNameContext } from "../connectionStringsUtils";
 import { components, OptionProps } from "react-select";
 import LicenseRestrictedBadge from "components/common/LicenseRestrictedBadge";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
@@ -31,6 +29,7 @@ import Form from "react-bootstrap/Form";
 import ModelTypeField from "./aiFields/ModelTypeField";
 import { withNestedSubmit } from "components/utils/common";
 import { useEffect } from "react";
+import { aiConnectionStringUtils } from "./aiConnectionStringUtils";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -48,9 +47,9 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
 
     const form = useForm<FormData>({
         mode: "all",
-        defaultValues: getDefaultValues(initialConnection, isForNewConnection),
+        defaultValues: aiConnectionStringUtils.getDefaultValues(initialConnection, isForNewConnection),
         resolver: (data, _, options) =>
-            yupResolver(schema)(
+            yupResolver(aiConnectionStringUtils.schema)(
                 data,
                 {
                     connectorType: data.connectorType,
@@ -76,7 +75,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 name === "modelType" &&
                 values.modelType === "Chat" &&
                 values.connectorType != null &&
-                !chatConnectorTypes.includes(values.connectorType)
+                !aiConnectionStringUtils.chatConnectorTypes.includes(values.connectorType)
             ) {
                 setValue("connectorType", null);
             }
@@ -157,7 +156,7 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                         control={control}
                         name="connectorType"
                         placeholder={`Select connector${modelType == null ? " (select model type first)" : ""}`}
-                        options={getConnectorOptions(modelType)}
+                        options={aiConnectionStringUtils.getConnectorOptions(modelType)}
                         isDisabled={isUsedByAnyTask || modelType == null}
                         components={{
                             Option: SettingsOptionComponent,
@@ -206,259 +205,4 @@ export function SettingsOptionComponent(props: OptionProps<SelectOptionWithIcon>
             </components.Option>
         </div>
     );
-}
-
-const chatConnectorTypes: FormData["connectorType"][] = ["ollamaSettings", "openAiSettings", "azureOpenAiSettings"];
-
-function getConnectorOptions(modelType: FormData["modelType"]): SelectOptionWithIcon<FormData["connectorType"]>[] {
-    const allOptions: SelectOptionWithIcon<FormData["connectorType"]>[] = [
-        { label: "Azure OpenAI", value: "azureOpenAiSettings", icon: "openai" },
-        { label: "Google AI", value: "googleSettings", icon: "google-gemini" },
-        { label: "Hugging Face", value: "huggingFaceSettings", icon: "huggingface" },
-        { label: "Ollama", value: "ollamaSettings", icon: "ollama" },
-        { label: "OpenAI", value: "openAiSettings", icon: "openai" },
-        { label: "Mistral AI", value: "mistralAiSettings", icon: "mistralai" },
-        { label: "Embedded (bge-micro-v2)", value: "embeddedSettings", icon: "onnx" },
-    ];
-
-    if (modelType === "Chat") {
-        return [...allOptions.filter((x) => chatConnectorTypes.includes(x.value))].reverse();
-    }
-
-    return allOptions;
-}
-
-const temperatureSchema = yup
-    .number()
-    .nullable()
-    .when(["$modelType", "isSetTemperature"], {
-        is: (modelType: FormData["modelType"], isSetTemperature: boolean) => modelType === "Chat" && isSetTemperature,
-        then: (schema) => schema.min(0).max(2).required(),
-    });
-
-const schema = yupObjectSchema<FormData>({
-    name: connectionStringsUtils.nameSchema,
-    identifier: yup
-        .string()
-        .nullable()
-        .test("is-identifier", "Only lowercase letters (a-z), numbers (0-9) and hyphens (-) are allowed.", (value) => {
-            if (!value) {
-                return true;
-            }
-
-            return /^[a-z0-9-]+$/.test(value);
-        }),
-    connectorType: yup.string<FormData["connectorType"]>().nullable().required(),
-    modelType: yup.string<Raven.Client.Documents.Operations.AI.AiModelType>().nullable().required(),
-    azureOpenAiSettings: yupObjectSchema<FormData["azureOpenAiSettings"]>({
-        apiKey: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "azureOpenAiSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        endpoint: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "azureOpenAiSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        model: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "azureOpenAiSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        deploymentName: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "azureOpenAiSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        dimensions: yup.number().nullable().integer().positive(),
-        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
-        isSetTemperature: yup.boolean().nullable(),
-        temperature: temperatureSchema,
-    }),
-    googleSettings: yupObjectSchema<FormData["googleSettings"]>({
-        aiVersion: yup.string<Raven.Client.Documents.Operations.AI.GoogleAIVersion>().nullable(),
-        apiKey: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "googleSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        model: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "googleSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        dimensions: yup.number().nullable().integer().positive(),
-        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
-    }),
-    huggingFaceSettings: yupObjectSchema<FormData["huggingFaceSettings"]>({
-        apiKey: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "huggingFaceSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        endpoint: yup.string().nullable(),
-        model: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "huggingFaceSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
-    }),
-    ollamaSettings: yupObjectSchema<FormData["ollamaSettings"]>({
-        model: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "ollamaSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        uri: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "ollamaSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
-        think: yup.boolean().nullable(),
-        isSetTemperature: yup.boolean().nullable(),
-        temperature: temperatureSchema,
-    }),
-    embeddedSettings: yupObjectSchema<FormData["embeddedSettings"]>({
-        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
-    }),
-    openAiSettings: yupObjectSchema<FormData["openAiSettings"]>({
-        apiKey: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "openAiSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        endpoint: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "openAiSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        model: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "openAiSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        organizationId: yup.string().nullable(),
-        projectId: yup.string().nullable(),
-        dimensions: yup.number().nullable().integer().positive(),
-        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
-        isSetTemperature: yup.boolean().nullable(),
-        temperature: temperatureSchema,
-    }),
-    mistralAiSettings: yupObjectSchema<FormData["mistralAiSettings"]>({
-        apiKey: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "mistralaiAiSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        endpoint: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "mistralaiAiSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        model: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "mistralaiAiSettings",
-                then: (schema) => schema.trim().required(),
-            }),
-        embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
-    }),
-});
-
-function getDefaultValues(initialConnection: AiConnection, isForNewConnection: boolean): FormData {
-    if (isForNewConnection) {
-        return {
-            name: null,
-            identifier: null,
-            connectorType: null,
-            modelType: initialConnection?.modelType ?? null,
-            azureOpenAiSettings: {
-                apiKey: null,
-                endpoint: null,
-                model: null,
-                deploymentName: null,
-                dimensions: null,
-                embeddingsMaxConcurrentBatches: null,
-                isSetTemperature: false,
-                temperature: null,
-            } satisfies Required<FormData["azureOpenAiSettings"]>,
-            googleSettings: {
-                aiVersion: null,
-                apiKey: null,
-                model: null,
-                dimensions: null,
-                embeddingsMaxConcurrentBatches: null,
-            } satisfies Required<FormData["googleSettings"]>,
-            huggingFaceSettings: {
-                apiKey: null,
-                endpoint: null,
-                model: null,
-                embeddingsMaxConcurrentBatches: null,
-            } satisfies Required<FormData["huggingFaceSettings"]>,
-            ollamaSettings: {
-                model: null,
-                uri: null,
-                embeddingsMaxConcurrentBatches: null,
-                think: null,
-                isSetTemperature: false,
-                temperature: null,
-            } satisfies Required<FormData["ollamaSettings"]>,
-            embeddedSettings: {
-                embeddingsMaxConcurrentBatches: null,
-            } satisfies Required<FormData["embeddedSettings"]>,
-            openAiSettings: {
-                apiKey: null,
-                endpoint: null,
-                model: null,
-                organizationId: null,
-                projectId: null,
-                dimensions: null,
-                embeddingsMaxConcurrentBatches: null,
-                isSetTemperature: false,
-                temperature: null,
-            } satisfies Required<FormData["openAiSettings"]>,
-            mistralAiSettings: {
-                apiKey: null,
-                endpoint: null,
-                model: null,
-                embeddingsMaxConcurrentBatches: null,
-            } satisfies Required<FormData["mistralAiSettings"]>,
-        };
-    }
-
-    return _.omit(initialConnection, "type", "usedByTasks");
 }
