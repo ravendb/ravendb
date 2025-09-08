@@ -43,7 +43,7 @@ public partial class RevisionsStorage
             for (int i = _ids.Count - 1; i >= 0; i--)
             {
                 var id = _ids[i];
-                using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+                using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
                 using (revisionsStorage.GetKeyPrefix(context, lowerId, out Slice prefixSlice))
                 {
                     var collectionName = revisionsStorage.GetCollectionFor(context, prefixSlice);
@@ -60,7 +60,7 @@ public partial class RevisionsStorage
                         maxDeletes = maxTotalDeletes - deleted;
                     }
 
-					var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName, maxDeletes, ShouldSkipRevision);
+                    var result = revisionsStorage.ForceDeleteAllRevisionsFor(context, lowerId, prefixSlice, collectionName, maxDeletes, ShouldSkipRevision);
                     if (result.MoreWork == false)
                     {
                         _ids.RemoveAt(i);

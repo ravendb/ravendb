@@ -74,10 +74,12 @@ namespace SlowTests.Issues
 
                 Indexes.WaitForIndexing(store);
 
-                state = tombstoneCleaner.GetState().Tombstones;
-
-                Assert.Equal(9, state["Companies"].Documents.Etag);
-                Assert.Equal(2, state["Companies"].TimeSeries.Etag);
+                WaitForValue(() =>
+                {
+                    state = tombstoneCleaner.GetState().Tombstones;
+                    var companyState = state["Companies"];
+                    return companyState.Documents.Etag == 9 && companyState.TimeSeries.Etag == 2;
+                }, true);
             }
         }
 

@@ -42,7 +42,7 @@ public partial class RevisionsStorage
 
             foreach (var (id, etag) in _idsAndEtags)
             {
-                using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+                using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
                 using (revisionsStorage.GetKeyPrefix(context, lowerId, out Slice prefixSlice))
                 {
                     var collectionName = revisionsStorage.GetCollectionFor(context, prefixSlice);

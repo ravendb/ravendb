@@ -320,7 +320,7 @@ namespace Raven.Server.Documents
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
                 ByteStringContext.InternalScope countersGroupKeyScope = default;
-                using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                 using (DocumentIdWorker.GetLower(context.Allocator, name, out Slice counterName))
                 using (context.Allocator.Allocate(documentKeyPrefix.Size + counterName.Size, out var counterKeyBuffer))
                 using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterName, out var counterKeySlice))
@@ -852,7 +852,7 @@ namespace Raven.Server.Documents
                 var collectionName = _documentsStorage.ExtractCollectionName(context, collection);
                 var table = GetCountersTable(context.Transaction.InnerTransaction, collectionName);
 
-                using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                 {
                     if (sourceData.TryGet(Values, out BlittableJsonReaderObject sourceCounters) == false)
                     {
@@ -989,7 +989,7 @@ namespace Raven.Server.Documents
 
                                 if (changeType == CounterChangeTypes.Delete)
                                 {
-                                    using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefixSlice, separator: SpecialChars.RecordSeparator))
+                                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice documentKeyPrefixSlice, separator: SpecialChars.RecordSeparator))
                                     using (DocumentIdWorker.GetLower(context.Allocator, prop.Name, out Slice deletedCounterNameSlice))
                                     {
                                         CreateCounterTombstone(context, documentKeyPrefixSlice, deletedCounterNameSlice, collectionName, changeVector);
@@ -1510,7 +1510,7 @@ namespace Raven.Server.Documents
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
             var countersCount = 0L;
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
             {
                 foreach (var counterGroup in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
@@ -1532,7 +1532,7 @@ namespace Raven.Server.Documents
 
         internal static IEnumerable<string> GetCountersForDocumentInternal(DocumentsOperationContext context, string docId, Table table)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
             {
                 var names = GetCountersOriginalCasing(context, table, key);
                 if (names == null)
@@ -1600,7 +1600,7 @@ namespace Raven.Server.Documents
             etag = -1;
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
             using (DocumentIdWorker.GetLower(context.Allocator, counterName, out Slice counterNameSlice))
             using (context.Allocator.Allocate(counterNameSlice.Size + documentIdPrefix.Size, out var buffer))
             using (CreateCounterKeySlice(context, buffer, documentIdPrefix, counterNameSlice, out var counterKeySlice))
@@ -1637,7 +1637,7 @@ namespace Raven.Server.Documents
 
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out Slice documentIdPrefix, separator: SpecialChars.RecordSeparator))
             using (DocumentIdWorker.GetLower(context.Allocator, counterName, out Slice counterNameSlice))
             using (context.Allocator.Allocate(counterNameSlice.Size + documentIdPrefix.Size, out var buffer))
             using (CreateCounterKeySlice(context, buffer, documentIdPrefix, counterNameSlice, out var counterKeySlice))
@@ -1712,7 +1712,7 @@ namespace Raven.Server.Documents
         {
             var table = new Table(CountersSchema, context.Transaction.InnerTransaction);
 
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out Slice key, separator: SpecialChars.RecordSeparator))
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
@@ -1732,7 +1732,7 @@ namespace Raven.Server.Documents
             if (table.NumberOfEntries == 0)
                 return;
 
-            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerIdPrefix, separator: 30))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice lowerIdPrefix, separator: 30))
             {
                 table.DeleteByPrimaryKeyPrefix(lowerIdPrefix);
             }
@@ -1746,7 +1746,7 @@ namespace Raven.Server.Documents
                 Debug.Assert(false); // never hit
             }
 
-            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
             using (DocumentIdWorker.GetLower(context.Allocator, counterName, out Slice counterNameSlice))
             using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
             using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterNameSlice, out var counterKeySlice))
@@ -2009,7 +2009,7 @@ namespace Raven.Server.Documents
 
                 foreach (var name in counterNames)
                 {
-                    using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                     using (DocumentIdWorker.GetLower(context.Allocator, context.GetLazyString(name), out Slice counterNameSlice))
                     using (context.Allocator.Allocate(documentKeyPrefix.Size + counterNameSlice.Size, out var counterKeyBuffer))
                     using (CreateCounterKeySlice(context, counterKeyBuffer, documentKeyPrefix, counterNameSlice, out var counterKeySlice))

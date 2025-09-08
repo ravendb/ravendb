@@ -27,6 +27,7 @@ using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Queries.Sorting;
 using Raven.Client.Documents.Smuggler;
 using Raven.Client.Documents.Subscriptions;
+using Raven.Client.Exceptions;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Operations.Integrations.PostgreSQL;
 using Raven.Client.Util;
@@ -1435,8 +1436,8 @@ namespace Raven.Server.Smuggler.Documents
 
             public async ValueTask WriteDocumentAsync(DocumentItem item, SmugglerProgressBase.CountsWithLastEtagAndAttachments progress, Func<ValueTask> beforeFlush)
             {
-                var document = item.Document;
-                using (document)
+                using var document = item.Document;
+                try
                 {
                     if (_options.OperateOnTypes.HasFlag(DatabaseItemType.Attachments))
                     {
@@ -1461,6 +1462,11 @@ namespace Raven.Server.Smuggler.Documents
                     Writer.WriteDocument(_context, document, metadataOnly: false, _filterMetadataProperty);
 
                     await Writer.MaybeFlushAsync();
+                }
+                catch (Exception e)
+                {
+                    throw new RavenException(
+                        $"Failed to write document {document.Id}. LowerId: {document.LowerId}, Etag: {document.Etag}, ChangeVector: {document.ChangeVector}", e);
                 }
             }
 

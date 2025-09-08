@@ -603,7 +603,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             // delete segments, stats and roll-ups
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collection);
-            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
             {
                 table.DeleteByPrimaryKeyPrefix(documentKeyPrefix);
                 Stats.DeleteByPrimaryKeyPrefix(context, collection, documentKeyPrefix);
@@ -2420,7 +2420,7 @@ namespace Raven.Server.Documents.TimeSeries
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesForDoc(DocumentsOperationContext context, string docId)
         {
             var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
-            using var dispose = DocumentIdWorker.GetSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator);
+            using var dispose = DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator);
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach ((_, Table.TableValueHolder tvh) in table.SeekByPrimaryKeyPrefix(documentKeyPrefix, Slices.Empty, 0))
             {
