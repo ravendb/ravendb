@@ -18,9 +18,9 @@ internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletion
     {
         var uri = base.GetBaseUri();
         
-        // Remove /v1/ from the URI if it exists
         var uriBuilder = new UriBuilder(uri);
-        uriBuilder.Path = uriBuilder.Path.Replace("/v1/", "/");
+        if (IsBaseUrl(uri))
+            uriBuilder.Path += "v1/";
 
         return uriBuilder.Uri;
     }

@@ -392,6 +392,14 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         public BlittableJsonReaderObject GetContent(JsonOperationContext context)
         {
+            if (string.IsNullOrEmpty(_content))
+            {
+                _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
+                _ = _choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal) || Message.TryGet(Constants.ResponseFields.Refusal, out refusal);
+
+                RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
+            }
+
             return context.Sync.ReadForMemory(_content, "ai/output");
         }
     }

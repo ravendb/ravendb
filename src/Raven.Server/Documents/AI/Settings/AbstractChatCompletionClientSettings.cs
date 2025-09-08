@@ -40,9 +40,9 @@ internal abstract class AbstractChatCompletionClientSettings
     {
     }
 
-    public virtual string GetRelativeCompletionUri() => "v1/chat/completions";
+    public virtual string GetRelativeCompletionUri() => "chat/completions";
 
-    public virtual string GetRelativeModelsUri() => "v1/models";
+    public virtual string GetRelativeModelsUri() => "models";
     
     internal static bool TryGetParameters(AiConnectionString connectionString, out AbstractChatCompletionClientSettings settings)
     {
@@ -89,4 +89,9 @@ internal abstract class AbstractChatCompletionClientSettings
             public const string OpenAiProject = "OpenAI-Project";
         }
     }
+
+    internal static bool IsBaseUrl(Uri uri) =>
+        uri.AbsolutePath == "/" 
+        && string.IsNullOrEmpty(uri.Query) 
+        && string.IsNullOrEmpty(uri.Fragment);
 }

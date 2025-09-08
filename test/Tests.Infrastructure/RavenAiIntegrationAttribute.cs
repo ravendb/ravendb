@@ -153,6 +153,9 @@ public class RavenGenAiDataAttribute : AbstractRavenAiIntegrationDataAttribute<G
 
         if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
             yield return GenAiOllamaConnectorForTesting.CreateNewInstance(testMethodName);
+
+        if (aiIntegration.HasFlag(RavenAiIntegration.AzureOpenAI))
+            yield return GenAiAzureOpenAiConnectorForTesting.CreateNewInstance(testMethodName);
     }
 
     public override IEnumerable<IAiConnectorForTesting<GenAiConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration)
@@ -162,6 +165,9 @@ public class RavenGenAiDataAttribute : AbstractRavenAiIntegrationDataAttribute<G
 
         if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
             yield return GenAiOllamaConnectorForTesting.Instance;
+
+        if (aiIntegration.HasFlag(RavenAiIntegration.AzureOpenAI))
+            yield return GenAiAzureOpenAiConnectorForTesting.Instance;
     }
 }
 

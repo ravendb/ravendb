@@ -1,13 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading;
 using FastTests;
 using Microsoft.Extensions.AI;
 using Microsoft.SemanticKernel.Embeddings;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Server.Documents.AI;
+using Raven.Server.Web.System;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -136,6 +143,32 @@ public class AiConnectionStringsTests : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.AzureOpenAI | RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    public void CanTestAiChatConnectionString(Options options, GenAiConfiguration configuration)
+    {
+        using (var store = GetDocumentStore())
+        {
+            var op = new TestAiConnectionStringOperation(configuration.Connection);
+            var r = store.Maintenance.Send(op);
+            Assert.Null(r.Error);
+            Assert.True(r.Success);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.All, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    public void CanTestAiEmbeddingsConnectionString(Options options, EmbeddingsGenerationConfiguration configuration)
+    {
+        using (var store = GetDocumentStore())
+        {
+            var op = new TestAiConnectionStringOperation(configuration.Connection);
+            var r = store.Maintenance.Send(op);
+            Assert.Null(r.Error);
+            Assert.True(r.Success);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
     [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.NonInternal, CheckCanConnect = false, NightlyBuildRequired = false)]
     [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.Onnx, Skip = "Onnx does not require any mandatory fields.")]
     public void PutAiConnectionString_WithInvalidConfiguration_ShouldThrow(Options options, EmbeddingsGenerationConfiguration embeddingsGenerationConfiguration)
@@ -161,6 +194,7 @@ public class AiConnectionStringsTests : RavenTestBase
                 embeddingsGenerationConfiguration.Connection.MistralAiSettings.Model = string.Empty;
                 break;
         }
+
         using (var store = GetDocumentStore())
         {
             var exception = Assert.Throws<BadRequestException>(() => store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(embeddingsGenerationConfiguration.Connection)));
@@ -196,7 +230,8 @@ public class AiConnectionStringsTests : RavenTestBase
             var embeddings = service.GenerateAsync(_testValuesList, cancellationToken: cts.Token).GetAwaiter().GetResult();
 
             for (var i = 0; i < _testValuesList.Count; i++)
-                Assert.False(embeddings[i].Vector.Length == dimensions, $"{_testValuesList[i]}: Dimensionality hasn't been configured yet, but embeddings were generated with '{embeddings[i].Vector.Length}' dimensions, which should be different from {dimensions} to test it when it is configured.");
+                Assert.False(embeddings[i].Vector.Length == dimensions,
+                    $"{_testValuesList[i]}: Dimensionality hasn't been configured yet, but embeddings were generated with '{embeddings[i].Vector.Length}' dimensions, which should be different from {dimensions} to test it when it is configured.");
 
             embeddings = null;
             Assert.Null(embeddings);
@@ -219,6 +254,58 @@ public class AiConnectionStringsTests : RavenTestBase
 
             for (var i = 0; i < _testValuesList.Count; i++)
                 Assert.True(embeddings[i].Vector.Length == dimensions, $"{_testValuesList[i]}: Dimensionality was configured to {dimensions}, but embeddings were generated with {embeddings[i].Vector.Length} dimensions.");
+        }
+    }
+
+    
+    private class TestAiConnectionStringOperation : IMaintenanceOperation<NodeConnectionTestResult>
+    {
+        private readonly AiConnectionString _connectionString;
+
+        public TestAiConnectionStringOperation(AiConnectionString connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        public RavenCommand<NodeConnectionTestResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        {
+            return new TestAiConnectionStringCommand(_connectionString);
+        }
+
+        private class TestAiConnectionStringCommand : RavenCommand<NodeConnectionTestResult>
+        {
+            private readonly AiConnectionString _connectionString;
+
+            public TestAiConnectionStringCommand(AiConnectionString connectionString)
+            {
+                _connectionString = connectionString;
+            }
+
+            public override bool IsReadRequest => false;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/admin/ai/test-connection?type={_connectionString.GetActiveProvider()}&modelType={_connectionString.ModelType}";
+                return new HttpRequestMessage
+                {
+                    RequestUri = new Uri(url),
+                    Method = HttpMethod.Post,
+                    Content = new BlittableJsonContent(async stream =>
+                    {
+                        await ctx.WriteAsync(stream, ctx.ReadObject(ctx.ReadObject(_connectionString.GetActiveProviderInstance().ToJson(), "connection"), "connection"));
+                    }, DocumentConventions.Default)
+                };
+            }
+
+
+            private static Func<BlittableJsonReaderObject, NodeConnectionTestResult> NodeConnectionTestResult = JsonDeserializationBase.GenerateJsonDeserializationRoutine<NodeConnectionTestResult>();
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    throw new InvalidOperationException("Response is null");
+
+                Result = NodeConnectionTestResult(response);
+            }
         }
     }
 }

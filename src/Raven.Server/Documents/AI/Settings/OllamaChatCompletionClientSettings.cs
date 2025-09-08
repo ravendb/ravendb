@@ -1,4 +1,5 @@
-﻿using Raven.Client.Documents.Operations.AI;
+﻿using System;
+using Raven.Client.Documents.Operations.AI;
 using Sparrow.Json;
 
 namespace Raven.Server.Documents.AI.Settings;
@@ -11,6 +12,17 @@ internal class OllamaChatCompletionClientSettings : AbstractChatCompletionClient
         : base(settings.Uri, apiKey: null, settings.Model)
     {
         _settings = settings;
+    }
+
+    public override Uri GetBaseUri()
+    {
+        var uri = base.GetBaseUri();
+        
+        var uriBuilder = new UriBuilder(uri);
+        if (IsBaseUrl(uri))
+            uriBuilder.Path += "v1/";
+
+        return uriBuilder.Uri;
     }
 
     public override void HandleCompletionRequestPayload(AsyncBlittableJsonTextWriter writer)
