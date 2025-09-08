@@ -345,27 +345,28 @@ namespace Raven.Server.Documents.Handlers.Batches
                         commandData.SizeInBytes = state.Long;
 
                         break;
-               
+
                     case CommandPropertyName.RetireParameters:
                         while (parser.Read() == false)
                             await RefillParserBuffer(stream, buffer, parser, token).ConfigureAwait(false);
-                        var retireParameters = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false);
-                        if (retireParameters == null)
+
+                        using (var retireParameters = await ReadJsonObject(ctx, stream, commandData.Id, parser, state, buffer, modifier, token).ConfigureAwait(false))
                         {
-                            break;
+                            if (retireParameters == null)
+                                break;
+
+                            if (retireParameters.TryGet(nameof(RetireAttachmentParameters.At), out DateTime at) == false)
+                                throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.At)}' property on '{nameof(RetireAttachmentParameters)}'");
+
+                            if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out RetiredAttachmentFlags flag) == false)
+                                throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.Flags)}' property on '{nameof(RetireAttachmentParameters)}'");
+
+                            if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Identifier), out string identifier) == false)
+                                throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.Identifier)}' property on '{nameof(RetireAttachmentParameters)}'");
+
+                            commandData.RetireParameters = new RetireAttachmentParameters(identifier, at) { Flags = flag };
                         }
 
-                        if (retireParameters.TryGet(nameof(RetireAttachmentParameters.At), out DateTime at) == false)
-                            throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.At)}' property on '{nameof(RetireAttachmentParameters)}'");
-
-                        if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Flags), out RetiredAttachmentFlags flag) == false)
-                            throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.Flags)}' property on '{nameof(RetireAttachmentParameters)}'");
-
-                        if (retireParameters.TryGet(nameof(RetireAttachmentParameters.Identifier), out string identifier) == false)
-                            throw new InvalidDataException($"Missing '{nameof(RetireAttachmentParameters.Identifier)}' property on '{nameof(RetireAttachmentParameters)}'");
-
-
-                        commandData.RetireParameters = new RetireAttachmentParameters(identifier, at) { Flags = flag};
                         break;
 
                     case CommandPropertyName.Hash:

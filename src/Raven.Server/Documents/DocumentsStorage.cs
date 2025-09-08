@@ -5,7 +5,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
 using System.Threading;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
@@ -24,7 +23,6 @@ using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Revisions;
 using Raven.Server.Documents.Sharding;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.Logging;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Storage.Layout;
 using Raven.Server.Storage.Schema;
@@ -1301,7 +1299,7 @@ namespace Raven.Server.Documents
             }
         }
 
-        public IEnumerable<AttachmentTombstoneReplicationItem> GetAttachmentTombstonesFrom(
+        public IEnumerable<Tombstone> GetAttachmentTombstonesFrom(
             DocumentsOperationContext context,
             long etag,
             long start,
@@ -1317,16 +1315,8 @@ namespace Raven.Server.Documents
             {
                 if (take-- <= 0)
                     yield break;
-                var t = TableValueToTombstone(context, ref result.Reader);
-                var attachmentTombstone = TombstoneReplicationItem.AttachmentTombstoneReplicationItem(context, ref result.Reader, t);
-                unsafe
-                {
-                    var disposable = Slice.From(context.Allocator, t.LowerId.Buffer, t.LowerId.Size, ByteStringType.Immutable, out attachmentTombstone.Key);
 
-                    attachmentTombstone.ToDispose(disposable);
-                }
-                yield return attachmentTombstone;
-
+                yield return TableValueToTombstone(context, ref result.Reader);
             }
         }
 
@@ -1628,6 +1618,7 @@ namespace Raven.Server.Documents
                 TransactionMarker = *(short*)tvr.Read((int)TombstoneTable.TransactionMarker, out int _),
                 ChangeVector = TableValueToChangeVector(context, (int)TombstoneTable.ChangeVector, ref tvr),
                 LastModified = TableValueToDateTime((int)TombstoneTable.LastModified, ref tvr),
+                Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr)
             };
 
             switch (result.Type)
@@ -1635,28 +1626,13 @@ namespace Raven.Server.Documents
                 case Tombstone.TombstoneType.Document:
                     result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
                     result.LowerId = UnwrapLowerIdIfNeeded(context, result.LowerId);
-                    result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
-
                     break;
                 case Tombstone.TombstoneType.Revision:
                     result.Collection = TableValueToId(context, (int)TombstoneTable.Collection, ref tvr);
-                    result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
-                    break;
-                case Tombstone.TombstoneType.Attachment:
-                    ExtractAttachmentTombstoneFlag(ref tvr, result);
-                    break;
-                case Tombstone.TombstoneType.Counter:
-                    result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
                     break;
             }
 
             return result;
-        }
-
-        public static bool ExtractAttachmentTombstoneFlag(ref TableValueReader tvr, Tombstone result)
-        {
-                result.Flags = TableValueToFlags((int)TombstoneTable.Flags, ref tvr);
-                return false;
         }
 
         public DeleteOperationResult? Delete(DocumentsOperationContext context, string id, DocumentFlags flags)
@@ -2926,12 +2902,6 @@ namespace Raven.Server.Documents
         public static DocumentFlags TableValueToFlags(int index, ref TableValueReader tvr)
         {
             return *(DocumentFlags*)tvr.Read(index, out _);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static int TableValueToInt(int index, ref TableValueReader tvr)
-        {
-            return *(int*)tvr.Read(index, out _);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

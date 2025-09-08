@@ -47,12 +47,13 @@ public sealed class EmbeddingsGenerationTask : EtlProcess<EmbeddingsGenerationIt
         return new DocumentsToEmbeddingsGenerationItems(docs, collection);
     }
 
-    protected override IEnumerator<EmbeddingsGenerationItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
+    protected override IEnumerator<EmbeddingsGenerationItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection,
+        bool trackAttachments)
     {
         return new TombstonesToEmbeddingsGenerationItems(tombstones, collection);
     }
 
-    protected override IEnumerator<EmbeddingsGenerationItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<AttachmentTombstoneReplicationItem> tombstones,
+    protected override IEnumerator<EmbeddingsGenerationItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
         List<string> collections)
     {
         throw new NotSupportedException($"{nameof(ConvertAttachmentTombstonesEnumerator)} is not supported for {nameof(EmbeddingsGenerationTask)}");

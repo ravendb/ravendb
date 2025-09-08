@@ -2,17 +2,13 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using Jint.Native;
-using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
-using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Server.Documents.ETL.Stats;
 using Raven.Server.Documents.TimeSeries;
-using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.ETL.Providers.Raven
 {
@@ -59,7 +55,6 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
         }
         
         public void PutFullDocument(
-            DocumentsOperationContext context,
             string id, 
             BlittableJsonReaderObject doc, 
             List<Attachment> attachments = null, 
@@ -72,8 +67,9 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
                 return;
 
             var commands = _fullDocuments[id] = new List<ICommandData>();
+
             string remoteDocumentId = GetRemoteDocumentId(id);
-            commands.Add(new PutCommandDataWithBlittableJson(remoteDocumentId, null, null, doc));
+            commands.Add(new PutCommandDataWithBlittableJson(remoteDocumentId, null,null, doc));
 
             _stats.IncrementBatchSize(doc.Size);
 
@@ -156,10 +152,8 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             _stats.IncrementBatchSize(attachment.Stream.Length);
         }
 
-        public void DeleteAttachment(RavenEtlItem item)
+        public void DeleteAttachment(string documentId, string name)
         {
-            var (documentId, name) = AttachmentsStorage.ExtractDocIdAndAttachmentNameFromTombstone(item.AttachmentTombstone.Key);
-
             _deletes.Add(new DeleteAttachmentCommandData(GetRemoteDocumentId(documentId), name, null));
         }
 

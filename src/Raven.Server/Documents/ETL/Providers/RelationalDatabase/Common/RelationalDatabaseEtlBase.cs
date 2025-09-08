@@ -39,12 +39,12 @@ public abstract class RelationalDatabaseEtlBase<TRelationalEtlConfiguration, TRe
         return new DocumentsToRelationalDatabaseItems(docs, collection);
     }
     
-    protected override IEnumerator<RelationalDatabaseItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
+    protected override IEnumerator<RelationalDatabaseItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
     {
         return new TombstonesToRelationalDatabaseItems(tombstones, collection);
     }
     
-    protected override IEnumerator<RelationalDatabaseItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<AttachmentTombstoneReplicationItem> tombstones,
+    protected override IEnumerator<RelationalDatabaseItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
         List<string> collections)
     {
         throw new NotSupportedException($"Attachment tombstones aren't supported by {Configuration.EtlType.ToString()} ETL");

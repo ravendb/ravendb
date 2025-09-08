@@ -69,12 +69,13 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         return new DocumentsToGenAiItems(docs, collection);
     }
 
-    protected override IEnumerator<GenAiItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
+    protected override IEnumerator<GenAiItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection,
+        bool trackAttachments)
     {
         throw new NotSupportedException($"{nameof(ConvertTombstonesEnumerator)} is not supported for {nameof(GenAiTask)}");
     }
 
-    protected override IEnumerator<GenAiItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<AttachmentTombstoneReplicationItem> tombstones,
+    protected override IEnumerator<GenAiItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones,
         List<string> collections)
     {
         throw new NotSupportedException($"{nameof(ConvertAttachmentTombstonesEnumerator)} is not supported for {nameof(GenAiTask)}");

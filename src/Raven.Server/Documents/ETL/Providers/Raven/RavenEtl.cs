@@ -82,12 +82,12 @@ namespace Raven.Server.Documents.ETL.Providers.Raven
             return new DocumentsToRavenEtlItems(docs, collection);
         }
 
-        protected override IEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
+        protected override IEnumerator<RavenEtlItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
         {
-            return new TombstonesToRavenEtlItems(context, tombstones, collection);
+            return new TombstonesToRavenEtlItems(context, tombstones, collection, trackAttachments);
         }
 
-        protected override IEnumerator<RavenEtlItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<AttachmentTombstoneReplicationItem> tombstones, List<string> collections)
+        protected override IEnumerator<RavenEtlItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
         {
             return new AttachmentTombstonesToRavenEtlItems(context, tombstones, collections);
         }

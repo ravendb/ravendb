@@ -79,12 +79,12 @@ namespace Raven.Server.Documents.ETL.Providers.OLAP
             return new DocumentsToOlapItems(docs, collection);
         }
 
-        protected override IEnumerator<ToOlapItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection)
+        protected override IEnumerator<ToOlapItem> ConvertTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, string collection, bool trackAttachments)
         {
             return EmptyEnumerator;
         }
 
-        protected override IEnumerator<ToOlapItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<AttachmentTombstoneReplicationItem> tombstones, List<string> collections)
+        protected override IEnumerator<ToOlapItem> ConvertAttachmentTombstonesEnumerator(DocumentsOperationContext context, IEnumerator<Tombstone> tombstones, List<string> collections)
         {
             throw new NotSupportedException("Attachment tombstones aren't supported by OLAP ETL");
         }

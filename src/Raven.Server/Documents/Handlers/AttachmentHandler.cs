@@ -12,8 +12,6 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers
 {
-
-
     public sealed class AttachmentHandler : DatabaseRequestHandler
     {
         [RavenAction("/databases/*/attachments", "HEAD", AuthorizationStatus.ValidUser, EndpointType.Read)]
@@ -204,7 +202,7 @@ namespace Raven.Server.Documents.Handlers
         public string Name;
         public LazyStringValue ExpectedChangeVector;
 
-        public virtual AttachmentHandler.MergedDeleteAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        public AttachmentHandler.MergedDeleteAttachmentCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new AttachmentHandler.MergedDeleteAttachmentCommand
             {
@@ -241,7 +239,7 @@ namespace Raven.Server.Documents.Handlers
     internal class MergedDeleteAttachmentsCommandDto : IReplayableCommandDto<DocumentsOperationContext, DocumentsTransaction, MergedDeleteAttachmentsCommand>
     {
         public List<AttachmentRequest> Deletes;
-        public virtual MergedDeleteAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
+        public MergedDeleteAttachmentsCommand ToCommand(DocumentsOperationContext context, DocumentDatabase database)
         {
             return new MergedDeleteAttachmentsCommand { Deletes = Deletes, Database = database };
         }
