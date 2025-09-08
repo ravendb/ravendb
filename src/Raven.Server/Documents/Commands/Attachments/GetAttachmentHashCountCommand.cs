@@ -18,7 +18,6 @@ namespace Raven.Server.Documents.Commands.Attachments
             public long RegularCount { get; set; }
             public long RetiredCount { get; set; }
             public long Count { get; set; }
-
         }
 
         public GetAttachmentHashCountCommand([NotNull] string hash)

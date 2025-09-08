@@ -77,8 +77,6 @@ namespace Raven.Server.Documents.Replication.Stats
                     AttachmentOutputSizeInBytes = Stats.AttachmentOutputSize.GetValue(SizeUnit.Bytes),
                     AttachmentStreamOutputCount = Stats.AttachmentStreamOutputCount,
                     AttachmentStreamOutputSizeInBytes = Stats.AttachmentStreamOutputSize.GetValue(SizeUnit.Bytes),
-                    RetiredAttachmentStreamOutputCount = Stats.RetiredAttachmentStreamOutputCount,
-                    RetiredAttachmentStreamOutputSizeInBytes = Stats.RetiredAttachmentStreamOutputSize.GetValue(SizeUnit.Bytes),
                     RevisionOutputCount = Stats.RevisionOutputCount,
                     RevisionOutputSizeInBytes = Stats.RevisionOutputSize.GetValue(SizeUnit.Bytes),
                     RevisionTombstoneOutputCount = Stats.RevisionTombstoneOutputCount,
@@ -140,13 +138,6 @@ namespace Raven.Server.Documents.Replication.Stats
         {
             _stats.AttachmentStreamOutputCount++;
             _stats.AttachmentStreamOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
-            _stats.LastBatchSize.Add(sizeInBytes, SizeUnit.Bytes);
-        }
-
-        public void RecordRetiredAttachmentStreamOutput(long sizeInBytes)
-        {
-            _stats.RetiredAttachmentStreamOutputCount++;
-            _stats.RetiredAttachmentStreamOutputSize.Add(sizeInBytes, SizeUnit.Bytes);
             _stats.LastBatchSize.Add(sizeInBytes, SizeUnit.Bytes);
         }
 
@@ -277,9 +268,6 @@ namespace Raven.Server.Documents.Replication.Stats
 
         public int AttachmentStreamOutputCount;
         public Size AttachmentStreamOutputSize;
-
-        public int RetiredAttachmentStreamOutputCount;
-        public Size RetiredAttachmentStreamOutputSize;
 
         public int CounterOutputCount;
         public Size CounterOutputSize;

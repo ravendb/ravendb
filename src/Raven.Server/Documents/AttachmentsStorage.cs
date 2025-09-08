@@ -31,7 +31,6 @@ using static Raven.Server.Documents.DocumentsStorage;
 using static Raven.Server.Documents.Schemas.Attachments;
 using static Raven.Server.Documents.Schemas.Documents;
 using static Raven.Server.Documents.Schemas.Tombstones;
-using static Voron.Data.Tables.Table;
 
 namespace Raven.Server.Documents
 {
@@ -726,15 +725,14 @@ namespace Raven.Server.Documents
 
         private void DeleteAttachmentStream(DocumentsOperationContext context, Slice hash)
         {
-            var myHashesStruct = GetCountOfAttachmentsForHash(context, hash);
+            var attachmentHashesCount = GetCountOfAttachmentsForHash(context, hash);
 
-
-            if (myHashesStruct.RegularHashes > 0 )
+            if (attachmentHashesCount.RegularHashes > 0)
             {
                 return;
             }
 
-            Debug.Assert(myHashesStruct.TotalHashes == myHashesStruct.RetiredHashes);
+            Debug.Assert(attachmentHashesCount.TotalHashes == attachmentHashesCount.RetiredHashes);
 
             // all attachments are retired or there is no attachments
             DeleteAttachmentStreamInternal(context, hash);
@@ -999,34 +997,6 @@ namespace Raven.Server.Documents
         {
             var tree = context.Transaction.InnerTransaction.ReadTree(AttachmentsSlice);
             return tree.ReadStream(hashSlice);
-        }
-
-        public Stream GetAttachmentStreamByKey(DocumentsOperationContext context, Slice key)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            if (table.ReadByKey(key, out TableValueReader tvr) == false)
-            {
-                throw new FileNotFoundException($"Attachment's stream for key '{key}' was not found. This should not happen and is likely a bug.");
-            }
-
-            using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice existingHash))
-            {
-                return GetAttachmentStream(context, existingHash);
-            }
-        }
-
-        public long GetAttachmentStreamLengthByKey(DocumentsOperationContext context, Slice key)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            if (table.ReadByKey(key, out TableValueReader tvr) == false)
-            {
-                throw new FileNotFoundException($"Attachment's stream for key '{key}' was not found. This should not happen and is likely a bug.");
-            }
-
-            using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out Slice existingHash))
-            {
-                return GetAttachmentStreamLength(context, existingHash);
-            }
         }
 
         public LazyStringValue GetAttachmentNameByKey(DocumentsOperationContext context, Slice key)
@@ -1392,12 +1362,13 @@ namespace Raven.Server.Documents
                     attachmentEtag = _documentsStorage.GenerateNextEtagForReplicatedTombstoneMissingDocument(context);
                 }
 
-                CreateTombstone(context, key, attachmentEtag, changeVector, lastModifiedTicks, (int)DocumentFlags.None);
+                CreateTombstone(context, key, attachmentEtag, changeVector, lastModifiedTicks, flags: DocumentFlags.None);
                 return;
             }
 
             var currentChangeVector = TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref tvr);
             var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref tvr);
+
             using (isPartialKey ?
                 TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr, out key)
               : default(ByteStringContext.InternalScope))
@@ -1425,7 +1396,7 @@ namespace Raven.Server.Documents
         private void DeleteInternal(DocumentsOperationContext context, Slice key, long etag, Slice hash, string changeVector, 
              long lastModifiedTicks, DocumentFlags flags, string identifier, long retireAtTicks)
         {
-            CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, (int)flags);
+            CreateTombstone(context, key, etag, changeVector, lastModifiedTicks, flags);
             if (retireAtTicks != -1)
             {
                 RetiredAttachmentsStorage.RemoveRetirePutValue(context, key, identifier, retireAtTicks);
@@ -1442,7 +1413,7 @@ namespace Raven.Server.Documents
         }
 
         private void CreateTombstone(DocumentsOperationContext context, Slice keySlice, long attachmentEtag,
-            string changeVector, long lastModifiedTicks, int flags)
+            string changeVector, long lastModifiedTicks, DocumentFlags flags)
         {
             var newEtag = _documentsStorage.GenerateNextEtag();
 
@@ -1460,18 +1431,10 @@ namespace Raven.Server.Documents
                 tvb.Add(context.GetTransactionMarker());
                 tvb.Add((byte)Tombstone.TombstoneType.Attachment);
                 tvb.Add(null, 0);
-                tvb.Add(flags);
+                tvb.Add((int)flags);
                 tvb.Add(cv.Content.Ptr, cv.Size);
                 tvb.Add(lastModifiedTicks);
                 table.Insert(tvb);
-            }
-        }
-
-        private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice, Action<TableValueHolder> beforeDelete = null)
-        {
-            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
-            {
-                table.DeleteByPrimaryKeyPrefix(prefixSlice, beforeDelete);
             }
         }
 
@@ -1480,37 +1443,36 @@ namespace Raven.Server.Documents
             using (Slice.From(context.Allocator, revision.ChangeVector, out Slice changeVectorSlice))
             using (AttachmentKey.GetPrefix(context, revision.LowerId.Buffer, revision.LowerId.Size, AttachmentType.Revision, changeVectorSlice, out Slice prefixSlice))
             {
-                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, 
-                    before =>
-                    {
-                            using (TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref before.Reader, out Slice key))
-                            using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref before.Reader, out Slice hash))
-                            {
-                                var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref before.Reader);
-                                DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags, identifier: null, retireAtTicks: -1L);
-                            }
-                    }
-                );
+                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector.Version, lastModifiedTicks, flags, isRevision: true);
             }
         }
 
-        public void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice lowerId, string changeVector, long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
+        public void DeleteAttachmentsOfDocument(DocumentsOperationContext context, Slice lowerId, string changeVector,
+            long lastModifiedTicks, DocumentFlags flags = DocumentFlags.None)
         {
             using (AttachmentKey.GetPrefix(context, lowerId.Content.Ptr, lowerId.Size, AttachmentType.Document, Slices.Empty, out Slice prefixSlice))
             {
-                DeleteAttachmentsOfDocumentInternal(context, prefixSlice,
-                    before =>
+                DeleteAttachmentsOfDocumentInternal(context, prefixSlice, changeVector, lastModifiedTicks, flags, isRevision: false);
+            }
+        }
+
+        private void DeleteAttachmentsOfDocumentInternal(DocumentsOperationContext context, Slice prefixSlice, string changeVector,
+            long lastModifiedTicks, DocumentFlags flags, bool isRevision)
+        {
+            var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+            {
+                table.DeleteByPrimaryKeyPrefix(prefixSlice, before =>
+                {
+                    using (TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref before.Reader, out Slice key))
+                    using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref before.Reader, out Slice hash))
                     {
-                        using (TableValueToSlice(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref before.Reader, out Slice key))
-                        using (TableValueToSlice(context, (int)AttachmentsTable.Hash, ref before.Reader, out Slice hash))
-                        {
-                            var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref before.Reader);
-                            var retireAtTicks = TableValueToLong((int)AttachmentsTable.RetireAt, ref before.Reader);
-                            var identifier = TableValueToString(context, (int)AttachmentsTable.Identifier, ref before.Reader);
-                            DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags, identifier, retireAtTicks);
-                        }
+                        var etag = TableValueToEtag((int)AttachmentsTable.Etag, ref before.Reader);
+
+                        long retireAtTicks = isRevision ? -1L : TableValueToLong((int)AttachmentsTable.RetireAt, ref before.Reader);
+                        LazyStringValue identifier = isRevision ? null : TableValueToString(context, (int)AttachmentsTable.Identifier, ref before.Reader);
+                        DeleteInternal(context, key, etag, hash, changeVector, lastModifiedTicks, flags, identifier, retireAtTicks);
                     }
-                );
+                });
             }
         }
 
@@ -1545,6 +1507,7 @@ namespace Raven.Server.Documents
         public long GetNumberOfAttachmentsToProcess(DocumentsOperationContext context, long afterEtag, out long totalCount, Stopwatch overallDuration)
         {
             var table = context.Transaction.InnerTransaction.OpenTable(AttachmentsSchema, AttachmentsMetadataSlice);
+
             if (table == null)
             {
                 totalCount = 0;
@@ -1559,20 +1522,6 @@ namespace Raven.Server.Documents
         {
             var table = context.Transaction.InnerTransaction.OpenTable(_documentsStorage.TombstonesSchema, AttachmentsTombstones);
             return table?.NumberOfEntries ?? 0;
-        }
-
-        public static (LazyStringValue DocId, LazyStringValue AttachmentName) GetDocIdAndAttachmentName(JsonOperationContext context,
-            LazyStringValue attachmentKey)
-        {
-            var p = attachmentKey.Buffer;
-            var size = attachmentKey.Size;
-
-            ExtractDocIdAndAttachmentNameFromTombstone(p, size, out int sizeOfDocId, out int attachmentNameIndex, out int sizeOfAttachmentName, out _);
-
-            var doc = context.AllocateStringValue(null, p, sizeOfDocId);
-            var name = context.AllocateStringValue(null, p + attachmentNameIndex, sizeOfAttachmentName);
-
-            return (doc, name);
         }
 
         public static (string DocId, string AttachmentName) ExtractDocIdAndAttachmentNameFromTombstone(Slice attachmentTombstoneId)
@@ -1857,24 +1806,6 @@ namespace Raven.Server.Documents
 
                 return key.Length;
             }
-        }
-    }
-
-    public readonly struct ResourceWithDisposable<T, TDisposable> : IDisposable
-        where TDisposable : IDisposable
-    {
-        public TDisposable Scope { get; }
-        public T Key { get; }
-
-        public ResourceWithDisposable(TDisposable scope, T key)
-        {
-            Scope = scope;
-            Key = key;
-        }
-
-        public void Dispose()
-        {
-            Scope.Dispose();
         }
     }
 }

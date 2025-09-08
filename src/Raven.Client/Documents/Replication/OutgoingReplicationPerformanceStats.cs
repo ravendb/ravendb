@@ -53,9 +53,6 @@ namespace Raven.Client.Documents.Replication
 
             public int TimeSeriesDeletedRangeOutputCount { get; set; }
             public long TimeSeriesDeletedRangeOutputSizeInBytes { get; set; }
-
-            public int RetiredAttachmentStreamOutputCount { get; set; }
-            public long RetiredAttachmentStreamOutputSizeInBytes { get; set; }
         }
 
         public sealed class StorageStats
