@@ -40,10 +40,13 @@ namespace Raven.Server.Documents.Handlers
         }
 
         [RavenAction("/databases/*/docs", "POST", AuthorizationStatus.ValidUser, EndpointType.Read, DisableOnCpuCreditsExhaustion = true)]
-        public Task PostGet()
+        public async Task PostGet()
         {
             // Disposal of the processor is handled in the `ExecuteAsTaskAsync` method.
-            return new DocumentHandlerProcessorForGet(HttpMethod.Post, this).ExecuteAsTaskAsync();
+            using (ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+            {
+                await new DocumentHandlerProcessorForGet(HttpMethod.Post, this).ExecuteAsTaskAsync(await DocumentHandlerProcessorForGet.GetIdsFromRequestBodyAsync(context, this), context);
+            }
         }
 
         [RavenAction("/databases/*/docs", "DELETE", AuthorizationStatus.ValidUser, EndpointType.Write, DisableOnCpuCreditsExhaustion = true)]
