@@ -285,7 +285,7 @@ namespace Raven.Server.Documents.Indexes.Static
                 // making sure that we normalize the case of the id so we'll be able to find
                 // it in case-insensitive manner
                 // in addition, special characters need to be escaped
-                DocumentIdWorker.GetSliceFromId(QueryContext.Documents, id, out idSlice);
+                DocumentIdWorker.GetLoweredIdSliceFromId(QueryContext.Documents, id, out idSlice);
             }
             else
             {
@@ -359,14 +359,14 @@ namespace Raven.Server.Documents.Indexes.Static
                 if (keyLazy.Length == 0)
                     return false;
 
-                DocumentIdWorker.GetSliceFromId(QueryContext.Documents, keyLazy, out keySlice);
+                DocumentIdWorker.GetLoweredIdSliceFromId(QueryContext.Documents, keyLazy, out keySlice);
             }
             else
             {
                 if (keyString.Length == 0)
                     return false;
 
-                DocumentIdWorker.GetSliceFromId(QueryContext.Documents, keyString, out keySlice);
+                DocumentIdWorker.GetLoweredIdSliceFromId(QueryContext.Documents, keyString, out keySlice);
             }
 
             return true;
