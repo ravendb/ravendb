@@ -633,7 +633,11 @@ namespace Raven.Server.Web.System
                 },
                 BackupDestinations = backupDestinations,
                 RetentionPolicy = backupConfiguration.RetentionPolicy,
-                IsEncrypted = BackupTask.IsBackupEncrypted(Database, backupConfiguration)
+                IsEncrypted = BackupTask.IsBackupEncrypted(Database, backupConfiguration),
+                FullBackupFrequency = backupConfiguration.FullBackupFrequency,
+                IncrementalBackupFrequency = backupConfiguration.IncrementalBackupFrequency,
+                BackupUploadMode = backupConfiguration.BackupUploadMode,
+                HasCloudBackup = backupConfiguration.HasCloudBackup()
             };
         }
 
