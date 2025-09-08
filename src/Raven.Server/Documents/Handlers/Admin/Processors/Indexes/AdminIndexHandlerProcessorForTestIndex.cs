@@ -20,7 +20,7 @@ namespace Raven.Server.Documents.Handlers.Admin.Processors.Indexes;
 internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminIndexHandlerProcessorForTestIndex<DatabaseRequestHandler, DocumentsOperationContext>
 {
     private static readonly Regex FromIndexClauseRegex = new Regex(
-        @"from index\s+(['""])(.*?)\1",
+        @"from\sindex\s+(['""])(.*?)\1",
         RegexOptions.IgnoreCase | RegexOptions.Compiled
     );
     public AdminIndexHandlerProcessorForTestIndex([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
@@ -44,8 +44,6 @@ internal sealed class AdminIndexHandlerProcessorForTestIndex : AbstractAdminInde
             const int documentsPerIndexUpperLimit = 10_000;
             const int documentsPerIndexLowerLimit = 1;
             
-            const string defaultTestIndexName = "<TestIndexName>";
-
             if (testIndexParameters.IndexDefinition is null)
                 throw new BadRequestException($"Index must have an {nameof(TestIndexParameters.IndexDefinition)} field");
 
