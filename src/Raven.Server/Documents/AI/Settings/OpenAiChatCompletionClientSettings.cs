@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.AI.Settings;
 internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletionClientSettings
 {
     private readonly OpenAiSettings _settings;
-
+    private static readonly Uri OpenAiBaseUri = new Uri("https://api.openai.com/");
     public OpenAiChatCompletionClientSettings(OpenAiSettings settings) 
         : base(settings)
     {
@@ -17,10 +17,12 @@ internal class OpenAiChatCompletionClientSettings : AbstractOpenAiChatCompletion
     public override Uri GetBaseUri()
     {
         var uri = base.GetBaseUri();
-        
         var uriBuilder = new UriBuilder(uri);
-        if (IsBaseUrl(uri))
+
+        if (uri.Equals(OpenAiBaseUri))
+        {
             uriBuilder.Path += "v1/";
+        }
 
         return uriBuilder.Uri;
     }
