@@ -856,7 +856,7 @@ namespace Raven.Server.Smuggler.Documents
                         continue;
                     }
 
-                    using (DocumentIdWorker.GetSliceFromId(_context, document.Id, out Slice lowerDocumentId))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(_context, document.Id, out Slice lowerDocumentId))
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, name, out Slice lowerName, out Slice nameSlice))
                     using (DocumentIdWorker.GetLowerIdSliceAndStorageKey(_context, contentType, out Slice lowerContentType, out Slice contentTypeSlice))
                     using (Slice.External(_context.Allocator, hash, out Slice base64Hash))
@@ -1014,7 +1014,7 @@ namespace Raven.Server.Smuggler.Documents
                 var count = 0;
                 foreach (var id in Ids)
                 {
-                    using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out var lowerId))
                     {
                         var document = _database.DocumentsStorage.Get(context, lowerId, throwOnConflict: false, skipValidationInDebug: true);
                         if (document == null)
@@ -1164,7 +1164,7 @@ namespace Raven.Server.Smuggler.Documents
 
                 foreach (var id in Ids)
                 {
-                    using (DocumentIdWorker.GetSliceFromId(context, id.Key, out var lowerId))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id.Key, out var lowerId))
                     {
                         _database.DocumentsStorage.RevisionsStorage.Delete(context,
                             id.Key,

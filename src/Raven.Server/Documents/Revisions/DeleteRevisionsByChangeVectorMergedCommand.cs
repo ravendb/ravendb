@@ -36,7 +36,7 @@ public partial class RevisionsStorage
             var revisionsStorage = context.DocumentDatabase.DocumentsStorage.RevisionsStorage;
             var deleted = 0L;
 
-            using (DocumentIdWorker.GetSliceFromId(context, _id, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, _id, out Slice lowerId))
             using (revisionsStorage.GetKeyPrefix(context, lowerId, out Slice prefixSlice))
             {
                 var collectionName = revisionsStorage.GetCollectionFor(context, prefixSlice);

@@ -93,7 +93,7 @@ namespace SlowTests.Issues
                         using (database3.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                         using (context.OpenReadTransaction())
                         {
-                            using (DocumentIdWorker.GetSliceFromId(context, "users/1", out Slice docIdSlice))
+                            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, "users/1", out Slice docIdSlice))
                             {
                                 var attachments = database3.DocumentsStorage.AttachmentsStorage.GetAttachmentsForDocument(context, docIdSlice).ToList();
                                 Assert.NotNull(attachments);
