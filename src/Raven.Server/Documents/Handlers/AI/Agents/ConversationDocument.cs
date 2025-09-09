@@ -82,7 +82,7 @@ public class ConversationDocument([NotNull] string agent, BlittableJsonReaderObj
             throw new InvalidOperationException("conversation document is not initialized. Call Initialize() first.");
     }
 
-    public BlittableJsonReaderObject ToBlittable(JsonOperationContext context, AiAgentConfiguration configuration)
+    public BlittableJsonReaderObject ToBlittable(JsonOperationContext context)
     {
         var metadata = new DynamicJsonValue
         {

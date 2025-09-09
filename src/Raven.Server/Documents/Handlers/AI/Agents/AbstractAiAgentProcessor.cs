@@ -156,7 +156,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             WriteResponse(context, writer, conversationId, document, response);
         }
 
-        public void WriteResponse(JsonOperationContext context, AsyncBlittableJsonTextWriter writer,
+        public virtual void WriteResponse(JsonOperationContext context, AsyncBlittableJsonTextWriter writer,
             string conversationId, ConversationDocument document,
             BlittableJsonReaderObject response)
         {
