@@ -75,7 +75,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
         conventions ??= ConventionsToUse;
 
-        var baseUri = settings.GetBaseUri();
+        var baseUri = settings.GetBaseEndpointUri();
 
         _httpClientCacheKey = HttpClientCacheKey.Create(conventions.UseHttpDecompression,
             conventions.HasExplicitlySetDecompressionUsage, conventions.HttpPooledConnectionLifetime,

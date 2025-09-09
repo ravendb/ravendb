@@ -1,4 +1,5 @@
-﻿using Sparrow.Json.Parsing;
+﻿using System;
+using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
@@ -16,6 +17,20 @@ public sealed class OpenAiSettings : OpenAiBaseSettings
     public OpenAiSettings()
     {
         // deserialization
+    }
+
+    private static readonly Uri OpenAiBaseUri = new Uri("https://api.openai.com/");
+    public override Uri GetBaseEndpointUri()
+    {
+        var uri = base.GetBaseEndpointUri();
+        var uriBuilder = new UriBuilder(uri);
+
+        if (uri.Equals(OpenAiBaseUri))
+        {
+            uriBuilder.Path += "v1/";
+        }
+
+        return uriBuilder.Uri;
     }
 
     /// <summary>

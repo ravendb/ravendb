@@ -7,31 +7,17 @@ namespace Raven.Server.Documents.AI.Settings;
 
 internal abstract class AbstractChatCompletionClientSettings
 {
-    private string _baseUri;
+    private readonly IChatCompletionSettings _settings;
     
-    public string ApiKey { get; }
-    
-    public string Model { get; }
+    public string ApiKey => _settings.ApiKey;
 
-    protected AbstractChatCompletionClientSettings(string baseUri, string apiKey, string model)
+    public string Model => _settings.Model;
+
+    public Uri GetBaseEndpointUri() => _settings.GetBaseEndpointUri();
+
+    protected AbstractChatCompletionClientSettings(IChatCompletionSettings settings)
     {
-        _baseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
-        ApiKey = apiKey;
-        Model = model;
-    }
-
-    internal void SetBaseUri(string baseUri)
-    {
-        _baseUri = baseUri ?? throw new ArgumentNullException(nameof(baseUri));
-    }
-
-    public virtual Uri GetBaseUri()
-    {
-        var baseUri = _baseUri;
-        if (baseUri.EndsWith("/") == false)
-            baseUri += "/";
-
-        return new Uri(baseUri);
+        _settings = settings;
     }
 
     public abstract void HandleCompletionRequestPayload(AsyncBlittableJsonTextWriter writer);
@@ -89,9 +75,4 @@ internal abstract class AbstractChatCompletionClientSettings
             public const string OpenAiProject = "OpenAI-Project";
         }
     }
-
-    internal static bool IsBaseUrl(Uri uri) =>
-        uri.AbsolutePath == "/" 
-        && string.IsNullOrEmpty(uri.Query) 
-        && string.IsNullOrEmpty(uri.Fragment);
 }

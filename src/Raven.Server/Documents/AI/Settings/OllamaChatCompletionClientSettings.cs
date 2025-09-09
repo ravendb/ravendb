@@ -9,21 +9,14 @@ internal class OllamaChatCompletionClientSettings : AbstractChatCompletionClient
     private readonly OllamaSettings _settings;
 
     public OllamaChatCompletionClientSettings(OllamaSettings settings) 
-        : base(settings.Uri, apiKey: null, settings.Model)
+        : base(settings)
     {
         _settings = settings;
     }
 
-    public override Uri GetBaseUri()
-    {
-        var uri = base.GetBaseUri();
-        
-        var uriBuilder = new UriBuilder(uri);
-        if (IsBaseUrl(uri))
-            uriBuilder.Path += "v1/";
+    public override string GetRelativeCompletionUri() => "v1/" + base.GetRelativeCompletionUri();
 
-        return uriBuilder.Uri;
-    }
+    public override string GetRelativeModelsUri() => "v1/" + base.GetRelativeModelsUri();
 
     public override void HandleCompletionRequestPayload(AsyncBlittableJsonTextWriter writer)
     {

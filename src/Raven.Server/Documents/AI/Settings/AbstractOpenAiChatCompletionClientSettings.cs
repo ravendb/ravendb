@@ -8,7 +8,7 @@ internal abstract class AbstractOpenAiChatCompletionClientSettings : AbstractCha
     private readonly OpenAiBaseSettings _settings;
 
     protected AbstractOpenAiChatCompletionClientSettings(OpenAiBaseSettings settings) 
-        : base(settings.Endpoint, settings.ApiKey, settings.Model)
+        : base(settings)
     {
         _settings = settings;
     }

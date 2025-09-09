@@ -8,7 +8,7 @@ namespace Raven.Client.Documents.Operations.AI;
 /// <summary>
 /// The configuration for the Ollama API client.
 /// </summary>
-public sealed class OllamaSettings : AbstractAiSettings
+public sealed class OllamaSettings : AbstractAiSettings, IChatCompletionSettings
 {
     public OllamaSettings(string uri, string model)
     {
@@ -92,4 +92,8 @@ public sealed class OllamaSettings : AbstractAiSettings
 
         return json;
     }
+
+    public string ApiKey => null;
+    public string Endpoint => Uri;
+    public Uri GetBaseEndpointUri() => new Uri(Endpoint);
 }

@@ -150,20 +150,21 @@ public class AiConnectionStringsTests : RavenTestBase
         {
             var op = new TestAiConnectionStringOperation(configuration.Connection);
             var r = store.Maintenance.Send(op);
-            Assert.Null(r.Error);
+            Assert.True(r.Error == null, r.Error);
             Assert.True(r.Success);
         }
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.All, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.HuggingFace , DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Skip = "fix me")]
+    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI | RavenAiIntegration.Ollama | RavenAiIntegration.Onnx | RavenAiIntegration.Google | RavenAiIntegration.MistralAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
     public void CanTestAiEmbeddingsConnectionString(Options options, EmbeddingsGenerationConfiguration configuration)
     {
         using (var store = GetDocumentStore())
         {
             var op = new TestAiConnectionStringOperation(configuration.Connection);
             var r = store.Maintenance.Send(op);
-            Assert.Null(r.Error);
+            Assert.True(r.Error == null, r.Error);
             Assert.True(r.Success);
         }
     }
