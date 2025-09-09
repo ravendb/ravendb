@@ -20,7 +20,6 @@ using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Paging;
 using Voron.Util;
-using static Sparrow.Server.Utils.ThreadNames.ThreadDetails;
 using static Voron.Data.Tables.TableSchema;
 using Constants = Voron.Global.Constants;
 

@@ -6,11 +6,9 @@ using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Threading;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Replication;
 using Raven.Client.Documents.Replication.Messages;
 using Raven.Client.Exceptions;
 using Raven.Server.Documents.Handlers.Processors.TimeSeries;
-using Raven.Server.Documents.PeriodicBackup.DirectDownload;
 using Raven.Server.Documents.Replication.Outgoing;
 using Raven.Server.Documents.Replication.ReplicationItems;
 using Raven.Server.Documents.Replication.Stats;
@@ -22,7 +20,6 @@ using Raven.Server.Utils.Enumerators;
 using Sparrow;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
-using Sparrow.Logging;
 using Sparrow.Server;
 using Sparrow.Server.Logging;
 using Sparrow.Threading;
@@ -660,7 +657,7 @@ namespace Raven.Server.Documents.Replication.Senders
             {
                 if (item.Value is AttachmentReplicationItem)
                 {
-                    // we will dispose item.Value when we are done with writing the stream
+                    // we will dispose item.Value when we are done with writing the stream in the loop below
                     using (Slice.From(documentsContext.Allocator, item.Value.ChangeVector, out var cv))
                     {
                         item.Value.Write(cv, _stream, _tempBuffer, stats, _parent.SupportedFeatures.Replication);

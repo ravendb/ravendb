@@ -13,7 +13,7 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
     public interface IRestoreSource : IDownloadSource
     {
-        protected string _remoteFolderName { get; set; }
+        string _remoteFolderName { get; set; }
 
         Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress);
 

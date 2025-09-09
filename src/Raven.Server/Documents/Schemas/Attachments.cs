@@ -54,7 +54,6 @@ namespace Raven.Server.Documents.Schemas
             DefineIndexesForAttachmentsSchema(AttachmentsSchemaBase);
             DefineIndexesForShardingAttachmentsSchema();
 
-
             void DefineIndexesForAttachmentsSchema(TableSchema schema)
             {
                 schema.DefineKey(new TableSchema.IndexDef

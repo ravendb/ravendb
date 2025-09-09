@@ -1691,22 +1691,18 @@ namespace Raven.Server.Smuggler.Documents
 
         public static BlittableJsonReaderObject WriteDummyDocumentForAttachment(JsonOperationContext context, LegacyAttachmentDetails details)
         {
-            const string collectionName = "@files";
             var attachment = new DynamicJsonValue
             {
                 ["Name"] = details.Key,
                 ["Hash"] = details.Hash,
                 ["ContentType"] = string.Empty,
-                ["Size"] = details.Size,
-                [nameof(IStoreAttachmentParameters.RetireParameters)] = null
-
+                ["Size"] = details.Size
             };
-
             var attachments = new DynamicJsonArray();
             attachments.Add(attachment);
             var metadata = new DynamicJsonValue
             {
-                [Constants.Documents.Metadata.Collection] = collectionName,
+                [Constants.Documents.Metadata.Collection] = "@files",
                 [Constants.Documents.Metadata.Attachments] = attachments,
                 [Constants.Documents.Metadata.LegacyAttachmentsMetadata] = details.Metadata
             };

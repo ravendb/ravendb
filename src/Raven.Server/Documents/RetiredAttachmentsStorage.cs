@@ -80,16 +80,6 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         return d2;
     }
 
-    private static (ByteStringContext<ByteStringMemoryCache>.ExternalScope IdentifierDisposable, ByteStringContext<ByteStringMemoryCache>.ExternalScope AttachmentKeyDisposable)
-        ExtractIdentifierSliceAndAttachmentKeySlice(DocumentsOperationContext context, Slice key, out Slice identifierSlice, out Slice attachmentKeySlice)
-    {
-        var sizeOfIdentifier = AttachmentsStorage.AttachmentKey.FindNextSeparator(key, 0);
-        var d1 = Slice.External(context.Allocator, key.Content, 0, sizeOfIdentifier, out identifierSlice);
-        var d2 = ExtractAttachmentKeySliceFromRetiredAttachmentKey(context, key, out attachmentKeySlice);
-
-        return (d1, d2);
-    }
-
     private static ByteStringContext<ByteStringMemoryCache>.ExternalScope ExtractAttachmentKeySliceFromRetiredAttachmentKey(DocumentsOperationContext context, Slice key, out Slice attachmentKeySlice)
     {
         var sizeOfIdentifier = AttachmentsStorage.AttachmentKey.FindNextSeparator(key, 0);
@@ -259,8 +249,8 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
         var ticksBigEndian = Bits.SwapBytes(ticks);
 
         var msg = $"Removing retired attachment put with key: '{lowerId}' from '{_treeName}' tree.";
-        if (_logger.IsInfoEnabled)
-            _logger.Info(msg);
+        if (_logger.IsDebugEnabled)
+            _logger.Debug(msg);
 
         var tree = context.Transaction.InnerTransaction.ReadTree(_treeName);
 
@@ -483,8 +473,8 @@ public class RetiredAttachmentsStorage : AbstractBackgroundWorkStorage
                 $"Attachment retirement error in '{Database.Name}'", msg,
                 AlertType.RetireAttachmentsConfigurationNotValid, NotificationSeverity.Error, Database.Name));
 
-            if (_logger.IsInfoEnabled)
-                _logger.Info(msg, e);
+            if (_logger.IsWarnEnabled)
+                _logger.Warn(msg, e);
 
             return null;
         }

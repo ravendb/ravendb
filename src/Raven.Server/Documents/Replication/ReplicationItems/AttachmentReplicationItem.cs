@@ -259,7 +259,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 ToDispose(Slice.From(allocator, Reader.ReadExactly(base64HashSize), base64HashSize, out Base64Hash));
 
                 var streamLength = *(long*)Reader.ReadExactly(sizeof(long));
-                AttachmentSize = streamLength;
+                AttachmentSize = streamLength; // we populate the stream size here so we can use it in PreProcessAttachments method, when receiving replication from old versions, without retired attachments support
                 Stream = attachmentStreamsTempFile.StartNewStream();
                 Reader.ReadExactly(streamLength, Stream);
                 Stream.Flush();

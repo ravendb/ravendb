@@ -178,7 +178,7 @@ namespace Raven.Server.Documents
 
                                 using var hashSliceDisposable = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.ExtractHashSliceFromAttachmentId(context, doc.LowerId, out Slice hashSlice);
                                 var hash = hashSlice.ToString();
-
+                                //TODO: egor add test that will cover this scenario, when the attachment is already in cloud, also cover scenario if we had partial upload
                                 if (directUpload.GetObjectMetadata(string.Empty, hash) != null)
                                 {
                                     // the attachment already exists in the cloud, no need to upload it again

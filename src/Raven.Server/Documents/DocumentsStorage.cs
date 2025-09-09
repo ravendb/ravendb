@@ -1290,7 +1290,7 @@ namespace Raven.Server.Documents
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach (var result in table.SeekForwardFrom(TombstonesSchema.FixedSizeIndexes[AllTombstonesEtagsSlice], etag, 0))
             {
-                var tombstoneItem = TombstoneReplicationItem.From(context, ref result.Reader);
+                var tombstoneItem = TombstoneReplicationItem.From(context, TableValueToTombstone(context, ref result.Reader));
 
                 if (revisionTombstonesWithId == false && tombstoneItem is RevisionTombstoneReplicationItem revisionTombstone)
                     revisionTombstone.StripDocumentIdFromKeyIfNeeded(context);

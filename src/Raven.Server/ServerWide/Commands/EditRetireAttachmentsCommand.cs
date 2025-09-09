@@ -1,13 +1,12 @@
 ﻿using Raven.Client.Documents.Attachments;
 using Raven.Client.ServerWide;
-using Raven.Server.Utils;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.ServerWide.Commands
 {
     public sealed class EditRetireAttachmentsCommand : UpdateDatabaseCommand
     {
-        public const int CommandVersion = 71_001;
+        public const int CommandVersion = 72_000;
         public RetiredAttachmentsConfiguration Configuration;
 
         public EditRetireAttachmentsCommand()

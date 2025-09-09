@@ -653,8 +653,7 @@ namespace Raven.Server.Smuggler.Documents
                                     var attachmentId = key.Content.Substring(idEnd);
                                     idsOfDocumentsToUpdateAfterAttachmentDeletion.Add(attachmentId);
 
-                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(
-                                        context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks);
+                                    _database.DocumentsStorage.AttachmentsStorage.DeleteAttachmentDirect(context, key, false, "$fromReplication", null, tombstone.ChangeVector, tombstone.LastModified.Ticks);
 
                                     break;
 
@@ -1033,7 +1032,7 @@ namespace Raven.Server.Smuggler.Documents
                             metadata.TryGet(Client.Constants.Documents.Metadata.Attachments, out BlittableJsonReaderArray attachments) == false)
                             continue;
 
-                        var attachmentsToRemoveNames = new HashSet<(LazyStringValue Name, RetireAttachmentParameters RetireParameters)>();
+                        var attachmentsToRemoveNames = new HashSet<LazyStringValue>();
                         var attachmentsToRemoveHashes = new HashSet<LazyStringValue>();
 
                         foreach (BlittableJsonReaderObject attachment in attachments)
@@ -1047,13 +1046,7 @@ namespace Raven.Server.Smuggler.Documents
                             var attachmentsStorage = _database.DocumentsStorage.AttachmentsStorage;
                             if (attachmentsStorage.AttachmentExists(context, hash) == false)
                             {
-                                RetireAttachmentParameters retireParams = null;
-                                if (attachment.TryGet(nameof(AttachmentName.RetireParameters), out BlittableJsonReaderObject retireParametersBjro) && retireParametersBjro != null)
-                                {
-                                    retireParams = JsonDeserializationClient.RetireAttachmentParameters(retireParametersBjro);
-                                }
-
-                                attachmentsToRemoveNames.Add((name, retireParams));
+                                attachmentsToRemoveNames.Add(name);
                                 attachmentsToRemoveHashes.Add(hash);
                             }
                         }
@@ -1076,7 +1069,7 @@ namespace Raven.Server.Smuggler.Documents
 
                         foreach (var toRemove in attachmentsToRemoveNames)
                         {
-                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove.Name, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
+                            _database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, id, toRemove, null, collectionName: out _, updateDocument: false, extractCollectionName: false);
                         }
 
                         metadata.Modifications = new DynamicJsonValue(metadata);

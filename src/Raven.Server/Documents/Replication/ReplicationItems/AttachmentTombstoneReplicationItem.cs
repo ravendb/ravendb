@@ -24,7 +24,7 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         {
             var djv = base.ToDebugJson();
             djv[nameof(Key)] = CompoundKeyHelper.ExtractDocumentId(Key);
-            djv[nameof(Flags)] = Flags;
+            djv[nameof(Flags)] = Flags.ToString();
             return djv;
         }
 
