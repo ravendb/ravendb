@@ -24,6 +24,7 @@ internal sealed class AlphanumericalComparer
         public readonly uint StringLengthInBytes;
         private bool _curSequenceIsNumber = false;
         private uint _numberLength = 0;
+        private uint _numberLengthInBytes = 0;
         private uint _curSequenceStartPosition = 0;
 
         public void ScanNextAlphabeticOrNumericSequence()
@@ -32,6 +33,7 @@ internal sealed class AlphanumericalComparer
             var (usedBytes, usedChars) = ReadCharacter(_originalString, CurrentBytePosition, _curCharacters);
             _curSequenceIsNumber = usedChars == 1 && char.IsDigit(_curCharacters[0]);
             _numberLength = 0;
+            _numberLengthInBytes = 0;
 
             var curCharacterIsDigit = _curSequenceIsNumber;
             var insideZeroPrefix = _curSequenceIsNumber && _curCharacters[0] == '0';
@@ -43,6 +45,7 @@ internal sealed class AlphanumericalComparer
             {
                 if (_curSequenceIsNumber)
                 {
+
                     if (_curCharacters[0] != '0')
                     {
                         insideZeroPrefix = false;
@@ -51,6 +54,7 @@ internal sealed class AlphanumericalComparer
                     if (insideZeroPrefix == false)
                     {
                         _numberLength++;
+                        _numberLengthInBytes += usedBytes;
                     }
                 }
 
@@ -129,11 +133,17 @@ internal sealed class AlphanumericalComparer
                     return string1State._numberLength.CompareTo(string2State._numberLength);
                 }
 
+                if (string1State._numberLengthInBytes != 1 || string2State._numberLengthInBytes != 1)
+                {
+                    var str1 = Encoding.UTF8.GetString(string1State._originalString);
+                    var str2 = Encoding.UTF8.GetString(string2State._originalString);
+                }
+
                 // else, it means they should be compared by string, again, we compare only the effective numbers
-                // One digit is always one byte, so no need to care about chars vs bytes 
-                return string1State._originalString.Slice((int)(string1State.CurrentBytePosition - string1State._numberLength), (int)string1State._numberLength)
-                    .SequenceCompareTo(string2State._originalString.Slice((int)(string2State.CurrentBytePosition - string2State._numberLength),
-                        (int)string2State._numberLength));
+                // we compare the numbers as byte sequences, because both numbers are guaranteed to be of the same length
+                return string1State._originalString.Slice((int)(string1State.CurrentBytePosition - string1State._numberLengthInBytes), (int)string1State._numberLengthInBytes)
+                    .SequenceCompareTo(string2State._originalString.Slice((int)(string2State.CurrentBytePosition - string2State._numberLengthInBytes),
+                        (int)string2State._numberLengthInBytes));
             }
 
             // if one of the sequences is a number and the other is not, the number is always smaller
