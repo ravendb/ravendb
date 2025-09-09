@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Orders;
@@ -42,6 +43,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
 
     public abstract IAsyncDisposable CreateCloudSettings([CallerMemberName] string caller = null);
     protected abstract Task<List<FileInfoDetails>> GetBlobsFromCloudAndAssertForCount(TSettings settings, int expected, int timeout = 120_000);
+    protected abstract Task OverwriteBlobInCloudWithDummyStream(TSettings settings, FileInfoDetails file);
     public abstract Task DeleteObjects(TSettings settings);
     public abstract Task<string> PutRetireAttachmentsConfiguration(IDocumentStore store, TSettings settings, List<string> collections = null, string database = null, string id = null);
     public abstract TSettings GetCloudSetting(string remoteFolderName, [CallerMemberName] string caller = null);
@@ -686,7 +688,7 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
         }
     }
 
-    protected async Task CanUploadRetiredAttachmentToCloudIfItAlreadyExists_ShouldNotOverwriteInternal()
+    protected async Task CanUploadRetiredAttachmentToCloudIfItAlreadyExists_ShouldNotOverwriteInternal(bool overwriteWithDummy)
     {
         await using (var holder = CreateCloudSettings())
         {
@@ -742,6 +744,19 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 await GetAndCompareRetiredAttachment(store, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", profileStream, 3, identifier1);
                 await WaitForTaskDelayIfNeeded();
 
+                if (overwriteWithDummy)
+                {
+                    var cloudObject = cloudObjects[0];
+                    await OverwriteBlobInCloudWithDummyStream(Settings, cloudObject);
+                    cloudObjects = await GetBlobsFromCloudAndAssertForCount(Settings, 1);
+                    using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("EGOR")))
+                    {
+                        // we should have dummy stream in cloud now but the size is same since its saved in attachment metadata
+                        await GetAndCompareRetiredAttachment(store, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", stream, 3, identifier1);
+                        await WaitForTaskDelayIfNeeded();
+                    }
+                }
+
                 var database2 = await Databases.GetDocumentDatabaseInstanceFor(server, store2);
                 database2.Time.UtcDateTime = () => DateTime.UtcNow.AddMinutes(10);
                 var expiredDocumentsCleaner2 = database2.RetireAttachmentsSender;
@@ -750,9 +765,17 @@ public abstract class RetiredAttachmentsHolder<TSettings> : RetiredAttachmentsHo
                 List<FileInfoDetails> cloudObjects2 = await GetBlobsFromCloudAndAssertForCount(Settings, 1);
                 Assert.Contains($"{Settings.RemoteFolderName}/EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", cloudObjects2[0].FullPath);
 
-                // should be the same attachment, not a new one
-                Assert.Equal(cloudObjects[0].LastModified, cloudObjects2[0].LastModified);
+                if (overwriteWithDummy)
+                {
+                    Assert.NotEqual(cloudObjects[0].LastModified, cloudObjects2[0].LastModified);
+                }
+                else
+                {
+                    // should be the same attachment, not a new one
+                    Assert.Equal(cloudObjects[0].LastModified, cloudObjects2[0].LastModified);
+                }
 
+                await GetAndCompareRetiredAttachment(store, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", profileStream, 3, identifier1);
                 await GetAndCompareRetiredAttachment(store2, id, "test.png", "EcDnm3HDl2zNDALRMQ4lFsCO3J2Lb1fM1oDWOk2Octo=", "image/png", profileStream, 3, identifier2);
             }
 

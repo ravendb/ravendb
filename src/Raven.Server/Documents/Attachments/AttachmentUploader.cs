@@ -52,6 +52,21 @@ public class AttachmentUploader : MultipleFileUploaderBase<AttachmentUploadToClo
         }
     }
 
+    public long? GetObjectSizeFromMetadata(IDictionary<string, string> metadata)
+    {
+        switch (_destination)
+        {
+            case BackupConfiguration.BackupDestination.AmazonS3:
+                return GetObjectSizeFromMetadataS3(metadata);
+
+            case BackupConfiguration.BackupDestination.Azure:
+                return GetObjectSizeFromMetadataAzure(metadata);
+
+            default:
+                throw new ArgumentOutOfRangeException($"Missing implementation for direct upload destination '{_destination}'");
+        }
+    }
+
     public void CreateUploadTask(DocumentDatabase database, AbstractBackgroundWorkStorage.DocumentExpirationInfo doc, Stream attachmentStream, string objKeyName, long attachmentLength)
     {
         Task task = CreateUploadTaskInternal(database, attachmentStream, objKeyName, attachmentLength);

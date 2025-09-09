@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -92,6 +94,20 @@ public abstract class RetiredAttachmentsAzureBase : RetiredAttachmentsHolder<Azu
             FullPath = x.Name,
             LastModified = x.LastModified?.DateTime ?? DateTime.MinValue
         }).ToList();
+    }
+
+    protected override Task OverwriteBlobInCloudWithDummyStream(AzureSettings settings, FileInfoDetails file)
+    {
+        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("EGOR")))
+        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+        using (var client = RavenAzureClient.Create(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
+        {
+            client.PutBlob(file.FullPath, stream, new Dictionary<string, string>
+            {
+                { "Description", "GetBackupDescription" }
+            });
+        }
+        return Task.CompletedTask;
     }
 
     public override async Task DeleteObjects(AzureSettings settings)

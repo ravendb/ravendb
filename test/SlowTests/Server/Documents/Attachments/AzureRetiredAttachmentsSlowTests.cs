@@ -94,7 +94,13 @@ namespace SlowTests.Server.Documents.Attachments
         [AzureRetryFact]
         public async Task CanUploadRetiredAttachmentToAzureIfItAlreadyExists_ShouldNotOverwrite()
         {
-            await CanUploadRetiredAttachmentToCloudIfItAlreadyExists_ShouldNotOverwriteInternal();
+            await CanUploadRetiredAttachmentToCloudIfItAlreadyExists_ShouldNotOverwriteInternal(overwriteWithDummy: false);
+        }
+
+        [AzureRetryFact]
+        public async Task CanUploadRetiredAttachmentToAzureIfItAlreadyExists_ShouldOverwriteIfBroken()
+        {
+            await CanUploadRetiredAttachmentToCloudIfItAlreadyExists_ShouldNotOverwriteInternal(overwriteWithDummy: true);
         }
 
         [AzureRetryFact]

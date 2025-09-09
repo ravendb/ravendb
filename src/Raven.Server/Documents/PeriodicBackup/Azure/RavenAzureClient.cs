@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Azure;
+using Azure.Core;
 using Azure.Storage;
 using Azure.Storage.Blobs;
 using Azure.Storage.Blobs.Models;
@@ -280,10 +281,12 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 var client = _client.GetBlobClient(key);
                 var response = await client.GetPropertiesAsync(cancellationToken: _cancellationToken);
 
-                var metadata = new Dictionary<string, string>();
-                foreach (var kvp in response.Value.Metadata)
+                var headers = ConvertHeaders(response.GetRawResponse().Headers);
+                var metadata = ConvertMetadata(response.Value.Metadata);
+
+                foreach (var kvp in headers)
                 {
-                    metadata[kvp.Key] = kvp.Value;
+                    metadata.TryAdd(kvp.Key, kvp.Value);
                 }
 
                 return metadata;
@@ -295,6 +298,30 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
 
                 throw;
             }
+        }
+
+        private static IDictionary<string, string> ConvertHeaders(ResponseHeaders collection)
+        {
+            var metadata = new Dictionary<string, string>();
+
+            foreach (var header in collection)
+            {
+                metadata[header.Name] = header.Value;
+            }
+
+            return metadata;
+        }
+
+        private static IDictionary<string, string> ConvertMetadata(IDictionary<string, string> collection)
+        {
+            var metadata = new Dictionary<string, string>();
+            if (collection == null)
+                return metadata;
+
+            foreach (var key in collection.Keys)
+                metadata[key] = collection[key];
+
+            return metadata;
         }
     }
 }

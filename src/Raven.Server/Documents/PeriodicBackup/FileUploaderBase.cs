@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Raven.Client;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Server.Documents.PeriodicBackup.Aws;
@@ -97,6 +98,27 @@ public abstract class FileUploaderBase : FileUploaderDownloaderBase
     protected IDictionary<string, string> GetObjectMetadataFromGoogleCloud(GoogleCloudSettings settings, string folderName, string fileName)
     {
         throw new NotImplementedException();
+    }
+
+    protected long? GetObjectSizeFromMetadataS3(IDictionary<string, string> metadata)
+    {
+        return GetObjectSizeFromMetadataInternal(metadata);
+    }
+
+    protected long? GetObjectSizeFromMetadataAzure(IDictionary<string, string> metadata)
+    {
+        return GetObjectSizeFromMetadataInternal(metadata);
+    }
+
+    private long? GetObjectSizeFromMetadataInternal(IDictionary<string, string> metadata)
+    {
+        if (metadata.TryGetValue(Constants.Headers.ContentLength, out var contentLengthStr) &&
+            long.TryParse(contentLengthStr, out var cloudSize))
+        {
+            return cloudSize;
+        }
+
+        return null;
     }
 
     private string ReportDeletion(string name)

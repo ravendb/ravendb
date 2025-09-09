@@ -712,7 +712,13 @@ namespace SlowTests.Server.Documents.Attachments
         [AmazonS3RetryFact]
         public async Task CanUploadRetiredAttachmentToS3IfItAlreadyExists_ShouldNotOverwrite()
         {
-            await CanUploadRetiredAttachmentToCloudIfItAlreadyExists_ShouldNotOverwriteInternal();
+            await CanUploadRetiredAttachmentToCloudIfItAlreadyExists_ShouldNotOverwriteInternal(overwriteWithDummy: false);
+        }
+
+        [AmazonS3RetryFact]
+        public async Task CanUploadRetiredAttachmentToS3IfItAlreadyExists_ShouldOverwriteIfBroken()
+        {
+            await CanUploadRetiredAttachmentToCloudIfItAlreadyExists_ShouldNotOverwriteInternal(overwriteWithDummy: true);
         }
 
         [AmazonS3RetryFact]

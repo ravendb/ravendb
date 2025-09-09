@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -178,18 +179,43 @@ namespace Raven.Server.Documents
 
                                 using var hashSliceDisposable = _database.DocumentsStorage.AttachmentsStorage.RetiredAttachmentsStorage.ExtractHashSliceFromAttachmentId(context, doc.LowerId, out Slice hashSlice);
                                 var hash = hashSlice.ToString();
-                                //TODO: egor add test that will cover this scenario, when the attachment is already in cloud, also cover scenario if we had partial upload
-                                if (directUpload.GetObjectMetadata(string.Empty, hash) != null)
+
+                                var metadata = directUpload.GetObjectMetadata(string.Empty, hash);
+                                bool shouldUpload = true;
+                                long? attachmentLength = null;
+                                if (metadata != null)
+                                {
+                                    // The attachment already exists in the cloud, the file name is the hash so we can check if size matches to detect partial uploads
+                                    var objectSizeFromMetadata = directUpload.GetObjectSizeFromMetadata(metadata);
+                                    if (objectSizeFromMetadata.HasValue)
+                                    {
+                                        attachmentLength = AttachmentsStorage.GetAttachmentStreamLength(context, hashSlice);
+
+                                        // Only skip upload if sizes match exactly
+                                        shouldUpload = objectSizeFromMetadata != attachmentLength;
+                                    }
+                                }
+
+                                _token.ThrowIfCancellationRequested();
+
+                                if (shouldUpload == false)
                                 {
                                     // the attachment already exists in the cloud, no need to upload it again
                                     retired.Enqueue(doc);
                                     continue;
                                 }
 
-                                _token.ThrowIfCancellationRequested();
-
                                 // the attachment stream is disposed by the directUpload
-                                var (attachmentStream, attachmentLength) = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamAndLength(context, hashSlice);
+                                Stream attachmentStream;
+                                if (attachmentLength.HasValue == false)
+                                {
+                                    (attachmentStream, attachmentLength) = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStreamAndLength(context, hashSlice);
+                                }
+                                else
+                                {
+                                    attachmentStream = _database.DocumentsStorage.AttachmentsStorage.GetAttachmentStream(context, hashSlice);
+                                }
+
                                 if (attachmentStream == null)
                                 {
                                     // attachment was deleted, need to remote it from retired tree
@@ -199,7 +225,7 @@ namespace Raven.Server.Documents
 
                                 if (await directUpload.WaitForFinishedTasksIfNeededAsync(duration, _token))
                                 {
-                                    directUpload.CreateUploadTask(_database, doc, attachmentStream, hash, attachmentLength);
+                                    directUpload.CreateUploadTask(_database, doc, attachmentStream, hash, attachmentLength.Value);
                                 }
                                 else
                                 {

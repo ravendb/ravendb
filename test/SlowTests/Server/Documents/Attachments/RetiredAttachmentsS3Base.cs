@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents;
@@ -101,6 +103,19 @@ public abstract class RetiredAttachmentsS3Base : RetiredAttachmentsHolder<S3Sett
             FullPath = x.FullPath,
             LastModified = x.LastModified
         }).ToList();
+    }
+
+    protected override async Task OverwriteBlobInCloudWithDummyStream(S3Settings settings, FileInfoDetails file)
+    {
+        using (var stream = new MemoryStream(Encoding.UTF8.GetBytes("EGOR")))
+        using (var cts = new CancellationTokenSource(TimeSpan.FromMinutes(5)))
+        using (var s3Client = new RavenAwsS3Client(settings, EtlTestBase.DefaultBackupConfiguration, cancellationToken: cts.Token))
+        {
+            await s3Client.PutObjectAsync(file.FullPath, stream, new Dictionary<string, string>
+            {
+                { "Description", "GetBackupDescription" }
+            });
+        }
     }
 
     public override async Task DeleteObjects(S3Settings settings)

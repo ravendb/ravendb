@@ -264,8 +264,15 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
             try
             {
                 GetObjectMetadataResponse response = await _client.GetObjectMetadataAsync(_bucketName, key, _cancellationToken);
+                var headers = ConvertHeaders(response.Headers);
+                var metadata = ConvertMetadata(response.Metadata);
 
-                return ConvertMetadata(response.Metadata);
+                foreach (var kvp in headers)
+                {
+                    metadata.TryAdd(kvp.Key, kvp.Value);
+                }
+
+                return metadata;
             }
             catch (AmazonS3Exception e)
             {
@@ -405,6 +412,18 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
             foreach (var kvp in metadata)
                 collection[Uri.EscapeDataString(kvp.Key)] = Uri.EscapeDataString(kvp.Value);
+        }
+
+        private static IDictionary<string, string> ConvertHeaders(HeadersCollection collection)
+        {
+            var metadata = new Dictionary<string, string>();
+            if (collection == null)
+                return metadata;
+
+            foreach (var key in collection.Keys)
+                metadata[key] = collection[key];
+
+            return metadata;
         }
 
         private static IDictionary<string, string> ConvertMetadata(MetadataCollection collection)
