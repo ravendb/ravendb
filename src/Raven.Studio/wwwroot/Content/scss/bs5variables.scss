@@ -560,7 +560,7 @@ $input-font-size-lg: $input-btn-font-size-lg !default;
 
 $input-bg: var(--#{$prefix}input-bg) !default;
 $input-disabled-color: null !default;
-$input-disabled-bg: transparent !default;
+$input-disabled-bg: $input-bg !default;
 $input-disabled-border-color: $border-color-disabled !default;
 
 $input-color: $text-color !default;
@@ -578,7 +578,7 @@ $input-focus-color: $text-emphasis-color !default;
 $input-focus-width: $input-btn-focus-width !default;
 $input-focus-box-shadow: $input-btn-focus-box-shadow !default;
 
-$input-placeholder-color: $text-muted !default;
+$input-placeholder-color: $text-muted-color !default;
 $input-plaintext-color: $text-color !default;
 
 $input-height-border: calc(#{$input-border-width} * 2) !default; // stylelint-disable-line function-disallowed-list
@@ -823,11 +823,11 @@ $zindexes: (
     "topalert": 1083,
     "modal-backdrop": 1050,
     "offcanvas": 1055,
-    "popover": 1086,
-    "tooltip": 1086,
     "modal": 1085,
     "toast": 1090,
     "menu-xs": 1090,
+    "popover": 1101,
+    "tooltip": 1101,
     "loading-overlay": 2490,
     "processing-spinner": 2500,
     "ace-fullScreen": 9999,
