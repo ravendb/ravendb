@@ -209,7 +209,7 @@ var ai = new AI();
                         var data = string.Empty;
                         string type = attachmentObj.GetOwnProperty(AttachmentsRequestConstants.Type).Value.AsString();
                         string filename = "unknown.name";
-                        var source = AiAttachmentSource.FromAttachments;
+                        var source = AiAttachmentSource.FromAttachment;
 
                         // TODO: we aren't being really efficient here in terms of allocations / memory
                         // but the problem is that the API itself may require large BASE64 strings, annoying 

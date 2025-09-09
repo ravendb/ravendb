@@ -451,8 +451,8 @@ for(const comment of this.Comments)
         Assert.Equal("image/png", genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Type);
         Assert.Equal("[Hash:'FLNK25A3VOpVPIiusBEZMwUU5mWqSZR7T2OqYF4nBfA=']", genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.Data);
         Assert.Equal("[Hash:'94IlaZrchKnAQBD3vQQ7sE0Yt6f0CJeu69Ljfb66bxo=']", genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Data);
-        Assert.Equal(AiAttachmentSource.FromAttachments, genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.Source);
-        Assert.Equal(AiAttachmentSource.FromAttachments, genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Source);
+        Assert.Equal(AiAttachmentSource.FromAttachment, genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.Source);
+        Assert.Equal(AiAttachmentSource.FromAttachment, genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Source);
         Assert.NotNull(genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.Data);
         Assert.NotNull(genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Data);
 
@@ -592,8 +592,8 @@ for(const comment of this.Comments)
         Assert.Equal("image/png", genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Type);
         Assert.Equal("[Hash:'FLNK25A3VOpVPIiusBEZMwUU5mWqSZR7T2OqYF4nBfA=']", genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.Data);
         Assert.Equal("[Hash:'94IlaZrchKnAQBD3vQQ7sE0Yt6f0CJeu69Ljfb66bxo=']", genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Data);
-        Assert.Equal(AiAttachmentSource.FromAttachments, genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.Source);
-        Assert.Equal(AiAttachmentSource.FromAttachments, genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Source);
+        Assert.Equal(AiAttachmentSource.FromAttachment, genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.Source);
+        Assert.Equal(AiAttachmentSource.FromAttachment, genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Source);
         Assert.NotNull(genAiContexts[0].ContextOutput.Attachments.FirstOrDefault()?.Data);
         Assert.NotNull(genAiContexts[1].ContextOutput.Attachments.FirstOrDefault()?.Data);
         
@@ -727,8 +727,8 @@ for(const comment of this.Comments)
             Assert.Equal("text.csv", aiAttachments[5].Name);
             Assert.Equal("short_text.txt", aiAttachments[6].Name);
 
-            Assert.Equal(AiAttachmentSource.FromAttachments, aiAttachments[0].Source);
-            Assert.Equal(AiAttachmentSource.FromAttachments, aiAttachments[1].Source);
+            Assert.Equal(AiAttachmentSource.FromAttachment, aiAttachments[0].Source);
+            Assert.Equal(AiAttachmentSource.FromAttachment, aiAttachments[1].Source);
             Assert.Equal(AiAttachmentSource.NotFound, aiAttachments[2].Source);
             Assert.Equal(AiAttachmentSource.FromScript, aiAttachments[3].Source);
             Assert.Equal("[Hash:'FLNK25A3VOpVPIiusBEZMwUU5mWqSZR7T2OqYF4nBfA=']", aiAttachments[0].Data);
