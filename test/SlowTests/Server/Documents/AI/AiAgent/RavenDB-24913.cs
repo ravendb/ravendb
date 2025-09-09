@@ -1,6 +1,4 @@
 ﻿using System.Linq;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
@@ -34,10 +32,9 @@ public class RavenDB_24913(ITestOutputHelper output) : RavenTestBase(output)
 
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
 
-
         AiAgentConfiguration CreateAgent(AiAgentToolQueryOptions toolQueryOptions)
         {
-            var aiAgentConfiguration = new AiAgentConfiguration("my assistant " + toolQueryOptions, config.ConnectionStringName,
+            var aiAgentConfiguration = new AiAgentConfiguration($"my assistant_I{toolQueryOptions.AddToInitialContext}_M{toolQueryOptions.AllowModelQueries}", config.ConnectionStringName,
                 "Be helpful")
             {
                 SampleObject = JsonConvert.SerializeObject(new Reply(Answer: "The answer to the user's question")),
@@ -58,13 +55,12 @@ public class RavenDB_24913(ITestOutputHelper output) : RavenTestBase(output)
         }
 
         var identifierAddInitialContext = (await store.AI.CreateAgentAsync(
-                CreateAgent(new AiAgentToolQueryOptions { AddToInitialContext = true }), AiAgentBasics.OutputSchema.Instance)
+                CreateAgent(new AiAgentToolQueryOptions { AddToInitialContext = true, AllowModelQueries = false }), AiAgentBasics.OutputSchema.Instance)
             ).Identifier;
 
         var identifierAllowModelQueries = (await store.AI.CreateAgentAsync(
-                CreateAgent(new AiAgentToolQueryOptions { AllowModelQueries = true }), AiAgentBasics.OutputSchema.Instance)
+                CreateAgent(new AiAgentToolQueryOptions { AllowModelQueries = true, AddToInitialContext = false }), AiAgentBasics.OutputSchema.Instance)
             ).Identifier;
-
 
         await VerifyCall(identifierAllowModelQueries, 2);
         await VerifyCall(identifierAddInitialContext, 1);
