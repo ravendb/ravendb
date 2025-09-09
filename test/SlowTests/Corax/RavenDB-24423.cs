@@ -1,5 +1,4 @@
-﻿
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using FastTests;
 using Raven.Client.Documents;
@@ -30,6 +29,60 @@ public class RavenDB_24423 : RavenTestBase
             {
                 "বাংলাবর্ণমালাবালিপি",
                 "বাংলাবর্ণমালা1"
+            };
+
+            titles.ForEach(x => localDtos.Add(new Dto(x)));
+
+            foreach (var dto in localDtos)
+            {
+                session.Store(dto);
+            }
+
+            session.SaveChanges();
+        }
+
+        using (var session = store.OpenSession())
+        {
+            var dtosFromServer = session.Query<Dto>()
+                .OrderBy(x => x.Title, OrderingType.AlphaNumeric)
+                .Select(x => x.Title)
+                .ToList();
+
+            Assert.Equal(2, dtosFromServer.Count);
+
+            localDtos.Sort(new AlphaNumericDtoOrder(titleDescending: false));
+
+            Assert.Equal(localDtos.Select(x => x.Title), dtosFromServer);
+        }
+
+        using (var session = store.OpenSession())
+        {
+            var dtosFromServer = session.Query<Dto>()
+                .OrderByDescending(x => x.Title, OrderingType.AlphaNumeric)
+                .Select(x => x.Title)
+                .ToList();
+
+            Assert.Equal(2, dtosFromServer.Count);
+
+            localDtos.Sort(new AlphaNumericDtoOrder(titleDescending: true));
+
+            Assert.Equal(localDtos.Select(x => x.Title), dtosFromServer);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Querying)]
+    [RavenData(SearchEngineMode = RavenSearchEngineMode.All)]
+    public void CanSortBengaliNumericByOrderByAlphaNumeric(Options options)
+    {
+        using var store = GetDocumentStore(options);
+        var localDtos = new List<Dto>();
+
+        using (var session = store.OpenSession())
+        {
+            var titles = new List<string>
+            {
+                "১০০",
+                "১১০"
             };
 
             titles.ForEach(x => localDtos.Add(new Dto(x)));
