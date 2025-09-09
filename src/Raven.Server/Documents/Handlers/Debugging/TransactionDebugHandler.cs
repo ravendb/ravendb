@@ -68,6 +68,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 TotalAllocatedSize = new Size(lowLevelTransaction.TotalAllocatedInBytes, SizeUnit.Bytes).ToString(),
                 DecompressedBufferSize = new Size(lowLevelTransaction.DecompressedBufferBytes, SizeUnit.Bytes).ToString(),
                 TotalEncryptionBufferSize = lowLevelTransaction.TotalEncryptionBufferInBytes.ToString(),
+                IsDisposed = lowLevelTransaction.IsDisposed,
             };
         }
 
@@ -96,21 +97,21 @@ namespace Raven.Server.Documents.Handlers.Debugging
         {
             return new DynamicJsonValue
             {
-                [nameof(TxInfoResult.TransactionId)] = lowLevelTransaction.Id,
-                [nameof(TxInfoResult.ThreadId)] = lowLevelTransaction.CurrentTransactionHolder?.ManagedThreadId,
-                [nameof(TxInfoResult.ThreadName)] = lowLevelTransaction.CurrentTransactionHolder?.Name,
-                [nameof(TxInfoResult.CallerName)] = lowLevelTransaction.CallerName,
-                [nameof(TxInfoResult.StartTime)] = lowLevelTransaction.TxStartTime.GetDefaultRavenFormat(isUtc: true),
-                [nameof(TxInfoResult.TotalTime)] = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).TotalMilliseconds} mSecs",
-                [nameof(TxInfoResult.FlushInProgressLockTaken)] = lowLevelTransaction.FlushInProgressLockTaken,
-                [nameof(TxInfoResult.Flags)] = lowLevelTransaction.Flags,
-                [nameof(TxInfoResult.IsCloned)] = lowLevelTransaction.IsCloned,
-                [nameof(TxInfoResult.NumberOfModifiedPages)] = lowLevelTransaction.NumberOfModifiedPages,
-                [nameof(TxInfoResult.Committed)] = lowLevelTransaction.Committed,
-                [nameof(TxInfoResult.TotalAllocatedSize)] = new Size(lowLevelTransaction.TotalAllocatedInBytes, SizeUnit.Bytes).ToString(),
-                [nameof(TxInfoResult.DecompressedBufferSize)] = new Size(lowLevelTransaction.DecompressedBufferBytes, SizeUnit.Bytes).ToString(),
-                [nameof(TxInfoResult.TotalEncryptionBufferSize)] = lowLevelTransaction.TotalEncryptionBufferInBytes.ToString(),
-                [nameof(TxInfoResult.IsDisposed)] = lowLevelTransaction.IsDisposed,
+                [nameof(TxInfoResult.TransactionId)] = txInfo.TransactionId,
+                [nameof(TxInfoResult.ThreadId)] = txInfo.ThreadId,
+                [nameof(TxInfoResult.ThreadName)] = txInfo.ThreadName,
+                [nameof(TxInfoResult.CallerName)] = txInfo.CallerName,
+                [nameof(TxInfoResult.StartTime)] = txInfo.StartTime,
+                [nameof(TxInfoResult.TotalTime)] = txInfo.TotalTime,
+                [nameof(TxInfoResult.FlushInProgressLockTaken)] = txInfo.FlushInProgressLockTaken,
+                [nameof(TxInfoResult.Flags)] = txInfo.Flags,
+                [nameof(TxInfoResult.IsCloned)] = txInfo.IsCloned,
+                [nameof(TxInfoResult.NumberOfModifiedPages)] = txInfo.NumberOfModifiedPages,
+                [nameof(TxInfoResult.Committed)] = txInfo.Committed,
+                [nameof(TxInfoResult.TotalAllocatedSize)] = txInfo.TotalAllocatedSize,
+                [nameof(TxInfoResult.DecompressedBufferSize)] = txInfo.DecompressedBufferSize,
+                [nameof(TxInfoResult.TotalEncryptionBufferSize)] = txInfo.TotalEncryptionBufferSize,
+                [nameof(TxInfoResult.IsDisposed)] = txInfo.IsDisposed,
             };
         }
     }
