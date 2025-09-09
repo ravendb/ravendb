@@ -48,6 +48,9 @@ class periodicBackupConfiguration extends backupConfiguration {
         this.pinMentorNode(dto.PinToMentorNode);
         
         this.retentionPolicy(!dto.RetentionPolicy ? retentionPolicy.empty() : new retentionPolicy(dto.RetentionPolicy));
+
+        this.isSetMaxReadOpsPerSecond(dto.MaxReadOpsPerSecond != null);
+        this.maxReadOpsPerSecond(dto.MaxReadOpsPerSecond ?? null);
        
         this.initObservables();
         this.initValidation();
@@ -87,7 +90,9 @@ class periodicBackupConfiguration extends backupConfiguration {
             this.snapshot().excludeIndexes,
             this.retentionPolicy().dirtyFlag().isDirty,
             this.encryptionSettings().dirtyFlag().isDirty,
-            this.anyBackupTypeIsDirty
+            this.anyBackupTypeIsDirty,
+            this.isSetMaxReadOpsPerSecond,
+            this.maxReadOpsPerSecond
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -172,6 +177,7 @@ class periodicBackupConfiguration extends backupConfiguration {
             GoogleCloudSettings: this.googleCloudSettings().toDto(),
             FtpSettings: this.ftpSettings().toDto(),
             CreatedAt: this.createdAt(),
+            MaxReadOpsPerSecond: this.isSetMaxReadOpsPerSecond() ? this.maxReadOpsPerSecond() : null
         };
     }
 
