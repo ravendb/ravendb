@@ -5,7 +5,7 @@ using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
-public abstract class OpenAiBaseSettings : AbstractAiSettings, IChatCompletionSettings
+public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
 {
     protected OpenAiBaseSettings(string apiKey, string endpoint, string model, int? dimensions = null, double? temperature = null)
 

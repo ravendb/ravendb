@@ -7,7 +7,7 @@ namespace Raven.Server.Documents.AI.Settings;
 
 internal abstract class AbstractChatCompletionClientSettings
 {
-    private readonly IChatCompletionSettings _settings;
+    private readonly IAiSettings _settings;
     
     public string ApiKey => _settings.ApiKey;
 
@@ -15,7 +15,7 @@ internal abstract class AbstractChatCompletionClientSettings
 
     public Uri GetBaseEndpointUri() => _settings.GetBaseEndpointUri();
 
-    protected AbstractChatCompletionClientSettings(IChatCompletionSettings settings)
+    protected AbstractChatCompletionClientSettings(IAiSettings settings)
     {
         _settings = settings;
     }

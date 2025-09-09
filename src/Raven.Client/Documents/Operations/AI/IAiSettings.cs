@@ -2,7 +2,7 @@
 
 namespace Raven.Client.Documents.Operations.AI;
 
-public interface IChatCompletionSettings
+internal interface IAiSettings
 {
     public string ApiKey { get; }
 
