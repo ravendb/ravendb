@@ -15,8 +15,8 @@ namespace Raven.Server.Documents.Refresh
     {
         private const string DocumentsByRefresh = "DocumentsByRefresh";
 
-        public RefreshStorage(DocumentDatabase database, Transaction tx) 
-            : base(tx, database,DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
+        public RefreshStorage(DocumentDatabase database, Transaction tx)
+            : base(tx, database, DocumentsByRefresh, Constants.Documents.Metadata.Refresh)
         {
         }
 

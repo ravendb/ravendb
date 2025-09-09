@@ -4,12 +4,12 @@ using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Server.Documents.Attachments;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
 {
-
-    internal class RegularGetAttachmentStrategyProcessor : AbstractGetAttachmentStrategyProcessor<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class RegularGetAttachmentStrategyProcessor : AbstractGetAttachmentStrategyProcessor<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public RegularGetAttachmentStrategyProcessor([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
@@ -28,7 +28,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
             }
         }
 
-        public override async Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, CancellationToken token)
+        public override async Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, OperationCancelToken tcs)
         {
             var (sendBody, start, bytesRemaining) = RangeHelper.SetRangeHeaders(HttpContext, attachment.Size);
             if (!sendBody)
@@ -41,7 +41,7 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
                     stream.Seek(start, SeekOrigin.Begin);
                 }
 
-                await WriteAttachmentToResponseStream(context, stream, attachment, bytesRemaining, token);
+                await WriteAttachmentToResponseStream(context, stream, attachment, bytesRemaining, tcs.Token);
             }
         }
     }

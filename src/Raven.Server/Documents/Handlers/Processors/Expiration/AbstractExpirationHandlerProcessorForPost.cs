@@ -18,13 +18,5 @@ namespace Raven.Server.Documents.Handlers.Processors.Expiration
         {
             return RequestHandler.ServerStore.ModifyDatabaseExpiration(context, RequestHandler.DatabaseName, configuration, raftRequestId);
         }
-
-        protected override void OnBeforeUpdateConfiguration(ref BlittableJsonReaderObject configuration, JsonOperationContext context)
-        {
-            if (configuration == null)
-            {
-                return;
-            }
-        }
     }
 }

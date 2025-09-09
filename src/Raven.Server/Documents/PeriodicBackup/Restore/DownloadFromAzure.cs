@@ -9,7 +9,7 @@ using Raven.Server.Documents.PeriodicBackup.Azure;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore;
 
-public class DownloadFromAzure : IRestoreSource
+public class DownloadFromAzure : IDownloadSource
 {
     protected readonly IRavenAzureClient _client;
 
@@ -22,31 +22,6 @@ public class DownloadFromAzure : IRestoreSource
     {
         var blob = await _client.GetBlobAsync(path);
         return blob.Data;
-    }
-
-    public virtual Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress)
-    {
-        throw new NotImplementedException();
-    }
-
-    public virtual Task<List<string>> GetFilesForRestore()
-    {
-        throw new NotImplementedException();
-    }
-
-    public virtual string GetBackupPath(string smugglerFile)
-    {
-        throw new NotImplementedException();
-    }
-
-    public virtual string GetBackupLocation()
-    {
-        throw new NotImplementedException();
-    }
-
-    public virtual Task ValidateConfigurationsAsync()
-    {
-        throw new NotImplementedException();
     }
 
     public void Dispose()

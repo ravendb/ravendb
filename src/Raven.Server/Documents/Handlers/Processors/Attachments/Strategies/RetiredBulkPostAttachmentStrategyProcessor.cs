@@ -7,7 +7,7 @@ using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies
 {
-    internal class RetiredBulkPostAttachmentStrategyProcessor : AbstractBulkPostAttachmentStrategyProcessor<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class RetiredBulkPostAttachmentStrategyProcessor : AbstractBulkPostAttachmentStrategyProcessor<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public RetiredBulkPostAttachmentStrategyProcessor([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {

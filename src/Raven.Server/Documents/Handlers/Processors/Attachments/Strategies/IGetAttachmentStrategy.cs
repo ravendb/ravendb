@@ -3,6 +3,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.Attachments;
 using Raven.Server.Documents.Attachments;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
@@ -11,7 +12,7 @@ public interface IGetAttachmentStrategy
 {
     public void DisposeReadTransactionIfNeeded(DocumentsTransaction tx);
     public void CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name);
-    public Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, CancellationToken token);
+    public Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, OperationCancelToken tcs);
 
     public static void CheckAttachmentFlagAndConfigurationAndThrowIfNeededInternal(DocumentsOperationContext context, DocumentDatabase database, Attachment attachment, string documentId, string name, string method)
     {

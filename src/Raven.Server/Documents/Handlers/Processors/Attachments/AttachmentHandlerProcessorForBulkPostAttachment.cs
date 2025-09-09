@@ -14,12 +14,11 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
-    internal class AttachmentHandlerProcessorForBulkPostAttachment : AbstractAttachmentHandlerProcessorForBulkPostAttachment<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class AttachmentHandlerProcessorForBulkPostAttachment : AbstractAttachmentHandlerProcessorForBulkPostAttachment<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public AttachmentHandlerProcessorForBulkPostAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
-
 
         protected override async ValueTask GetAttachmentsAsync(DocumentsOperationContext context, BlittableJsonReaderArray attachments, AttachmentType type,
             OperationCancelToken tcs)

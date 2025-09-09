@@ -11,7 +11,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         where TOperationContext : JsonOperationContext 
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-
         protected AbstractAttachmentHandlerProcessorForBulkDeleteAttachment([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }
@@ -20,7 +19,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
         public override async ValueTask ExecuteAsync()
         {
-
             using (ContextPool.AllocateOperationContext(out TOperationContext context))
             using (var operationCancelToken = RequestHandler.CreateHttpRequestBoundOperationToken())
             {

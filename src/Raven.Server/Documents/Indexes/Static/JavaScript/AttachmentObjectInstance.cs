@@ -8,7 +8,6 @@ using Jint.Runtime.Descriptors;
 using Jint.Runtime.Interop;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
-using Raven.Server.Exceptions;
 using Raven.Server.Exceptions.Attachments;
 
 namespace Raven.Server.Documents.Indexes.Static.JavaScript

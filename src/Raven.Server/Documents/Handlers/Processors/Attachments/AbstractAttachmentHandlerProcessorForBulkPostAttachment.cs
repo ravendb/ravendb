@@ -12,7 +12,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
         where TOperationContext : JsonOperationContext 
         where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
     {
-
         protected AbstractAttachmentHandlerProcessorForBulkPostAttachment([NotNull] TRequestHandler requestHandler) : base(requestHandler)
         {
         }

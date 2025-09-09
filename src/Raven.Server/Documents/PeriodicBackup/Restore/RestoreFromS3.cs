@@ -11,11 +11,11 @@ using Raven.Server.Utils;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore
 {
-    public sealed class RestoreFromS3 : DownloadFromS3
+    public sealed class RestoreFromS3 : DownloadFromS3, IRestoreSource
     {
         private readonly ServerStore _serverStore;
         private readonly CancellationToken _cancellationToken;
-        private readonly string _remoteFolderName;
+        public string _remoteFolderName { get; set; }
 
         public RestoreFromS3([NotNull] ServerStore serverStore, RestoreFromS3Configuration restoreFromConfiguration, CancellationToken cancellationToken) : base(restoreFromConfiguration, serverStore.Configuration.Backup, token: cancellationToken)
         {
@@ -24,31 +24,21 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
             _remoteFolderName = restoreFromConfiguration.Settings.RemoteFolderName;
         }
 
-        public override async Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress)
+        public async Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress)
         {
             var blob = await _client.GetObjectAsync(path);
             var file = await RestoreUtils.CopyRemoteStreamLocallyAsync(blob.Data, blob.Size, _serverStore.Configuration, onProgress, _cancellationToken);
             return new DeleteOnCloseZipArchive(file, ZipArchiveMode.Read);
         }
 
-        public override async Task<List<string>> GetFilesForRestore()
+        public async Task<List<string>> GetFilesForRestore()
         {
             var prefix = string.IsNullOrEmpty(_remoteFolderName) ? "" : _remoteFolderName.TrimEnd('/') + "/";
             var allObjects = await _client.ListAllObjectsAsync(prefix, string.Empty, false);
             return allObjects.Select(x => x.FullPath).ToList();
         }
 
-        public override string GetBackupPath(string fileName)
-        {
-            return fileName;
-        }
-
-        public override string GetBackupLocation()
-        {
-            return _remoteFolderName;
-        }
-
-        public override async Task ValidateConfigurationsAsync()
+        public async Task ValidateConfigurationsAsync()
         {
             var files = await GetFilesForRestore();
             foreach (var file in files)

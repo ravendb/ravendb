@@ -1,5 +1,4 @@
 ﻿using System.Threading.Tasks;
-using Elastic.Clients.Elasticsearch;
 using JetBrains.Annotations;
 using Raven.Client.Documents.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Databases;

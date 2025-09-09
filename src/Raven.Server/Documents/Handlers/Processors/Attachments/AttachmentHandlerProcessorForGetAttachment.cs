@@ -1,25 +1,25 @@
 ﻿using System;
 using System.IO;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Server.Documents.Attachments;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Extensions;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments;
 
-internal class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHandlerProcessorForGetAttachment<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHandlerProcessorForGetAttachment<DatabaseRequestHandler, DocumentsOperationContext>
 {
     internal AttachmentHandlerProcessorForGetAttachment([NotNull] DatabaseRequestHandler requestHandler, bool isDocument) : base(requestHandler, isDocument)
     {
     }
 
-    protected override async ValueTask GetAttachmentAsync(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector, CancellationToken token)
+    protected override async ValueTask GetAttachmentAsync(DocumentsOperationContext context, string documentId, string name, AttachmentType type, string changeVector, OperationCancelToken tcs)
     {
         using (var tx = context.OpenReadTransaction())
         {
@@ -80,7 +80,7 @@ internal class AttachmentHandlerProcessorForGetAttachment : AbstractAttachmentHa
 
             strategy.DisposeReadTransactionIfNeeded(tx);
 
-            await strategy.WriteResponseStream(context, attachment, token);
+            await strategy.WriteResponseStream(context, attachment, tcs);
         }
     }
 }

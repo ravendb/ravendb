@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -19,7 +18,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Aws
 {
-    public sealed class RavenAwsS3Client : IDirectUploader, IDisposable
+    public sealed class RavenAwsS3Client : IDirectUploader
     {
         private readonly Progress _progress;
         private readonly CancellationToken _cancellationToken;

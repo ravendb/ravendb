@@ -18,7 +18,7 @@ using Size = Sparrow.Size;
 
 namespace Raven.Server.Documents.PeriodicBackup.Azure
 {
-    public interface IRavenAzureClient : IDirectUploader, IDisposable
+    public interface IRavenAzureClient : IDirectUploader
     {
         void PutBlob(string blobName, Stream stream, Dictionary<string, string> metadata);
         RavenStorageClient.ListBlobResult ListBlobs(string prefix, string delimiter, bool listFolders, string continuationToken = null);
@@ -218,12 +218,14 @@ namespace Raven.Server.Documents.PeriodicBackup.Azure
                 .Select(x =>
                 {
                     if (listFolders)
+                    {
                         return new RavenStorageClient.BlobProperties
                         {
                             Name = RestorePointsBase.GetDirectoryName(x.IsPrefix ? x.Prefix : x.Blob.Name), LastModified = x.Blob?.Properties.LastModified
                         };
-                    else
-                        return new RavenStorageClient.BlobProperties { Name = x.Blob.Name, LastModified = x.Blob.Properties.LastModified };
+                    }
+
+                    return new RavenStorageClient.BlobProperties { Name = x.Blob.Name, LastModified = x.Blob.Properties.LastModified };
                 })
                 .Distinct()
                 .ToList();

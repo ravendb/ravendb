@@ -3,7 +3,6 @@ using System.IO;
 
 namespace Raven.Server.Documents.PeriodicBackup.DirectUpload;
 
-
 public struct BackupDestinationStream : IDisposable
 {
     public Stream Stream;

@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
 
@@ -18,7 +19,7 @@ internal abstract class AbstractGetAttachmentStrategyProcessor<TRequestHandler, 
 
     public abstract void DisposeReadTransactionIfNeeded(DocumentsTransaction tx);
     public abstract void CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name);
-    public abstract Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, CancellationToken token);
+    public abstract Task WriteResponseStream(DocumentsOperationContext context, Attachment attachment, OperationCancelToken token);
 
     protected async Task WriteAttachmentToResponseStream(DocumentsOperationContext context, Stream stream, Attachment attachment, long? bytesRemaining,
         CancellationToken token)

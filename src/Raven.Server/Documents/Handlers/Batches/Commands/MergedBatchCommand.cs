@@ -4,7 +4,6 @@ using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Text;
-using Elastic.Clients.Elasticsearch;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Commands.Batches;
@@ -12,13 +11,9 @@ using Raven.Client.Documents.Operations.Attachments;
 using Raven.Client.Documents.Operations.Counters;
 using Raven.Client.Documents.Session;
 using Raven.Server.Documents.Attachments;
-using Raven.Server.Documents.Handlers.Processors.Attachments;
-using Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 using Raven.Server.Documents.TimeSeries;
 using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.ServerWide.Context;
-using Raven.Server.Utils;
-using Raven.Server.Web;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Server.Documents.Handlers.Batches.Commands;
@@ -210,8 +205,7 @@ public sealed class MergedBatchCommand : TransactionMergedCommand
                     break;
 
                 case CommandType.AttachmentDELETE:
-
-                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out CollectionName collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
+                    Database.DocumentsStorage.AttachmentsStorage.DeleteAttachment(context, cmd.Id, cmd.Name, cmd.ChangeVector, out var collectionName, updateDocument: false, extractCollectionName: ModifiedCollections is not null);
 
                     if (collectionName != null)
                         ModifiedCollections?.Add(collectionName.Name);

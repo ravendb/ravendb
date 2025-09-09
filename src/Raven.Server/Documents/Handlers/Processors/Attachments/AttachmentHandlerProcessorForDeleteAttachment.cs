@@ -5,13 +5,13 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
-    internal class AttachmentHandlerProcessorForDeleteAttachment : AbstractAttachmentHandlerProcessorForDeleteAttachment<DatabaseRequestHandler, DocumentsOperationContext>
+    internal sealed class AttachmentHandlerProcessorForDeleteAttachment : AbstractAttachmentHandlerProcessorForDeleteAttachment<DatabaseRequestHandler, DocumentsOperationContext>
     {
         public AttachmentHandlerProcessorForDeleteAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
         {
         }
 
-        protected override async ValueTask DeleteAttachmentAsync(DocumentsOperationContext context, string docId, string name, LazyStringValue changeVector)
+        protected override async ValueTask DeleteAttachmentAsync(DocumentsOperationContext _, string docId, string name, LazyStringValue changeVector)
         {
             var cmd = new AttachmentHandler.MergedDeleteAttachmentCommand
             {
@@ -20,7 +20,6 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
                 DocumentId = docId,
                 Name = name
             };
-
             await RequestHandler.Database.TxMerger.Enqueue(cmd);
         }
     }

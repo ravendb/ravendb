@@ -10,7 +10,7 @@ using Sparrow.Json;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments
 {
-    internal class AttachmentHandlerProcessorForBulkDeleteAttachment : AbstractAttachmentHandlerProcessorForBulkDeleteAttachment<DatabaseRequestHandler,
+    internal sealed class AttachmentHandlerProcessorForBulkDeleteAttachment : AbstractAttachmentHandlerProcessorForBulkDeleteAttachment<DatabaseRequestHandler,
         DocumentsOperationContext>
     {
         public AttachmentHandlerProcessorForBulkDeleteAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
@@ -51,7 +51,5 @@ namespace Raven.Server.Documents.Handlers.Processors.Attachments
 
             await RequestHandler.Database.TxMerger.Enqueue(cmd);
         }
-
     }
-
 }

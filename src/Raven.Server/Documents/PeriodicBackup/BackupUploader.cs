@@ -30,7 +30,6 @@ namespace Raven.Server.Documents.PeriodicBackup
         public BackupUploader(UploaderSettings settings, RetentionPolicyBaseParameters retentionPolicyParameters, RavenLogger logger, BackupResult backupResult, Action<IOperationProgress> onProgress, OperationCancelToken taskCancelToken) :
             base(settings, retentionPolicyParameters, logger, backupResult, onProgress, taskCancelToken)
         {
-   
         }
 
         public bool AnyUploads => BackupConfiguration.CanBackupUsing(_settings.S3Settings)
@@ -52,9 +51,9 @@ namespace Raven.Server.Documents.PeriodicBackup
 
         public override void Execute()
         {
-            foreach (var x in _threads)
+            foreach (var longRunningWork in _threads)
             {
-                x.Join(int.MaxValue);
+                longRunningWork.Join(int.MaxValue);
             }
 
             if (_exceptions.IsEmpty == false)

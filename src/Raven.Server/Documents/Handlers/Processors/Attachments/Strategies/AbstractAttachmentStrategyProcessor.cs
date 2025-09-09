@@ -4,12 +4,11 @@ using Microsoft.AspNetCore.Http;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Json;
-using Sparrow.Logging;
 using Sparrow.Server.Logging;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments.Strategies;
 
-internal abstract class AbstractAttachmentStrategyProcessor<TRequestHandler, TOperationContext> : IDisposable
+internal abstract class AbstractAttachmentStrategyProcessor<TRequestHandler, TOperationContext> 
     where TOperationContext : JsonOperationContext 
     where TRequestHandler : AbstractDatabaseRequestHandler<TOperationContext>
 {
@@ -27,10 +26,5 @@ internal abstract class AbstractAttachmentStrategyProcessor<TRequestHandler, TOp
         ClusterContextPool = requestHandler.ServerStore.Engine.ContextPool;
         ContextPool = requestHandler.ContextPool;
         Logger = requestHandler.Logger;
-    }
-
-    public virtual void Dispose()
-    {
-        GC.SuppressFinalize(this);
     }
 }

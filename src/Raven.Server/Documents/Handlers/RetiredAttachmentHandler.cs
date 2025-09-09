@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="RetiredAttachmentHandler.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using Raven.Server.Documents.Handlers.Processors.Attachments.Retired;
 using Raven.Server.Routing;
 

@@ -1,29 +1,16 @@
-﻿using System;
-using System.Net;
+﻿using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
-using Raven.Client.Documents.Operations.Attachments;
-using Raven.Server.Documents.Attachments;
 using Raven.Server.ServerWide.Context;
 
 namespace Raven.Server.Documents.Handlers.Processors.Attachments;
 
-internal class AttachmentHandlerProcessorForHeadAttachment : AbstractAttachmentHandlerProcessorForHeadAttachment<DatabaseRequestHandler, DocumentsOperationContext>
+internal sealed class AttachmentHandlerProcessorForHeadAttachment : AbstractAttachmentHandlerProcessorForHeadAttachment<DatabaseRequestHandler, DocumentsOperationContext>
 {
     public AttachmentHandlerProcessorForHeadAttachment([NotNull] DatabaseRequestHandler requestHandler) : base(requestHandler)
     {
-    }
-
-    public virtual string CheckAttachmentFlagAndConfigurationAndThrowIfNeeded(DocumentsOperationContext context, Attachment attachment, string documentId, string name)
-    {
-        if (attachment.RetireParameters.IsRetiredAttachment())
-        {
-            throw new InvalidOperationException($"Cannot get attachment '{name}' on document '{documentId}' because it is retired. Please use dedicated API.");
-        }
-
-        return null;
     }
 
     protected override ValueTask HandleHeadAttachmentAsync(string documentId, string name, string changeVector)

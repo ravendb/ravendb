@@ -631,8 +631,6 @@ namespace Raven.Server.Documents.PeriodicBackup.Restore
 
                 database.SupportedFeatures = new SupportedFeature(smugglerDatabaseRecord);
             };
-
-
         }
 
         private async Task OnErrorAsync(Action<IOperationProgress> onProgress, Exception e)

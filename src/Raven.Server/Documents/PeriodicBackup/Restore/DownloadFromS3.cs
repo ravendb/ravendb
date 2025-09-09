@@ -9,7 +9,7 @@ using Raven.Server.Documents.PeriodicBackup.Aws;
 
 namespace Raven.Server.Documents.PeriodicBackup.Restore;
 
-public class DownloadFromS3 : IRestoreSource
+public class DownloadFromS3 : IDownloadSource
 {
     protected readonly RavenAwsS3Client _client;
 
@@ -22,31 +22,6 @@ public class DownloadFromS3 : IRestoreSource
     {
         var blob = await _client.GetObjectAsync(path);
         return blob.Data;
-    }
-
-    public virtual Task<ZipArchive> GetZipArchiveForSnapshot(string path, Action<string> onProgress)
-    {
-        throw new NotImplementedException();
-    }
-
-    public virtual Task<List<string>> GetFilesForRestore()
-    {
-        throw new NotImplementedException();
-    }
-
-    public virtual string GetBackupPath(string smugglerFile)
-    {
-        throw new NotImplementedException();
-    }
-
-    public virtual string GetBackupLocation()
-    {
-        throw new NotImplementedException();
-    }
-
-    public virtual Task ValidateConfigurationsAsync()
-    {
-        throw new NotImplementedException();
     }
 
     public void Dispose()
