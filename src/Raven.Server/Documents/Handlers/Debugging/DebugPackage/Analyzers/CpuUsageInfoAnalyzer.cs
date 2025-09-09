@@ -28,10 +28,8 @@ public class CpuUsageInfoAnalyzer : AbstractDebugPackageAnalyzer
         if (serverEntries.TryGetEntry<ProcStatsHandler>(x => x.CpuStats(), out var cpuStatsEntry) &&
             cpuStatsEntry.TryGetJson("CpuStats", out var cpuStatsJsonArray))
         {
-            if (cpuStatsJsonArray.ValueKind == JsonValueKind.Array)
+            if (cpuStatsJsonArray.ValueKind == JsonValueKind.Array && cpuStatsJsonArray.GetArrayLength() == 1)
             {
-                Debug.Assert(cpuStatsJsonArray.GetArrayLength() == 1, $"Expected 1 CPU stats entry while it got {cpuStatsJsonArray.GetArrayLength()}");
-                    
                 var cpuStats = cpuStatsJsonArray[0].Deserialize<ProcStatsHandler.Stats>();
 
                 CpuUsageInfo = new CpuUsageAnalysisInfo

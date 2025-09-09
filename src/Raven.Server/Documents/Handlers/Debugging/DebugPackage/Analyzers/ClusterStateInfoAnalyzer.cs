@@ -59,7 +59,7 @@ public class ClusterStateInfoAnalyzer(DebugPackageAnalyzeErrors errors, DebugPac
         
         if (serverEntries.TryGetEntry<RachisAdminHandler>(x => x.GetClusterTopology(), out var entry))
         {
-            if (entry.TryGetJson("Errors", out var clusterErrorsPerNode) && clusterErrorsPerNode.ValueKind == JsonValueKind.Array)
+            if (entry.TryGetJson(nameof(RachisAdminHandler.ClusterTopologyResponseExtraData.Errors), out var clusterErrorsPerNode) && clusterErrorsPerNode.ValueKind == JsonValueKind.Array)
             {
                 for (int i = 0; i < clusterErrorsPerNode.GetArrayLength(); i++)
                 {

@@ -107,7 +107,7 @@ public class DebugPackageAnalyzer(Stream packageZipStream)
                 {
                     var generalInfoAnalyzer = new GeneralDatabaseInfoAnalyzer(databaseName, errors, issues);
                     var configurationAnalyzer = new ConfigurationInfoAnalyzer(serverAnalysisInfo, clusterAnalysisInfo, databaseName, errors, issues);
-                    var indexesAnalyzer = new IndexesInfoAnalyzer(databaseName, errors, issues);
+                    var indexesAnalyzer = new IndexesInfoAnalyzer(generalInfoAnalyzer, databaseName, errors, issues);
                     var tombstonesAnalyzer = new TombstonesInfoAnalyzer(databaseName, errors, issues);
                     var tasksAnalyzer = new TasksInfoAnalyzer(databaseName, errors, issues);
                     var databaseTxInfoAnalyzer = new DatabaseTransactionInfoAnalyzer(databaseName, errors, issues);

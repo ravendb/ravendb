@@ -34,7 +34,7 @@ public class ClusterLogInfoAnalyzer : AbstractDebugPackageAnalyzer
 
         ClusterNodeLogInfo = new ClusterNodeLogAnalysisInfo { LogEntry = logEntry, LogSummary = logSummary };
 
-        if (logEntry.TryGetJson("@metadata", out JsonElement metadata) && metadata.TryGetProperty("DateTime", out var dateTimeField) &&
+        if (logEntry.TryGetJson(Raven.Client.Constants.Documents.Metadata.Key, out JsonElement metadata) && metadata.TryGetProperty("DateTime", out var dateTimeField) &&
             dateTimeField.TryGetDateTime(out var retrievalInfoDateTime))
         {
             ClusterNodeLogInfo.DebugInfoCollectedAt = retrievalInfoDateTime;

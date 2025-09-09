@@ -52,7 +52,8 @@ public class TombstonesInfoAnalyzer(
                 
                 issues.ForDatabase(DatabaseName).Add(new DetectedIssue(
                     $"Blocking {tombstonesTypes}tombstones by '{extendedInfo.Identifier}' {extendedInfo.Process}",
-                    $"There are {extendedInfo.NumberOfTombstoneLeft} tombstones that are blocked from being deleted",
+                    $"There are {extendedInfo.NumberOfTombstoneLeft} tombstones that are blocked by the given process from being deleted. " +
+                    "Please check the state of the process (is it disabled maybe?).",
                     IssueSeverity.Warning,
                     IssueCategory.Database));
             }

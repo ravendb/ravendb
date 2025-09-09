@@ -11,10 +11,12 @@ using Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Results.D
 namespace Raven.Server.Documents.Handlers.Debugging.DebugPackage.Analyzers.Database;
 
 public class IndexesInfoAnalyzer(
+    GeneralDatabaseInfoAnalyzer generalInfoAnalyzer,
     string databaseName,
     DebugPackageAnalyzeErrors errors,
     DebugPackageAnalysisIssues issues) : AbstractDebugPackageDatabaseAnalyzer(databaseName, errors, issues)
 {
+    private readonly GeneralDatabaseInfoAnalyzer _generalInfoAnalyzer = generalInfoAnalyzer;
     public IndexesAnalysisInfo IndexesInfo { get; set; }
 
     protected override bool RetrieveAnalyzerInfo(DebugPackageEntries entries)
@@ -88,10 +90,17 @@ public class IndexesInfoAnalyzer(
 
             if (indexesStoringAllFields.Count > 0)
             {
+                var description = GetIndexesDescription(indexesStoringAllFields, indexState: null, "storing all fields") 
+                                  + ". Storing all index fields might be storage expensive and causes additional index processing cost";
+
+                if (_generalInfoAnalyzer.Analyzed && _generalInfoAnalyzer.DatabaseInfo?.DatabaseRecord?.Encrypted == true)
+                {
+                    description += " that will result in higher CPU usage due to encryption usage.";
+                }
+                
                 issues.ForDatabase(DatabaseName).Add(new DetectedIssue(
                     $"Storing all fields in indexes",
-                    GetIndexesDescription(indexesStoringAllFields, indexState: null, "storing all fields") + 
-                    ". Storing all index fields might be storage expensive and causes additional index processing cost",
+                    description,
                     IssueSeverity.Warning,
                     IssueCategory.Indexes));
             }

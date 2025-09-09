@@ -251,7 +251,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         [nameof(ClusterTopologyResponse.Topology)] = topology.ToSortedJson(),
                         [nameof(ClusterTopologyResponse.Etag)] = topology.Etag,
                         [nameof(ClusterTopologyResponse.Leader)] = ServerStore.LeaderTag,
-                        ["LeaderShipDuration"] = ServerStore.Engine.CurrentLeader?.LeaderShipDuration,
+                        [nameof(ClusterTopologyResponseExtraData.LeaderShipDuration)] = ServerStore.Engine.CurrentLeader?.LeaderShipDuration,
                         [nameof(RachisConsensus.CurrentState)] = ServerStore.CurrentRachisState,
                         [nameof(ClusterTopologyResponse.NodeTag)] = nodeTag,
                         [nameof(ClusterTopologyResponse.ServerRole)] = topology.GetServerRoleForTag(nodeTag),
@@ -261,14 +261,23 @@ namespace Raven.Server.Documents.Handlers.Admin
                     };
                     var clusterErrors = ServerStore.GetClusterErrors();
                     if (clusterErrors.Count > 0)
-                        json["Errors"] = clusterErrors;
+                        json[nameof(ClusterTopologyResponseExtraData.Errors)] = clusterErrors;
 
                     var nodesStatues = ServerStore.GetNodesStatuses();
-                    json["Status"] = DynamicJsonValue.Convert(nodesStatues);
+                    json[nameof(ClusterTopologyResponseExtraData.Status)] = DynamicJsonValue.Convert(nodesStatues);
 
                     context.Write(writer, json);
                 }
             }
+        }
+
+        internal class ClusterTopologyResponseExtraData
+        {
+            public DynamicJsonArray Errors { get; set; }
+            
+            public DynamicJsonValue Status { get; set; }
+            
+            public long LeaderShipDuration { get; set; }
         }
 
         [RavenAction("/admin/cluster/maintenance-stats", "GET", AuthorizationStatus.Operator)]

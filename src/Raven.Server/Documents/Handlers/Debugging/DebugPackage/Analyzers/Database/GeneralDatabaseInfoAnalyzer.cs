@@ -20,7 +20,7 @@ public class GeneralDatabaseInfoAnalyzer(
     {
         DatabaseStatistics stats;
 
-        if (databaseEntries.TryGetEntry("/database-record", string.Empty, "json", out var databaseRecordEntry) == false)
+        if (databaseEntries.TryGetEntry("database-record", string.Empty, "json", out var databaseRecordEntry) == false)
         {
             AddWarning($"Could not retrieve database record for '{DatabaseName}' database. Skipping it.");
             return false;
@@ -90,6 +90,33 @@ public class GeneralDatabaseInfoAnalyzer(
                         IssueSeverity.Info,
                         IssueCategory.Database));
                 }
+            }
+
+            if (dbRecord.Expiration is { Disabled: false })
+            {
+                issues.ForDatabase(DatabaseName).Add(new DetectedIssue(
+                    "Expiration usage",
+                    "Database is using documents expiration",
+                    IssueSeverity.Info,
+                    IssueCategory.Database));
+            }
+            
+            if (dbRecord.Refresh is { Disabled: false })
+            {
+                issues.ForDatabase(DatabaseName).Add(new DetectedIssue(
+                    "Refresh usage",
+                    "Database is using documents refresh feature",
+                    IssueSeverity.Info,
+                    IssueCategory.Database));
+            }
+            
+            if (dbRecord.DataArchival is { Disabled: false })
+            {
+                issues.ForDatabase(DatabaseName).Add(new DetectedIssue(
+                    "Data Archival usage",
+                    "Database is using data archival",
+                    IssueSeverity.Info,
+                    IssueCategory.Database));
             }
         }
     }
