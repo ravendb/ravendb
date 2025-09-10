@@ -30,8 +30,14 @@ import classNames from "classnames";
 import Form from "react-bootstrap/Form";
 import ModelTypeField from "./aiFields/ModelTypeField";
 import { withNestedSubmit } from "components/utils/common";
+import { useEffect } from "react";
 
 type FormData = ConnectionFormData<AiConnection>;
+
+type FormSchemaContext = ConnectionStringsNameContext & {
+    connectorType: FormData["connectorType"];
+    modelType: FormData["modelType"];
+};
 
 export interface AiConnectionStringProps extends EditConnectionStringFormProps {
     initialConnection: AiConnection;
@@ -50,17 +56,34 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                     connectorType: data.connectorType,
                     isForNewConnection,
                     usedNames,
-                } satisfies ConnectionStringsNameContext & { connectorType: FormData["connectorType"] },
+                    modelType: data.modelType,
+                } satisfies FormSchemaContext,
                 options
             ),
     });
 
-    const { control, handleSubmit, setValue } = form;
+    const { control, handleSubmit, setValue, watch } = form;
 
     const { forCurrentDatabase } = useAppUrls();
 
     const formValues = useWatch({ control });
     const { connectorType, modelType } = formValues;
+
+    // Reset connector when model type does not match it
+    useEffect(() => {
+        const { unsubscribe } = watch((values, { name }) => {
+            if (
+                name === "modelType" &&
+                values.modelType === "Chat" &&
+                values.connectorType != null &&
+                !chatConnectorTypes.includes(values.connectorType)
+            ) {
+                setValue("connectorType", null);
+            }
+        });
+
+        return () => unsubscribe();
+    }, [setValue, watch]);
 
     const handleGenerateIdentifier = () => {
         setValue("identifier", TaskUtils.getGeneratedIdentifier(formValues.name));
@@ -185,6 +208,8 @@ export function SettingsOptionComponent(props: OptionProps<SelectOptionWithIcon>
     );
 }
 
+const chatConnectorTypes: FormData["connectorType"][] = ["ollamaSettings", "openAiSettings", "azureOpenAiSettings"];
+
 function getConnectorOptions(modelType: FormData["modelType"]): SelectOptionWithIcon<FormData["connectorType"]>[] {
     const allOptions: SelectOptionWithIcon<FormData["connectorType"]>[] = [
         { label: "Azure OpenAI", value: "azureOpenAiSettings", icon: "openai" },
@@ -197,15 +222,19 @@ function getConnectorOptions(modelType: FormData["modelType"]): SelectOptionWith
     ];
 
     if (modelType === "Chat") {
-        return [
-            ...allOptions.filter(
-                (x) => x.value === "ollamaSettings" || x.value === "openAiSettings" || x.value === "azureOpenAiSettings"
-            ),
-        ].reverse();
+        return [...allOptions.filter((x) => chatConnectorTypes.includes(x.value))].reverse();
     }
 
     return allOptions;
 }
+
+const temperatureSchema = yup
+    .number()
+    .nullable()
+    .when(["$modelType", "isSetTemperature"], {
+        is: (modelType: FormData["modelType"], isSetTemperature: boolean) => modelType === "Chat" && isSetTemperature,
+        then: (schema) => schema.min(0).max(2).required(),
+    });
 
 const schema = yupObjectSchema<FormData>({
     name: connectionStringsUtils.nameSchema,
@@ -252,6 +281,8 @@ const schema = yupObjectSchema<FormData>({
             }),
         dimensions: yup.number().nullable().integer().positive(),
         embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
+        isSetTemperature: yup.boolean().nullable(),
+        temperature: temperatureSchema,
     }),
     googleSettings: yupObjectSchema<FormData["googleSettings"]>({
         aiVersion: yup.string<Raven.Client.Documents.Operations.AI.GoogleAIVersion>().nullable(),
@@ -308,15 +339,7 @@ const schema = yupObjectSchema<FormData>({
         embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
         think: yup.boolean().nullable(),
         isSetTemperature: yup.boolean().nullable(),
-        temperature: yup
-            .number()
-            .nullable()
-            .min(0)
-            .max(2)
-            .when("isSetTemperature", {
-                is: true,
-                then: (schema) => schema.required(),
-            }),
+        temperature: temperatureSchema,
     }),
     embeddedSettings: yupObjectSchema<FormData["embeddedSettings"]>({
         embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
@@ -347,6 +370,8 @@ const schema = yupObjectSchema<FormData>({
         projectId: yup.string().nullable(),
         dimensions: yup.number().nullable().integer().positive(),
         embeddingsMaxConcurrentBatches: yup.number().nullable().integer().positive(),
+        isSetTemperature: yup.boolean().nullable(),
+        temperature: temperatureSchema,
     }),
     mistralAiSettings: yupObjectSchema<FormData["mistralAiSettings"]>({
         apiKey: yup
@@ -388,6 +413,8 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 deploymentName: null,
                 dimensions: null,
                 embeddingsMaxConcurrentBatches: null,
+                isSetTemperature: false,
+                temperature: null,
             } satisfies Required<FormData["azureOpenAiSettings"]>,
             googleSettings: {
                 aiVersion: null,
@@ -421,6 +448,8 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 projectId: null,
                 dimensions: null,
                 embeddingsMaxConcurrentBatches: null,
+                isSetTemperature: false,
+                temperature: null,
             } satisfies Required<FormData["openAiSettings"]>,
             mistralAiSettings: {
                 apiKey: null,

@@ -210,7 +210,7 @@ export function FormSelect<
 
     const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
 
-    const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
+    const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor) ?? null;
 
     return (
         <>

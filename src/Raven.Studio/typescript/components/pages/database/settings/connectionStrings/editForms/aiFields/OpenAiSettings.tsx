@@ -17,6 +17,7 @@ import { useFormContext, useWatch } from "react-hook-form";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 import { SelectOption } from "components/common/select/Select";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
+import TemperatureField from "./TemperatureField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
@@ -39,6 +40,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             Model: formValues.openAiSettings.model,
             OrganizationId: formValues.openAiSettings.organizationId,
             ProjectId: formValues.openAiSettings.projectId,
+            Temperature: formValues.openAiSettings.isSetTemperature ? formValues.openAiSettings.temperature : null,
         });
     });
 
@@ -189,6 +191,7 @@ export default function OpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     />
                 </div>
             )}
+            <TemperatureField baseName="openAiSettings" />
             {formValues.modelType === "TextEmbeddings" && <EmbeddingsMaxConcurrentBatches baseName="openAiSettings" />}
             <div className="d-flex mb-2">
                 <FlexGrow />

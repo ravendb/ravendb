@@ -216,8 +216,9 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       Endpoint: connection.azureOpenAiSettings.endpoint,
                       Model: connection.azureOpenAiSettings.model,
                       DeploymentName: connection.azureOpenAiSettings.deploymentName,
-                      Dimensions: connection.azureOpenAiSettings.dimensions,
-                      EmbeddingsMaxConcurrentBatches: connection.azureOpenAiSettings.embeddingsMaxConcurrentBatches,
+                      Dimensions: mapDimensionsToDto(connection),
+                      EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
+                      Temperature: mapTemperatureToDto(connection),
                   }
                 : null,
         GoogleSettings:
@@ -226,8 +227,8 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       ApiKey: connection.googleSettings.apiKey,
                       Model: connection.googleSettings.model,
                       AiVersion: connection.googleSettings.aiVersion,
-                      Dimensions: connection.googleSettings.dimensions,
-                      EmbeddingsMaxConcurrentBatches: connection.googleSettings.embeddingsMaxConcurrentBatches,
+                      Dimensions: mapDimensionsToDto(connection),
+                      EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                   }
                 : null,
         HuggingFaceSettings:
@@ -236,7 +237,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       ApiKey: connection.huggingFaceSettings.apiKey,
                       Endpoint: connection.huggingFaceSettings.endpoint,
                       Model: connection.huggingFaceSettings.model,
-                      EmbeddingsMaxConcurrentBatches: connection.huggingFaceSettings.embeddingsMaxConcurrentBatches,
+                      EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                   }
                 : null,
         OllamaSettings:
@@ -246,17 +247,15 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       Uri: connection.ollamaSettings.uri,
                       Endpoint: connection.ollamaSettings.uri,
                       ApiKey: null,
-                      Think: connection.ollamaSettings.think,
-                      EmbeddingsMaxConcurrentBatches: connection.ollamaSettings.embeddingsMaxConcurrentBatches,
-                      Temperature: connection.ollamaSettings.isSetTemperature
-                          ? connection.ollamaSettings.temperature
-                          : null,
+                      Think: connection.modelType === "Chat" ? connection.ollamaSettings.think : null,
+                      EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
+                      Temperature: mapTemperatureToDto(connection),
                   }
                 : null,
         EmbeddedSettings:
             connection.connectorType === "embeddedSettings"
                 ? {
-                      EmbeddingsMaxConcurrentBatches: connection.embeddedSettings.embeddingsMaxConcurrentBatches,
+                      EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                   }
                 : null,
         OpenAiSettings:
@@ -267,8 +266,9 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       Model: connection.openAiSettings.model,
                       OrganizationId: connection.openAiSettings.organizationId,
                       ProjectId: connection.openAiSettings.projectId,
-                      Dimensions: connection.openAiSettings.dimensions,
-                      EmbeddingsMaxConcurrentBatches: connection.openAiSettings.embeddingsMaxConcurrentBatches,
+                      Dimensions: mapDimensionsToDto(connection),
+                      EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
+                      Temperature: mapTemperatureToDto(connection),
                   }
                 : null,
         MistralAiSettings:
@@ -277,10 +277,54 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       ApiKey: connection.mistralAiSettings.apiKey,
                       Endpoint: connection.mistralAiSettings.endpoint,
                       Model: connection.mistralAiSettings.model,
-                      EmbeddingsMaxConcurrentBatches: connection.mistralAiSettings.embeddingsMaxConcurrentBatches,
+                      EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                   }
                 : null,
     };
+}
+
+function mapEmbeddingsMaxConcurrentBatchesToDto(connection: AiConnection): number {
+    if (connection.modelType !== "TextEmbeddings") {
+        return null;
+    }
+
+    return connection[connection.connectorType].embeddingsMaxConcurrentBatches;
+}
+
+function mapDimensionsToDto(connection: AiConnection): number {
+    const connectorType = connection.connectorType;
+
+    if (
+        connectorType !== "azureOpenAiSettings" &&
+        connectorType !== "openAiSettings" &&
+        connectorType !== "googleSettings"
+    ) {
+        return null;
+    }
+
+    if (connection.modelType !== "TextEmbeddings") {
+        return null;
+    }
+
+    return connection[connectorType].dimensions;
+}
+
+function mapTemperatureToDto(connection: AiConnection): number {
+    const connectorType = connection.connectorType;
+
+    if (
+        connectorType !== "openAiSettings" &&
+        connectorType !== "ollamaSettings" &&
+        connectorType !== "azureOpenAiSettings"
+    ) {
+        return null;
+    }
+
+    if (connection.modelType !== "Chat" || !connection[connectorType].isSetTemperature) {
+        return null;
+    }
+
+    return connection[connectorType].temperature;
 }
 
 export function mapConnectionStringToDto(connection: Connection): ConnectionStringDto {
