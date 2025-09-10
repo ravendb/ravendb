@@ -82,7 +82,7 @@ namespace Voron.Data.BTrees
 
             public void Write(Stream stream)
             {
-                using (var buffer = StreamBufferAllocator.Instance.Rent())
+                using (var buffer = stream != Stream.Null ? StreamBufferAllocator.Instance.Rent() : StreamBufferAllocator.Buffer.Null)
                 {
                     AllocateNextPage();
 
@@ -552,7 +552,7 @@ namespace Voron.Data.BTrees
 
                 foreach (var buffer in _buffers.EnumerateAndClear())
                 {
-                    buffer.Dispose();
+                    buffer.Free();
                 }
             }
 
@@ -568,6 +568,8 @@ namespace Voron.Data.BTrees
 
                 public byte* Pointer => _ptr;
 
+                public static readonly Buffer Null = new Buffer(null, 0);
+
                 public Span<byte> AsSpan() => new Span<byte>(_ptr, (int)_size);
 
                 public Buffer(byte* ptr, long size)
@@ -576,10 +578,16 @@ namespace Voron.Data.BTrees
                     _size = size;
                 }
 
+                public void Free()
+                {
+                    NativeMemory.Free(_ptr, _size);
+                }
+
                 public void Dispose()
                 {
-                    if (Instance._buffers.TryPush(this) == false)
-                        NativeMemory.Free(_ptr, _size);
+                    if (_ptr != null && Instance._buffers.TryPush(this) == false)
+                        Free();
+
                 }
             }
         }
