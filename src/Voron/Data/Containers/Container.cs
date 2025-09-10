@@ -1280,8 +1280,6 @@ namespace Voron.Data.Containers
             Debug.Assert(size == sizeof(long));
             return *(long*)pagePointer;
         }
-
-        
         
         public static Span<byte> GetMutable(LowLevelTransaction llt, long id)
         {
@@ -1316,7 +1314,6 @@ namespace Voron.Data.Containers
 
             if (page.IsOverflow)
             {
-                Debug.Assert(page.IsOverflow);
                 item = new Item(page, page.DataPointer, page.OverflowSize);
                 return;
             }

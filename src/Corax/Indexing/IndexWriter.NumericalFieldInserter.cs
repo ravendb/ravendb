@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using System.Threading;
@@ -227,6 +227,9 @@ public partial class IndexWriter
                     _dumper.WriteRemoval(term, oldValue);
                     break;
                 }
+                case (AddEntriesToTermResult.NothingToDo, TreeChanged: _):
+                    break;
+                default: throw new ArgumentOutOfRangeException($"Unknown operation: {job.Operation}");
             }
         }
         
