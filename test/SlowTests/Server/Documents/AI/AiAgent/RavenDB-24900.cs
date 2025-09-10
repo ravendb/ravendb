@@ -21,7 +21,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task WillThrowIfUnexpectedActionCalled(Options options, GenAiConfiguration config)
         {
             using var store = await GetClusterStoreAsync(options);
@@ -45,7 +45,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
         
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task EventWillBeRaisedForUnexpectedActions(Options options, GenAiConfiguration config)
         {
             using var store = await GetClusterStoreAsync(options);
@@ -81,7 +81,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
             public string[] Query { get; set; }
         }
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanRegisterToReceiveActions(Options options, GenAiConfiguration config)
         {
             using var store = await GetClusterStoreAsync(options);

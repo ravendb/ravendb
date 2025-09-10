@@ -32,9 +32,6 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
     public RavenDatabaseMode DatabaseMode { get; set; } = RavenDatabaseMode.All;
     public RavenAiIntegration IntegrationType { get; set; } = RavenAiIntegration.All;
     public object[] Data { get; set; } = null;
-    public bool NightlyBuildRequired { get; set; } = true;
-    public bool CheckCanConnect { get; set; } = true;
-    public bool ReuseConnectionString { get; set; } = true;
 
     protected AbstractRavenAiIntegrationDataAttribute()
     {
@@ -49,17 +46,17 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
     {
         foreach (var (databaseMode, options) in RavenDataAttribute.GetOptions(DatabaseMode))
         {
-            Func<IEnumerable<IAiConnectorForTesting<TConfig>>> aiConnectionStringForTestingGetter = ReuseConnectionString
-                ? () => GetAiConnectionStringsSingleton(IntegrationType)
-                : () => GetAiConnectionStringsNewInstance(IntegrationType, testMethod.Name);
-
-            foreach (var aiConnectionStringForTesting in aiConnectionStringForTestingGetter.Invoke())
+            foreach (var aiConnectionStringForTesting in GetAiConnectionStringsSingleton(IntegrationType))
             {
-                using (SetSkipValueIfNightlyBuildRequired())
-                using (SetSkipValueIfShardedDbOnX86(databaseMode))
-                using (SetSkipValueIfNoRequiredEnvVariablesDefined(aiConnectionStringForTesting))
-                using (SetSkipValueIfUnableConnectToAi(aiConnectionStringForTesting))
+                using (ResetSkipReason(Skip))
                 {
+                    if (string.IsNullOrEmpty(Skip))
+                    {
+                        SetSkipValueIfShardedDbOnX86(databaseMode);
+                        SetSkipValueIfNoRequiredEnvVariablesDefined(aiConnectionStringForTesting);
+                        SetSkipValueIfUnableConnectToAi(aiConnectionStringForTesting);
+                    }
+                    
                     var aiIntegrationConfiguration = aiConnectionStringForTesting.GetAiConfiguration();
 
                     if (Data == null || Data.Length == 0)
@@ -74,47 +71,40 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
         }
     }
 
-    private DisposableAction SetSkipValueIfShardedDbOnX86(RavenDatabaseMode databaseMode)
-    {
-        if (string.IsNullOrEmpty(Skip) == false)
-            return null;
+    private DisposableAction ResetSkipReason(string skip) => new(() => Skip = skip);
 
+    private void SetSkipValueIfShardedDbOnX86(RavenDatabaseMode databaseMode)
+    {
         if (Is32Bit == false)
-            return null;
+            return;
 
         if (databaseMode.HasFlag(RavenDatabaseMode.Sharded) == false)
-            return null;
+            return;
 
         Skip = ShardingSkipMessage;
-        return new DisposableAction(() => Skip = null);
     }
     
-    
-    private DisposableAction SetSkipValueIfNoRequiredEnvVariablesDefined(IAiConnectorForTesting<TConfig> aiConnectorForTesting)
+    private void SetSkipValueIfNoRequiredEnvVariablesDefined(IAiConnectorForTesting<TConfig> aiConnectorForTesting)
     {
-        if (string.IsNullOrEmpty(Skip) == false)
-            return null;
+        if (RavenTestHelper.IsRunningOnCI)
+            return;
 
         if (aiConnectorForTesting.MissingRequiredEnvVariables(out var envVar) is false)
-            return null;
+            return;
         
         Skip = $"The environment variable {envVar} is required for {aiConnectorForTesting.AiConnectorType}, but was not set.";
-        return new DisposableAction(() => Skip = null);
     }
 
-    private DisposableAction SetSkipValueIfUnableConnectToAi(IAiConnectorForTesting<TConfig> aiConnectorForTesting)
+    private void SetSkipValueIfUnableConnectToAi(IAiConnectorForTesting<TConfig> aiConnectorForTesting)
     {
-        if (string.IsNullOrEmpty(Skip) == false)
-            return null;
+        if (RavenTestHelper.IsRunningOnCI)
+            return;
 
-        if (CheckCanConnect == false)
-            return null;
-
+        // we want to skip only if we cannot connect
         if (CanConnectToAi(aiConnectorForTesting, out string unableToConnectMessage))
-            return null;
+            return;
 
         Skip = unableToConnectMessage;
-        return new DisposableAction(() => Skip = null);
     }
 
     private bool CanConnectToAi(IAiConnectorForTesting<TConfig> aiConnectorForTesting, out string skipMessage)
@@ -129,37 +119,12 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
         return false;
     }
 
-    private DisposableAction SetSkipValueIfNightlyBuildRequired()
-    {
-        if (string.IsNullOrEmpty(Skip) == false)
-            return null;
-
-        if (NightlyBuildRequired == false || NightlyBuildTheoryAttribute.IsNightlyBuild)
-            return null;
-
-        Skip = NightlyBuildTheoryAttribute.SkipMessage;
-        return new DisposableAction(() => Skip = null);
-    }
-
-    public abstract IEnumerable<IAiConnectorForTesting<TConfig>> GetAiConnectionStringsNewInstance(RavenAiIntegration aiIntegration, string testMethodName);
     public abstract IEnumerable<IAiConnectorForTesting<TConfig>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration);
 }
 
 public class RavenGenAiDataAttribute : AbstractRavenAiIntegrationDataAttribute<GenAiConfiguration>
 {
-    public override IEnumerable<IAiConnectorForTesting<GenAiConfiguration>> GetAiConnectionStringsNewInstance(RavenAiIntegration aiIntegration, string testMethodName)
-    {
-        if (aiIntegration.HasFlag(RavenAiIntegration.OpenAi))
-            yield return GenAiOpenAiConnectorForTesting.CreateNewInstance(testMethodName);
-
-        if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
-            yield return GenAiOllamaConnectorForTesting.CreateNewInstance(testMethodName);
-
-        if (aiIntegration.HasFlag(RavenAiIntegration.AzureOpenAI))
-            yield return GenAiAzureOpenAiConnectorForTesting.CreateNewInstance(testMethodName);
-    }
-
-    public override IEnumerable<IAiConnectorForTesting<GenAiConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration)
+    public static IEnumerable<IAiConnectorForTesting<GenAiConfiguration>> GetAiConnectionStrings(RavenAiIntegration aiIntegration)
     {
         if (aiIntegration.HasFlag(RavenAiIntegration.OpenAi))
             yield return GenAiOpenAiConnectorForTesting.Instance;
@@ -170,62 +135,39 @@ public class RavenGenAiDataAttribute : AbstractRavenAiIntegrationDataAttribute<G
         if (aiIntegration.HasFlag(RavenAiIntegration.AzureOpenAI))
             yield return GenAiAzureOpenAiConnectorForTesting.Instance;
     }
+
+    public override IEnumerable<IAiConnectorForTesting<GenAiConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration) => GetAiConnectionStrings(aiIntegration);
 }
 
 public class RavenAiEmbeddingsDataAttribute : AbstractRavenAiIntegrationDataAttribute<EmbeddingsGenerationConfiguration>
 {
-    public override IEnumerable<IAiConnectorForTesting<EmbeddingsGenerationConfiguration>> GetAiConnectionStringsNewInstance(RavenAiIntegration aiIntegration, string testMethodName)
-    {
-        if (aiIntegration.HasFlag(RavenAiIntegration.OpenAi))
-            yield return EmbeddingsOpenAiConnectorForTesting.CreateNewInstance(testMethodName);
-        
-        if (aiIntegration.HasFlag(RavenAiIntegration.AzureOpenAI))
-            yield return EmbeddingsAzureOpenAiConnectorForTesting.CreateNewInstance(testMethodName);
-        
-        if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
-            yield return EmbeddingsOllamaConnectorForTesting.CreateNewInstance(testMethodName);
-        
-        if (aiIntegration.HasFlag(RavenAiIntegration.Onnx))
-            yield return EmbeddedConnectorForTesting.CreateNewInstance(testMethodName);
-        
-        if (aiIntegration.HasFlag(RavenAiIntegration.Google))
-            yield return EmbeddingsGoogleConnectorForTesting.CreateNewInstance(testMethodName);
-        
-        if (aiIntegration.HasFlag(RavenAiIntegration.HuggingFace))
-            yield return EmbeddingsHuggingFaceConnectorForTesting.CreateNewInstance(testMethodName);
-        
-        if (aiIntegration.HasFlag(RavenAiIntegration.MistralAi))
-            yield return EmbeddingsMistralAiConnectorForTesting.CreateNewInstance(testMethodName);
-        
-        if (aiIntegration.HasFlag(RavenAiIntegration.Vertex))
-            yield return EmbeddingsVertexConnectorForTesting.CreateNewInstance(testMethodName);
-    }
-
-    public override IEnumerable<IAiConnectorForTesting<EmbeddingsGenerationConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration)
+    public static IEnumerable<IAiConnectorForTesting<EmbeddingsGenerationConfiguration>> GetAiConnectionStrings(RavenAiIntegration aiIntegration)
     {
         if (aiIntegration.HasFlag(RavenAiIntegration.OpenAi))
             yield return EmbeddingsOpenAiConnectorForTesting.Instance;
-        
+
         if (aiIntegration.HasFlag(RavenAiIntegration.AzureOpenAI))
             yield return EmbeddingsAzureOpenAiConnectorForTesting.Instance;
-        
+
         if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
             yield return EmbeddingsOllamaConnectorForTesting.Instance;
-        
+
         if (aiIntegration.HasFlag(RavenAiIntegration.Onnx))
             yield return EmbeddedConnectorForTesting.Instance;
-        
+
         if (aiIntegration.HasFlag(RavenAiIntegration.Google))
             yield return EmbeddingsGoogleConnectorForTesting.Instance;
-        
+
         if (aiIntegration.HasFlag(RavenAiIntegration.HuggingFace))
             yield return EmbeddingsHuggingFaceConnectorForTesting.Instance;
-        
+
         if (aiIntegration.HasFlag(RavenAiIntegration.MistralAi))
             yield return EmbeddingsMistralAiConnectorForTesting.Instance;
-        
-        if (aiIntegration.HasFlag(RavenAiIntegration.Vertex)) 
+
+        if (aiIntegration.HasFlag(RavenAiIntegration.Vertex))
             yield return EmbeddingsVertexConnectorForTesting.Instance;
     }
+
+    public override IEnumerable<IAiConnectorForTesting<EmbeddingsGenerationConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration) => GetAiConnectionStrings(aiIntegration);
 }
 

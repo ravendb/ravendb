@@ -1,9 +1,11 @@
 ﻿using System;
 using System.ClientModel;
 using System.Collections.Generic;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.SemanticKernel;
+using Microsoft.SemanticKernel.Connectors.HuggingFace;
 using OllamaSharp;
 using OpenAI;
 using Raven.Client.Documents.Operations.AI;
@@ -161,12 +163,15 @@ public static class AiExtensions
 
             case AiConnectorType.HuggingFace:
                 var huggingFaceSettings = connectionString.HuggingFaceSettings;
-                var huggingFaceUri = string.IsNullOrWhiteSpace(huggingFaceSettings.Endpoint) ? null : new Uri(huggingFaceSettings.Endpoint);
+                var endpoint = huggingFaceSettings.Endpoint;
+                
+                if (string.IsNullOrEmpty(endpoint))
+                    endpoint = $"https://router.huggingface.co/hf-inference/models/{huggingFaceSettings.Model}/pipeline/feature-extraction";
 
-                  kernelBuilder.AddHuggingFaceEmbeddingGenerator(
-                    huggingFaceSettings.Model,
-                    huggingFaceUri,
-                    huggingFaceSettings.ApiKey);
+                kernelBuilder.Services.AddKeyedSingleton<IEmbeddingGenerator<string, Embedding<float>>>(serviceKey: null, (serviceProvider, _) =>
+                    new HuggingFaceEmbeddingGenerator(
+                        new Uri(endpoint),
+                        apiKey: huggingFaceSettings.ApiKey));
                 break;
 
             case AiConnectorType.MistralAi:

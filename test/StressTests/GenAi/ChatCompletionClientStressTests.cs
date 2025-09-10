@@ -47,7 +47,7 @@ public class ChatCompletionClientStressTests : RavenTestBase
 
 
     [RavenTheory(RavenTestCategory.Ai, Skip = "Consume tokens for all other tests")]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Skip = "Stress test")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Stress test")]
     // Ollama Doesn't throw
     public async Task RateLimit_MaxTokens(Options options, GenAiConfiguration configuration)
     {
@@ -73,7 +73,7 @@ public class ChatCompletionClientStressTests : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai, Skip = "Consume tokens for all other tests")]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false, Skip = "Stress test")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Stress test")]
     // Ollama Doesn't throw
     public async Task RateLimit_ByHighRequestFreq(Options options, GenAiConfiguration configuration)
     {

@@ -29,7 +29,7 @@ public class RavenDB_24884 : RavenTestBase
     private static readonly string BananaPngBase64 = GetFileAsBase64("banana.png");
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Skip = "Takes too long")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Takes too long")]
     public async Task TextFileWithTooManyTokens(Options options, GenAiConfiguration config)
     {
         var titles = "Date,Author,Category,Fact";
@@ -140,7 +140,7 @@ ai.genContext({
 
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Skip = "Takes too long")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Takes too long")]
     public async Task ImgOver32MbRequest(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -277,7 +277,7 @@ else{
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Skip = "Takes too long")]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, Skip = "Takes too long")]
     public async Task Over1500ImagesRequest(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

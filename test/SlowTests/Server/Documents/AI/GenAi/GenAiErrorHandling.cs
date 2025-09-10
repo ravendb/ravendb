@@ -26,7 +26,7 @@ namespace SlowTests.Server.Documents.AI.GenAi;
 public class GenAiErrorHandling(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_ShouldRaiseAlertOnInvalidContextExtractionScript(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -79,7 +79,7 @@ this.Comments[idx].IsSpam = $output.Blocked;
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_ShouldRaiseAlertOnInvalidUpdateScript(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -137,7 +137,7 @@ if($output.Blocked)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_UpdateScriptErrorsShouldBeHandledPerContext(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -210,7 +210,7 @@ if($output.Blocked)
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_LoadError_ModelRefusedToAnswer(Options options, GenAiConfiguration config)
     {
         using (var store = GetDocumentStore(options))
@@ -299,7 +299,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_ShouldRespectRateLimitErrorAndFallback(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);
@@ -404,7 +404,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, NightlyBuildRequired = false)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task GenAi_LoadError_AuthFailure_ShouldOnlyTrackSuccess(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore();

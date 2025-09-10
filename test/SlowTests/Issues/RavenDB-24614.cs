@@ -24,7 +24,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.All, CheckCanConnect = false, NightlyBuildRequired = false)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.All)]
         public async Task PutAiConnectionString_WithInvalidIdentifier_ShouldThrowException(Options options, GenAiConfiguration configuration)
         {
             using var store = GetDocumentStore(options);
@@ -40,7 +40,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task AddGenAiEtl_WithInvalidIdentifier_ShouldThrowException(
             Options options, GenAiConfiguration configuration)
         {
@@ -59,7 +59,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.All, CheckCanConnect = false, NightlyBuildRequired = false)]
+        [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.All)]
         public async Task AddEmbeddingEtl_WithInvalidIdentifier_ShouldThrowException(Options options, EmbeddingsGenerationConfiguration configuration)
         {
             using var store = GetDocumentStore(options);

@@ -22,7 +22,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task CanCreateOpenAiEmbeddingConnectionStringAndTestGenAiConnection1(Options options, GenAiConfiguration configuration)
         {
             using var store = GetDocumentStore(options);
@@ -46,7 +46,7 @@ namespace SlowTests.Issues
         }
 
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = true, NightlyBuildRequired = false)]
+        [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task EmbeddingsGeneration_ShouldReject_ChatModelType(
             Options options,
             EmbeddingsGenerationConfiguration cfg)
