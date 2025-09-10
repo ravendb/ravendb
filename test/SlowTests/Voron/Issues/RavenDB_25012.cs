@@ -79,8 +79,8 @@ public class RavenDB_25012: StorageTest
                         createdTxId = tx.LowLevelTransaction.Id;
                         haveActive.Set();
 
-                        // while this tx is alive, sample oldest
-                        keepActive.Wait(TimeSpan.FromMilliseconds(2));
+                        // ensure tx stays alive until the main thread signals it's done sampling
+                        keepActive.Wait();
                     }
 
                     if (keepActive.IsSet)
@@ -92,25 +92,35 @@ public class RavenDB_25012: StorageTest
             //    as soon as we know there is an active tx (haveActive), assert oldest != 0
             bool observedActive = false;
             var sampleUntil = DateTime.UtcNow + TimeSpan.FromMilliseconds(200);
-            while (DateTime.UtcNow < sampleUntil)
+
+            try
             {
-                // let flusher recalculate using ScanOldest
-                Env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
-
-                if (haveActive.IsSet)
+                while (DateTime.UtcNow < sampleUntil)
                 {
-                    observedActive = true;
-                    var oldest = Env.ActiveTransactions.OldestTransaction;
-                    Assert.True(oldest != 0, $"Observed OldestTransaction=0 while a transaction (id {createdTxId}) was active");
+                    // let flusher recalculate using ScanOldest
+                    Env.ActiveTransactions.ForceRecheckingOldestTransactionByFlusherThread();
 
-                    // signal the racer it can dispose the tx now
-                    keepActive.Set();
-                    break;
+                    if (haveActive.IsSet)
+                    {
+                        observedActive = true;
+                        var oldest = Env.ActiveTransactions.OldestTransaction;
+                        Assert.True(oldest != 0, $"Observed OldestTransaction=0 while a transaction (id {createdTxId}) was active");
+
+                        // allow the racer to dispose the tx now
+                        keepActive.Set();
+                        break;
+                    }
+
+                    Thread.SpinWait(200);
                 }
-
-                Thread.SpinWait(200);
             }
-
+            finally
+            {
+                // Always unblock racer just in case we exit without seeing haveActive
+                if (!keepActive.IsSet)
+                    keepActive.Set();
+            }
+            
             Task.WaitAll(new[] { disposer, racer }, TimeSpan.FromSeconds(1));
 
             // If we didn't manage to observe the active window, try again
