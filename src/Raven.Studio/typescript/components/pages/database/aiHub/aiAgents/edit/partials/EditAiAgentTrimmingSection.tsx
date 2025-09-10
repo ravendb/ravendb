@@ -5,6 +5,10 @@ import ClickableCard from "components/common/ClickableCard";
 import Button from "react-bootstrap/Button";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import { Icon } from "components/common/Icon";
+import useBoolean from "components/hooks/useBoolean";
+import EditAiAgentCollapseButton from "./EditAiAgentCollapseButton";
+import EditAiAgentErrorIcon from "./EditAiAgentErrorIcon";
+import Collapse from "react-bootstrap/Collapse";
 
 export default function EditAiAgentTrimmingSection() {
     const { control, setValue } = useFormContext<EditAiAgentFormData>();
@@ -12,6 +16,8 @@ export default function EditAiAgentTrimmingSection() {
     const formValues = useWatch({
         control,
     });
+
+    const { value: isPanelOpen, setValue: setIsPanelOpen, toggle: toggleIsPanelOpen } = useBoolean(true);
 
     const handleSetTrimmingMethod = (method: AiAgentTrimmingMethod) => {
         if (formValues.trimming.method === method) {
@@ -23,47 +29,53 @@ export default function EditAiAgentTrimmingSection() {
 
     return (
         <>
-            <h3 className="m-0 mt-3">
-                Configure chat trimming
-                <PopoverWithHoverWrapper
-                    message={
-                        <>
-                            You can configure trimming of long conversations by summarizing older messages.
-                            <br />
-                            <br />
-                            If you &quot;enable history&quot;, the original chat content prior to trimming will be
-                            stored in dedicated documents in the <code>@conversations-history</code> collection.
-                            <br />
-                            <br />
-                            Note: if there are any open action tools that have not yet received a response, trimming
-                            will be delayed until those actions are completed.
-                        </>
-                    }
-                >
-                    <Icon icon="info-new" />
-                </PopoverWithHoverWrapper>
-            </h3>
+            <div className="hstack mt-3">
+                <h3 className="m-0">
+                    Configure chat trimming
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                You can configure trimming of long conversations by summarizing older messages.
+                                <br />
+                                <br />
+                                If you &quot;enable history&quot;, the original chat content prior to trimming will be
+                                stored in dedicated documents in the <code>@conversations-history</code> collection.
+                                <br />
+                                <br />
+                                Note: if there are any open action tools that have not yet received a response, trimming
+                                will be delayed until those actions are completed.
+                            </>
+                        }
+                    >
+                        <Icon icon="info-new" />
+                    </PopoverWithHoverWrapper>
+                </h3>
+                <EditAiAgentErrorIcon fieldNames={["trimming"]} openPanel={setIsPanelOpen} />
+                <EditAiAgentCollapseButton isPanelOpen={isPanelOpen} toggleIsPanelOpen={toggleIsPanelOpen} />
+            </div>
             <div className="mb-1">You can configure trimming of long conversations by summarizing older messages.</div>
-            <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
-                <FormGroup>
-                    <FormLabel className="hstack justify-content-between">
-                        <div>Trimming method</div>
-                        {formValues.trimming.method != null && (
-                            <Button variant="link" size="sm" onClick={() => setValue("trimming.method", null)}>
-                                Clear selection
-                            </Button>
-                        )}
-                    </FormLabel>
-                    <div className="d-flex">
-                        <ClickableCard
-                            icon="tasks-list"
-                            title="Summarize chat"
-                            description="Summarize the chat conversation into a compact prompt when the total number of tokens used exceeds the configured threshold."
-                            className="flex-grow-1"
-                            isSelected={formValues.trimming.method === "Tokens"}
-                            onClick={() => handleSetTrimmingMethod("Tokens")}
-                        />
-                        {/* maybe add it in RC2
+            <Collapse in={isPanelOpen} mountOnEnter unmountOnExit>
+                <div>
+                    <div className="panel-bg-1 p-3 rounded-2 border border-secondary">
+                        <FormGroup>
+                            <FormLabel className="hstack justify-content-between">
+                                <div>Trimming method</div>
+                                {formValues.trimming.method != null && (
+                                    <Button variant="link" size="sm" onClick={() => setValue("trimming.method", null)}>
+                                        Clear selection
+                                    </Button>
+                                )}
+                            </FormLabel>
+                            <div className="d-flex">
+                                <ClickableCard
+                                    icon="tasks-list"
+                                    title="Summarize chat"
+                                    description="Summarize the chat conversation into a compact prompt when the total number of tokens used exceeds the configured threshold."
+                                    className="flex-grow-1"
+                                    isSelected={formValues.trimming.method === "Tokens"}
+                                    onClick={() => handleSetTrimmingMethod("Tokens")}
+                                />
+                                {/* maybe add it in RC2
                         <ClickableCard
                             icon="collapse-vertical"
                             title="Truncate chat"
@@ -72,11 +84,13 @@ export default function EditAiAgentTrimmingSection() {
                             isSelected={formValues.trimming.method === "Truncate"}
                             onClick={() => handleSetTrimmingMethod("Truncate")}
                         /> */}
+                            </div>
+                        </FormGroup>
+                        {formValues.trimming.method === "Tokens" && <TokensFields />}
+                        {/* {formValues.trimming.method === "Truncate" && <TruncateFields />} */}
                     </div>
-                </FormGroup>
-                {formValues.trimming.method === "Tokens" && <TokensFields />}
-                {/* {formValues.trimming.method === "Truncate" && <TruncateFields />} */}
-            </div>
+                </div>
+            </Collapse>
         </>
     );
 }
