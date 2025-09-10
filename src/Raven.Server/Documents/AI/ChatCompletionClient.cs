@@ -423,11 +423,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         var msg2 = new DynamicJsonValue
         {
             [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
-            [Constants.RequestFields.Content] = attachments switch
-            {
-                null => userPrompt,
-                _ => CreateContentWithAttachments(userPrompt, attachments)
-            }
+            [Constants.RequestFields.Content] = CreateContentWithAttachments(userPrompt, attachments)
         };
 
         var messages = new List<BlittableJsonReaderObject>() { ctx.ReadObject(msg1, "system/msg"), ctx.ReadObject(msg2, "user/msg") };
@@ -449,6 +445,9 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                 [Constants.AttachmentsRequestFields.TypeText] = context
             }
         };
+
+        if (attachments?.Count > 0 == false)
+            return content;
 
         foreach (var attachment in attachments)
         {
