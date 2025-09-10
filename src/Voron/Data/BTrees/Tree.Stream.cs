@@ -4,13 +4,17 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
+using Sparrow.Json;
+using Sparrow.LowMemory;
 using Sparrow.Platform;
 using Sparrow.Server.Utils;
+using Sparrow.Threading;
 using Voron.Data.Fixed;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
+using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Data.BTrees
 {
@@ -52,10 +56,6 @@ namespace Voron.Data.BTrees
         
         private struct StreamToPageWriter
         {
-            private static readonly int BufferSize = PlatformDetails.Is32Bits == false
-                ? 512 * Constants.Size.Kilobyte
-                : 16 * Constants.Size.Kilobyte;
-            
             private int _chunkNumber;
 
             private byte* _writePos;
@@ -82,13 +82,14 @@ namespace Voron.Data.BTrees
 
             public void Write(Stream stream)
             {
-                using (_parent._tx.Allocator.Allocate(BufferSize, out Span<byte> localBuffer))
+                using (var buffer = StreamBufferAllocator.Instance.Rent())
                 {
                     AllocateNextPage();
 
                     ((StreamPageHeader*)_currentPage.Pointer)->StreamPageFlags |= StreamPageFlags.First;
 
-                    fixed (byte* pBuffer = localBuffer)
+                    var localBuffer = buffer.AsSpan();
+
                     {
                         while (true)
                         {
@@ -99,7 +100,7 @@ namespace Voron.Data.BTrees
                             var toWrite = 0L;
                             while (true)
                             {
-                                toWrite += WriteBufferToPage(pBuffer + toWrite, read - toWrite);
+                                toWrite += WriteBufferToPage(buffer.Pointer + toWrite, read - toWrite);
                                 if (toWrite == read)
                                     break;
 
@@ -515,6 +516,72 @@ namespace Voron.Data.BTrees
         {
             VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction.Environment,
                 $"Stream size mismatch of '{name}' stream. Sum of chunks size is {totalChunksSize} while stream info has {info->TotalSize}");
+        }
+
+        private class StreamBufferAllocator : ILowMemoryHandler
+        {
+            public static StreamBufferAllocator Instance = new StreamBufferAllocator();
+
+            private readonly PerCoreContainer<Buffer> _buffers = new PerCoreContainer<Buffer>(8);
+            private readonly MultipleUseFlag _isExtremelyLowMemory = new MultipleUseFlag();
+
+            private static readonly int BufferSize = PlatformDetails.Is32Bits == false
+                ? 512 * Constants.Size.Kilobyte
+                : 16 * Constants.Size.Kilobyte;
+
+            private StreamBufferAllocator()
+            {
+            }
+
+            public Buffer Rent()
+            {
+                if (_buffers.TryPull(out var buffer))
+                    return buffer;
+
+                var ptr = NativeMemory.AllocateMemory(BufferSize);
+                return new Buffer(ptr, BufferSize);
+            }
+
+            public void LowMemory(LowMemorySeverity lowMemorySeverity)
+            {
+                if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
+                    return;
+
+                if (_isExtremelyLowMemory.Raise() == false)
+                    return;
+
+                foreach (var buffer in _buffers.EnumerateAndClear())
+                {
+                    buffer.Dispose();
+                }
+            }
+
+            public void LowMemoryOver()
+            {
+                _isExtremelyLowMemory.Lower();
+            }
+
+            public class Buffer : IDisposable
+            {
+                private readonly byte* _ptr;
+                private readonly long _size;
+
+                public byte* Pointer => _ptr;
+
+                public Span<byte> AsSpan() => new Span<byte>(_ptr, (int)_size);
+
+                public Buffer(byte* ptr, long size)
+                {
+                    _ptr = ptr;
+                    _size = size;
+                }
+
+                public void Dispose()
+                {
+                    if (Instance._buffers.TryPush(this) == false)
+                        NativeMemory.Free(_ptr, _size);
+                }
+            }
         }
     }
 
