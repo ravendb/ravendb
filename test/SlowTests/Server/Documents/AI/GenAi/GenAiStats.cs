@@ -333,7 +333,7 @@ this.Comments[idx].IsSpam = $output.Blocked;
         Assert.NotNull(etlProcess);
 
         // simulate model call failure
-        var chatCompletionClient = (IChatCompletionClientForTesting)etlProcess.GetChatCompletionClient();
+        var chatCompletionClient = etlProcess.GetChatCompletionClient();
         chatCompletionClient.ForTestingPurposesOnly().SimulateFailureAsync = (ctx)
             => throw new RateLimitException("rate limit") { RetryAfter = TimeSpan.FromMinutes(30), RequestId = "test" };
 

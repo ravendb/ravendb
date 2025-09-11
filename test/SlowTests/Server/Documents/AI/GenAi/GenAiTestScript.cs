@@ -457,7 +457,7 @@ this.Comments[idx].Reason = $output.Reason;
     }
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
     public async Task CanModifyPromptAndSchema(Options options, GenAiConfiguration config)
     {
         using var store = GetDocumentStore(options);

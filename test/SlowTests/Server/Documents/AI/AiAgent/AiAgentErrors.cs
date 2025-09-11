@@ -73,7 +73,7 @@ public class AiAgentErrors : RavenTestBase
         // Raven.Client.Exceptions.InvalidQueryException: Parameter value '["Shahar"]' of type Sparrow.Json.BlittableJsonReaderArray is not supported
         // Query: from 'Customers' where Name == $name
         // Parameters: {"name":["Shahar"]}
-        var e = await Assert.ThrowsAsync<RavenException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
+        var e = await Assert.ThrowsAsync<InvalidQueryException>(() => chat.RunAsync<CustomerOutputSchema>(CancellationToken.None));
 
         Assert.Contains("Parameter value '[\"Shahar\"]' of type Sparrow.Json.BlittableJsonReaderArray is not supported", e.Message);
     }

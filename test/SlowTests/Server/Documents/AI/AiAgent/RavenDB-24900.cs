@@ -45,7 +45,7 @@ namespace SlowTests.Server.Documents.AI.AiAgent
         }
         
         [RavenTheory(RavenTestCategory.Ai)]
-        [RavenGenAiData(IntegrationType = RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single)]
+        [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single)]
         public async Task EventWillBeRaisedForUnexpectedActions(Options options, GenAiConfiguration config)
         {
             using var store = await GetClusterStoreAsync(options);

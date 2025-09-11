@@ -679,6 +679,8 @@ for(const comment of this.Comments)
         var taskInfo = await store.Maintenance.SendAsync(new GetOngoingTaskInfoOperation(config.Name, OngoingTaskType.GenAi));
         Assert.Equal(OngoingTaskState.Disabled, taskInfo.TaskState);
 
+        await AssertWaitForTrueAsync(() => Task.FromResult(etlProcess.IsRunning == false));
+        
         // update the configuration
         changeConfig(config);
         store.Maintenance.Send(new UpdateGenAiOperation(taskId, config));

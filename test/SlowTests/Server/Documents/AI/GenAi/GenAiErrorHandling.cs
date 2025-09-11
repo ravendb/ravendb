@@ -240,7 +240,7 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
             var etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
             Assert.NotNull(etlProcess);
 
-            var chatCompletionClient = (IChatCompletionClientForTesting)etlProcess.GetChatCompletionClient();
+            var chatCompletionClient = etlProcess.GetChatCompletionClient();
             chatCompletionClient.ForTestingPurposesOnly().SimulateFailureAsync = (ctx) =>
             {
                 if (ctx.Contains("win $$$$"))
@@ -320,9 +320,12 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
         Assert.NotNull(etlProcess);
 
         int triggerOn = 2;
-        var chatCompletionClient = (IChatCompletionClientForTesting)etlProcess.GetChatCompletionClient();
+        var chatCompletionClient = etlProcess.GetChatCompletionClient();
         chatCompletionClient.ForTestingPurposesOnly().SimulateFailureAsync = (ctx) =>
         {
+            if (ctx.Contains(config.Prompt))
+                return Task.CompletedTask;
+
             if (Interlocked.Decrement(ref triggerOn) <= 0)
                 throw new RateLimitException("rate limit") { RetryAfter = TimeSpan.FromMinutes(10), RequestId = "test" };
 
@@ -432,7 +435,7 @@ this.Comments[idx].IsSpam = $output.Blocked;";
         var etlProcess = db.EtlLoader.Processes.FirstOrDefault() as GenAiTask;
         Assert.NotNull(etlProcess);
 
-        var chatCompletionClient = (IChatCompletionClientForTesting)etlProcess.GetChatCompletionClient();
+        var chatCompletionClient = etlProcess.GetChatCompletionClient();
         var enteredOnce = 0;
         var blockEtlMre = new AsyncManualResetEvent();
 

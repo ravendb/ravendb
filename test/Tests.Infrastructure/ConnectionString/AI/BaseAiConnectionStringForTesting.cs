@@ -180,10 +180,8 @@ public abstract class AbstractGenAiConnectorForTesting<T> : BaseAiConnectorForTe
         using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
         {
             logger = null;
-            var result = client.CompleteAsync(systemPrompt: "Reply with exact word only: raven", "", schema, null, token).GetAwaiter().GetResult();
-
+            client.TestCompleteAsync(systemPrompt: "Reply with exact word only: raven", "", schema, token).GetAwaiter().GetResult();
             return true;
-
         }
     }
 }
