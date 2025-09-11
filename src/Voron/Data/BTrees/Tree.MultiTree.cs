@@ -4,6 +4,7 @@ using Sparrow;
 using Sparrow.Binary;
 using Sparrow.Server;
 using Voron.Exceptions;
+using Voron.Util;
 using Constants = Voron.Global.Constants;
 
 namespace Voron.Data.BTrees
@@ -30,8 +31,200 @@ namespace Voron.Data.BTrees
      */
     public unsafe partial class Tree
     {
+        private static void ValidateValuesForMultiBulkAdd(int maxNodeSize, ReadOnlySpan<Slice> values)
+        {
+            for (int i = 0; i < values.Length; i++)
+            {
+                if (values[i].HasValue == false)
+                    throw new ArgumentNullException($"{nameof(values)}[{i}]");
+
+                if (values[i].Size > maxNodeSize)
+                    throw new ArgumentException("Cannot add a value to child tree that is over " + maxNodeSize + " bytes in size", $"{nameof(values)}[{i}]");
+                if (values[i].Size == 0)
+                    throw new ArgumentException("Cannot add empty value to child tree", $"{nameof(values)}[{i}]");
+            }
+        }
+
+        [Conditional("DEBUG")]
+        private static void EnsureValuesAreSorted(ReadOnlySpan<Slice> values)
+        {
+            for (int i = 1; i < values.Length; i++)
+            {
+                var cmp = SliceComparer.Compare(values[i - 1], values[i]);
+                switch (cmp)
+                {
+                    case > 0:
+                        throw new ArgumentException("Values must be sorted", nameof(values));
+                    case 0:
+                        throw new ArgumentException("Values must be unique", nameof(values));
+                }
+            }
+        }
+        
         public bool IsMultiValueTree { get; set; }
 
+        /// <summary>
+        /// Adds multiple values to the multi-tree.
+        /// </summary>
+        /// <param name="key">The key associated with the values.</param>
+        /// <param name="values">The values to insert. Requirements: must be sorted and deduplicated.</param>
+        public void MultiBulkAdd(Slice key, ReadOnlySpan<Slice> values)
+        {
+            if (values.Length <= 1)
+            {
+                if (values.Length == 1)
+                    MultiAdd(key, values[0]);
+                return;
+            }
+            
+            int maxNodeSize = Llt.DataPager.NodeMaxSize;
+            EnsureValuesAreSorted(values);
+            ValidateValuesForMultiBulkAdd(maxNodeSize, values);
+            
+            // This is a new tree, we've to put a flag in the header.
+            if ((State.Header.Flags & TreeFlags.MultiValueTrees) != TreeFlags.MultiValueTrees)
+            {
+                ref var state = ref State.Modify();
+                state.Flags |= TreeFlags.MultiValueTrees;
+            }
+
+            var page = FindPageFor(key, out _);
+            if (page is not { LastMatch: 0 }) // Key is not in the tree. Use an optimized path for this scenario.
+            {
+                MultiBulkAddOnNewValue(key, values, maxNodeSize);
+                return;
+            }
+
+            ContextBoundNativeList<int> newItems;
+            {
+                var readonlyKeyItem = page.GetNode(page.LastSearchPosition);
+                if (readonlyKeyItem->Flags == TreeNodeFlags.MultiValuePageRef)
+                {
+
+                    // We have an inner tree for the key. Since our values are sorted,
+                    // we can iterate over the elements and add them one by one.
+                    // As the page is cached, it is already loaded into memory. 
+                    // Therefore, this path could be further optimized by batching them into a single page.
+                    var existingTree = OpenMultiValueTree(key, readonlyKeyItem);
+                    for (int i = 0; i < values.Length; i++)
+                    {
+                        if (existingTree.Exists(values[i]))
+                            continue;
+                        
+                        existingTree.DirectAdd(values[i], 0,out _).Dispose();
+                    }
+                    return;
+                }
+                
+                if (readonlyKeyItem->Flags == TreeNodeFlags.PageRef)
+                    throw new InvalidOperationException("Multi trees don't use overflows");
+                
+                // We have a nested page here, which means our values are inlined into the page.
+                // Since we want to avoid modifying the page unless it is necessary,
+                // we will prepare a list of new terms based on the loaded data.
+                // This way, we can avoid modifying the page if we don't have to.
+                newItems = GetListOfNewItems(ref readonlyKeyItem, values);
+            }
+
+            if (newItems.Count == 0)
+            {
+                // Everything is already in the tree, nothing to do here.
+                newItems.Dispose();
+                return;
+            }
+
+            // We know there are new insertions. Let's try to insert them.
+            // Since we scoped the readonly keys in the previous scope,
+            // we are guaranteed not to use invalid structures, but we need to recreate them.
+            {
+                page = ModifyPage(page);
+                var keyItem = page.GetNode(page.LastSearchPosition);
+                var nestedPagePtr = DirectAccessFromHeader(keyItem); // represents the values for the key
+                var nestedPage = new TreePage(nestedPagePtr, (ushort)GetDataSize(keyItem));
+
+                for (int i = 0; i < newItems.Count; i++)
+                {
+                    var currentProcessingTerm = values[newItems[i]]; 
+                    EnsureNestedPagePointer(page, keyItem, ref nestedPage, ref nestedPagePtr);
+
+                    if (nestedPage.HasSpaceFor(_llt, currentProcessingTerm, 0))
+                    {
+                        nestedPage.AddDataNode(nestedPage.LastSearchPosition, currentProcessingTerm, 0);
+                        continue;
+                    }
+
+                    if (page.HasSpaceFor(_llt, currentProcessingTerm, 0))
+                    {
+                        // page has space for an additional node in nested page ...
+                        var requiredSpace = nestedPage.PageSize + // existing page
+                                            nestedPage.GetRequiredSpace(currentProcessingTerm, 0); // new node
+
+                        if (requiredSpace + Constants.Tree.NodeHeaderSize <= maxNodeSize)
+                        {
+                            // ... and it won't require to create an overflow, so we can just expand the current value, no need to create a nested tree yet
+
+                            EnsureNestedPagePointer(page, keyItem, ref nestedPage, ref nestedPagePtr);
+
+                            var newPageSize = (ushort)Math.Min(Bits.PowerOf2(requiredSpace), maxNodeSize - Constants.Tree.NodeHeaderSize);
+
+                            ExpandMultiTreeNestedPageSize(key, currentProcessingTerm, nestedPagePtr, newPageSize, nestedPage.PageSize);
+                            
+                            // We may change the page. Ensure all pointers are valid as well.
+                            page = SearchForPage(key, out _);
+                            keyItem = page.GetNode(page.LastSearchPosition);
+                            nestedPagePtr = DirectAccessFromHeader(keyItem); // represents the values for the key
+                            nestedPage = new TreePage(nestedPagePtr, (ushort)GetDataSize(keyItem));
+                         
+                            
+                            continue;
+                        }
+                    }
+                    
+                    // There is no space for the new value, so we need to create a inner tree.
+                    EnsureNestedPagePointer(page, keyItem, ref nestedPage, ref nestedPagePtr);
+                    var tree = Create(_llt, _tx, key, TreeFlags.MultiValue);
+                    for (int nestedPageItemIdx = 0; nestedPageItemIdx < nestedPage.NumberOfEntries; nestedPageItemIdx++)
+                    {
+                        using (nestedPage.GetNodeKey(_llt, i, out Slice existingValue))
+                        {
+                            tree.DirectAdd(existingValue, 0,out byte* _).Dispose();
+                        }
+                    }
+
+                    for (; i < newItems.Count; i++)
+                        tree.DirectAdd(values[newItems[i]], 0, out _).Dispose();
+                    
+                    // Register the new tree.
+                    _tx.AddMultiValueTree(this, key, tree);
+                    DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef,out byte* _).Dispose();
+                }
+                newItems.Dispose();
+            }
+        }
+
+        private ContextBoundNativeList<int> GetListOfNewItems(ref TreeNodeHeader* item, ReadOnlySpan<Slice> values)
+        {
+            var newItemsIndexes = new ContextBoundNativeList<int>(_tx.Allocator);
+            var nestedPagePtr = DirectAccessFromHeader(item);
+            var nestedPage = new TreePage(nestedPagePtr, (ushort)GetDataSize(item));            
+            
+            for (int i = 0; i < values.Length; i++)
+            {
+                var itemInTree = nestedPage.Search(_tx.LowLevelTransaction, values[i]);
+                if (itemInTree != null && nestedPage.LastMatch == 0)
+                {
+                    using var _ = TreeNodeHeader.ToSlicePtr(_tx.Allocator, itemInTree, out Slice fetchedNodeKey);
+                    if (SliceComparer.Equals(values[i], fetchedNodeKey))
+                        continue;
+                }
+                
+                newItemsIndexes.Add(i);
+            }
+            
+            return newItemsIndexes;
+        }
+        
+        
         public void MultiAdd(Slice key, Slice value)
         {
             if (!value.HasValue)
@@ -169,6 +362,49 @@ namespace Voron.Data.BTrees
 
                     newNestedPage.Search(_llt, value);
                     newNestedPage.AddDataNode(newNestedPage.LastSearchPosition, value, 0);
+                }
+            }
+        }
+
+        private void MultiBulkAddOnNewValue(Slice key, ReadOnlySpan<Slice> values, int maxNodeSize)
+        {
+            var requiredPageSize = Constants.Tree.PageHeaderSize + Constants.Tree.NodeHeaderSize;
+            for (int i = 0; i < values.Length; i++)
+            {
+                requiredPageSize += TreeSizeOf.NodeEntry(-1, values[i], 0) + Constants.Tree.NodeHeaderSize;
+            }
+            
+            if (requiredPageSize > maxNodeSize)
+            {
+                var tree = Create(_llt, _tx, key, TreeFlags.MultiValue);
+                _tx.AddMultiValueTree(this, key, tree);
+                DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef,out _).Dispose();
+                
+                foreach (var value in values)
+                    tree.DirectAdd(value, 0, out _).Dispose();
+
+                return;
+            }
+            
+            // Now we know we can fit all values in a single nestedPage node.
+            var actualPageSize = (ushort)Math.Min(Bits.PowerOf2(requiredPageSize), maxNodeSize - Constants.Tree.NodeHeaderSize);
+
+            using (DirectAdd(key, actualPageSize, out byte* ptr))
+            {
+                var nestedPage = new TreePage(ptr, actualPageSize)
+                {
+                    PageNumber = -1L, // hint that this is an inner page
+                    Lower = (ushort)Constants.Tree.PageHeaderSize,
+                    Upper = actualPageSize,
+                    TreeFlags = TreePageFlags.Leaf,
+                    Flags = 0
+                };
+                
+                // since values are sorted, we know the order that they will be added to the tree
+                for (int itemIdx = 0; itemIdx < values.Length; itemIdx++)
+                {
+                    var value = values[itemIdx];
+                    nestedPage.AddDataNode(itemIdx, value, 0);
                 }
             }
         }
