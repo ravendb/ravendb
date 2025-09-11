@@ -111,6 +111,7 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                     AllowModelQueries: x.isAllowModelQueries,
                 },
             })) ?? [],
+        SubAgents: [],
         Actions:
             formData.actions?.map((x) => ({
                 Name: x.name,

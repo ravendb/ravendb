@@ -2,8 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
+using System.Net.ServerSentEvents;
 using System.Threading.Tasks;
-using Newtonsoft.Json.Linq;
 using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Http;
@@ -24,8 +24,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly string _conversationId;
     private readonly List<AiAgentActionResponse> _actionResponses;
     private readonly string _changeVector;
-
-    private readonly string _streamPropertyPath;
+    private readonly string _propertyToStream;
     private readonly Func<string, Task> _streamedChunksCallback;
 
     public RunConversationOperation(
@@ -45,13 +44,13 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         List<AiAgentActionResponse> actionResponses,
         AiConversationCreationOptions options,
         string changeVector,
-        string streamPropertyPath,
+        string propertyToStream,
         Func<string, Task> streamedChunksCallback)
     {
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
         ValidationMethods.AssertNotNullOrEmpty(conversationId, nameof(conversationId));
-        PortableExceptions.ThrowIfNot<InvalidOperationException>(streamPropertyPath is null == streamedChunksCallback is null,
-            "Both streamPropertyPath and streamedChunksCallback must be specified together");
+        PortableExceptions.ThrowIfNot<InvalidOperationException>(propertyToStream is null == streamedChunksCallback is null,
+            "Both propertyToStream and streamedChunksCallback must be specified together");
 
         _agentId = agentId;
         _conversationId = conversationId;
@@ -60,7 +59,8 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         _actionResponses = actionResponses;
         _options = options;
 
-        _streamPropertyPath = streamPropertyPath;
+
+        _propertyToStream = propertyToStream;
         _streamedChunksCallback = streamedChunksCallback;
     }
 
@@ -78,8 +78,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         {
             _conventions = conventions;
             _parent = parent;
-
-            if (parent._streamPropertyPath is not null)
+            if (parent._propertyToStream is not null)
             {
                 ResponseType = RavenCommandResponseType.Raw;
             }
@@ -100,8 +99,8 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             if (_parent._changeVector != null)
                 url += $"&changeVector={Uri.EscapeDataString(_parent._changeVector)}";
 
-            if (_parent._streamPropertyPath is not null)
-                url += $"&streaming=true&streamPropertyPath={Uri.EscapeDataString(_parent._streamPropertyPath)}";
+            if (_parent._propertyToStream is not null)
+                url += $"&streaming=true&propertyToStream={Uri.EscapeDataString(_parent._propertyToStream)}";
 
             var body = new ConversionRequestBody
             {
@@ -124,21 +123,17 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
 
         public override async Task SetResponseRawAsync(HttpResponseMessage response, Stream stream, JsonOperationContext context)
         {
-            using var streamReader = new StreamReader(stream);
-            while (true)
+            await foreach (var msg in SseParser.Create(stream).EnumerateAsync())
             {
-                var line = await streamReader.ReadLineAsync().ConfigureAwait(false);
-                if (line is null)
-                    break;
-                if (line.StartsWith("{"))
+                if (msg.EventType is "result")
                 {
-                    using var final = context.Sync.ReadForMemory(line, "final/result");
+                    var final = context.Sync.ReadForMemory(msg.Data, "final/result");
                     Result = ConversationResult<TSchema>.Convert(final, _conventions);
                     break;
                 }
 
-                string unescaped = JToken.Parse(line).Value<string>();
-                await _parent._streamedChunksCallback(unescaped).ConfigureAwait(false);
+                // streaming the output...
+                await _parent._streamedChunksCallback(msg.Data).ConfigureAwait(false);
             }
         }
 

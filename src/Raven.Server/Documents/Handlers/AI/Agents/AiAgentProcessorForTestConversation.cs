@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Raven.Client.Documents.AI;
@@ -8,6 +7,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Commands.AI;
+using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
@@ -22,7 +22,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
 
     public override async ValueTask ExecuteAsync()
     {
-        using var _ = ContextPool.AllocateOperationContext(out JsonOperationContext context);
+        using var _ = ContextPool.AllocateOperationContext(out DocumentsOperationContext context);
         using var token = RequestHandler.CreateHttpRequestBoundOperationToken();
         var options = await context.ReadForMemoryAsync(RequestHandler.RequestBodyStream(), "ai-agent", token.Token);
         
@@ -35,7 +35,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         ConversationDocument conversation = null;
         if (body.Document != null)
         {
-            conversation = ConversationDocument.ToDocument("test", body.Document);
+            conversation = ConversationDocument.ToDocument("test",body.Document);
         }
 
         if (conversation == null)
@@ -54,19 +54,18 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
         return Task.FromResult("test");
     }
 
-    public override void WriteResponse(JsonOperationContext context, AsyncBlittableJsonTextWriter writer,
-        string conversationId, ConversationDocument document,
-        BlittableJsonReaderObject response)
+    protected override async Task WriteResponseAsync(DocumentsOperationContext context, string conversationId, BlittableJsonReaderObject response, ConversationDocument document)
     {
-        context.Write(writer, new DynamicJsonValue
+        var output = new DynamicJsonValue
         {
-            [nameof(ConversationResult<object>.ConversationId)] = conversationId,
-            [nameof(ConversationResult<object>.ChangeVector)] = document.ChangeVector,
-            [nameof(ConversationResult<object>.Response)] = response,
-            [nameof(ConversationResult<object>.ActionRequests)] = new DynamicJsonArray(document.OpenActionCalls.Select(t => t.Value.ToJson())),
-            [nameof(ConversationResult<object>.TotalUsage)] = document.TotalUsage.ToJson(),
-            ["Document"] = document.ToBlittable(context)
-        });
+            [nameof(AiAgentTestResult.Document)] = document.ToJson(),
+            [nameof(AiAgentTestResult.Response)] = response,
+            [nameof(AiAgentTestResult.ActionRequests)] = new DynamicJsonArray(document.OpenActionCalls.Select(t => t.Value.ToJson())),
+            [nameof(AiAgentTestResult.Usage)] = document.TotalUsage.ToJson()
+        };
+
+        await using var writer = new AsyncBlittableJsonTextWriter(context, RequestHandler.ResponseBodyStream());
+        context.Write(writer, output);
     }
 
     public class AiAgentTestResult

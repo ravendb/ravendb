@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
@@ -15,8 +16,9 @@ namespace SlowTests.Server.Documents.AI.AiAgent;
 public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
 {
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
-    public async Task CanStreamResults(Options options, GenAiConfiguration config)
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Data = new object[] { true })]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.OpenAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Data = new object[] { false })]
+    public async Task CanStreamResults(Options options, GenAiConfiguration config, bool usePropertyToStream)
     {
         using var store = GetDocumentStore(options);
         await store.Maintenance.SendAsync(new PutConnectionStringOperation<AiConnectionString>(config.Connection));
@@ -31,12 +33,20 @@ public class RavenDB_24811(ITestOutputHelper output) : RavenTestBase(output)
 
         chat.SetUserPrompt("Give me 15 real cities names, one per line");
         var sb = new StringBuilder();
-        var result = await chat.StreamAsync<AiAgentBasics.OutputSchema>( a=>a.Answer, s =>
+
+        AiAnswer<AiAgentBasics.OutputSchema> result;
+        Func<string, Task> streamedChunksCallback = s =>
         {
             sb.Append(s);
             return Task.CompletedTask;
-        }, CancellationToken.None);
+        };
+
+        if (usePropertyToStream)
+            result = await chat.StreamAsync<AiAgentBasics.OutputSchema>(a => a.Answer, streamedChunksCallback, CancellationToken.None);
+        else
+            result = await chat.StreamAsync<AiAgentBasics.OutputSchema>("Answer", streamedChunksCallback, CancellationToken.None);
         
+
         Assert.Equal(result.Answer.Answer, sb.ToString());
     }
     

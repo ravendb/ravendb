@@ -167,7 +167,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
 
     public async Task<AiResponse> StreamingCompleteAsync(JsonOperationContext streamingContext, IMemoryContextPool contextPool,
-        string streamPropertyPath, HttpRequestMessage request,
+        string propertyToStream, HttpRequestMessage request,
         Func<Memory<byte>, Task> streamedPropertyCallback,
         AiUsage usage, CancellationToken token)
     {
@@ -176,7 +176,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         const int initialBufferSize = 64;
 
         using var __ = streamingContext.GetRawMemoryBuffer(initialBufferSize, out var streamedPropertyBuffer);
-        var parser = new SseStreamingJsonParser(streamingContext, streamPropertyPath);
+        var parser = new SseStreamingJsonParser(streamingContext, propertyToStream);
         var alreadySeen = 0;
         var sizeToStream = 0;
         parser.OnStringRead += (e) =>

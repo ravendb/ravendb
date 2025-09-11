@@ -186,6 +186,14 @@ namespace Sparrow.Json.Parsing
             EnsureNotDocumentInArray(obj);
             Items.Add(obj);
         }
+        
+        public void AddRange(IEnumerable<object> collection)
+        {
+            foreach (object item in collection)
+            {
+                Add(item);
+            }
+        }
 
         [Conditional("DEBUG")]
         private static void EnsureNotDocumentInArray(object value)

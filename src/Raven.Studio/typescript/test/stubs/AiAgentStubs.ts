@@ -37,6 +37,7 @@ export class AiAgentStubs {
                             },
                         },
                     ],
+                    SubAgents: [],
                     Actions: [
                         {
                             Name: "ActionProductSearch",

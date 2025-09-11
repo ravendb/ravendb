@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Text;
 using Raven.Client.Util;
 using Sparrow.Json.Parsing;
 
@@ -82,6 +83,20 @@ public class AiAgentConfiguration : IDynamicJson
     /// When the agent calls them, it expects the user to provide "answers" for them.
     /// </summary>
     public List<AiAgentToolAction> Actions { get; set; } = [];
+    
+    /// <summary>
+    /// Server side sub-agents that the model can also call. Those sub-agents will be invoked and managed as part of the
+    /// agent run, including running their own queries, etc. Parameters for the sub-agents will be inherited from the
+    /// root agent.
+    ///
+    /// Handle("attendance-agent/SendEmail", ...);
+    /// Handle("benefits-agent/SendEmail", ...);
+    /// Handle("benefits-agent/friendly-agent/SendEmail", ...);
+    /// 
+    /// If there is an action defined in the sub-agent, it will return all the way to the client code for handling,
+    /// with the following format: "$agentIdentifier/$actionName". "$agentIdentifier1/$agentIdentifier2/$actionName".
+    /// </summary>
+    public List<AiAgentToolSubAgent> SubAgents { get; set; } = [];
 
     /// <summary>
     /// The required parameters that are used in the agent's queries and actions.
@@ -112,7 +127,10 @@ public class AiAgentConfiguration : IDynamicJson
 
     internal AiAgentToolQuery FindQuery(string name)
     {
-        foreach (AiAgentToolQuery query in Queries ?? [])
+        if (Queries?.Count > 0 == false)
+            return null;
+
+        foreach (AiAgentToolQuery query in Queries)
         {
             if(query.Name == name)
                 return query;
@@ -123,10 +141,27 @@ public class AiAgentConfiguration : IDynamicJson
     
     internal AiAgentToolAction FindAction(string name)
     {
-        foreach (AiAgentToolAction action in Actions ?? [])
+        if (Actions?.Count > 0 == false)
+            return null;
+
+        foreach (AiAgentToolAction action in Actions)
         {
             if(action.Name == name)
                 return action;
+        }
+
+        return null;
+    }
+    
+    internal AiAgentToolSubAgent FindSubAgents(string identifier)
+    {
+        if (SubAgents?.Count > 0 == false)
+            return null;
+
+        foreach (AiAgentToolSubAgent tool in SubAgents)
+        {
+            if(tool.Identifier == identifier)
+                return tool;
         }
 
         return null;
@@ -144,9 +179,27 @@ public class AiAgentConfiguration : IDynamicJson
             [nameof(SampleObject)] = SampleObject,
             [nameof(Queries)] = Queries != null ? new DynamicJsonArray(Queries) : null,
             [nameof(Actions)] = Actions != null ? new DynamicJsonArray(Actions) : null,
+            [nameof(SubAgents)] = SubAgents != null ? new DynamicJsonArray(SubAgents) : null,
             [nameof(Parameters)] = new DynamicJsonArray(Parameters),
             [nameof(ChatTrimming)] = ChatTrimming?.ToJson(),
             [nameof(MaxModelIterationsPerCall)] = MaxModelIterationsPerCall
         };
+    }
+
+    public void AppendCapabilities(StringBuilder sb)
+    {
+        sb.AppendLine("Capabilities:");
+        foreach (var q in Queries??[])
+        {
+            sb.Append("- ").AppendLine(q.Description);
+        }
+        foreach (var q in SubAgents??[])
+        {
+            sb.Append("- ").AppendLine(q.Description);
+        }
+        foreach (var q in Actions??[])
+        {
+            sb.Append("- ").AppendLine(q.Description);
+        }
     }
 }
