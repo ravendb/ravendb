@@ -2,10 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
+using System.Threading.Tasks;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.ServerWide;
-using Raven.Client.Util;
-using Raven.Server.Config.Settings;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.Json;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -19,7 +21,7 @@ using Bits = Sparrow.Binary.Bits;
 
 namespace Raven.Server.Documents.PeriodicBackup.BackupHistory;
 
-public unsafe class BackupHistoryStorage
+public class BackupHistoryStorage
 {
     private const string JsonDocumentId = "backup-history-entry";
 
@@ -33,9 +35,6 @@ public unsafe class BackupHistoryStorage
 
     private static readonly Slice ByFullBackupIdSlice;
     private static readonly Slice ByBackupKindSlice;
-
-    public SystemTime Time = new SystemTime();
-
 
     static BackupHistoryStorage()
     {
@@ -86,38 +85,31 @@ public unsafe class BackupHistoryStorage
         }
     }
 
-    public void StoreBackupStatus(string databaseName, PeriodicBackupStatus status, TimeSetting backupHistoryRetentionPeriod)
+    public static void StoreBackupStatus<T>(TransactionOperationContext<T> context, string databaseName, PeriodicBackupStatus status, DateTime cutoffTime) where T : RavenTransaction
     {
         var entry = new BackupHistoryEntry(status);
         var taskId = status.TaskId;
 
-        using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-        using (var tx = context.OpenWriteTransaction())
-        {
-            var table = tx.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
+        var table = context.Transaction.InnerTransaction.OpenTable(BackupHistoryTableSchema, BackupHistorySchema.TableName);
 
-            StoreNewBackupEntry(table, entry, databaseName, taskId, context);
+        StoreNewBackupEntry(table, entry, databaseName, taskId, context);
 
-            if (entry.BackupKind == BackupKind.Full && entry.Error == null)
-                EnforceBackupRetentionPolicy(table, tx, databaseName, taskId, backupHistoryRetentionPeriod);
-
-            tx.Commit();
-        }
+        if (entry.BackupKind == BackupKind.Full && entry.Error == null)
+            EnforceBackupRetentionPolicy(table, context.Transaction, databaseName, taskId, cutoffTime);
     }
 
-    private static void StoreNewBackupEntry(Table table, BackupHistoryEntry entry, string databaseName, long taskId, TransactionOperationContext context)
+    private static unsafe void StoreNewBackupEntry<T>(Table table, BackupHistoryEntry entry, string databaseName, long taskId, TransactionOperationContext<T> context) where T : RavenTransaction
     {
         var createdAtTicks = entry.CreatedAt.Ticks;
         var fullBackupCreatedAtTicks = entry.BackupKind is BackupKind.Full
             ? createdAtTicks
             : entry.LastFullBackup?.Ticks ?? 0;
 
-        var json = context.ReadObject(entry.ToJson(), JsonDocumentId);
-
         using (BackupHistorySchema.GetPrimaryKey(context.Allocator, databaseName, taskId, fullBackupCreatedAtTicks, createdAtTicks, out var primaryKeySlice))
         using (BackupHistorySchema.GetByBackupKindIndexKey(context.Allocator, databaseName, taskId, entry.BackupKind, fullBackupCreatedAtTicks, createdAtTicks, out var byBackupKindKeySlice))
         using (BackupHistorySchema.GetByFullBackupIdIndexKey(context.Allocator, databaseName, taskId, fullBackupCreatedAtTicks, entry.BackupKind, createdAtTicks, out var byFullBackupIdKeySlice))
         using (table.Allocate(out TableValueBuilder tvb))
+        using (var json = context.ReadObject(entry.ToJson(), JsonDocumentId))
         {
             tvb.Add(primaryKeySlice);
             tvb.Add(byBackupKindKeySlice);
@@ -129,10 +121,8 @@ public unsafe class BackupHistoryStorage
         }
     }
 
-    private void EnforceBackupRetentionPolicy(Table backupHistoryTable, RavenTransaction tx, string databaseName, long taskId, TimeSetting backupHistoryRetentionPeriod)
+    private static void EnforceBackupRetentionPolicy(Table backupHistoryTable, RavenTransaction tx, string databaseName, long taskId, DateTime cutoffTime)
     {
-        var cutoffTime = Time.GetUtcNow() - (_forTestingPurposes?.CustomBackupHistoryRetentionConfiguration ?? backupHistoryRetentionPeriod.AsTimeSpan);
-        Console.WriteLine($"SystemTime.UtcNow: {Time.GetUtcNow():O}");
         var backupResultDetailsTable = tx.InnerTransaction.OpenTable(BackupResultDetailsTableSchema, BackupResultDetailsSchema.TableName);
 
         var tableIdsList = CollectBackupsToDelete(backupHistoryTable, tx, cutoffTime, databaseName, taskId);
@@ -146,7 +136,7 @@ public unsafe class BackupHistoryStorage
         }
     }
 
-    private List<(long HistoryTableId, long ResultDetailsId)> CollectBackupsToDelete(Table backupHistoryTable, RavenTransaction tx, DateTime cutoffTime, string databaseName, long taskId)
+    private static unsafe List<(long HistoryTableId, long ResultDetailsId)> CollectBackupsToDelete(Table backupHistoryTable, RavenTransaction tx, DateTime cutoffTime, string databaseName, long taskId)
     {
         var result = new List<(long, long)>();
 
@@ -198,33 +188,24 @@ public unsafe class BackupHistoryStorage
         return result;
     }
 
-    public void StoreBackupResultDetails(BackupResult result, PeriodicBackupStatus status, string databaseName)
+    public static unsafe void StoreBackupResultDetails<T>(TransactionOperationContext<T> context, string databaseName, PeriodicBackupStatus status, BackupResult result) where T : RavenTransaction
     {
         var key = BackupResultDetailsSchema.GenerateKey(databaseName, status);
 
-        if (_logger.IsInfoEnabled)
-            _logger.Info($"Saving to backup history storage result details with key: `{key}`.");
+        var table = context.Transaction.InnerTransaction.OpenTable(BackupResultDetailsTableSchema, BackupResultDetailsSchema.TableName);
 
-        using (_contextPool.AllocateOperationContext(out TransactionOperationContext context))
-        using (var transaction = context.OpenWriteTransaction())
+        var lsKey = context.GetLazyString(key);
+        using (var json = context.ReadObject(result.ToJson(), key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
+        using (table.Allocate(out TableValueBuilder tvb))
         {
-            var table = transaction.InnerTransaction.OpenTable(BackupResultDetailsTableSchema, BackupResultDetailsSchema.TableName);
+            tvb.Add(lsKey.Buffer, lsKey.Size);
+            tvb.Add(json.BasePointer, json.Size);
 
-            var lsKey = context.GetLazyString(key);
-            using (var json = context.ReadObject(result.ToJson(), key, BlittableJsonDocumentBuilder.UsageMode.ToDisk))
-            using (table.Allocate(out TableValueBuilder tvb))
-            {
-                tvb.Add(lsKey.Buffer, lsKey.Size);
-                tvb.Add(json.BasePointer, json.Size);
-
-                table.Set(tvb);
-            }
-
-            transaction.Commit();
+            table.Set(tvb);
         }
     }
 
-    public static BlittableJsonReaderObject GetBackupResult(TransactionOperationContext context, string databaseName, long taskId, long createdAtTicks)
+    public static unsafe BlittableJsonReaderObject GetBackupResult(TransactionOperationContext context, string databaseName, long taskId, long createdAtTicks)
     {
         using var tx = context.OpenReadTransaction();
         if (TryGetBackupResultDetailsReader(tx, databaseName, taskId, createdAtTicks, out var tvr) == false)
@@ -243,6 +224,67 @@ public unsafe class BackupHistoryStorage
         var table = tx.InnerTransaction.OpenTable(BackupResultDetailsTableSchema, BackupResultDetailsSchema.TableName);
         using (Slice.From(tx.InnerTransaction.Allocator, key, out Slice slice))
             return table.ReadByKey(slice, out tvr);
+    }
+
+    internal static void UpdateBackupHistoryWithRetries(
+    int maxRetries,
+    string databaseName,
+    ServerStore serverStore,
+    PeriodicBackupStatus status,
+    BackupResult backupResult,
+    Action<IOperationProgress> onProgress,
+    Logger logger,
+    OperationCancelToken operationCancelToken)
+    {
+        var retries = 0;
+        const int throttleDelay = 1_000;
+        var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
+        var retentionTimeSetting = serverStore.DatabaseInfoCache.BackupHistoryStorage._forTestingPurposes?.CustomBackupHistoryRetentionConfiguration ?? database.Configuration.Backup.BackupHistoryRetentionPeriod.AsTimeSpan;
+
+        while (true)
+        {
+            try
+            {
+                operationCancelToken?.Token.ThrowIfCancellationRequested();
+
+                if (retries > 0)
+                    Task.Delay(throttleDelay, operationCancelToken?.Token ?? CancellationToken.None).Wait();
+
+                backupResult?.AddInfo("Updating the backup history");
+                onProgress?.Invoke(backupResult?.Progress);
+
+                var cutoffTime = DateTime.UtcNow - retentionTimeSetting;
+                var updateBackupHistoryCommand = new UpdateBackupHistoryCommand(databaseName, status, backupResult, cutoffTime);
+                serverStore.Engine.TxMerger.EnqueueSync(updateBackupHistoryCommand);
+
+                return;
+            }
+            catch (OperationCanceledException)
+            {
+                const string message = "Backup history update was canceled.";
+                backupResult?.AddError(message);
+                onProgress?.Invoke(backupResult?.Progress);
+
+                if (logger.IsInfoEnabled)
+                    logger.Info(message);
+
+                return;
+            }
+            catch (Exception e)
+            {
+                var message = $"Failed to update the backup history: {e.Message}";
+                backupResult?.AddError(message);
+                onProgress?.Invoke(backupResult?.Progress);
+
+                if (++retries < maxRetries)
+                    continue;
+
+                if (logger.IsOperationsEnabled)
+                    logger.Operations(message, e);
+
+                return;
+            }
+        }
     }
 
     public static BlittableJsonReaderObject GetBackupHistory(
@@ -313,7 +355,7 @@ public unsafe class BackupHistoryStorage
         }
     }
 
-    private static BackupHistoryEntry GetBackupEntry(TransactionOperationContext context, TableValueReader result)
+    private static unsafe BackupHistoryEntry GetBackupEntry(TransactionOperationContext context, TableValueReader result)
     {
         var ptr = result.Read((int)BackupHistorySchema.BackupHistoryColumns.Data, out var size);
         var json = new BlittableJsonReaderObject(ptr, size, context);
@@ -483,7 +525,7 @@ public unsafe class BackupHistoryStorage
             return GetKey(allocator, databaseName, values, out keySlice);
         }
 
-        private static ByteStringContext<ByteStringMemoryCache>.InternalScope GetKey(
+        private static unsafe ByteStringContext<ByteStringMemoryCache>.InternalScope GetKey(
             ByteStringContext allocator,
             string databaseName,
             Span<long> values,
@@ -551,7 +593,7 @@ public unsafe class BackupHistoryStorage
             $"values/{databaseName}/{taskId}/{createdAtTicks}";
     }
 
-    private TestingStuff _forTestingPurposes;
+    internal TestingStuff _forTestingPurposes;
 
     internal TestingStuff ForTestingPurposesOnly()
     {
