@@ -100,7 +100,7 @@ namespace Raven.Server.Documents.Sharding
                         await merged.AddAsyncEnumerator(new YieldStreamArray<ShardStreamItem<T>, T>(shardToIterator.Value, converter, shardToIterator.Key, combinedState.CancellationToken));
                     }
 
-                    while (await merged.MoveNextAsync(combinedState.CancellationToken))
+                    while (await merged.MoveNextAsync())
                     {
                         yield return merged.Current;
                     }

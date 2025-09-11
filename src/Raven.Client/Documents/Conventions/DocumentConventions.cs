@@ -24,6 +24,7 @@ using Sparrow;
 using Sparrow.Json;
 using Sparrow.Platform;
 using Sparrow.Utils;
+using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 using Size = Sparrow.Size;
 
 namespace Raven.Client.Documents.Conventions

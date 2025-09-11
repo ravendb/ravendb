@@ -48,6 +48,7 @@ using Tests.Infrastructure.Entities;
 using Employee = Orders.Employee;
 using Xunit;
 using Xunit.Abstractions;
+using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 
 namespace SlowTests.Sharding.ETL
 {

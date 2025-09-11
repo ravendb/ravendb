@@ -39,6 +39,7 @@ using Raven.Server.Documents.ETL.Providers.AI.GenAi;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.Snowflake;
 using Raven.Server.Documents.ETL.Providers.RelationalDatabase.SQL;
 using Tests.Infrastructure;
+using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 
 namespace FastTests
 {

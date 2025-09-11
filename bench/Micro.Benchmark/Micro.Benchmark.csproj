@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <TargetFramework>net9.0</TargetFramework>
-    <RuntimeFrameworkVersion>9.0.8</RuntimeFrameworkVersion>
+    <TargetFramework>net10.0</TargetFramework>
+    <RuntimeFrameworkVersion></RuntimeFrameworkVersion>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Micro.Benchmark</AssemblyName>
     <OutputType>Exe</OutputType>
@@ -16,10 +16,6 @@
     <PackageReference Include="BenchmarkDotNet.Diagnostics.Windows" />
     <PackageReference Include="BenchmarkDotNet" />
     <PackageReference Include="xunit" />
-    <PackageReference Include="System.Net.Http" />
-    <PackageReference Include="System.Private.Uri" />
-    <PackageReference Include="System.Text.RegularExpressions" />
-    <PackageReference Include="System.Runtime.CompilerServices.Unsafe" />
     <PackageReference Include="Microsoft.Diagnostics.Tracing.TraceEvent" />
   </ItemGroup>
   <ItemGroup>

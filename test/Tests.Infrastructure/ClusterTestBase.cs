@@ -35,6 +35,7 @@ using Sparrow.Json.Parsing;
 using Sparrow.Platform;
 using Xunit;
 using Xunit.Abstractions;
+using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 
 namespace Tests.Infrastructure
 {
