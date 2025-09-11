@@ -38,6 +38,7 @@ using Xunit;
 using Xunit.Abstractions;
 using Xunit.Sdk;
 using XunitLogger;
+using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 
 namespace FastTests
 {

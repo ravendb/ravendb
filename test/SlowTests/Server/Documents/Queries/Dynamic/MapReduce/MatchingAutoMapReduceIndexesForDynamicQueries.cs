@@ -13,6 +13,7 @@ using Raven.Server.Documents.Queries.Dynamic;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
+using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 using Index = Raven.Server.Documents.Indexes.Index;
 
 namespace SlowTests.Server.Documents.Queries.Dynamic.MapReduce

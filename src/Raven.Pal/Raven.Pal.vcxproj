@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
-
     <ProjectConfiguration Include="Debug|Win32">
       <Configuration>Debug</Configuration>
       <Platform>Win32</Platform>
@@ -21,7 +20,6 @@
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ResolveNuGetPackages>false</ResolveNuGetPackages>
-
     <VCProjectVersion>16.0</VCProjectVersion>
     <ProjectGuid>{01D4353F-2BE9-4D98-B890-FA8364FFDEF1}</ProjectGuid>
     <RootNamespace>RavenPal</RootNamespace>
@@ -31,26 +29,26 @@
   <PropertyGroup Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>false</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
     <UseDebugLibraries>true</UseDebugLibraries>
-    <PlatformToolset>v143</PlatformToolset>
+    <PlatformToolset>v145</PlatformToolset>
     <WholeProgramOptimization>true</WholeProgramOptimization>
     <CharacterSet>MultiByte</CharacterSet>
   </PropertyGroup>
@@ -142,7 +140,8 @@
     <ClInclude Include="inc\status_codes.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\shared_all.c" />    <ClCompile Include="src\win\ioring.c" />
+    <ClCompile Include="src\shared_all.c" />
+    <ClCompile Include="src\win\ioring.c" />
     <ClCompile Include="test-win.c" />
     <ClCompile Include="src\rvngetpalver.c" />
     <ClCompile Include="src\win\fileutils.c" />

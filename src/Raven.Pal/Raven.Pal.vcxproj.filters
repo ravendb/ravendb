@@ -65,14 +65,14 @@
     <ClCompile Include="src\win\pager.c">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="test.c">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\shared_all.c">
       <Filter>Source Files</Filter>
     </ClCompile>
     <ClCompile Include="src\win\ioring.c">
       <Filter>Source Files\Win</Filter>
+    </ClCompile>
+    <ClCompile Include="test-win.c">
+      <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>

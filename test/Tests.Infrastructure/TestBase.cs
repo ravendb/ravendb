@@ -48,6 +48,7 @@ using Tests.Infrastructure.Utils;
 using Voron.Exceptions;
 using Xunit.Abstractions;
 using XunitLogger;
+using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 
 namespace FastTests
 {

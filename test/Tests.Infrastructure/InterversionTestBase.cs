@@ -21,6 +21,7 @@ using Raven.Server.Utils;
 using Tests.Infrastructure.InterversionTest;
 using Xunit;
 using Xunit.Abstractions;
+using AsyncHelpers = Raven.Client.Util.AsyncHelpers;
 
 namespace Tests.Infrastructure
 {
