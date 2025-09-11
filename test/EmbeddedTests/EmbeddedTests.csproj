@@ -11,10 +11,10 @@
     <SuppressTfmSupportBuildWarnings>True</SuppressTfmSupportBuildWarnings>
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' == 'Windows_NT'">
-    <TargetFrameworks>net10.0;net8.0;net6.0;net462</TargetFrameworks>
+    <TargetFrameworks>net10.0;net8.0;net462</TargetFrameworks>
   </PropertyGroup>
   <PropertyGroup Condition="'$(OS)' != 'Windows_NT'">
-    <TargetFrameworks>net10.0;net8.0;net6.0;</TargetFrameworks>
+    <TargetFrameworks>net10.0;net8.0</TargetFrameworks>
   </PropertyGroup>
   <ItemGroup Condition="'$(OS)' == 'Windows_NT'">
     <Compile Include="..\..\src\CommonAssemblyInfo.Windows.cs" Link="Properties\CommonAssemblyInfo.Windows.cs" />
@@ -36,6 +36,7 @@
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Raven.PAL" />
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
     <PackageReference Include="System.Net.Http" />
     <PackageReference Include="System.Text.Encodings.Web" />
     <PackageReference Include="System.Text.Json" />
@@ -45,12 +46,6 @@
     </PackageReference>
     <PackageReference Include="xunit" />
     <PackageReference Include="Npgsql" VersionOverride="5.0.18" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' != 'net6.0'">
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-  </ItemGroup>
-  <ItemGroup Condition="'$(TargetFramework)' == 'net6.0'">
-    <PackageReference Include="Microsoft.NET.Test.Sdk" VersionOverride="17.13.0" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\MyCustomAnalyzers.dll" />
