@@ -423,10 +423,21 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         var msg2 = new DynamicJsonValue
         {
             [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
-            [Constants.RequestFields.Content] = CreateContentWithAttachments(userPrompt, attachments)
+            [Constants.RequestFields.Content] = userPrompt
         };
 
-        var messages = new List<BlittableJsonReaderObject>() { ctx.ReadObject(msg1, "system/msg"), ctx.ReadObject(msg2, "user/msg") };
+        var messages = new List<BlittableJsonReaderObject>() { ctx.ReadObject(msg1, "system/msg"), ctx.ReadObject(msg2, "user/msg")};
+
+        if (attachments?.Count > 0)
+        {
+            var msg3 = new DynamicJsonValue
+            {
+                [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
+                [Constants.RequestFields.Content] = CreateContentWithAttachments(attachments)
+            };
+            messages.Add(ctx.ReadObject(msg3, "user/msg"));
+        }
+
         using var request = CreateCompletionRequest(ctx, messages, schema);
         var usage = new AiUsage();
         var results = await CompleteAsync(ctx, request, usage, token);
@@ -435,19 +446,9 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
     }
 
 
-    private DynamicJsonArray CreateContentWithAttachments(string context, List<AiAttachment> attachments)
+    private DynamicJsonArray CreateContentWithAttachments(List<AiAttachment> attachments)
     {
-        var content = new DynamicJsonArray
-        {
-            new DynamicJsonValue
-            {
-                [Constants.AttachmentsRequestFields.Type] = Constants.AttachmentsRequestFields.TypeText,
-                [Constants.AttachmentsRequestFields.TypeText] = context
-            }
-        };
-
-        if (attachments?.Count > 0 == false)
-            return content;
+        var content = new DynamicJsonArray();
 
         foreach (var attachment in attachments)
         {
