@@ -717,10 +717,8 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                         };
                 }
             default:
-                throw new UnsuccessfulRequestException(message, response.StatusCode)
-                {
-                    RequestId = reqId
-                };
+                UnsuccessfulRequestException.Throw(message, response.StatusCode, reqId);
+                break;
         }
     }
 

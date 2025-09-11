@@ -155,7 +155,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         if (exceptions?.Count > 0)
         {
             _maxConcurrency = 1;
-            throw new AggregateException(exceptions);
+            throw new AggregateException(exceptions).ExtractSingleInnerException();
         }
 
         // we had no errors, re-raise max concurrency slowly
