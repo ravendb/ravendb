@@ -4,7 +4,7 @@
     <Description>RavenDB Client is the client library for accessing RavenDB</Description>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <Authors>Hibernating Rhinos</Authors>
-    <TargetFrameworks>net10.0;net8.0;net6.0;netstandard2.1;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net10.0;net8.0;netstandard2.1;netstandard2.0</TargetFrameworks>
     <DefineConstants>$(DefineConstants);PORTABLE</DefineConstants>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <AssemblyName>Raven.Client</AssemblyName>
@@ -59,20 +59,6 @@
     </Content>
     <Content Include="..\Sparrow\bin\Release\netstandard2.1\Sparrow.pdb">
       <PackagePath>lib/netstandard2.1/</PackagePath>
-      <IncludeInPackage>false</IncludeInPackage>
-      <IncludeInSymbolPackage>true</IncludeInSymbolPackage>
-    </Content>
-    <!-- this is required for the nuget build to properly include the right files -->
-    <Content Include="..\Sparrow\bin\Release\net6.0\Sparrow.dll">
-      <PackagePath>lib/net6.0/</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-    <Content Include="..\Sparrow\bin\Release\net6.0\Sparrow.xml">
-      <PackagePath>lib/net6.0/</PackagePath>
-      <Pack>true</Pack>
-    </Content>
-    <Content Include="..\Sparrow\bin\Release\net6.0\Sparrow.pdb">
-      <PackagePath>lib/net6.0/</PackagePath>
       <IncludeInPackage>false</IncludeInPackage>
       <IncludeInSymbolPackage>true</IncludeInSymbolPackage>
     </Content>
@@ -174,8 +160,5 @@
     <PackageReference Include="System.Buffers" />
     <PackageReference Include="System.Memory" />
     <PackageReference Include="System.Threading.Tasks.Extensions" />
-  </ItemGroup>
-  <ItemGroup Condition="$(TargetFramework) == 'net6.0'">
-    <PackageReference Include="System.Collections.Immutable" VersionOverride="8.0.0" />
   </ItemGroup>
 </Project>
