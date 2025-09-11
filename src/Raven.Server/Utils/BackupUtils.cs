@@ -17,7 +17,9 @@ using Raven.Server.Config;
 using Raven.Server.Config.Settings;
 using Raven.Server.Documents;
 using Raven.Server.Documents.PeriodicBackup;
+using Raven.Server.Documents.PeriodicBackup.BackupHistory;
 using Raven.Server.Documents.PeriodicBackup.DirectUpload;
+using Raven.Server.Documents.TransactionMerger.Commands;
 using Raven.Server.NotificationCenter;
 using Raven.Server.Rachis;
 using Raven.Server.ServerWide;
@@ -659,11 +661,7 @@ public static class BackupUtils
         }
         finally
         {
-            var database = serverStore.DatabasesLandlord.TryGetOrCreateResourceStore(databaseName).Result;
-            var retentionPeriod = database.Configuration.Backup.BackupHistoryRetentionPeriod;
-
-            serverStore.DatabaseInfoCache.BackupHistoryStorage.StoreBackupStatus(databaseName, status, retentionPeriod);
-            serverStore.DatabaseInfoCache.BackupHistoryStorage.StoreBackupResultDetails(backupResult, status, databaseName);
+            BackupHistoryStorage.UpdateBackupHistoryWithRetries(maxRetries: 10, databaseName, serverStore, status, backupResult, onProgress, logger, operationCancelToken);
         }
     }
 
