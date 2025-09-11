@@ -531,6 +531,7 @@ namespace Voron.Data.BTrees
 
             private StreamBufferAllocator()
             {
+                LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
             }
 
             public Buffer Rent()
