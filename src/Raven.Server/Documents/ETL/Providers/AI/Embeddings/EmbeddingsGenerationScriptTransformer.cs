@@ -262,31 +262,61 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
     private JsValue SplitMarkDownLines(JsValue self, JsValue[] args)
     {
         const string methodSignature = "markdown.splitLines(text | [text], maxTokensPerLine)";
+        
+        if (args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+        
         return ChunkFunc(self, args, methodSignature, ChunkingMethod.MarkDownSplitLines);
     }
     
     private JsValue SplitMarkDownParagraphs(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "markdown.splitParagraphs(line | [line], maxTokensPerLine)";
+        const string methodSignature = "markdown.splitParagraphs(line | [line], maxTokensPerLine, overlapTokens)";
+        
+        if (args.Length != 3)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 3 arguments");
+        
         return ChunkFunc(self, args, methodSignature, ChunkingMethod.MarkDownSplitParagraphs);
     }
     
     private JsValue SplitPlainText(JsValue self, JsValue[] args)
     {
         const string methodSignature = "text.split(text | [text], maxTokensPerLine)";
+        
+        if (args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+        
         return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplit);
     }
     
     private JsValue SplitPlainTextLines(JsValue self, JsValue[] args)
     {
         const string methodSignature = "text.splitLines(text | [text], maxTokensPerLine)";
+        
+        if (args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+        
         return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplitLines);
     }
     
     private JsValue SplitPlainTextParagraphs(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "text.splitParagraphs(line | [line], maxTokensPerLine)";
+        const string methodSignature = "text.splitParagraphs(line | [line], maxTokensPerLine, overlapTokens)";
+        
+        if (args.Length != 3)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 3 arguments");
+        
         return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplitParagraphs);
+    }
+
+    private JsValue StripHtml(JsValue self, JsValue[] args)
+    {
+        const string methodSignature = "html.strip(htmlText | [htmlText], maxTokensPerChunk)";
+        
+        if (args.Length != 2)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
+        
+        return ChunkFunc(self, args, methodSignature, ChunkingMethod.HtmlStrip);
     }
     
     public class ObjectForChunking([NotNull] Engine engine) : ObjectInstance(engine)
@@ -294,17 +324,8 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         public readonly List<(string,ChunkingOptions)> Value = [];
     }
 
-    private JsValue StripHtml(JsValue self, JsValue[] args)
-    {
-        const string methodSignature = "html.strip(htmlText | [htmlText], maxTokensPerChunk)";
-        return ChunkFunc(self, args, methodSignature, ChunkingMethod.HtmlStrip);
-    }
-
     private static JsValue ChunkFunc(JsValue self, JsValue[] args, string methodSignature, ChunkingMethod chunkingMethod)
     {
-        if (args.Length != 2)
-            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 2 arguments");
-
         if(args[0].IsNull() || args[0].IsUndefined())
             return JsValue.Undefined;
         
@@ -314,9 +335,19 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
         if (args[1].IsNumber() == false)
             ThrowInvalidScriptMethodCall($"{methodSignature} second argument must be a number");
 
+        int overlapTokens = 0;
+        if (args.Length == 3)
+        {
+            if (args[2].IsNumber() == false)
+                ThrowInvalidScriptMethodCall($"{methodSignature} third argument must be a number");
+
+            overlapTokens = (int)args[2].AsNumber();
+        }
+
         ChunkingOptions chunkingOptions = new() { 
             MaxTokensPerChunk = (int)args[1].AsNumber(), 
-            ChunkingMethod = chunkingMethod 
+            ChunkingMethod = chunkingMethod,
+            OverlapTokens = overlapTokens
         };
         
         var result = new ObjectForChunking(((JsObject)self).Engine);

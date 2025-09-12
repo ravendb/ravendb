@@ -25,9 +25,9 @@ public static class TextChunker
                 return Microsoft.SemanticKernel.Text.TextChunker.SplitMarkDownLines(textualValue, chunkingOptions.MaxTokensPerChunk);
 
             case ChunkingMethod.PlainTextSplitParagraphs:
-                return Microsoft.SemanticKernel.Text.TextChunker.SplitPlainTextParagraphs([textualValue], chunkingOptions.MaxTokensPerChunk);
+                return Microsoft.SemanticKernel.Text.TextChunker.SplitPlainTextParagraphs([textualValue], chunkingOptions.MaxTokensPerChunk, chunkingOptions.OverlapTokens);
             case ChunkingMethod.MarkDownSplitParagraphs:
-                return Microsoft.SemanticKernel.Text.TextChunker.SplitMarkdownParagraphs([textualValue], chunkingOptions.MaxTokensPerChunk);
+                return Microsoft.SemanticKernel.Text.TextChunker.SplitMarkdownParagraphs([textualValue], chunkingOptions.MaxTokensPerChunk, chunkingOptions.OverlapTokens);
             default:
                 throw new ArgumentOutOfRangeException(chunkingOptions.ChunkingMethod.ToString());
         }
@@ -38,9 +38,9 @@ public static class TextChunker
         switch (chunkingOptions.ChunkingMethod)
         {
             case ChunkingMethod.PlainTextSplitParagraphs:
-                return Microsoft.SemanticKernel.Text.TextChunker.SplitPlainTextParagraphs(textualValues, chunkingOptions.MaxTokensPerChunk);
+                return Microsoft.SemanticKernel.Text.TextChunker.SplitPlainTextParagraphs(textualValues, chunkingOptions.MaxTokensPerChunk, chunkingOptions.OverlapTokens);
             case ChunkingMethod.MarkDownSplitParagraphs:
-                return Microsoft.SemanticKernel.Text.TextChunker.SplitMarkdownParagraphs(textualValues, chunkingOptions.MaxTokensPerChunk);
+                return Microsoft.SemanticKernel.Text.TextChunker.SplitMarkdownParagraphs(textualValues, chunkingOptions.MaxTokensPerChunk, chunkingOptions.OverlapTokens);
         }
 
         List<string> results = [];

@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -8,14 +10,28 @@ public class ChunkingOptions : IDynamicJsonValueConvertible
     public ChunkingMethod ChunkingMethod { get; set; }
 
     public int MaxTokensPerChunk { get; set; } = 512;
-    
+
+    public int OverlapTokens { get; set; } = 0;
+
+    public static readonly List<ChunkingMethod> MethodsSupportingOverlapTokens = [ChunkingMethod.MarkDownSplitParagraphs, ChunkingMethod.PlainTextSplitParagraphs];
+
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
         {
             [nameof(ChunkingMethod)] = ChunkingMethod, 
-            [nameof(MaxTokensPerChunk)] = MaxTokensPerChunk
+            [nameof(MaxTokensPerChunk)] = MaxTokensPerChunk,
+            [nameof(OverlapTokens)] = OverlapTokens
         };
+    }
+
+    public bool ValidateOptions()
+    {
+        if (OverlapTokens > 0 &&
+            MethodsSupportingOverlapTokens.Contains(ChunkingMethod) == false)
+            return false;
+        
+        return true;
     }
 }
 

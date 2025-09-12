@@ -105,6 +105,9 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
         {
             errors.Add($"Configuration must have either {nameof(EmbeddingsPathConfigurations)} or {nameof(EmbeddingsTransformation)} script specified");
         }
+        
+        if (EmbeddingsPathConfigurations is not null && EmbeddingsPathConfigurations.Any(x => x.ChunkingOptions.ValidateOptions() == false))
+            errors.Add($"{nameof(ChunkingOptions.OverlapTokens)} option is only supported for the following chunking methods: {string.Join(", ", ChunkingOptions.MethodsSupportingOverlapTokens)}.");
 
         if (EmbeddingsTransformation?.ValidateScript() == false)
             errors.Add($"Transformation script must use {EmbeddingsTransformation.GenerateEmbeddingsFunctionName} method.");
@@ -112,8 +115,18 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
         if (Quantization == VectorEmbeddingType.Text)
             errors.Add($"{nameof(Quantization)} cannot be {nameof(VectorEmbeddingType.Text)}");
 
-        if (ChunkingOptionsForQuerying is null || ChunkingOptionsForQuerying.MaxTokensPerChunk <= 0)
-            errors.Add($"{nameof(ChunkingOptionsForQuerying)} must be specified with {nameof(ChunkingOptionsForQuerying.MaxTokensPerChunk)} greater than 0.");
+        if (ChunkingOptionsForQuerying is null)
+        {
+            errors.Add($"{nameof(ChunkingOptionsForQuerying)} must be provided.");
+        }
+        else
+        {
+            if (ChunkingOptionsForQuerying.MaxTokensPerChunk <= 0)
+                errors.Add($"{nameof(ChunkingOptionsForQuerying)} must be specified with {nameof(ChunkingOptionsForQuerying.MaxTokensPerChunk)} greater than 0.");
+        
+            if (ChunkingOptionsForQuerying.OverlapTokens < 0)
+                errors.Add($"{nameof(ChunkingOptionsForQuerying)} must be specified with {nameof(ChunkingOptionsForQuerying.OverlapTokens)} greater than, or equal to 0.");
+        }
 
         return errors.Count == 0;
     }
@@ -137,6 +150,7 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
             {
                 [nameof(ChunkingOptionsForQuerying.ChunkingMethod)] = EmbeddingsTransformation.ChunkingOptions.ChunkingMethod,
                 [nameof(ChunkingOptionsForQuerying.MaxTokensPerChunk)] = EmbeddingsTransformation.ChunkingOptions.MaxTokensPerChunk,
+                [nameof(ChunkingOptionsForQuerying.OverlapTokens)] = EmbeddingsTransformation.ChunkingOptions.OverlapTokens,
             }
         } : null;
         json[nameof(AiConnectorType)] = AiConnectorType;
