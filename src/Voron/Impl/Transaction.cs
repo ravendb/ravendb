@@ -511,7 +511,13 @@ namespace Voron.Impl
 
             return tree;
         }
-        
+
+        public void DisposeStreamBuffer()
+        {
+            _streamBuffer?.Dispose();
+            _streamBuffer = null;
+        }
+
         public void Dispose()
         {
             if (_trees != null)
@@ -547,8 +553,7 @@ namespace Voron.Impl
                 }
             }
 
-            _streamBuffer?.Dispose();
-            _streamBuffer = null;
+            DisposeStreamBuffer();
 
             _lowLevelTransaction?.Dispose();
             _lowLevelTransaction = null;

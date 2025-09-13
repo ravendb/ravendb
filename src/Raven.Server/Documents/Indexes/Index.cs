@@ -2357,6 +2357,10 @@ namespace Raven.Server.Documents.Indexes
                                     entriesCount = writeOperation.Value.EntriesCount();
                                 }
 
+                                // at this point, we have completed storing all Lucene segment files,
+                                // so we can safely release the stream buffer.
+                                indexContext.Transaction.InnerTransaction.DisposeStreamBuffer();
+
                                 UpdateThreadAllocations(indexContext, null, null, IndexingWorkType.None);
                             }
 
