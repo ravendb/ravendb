@@ -4,17 +4,12 @@ using System.Diagnostics;
 using System.IO;
 using System.Runtime.InteropServices;
 using Sparrow;
-using Sparrow.Json;
-using Sparrow.LowMemory;
-using Sparrow.Platform;
 using Sparrow.Server.Utils;
-using Sparrow.Threading;
 using Voron.Data.Fixed;
 using Voron.Exceptions;
 using Voron.Global;
 using Voron.Impl;
 using Voron.Impl.Paging;
-using NativeMemory = Sparrow.Utils.NativeMemory;
 
 namespace Voron.Data.BTrees
 {
@@ -82,12 +77,12 @@ namespace Voron.Data.BTrees
 
             public void Write(Stream stream)
             {
-                using (var buffer = stream != Stream.Null ? StreamBufferAllocator.Instance.Rent() : StreamBufferAllocator.Buffer.Null)
                 {
                     AllocateNextPage();
 
                     ((StreamPageHeader*)_currentPage.Pointer)->StreamPageFlags |= StreamPageFlags.First;
 
+                    var buffer = stream != Stream.Null ? _parent.Llt.Transaction.StreamBuffer : StreamBufferAllocator.Buffer.Null;
                     var localBuffer = buffer.AsSpan();
 
                     {
@@ -516,81 +511,6 @@ namespace Voron.Data.BTrees
         {
             VoronUnrecoverableErrorException.Raise(_tx.LowLevelTransaction.Environment,
                 $"Stream size mismatch of '{name}' stream. Sum of chunks size is {totalChunksSize} while stream info has {info->TotalSize}");
-        }
-
-        private class StreamBufferAllocator : ILowMemoryHandler
-        {
-            public static StreamBufferAllocator Instance = new StreamBufferAllocator();
-
-            private readonly PerCoreContainer<Buffer> _buffers = new PerCoreContainer<Buffer>(8);
-            private readonly MultipleUseFlag _isExtremelyLowMemory = new MultipleUseFlag();
-
-            private static readonly int BufferSize = PlatformDetails.Is32Bits == false
-                ? 512 * Constants.Size.Kilobyte
-                : 16 * Constants.Size.Kilobyte;
-
-            private StreamBufferAllocator()
-            {
-                LowMemoryNotification.Instance.RegisterLowMemoryHandler(this);
-            }
-
-            public Buffer Rent()
-            {
-                if (_buffers.TryPull(out var buffer))
-                    return buffer;
-
-                var ptr = NativeMemory.AllocateMemory(BufferSize);
-                return new Buffer(ptr, BufferSize);
-            }
-
-            public void LowMemory(LowMemorySeverity lowMemorySeverity)
-            {
-                if (lowMemorySeverity != LowMemorySeverity.ExtremelyLow)
-                    return;
-
-                if (_isExtremelyLowMemory.Raise() == false)
-                    return;
-
-                foreach (var buffer in _buffers.EnumerateAndClear())
-                {
-                    buffer.Free();
-                }
-            }
-
-            public void LowMemoryOver()
-            {
-                _isExtremelyLowMemory.Lower();
-            }
-
-            public class Buffer : IDisposable
-            {
-                private readonly byte* _ptr;
-                private readonly long _size;
-
-                public byte* Pointer => _ptr;
-
-                public static readonly Buffer Null = new Buffer(null, 0);
-
-                public Span<byte> AsSpan() => new Span<byte>(_ptr, (int)_size);
-
-                public Buffer(byte* ptr, long size)
-                {
-                    _ptr = ptr;
-                    _size = size;
-                }
-
-                public void Free()
-                {
-                    NativeMemory.Free(_ptr, _size);
-                }
-
-                public void Dispose()
-                {
-                    if (_ptr != null && Instance._buffers.TryPush(this) == false)
-                        Free();
-
-                }
-            }
         }
     }
 
