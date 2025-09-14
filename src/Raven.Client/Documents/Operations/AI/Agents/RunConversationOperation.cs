@@ -24,7 +24,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
     private readonly string _conversationId;
     private readonly List<AiAgentActionResponse> _actionResponses;
     private readonly string _changeVector;
-    private readonly string _propertyToStream;
+    private readonly string _streamPropertyPath;
     private readonly Func<string, Task> _streamedChunksCallback;
 
     public RunConversationOperation(
@@ -44,13 +44,13 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         List<AiAgentActionResponse> actionResponses,
         AiConversationCreationOptions options,
         string changeVector,
-        string propertyToStream,
+        string streamPropertyPath,
         Func<string, Task> streamedChunksCallback)
     {
         ValidationMethods.AssertNotNullOrEmpty(agentId, nameof(agentId));
         ValidationMethods.AssertNotNullOrEmpty(conversationId, nameof(conversationId));
-        PortableExceptions.ThrowIfNot<InvalidOperationException>(propertyToStream is null == streamedChunksCallback is null,
-            "Both propertyToStream and streamedChunksCallback must be specified together");
+        PortableExceptions.ThrowIfNot<InvalidOperationException>(streamPropertyPath is null == streamedChunksCallback is null,
+            "Both streamPropertyPath and streamedChunksCallback must be specified together");
 
         _agentId = agentId;
         _conversationId = conversationId;
@@ -60,7 +60,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         _options = options;
 
 
-        _propertyToStream = propertyToStream;
+        _streamPropertyPath = streamPropertyPath;
         _streamedChunksCallback = streamedChunksCallback;
     }
 
@@ -78,7 +78,7 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
         {
             _conventions = conventions;
             _parent = parent;
-            if (parent._propertyToStream is not null)
+            if (parent._streamPropertyPath is not null)
             {
                 ResponseType = RavenCommandResponseType.Raw;
             }
@@ -99,8 +99,8 @@ public class RunConversationOperation<TSchema> : IMaintenanceOperation<Conversat
             if (_parent._changeVector != null)
                 url += $"&changeVector={Uri.EscapeDataString(_parent._changeVector)}";
 
-            if (_parent._propertyToStream is not null)
-                url += $"&streaming=true&propertyToStream={Uri.EscapeDataString(_parent._propertyToStream)}";
+            if (_parent._streamPropertyPath is not null)
+                url += $"&streaming=true&streamPropertyPath={Uri.EscapeDataString(_parent._streamPropertyPath)}";
 
             var body = new ConversionRequestBody
             {

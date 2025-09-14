@@ -156,18 +156,18 @@ internal class AiConversation : IAiConversationOperations
 
     public AiAnswer<TAnswer> Run<TAnswer>() => AsyncHelpers.RunSync(() => RunAsync<TAnswer>());
 
-    public Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> propertyToStream, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
+    public Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(Expression<Func<TAnswer, string>> streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
     {
         var pathProvider = new LinqPathProvider(_aiOperations._store.Conventions);
-        var pathResult = pathProvider.GetPath(propertyToStream.Body);
+        var pathResult = pathProvider.GetPath(streamPropertyPath.Body);
         return StreamAsync<TAnswer>(pathResult.Path, streamedChunksCallback, token);
     }
 
-    public async Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string propertyToStream, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
+    public async Task<AiAnswer<TAnswer>> StreamAsync<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
     {
         while (true)
         {
-            var r = await RunAsyncInternal<TAnswer>(propertyToStream, streamedChunksCallback, token).ConfigureAwait(false);
+            var r = await RunAsyncInternal<TAnswer>(streamPropertyPath, streamedChunksCallback, token).ConfigureAwait(false);
             if (await HandleServerReplyAsync(r, token).ConfigureAwait(false))
                 return r;
         }
@@ -177,7 +177,7 @@ internal class AiConversation : IAiConversationOperations
     {
         while (true)
         {
-            var r = await RunAsyncInternal<TAnswer>(propertyToStream: null, streamedChunksCallback: null, token).ConfigureAwait(false);
+            var r = await RunAsyncInternal<TAnswer>(streamPropertyPath: null, streamedChunksCallback: null, token).ConfigureAwait(false);
             if (await HandleServerReplyAsync(r, token).ConfigureAwait(false))
                 return r;
         }
@@ -220,7 +220,7 @@ internal class AiConversation : IAiConversationOperations
 
     public event Func<UnhandledActionEventArgs, Task> OnUnhandledAction;
     
-    private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(string propertyToStream, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
+    private async Task<AiAnswer<TAnswer>> RunAsyncInternal<TAnswer>(string streamPropertyPath, Func<string, Task> streamedChunksCallback, CancellationToken token = default)
     {
         if (
             // if this is null, it is the first time we call RunAsync, so we are going to the server to get the pending actions
@@ -234,7 +234,7 @@ internal class AiConversation : IAiConversationOperations
             };
         }
 
-        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _userPrompt, _actionResponses, _options, _changeVector, propertyToStream, streamedChunksCallback);
+        var op = new RunConversationOperation<TAnswer>(_agentId, _conversationId, _userPrompt, _actionResponses, _options, _changeVector, streamPropertyPath, streamedChunksCallback);
 
         try
         {
