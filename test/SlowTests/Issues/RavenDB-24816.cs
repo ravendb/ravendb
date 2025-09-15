@@ -230,6 +230,43 @@ public class RavenDB_24816 : EmbeddingsGenerationTestBase
             Assert.Contains("text.splitLines(text | [text], maxTokensPerLine) has to be called with 2 arguments", transformationError.Error);
         }
     }
+    
+    [RavenFact(RavenTestCategory.Ai)]
+    public void OverlapTokensShouldBeBackwardCompatible()
+    {
+        const string plainTextToChunk =
+            "this is a relatively long text that should produce multiple chunks because of the chunking configuration (max tokens per chunk)";
+        
+        string[] expectedChunks = [
+            "this is a relatively long text",
+            "that should produce multiple",
+            "chunks because of the chunking",
+            "configuration (max tokens per chunk)"
+        ];
+
+        var dto = new Dto { Name = plainTextToChunk };
+
+        using (var store = GetDocumentStore())
+        {
+            using (var session = store.OpenSession())
+            {
+                session.Store(dto);
+                session.SaveChanges();
+            }
+            
+            var aiTaskDone = Etl.WaitForEtlToComplete(store);
+            
+            var (configuration, connectionString) = AddEmbeddingsGenerationTask(store,
+                script: "embeddings.generate({ ChunkedName: text.splitParagraphs(this.Name, 10) });");
+
+            Assert.True(aiTaskDone.Wait(DefaultEtlTimeout));
+            var (queriesWorkerRegistered, indexingWorkerRegistered) = WaitForEmbeddingsGenerationWorkerToRegister(store, configuration);
+            Assert.True(queriesWorkerRegistered);
+            Assert.True(indexingWorkerRegistered);
+            
+            AssertEmbeddingsForPath(store, new EmbeddingsGenerationTaskIdentifier(configuration.Identifier), new AiConnectionStringIdentifier(connectionString.Identifier), "ChunkedName", expectedChunks, dto.Id);
+        }
+    }
 
     private class Dto
     {
