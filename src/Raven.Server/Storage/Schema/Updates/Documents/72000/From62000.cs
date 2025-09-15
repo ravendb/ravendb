@@ -1,15 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Runtime.InteropServices;
 using Raven.Server.Documents;
-using Raven.Server.Documents.Schemas;
 using Raven.Server.Json;
 using Raven.Server.ServerWide.Context;
 using Sparrow.Binary;
 using Sparrow.Platform;
 using Sparrow.Server;
+using Sparrow.Server.Utils;
 using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.Tables;
+using Voron.Impl;
 using Voron.Util;
 
 namespace Raven.Server.Storage.Schema.Updates.Documents
@@ -20,6 +23,12 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
         public int To => 72_000;
         public SchemaUpgrader.StorageType StorageType => SchemaUpgrader.StorageType.Documents;
 
+        private static readonly string AttachmentsMetadata = "AttachmentsMetadata";
+        private static readonly string Attachments = "Attachments";
+        private static readonly string AttachmentsEtag = "AttachmentsEtag";
+        private static readonly string AttachmentsHash = "AttachmentsHash";
+        private static readonly string AttachmentsFlagAndHash = "AttachmentsFlagAndHash";
+
         internal static int NumberOfAttachmentsToMigrateInSingleTransaction = PlatformDetails.Is32Bits ? 2048 : 32768;
 
         /*
@@ -28,77 +37,97 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
          */
         public bool Update(UpdateStep step)
         {
-            step.WriteTx.CreateTree(Attachments.AttachmentsFlagAndHashSlice, isIndexTree: true);
+            using var e = step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext ctx);
+            using var g = Slice.From(ctx.Allocator, AttachmentsEtag, out var attachmentsEtagSlice);
+            using var o = Slice.From(ctx.Allocator, AttachmentsHash, out var attachmentsHashSlice);
+            using var r = Slice.From(ctx.Allocator, AttachmentsFlagAndHash, out var attachmentsFlagAndHashSlice);
+
+            step.WriteTx.CreateTree(attachmentsFlagAndHashSlice, isIndexTree: true);
+
+            TableSchema attachmentsSchemaBase = new TableSchema();
+
+            attachmentsSchemaBase.DefineKey(new TableSchema.IndexDef
+            {
+                StartIndex = (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType,
+                Count = 1
+            });
+            attachmentsSchemaBase.DefineFixedSizeIndex(new TableSchema.FixedSizeKeyIndexDef
+            {
+                StartIndex = (int)AttachmentsTable.Etag,
+                Name = attachmentsEtagSlice
+            });
+            attachmentsSchemaBase.DefineIndex(new TableSchema.IndexDef
+            {
+                StartIndex = (int)AttachmentsTable.Hash,
+                Count = 1,
+                Name = attachmentsHashSlice
+            });
+
+            var dynamicIndex = new TableSchema.DynamicKeyIndexDef
+            {
+                GenerateKey = GenerateFlagAndHashForAttachments,
+                IsGlobal = true,
+                Name = attachmentsFlagAndHashSlice,
+                SupportDuplicateKeys = true
+            };
 
             var skip = 0L;
             var processed = 0L;
             var done = false;
 
-            var dynamicIndex = Attachments.AttachmentsSchemaBase.DynamicKeyIndexes[Attachments.AttachmentsFlagAndHashSlice];
-
-            // we need to remove the dynamic index so we can remove the old value for which we are missing an entry inside the dynamic index
-            Attachments.AttachmentsSchemaBase.DynamicKeyIndexes.Remove(Attachments.AttachmentsFlagAndHashSlice);
-
-            try
+            while (done == false)
             {
-                while (done == false)
+                using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
                 {
-                    using (step.DocumentsStorage.ContextPool.AllocateOperationContext(out DocumentsOperationContext context))
+                    context.TransactionMarkerOffset = (short)step.WriteTx.LowLevelTransaction.Id;
+                    var commit = false;
+                    var readTable = step.ReadTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata);
+                    if (readTable != null)
                     {
-                        context.TransactionMarkerOffset = (short)step.WriteTx.LowLevelTransaction.Id;
-                        var commit = false;
-                        var readTable = step.ReadTx.OpenTable(Attachments.AttachmentsSchemaBase, Attachments.AttachmentsMetadataSlice);
-                        if (readTable != null)
+                        var writeTable = step.WriteTx.OpenTable(attachmentsSchemaBase, AttachmentsMetadata);
+
+                        var streamsTree = step.ReadTx.ReadTree(Attachments);
+
+                        foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, skip))
                         {
-                            Table writeTable = step.WriteTx.OpenTable(Attachments.AttachmentsSchemaBase, Attachments.AttachmentsMetadataSlice);
-                            var streamsTree = step.ReadTx.ReadTree(Attachments.AttachmentsSlice);
-
-                            foreach (var read in readTable.SeekByPrimaryKey(Slices.BeforeAllKeys, skip))
+                            using (TableValueReaderUtil.CloneTableValueReader(context, read))
                             {
-                                using (TableValueReaderUtil.CloneTableValueReader(context, read))
+                                Attachment attachmentOld = TableValueToAttachmentOld(context, streamsTree, ref read.Reader, out var scope);
+
+                                using (scope)
+                                using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out var pkSlice))
                                 {
-                                    Attachment attachmentOld = TableValueToAttachmentOld(context, streamsTree, ref read.Reader, out var scope);
+                                    writeTable.DeleteByKey(pkSlice);
 
-                                    using (scope)
-                                    using (AttachmentOldToTableValue(context, writeTable, attachmentOld, out var tvb, out var pkSlice))
+                                    var id = writeTable.Insert(tvb);
+
+                                    using (dynamicIndex.GetValue(writeTable._tx, tvb, out Slice newVal))
                                     {
-                                        writeTable.DeleteByKey(pkSlice);
-
-                                        var id = writeTable.Insert(tvb);
-
-                                        using (dynamicIndex.GetValue(writeTable._tx, tvb, out Slice newVal))
-                                        {
-                                            var indexTree = writeTable.GetTree(dynamicIndex);
-                                            writeTable.AddValueToDynamicIndex(id, dynamicIndex, indexTree, newVal, TreeNodeFlags.Data);
-                                        }
+                                        var indexTree = writeTable.GetTree(dynamicIndex);
+                                        writeTable.AddValueToDynamicIndex(id, dynamicIndex, indexTree, newVal, TreeNodeFlags.Data);
                                     }
                                 }
-
-                                if (++processed >= NumberOfAttachmentsToMigrateInSingleTransaction)
-                                {
-                                    skip += processed;
-                                    processed = 0;
-                                    commit = true;
-                                    break;
-                                }
                             }
 
-                            if (commit)
+                            if (++processed >= NumberOfAttachmentsToMigrateInSingleTransaction)
                             {
-                                step.Commit(context);
-                                step.RenewTransactions();
-                                continue;
+                                skip += processed;
+                                processed = 0;
+                                commit = true;
+                                break;
                             }
-
-                            done = true;
                         }
+
+                        if (commit)
+                        {
+                            step.Commit(context);
+                            step.RenewTransactions();
+                            continue;
+                        }
+
+                        done = true;
                     }
                 }
-            }
-            finally
-            {
-                // now we add the populated dynamic index back
-                Attachments.AttachmentsSchemaBase.DynamicKeyIndexes.Add(Attachments.AttachmentsFlagAndHashSlice, dynamicIndex);
             }
 
             return true;
@@ -149,19 +178,55 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             var result = new Attachment
             {
                 StorageId = tvr.Id,
-                Key = DocumentsStorage.TableValueToString(context, (int)Attachments.AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr),
-                Etag = DocumentsStorage.TableValueToEtag((int)Attachments.AttachmentsTable.Etag, ref tvr),
-                ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)Attachments.AttachmentsTable.ChangeVector, ref tvr),
-                Name = DocumentsStorage.TableValueToId(context, (int)Attachments.AttachmentsTable.Name, ref tvr),
-                ContentType = DocumentsStorage.TableValueToId(context, (int)Attachments.AttachmentsTable.ContentType, ref tvr),
-                TransactionMarker = *(short*)tvr.Read((int)Attachments.AttachmentsTable.TransactionMarker, out int _)
+                Key = DocumentsStorage.TableValueToString(context, (int)AttachmentsTable.LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType, ref tvr),
+                Etag = DocumentsStorage.TableValueToEtag((int)AttachmentsTable.Etag, ref tvr),
+                ChangeVector = DocumentsStorage.TableValueToChangeVector(context, (int)AttachmentsTable.ChangeVector, ref tvr),
+                Name = DocumentsStorage.TableValueToId(context, (int)AttachmentsTable.Name, ref tvr),
+                ContentType = DocumentsStorage.TableValueToId(context, (int)AttachmentsTable.ContentType, ref tvr),
+                TransactionMarker = *(short*)tvr.Read((int)AttachmentsTable.TransactionMarker, out int _)
             };
 
-            scope = DocumentsStorage.TableValueToSlice(context, (int)Attachments.AttachmentsTable.Hash, ref tvr, out result.Base64Hash);
+            scope = DocumentsStorage.TableValueToSlice(context, (int)AttachmentsTable.Hash, ref tvr, out result.Base64Hash);
 
             result.Size = GetAttachmentStreamLength(tree, result.Base64Hash);
 
             return result;
+        }
+
+        [StorageIndexEntryKeyGenerator]
+        internal static unsafe ByteStringContext.Scope GenerateFlagAndHashForAttachments(Transaction tx, ref TableValueReader tvr, out Slice slice)
+        {
+            var hashPtr = tvr.Read((int)AttachmentsTable.Hash, out var hashSize);
+
+            var flags = *(int*)tvr.Read((int)AttachmentsTable.Flags, out var size);
+            Debug.Assert(size == sizeof(int));
+            var scope = tx.Allocator.Allocate(sizeof(int) + 1 + hashSize, out var buffer); // flag + record separator + hash
+
+            var span = new Span<byte>(buffer.Ptr, buffer.Length);
+            MemoryMarshal.AsBytes(new Span<int>(ref flags)).CopyTo(span);
+            buffer.Ptr[sizeof(int)] = SpecialChars.RecordSeparator;
+            new ReadOnlySpan<byte>(hashPtr, hashSize).CopyTo(span[(sizeof(int) + 1)..]);
+
+            slice = new Slice(buffer);
+            return scope;
+        }
+
+        internal enum AttachmentsTable
+        {
+            /* AND is a record separator.
+             * We are you using the record separator in order to avoid loading another files that has the same key prefix,
+                e.g. fitz(record-separator)profile.png and fitz0(record-separator)profile.png, without the record separator we would have to load also fitz0 and filter it. */
+            LowerDocumentIdAndLowerNameAndTypeAndHashAndContentType = 0,
+            Etag = 1,
+            Name = 2, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
+            ContentType = 3, // format of lazy string key is detailed in GetLowerIdSliceAndStorageKey
+            Hash = 4, // base64 hash
+            TransactionMarker = 5,
+            ChangeVector = 6,
+            Size = 7,
+            Flags = 8,
+            RetireAt = 9,
+            Identifier = 10,
         }
     }
 }
