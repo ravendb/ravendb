@@ -455,8 +455,8 @@ namespace Raven.Server
 
         private double CalculateDaysToRenewBeforeExpiration(X509Certificate2 serverCertificate)
         {
-            // 30% of the certificate lifetime
-            return Math.Floor((serverCertificate.NotAfter - serverCertificate.NotBefore).TotalDays * 0.3);
+            // % of the certificate lifetime
+            return Math.Floor((serverCertificate.NotAfter - serverCertificate.NotBefore).TotalDays * ServerStore.Configuration.Core.AcmeRenewalThresholdPercentage / 100.0);
         }
 
         private void OnServerCertificateChanged(object sender, EventArgs e)

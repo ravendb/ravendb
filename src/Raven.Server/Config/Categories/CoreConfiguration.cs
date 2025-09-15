@@ -84,7 +84,12 @@ namespace Raven.Server.Config.Categories
         [DefaultValue(null)]
         [ConfigurationEntry("LetsEncrypt.AcmeProfile", ConfigurationEntryScope.ServerWideOnly)]
         public string AcmeProfile { get; set; }
-        
+
+        [Description("The percentage of certificate lifetime remaining that triggers automatic renewal. For example, with the default 30%, a certificate valid for 90 days will be renewed when 27 days remain.")]
+        [DefaultValue(30)]
+        [ConfigurationEntry("AcmeRenewalThresholdPercentage", ConfigurationEntryScope.ServerWideOnly)]
+        public int AcmeRenewalThresholdPercentage { get; set; }
+
         [Description("Indicates if we should throw an exception if any index could not be opened")]
         [DefaultValue(false)]
         [ConfigurationEntry("ThrowIfAnyIndexCannotBeOpened", ConfigurationEntryScope.ServerWideOrPerDatabase)]
