@@ -25,14 +25,17 @@ public class ChunkingOptions : IDynamicJsonValueConvertible
         };
     }
 
-    public bool ValidateOverlapTokensProperty()
+    public bool Validate(string path, List<string> errors)
     {
+        if (MaxTokensPerChunk <= 0)
+            errors.Add($"Path '{path}': {nameof(MaxTokensPerChunk)} value has to be greater than 0.");
+        
         if (OverlapTokens < 0)
-            return false;
+            errors.Add($"Path '{path}': {nameof(OverlapTokens)} value cannot be negative.");
         
         if (OverlapTokens > 0 &&
             MethodsSupportingOverlapTokens.Contains(ChunkingMethod) == false)
-            return false;
+            errors.Add($"Path '{path}': {nameof(OverlapTokens)} option is only supported for the following chunking methods: {string.Join(", ", MethodsSupportingOverlapTokens)}.");
         
         return true;
     }

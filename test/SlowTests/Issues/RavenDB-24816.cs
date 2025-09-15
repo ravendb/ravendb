@@ -198,7 +198,7 @@ public class RavenDB_24816 : EmbeddingsGenerationTestBase
                     }
                 ]));
 
-            Assert.Contains("OverlapTokens option is only supported for the following chunking methods: MarkDownSplitParagraphs, PlainTextSplitParagraphs.", exception.Message);
+            Assert.Contains("Path 'Name': OverlapTokens option is only supported for the following chunking methods: MarkDownSplitParagraphs, PlainTextSplitParagraphs.", exception.Message);
         }
     }
     
