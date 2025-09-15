@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
@@ -50,7 +51,15 @@ namespace Raven.Server.Documents.TcpHandlers
             _connectedAt = DateTime.UtcNow;
 
             Id = Interlocked.Increment(ref _sequence);
+
+#if !RELEASE
+            _ctorStackTrace = new StackTrace();
+#endif
         }
+
+#if !RELEASE
+        private readonly StackTrace _ctorStackTrace;
+#endif
 
         public long Id { get; set; }
         public JsonContextPool ContextPool;
@@ -150,7 +159,7 @@ namespace Raven.Server.Documents.TcpHandlers
 #if !RELEASE
         ~TcpConnectionOptions()
         {
-            throw new LowMemoryException($"Detected a leak on TcpConnectionOptions ('{ToString()}') when running the finalizer.");
+            throw new LowMemoryException($"Detected a leak on TcpConnectionOptions ('{ToString()}') when running the finalizer. The instance was created at {_ctorStackTrace}");
         }
 #endif
 
