@@ -5,7 +5,6 @@
 using System;
 using System.Diagnostics;
 using System.IO;
-using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 
 namespace Raven.Client.Util;
@@ -17,11 +16,10 @@ internal static class CertificateHelper
 
     static CertificateHelper()
     {
-        AllowDuplicateAttributes = new Pkcs12LoaderLimits(Pkcs12LoaderLimits.Defaults);
-
-        var allowDuplicateAttributesProperty = AllowDuplicateAttributes.GetType().GetProperty(nameof(AllowDuplicateAttributes), BindingFlags.Instance | BindingFlags.NonPublic);
-        Debug.Assert(allowDuplicateAttributesProperty != null, $"{nameof(allowDuplicateAttributesProperty)} != null");
-        allowDuplicateAttributesProperty.SetValue(AllowDuplicateAttributes, true);
+        AllowDuplicateAttributes = new Pkcs12LoaderLimits(Pkcs12LoaderLimits.Defaults)
+        {
+            AllowDuplicateAttributes = true
+        };
     }
 #endif
 
