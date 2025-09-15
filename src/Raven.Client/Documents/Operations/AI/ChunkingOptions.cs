@@ -13,7 +13,7 @@ public class ChunkingOptions : IDynamicJsonValueConvertible
 
     public int OverlapTokens { get; set; } = 0;
 
-    public static readonly List<ChunkingMethod> MethodsSupportingOverlapTokens = [ChunkingMethod.MarkDownSplitParagraphs, ChunkingMethod.PlainTextSplitParagraphs];
+    internal static readonly HashSet<ChunkingMethod> MethodsSupportingOverlapTokens = [ChunkingMethod.MarkDownSplitParagraphs, ChunkingMethod.PlainTextSplitParagraphs];
 
     public DynamicJsonValue ToJson()
     {
@@ -25,8 +25,11 @@ public class ChunkingOptions : IDynamicJsonValueConvertible
         };
     }
 
-    public bool ValidateOptions()
+    public bool ValidateOverlapTokensProperty()
     {
+        if (OverlapTokens < 0)
+            return false;
+        
         if (OverlapTokens > 0 &&
             MethodsSupportingOverlapTokens.Contains(ChunkingMethod) == false)
             return false;

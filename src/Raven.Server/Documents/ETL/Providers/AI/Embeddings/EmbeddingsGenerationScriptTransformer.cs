@@ -271,10 +271,10 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
     
     private JsValue SplitMarkDownParagraphs(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "markdown.splitParagraphs(line | [line], maxTokensPerLine, overlapTokens)";
+        const string methodSignature = "markdown.splitParagraphs(line | [line], maxTokensPerLine, overlapTokens?)";
         
-        if (args.Length != 3)
-            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 3 arguments");
+        if (args.Length != 2 && args.Length != 3)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with either 2 or 3 arguments");
         
         return ChunkFunc(self, args, methodSignature, ChunkingMethod.MarkDownSplitParagraphs);
     }
@@ -301,10 +301,10 @@ internal sealed class EmbeddingsGenerationScriptTransformer : EtlTransformer<Emb
     
     private JsValue SplitPlainTextParagraphs(JsValue self, JsValue[] args)
     {
-        const string methodSignature = "text.splitParagraphs(line | [line], maxTokensPerLine, overlapTokens)";
+        const string methodSignature = "text.splitParagraphs(line | [line], maxTokensPerLine, overlapTokens?)";
         
-        if (args.Length != 3)
-            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with 3 arguments");
+        if (args.Length != 2 && args.Length != 3)
+            ThrowInvalidScriptMethodCall($"{methodSignature} has to be called with either 2 or 3 arguments");
         
         return ChunkFunc(self, args, methodSignature, ChunkingMethod.PlainTextSplitParagraphs);
     }

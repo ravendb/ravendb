@@ -106,7 +106,7 @@ public sealed class EmbeddingsGenerationConfiguration : AbstractAiIntegrationCon
             errors.Add($"Configuration must have either {nameof(EmbeddingsPathConfigurations)} or {nameof(EmbeddingsTransformation)} script specified");
         }
         
-        if (EmbeddingsPathConfigurations is not null && EmbeddingsPathConfigurations.Any(x => x.ChunkingOptions.ValidateOptions() == false))
+        if (EmbeddingsPathConfigurations is not null && EmbeddingsPathConfigurations.Any(x => x.ChunkingOptions.ValidateOverlapTokensProperty() == false))
             errors.Add($"{nameof(ChunkingOptions.OverlapTokens)} option is only supported for the following chunking methods: {string.Join(", ", ChunkingOptions.MethodsSupportingOverlapTokens)}.");
 
         if (EmbeddingsTransformation?.ValidateScript() == false)
