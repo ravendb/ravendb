@@ -214,7 +214,7 @@
                                     <div class="form-group flex-grow">
                                         <label class="control-label">Overlap Tokens</label>
                                         <div class="flex-grow">
-                                            <input type="number" class="form-control" placeholder="Default: 0" data-bind="value: overlapTokens, attr: { disabled: !canUseOverlapTokensForPathConfiguration() }"/>
+                                            <input type="number" class="form-control" placeholder="Default: 0" data-bind="value: pathConfigurationOverlapTokens, attr: { disabled: !canUseOverlapTokensForPathConfiguration() }"/>
                                         </div>
                                     </div>
                                 </div>
@@ -297,7 +297,7 @@
                                 <i class="icon-info text-info overlap-tokens"></i>
                             </label>
                             <div class="flex-grow">
-                                <input type="number" class="form-control" placeholder="Default: 0" data-bind="value: overlapTokens, attr: { disabled: !canUseOverlapTokensForTransformation() }"/>
+                                <input type="number" class="form-control" placeholder="Default: 0" data-bind="value: transformationOverlapTokens, attr: { disabled: !canUseOverlapTokensForTransformation() }"/>
                             </div>
                         </div>
                     </div>

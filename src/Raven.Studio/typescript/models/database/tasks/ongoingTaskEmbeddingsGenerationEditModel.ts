@@ -27,6 +27,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     pathConfigurationChunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>(defaultChunkingMethod);
     pathConfigurationChunkingMethodLabel: KnockoutComputed<string>;
     pathConfigurationPath = ko.observable<string>("");
+    pathConfigurationOverlapTokens = ko.observable<number>(null);
 
     overlapTokens = ko.observable<number>(null);
     canUseOverlapTokensForPathConfiguration: KnockoutComputed<boolean>;
@@ -43,6 +44,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     ];
     chunkingMethodLabel: KnockoutComputed<string>;
 
+    transformationOverlapTokens = ko.observable<number>(null);
     transformationChunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>(defaultChunkingMethod);
     transformationChunkingMethodLabel: KnockoutComputed<string>;
     transformationMaxTokensPerChunk = ko.observable<number>();
@@ -93,21 +95,31 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         this.initializeObservables();
         this.update(dto);
         this.initializeValidation();
-
-        this.pathConfigurationChunkingMethod.subscribe(this.resetOverlapTokensIfNotSupported);
-        this.transformationChunkingMethod.subscribe(this.resetOverlapTokensIfNotSupported);
-        this.chunkingMethod.subscribe(this.resetOverlapTokensIfNotSupported);
     }
 
-    private resetOverlapTokensIfNotSupported = (chunkingMethod: Raven.Client.Documents.Operations.AI.ChunkingMethod) => {
+    private resetOverlapTokensIfNotSupported = (chunkingMethod: Raven.Client.Documents.Operations.AI.ChunkingMethod, type?: "pathConfiguration" | "transformation" | "normal") => {
         if (chunkingMethod !== "PlainTextSplitParagraphs" && chunkingMethod !== "MarkDownSplitParagraphs") {
-            this.overlapTokens(null);
+            switch (type) {
+                case "transformation":
+                    this.transformationOverlapTokens(null);
+                    break;
+                case "pathConfiguration":
+                    this.pathConfigurationOverlapTokens(null);
+                    break;
+                default:
+                    this.overlapTokens(null);
+                    break;
+            }
         }
     }
     
     protected initializeObservables() {
         super.initializeObservables();
-        
+
+        this.pathConfigurationChunkingMethod.subscribe((newValue) => this.resetOverlapTokensIfNotSupported(newValue, "pathConfiguration"));
+        this.transformationChunkingMethod.subscribe((newValue) => this.resetOverlapTokensIfNotSupported(newValue, "transformation"));
+        this.chunkingMethod.subscribe(this.resetOverlapTokensIfNotSupported);
+
         this.maxTokensPerChunkDefaultValue = ko.pureComputed(() => {
             const connectionString = this.aiConnectionStrings().find(x => x.Name === this.connectionStringName());
             
@@ -164,6 +176,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             this.allowEtlOnNonEncryptedChannel,
             this.chunkingMethod,
             this.maxTokensPerChunk,
+            this.overlapTokens,
             this.quantizationType,
             this.embeddingsCacheExpiration,
             this.embeddingsCacheForQueryingExpiration,
@@ -262,7 +275,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         this.embeddingPathConfigurations.push({
             Path: this.pathConfigurationPath(),
             ChunkingOptions: {
-                OverlapTokens: this.overlapTokens() ?? 0,
+                OverlapTokens: this.pathConfigurationOverlapTokens() ?? 0,
                 ChunkingMethod: this.pathConfigurationChunkingMethod(),
                 MaxTokensPerChunk: this.pathConfigurationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue()
             }
@@ -270,6 +283,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         this.pathConfigurationPath("");
         this.pathConfigurationMaxTokensPerChunk(null);
         this.pathConfigurationChunkingMethod("PlainTextSplitLines");
+        this.pathConfigurationOverlapTokens(null);
     }
 
     removeEmbeddingsPathConfiguration(path: string): void {
@@ -299,6 +313,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             if (configuration.ChunkingOptionsForQuerying) {
                 this.chunkingMethod(configuration.ChunkingOptionsForQuerying.ChunkingMethod);
                 this.maxTokensPerChunk(configuration.ChunkingOptionsForQuerying.MaxTokensPerChunk);
+                this.overlapTokens(configuration.ChunkingOptionsForQuerying.OverlapTokens);
             }
             if (configuration.Quantization) {
                 this.quantizationType(configuration.Quantization);
@@ -322,6 +337,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             if (configuration.EmbeddingsTransformation?.ChunkingOptions) {
                 this.transformationChunkingMethod(configuration.EmbeddingsTransformation.ChunkingOptions.ChunkingMethod);
                 this.transformationMaxTokensPerChunk(configuration.EmbeddingsTransformation.ChunkingOptions.MaxTokensPerChunk);
+                this.transformationOverlapTokens(configuration.EmbeddingsTransformation.ChunkingOptions.OverlapTokens);
             }
 
             // Open the querying section if some value is different from the default
@@ -329,7 +345,8 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
                 configuration.EmbeddingsCacheForQueryingExpiration !== genUtils.formatAsTimeSpan(defaultEmbeddingsCacheForQueryingExpiration * 1000) ||
                 (configuration.ChunkingOptionsForQuerying && (
                     configuration.ChunkingOptionsForQuerying.MaxTokensPerChunk !== this.maxTokensPerChunkDefaultValue() ||
-                    configuration.ChunkingOptionsForQuerying.ChunkingMethod !== defaultChunkingMethod
+                    configuration.ChunkingOptionsForQuerying.ChunkingMethod !== defaultChunkingMethod ||
+                    (configuration.ChunkingOptionsForQuerying.OverlapTokens !== null && configuration.ChunkingOptionsForQuerying.OverlapTokens !== 0)
                 ))
             ) {
                 this.isQueryingOpen(true);
@@ -357,7 +374,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             },
             Quantization: this.quantizationType(),
             EmbeddingsTransformation: this.embeddingsSource() === "script" ? {
-                Script: this.script(), ChunkingOptions: { OverlapTokens: this.overlapTokens() ?? 0, MaxTokensPerChunk: this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(), ChunkingMethod: this.transformationChunkingMethod() }
+                Script: this.script(), ChunkingOptions: { OverlapTokens: this.transformationOverlapTokens() ?? 0, MaxTokensPerChunk: this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(), ChunkingMethod: this.transformationChunkingMethod() }
             } : null,
             EmbeddingsPathConfigurations: this.embeddingsSource() === "paths" ? this.embeddingPathConfigurations() : [],
             EmbeddingsCacheExpiration: genUtils.formatAsTimeSpan(this.embeddingsCacheExpiration() * 1000),
