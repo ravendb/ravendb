@@ -93,6 +93,16 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         this.initializeObservables();
         this.update(dto);
         this.initializeValidation();
+
+        this.pathConfigurationChunkingMethod.subscribe(this.resetOverlapTokensIfNotSupported);
+        this.transformationChunkingMethod.subscribe(this.resetOverlapTokensIfNotSupported);
+        this.chunkingMethod.subscribe(this.resetOverlapTokensIfNotSupported);
+    }
+
+    private resetOverlapTokensIfNotSupported = (chunkingMethod: Raven.Client.Documents.Operations.AI.ChunkingMethod) => {
+        if (chunkingMethod !== "PlainTextSplitParagraphs" && chunkingMethod !== "MarkDownSplitParagraphs") {
+            this.overlapTokens(null);
+        }
     }
     
     protected initializeObservables() {
