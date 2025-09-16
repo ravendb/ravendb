@@ -33,6 +33,9 @@ public class ChunkingOptions : IDynamicJsonValueConvertible
         if (OverlapTokens < 0)
             errors.Add($"Path '{path}': {nameof(OverlapTokens)} value cannot be negative.");
         
+        if (OverlapTokens > MaxTokensPerChunk)
+            errors.Add($"Path '{path}': {nameof(OverlapTokens)} cannot be greater than {nameof(MaxTokensPerChunk)}.");
+        
         if (OverlapTokens > 0 &&
             MethodsSupportingOverlapTokens.Contains(ChunkingMethod) == false)
             errors.Add($"Path '{path}': {nameof(OverlapTokens)} option is only supported for the following chunking methods: {string.Join(", ", MethodsSupportingOverlapTokens)}.");
