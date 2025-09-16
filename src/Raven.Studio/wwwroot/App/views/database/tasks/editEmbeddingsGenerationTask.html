@@ -245,7 +245,7 @@
                                                 <td data-bind="text: Path"></td>
                                                 <td data-bind="text: ChunkingOptions.ChunkingMethod"></td>
                                                 <td data-bind="text: ChunkingOptions.MaxTokensPerChunk"></td>
-                                                <td data-bind="text: ChunkingOptions.OverlapTokens"></td>
+                                                <td data-bind="text: ChunkingOptions.OverlapTokens ?? 0"></td>
                                                 <td class="actions">
                                                     <a title="Remove path" href="#" data-bind="click: $parent.removeEmbeddingsPathConfiguration.bind($parent, Path)"><i class="icon-trash"></i></a>
                                                 </td>
