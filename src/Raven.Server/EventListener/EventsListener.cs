@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Diagnostics.Tracing;
 using System.Linq;
 using System.Text;
+using Sparrow;
 
 namespace Raven.Server.EventListener;
 
@@ -14,6 +15,7 @@ public class EventsListener : AbstractEventListener
     private DotNetEventType _dotNetEventType;
 
     private readonly Dictionary<string, AllocationsHandler.AllocationInfo> _allocations = new();
+    private ulong _totalAllocated = 0;
     private readonly StringBuilder _sb = new();
 
     private Stopwatch _stopwatchSinceLastAllocation;
@@ -52,12 +54,14 @@ public class EventsListener : AbstractEventListener
                 allocation.NumberOfLargeObjectAllocations += e.NumberOfLargeObjectAllocations;
             }
 
+            _totalAllocated += e.SmallObjectAllocations + e.LargeObjectAllocations;
+
             if (_stopwatchSinceLastAllocation.ElapsedMilliseconds >= _allocationsLoggingIntervalInMs)
             {
                 var count = _allocationsLoggingCount;
                 _sb.Clear();
 
-                _sb.Append($"Top {_allocationsLoggingCount} allocations for the past {_allocationsLoggingIntervalInMs:#,#;;0}ms: ");
+                _sb.Append($"Top {_allocationsLoggingCount} allocations for the past {_allocationsLoggingIntervalInMs:#,#;;0}ms: (total allocated: {new Size((long)_totalAllocated, SizeUnit.Bytes)}): ");
                 _sb.AppendLine();
 
                 var first = true;
@@ -77,6 +81,7 @@ public class EventsListener : AbstractEventListener
                 onEvent.Invoke(_internalEvent);
                 _stopwatchSinceLastAllocation.Restart();
                 _allocations.Clear();
+                _totalAllocated = 0;
             }
         };
     }
@@ -136,6 +141,7 @@ public class EventsListener : AbstractEventListener
         if (eventTypes.Contains(EventType.Allocations) == false)
         {
             _allocations.Clear();
+            _totalAllocated = 0;
             _stopwatchSinceLastAllocation = null;
         }
 
