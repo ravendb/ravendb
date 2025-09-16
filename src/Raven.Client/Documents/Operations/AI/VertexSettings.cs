@@ -42,6 +42,12 @@ public sealed class VertexSettings : AbstractAiSettings
         
         if (string.IsNullOrWhiteSpace(ApiKey))
             errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty.");
+        
+        if (string.IsNullOrWhiteSpace(Location))
+            errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty.");
+        
+        if (string.IsNullOrWhiteSpace(ProjectId))
+            errors.Add($"Value of `{nameof(ProjectId)}` field cannot be empty.");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)
