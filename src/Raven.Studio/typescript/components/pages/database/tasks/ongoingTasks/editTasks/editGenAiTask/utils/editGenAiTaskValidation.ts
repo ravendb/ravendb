@@ -9,7 +9,7 @@ const attachmentsSchema = yup.array().of(
         Name: yup.string(),
         Source: yup.string<Raven.Server.Documents.ETL.Providers.AI.AiAttachmentSource>(),
         Type: yup.string(),
-    })
+    }).nullable()
 );
 
 export const editGenAiTaskSchema = yup.object({

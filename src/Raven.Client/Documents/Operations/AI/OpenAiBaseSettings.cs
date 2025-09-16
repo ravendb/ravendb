@@ -1,10 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Sparrow.Extensions;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
 
-public abstract class OpenAiBaseSettings : AbstractAiSettings
+public abstract class OpenAiBaseSettings : AbstractAiSettings, IAiSettings
 {
     protected OpenAiBaseSettings(string apiKey, string endpoint, string model, int? dimensions = null, double? temperature = null)
 
@@ -30,6 +31,15 @@ public abstract class OpenAiBaseSettings : AbstractAiSettings
     /// The service endpoint that the client will send requests to.
     /// </summary>
     public string Endpoint { get; set; }
+
+    public virtual Uri GetBaseEndpointUri()
+    {
+        var endpoint = Endpoint;
+        if (endpoint.EndsWith("/") == false)
+            endpoint += "/";
+
+        return new Uri(endpoint);
+    }
 
     /// <summary>
     /// The model that should be used.

@@ -20,7 +20,7 @@ namespace Raven.Server.Utils
             var wait = _semaphore.WaitAsync();
             return wait.IsCompleted ?
                         _releaser :
-                        wait.ContinueWith((_, state) => (IDisposable)state,
+                        wait.ContinueWith(static (_, state) => (IDisposable)state,
                             _releaser.Result, CancellationToken.None,
             TaskContinuationOptions.ExecuteSynchronously, TaskScheduler.Default);
         }

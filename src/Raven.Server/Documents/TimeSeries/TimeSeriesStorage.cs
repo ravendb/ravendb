@@ -605,7 +605,7 @@ namespace Raven.Server.Documents.TimeSeries
 
             // delete segments, stats and roll-ups
             var table = GetOrCreateTimeSeriesTable(context.Transaction.InnerTransaction, collection);
-            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice documentKeyPrefix, SpecialChars.RecordSeparator))
             {
                 table.DeleteByPrimaryKeyPrefix(documentKeyPrefix);
                 Stats.DeleteByPrimaryKeyPrefix(context, collection, documentKeyPrefix);
@@ -1550,6 +1550,12 @@ namespace Raven.Server.Documents.TimeSeries
                         throw new InvalidDataException($"The entries of '{Name}' incremental time-series for document '{DocumentId}' must be sorted by their timestamps. " +
                                                        $"Got: current '{_current.Timestamp:O}'.");
 
+                    if (_current.Status == TimeSeriesValuesSegment.Dead || _next.Status == TimeSeriesValuesSegment.Dead)
+                    {
+                        // dead values doesn't have tags, so we let the caller handle this
+                        break;
+                    }
+
                     if (_current.Timestamp == _next.Timestamp)
                     {
                         var tagCompare = _current.Tag.CompareTo(_next.Tag);
@@ -1588,11 +1594,8 @@ namespace Raven.Server.Documents.TimeSeries
 
             private void AssertTag(SingleResult next)
             {
-                if (FromReplication)
-                {
-                    if (next.Status == TimeSeriesValuesSegment.Dead)
-                        return;
-                }
+                if (next.Status == TimeSeriesValuesSegment.Dead)
+                    return;
 
                 if (next.Tag?.Length != _tagLength)
                     throw new InvalidDataException($"Tag of '{Name}' time-series for document '{DocumentId}' are illegal (Tag:{next.Tag})");
@@ -2422,7 +2425,7 @@ namespace Raven.Server.Documents.TimeSeries
         public IEnumerable<TimeSeriesDeletedRangeItem> GetDeletedRangesForDoc(DocumentsOperationContext context, string docId)
         {
             var table = new Table(DeleteRangesSchema, context.Transaction.InnerTransaction);
-            using var dispose = DocumentIdWorker.GetSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator);
+            using var dispose = DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out var documentKeyPrefix, SpecialChars.RecordSeparator);
             // ReSharper disable once LoopCanBeConvertedToQuery
             foreach ((_, Table.TableValueHolder tvh) in table.SeekByPrimaryKeyPrefix(documentKeyPrefix, Slices.Empty, 0))
             {

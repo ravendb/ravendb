@@ -23,7 +23,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         public async Task SessionLoadWithIncludeAllTimeSeriesByRange()
         {
-            var baseTime = new DateTime(year: 2024, month: 1, day: 1, hour: 1, minute: 30, second: 0);
+            var baseTime = new DateTime(year: 2024, month: 1, day: 1, hour: 1, minute: 30, second: 0, kind: DateTimeKind.Utc);
 
             using var store = GetDocumentStore();
             var db = await Databases.GetDocumentDatabaseInstanceFor(store);
@@ -147,7 +147,7 @@ namespace SlowTests.Issues
         [RavenFact(RavenTestCategory.Indexes | RavenTestCategory.TimeSeries | RavenTestCategory.Querying)]
         public async Task SessionLoadWithIncludeAllTimeSeriesByRangeWithMultipleDocs()
         {
-            var baseTime = new DateTime(year: 2024, month: 1, day: 1, hour: 1, minute: 30, second: 0);
+            var baseTime = new DateTime(year: 2024, month: 1, day: 1, hour: 1, minute: 30, second: 0, kind: DateTimeKind.Utc);
 
             using var store = GetDocumentStore();
             var db = await Databases.GetDocumentDatabaseInstanceFor(store);

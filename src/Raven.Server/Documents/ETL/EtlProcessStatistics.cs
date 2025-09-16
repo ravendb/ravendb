@@ -17,6 +17,11 @@ namespace Raven.Server.Documents.ETL
 
         private bool _preventFromAddingAlertsToNotificationCenter;
 
+        public EtlProcessStatistics()
+        {
+            // for deserialization
+        }
+        
         public EtlProcessStatistics(string processTag, string processName, DatabaseNotificationCenter notificationCenter)
         {
             _processTag = processTag;

@@ -209,7 +209,7 @@ var ai = new AI();
                         var data = string.Empty;
                         string type = attachmentObj.GetOwnProperty(AttachmentsRequestConstants.Type).Value.AsString();
                         string filename = "unknown.name";
-                        var source = AiAttachmentSource.FromDatabase;
+                        var source = AiAttachmentSource.FromAttachment;
 
                         // TODO: we aren't being really efficient here in terms of allocations / memory
                         // but the problem is that the API itself may require large BASE64 strings, annoying 
@@ -228,7 +228,7 @@ var ai = new AI();
                         else
                         {
                             //if we arrive here we probably didn't pass through loadAttachment() function
-                            source = AiAttachmentSource.FromUser;
+                            source = AiAttachmentSource.FromScript;
                             data = reference.ToString();
                             if (type != AttachmentsRequestConstants.MediaTypeTextPlain && IsBase64(data) == false)
                                 throw new InvalidOperationException($"Attachment must be loaded or base64 string (on type {type})");

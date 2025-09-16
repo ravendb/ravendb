@@ -67,7 +67,7 @@ public sealed class ClusterTransactionMergedCommand : TransactionMergedCommand
                                 if (cmd.FromBackup is not BackupKind.Full)
                                 {
                                     // delete the document to avoid exception if we put new document in a different collection.
-                                    using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
+                                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, cmd.Id, out Slice lowerId))
                                     {
                                         Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, expectedChangeVector: null,
                                             nonPersistentFlags: NonPersistentDocumentFlags.SkipRevisionCreation);
@@ -121,7 +121,7 @@ public sealed class ClusterTransactionMergedCommand : TransactionMergedCommand
                         case CommandType.DELETE:
                             if (current < count)
                             {
-                                using (DocumentIdWorker.GetSliceFromId(context, cmd.Id, out Slice lowerId))
+                                using (DocumentIdWorker.GetLoweredIdSliceFromId(context, cmd.Id, out Slice lowerId))
                                 {
                                     var deleteResult = Database.DocumentsStorage.Delete(context, lowerId, cmd.Id, null, changeVector: context.GetChangeVector(changeVector),
                                         newFlags: DocumentFlags.FromClusterTransaction);

@@ -13,6 +13,7 @@ import EditGenAiTaskInfoHub from "../../EditGenAiTaskInfoHub";
 import EditGenAiTaskCancelButton from "../EditGenAiTaskCancelButton";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { aiConnectionStringUtils } from "components/pages/database/settings/connectionStrings/editForms/aiConnectionStringUtils";
 
 export function EditGenAiTaskStepBasic() {
     const hasGenAi = useAppSelector(licenseSelectors.statusValue("HasGenAi"));
@@ -62,9 +63,9 @@ export function EditGenAiTaskStepBasicFooter() {
         dispatch(
             editGenAiTaskActions.testConnectionString({
                 databaseName,
-                connectorType: getConnectorType(connectionString),
+                connectorType: aiConnectionStringUtils.getConnectorType(connectionString),
                 modelType: connectionString.ModelType,
-                settings: mapAiConnectionStringToSettingsDto(connectionString),
+                settings: aiConnectionStringUtils.mapAiConnectionStringToSettingsDto(connectionString),
             })
         );
     };
@@ -111,52 +112,4 @@ export function EditGenAiTaskStepBasicFooter() {
             )}
         </div>
     );
-}
-
-const getConnectorType = (
-    connection: Raven.Client.Documents.Operations.AI.AiConnectionString
-): Raven.Client.Documents.Operations.AI.AiConnectorType => {
-    if (connection.AzureOpenAiSettings) {
-        return "AzureOpenAi";
-    }
-    if (connection.GoogleSettings) {
-        return "Google";
-    }
-    if (connection.HuggingFaceSettings) {
-        return "HuggingFace";
-    }
-    if (connection.OllamaSettings) {
-        return "Ollama";
-    }
-    if (connection.EmbeddedSettings) {
-        return "Embedded";
-    }
-    if (connection.OpenAiSettings) {
-        return "OpenAi";
-    }
-    if (connection.MistralAiSettings) {
-        return "MistralAi";
-    }
-
-    throw new Error("No connector type found. Please check the connection string.");
-};
-
-export function mapAiConnectionStringToSettingsDto(
-    connection: Raven.Client.Documents.Operations.AI.AiConnectionString
-): AiConnectionStringsSettings {
-    const settings = [
-        connection.AzureOpenAiSettings,
-        connection.GoogleSettings,
-        connection.HuggingFaceSettings,
-        connection.OllamaSettings,
-        connection.EmbeddedSettings,
-        connection.OpenAiSettings,
-        connection.MistralAiSettings,
-    ].find(Boolean);
-
-    if (!settings) {
-        throw new Error("No settings found. Please check the connection string.");
-    }
-
-    return settings;
 }

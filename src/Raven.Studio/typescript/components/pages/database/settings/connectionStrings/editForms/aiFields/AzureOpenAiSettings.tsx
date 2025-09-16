@@ -17,6 +17,7 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
 import { SelectOption } from "components/common/select/Select";
+import TemperatureField from "./TemperatureField";
 
 export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
     const { control, trigger } = useFormContext<ConnectionFormData<AiConnection>>();
@@ -37,6 +38,9 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
             Model: formValues.azureOpenAiSettings.model,
             DeploymentName: formValues.azureOpenAiSettings.deploymentName,
             Dimensions: formValues.azureOpenAiSettings.dimensions,
+            Temperature: formValues.azureOpenAiSettings.isSetTemperature
+                ? formValues.azureOpenAiSettings.temperature
+                : null,
         });
     });
 
@@ -149,6 +153,7 @@ export default function AzureOpenAiSettings({ isUsedByAnyTask }: { isUsedByAnyTa
                     />
                 </div>
             )}
+            <TemperatureField baseName="azureOpenAiSettings" />
             {formValues.modelType === "TextEmbeddings" && (
                 <EmbeddingsMaxConcurrentBatches baseName="azureOpenAiSettings" />
             )}

@@ -346,8 +346,8 @@ namespace SlowTests.Server.Documents.AI.AiAgent
 
             internal static TestResult<TSchema> Convert(BlittableJsonReaderObject response, DocumentConventions conventions)
             {
-                response.TryGet(nameof(Usage), out BlittableJsonReaderObject usage);
-                response.TryGet(nameof(Response), out BlittableJsonReaderObject result);
+                response.TryGet(nameof(ConversationResult<object>.TotalUsage), out BlittableJsonReaderObject usage);
+                response.TryGet(nameof(ConversationResult<object>.Response), out BlittableJsonReaderObject result);
                 response.TryGet(nameof(Document), out BlittableJsonReaderObject document);
 
                 List<AiAgentActionRequest> requests = null;

@@ -45,7 +45,7 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 _conversation.LinkedConversations.Add(putHistoryResult.Id);
             }
 
-            _conversationDoc = _conversation.ToBlittable(context, _configuration);
+            _conversationDoc = _conversation.ToBlittable(context);
             var putResult = _database.DocumentsStorage.Put(context, _id, _expectedChangeVector, _conversationDoc);
             PutResult = (putResult, putHistoryResult);
 

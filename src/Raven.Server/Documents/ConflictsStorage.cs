@@ -359,7 +359,7 @@ namespace Raven.Server.Documents
             if (ConflictsCount == 0)
                 return false;
 
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
             using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
             {
                 var conflictsTable = context.Transaction.InnerTransaction.OpenTable(ConflictsSchema, ConflictsSlice);
@@ -376,7 +376,7 @@ namespace Raven.Server.Documents
             if (ConflictsCount == 0)
                 return ImmutableAppendOnlyList<DocumentConflict>.Empty;
 
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
             using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
             {
                 return GetConflictsFor(context, prefixSlice);
@@ -726,7 +726,7 @@ namespace Raven.Server.Documents
         public string GetCollection(DocumentsOperationContext context, string id)
         {
             LazyStringValue collection = null;
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
             using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
             {
                 foreach (var conflict in GetConflictsFor(context, prefixSlice))
@@ -747,7 +747,7 @@ namespace Raven.Server.Documents
 
         public string GetFirstOrNullCollection(DocumentsOperationContext context, string id)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice lowerId))
             using (GetConflictsIdPrefix(context, lowerId, out Slice prefixSlice))
             {
                 foreach (var conflict in GetConflictsFor(context, prefixSlice))

@@ -7,6 +7,7 @@ using Raven.Client.Http;
 using Raven.Client.Json;
 using Sparrow.Json;
 using Sparrow.Logging;
+using Raven.Client.Json.Serialization;
 
 namespace Raven.Client.Documents.Subscriptions;
 
@@ -85,6 +86,7 @@ public abstract class SubscriptionBatchBase<T>
     protected List<BlittableJsonReaderObject> _includes;
     protected List<(BlittableJsonReaderObject Includes, Dictionary<string, string[]> IncludedCounterNames)> _counterIncludes;
     protected List<BlittableJsonReaderObject> _timeSeriesIncludes;
+    internal ISubscriptionsBlittableJsonConverter _converter;
 
     protected SubscriptionBatchBase(RequestExecutor requestExecutor, string dbName, IRavenLogger logger)
     {
@@ -130,7 +132,7 @@ public abstract class SubscriptionBatchBase<T>
                 {
                     try
                     {
-                        instance = _requestExecutor.Conventions.Serialization.DefaultConverter.FromBlittable<T>(curDoc, id);
+                        instance = _converter.FromBlittable<T>(curDoc, id);
                     }
                     catch (InvalidOperationException e)
                     {

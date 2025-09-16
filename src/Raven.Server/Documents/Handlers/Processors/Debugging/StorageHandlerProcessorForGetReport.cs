@@ -27,11 +27,11 @@ namespace Raven.Server.Documents.Handlers.Processors.Debugging
                 {
                     writer.WriteStartObject();
 
-                    writer.WritePropertyName("BasePath");
+                    writer.WritePropertyName(nameof(EnvironmentStorageReport.BasePath));
                     writer.WriteString(RequestHandler.Database.Configuration.Core.DataDirectory.FullPath);
                     writer.WriteComma();
 
-                    writer.WritePropertyName("Results");
+                    writer.WritePropertyName(nameof(EnvironmentStorageReport.Results));
                     writer.WriteStartArray();
                     var first = true;
                     foreach (var env in RequestHandler.Database.GetAllStoragesEnvironment())
@@ -43,16 +43,16 @@ namespace Raven.Server.Documents.Handlers.Processors.Debugging
 
                         writer.WriteStartObject();
 
-                        writer.WritePropertyName("Name");
+                        writer.WritePropertyName(nameof(DatabaseStorageComponentReport.Name));
                         writer.WriteString(env.Name);
                         writer.WriteComma();
 
-                        writer.WritePropertyName("Type");
+                        writer.WritePropertyName(nameof(DatabaseStorageComponentReport.Type));
                         writer.WriteString(env.Type.ToString());
                         writer.WriteComma();
 
                         var djv = (DynamicJsonValue)TypeConverter.ToBlittableSupportedType(GetReport(env));
-                        writer.WritePropertyName("Report");
+                        writer.WritePropertyName(nameof(DatabaseStorageComponentReport.Report));
                         writer.WriteObject(context.ReadObject(djv, env.Name));
 
                         writer.WriteEndObject();

@@ -231,7 +231,7 @@ public class CountersRepairTask
         {
             var table = new Table(_database.DocumentsStorage.CountersStorage.CountersSchema, context.Transaction.InnerTransaction);
 
-            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice key, separator: SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice key, separator: SpecialChars.RecordSeparator))
             {
                 foreach (var result in table.SeekByPrimaryKeyPrefix(key, Slices.Empty, 0))
                 {
@@ -406,7 +406,7 @@ public class CountersRepairTask
 
         public unsafe Slice GetStartAfterSlice(DocumentsOperationContext context)
         {
-            _toDispose.Add(DocumentIdWorker.GetSliceFromId(context, _docId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator));
+            _toDispose.Add(DocumentIdWorker.GetLoweredIdSliceFromId(context, _docId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator));
             _toDispose.Add(context.Allocator.Allocate(documentKeyPrefix.Size + sizeof(long), out var startAfterBuffer));
             _toDispose.Add(Slice.External(context.Allocator, startAfterBuffer.Ptr, startAfterBuffer.Length, out var startAfter));
 

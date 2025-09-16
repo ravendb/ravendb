@@ -58,6 +58,19 @@ namespace Voron.Impl
         private LowLevelTransaction _lowLevelTransaction;
         private Dictionary<Tuple<Tree, Slice>, Tree> _multiValueTrees;
         private Dictionary<long, ByteString> _cachedDecompressedBuffersByStorageId;
+        
+        private StreamBufferAllocator.Buffer _streamBuffer;
+
+        public StreamBufferAllocator.Buffer StreamBuffer
+        {
+            get
+            {
+                if (_streamBuffer != null)
+                    return _streamBuffer;
+
+                return _streamBuffer = StreamBufferAllocator.Instance.Rent();
+            }
+        }
 
         public Transaction(LowLevelTransaction lowLevelTransaction)
         {
@@ -525,8 +538,16 @@ namespace Voron.Impl
             return tree;
         }
         
+        public void DisposeStreamBuffer()
+        {
+            _streamBuffer?.Dispose();
+            _streamBuffer = null;
+        }
+
         public void Dispose()
         {
+            DisposeStreamBuffer();
+
             _lowLevelTransaction?.Dispose();
             _lowLevelTransaction = null;
         }

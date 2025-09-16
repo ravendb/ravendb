@@ -8,6 +8,7 @@ using Raven.Client.Documents.Session;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal;
 using Raven.Client.Json.Serialization.NewtonsoftJson.Internal.Converters;
 using Sparrow.Json;
+using Raven.Client.Documents.Subscriptions;
 
 namespace Raven.Client.Json.Serialization.NewtonsoftJson
 {
@@ -115,6 +116,11 @@ namespace Raven.Client.Json.Serialization.NewtonsoftJson
                 Conventions?.AssertNotFrozen();
                 _ignoreUnsafeMembers = value;
             }
+        }
+
+        public ISubscriptionsBlittableJsonConverter CreateConverter<T>(SubscriptionBatch<T> batch)
+        {
+            return new SubscriptionBlittableJsonConverter(this);
         }
 
         ISessionBlittableJsonConverter ISerializationConventions.CreateConverter(InMemoryDocumentSessionOperations session)

@@ -139,6 +139,8 @@ export interface AiConnection extends ConnectionBase {
         deploymentName?: string;
         dimensions?: number;
         embeddingsMaxConcurrentBatches?: number;
+        isSetTemperature?: boolean;
+        temperature?: number;
     };
     googleSettings?: {
         aiVersion?: Raven.Client.Documents.Operations.AI.GoogleAIVersion;
@@ -172,6 +174,8 @@ export interface AiConnection extends ConnectionBase {
         projectId?: string;
         dimensions?: number;
         embeddingsMaxConcurrentBatches?: number;
+        isSetTemperature?: boolean;
+        temperature?: number;
     };
     mistralAiSettings?: {
         apiKey?: string;

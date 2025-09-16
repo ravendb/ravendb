@@ -12,6 +12,7 @@ using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Operations.Backups;
 using Raven.Client.Documents.Operations.ETL;
 using Raven.Client.Documents.Operations.ETL.OLAP;
+using Raven.Client.Exceptions.Database;
 using Raven.Client.ServerWide.Operations;
 using Raven.Server.Documents;
 using Raven.Server.Documents.ETL;
@@ -287,15 +288,9 @@ loadToOrders(partitionBy(key), o);
                 {
                     return await Databases.GetDocumentDatabaseInstanceFor(store);
                 }
-                catch (AggregateException e)
+                catch (DatabaseDisabledException)
                 {
-                    if (e.Message.Contains($"The database '{store.Database}' has been unloaded and locked"))
-                    {
-                        await Task.Delay(10);
-                        continue;
-                    }
-
-                    throw;
+                    await Task.Delay(10);
                 }
             }
 
