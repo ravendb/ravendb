@@ -152,7 +152,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        internal sealed class PingResult : IDynamicJsonValueConvertible
+        public sealed class PingResult : IDynamicJsonValueConvertible
         {
             public string Url;
             public SetupAliveInfo SetupAlive;
@@ -185,7 +185,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        internal sealed class SetupAliveInfo : IDynamicJson
+        public sealed class SetupAliveInfo : IDynamicJson
         {
             public long Time;
             public string Error;
@@ -202,7 +202,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
-        internal sealed class TcpInfo : IDynamicJson
+        public sealed class TcpInfo : IDynamicJson
         {
             public long TcpInfoTime;
             public long SendTime;

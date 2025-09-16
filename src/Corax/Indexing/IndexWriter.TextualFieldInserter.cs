@@ -1,5 +1,6 @@
-﻿using System;
+using System;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using Corax.Utils;
@@ -11,6 +12,7 @@ using Voron;
 using Voron.Data.BTrees;
 using Voron.Data.CompactTrees;
 using Voron.Data.Containers;
+using Voron.Data.Lookups;
 using Voron.Data.PostingLists;
 using Voron.Util;
 
@@ -28,7 +30,8 @@ public unsafe partial class IndexWriter
 
         private IndexTermDumper _dumper;
         private NativeList<TermInEntryModification> _entriesForTerm;
-        private ContextBoundNativeList<long> _pagesToPrefetch;
+        private ContextBoundNativeList<long> _postingListPagesProcessingBuffer;
+        private ContextBoundNativeList<LookupTreeOperationJob> _jobs;
 
         /// <summary>
         /// Terms are lazily initialized on disk, and we obtain the real address after processing EntriesModification.
@@ -50,7 +53,8 @@ public unsafe partial class IndexWriter
             _fieldTree.InitializeStateForTryGetNextValue();
             _entriesForTerm = new NativeList<TermInEntryModification>();
             _entriesForTerm.Initialize(_writer._entriesAllocator);
-            _pagesToPrefetch = new ContextBoundNativeList<long>(_writer._entriesAllocator);
+            _postingListPagesProcessingBuffer = new (_writer._entriesAllocator);
+            _jobs = new(writer._entriesAllocator);
             _buffers = _writer._textualFieldBuffers ??= new FieldBuffers<Slice, CompactTree.CompactKeyLookup>(_writer);
 
             if (indexedField.FieldSupportsPhraseQuery)
@@ -66,7 +70,7 @@ public unsafe partial class IndexWriter
         {
             _dumper.Dispose();
             _entriesForTerm.Dispose(_writer._entriesAllocator);
-            _pagesToPrefetch.Dispose();
+            _postingListPagesProcessingBuffer.Dispose();
         }
 
         public void InsertTextualField(in CancellationToken token)
@@ -106,7 +110,7 @@ public unsafe partial class IndexWriter
                     sortedTerms,
                     termsOffsets,
                     out var keys,
-                    out var postListIds,
+                    out var postingListIds,
                     out var pageOffsets);
 
                 var entriesOffsets = termsOffsets; // a copy that we trim internally in the loop belows
@@ -115,41 +119,37 @@ public unsafe partial class IndexWriter
                     var treeChanged = _fieldTree.CheckTreeStructureChanges();
 
                     _offsetAdjustment = 0;
-                    int read = _fieldTree.BulkUpdateStart(keys, postListIds, pageOffsets, out _curPage);
-
-                    FieldInserterHelper.PrefetchContainerPages(_writer, ref _pagesToPrefetch, postListIds[..read]);
+                    int read = _fieldTree.BulkUpdateStart(keys, postingListIds, pageOffsets, out _curPage);
+                    _jobs.ResetAndEnsureCapacity(read);
+                    _jobs.Count = read;
+                    _postingListPagesProcessingBuffer.ResetAndEnsureCapacity(read);
+                    FieldInserterHelper.PrefetchPostingListsPagesAndPrepareOrderedPostingListProcessingList(_writer, ref _postingListPagesProcessingBuffer, postingListIds[..read]);
 
                     int idx = 0;
                     for (; idx < read; idx++)
                     {
-                        ref var entries = ref _indexedField.Storage.GetAsRef(entriesOffsets[idx]);
-                        totalLengthOfTerm += ProcessSingleEntry(ref entries, ref keys[idx], isNullTerm: false,
-                            sortedTerms[idx], postListIds[idx],
-                            keys[idx].ContainerId, pageOffsets[idx], entriesOffsets[idx]);
-
-                        // if the tree structure changed, the bulk insert details are wrong
-                        // and will need to restart the operation with a new BulkUpdateStart
-                        if (treeChanged.Changed)
-                        {
-                            // next time, we start from the _next_ key, not the current one
-                            idx++;
-                            for (int j = idx; j < read; j++)
-                            {
-                                // Reset the known container id, since we modified the tree structure.
-                                // The issue is that we may have a term id that was remembered by a separator key
-                                // and we'll lose that after a page merge, so we'll have a reference to a deleted key
-                                // see: RavenDB-21272
-                                keys[j].ContainerId = Container.InvalidId;
-                            }
-
-                            break;
-                        }
-
+                        //We will process the containers by page ID, keeping in mind that a page can contain multiple entries.
+                        //The posting lists will be processed in page order; however, the lookup tree will be updated in term order.
+                        //Singles / new items are processed at the end. 
+                        var offset = (int)(_postingListPagesProcessingBuffer[idx] & FieldInserterHelper.OffsetMask);
+                        
+                        ref var entries = ref _indexedField.Storage.GetAsRef(entriesOffsets[offset]);
+                        var job = ProcessSingleEntry(ref entries, isNullTerm: false,
+                            sortedTerms[offset], postingListIds[offset],
+                            keys[offset].ContainerId, entriesOffsets[offset], out var totalLengthOfTermDelta);
+                        totalLengthOfTerm += totalLengthOfTermDelta;
                         entries.Dispose(_writer._entriesAllocator);
+                        _jobs[offset] = job;
                     }
 
+                    for (idx = 0; idx < read; idx++)
+                    {
+                        ProcessCompactTreeOperation(_jobs[idx], ref keys[idx], treeChanged, pageOffsets[idx], sortedTerms[idx]);
+                    }
+                    
+
                     keys = keys[idx..];
-                    postListIds = postListIds[idx..];
+                    postingListIds = postingListIds[idx..];
                     pageOffsets = pageOffsets[idx..];
                     entriesOffsets = entriesOffsets[idx..];
                     sortedTerms = sortedTerms[idx..];
@@ -169,12 +169,52 @@ public unsafe partial class IndexWriter
             (long postingListId, long termContainerId) = GetOrCreateSpecialPostingList(tree);
             ref var entries = ref _indexedField.Storage.GetAsRef(termsOffsets[termIndex]);
             var nullLookup = new CompactTree.CompactKeyLookup(CompactKey.NullInstance);
-            totalLengthOfTerm += ProcessSingleEntry(ref entries, ref nullLookup, isNullTerm: true,
-                sortedTerms[termIndex], postingListId, termContainerId, -1, termsOffsets[termIndex]);
+            var job = ProcessSingleEntry(ref entries, isNullTerm: true,
+                sortedTerms[termIndex], postingListId, termContainerId, termsOffsets[termIndex], out var totalLengthOfTermDelta);
+            totalLengthOfTerm += totalLengthOfTermDelta;
+            ProcessCompactTreeOperation(job, ref nullLookup, _fieldTree.CheckTreeStructureChanges(), pageOffset: -1, sortedTerms[termIndex]);
         }
 
-        private long ProcessSingleEntry(ref EntriesModifications entries, ref CompactTree.CompactKeyLookup key,
-            bool isNullTerm, Slice term, long postListId, long termContainerId, int pageOffset, int storageLocation)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void ProcessCompactTreeOperation(in LookupTreeOperationJob job, ref CompactTree.CompactKeyLookup key, in Lookup<CompactTree.CompactKeyLookup>.TreeStructureChanged treeChanged, int pageOffset, Slice term)
+        {
+            switch (job.Operation, TreeChanged: treeChanged.Changed)
+            {
+                case (AddEntriesToTermResult.UpdateTermId, TreeChanged: false):
+                    _fieldTree.BulkUpdateSet(ref key, job.TermId, _curPage, pageOffset, ref _offsetAdjustment);
+                    _dumper.WriteAddition(term, job.TermId);
+                    break;
+                case (AddEntriesToTermResult.UpdateTermId, TreeChanged: true):
+                    _fieldTree.Add(key, job.TermId);
+                    _dumper.WriteAddition(term, job.TermId);
+                    break;
+                case (AddEntriesToTermResult.RemoveTermId, TreeChanged: false):
+                {
+                    if (_fieldTree.BulkUpdateRemove(ref key, _curPage, pageOffset, ref _offsetAdjustment, out long oldValue) == false)
+                    {
+                        _dumper.WriteRemoval(term, job.TermId);
+                        ThrowTriedToDeleteTermThatDoesNotExists(term, _indexedField.Name);
+                    }
+                    _dumper.WriteRemoval(term, oldValue);
+                    break;
+                }
+                case (AddEntriesToTermResult.RemoveTermId, TreeChanged: true):
+                {
+                    if (_fieldTree.TryRemove(key, out long oldValue) == false)
+                    {
+                        _dumper.WriteRemoval(term, job.TermId);
+                        ThrowTriedToDeleteTermThatDoesNotExists(term, _indexedField.Name);
+                    }
+                    _dumper.WriteRemoval(term, oldValue);
+                    break;
+                }
+                case (AddEntriesToTermResult.NothingToDo, TreeChanged: _):
+                    break;
+                default: throw new ArgumentOutOfRangeException($"Unknown operation: {job.Operation}");
+            }
+        }
+        
+        private LookupTreeOperationJob ProcessSingleEntry(ref EntriesModifications entries, bool isNullTerm, Slice term, long postListId, long termContainerId, int storageLocation, out int totalLengthOfTermDelta)
         {
             UpdateEntriesForTerm(ref _entriesForTerm, in entries);
             if (_indexedField.Spatial == null) // For spatial, we handle this in InsertSpatialField, so we skip it here
@@ -182,8 +222,8 @@ public unsafe partial class IndexWriter
 
             bool found = postListId != Constants.IndexSearcher.InvalidId;
             Debug.Assert(found || entries.Removals.Count == 0, "Cannot remove entries from term that isn't already there");
-
-            int totalLengthOfTerm = 0;
+            LookupTreeOperationJob lookupTreeOperationJob;
+            totalLengthOfTermDelta = 0;
             if (entries.HasChanges)
             {
                 long termId;
@@ -193,10 +233,8 @@ public unsafe partial class IndexWriter
                         throw new InvalidOperationException($"Attempt to remove entries from new term: '{term}' for field {_indexedField.Name}! This is a bug.");
 
                     _writer.CreatePostingListForNewTerm(ref entries, _tmpBuf, out termId);
-                    totalLengthOfTerm = entries.TermSize;
-
-                    _dumper.WriteAddition(term, termId);
-                    _fieldTree.BulkUpdateSet(ref key, termId, _curPage, pageOffset, ref _offsetAdjustment);
+                    totalLengthOfTermDelta = entries.TermSize;
+                    lookupTreeOperationJob = new LookupTreeOperationJob(AddEntriesToTermResult.UpdateTermId, termId);
                 }
                 else
                 {
@@ -211,27 +249,25 @@ public unsafe partial class IndexWriter
 
                             Debug.Assert(isNullTerm == false, "isNullTerm == false - we pre-generate the ids, after all");
 
-                            _dumper.WriteAddition(term, termId);
-                            _fieldTree.BulkUpdateSet(ref key, termId, _curPage, pageOffset, ref _offsetAdjustment);
+                            lookupTreeOperationJob = new LookupTreeOperationJob(AddEntriesToTermResult.UpdateTermId, termId);
                             break;
                         case AddEntriesToTermResult.RemoveTermId:
                             Debug.Assert(isNullTerm == false, "isNullTerm == false, checked inside AddEntriesToTerm");
-                            if (_fieldTree.BulkUpdateRemove(ref key, _curPage, pageOffset, ref _offsetAdjustment, out long oldValue) == false)
-                            {
-                                _dumper.WriteRemoval(term, termId);
-                                ThrowTriedToDeleteTermThatDoesNotExists(term, _indexedField.Name);
-                            }
-
-                            totalLengthOfTerm = -entries.TermSize;
-                            _dumper.WriteRemoval(term, oldValue);
+                            totalLengthOfTermDelta = -entries.TermSize;
                             _writer._numberOfTermModifications--;
+                            lookupTreeOperationJob = new LookupTreeOperationJob(AddEntriesToTermResult.RemoveTermId, termId);
                             break;
                         case AddEntriesToTermResult.NothingToDo:
+                            lookupTreeOperationJob = new LookupTreeOperationJob(AddEntriesToTermResult.NothingToDo, -1L);
                             break;
                         default:
                             throw new ArgumentOutOfRangeException(entriesToTermResult.ToString());
                     }
                 }
+            }
+            else
+            {
+                lookupTreeOperationJob = new LookupTreeOperationJob(AddEntriesToTermResult.NothingToDo, -1L);
             }
 
             RecordTermsForEntries(entries, termContainerId);
@@ -244,10 +280,10 @@ public unsafe partial class IndexWriter
                 _virtualTermIdToTermContainerId[storageLocation] = termContainerId;
             }
 
-            return totalLengthOfTerm;
+            return lookupTreeOperationJob;
         }
 
-        void ProcessTermsVector()
+        private void ProcessTermsVector()
         {
             if (_indexedField.FieldSupportsPhraseQuery == false)
                 return;
@@ -497,10 +533,12 @@ public unsafe partial class IndexWriter
 
     private static class FieldInserterHelper
     {
-        public static void PrefetchContainerPages(IndexWriter writer, ref ContextBoundNativeList<long> pagesToPrefetch, Span<long> postListIds)
+        public const int OffsetMask = 0x3FF;
+        
+        public static void PrefetchPostingListsPagesAndPrepareOrderedPostingListProcessingList(IndexWriter writer, ref ContextBoundNativeList<long> postingListPagesProcessingBuffer, Span<long> postListIds)
         {
-            pagesToPrefetch.Clear();
-            pagesToPrefetch.EnsureCapacityFor(postListIds.Length);
+            postingListPagesProcessingBuffer.Clear();
+            postingListPagesProcessingBuffer.EnsureCapacityFor(postListIds.Length);
 
             foreach (var cur in postListIds)
             {
@@ -510,12 +548,29 @@ public unsafe partial class IndexWriter
                     continue;
 
                 long containerId = EntryIdEncodings.GetContainerId(cur);
-                pagesToPrefetch.Add(containerId / Voron.Global.Constants.Storage.PageSize);
+                postingListPagesProcessingBuffer.Add(containerId / Voron.Global.Constants.Storage.PageSize);
             }
 
-            pagesToPrefetch.Count = Sorting.SortAndRemoveDuplicates(pagesToPrefetch.RawItems, pagesToPrefetch.Count);
+            postingListPagesProcessingBuffer.Count = Sorting.SortAndRemoveDuplicates(postingListPagesProcessingBuffer.RawItems, postingListPagesProcessingBuffer.Count);
 
-            writer._transaction.LowLevelTransaction.DataPager.MaybePrefetchMemory(pagesToPrefetch.GetEnumerator());
+            writer._transaction.LowLevelTransaction.DataPager.MaybePrefetchMemory(postingListPagesProcessingBuffer.GetEnumerator());
+            postingListPagesProcessingBuffer.Clear();
+
+            Debug.Assert(postListIds.Length <= 1024);
+            //ContainerId has 10 lowest bits in use to encode the metadata. We can use them to store the offset of the item in the original order.
+            for (int i = 0; i < postListIds.Length; i++)
+            {
+                if (postListIds[i] == Constants.IndexSearcher.InvalidId || (postListIds[i] & (long)TermIdMask.EnsureIsSingleMask) == 0)
+                {
+                    // new and single term will be allocating new containers or will be deleted. So let's put them at the end of the list.
+                    postingListPagesProcessingBuffer.AddByRefUnsafe() = (long.MaxValue & ~OffsetMask) | (long)i;
+                    continue;
+                }
+                
+                postingListPagesProcessingBuffer.AddByRefUnsafe() = (postListIds[i] & ~OffsetMask) | (long)i;
+            }
+            
+            postingListPagesProcessingBuffer.Sort();
         }
     }
 }

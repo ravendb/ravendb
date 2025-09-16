@@ -43,4 +43,9 @@ public class AiAttachment
     }
 }
 
-public enum AiAttachmentSource { FromDatabase, FromUser, NotFound }
+public enum AiAttachmentSource
+{
+    FromAttachment, 
+    FromScript, 
+    NotFound
+}

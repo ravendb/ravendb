@@ -185,9 +185,33 @@ namespace Raven.Client.Http
             }
         }
 
-        public string LastNodeId { get; private set; }
-        public string TopologyId { get; private set; }
-        public long Etag { get; private set; }
+        public string LastNodeId
+        { 
+            get; 
+#if NET6_0_OR_GREATER
+            init;
+#else
+            private set;
+#endif
+        }
+        public string TopologyId
+        { 
+            get; 
+#if NET6_0_OR_GREATER
+            init;
+#else
+            private set;
+#endif
+        }
+        public long Etag
+        { 
+            get; 
+#if NET6_0_OR_GREATER
+            init;
+#else
+            private set;
+#endif
+        }
 
         public override string ToString()
         {
@@ -197,9 +221,33 @@ namespace Raven.Client.Http
             }
         }
 
-        public Dictionary<string, string> Members { get; private set; }
-        public Dictionary<string, string> Promotables { get; private set; }
-        public Dictionary<string, string> Watchers { get; private set; }
+        public Dictionary<string, string> Members 
+        { 
+            get; 
+#if NET6_0_OR_GREATER
+            init;
+#else
+            private set;
+#endif
+        }
+        public Dictionary<string, string> Promotables 
+        { 
+            get; 
+#if NET6_0_OR_GREATER
+            init;
+#else
+            private set;
+#endif
+        }
+        public Dictionary<string, string> Watchers 
+        { 
+            get; 
+#if NET6_0_OR_GREATER
+            init;
+#else
+            private set;
+#endif
+        }
 
         [JsonIgnore]
         internal int Count => Members.Count + Promotables.Count + Watchers.Count;

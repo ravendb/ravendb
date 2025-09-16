@@ -66,7 +66,7 @@ public static class AiExtensions
                 var apiKey = new ApiKeyCredential(openAiSettings.ApiKey);
                 var openAiOptions = new OpenAIClientOptions
                 {
-                    Endpoint = new Uri(openAiSettings.Endpoint),
+                    Endpoint = openAiSettings.GetBaseEndpointUri(),
                     ProjectId = openAiSettings.ProjectId,
                     UserAgentApplicationId = $"RavenDB-{ServerVersion.Version}"
                 };
@@ -80,7 +80,7 @@ public static class AiExtensions
 
                 kernelBuilder.AddAzureOpenAIEmbeddingGenerator(
                     azureOpenAiSettings.DeploymentName,
-                    azureOpenAiSettings.Endpoint,
+                    azureOpenAiSettings.GetBaseEndpointUri().ToString(),
                     azureOpenAiSettings.ApiKey,
                     modelId: azureOpenAiSettings.Model,
                     dimensions: azureOpenAiSettings.Dimensions);
@@ -88,7 +88,7 @@ public static class AiExtensions
 
             case AiConnectorType.Ollama:
                 var ollamaSettings = connectionString.OllamaSettings;
-                var ollamaApiConfig = new OllamaApiClient.Configuration { Uri = new Uri(ollamaSettings.Uri), Model = ollamaSettings.Model };
+                var ollamaApiConfig = new OllamaApiClient.Configuration { Uri = ollamaSettings.GetBaseEndpointUri(), Model = ollamaSettings.Model };
                 
                 var ollamaApiClient = new OllamaApiClient(ollamaApiConfig);
 

@@ -32,7 +32,7 @@ namespace Raven.Server.Utils
         /// </summary>
         public static int GetBucketFor(ShardingConfiguration configuration, ByteStringContext context, string id)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, id, out var lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out var lowerId))
             {
                 return GetBucketFor(configuration, lowerId);
             }
@@ -128,7 +128,7 @@ namespace Raven.Server.Utils
 
         public static (int ShardNumber, int Bucket) GetShardNumberAndBucketFor(ShardingConfiguration configuration, ByteStringContext allocator, string id)
         {
-            using (DocumentIdWorker.GetSliceFromId(allocator, id, out var lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(allocator, id, out var lowerId))
             {
                 return GetShardNumberAndBucketFor(configuration, lowerId);
             }
@@ -137,7 +137,7 @@ namespace Raven.Server.Utils
         public static (int ShardNumber, int Bucket) GetShardNumberAndBucketFor(ShardingConfiguration configuration, ByteStringContext allocator, LazyStringValue id)
         {
             DevelopmentHelper.ShardingToDo(DevelopmentHelper.TeamMember.Arek, DevelopmentHelper.Severity.Normal, "Avoid the allocation of the LazyStringValue below");
-            using (DocumentIdWorker.GetSliceFromId(allocator, id, out var lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(allocator, id, out var lowerId))
             {
                 return GetShardNumberAndBucketFor(configuration, lowerId);
             }

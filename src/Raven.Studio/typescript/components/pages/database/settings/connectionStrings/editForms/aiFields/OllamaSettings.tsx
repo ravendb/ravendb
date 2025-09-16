@@ -1,5 +1,5 @@
 import { FlexGrow } from "components/common/FlexGrow";
-import { FormCheckbox, FormInput, FormLabel, FormSelect, FormSelectAutocomplete } from "components/common/Form";
+import { FormInput, FormLabel, FormSelect, FormSelectAutocomplete } from "components/common/Form";
 import { Icon } from "components/common/Icon";
 import {
     ConnectionFormData,
@@ -16,13 +16,12 @@ import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
 import { SelectOption } from "components/common/select/Select";
 import { useAsyncDebounce } from "components/hooks/useAsyncDebounce";
-import InputGroup from "react-bootstrap/InputGroup";
-import { useEffect } from "react";
+import TemperatureField from "./TemperatureField";
 
 type FormData = ConnectionFormData<AiConnection>;
 
 export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
-    const { control, trigger, watch, setValue } = useFormContext<FormData>();
+    const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
 
@@ -69,17 +68,6 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
         300
     );
 
-    // Reset temperature when isSetTemperature is disabled
-    useEffect(() => {
-        const { unsubscribe } = watch((values, { name }) => {
-            if (name === "ollamaSettings.isSetTemperature" && !values.ollamaSettings.isSetTemperature) {
-                setValue("ollamaSettings.temperature", null, { shouldValidate: true });
-            }
-        });
-
-        return () => unsubscribe();
-    }, [setValue, watch]);
-
     return (
         <>
             <div className="mb-2">
@@ -118,39 +106,7 @@ export default function OllamaSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     <FormSelect control={control} name="ollamaSettings.think" options={thinkOptions} />
                 </div>
             )}
-            {formValues.modelType === "Chat" && (
-                <div className="mb-2">
-                    <FormLabel>
-                        Temperature
-                        <PopoverWithHoverWrapper
-                            message={
-                                <>
-                                    Controls randomness of the model output. Range typically [0.0, 2.0].
-                                    <br />
-                                    <br />
-                                    Higher values (e.g., 1.0+) make output more creative and diverse.
-                                    <br />
-                                    Lower values (e.g., 0.2) make it more deterministic.
-                                </>
-                            }
-                        >
-                            <Icon icon="info" color="info" margin="ms-1" />
-                        </PopoverWithHoverWrapper>
-                    </FormLabel>
-                    <InputGroup>
-                        <div className="toggle-field-checkbox">
-                            <FormCheckbox control={control} name="ollamaSettings.isSetTemperature" color="primary" />
-                        </div>
-                        <FormInput
-                            type="number"
-                            control={control}
-                            name="ollamaSettings.temperature"
-                            placeholder="e.g. 0.4"
-                            disabled={!formValues.ollamaSettings.isSetTemperature}
-                        />
-                    </InputGroup>
-                </div>
-            )}
+            <TemperatureField baseName="ollamaSettings" />
             {formValues.modelType === "TextEmbeddings" && <EmbeddingsMaxConcurrentBatches baseName="ollamaSettings" />}
             <div className="d-flex mb-2">
                 <FlexGrow />

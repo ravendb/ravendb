@@ -13,7 +13,7 @@ namespace Raven.Server.Dashboard
 
         public DateTime Date => SystemTime.UtcNow;
 
-        public SortedSet<ThreadInfo> List { get; }
+        public ISet<ThreadInfo> List { get; set; }
 
         public double CpuUsage { get; set; }
         
@@ -31,6 +31,11 @@ namespace Raven.Server.Dashboard
             List = new SortedSet<ThreadInfo>(new ThreadsInfoComparer());
         }
 
+        public ThreadsInfo()
+        {
+            // for deserialization purposes
+        }
+        
         private sealed class ThreadsInfoComparer : IComparer<ThreadInfo>
         {
             public int Compare(ThreadInfo x, ThreadInfo y)

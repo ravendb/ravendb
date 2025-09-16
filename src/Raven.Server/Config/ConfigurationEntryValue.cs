@@ -29,6 +29,11 @@ namespace Raven.Server.Config
     
     public abstract class ConfigurationEntryValue : IDynamicJson
     {
+        protected ConfigurationEntryValue()
+        {
+            // for deserialization
+        }
+        
         protected ConfigurationEntryValue(ConfigurationEntryMetadata metadata)
         {
             Metadata = metadata ?? throw new ArgumentNullException(nameof(metadata));

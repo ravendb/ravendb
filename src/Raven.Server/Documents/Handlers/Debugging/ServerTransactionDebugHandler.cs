@@ -1,10 +1,12 @@
 ﻿using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Raven.Server.Routing;
 using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Voron.Impl;
 
 namespace Raven.Server.Documents.Handlers.Debugging
 {
@@ -19,7 +21,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
             var txInfo = new TransactionDebugHandler.TransactionInfo
             {
                 Path = env.Options.BasePath.FullPath,
-                Information = env.ActiveTransactions.AllTransactionsInstances
+                Information = env.ActiveTransactions.AllTransactionsInstances.Select(TransactionDebugHandler.ToTxInfoResult).ToList()
             };
             results.Add(txInfo);
 

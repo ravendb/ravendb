@@ -3,15 +3,11 @@
 @use "Content/scss/sizes";
 
 .ai-agent-messages {
-    .agent-icon-wrapper {
-        padding: 4px;
-        border: 1.5px solid rgba(123, 81, 255);
-        border-radius: sizes.$gutter-xxxs;
-        background: linear-gradient(135.89deg, rgba(56, 142, 233, 0.2) 0%, rgba(123, 81, 255, 0.2) 85.4%);
-
-        i {
-            color: rgba(123, 81, 255);
-        }
+    .icon-sparkles::before {
+        background: colors.$ai-gradient;
+        background-clip: text;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
     }
 
     .accordion-button {
@@ -28,5 +24,11 @@
             padding: sizes.$gutter-xxs !important;
             background-color: colors.$panel-bg-2-var !important;
         }
+    }
+
+    .accordion-button::after {
+        display: flex;
+        justify-content: center;
+        align-items: center;
     }
 }

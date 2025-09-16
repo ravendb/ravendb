@@ -23,13 +23,13 @@ namespace Raven.Client.Documents.Session
             PendingLazyOperations.Add(operation);
             var lazyValue = new Lazy<Task<T>>(() =>
                 ExecuteAllPendingLazyOperationsAsync(token)
-                    .ContinueWith(t =>
+                    .ContinueWith(static (t, op) =>
                     {
                         if (t.Exception != null)
                             throw new InvalidOperationException("Could not perform add lazy operation", t.Exception);
 
-                        return GetOperationResult<T>(operation.Result);
-                    }, token));
+                        return GetOperationResult<T>(((ILazyOperation)op).Result);
+                    }, operation, token));
 
             if (onEval != null)
                 OnEvaluateLazy[operation] = theResult => onEval(GetOperationResult<T>(theResult));
@@ -41,17 +41,17 @@ namespace Raven.Client.Documents.Session
         {
             PendingLazyOperations.Add(operation);
             var lazyValue = new Lazy<Task<int>>(() => ExecuteAllPendingLazyOperationsAsync(token)
-                .ContinueWith(t =>
+                .ContinueWith(static (t, op) =>
                 {
                     if (t.Exception != null)
                         throw new InvalidOperationException("Could not perform lazy count", t.Exception);
                     
-                    var value = operation.QueryResult.TotalResults;
+                    var value = ((ILazyOperation)op).QueryResult.TotalResults;
                     if (value > int.MaxValue)
                         DocumentSession.ThrowWhenResultsAreOverInt32(value, nameof(AddLazyCountOperation), nameof(AddLazyLongCountOperation));
                     
                     return (int)value;
-                }, token));
+                }, operation, token));
 
             return lazyValue;
         }
@@ -60,13 +60,13 @@ namespace Raven.Client.Documents.Session
         {
             PendingLazyOperations.Add(operation);
             var lazyValue = new Lazy<Task<long>>(() => ExecuteAllPendingLazyOperationsAsync(token)
-                .ContinueWith(t =>
+                .ContinueWith(static (t, op) =>
                 {
                     if (t.Exception != null)
                         throw new InvalidOperationException("Could not perform lazy count", t.Exception);
                     
-                    return operation.QueryResult.TotalResults;
-                }, token));
+                    return ((ILazyOperation) op).QueryResult.TotalResults;
+                }, operation, token));
 
             return lazyValue;
         }

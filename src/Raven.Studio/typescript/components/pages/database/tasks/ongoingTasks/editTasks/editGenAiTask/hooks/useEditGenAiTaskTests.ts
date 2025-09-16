@@ -151,6 +151,10 @@ export function useEditGenAiTaskTests() {
     const getAttachments = (
         attachments: GenAiAiAttachment[]
     ): Raven.Server.Documents.ETL.Providers.AI.AiAttachment[] => {
+        if (!attachments) {
+            return null;
+        }
+
         return attachments.map((x) => ({
             Data: x.Data,
             Name: x.Name,

@@ -40,6 +40,15 @@ namespace Raven.Server.Documents.Handlers.Debugging
             }
         }
 
+        public class Stats
+        {
+            public string ProcessName { get; set; }
+            public long ProcessorAffinity { get; set; }
+            public TimeSpan PrivilegedProcessorTime { get; set; }
+            public TimeSpan TotalProcessorTime { get; set; }
+            public TimeSpan UserProcessorTime { get; set; }
+        }
+
         private DynamicJsonValue CpuStatsInternal()
         {
             using (var proc = Process.GetCurrentProcess())
@@ -47,13 +56,13 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 var djaCpu = new DynamicJsonArray();
                 var djvCpu = new DynamicJsonValue
                 {
-                    ["ProcessName"] = proc.ProcessName,
+                    [nameof(Stats.ProcessName)] = proc.ProcessName,
 #pragma warning disable CA1416 // Validate platform compatibility
-                    ["ProcessorAffinity"] = proc.ProcessorAffinity.ToInt64(),
+                    [nameof(Stats.ProcessorAffinity)] = proc.ProcessorAffinity.ToInt64(),
 #pragma warning restore CA1416 // Validate platform compatibility
-                    ["PrivilegedProcessorTime"] = proc.PrivilegedProcessorTime,
-                    ["TotalProcessorTime"] = proc.TotalProcessorTime,
-                    ["UserProcessorTime"] = proc.UserProcessorTime
+                    [nameof(Stats.PrivilegedProcessorTime)] = proc.PrivilegedProcessorTime,
+                    [nameof(Stats.TotalProcessorTime)] = proc.TotalProcessorTime,
+                    [nameof(Stats.UserProcessorTime)] = proc.UserProcessorTime
                 };
 
                 djaCpu.Add(djvCpu);

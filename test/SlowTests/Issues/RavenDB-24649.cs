@@ -16,6 +16,9 @@ namespace SlowTests.Issues;
 
 public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
 {
+    private static readonly int Timeout = (int)TimeSpan.FromMinutes(1).TotalMilliseconds;
+    private const int Interval = 10;
+    
     [RavenFact(RavenTestCategory.Indexes)]
     public async Task ElapsedSinceQueriedTimeIsPersistedAndIncreased()
     {
@@ -43,7 +46,7 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
 
         // Wait that elapsed time will be increased.
         var elapsed1 = index.GetElapsedTimeFromLastQuery();
-        var elapsed2 = await WaitAndAssertForGreaterThanAsync(() => Task.FromResult(index.GetElapsedTimeFromLastQuery()), elapsed1);
+        var elapsed2 = await WaitAndAssertForGreaterThanAsync(() => Task.FromResult(index.GetElapsedTimeFromLastQuery()), elapsed1, timeout: Timeout, interval: Interval);
 
         using (var session = store.OpenAsyncSession())
         {
@@ -53,7 +56,7 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
                 .ToListAsync();
             
             // Wait for changed elapsed time.
-            var currentElapsed = await WaitForNotEqualsAsync(() => Task.FromResult(index.GetElapsedTimeFromLastQuery()), elapsed2);
+            var currentElapsed = await WaitForNotEqualsAsync(() => Task.FromResult(index.GetElapsedTimeFromLastQuery()), elapsed2, timeout: Timeout, interval: Interval);
             Assert.True(currentElapsed != elapsed2, $"{currentElapsed} != {elapsed2}");
         }
 
@@ -73,11 +76,11 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
         var elapsedOnInit = index.GetElapsedTimeFromLastQuery();
         
         //LastQueryingTime on index initialization is InitializationTime - ElapsedSinceQueried. An index on initialization performs indexing batch so that value must be greater than InitializationTime.
-        var lastQueryTime = await WaitAndAssertForLessThanAsync(() => Task.FromResult(index.GetLastQueryingTime()!.Value), index.LastIndexingTime!.Value);
+        var lastQueryTime = await WaitAndAssertForLessThanAsync(() => Task.FromResult(index.GetLastQueryingTime()!.Value), index.LastIndexingTime!.Value, timeout: Timeout, interval: Interval);
         Assert.True(lastQueryTime < index.LastIndexingTime, $"{lastQueryTime} < {index.LastIndexingTime}"); // 
         
         // Wait that elapsed time will be increased.
-        var val = await WaitAndAssertForGreaterThanAsync(() => Task.FromResult((index.LastIndexingTime - index.GetLastQueryingTime())!.Value), elapsedOnInit);
+        var val = await WaitAndAssertForGreaterThanAsync(() => Task.FromResult((index.LastIndexingTime - index.GetLastQueryingTime())!.Value), elapsedOnInit, timeout: Timeout, interval: Interval);
         Assert.True(val > elapsedOnInit, $"{val} > {elapsedOnInit}");
     }
 

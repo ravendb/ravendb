@@ -1204,13 +1204,12 @@ namespace Corax.Indexing
             return AddEntriesToTermResultSingleValue(tmpBuf, idInTree, ref entries, out termId);
         }
 
-        private AddEntriesToTermResult AddEntriesToTermResultViaSmallPostingList(Span<byte> tmpBuf, ref EntriesModifications entries, out long termIdInTree,
-            long idInTree)
+        private AddEntriesToTermResult AddEntriesToTermResultViaSmallPostingList(Span<byte> tmpBuf, ref EntriesModifications entries, out long termIdInTree, long idInTree)
         {
             var containerId = EntryIdEncodings.GetContainerId(idInTree);
 
             var llt = _transaction.LowLevelTransaction;
-            Container.Get(llt, containerId, out var item);
+            Container.GetMutable(llt, containerId, out var item);
 
             Debug.Assert(entries.Removals.ToSpan().ToArray().Distinct().Count() == entries.Removals.Count, $"Removals list is not distinct.");
 
@@ -1261,7 +1260,7 @@ namespace Corax.Indexing
 
             if (encoded.Length == item.Length)
             {
-                var mutableSpace = Container.GetMutable(llt, containerId);
+                var mutableSpace = item.ToSpan();
                 encoded.CopyTo(mutableSpace);
 
                 // can update in place
@@ -1353,6 +1352,13 @@ namespace Corax.Indexing
             return AddEntriesToTermResult.UpdateTermId;
         }
 
+        /// <summary>
+        /// Operation to perform on a lookup tree after processing a term.
+        /// </summary>
+        /// <param name="Operation">Operation to perform.</param>
+        /// <param name="TermId">Encoded location of the posting list / single document.</param>
+        private record struct LookupTreeOperationJob(AddEntriesToTermResult Operation, long TermId);
+        
         private AddEntriesToTermResult AddEntriesToTermResultViaLargePostingList(ref EntriesModifications entries, out long termId, bool isNullTerm, long id)
         {
             var containerId = EntryIdEncodings.GetContainerId(id);

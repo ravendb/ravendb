@@ -22,6 +22,8 @@ const defaultValues: FormData = {
         isDisableOngoingTasksAfterRestore: false,
         isSkipIndexes: false,
         isEncrypted: false,
+        isSetMaxReadOpsPerSecond: false,
+        maxReadOpsPerSecond: null,
         sourceType: null,
         sourceData: {
             local: {
@@ -289,6 +291,7 @@ function mapToDto({
         DisableOngoingTasks: sourceStep.isDisableOngoingTasksAfterRestore,
         SkipIndexes: sourceStep.isSkipIndexes,
         DataDirectory: dataDirectoryStep.isDefault ? null : dataDirectoryStep.directory,
+        MaxReadOpsPerSecond: sourceStep.isSetMaxReadOpsPerSecond ? sourceStep.maxReadOpsPerSecond : null,
     };
 }
 

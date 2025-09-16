@@ -44,6 +44,9 @@ class exportDatabaseModel {
     exportDefinitionHasIncludes: KnockoutComputed<boolean>;
     itemsToWarnAbout: KnockoutComputed<string>;
 
+    isSetMaxReadOpsPerSecond = ko.observable<boolean>(false);
+    maxReadOpsPerSecond = ko.observable<number>(null);
+
     constructor() {
         this.initValidation();
         this.initEncryptionValidation();
@@ -190,7 +193,8 @@ class exportDatabaseModel {
             SkipRevisionCreation: undefined,
             AuthorizationStatus: undefined,
             CompressionAlgorithm: this.compressionAlgorithm(),
-            SkipCorruptedData: this.skipCorruptedData()
+            SkipCorruptedData: this.skipCorruptedData(),
+            MaxReadOpsPerSecond: this.isSetMaxReadOpsPerSecond() ? this.maxReadOpsPerSecond() : null
         };
     }
     

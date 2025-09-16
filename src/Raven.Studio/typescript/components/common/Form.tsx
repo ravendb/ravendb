@@ -210,7 +210,7 @@ export function FormSelect<
 
     const valueAccessor = rest.getOptionValue ?? ((option: any) => option.value);
 
-    const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor);
+    const selectedOptions = getFormSelectedOptions<Option>(formValues, rest.options, valueAccessor) ?? null;
 
     return (
         <>
@@ -331,13 +331,20 @@ export function FormSelectAutocomplete<
     const { value: isInitialOpen, setValue: setIsInitialOpen } = useBoolean(false);
 
     const valueAccessor = props.getOptionValue ?? ((option: any) => option.value);
+    const labelAccessor = props.getOptionLabel ?? ((option: any) => option.label);
 
     const handleFilterOption = (option: FilterOptionOption<Option>, inputValue: string) => {
         if (isInitialOpen) {
             return true;
         }
 
-        return valueAccessor(option).trim().toLowerCase().includes(inputValue.trim().toLowerCase());
+        return (
+            compareInputValue(valueAccessor(option), inputValue) || compareInputValue(labelAccessor(option), inputValue)
+        );
+    };
+
+    const compareInputValue = (value: unknown, inputValue: string): boolean => {
+        return String(value).trim().toLowerCase().includes(String(inputValue).trim().toLowerCase());
     };
 
     const handleInputChange = (value: string, action: InputActionMeta) => {
@@ -348,17 +355,19 @@ export function FormSelectAutocomplete<
     };
 
     const handleFocus = (e: React.FocusEvent<HTMLInputElement, Element>) => {
-        e.target.selectionStart = value?.length ?? 0;
+        e.target.selectionStart = String(value).length;
         setIsInitialOpen(true);
     };
 
+    const inputValue = props.isDisabled ? "" : (value ?? "");
+
     return (
         <FormSelectCreatable<Option, IsMulti, Group, TFieldValues, TName>
-            inputValue={value ?? ""}
+            inputValue={inputValue}
             onInputChange={handleInputChange}
             components={{ Input: InputNotHidden }}
             tabSelectsValue
-            controlShouldRenderValue={false}
+            controlShouldRenderValue={!!props.isDisabled}
             filterOption={handleFilterOption}
             onFocus={handleFocus}
             blurInputOnSelect

@@ -16,6 +16,7 @@ import RichAlert from "components/common/RichAlert";
 import Button from "react-bootstrap/Button";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import { useAppUrls } from "components/hooks/useAppUrls";
+import "./ChatAiAgentFormBody.scss";
 
 interface ChatAiAgentFormBodyProps {
     height: number;
@@ -81,7 +82,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
             <div
                 ref={messagesPanelRef}
                 className={classNames(
-                    "overflow-auto ps-2 flex-grow-1 position-relative d-flex justify-content-center",
+                    "ai-agents overflow-auto ps-2 flex-grow-1 position-relative d-flex justify-content-center",
                     { "pe-2": !hasScroll }
                 )}
                 style={{ height: height - promptHeightInPx }}
@@ -127,7 +128,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                 </div>
             </div>
             {!isHistory && (
-                <div className="d-flex justify-content-center mt-3 px-3 pb-3">
+                <div className="d-flex justify-content-center ps-2 pe-3 pb-4">
                     <div className="w-100" style={{ maxWidth: "800px" }}>
                         {isDocumentChanged && !isDocumentDeleted && (
                             <RichAlert variant="warning" className="p-1 mb-2">
@@ -150,7 +151,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                                 .
                             </RichAlert>
                         )}
-                        <div className="position-relative">
+                        <div className="position-relative gradient-top">
                             <FormInput
                                 type="textarea"
                                 as="textarea"
@@ -166,6 +167,7 @@ export default function ChatAiAgentFormBody({ height, handleSend, runChat, isHis
                                     }
                                 }}
                                 disabled={isPromptDisabled}
+                                style={{ zIndex: 5 }}
                             />
                             {formValues.prompt && (
                                 <ButtonWithSpinner

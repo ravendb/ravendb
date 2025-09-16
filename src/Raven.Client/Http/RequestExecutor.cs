@@ -1916,7 +1916,7 @@ namespace Raven.Client.Http
             }
 
             var nodeStatus = new NodeStatus(this, copy[i]);
-            return CheckNodeStatusCallback(nodeStatus).ContinueWith(t => nodeStatus.Dispose());
+            return CheckNodeStatusCallback(nodeStatus).ContinueWith(static (t, status) => ((NodeStatus)status).Dispose(), nodeStatus);
         }
 
         private async Task CheckNodeStatusCallback(NodeStatus nodeStatus)
