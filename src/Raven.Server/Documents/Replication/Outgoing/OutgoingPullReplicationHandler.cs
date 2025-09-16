@@ -53,7 +53,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         /// <summary>
         /// The replication scope that should be disposed when the replication is done.
         /// </summary>
-        private IDisposable _scope;
+        private IDisposable _replicationScope;
 
         public OutgoingPullReplicationHandlerAsHub(ReplicationLoader parent, DocumentDatabase database, PullReplicationAsHub node, TcpConnectionInfo connectionInfo) :
             base(parent, database, node, connectionInfo)
@@ -64,7 +64,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         {
             SupportedFeatures = supportedVersions;
             _stream = stream;
-            _scope = replicationScope;
+            _replicationScope = replicationScope;
             OutgoingReplicationThreadName = $"Pull replication as hub {FromToString}";
             _longRunningSendingWork =
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName,
@@ -79,7 +79,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Start pull replication as hub {FromToString}");
 
-            using (_scope)
+            using (_replicationScope)
             using (_stream)
             using (_interruptibleRead = new InterruptibleRead<DocumentsContextPool, DocumentsOperationContext>(_parent.ContextPool, _stream))
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
