@@ -68,6 +68,11 @@ internal class AiIntegrationHandlerProcessorForTestAiConnection<TRequestHandler,
                         var googleSettings = JsonDeserializationServer.GoogleSettings(json);
                         aiConnectionString.GoogleSettings = googleSettings;
                         break;
+                    
+                    case AiConnectorType.Vertex:
+                        var vertexSettings = JsonDeserializationServer.VertexSettings(json);
+                        aiConnectionString.VertexSettings = vertexSettings;
+                        break;
 
                     case AiConnectorType.HuggingFace:
                         var huggingFace = JsonDeserializationServer.HuggingFaceSettings(json);

@@ -347,6 +347,8 @@ namespace Raven.Server.Json
         internal static readonly Func<BlittableJsonReaderObject, EmbeddedSettings> EmbeddedSettings = GenerateJsonDeserializationRoutine<EmbeddedSettings>();
 
         internal static readonly Func<BlittableJsonReaderObject, GoogleSettings> GoogleSettings = GenerateJsonDeserializationRoutine<GoogleSettings>();
+        
+        internal static readonly Func<BlittableJsonReaderObject, VertexSettings> VertexSettings = GenerateJsonDeserializationRoutine<VertexSettings>();
 
         internal static readonly Func<BlittableJsonReaderObject, HuggingFaceSettings> HuggingFaceSettings = GenerateJsonDeserializationRoutine<HuggingFaceSettings>();
 
