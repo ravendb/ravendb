@@ -388,6 +388,7 @@ export class TasksStubs {
                     {
                         Path: "Name",
                         ChunkingOptions: {
+                            OverlapTokens: 0,
                             ChunkingMethod: "PlainTextSplit",
                             MaxTokensPerChunk: 2048,
                         },
@@ -397,6 +398,7 @@ export class TasksStubs {
                 Quantization: "Single",
                 EmbeddingsCacheExpiration: "90.00:00:00",
                 ChunkingOptionsForQuerying: {
+                    OverlapTokens: 0,
                     ChunkingMethod: "PlainTextSplit",
                     MaxTokensPerChunk: 2048,
                 },

@@ -28,6 +28,10 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
     pathConfigurationChunkingMethodLabel: KnockoutComputed<string>;
     pathConfigurationPath = ko.observable<string>("");
 
+    overlapTokens = ko.observable<number>(null);
+    canUseOverlapTokensForPathConfiguration: KnockoutComputed<boolean>;
+    canUseOverlapTokensForTransformation: KnockoutComputed<boolean>;
+
     chunkingMethod = ko.observable<Raven.Client.Documents.Operations.AI.ChunkingMethod>(defaultChunkingMethod);
     chunkingMethodOptions: valueAndLabelItem<Raven.Client.Documents.Operations.AI.ChunkingMethod, string>[] = [
         { value: "PlainTextSplit", label: "Plain Text: Split" },
@@ -130,6 +134,14 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             }
             return genUtils.assertUnreachable(source);
         });
+
+        this.canUseOverlapTokensForPathConfiguration = ko.pureComputed(() => {
+            return this.pathConfigurationChunkingMethod() === "PlainTextSplitParagraphs" || this.pathConfigurationChunkingMethod() === "MarkDownSplitParagraphs";
+        })
+
+        this.canUseOverlapTokensForTransformation = ko.pureComputed(() => {
+            return this.transformationChunkingMethod() === "PlainTextSplitParagraphs" || this.transformationChunkingMethod() === "MarkDownSplitParagraphs";
+        })
 
         this.dirtyFlag = new ko.DirtyFlag([ 
             this.taskName,
@@ -240,6 +252,7 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
         this.embeddingPathConfigurations.push({
             Path: this.pathConfigurationPath(),
             ChunkingOptions: {
+                OverlapTokens: this.overlapTokens() ?? 0,
                 ChunkingMethod: this.pathConfigurationChunkingMethod(),
                 MaxTokensPerChunk: this.pathConfigurationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue()
             }
@@ -328,12 +341,13 @@ class ongoingTaskEmbeddingsGenerationEditModel extends ongoingTaskEditModel {
             Transforms: null,
             Collection: this.collectionInput(),
             ChunkingOptionsForQuerying: {
+                OverlapTokens: this.overlapTokens() ?? 0,
                 ChunkingMethod: this.chunkingMethod(),
                 MaxTokensPerChunk: this.maxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(),
             },
             Quantization: this.quantizationType(),
             EmbeddingsTransformation: this.embeddingsSource() === "script" ? {
-                Script: this.script(), ChunkingOptions: { MaxTokensPerChunk: this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(), ChunkingMethod: this.transformationChunkingMethod() }
+                Script: this.script(), ChunkingOptions: { OverlapTokens: this.overlapTokens() ?? 0, MaxTokensPerChunk: this.transformationMaxTokensPerChunk() ?? this.maxTokensPerChunkDefaultValue(), ChunkingMethod: this.transformationChunkingMethod() }
             } : null,
             EmbeddingsPathConfigurations: this.embeddingsSource() === "paths" ? this.embeddingPathConfigurations() : [],
             EmbeddingsCacheExpiration: genUtils.formatAsTimeSpan(this.embeddingsCacheExpiration() * 1000),
