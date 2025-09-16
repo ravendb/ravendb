@@ -105,36 +105,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
             return _lastStats;
         }
 
-        public void StartPullReplicationAsHub(IDisposable replicationScope, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures supportedVersions)
-        {
-            SupportedFeatures = supportedVersions;
-            _stream = stream;
-            _scope = replicationScope;
-            OutgoingReplicationThreadName = $"Pull replication as hub {FromToString}";
-            _longRunningSendingWork =
-                PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName,
-                    _database.Name, Destination.FromString(), pullReplicationAsHub: true));
-        }
-
-        private void PullReplication()
-        {
-            NativeMemory.EnsureRegistered();
-
-            AddReplicationPulse(ReplicationPulseDirection.OutgoingInitiate);
-            if (Logger.IsInfoEnabled)
-                Logger.Info($"Start pull replication as hub {FromToString}");
-
-            using (_scope)
-            using (_stream)
-            using (_interruptibleRead = new InterruptibleRead<DocumentsContextPool, DocumentsOperationContext>(_parent.ContextPool, _stream))
-            using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
-            using (context.GetMemoryBuffer(out _buffer))
-            {
-                InitialHandshake();
-                Replicate();
-            }
-        }
-
         protected override void AssertDatabaseNotDisposed()
         {
             var database = _parent.Database;
@@ -442,7 +412,6 @@ namespace Raven.Server.Documents.Replication.Outgoing
         private void OnSuccessfulReplication() => SuccessfulReplication?.Invoke(this);
 
         internal TestingStuff ForTestingPurposes;
-        private IDisposable _scope;
 
         internal TestingStuff ForTestingPurposesOnly()
         {
