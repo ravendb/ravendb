@@ -14,11 +14,9 @@ public class EventsListener : AbstractEventListener
     private readonly Dictionary<string, IEventsHandler> _handlerByEventName = new();
     private DotNetEventType _dotNetEventType;
 
-    private readonly Dictionary<string, AllocationsHandler.AllocationInfo> _allocations = new();
-    private ulong _totalAllocated = 0;
+    private AllocationsInfo _allocationInfo = new();
     private readonly StringBuilder _sb = new();
 
-    private Stopwatch _stopwatchSinceLastAllocation;
     private long _allocationsLoggingIntervalInMs;
     private int _allocationsLoggingCount;
     private readonly InternalEvent _internalEvent = new();
@@ -40,11 +38,12 @@ public class EventsListener : AbstractEventListener
     {
         return e =>
         {
-            _stopwatchSinceLastAllocation ??= Stopwatch.StartNew();
+            var allocationsInfo = _allocationInfo;
+            allocationsInfo.StopwatchSinceLastAllocation ??= Stopwatch.StartNew();
 
-            if (_allocations.TryGetValue(e.AllocationType, out var allocation) == false)
+            if (allocationsInfo.Allocations.TryGetValue(e.AllocationType, out var allocation) == false)
             {
-                _allocations[e.AllocationType] = e;
+                allocationsInfo.Allocations[e.AllocationType] = e;
             }
             else
             {
@@ -54,18 +53,18 @@ public class EventsListener : AbstractEventListener
                 allocation.NumberOfLargeObjectAllocations += e.NumberOfLargeObjectAllocations;
             }
 
-            _totalAllocated += e.SmallObjectAllocations + e.LargeObjectAllocations;
+            allocationsInfo.TotalAllocated += e.SmallObjectAllocations + e.LargeObjectAllocations;
 
-            if (_stopwatchSinceLastAllocation.ElapsedMilliseconds >= _allocationsLoggingIntervalInMs)
+            if (allocationsInfo.StopwatchSinceLastAllocation.ElapsedMilliseconds >= _allocationsLoggingIntervalInMs)
             {
                 var count = _allocationsLoggingCount;
                 _sb.Clear();
 
-                _sb.Append($"Top {_allocationsLoggingCount} allocations for the past {_allocationsLoggingIntervalInMs:#,#;;0}ms: (total allocated: {new Size((long)_totalAllocated, SizeUnit.Bytes)}): ");
+                _sb.Append($"Top {_allocationsLoggingCount} allocations for the past {_allocationsLoggingIntervalInMs:#,#;;0}ms: (total allocated: {new Size((long)allocationsInfo.TotalAllocated, SizeUnit.Bytes)}): ");
                 _sb.AppendLine();
 
                 var first = true;
-                foreach (var alloc in _allocations.Values.OrderByDescending(x => x.Allocations))
+                foreach (var alloc in allocationsInfo.Allocations.Values.OrderByDescending(x => x.Allocations))
                 {
                     if (first == false)
                         _sb.AppendLine();
@@ -79,9 +78,7 @@ public class EventsListener : AbstractEventListener
 
                 _internalEvent.SetString(_sb.ToString());
                 onEvent.Invoke(_internalEvent);
-                _stopwatchSinceLastAllocation.Restart();
-                _allocations.Clear();
-                _totalAllocated = 0;
+                allocationsInfo.Clear();
             }
         };
     }
@@ -140,9 +137,7 @@ public class EventsListener : AbstractEventListener
 
         if (eventTypes.Contains(EventType.Allocations) == false)
         {
-            _allocations.Clear();
-            _totalAllocated = 0;
-            _stopwatchSinceLastAllocation = null;
+            _allocationInfo = new AllocationsInfo();
         }
 
         var newDotNetEventType = GetDotNetEventTypes(eventTypes);
@@ -196,5 +191,19 @@ public class EventsListener : AbstractEventListener
             throw new InvalidOperationException($"Failed to determine which event type to log, {string.Join(", ", eventTypes.Select(et => et.ToString()))}");
 
         return dotNetEventType.Value;
+    }
+
+    private class AllocationsInfo
+    {
+        public readonly Dictionary<string, AllocationsHandler.AllocationInfo> Allocations = new();
+        public ulong TotalAllocated = 0;
+        public Stopwatch StopwatchSinceLastAllocation;
+
+        public void Clear()
+        {
+            StopwatchSinceLastAllocation.Restart();
+            Allocations.Clear();
+            TotalAllocated = 0;
+        }
     }
 }
