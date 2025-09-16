@@ -51,6 +51,7 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.OpenAiSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings.ApiKey);
@@ -65,7 +66,8 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
-
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
+                    
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.AzureOpenAiSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings.ApiKey);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.AzureOpenAiSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings.Model);
@@ -79,6 +81,7 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.OllamaSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings.Model);
@@ -92,6 +95,7 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].EmbeddedSettings);
                     break;
@@ -103,6 +107,7 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].EmbeddedSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.GoogleSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings.ApiKey);
@@ -116,7 +121,8 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].EmbeddedSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
-
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
+                    
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.HuggingFaceSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings.ApiKey);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.HuggingFaceSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings.Model);
@@ -129,13 +135,31 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].EmbeddedSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.MistralAiSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings.ApiKey);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.MistralAiSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings.Model);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.MistralAiSettings.Endpoint, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings.Endpoint);
                     break;
-
+                
+                case AiConnectorType.Vertex:
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].EmbeddedSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
+                    
+                    Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.ApiKey);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.Model);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.AiVersion, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.AiVersion);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.Location, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.Location);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.ProjectId, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.ProjectId);
+                    break;
+                
                 default:
                     throw new ArgumentOutOfRangeException(nameof(embeddingsGenerationConfiguration.AiConnectorType), embeddingsGenerationConfiguration.AiConnectorType, null);
             }
@@ -156,8 +180,8 @@ public class AiConnectionStringsTests : RavenTestBase
     }
 
     [RavenTheory(RavenTestCategory.Ai)]
-    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.HuggingFace , DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Skip = "fix me")]
-    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI | RavenAiIntegration.Ollama | RavenAiIntegration.Onnx | RavenAiIntegration.Google | RavenAiIntegration.MistralAi, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.HuggingFace, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Skip = "fix me")]
+    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI | RavenAiIntegration.Ollama | RavenAiIntegration.Onnx | RavenAiIntegration.Google | RavenAiIntegration.MistralAi | RavenAiIntegration.Vertex, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
     public void CanTestAiEmbeddingsConnectionString(Options options, EmbeddingsGenerationConfiguration configuration)
     {
         using (var store = GetDocumentStore())
@@ -194,6 +218,9 @@ public class AiConnectionStringsTests : RavenTestBase
             case AiConnectorType.MistralAi:
                 embeddingsGenerationConfiguration.Connection.MistralAiSettings.Model = string.Empty;
                 break;
+            case AiConnectorType.Vertex:
+                embeddingsGenerationConfiguration.Connection.VertexSettings.Model = string.Empty;
+                break;
         }
 
         using (var store = GetDocumentStore())
@@ -220,7 +247,7 @@ public class AiConnectionStringsTests : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
     [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI | RavenAiIntegration.Google)]
-    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.Ollama | RavenAiIntegration.HuggingFace | RavenAiIntegration.MistralAi | RavenAiIntegration.Onnx, Skip = "This provider does not support dimensionality yet.")]
+    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.Ollama | RavenAiIntegration.HuggingFace | RavenAiIntegration.MistralAi | RavenAiIntegration.Onnx | RavenAiIntegration.Vertex, Skip = "This provider does not support dimensionality yet.")]
     public void SemanticKernel_ShouldRespect_Dimensionality(Options options, EmbeddingsGenerationConfiguration embeddingsGenerationConfiguration)
     {
         const int dimensions = 5;

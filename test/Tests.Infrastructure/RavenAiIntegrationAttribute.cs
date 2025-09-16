@@ -20,9 +20,10 @@ public enum RavenAiIntegration
     Google = 1 << 5,
     HuggingFace = 1 << 6,
     MistralAi = 1 << 7,
+    Vertex = 1 << 8,
 
-    All = OpenAi | AzureOpenAI | Ollama | Onnx | Google | HuggingFace | MistralAi,
-    NonInternal = OpenAi | AzureOpenAI | Ollama | Google | HuggingFace | MistralAi
+    All = OpenAi | AzureOpenAI | Ollama | Onnx | Google | HuggingFace | MistralAi | Vertex,
+    NonInternal = OpenAi | AzureOpenAI | Ollama | Google | HuggingFace | MistralAi | Vertex
 }
 
 public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDataAttributeBase
@@ -195,6 +196,9 @@ public class RavenAiEmbeddingsDataAttribute : AbstractRavenAiIntegrationDataAttr
         
         if (aiIntegration.HasFlag(RavenAiIntegration.MistralAi))
             yield return EmbeddingsMistralAiConnectorForTesting.CreateNewInstance(testMethodName);
+        
+        if (aiIntegration.HasFlag(RavenAiIntegration.Vertex))
+            yield return EmbeddingsVertexConnectorForTesting.CreateNewInstance(testMethodName);
     }
 
     public override IEnumerable<IAiConnectorForTesting<EmbeddingsGenerationConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration)
@@ -219,6 +223,9 @@ public class RavenAiEmbeddingsDataAttribute : AbstractRavenAiIntegrationDataAttr
         
         if (aiIntegration.HasFlag(RavenAiIntegration.MistralAi))
             yield return EmbeddingsMistralAiConnectorForTesting.Instance;
+        
+        if (aiIntegration.HasFlag(RavenAiIntegration.Vertex)) 
+            yield return EmbeddingsVertexConnectorForTesting.Instance;
     }
 }
 
