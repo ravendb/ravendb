@@ -105,10 +105,11 @@ namespace Raven.Server.Documents.Replication.Outgoing
             return _lastStats;
         }
 
-        public void StartPullReplicationAsHub(Stream stream, TcpConnectionHeaderMessage.SupportedFeatures supportedVersions)
+        public void StartPullReplicationAsHub(IDisposable replicationScope, Stream stream, TcpConnectionHeaderMessage.SupportedFeatures supportedVersions)
         {
             SupportedFeatures = supportedVersions;
             _stream = stream;
+            _scope = replicationScope;
             OutgoingReplicationThreadName = $"Pull replication as hub {FromToString}";
             _longRunningSendingWork =
                 PoolOfThreads.GlobalRavenThreadPool.LongRunning(x => HandleReplicationErrors(PullReplication), null, ThreadNames.ForOutgoingReplication(OutgoingReplicationThreadName,
@@ -123,6 +124,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
             if (Logger.IsInfoEnabled)
                 Logger.Info($"Start pull replication as hub {FromToString}");
 
+            using (_scope)
             using (_stream)
             using (_interruptibleRead = new InterruptibleRead<DocumentsContextPool, DocumentsOperationContext>(_parent.ContextPool, _stream))
             using (_database.DocumentsStorage.ContextPool.AllocateOperationContext(out JsonOperationContext context))
@@ -440,6 +442,7 @@ namespace Raven.Server.Documents.Replication.Outgoing
         private void OnSuccessfulReplication() => SuccessfulReplication?.Invoke(this);
 
         internal TestingStuff ForTestingPurposes;
+        private IDisposable _scope;
 
         internal TestingStuff ForTestingPurposesOnly()
         {

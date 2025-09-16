@@ -2809,6 +2809,7 @@ namespace Raven.Server
             switch (header.Operation)
             {
                 case TcpConnectionHeaderMessage.OperationTypes.Subscription:
+                    // tcp ownership - properly scoped by SubscriptionBinder method
                     CreateSubscriptionConnection(ServerStore, result, tcp, bufferToCopy);
                     break;
 
@@ -2829,9 +2830,9 @@ namespace Raven.Server
                     throw new InvalidOperationException("Unknown operation for TCP " + header.Operation);
             }
 
-            //since the responses to TCP connections mostly continue to run
-            //beyond this point, no sense to dispose the connection now, so set it to null.
-            //this way the responders are responsible to dispose the connection and the context
+            // Since the responses to TCP connections mostly continue to run beyond this point,
+            // there's no sense to dispose the connection now, so set it to null.
+            // This way the responders are responsible to dispose the connection and the context.
             // ReSharper disable once RedundantAssignment
             tcp = null;
             return false;
