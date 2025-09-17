@@ -42,7 +42,7 @@ public class CountersRepairTask
         StartAfterSliceHolder startAfterSliceHolder = null;
         string lastDocId = null;
 
-        if (lastProcessedKey != null)
+        if (string.IsNullOrEmpty(lastProcessedKey) == false)
         {
             startAfterSliceHolder = new StartAfterSliceHolder(lastProcessedKey);
         }
@@ -110,6 +110,7 @@ public class CountersRepairTask
 
                         if (docIdsToFix.Count == 0)
                         {
+                            startAfterSliceHolder?.Dispose();
                             MarkAsCompleted();
                             return;
                         }
@@ -120,10 +121,15 @@ public class CountersRepairTask
                         await _database.TxMerger.Enqueue(new ExecuteFixCounterGroupsCommand(_database, docIdsToFix, hasMore));
                         docIdsToFix.Clear();
 
-                        if (hasMore)
-                            break; // break from inner while loop in order to open a new read tx
-
+                        // need to dispose startAfterSliceHolder before we close the context
                         startAfterSliceHolder?.Dispose();
+
+                        if (hasMore)
+                        {
+                            startAfterSliceHolder = new StartAfterSliceHolder(lastDocId);
+                            break; // break from inner while loop in order to open a new read tx
+                        }
+
                         return;
                     }
                 }
@@ -136,10 +142,6 @@ public class CountersRepairTask
                 _logger.Warn($"An Error occured while executing FixCorruptedCountersTask. Last DocId : '{lastDocId}'", e);
             }
 
-        }
-        finally
-        {
-            startAfterSliceHolder?.Dispose();
         }
     }
 
