@@ -62,7 +62,7 @@ function getConnectorOptions(modelType: FormData["modelType"]): SelectOptionWith
         { label: "Ollama", value: "ollamaSettings", icon: "ollama" },
         { label: "OpenAI", value: "openAiSettings", icon: "openai" },
         { label: "Mistral AI", value: "mistralAiSettings", icon: "mistralai" },
-        { label: "Vertex AI", value: "vertexSettings", icon: "google-gemini" }, // TODO: Add vertex-ai icon
+        { label: "Vertex AI", value: "vertexSettings", icon: "vertex-ai" },
         { label: "Embedded (bge-micro-v2)", value: "embeddedSettings", icon: "onnx" },
     ];
 
