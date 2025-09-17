@@ -1106,7 +1106,8 @@ type AiConnectionStringsSettings =
     | Raven.Client.Documents.Operations.AI.EmbeddedSettings
     | Raven.Client.Documents.Operations.AI.GoogleSettings
     | Raven.Client.Documents.Operations.AI.HuggingFaceSettings
-    | Raven.Client.Documents.Operations.AI.MistralAiSettings;
+    | Raven.Client.Documents.Operations.AI.MistralAiSettings
+    | Raven.Client.Documents.Operations.AI.VertexSettings;
 
 interface AiModelsRequestDto {
     ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi">;
