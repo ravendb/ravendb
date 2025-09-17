@@ -17,6 +17,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
         public LazyStringValue Collection;
         public LazyStringValue Id;
         public DocumentFlags Flags;
+        public long StorageId;
+        public DocumentsOperationContext Context;
 
         public override DynamicJsonValue ToDebugJson()
         {
@@ -41,6 +43,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
                 Flags = doc.Flags,
                 TransactionMarker = doc.TransactionMarker,
                 LastModifiedTicks = doc.LastModified.Ticks,
+                StorageId = doc.StorageId,
+                Context = context,
             };
 
             return result;
@@ -209,6 +213,8 @@ namespace Raven.Server.Documents.Replication.ReplicationItems
             Data?.Dispose();
             Id?.Dispose();
             Collection?.Dispose();
+
+            Context?.Transaction?.InnerTransaction.ForgetAbout(StorageId);
         }
     }
 }
