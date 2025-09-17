@@ -244,7 +244,7 @@ const schema = yupObjectSchema<FormData>({
     }),
     vertexSettings: yupObjectSchema<FormData["vertexSettings"]>({
         aiVersion: yup.string<Raven.Client.Documents.Operations.AI.VertexAIVersion>().nullable(),
-        apiKey: yup
+        googleCredentialsJson: yup
             .string()
             .nullable()
             .when("$connectorType", {
@@ -354,7 +354,7 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
             } satisfies Required<FormData["openAiSettings"]>,
             vertexSettings: {
                 aiVersion: null,
-                apiKey: null,
+                googleCredentialsJson: null,
                 location: null,
                 model: null,
                 projectId: null,

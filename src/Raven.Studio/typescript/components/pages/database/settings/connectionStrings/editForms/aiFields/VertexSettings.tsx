@@ -35,7 +35,7 @@ export default function VertexSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
 
         return tasksService.testAiConnectionString(databaseName, "Vertex", formValues.modelType, {
             AiVersion: formValues.vertexSettings.aiVersion,
-            ApiKey: formValues.vertexSettings.apiKey,
+            GoogleCredentialsJson: formValues.vertexSettings.googleCredentialsJson,
             Model: formValues.vertexSettings.model,
             Location: formValues.vertexSettings.location,
             ProjectId: formValues.vertexSettings.projectId,
@@ -66,12 +66,12 @@ export default function VertexSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
 
             <div className="mb-2">
                 <FormLabel>
-                    API Key
-                    <PopoverWithHoverWrapper message="The API key used to authenticate requests to Vertex AI services.">
+                    Google Credentials Json
+                    <PopoverWithHoverWrapper message="Google credentials used to authenticate requests to Vertex AI services.">
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
-                <FormInput control={control} name="vertexSettings.apiKey" type="password" passwordPreview />
+                <FormInput control={control} name="vertexSettings.googleCredentialsJson" type="password" passwordPreview />
             </div>
 
             <div className="mb-2">

@@ -10,10 +10,10 @@ public sealed class VertexSettings : AbstractAiSettings
         // deserialization
     }
     
-    public VertexSettings(string model, string apiKey, string location, string projectId, VertexAIVersion? aiVersion = null)
+    public VertexSettings(string model, string googleCredentialsJson, string location, string projectId, VertexAIVersion? aiVersion = null)
     {
         Model = model;
-        ApiKey = apiKey;
+        GoogleCredentialsJson = googleCredentialsJson;
         Location = location;
         ProjectId = projectId;
         AiVersion = aiVersion;
@@ -23,11 +23,8 @@ public sealed class VertexSettings : AbstractAiSettings
     /// The model ID for the Vertex AI service.
     /// </summary>
     public string Model { get; set; }
-
-    /// <summary>
-    /// The API key required for accessing the Vertex AI service.
-    /// </summary>
-    public string ApiKey { get; set; }
+    
+    public string GoogleCredentialsJson { get; set; }
     
     public VertexAIVersion? AiVersion { get; set; }
     
@@ -40,11 +37,11 @@ public sealed class VertexSettings : AbstractAiSettings
         if (string.IsNullOrWhiteSpace(Model))
             errors.Add($"Value of `{nameof(Model)}` field cannot be empty.");
         
-        if (string.IsNullOrWhiteSpace(ApiKey))
-            errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty.");
+        if (string.IsNullOrWhiteSpace(GoogleCredentialsJson))
+            errors.Add($"Value of `{nameof(GoogleCredentialsJson)}` field cannot be empty.");
         
         if (string.IsNullOrWhiteSpace(Location))
-            errors.Add($"Value of `{nameof(ApiKey)}` field cannot be empty.");
+            errors.Add($"Value of `{nameof(Location)}` field cannot be empty.");
         
         if (string.IsNullOrWhiteSpace(ProjectId))
             errors.Add($"Value of `{nameof(ProjectId)}` field cannot be empty.");
@@ -61,7 +58,7 @@ public sealed class VertexSettings : AbstractAiSettings
             AiVersion != vertexSettings.AiVersion)
             differences |= AiSettingsCompareDifferences.ModelArchitecture;
         
-        if (ApiKey != vertexSettings.ApiKey)
+        if (GoogleCredentialsJson != vertexSettings.GoogleCredentialsJson)
             differences |= AiSettingsCompareDifferences.AuthenticationSettings;
 
         if (Location != vertexSettings.Location ||
@@ -75,7 +72,7 @@ public sealed class VertexSettings : AbstractAiSettings
     {
         var json = base.ToJson();
         json[nameof(Model)] = Model;
-        json[nameof(ApiKey)] = ApiKey;
+        json[nameof(GoogleCredentialsJson)] = GoogleCredentialsJson;
         
         if (AiVersion != null)
             json[nameof(AiVersion)] = AiVersion.Value.ToString("G"); // Explicitly convert to string to avoid enum serialization

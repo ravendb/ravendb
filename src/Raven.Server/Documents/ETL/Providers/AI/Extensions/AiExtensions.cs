@@ -136,12 +136,13 @@ public static class AiExtensions
             
             case AiConnectorType.Vertex:
                 var vertexSettings = connectionString.VertexSettings;
+                var tokenProvider = new VertexBearerTokenProvider(vertexSettings);
 
                 if (vertexSettings.AiVersion.HasValue)
                 {
                     kernelBuilder.AddVertexAIEmbeddingGenerator(
                         vertexSettings.Model,
-                        vertexSettings.ApiKey,
+                        tokenProvider.BearerTokenProvider,
                         vertexSettings.Location,
                         vertexSettings.ProjectId,
                         vertexSettings.AiVersion.Value.ToVertexApiVersion());
@@ -150,7 +151,7 @@ public static class AiExtensions
                 {
                     kernelBuilder.AddVertexAIEmbeddingGenerator(
                         vertexSettings.Model,
-                        vertexSettings.ApiKey,
+                        tokenProvider.BearerTokenProvider,
                         vertexSettings.Location,
                         vertexSettings.ProjectId);
                 }

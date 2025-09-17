@@ -283,7 +283,7 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
         VertexSettings:
             connection.connectorType === "vertexSettings"
                 ? {
-                      ApiKey: connection.vertexSettings.apiKey,
+                      GoogleCredentialsJson: connection.vertexSettings.googleCredentialsJson,
                       Location: connection.vertexSettings.location,
                       Model: connection.vertexSettings.model,
                       AiVersion: connection.vertexSettings.aiVersion,

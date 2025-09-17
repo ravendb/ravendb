@@ -427,7 +427,7 @@ export function mapAiConnectionsFromDto(
                 },
                 vertexSettings: {
                     aiVersion: connection.VertexSettings?.AiVersion,
-                    apiKey: connection.VertexSettings?.ApiKey,
+                    googleCredentialsJson: connection.VertexSettings?.GoogleCredentialsJson,
                     location: connection.VertexSettings?.Location,
                     model: connection.VertexSettings?.Model,
                     projectId: connection.VertexSettings?.ProjectId,

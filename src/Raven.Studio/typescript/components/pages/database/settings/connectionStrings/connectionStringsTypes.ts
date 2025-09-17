@@ -186,7 +186,7 @@ export interface AiConnection extends ConnectionBase {
     };
     vertexSettings?: {
         aiVersion?: Raven.Client.Documents.Operations.AI.VertexAIVersion;
-        apiKey?: string;
+        googleCredentialsJson?: string;
         location?: string;
         model?: string;
         projectId?: string;

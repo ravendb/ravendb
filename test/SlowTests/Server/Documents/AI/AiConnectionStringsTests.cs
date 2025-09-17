@@ -153,7 +153,7 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
                     
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
-                    Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.ApiKey);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.GoogleCredentialsJson, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.GoogleCredentialsJson);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.Model);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.AiVersion, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.AiVersion);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.Location, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.Location);
