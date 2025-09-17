@@ -7,9 +7,10 @@ import _ from "lodash";
 
 type AiConnectionString = Raven.Client.Documents.Operations.AI.AiConnectionString;
 type AiConnectorType = Raven.Client.Documents.Operations.AI.AiConnectorType;
+type AiConnectionSetting = Exclude<keyof AiConnectionString, "Type" | "Identifier" | "ModelType" | "Name">;
 
 const getConnectorType = (connection: AiConnectionString): AiConnectorType => {
-    const mapping: Partial<Record<keyof AiConnectionString, AiConnectorType>> = {
+    const mapping: Record<AiConnectionSetting, AiConnectorType> = {
         AzureOpenAiSettings: "AzureOpenAi",
         GoogleSettings: "Google",
         HuggingFaceSettings: "HuggingFace",
@@ -20,18 +21,16 @@ const getConnectorType = (connection: AiConnectionString): AiConnectorType => {
         VertexSettings: "Vertex",
     };
 
-    for (const key of Object.keys(mapping) as (keyof AiConnectionString)[]) {
+    for (const key of Object.keys(mapping) as AiConnectionSetting[]) {
         if (connection[key]) {
-            return mapping[key]!;
+            return mapping[key];
         }
     }
 
     throw new Error("No connector type found. Please check the connection string.");
 };
 
-function mapAiConnectionStringToSettingsDto(
-    connection: AiConnectionString
-): AiConnectionStringsSettings {
+function mapAiConnectionStringToSettingsDto(connection: AiConnectionString): AiConnectionStringsSettings {
     const settings = [
         connection.AzureOpenAiSettings,
         connection.GoogleSettings,
@@ -366,7 +365,7 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 endpoint: null,
                 model: null,
                 embeddingsMaxConcurrentBatches: null,
-            } satisfies Required<FormData["mistralAiSettings"]>
+            } satisfies Required<FormData["mistralAiSettings"]>,
         };
     }
 
