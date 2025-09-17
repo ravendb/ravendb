@@ -219,10 +219,13 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
 
                 if (listFolders)
                 {
-                    result.FileInfoDetails = response
-                        .CommonPrefixes
-                        .Select(x => new S3FileInfoDetails { FullPath = x })
-                        .ToList();
+                    if (response.CommonPrefixes != null)
+                    {
+                        result.FileInfoDetails = response
+                            .CommonPrefixes
+                            .Select(x => new S3FileInfoDetails { FullPath = x })
+                            .ToList();
+                    }
                 }
                 else
                 {
