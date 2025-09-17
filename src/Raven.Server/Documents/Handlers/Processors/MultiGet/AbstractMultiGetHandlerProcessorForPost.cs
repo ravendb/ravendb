@@ -49,7 +49,7 @@ internal abstract class AbstractMultiGetHandlerProcessorForPost<TRequestHandler,
             Raven.Server.Web.RequestHandler.ThrowRequiredPropertyNameInRequest("Requests");
 
         StringValues httpEncodings = HttpContext.Request.Headers.AcceptEncoding;
-        using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
+        await using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
         {
             await using (var writer = new AsyncBlittableJsonTextWriter(context, memoryStream))
             {

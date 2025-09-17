@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -24,6 +25,7 @@ using Raven.Client.Documents.AI;
 using Raven.Client.Documents.Commands.MultiGet;
 using Raven.Client.Documents.Queries;
 using Raven.Server.NotificationCenter.Notifications.Details;
+using Raven.Server.Web;
 using ChatConstants = Raven.Server.Documents.AI.ChatCompletionClient.Constants;
 
 namespace Raven.Server.Documents.Handlers.AI.Agents
@@ -76,7 +78,6 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
             if (hasActionResponse == false && hasUserPrompt == false)
                 throw new InvalidOperationException($"Cannot have a conversation '{conversationId}' without open action calls or user prompt.");
 
-
             if (string.IsNullOrEmpty(body.UserPrompt) == false)
             {
                 document.AddMessage(context, context.ReadObject(new DynamicJsonValue
@@ -88,7 +89,6 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
 
             return true;
         }
-
 
         public async Task HandleRequest(
             JsonOperationContext context,
@@ -638,8 +638,16 @@ namespace Raven.Server.Documents.Handlers.AI.Agents
                 });
             }
 
+            var multiGetHandler = new MultiGetHandler();
+            multiGetHandler.Init(new RequestHandlerContext
+            {
+                Database = RequestHandler.Database,
+                RavenServer = RequestHandler.Server,
+                HttpContext = new DefaultHttpContext()
+            });
+
             using (var reqsBlittable = context.ReadObject(new DynamicJsonValue { ["Requests"] = reqs }, "ai-agent/multi-query"))
-            using (var handler = new MultiGetHandlerProcessorForPost(RequestHandler))
+            using (var handler = new MultiGetHandlerProcessorForPost(multiGetHandler))
             using (var memoryStream = RecyclableMemoryStreamFactory.GetRecyclableStream())
             {
                 await handler.ExecuteMultiGetAsync(context, reqsBlittable, memoryStream);
