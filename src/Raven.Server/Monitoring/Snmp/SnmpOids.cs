@@ -250,6 +250,10 @@ namespace Raven.Server.Monitoring.Snmp
             [Description("Available memory for processing (in MB)")]
             public const string AvailableMemoryForProcessing = "1.6.13";
 
+            [SnmpDataType(SnmpType.Gauge32)]
+            [Description("Available memory for processing in %")]
+            public const string AvailableMemoryForProcessingPercentage = "1.6.14";
+
             [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of concurrent requests")]
             public const string ConcurrentRequests = "1.7.1";
