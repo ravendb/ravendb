@@ -83,10 +83,18 @@ namespace Raven.Server.ServerWide.Context
 
         protected override DocumentsTransaction CloneReadTransaction(DocumentsTransaction previous)
         {
+            var hasDebugInfo = previous.InnerTransaction?.LowLevelTransaction?.DebugInfo != null;
+            
+            if (hasDebugInfo)
+                previous.InnerTransaction?.LowLevelTransaction?.DebugInfo_Add("About to clone transaction");
+            
             var clonedTransaction = new DocumentsTransaction(this,
                 _documentDatabase.DocumentsStorage.Environment.CloneReadTransaction(previous.InnerTransaction, PersistentContext, Allocator),
                 _documentDatabase.Changes);
 
+            if (hasDebugInfo)
+                clonedTransaction.InnerTransaction?.LowLevelTransaction?.DebugInfo_Add("New cloned transaction");
+            
             previous.Dispose();
 
             return clonedTransaction;

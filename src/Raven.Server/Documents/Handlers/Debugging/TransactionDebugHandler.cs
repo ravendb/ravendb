@@ -87,6 +87,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(TxInfoResult.DecompressedBufferSize)] = new Size(lowLevelTransaction.DecompressedBufferBytes, SizeUnit.Bytes).ToString(),
                 [nameof(TxInfoResult.TotalEncryptionBufferSize)] = lowLevelTransaction.TotalEncryptionBufferInBytes.ToString(),
                 [nameof(TxInfoResult.IsDisposed)] = lowLevelTransaction.IsDisposed,
+                [nameof(TxInfoResult.DebugInfo)] = lowLevelTransaction.DebugInfo,
             };
         }
     }
@@ -108,5 +109,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
         public string DecompressedBufferSize;
         public string TotalEncryptionBufferSize;
         public bool IsDisposed;
+        public string DebugInfo;
     }
 }
