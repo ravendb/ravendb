@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using Newtonsoft.Json.Linq;
 using Sparrow.Json.Parsing;
 
@@ -27,26 +28,20 @@ public sealed class VertexSettings : AbstractAiSettings
     /// </summary>
     public string Model { get; set; }
 
-    public string GoogleCredentialsJson
-    {
-        get => _googleCredentialsJson;
-        set
-        {
-            _googleCredentialsJson = value;
-
-            var credentialJsonType = JObject.Parse(value);
-            if (credentialJsonType.TryGetValue(ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase, out var projectIdValue))
-                ProjectId = projectIdValue.Value<string>();
-        }
-    }
-    
-    private string _googleCredentialsJson;
+    public string GoogleCredentialsJson { get; set; }
 
     public VertexAIVersion? AiVersion { get; set; }
     
     public string Location { get; set; }
-    
-    internal string ProjectId { get; set; }
+
+    public string GetProjectId()
+    {
+        var credentialJsonType = JObject.Parse(GoogleCredentialsJson);
+        if (credentialJsonType.TryGetValue(ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase, out var projectIdValue))
+            return projectIdValue.Value<string>();
+        
+        throw new InvalidDataException($"Couldn't find {nameof(ProjectIdPropertyName)} in the provided {nameof(GoogleCredentialsJson)}.");
+    }
 
     public override void ValidateFields(List<string> errors)
     {
@@ -55,6 +50,10 @@ public sealed class VertexSettings : AbstractAiSettings
         
         if (string.IsNullOrWhiteSpace(GoogleCredentialsJson))
             errors.Add($"Value of `{nameof(GoogleCredentialsJson)}` field cannot be empty.");
+        
+        var credentialJsonType = JObject.Parse(GoogleCredentialsJson);
+        if (credentialJsonType.TryGetValue(ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase, out var projectIdValue) == false)
+            errors.Add($"`{nameof(GoogleCredentialsJson)}` has to contain `{ProjectIdPropertyName}` property.");
         
         if (string.IsNullOrWhiteSpace(Location))
             errors.Add($"Value of `{nameof(Location)}` field cannot be empty.");
@@ -74,8 +73,7 @@ public sealed class VertexSettings : AbstractAiSettings
         if (GoogleCredentialsJson != vertexSettings.GoogleCredentialsJson)
             differences |= AiSettingsCompareDifferences.AuthenticationSettings;
 
-        if (Location != vertexSettings.Location ||
-            ProjectId != vertexSettings.ProjectId)
+        if (Location != vertexSettings.Location)
             differences |= AiSettingsCompareDifferences.DeploymentConfiguration;
         
         return differences;
@@ -91,7 +89,6 @@ public sealed class VertexSettings : AbstractAiSettings
             json[nameof(AiVersion)] = AiVersion.Value.ToString("G"); // Explicitly convert to string to avoid enum serialization
         
         json[nameof(Location)] = Location;
-        json[nameof(ProjectId)] = ProjectId;
         
         return json;
     }

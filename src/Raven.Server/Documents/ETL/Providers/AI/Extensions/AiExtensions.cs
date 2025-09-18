@@ -137,6 +137,7 @@ public static class AiExtensions
             case AiConnectorType.Vertex:
                 var vertexSettings = connectionString.VertexSettings;
                 var tokenProvider = new VertexBearerTokenProvider(vertexSettings);
+                var projectId = vertexSettings.GetProjectId();
 
                 if (vertexSettings.AiVersion.HasValue)
                 {
@@ -144,7 +145,7 @@ public static class AiExtensions
                         vertexSettings.Model,
                         tokenProvider.BearerTokenProvider,
                         vertexSettings.Location,
-                        vertexSettings.ProjectId,
+                        projectId,
                         vertexSettings.AiVersion.Value.ToVertexApiVersion());
                 }
                 else
@@ -153,7 +154,7 @@ public static class AiExtensions
                         vertexSettings.Model,
                         tokenProvider.BearerTokenProvider,
                         vertexSettings.Location,
-                        vertexSettings.ProjectId);
+                        projectId);
                 }
 
                 break;
