@@ -3,9 +3,9 @@ import Row from "react-bootstrap/Row";
 import Col from "react-bootstrap/Col";
 import classNames from "classnames";
 import { Icon } from "components/common/Icon";
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { ConnectivityStatus, OverallInfoItem } from "components/pages/resources/about/partials/common";
-import { useAppSelector } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
 import { licenseSelectors } from "components/common/shell/licenseSlice";
 import LicenseType = Raven.Server.Commercial.LicenseType;
 import registration from "viewmodels/shell/registration";
@@ -25,6 +25,14 @@ import Button from "react-bootstrap/Button";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
+import { AiAssistantEulaModal } from "components/common/aiAssistantWindow/AiAssistantEulaModal";
+import useBoolean from "components/hooks/useBoolean";
+import { aiAssistantActions, aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
+import Spinner from "react-bootstrap/Spinner";
+import { CheckUsageAiAssistantResultDto } from "commands/aiAssistant/checkUsageAiAssistantCommand";
+import { loadableData } from "components/models/common";
+import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
+import ProgressBar from "react-bootstrap/ProgressBar";
 
 interface LicenseSummaryProps {
     asyncCheckLicenseServerConnectivity: AsyncState<ConnectivityStatus>;
@@ -39,9 +47,24 @@ function canRenewLicense(licenseType: LicenseType) {
 export function LicenseSummary(props: LicenseSummaryProps) {
     const { recheckConnectivity, asyncCheckLicenseServerConnectivity, asyncGetConfigurationSettings } = props;
 
+    const dispatch = useAppDispatch();
     const licenseStatus = useAppSelector(licenseSelectors.status);
     const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
     const licenseType = useAppSelector(licenseSelectors.statusValue("Type"));
+    const aiAssistantConsentStatus = useAppSelector(aiAssistantSelectors.consentStatus);
+    const aiAssistantUsage = useAppSelector(aiAssistantSelectors.usage);
+
+    // Check AI Assistant usage on load
+    useEffect(() => {
+        dispatch(aiAssistantActions.checkUsage());
+    }, []);
+
+    // Check AI Assistant consent if not checked yet
+    useEffect(() => {
+        if (aiAssistantConsentStatus.status === "idle") {
+            dispatch(aiAssistantActions.checkConsent());
+        }
+    }, [aiAssistantConsentStatus.status]);
 
     const [refreshing, setRefreshing] = useState<boolean>(false);
 
@@ -83,6 +106,42 @@ export function LicenseSummary(props: LicenseSummaryProps) {
                             />
                         </OverallInfoItem>
                         <LicenseActions asyncGetConfigurationSettings={asyncGetConfigurationSettings} />
+                    </Row>
+                </div>
+                <hr />
+                <h4>AI Assistant</h4>
+                <div className="vstack gap-4">
+                    <Row>
+                        <OverallInfoItem
+                            icon="ai"
+                            isFullWidth
+                            label={
+                                <>
+                                    Tokens usage
+                                    <PopoverWithHoverWrapper message="Each month, your token balance resets. The number of tokens available depends on your license and powers the AI Assistant.">
+                                        <Icon icon="info-new" margin="ms-1" />
+                                    </PopoverWithHoverWrapper>
+                                </>
+                            }
+                        >
+                            <TokensUsageItem usage={aiAssistantUsage} />
+                        </OverallInfoItem>
+                    </Row>
+                    <Row>
+                        <OverallInfoItem
+                            icon="document"
+                            label={
+                                <>
+                                    Consent
+                                    <PopoverWithHoverWrapper message="To use our built-in AI features, such as AI Assistant, you need to provide consent. If you do not accept, the feature will remain unavailable until you do.">
+                                        <Icon icon="info-new" margin="ms-1" />
+                                    </PopoverWithHoverWrapper>
+                                </>
+                            }
+                        >
+                            <ConsentStatusItem consentStatus={aiAssistantConsentStatus} />
+                        </OverallInfoItem>
+                        {aiAssistantConsentStatus.data === "ConsentRequired" && <AiAssistantConsentButton />}
                     </Row>
                 </div>
             </Card.Body>
@@ -395,4 +454,115 @@ function LicenseExpirationInfoPopover({ date, children }: { date: moment.Moment;
             {children}
         </PopoverWithHoverWrapper>
     );
+}
+
+function AiAssistantConsentButton() {
+    const { value: isEulaOpen, toggle: toggleEulaOpen } = useBoolean(false);
+
+    return (
+        <Col className="d-flex align-items-center justify-content-end">
+            <Button variant="outline-secondary" className="rounded-pill" onClick={toggleEulaOpen}>
+                Review the consent
+                <Icon icon="open-modal" margin="ms-1" />
+            </Button>
+            {isEulaOpen && <AiAssistantEulaModal close={toggleEulaOpen} />}
+        </Col>
+    );
+}
+
+function TokensUsageItem({ usage }: { usage: loadableData<CheckUsageAiAssistantResultDto> }) {
+    if (usage.status === "loading") {
+        return (
+            <strong className="fs-4">
+                <Spinner size="sm" variant="progress" className="me-1" />
+                Checking usage...
+            </strong>
+        );
+    }
+
+    if (usage.status === "failure") {
+        return (
+            <strong className="text-danger fs-4">
+                <Icon icon="cancel" />
+                Failed to check usage
+            </strong>
+        );
+    }
+
+    if (usage.data?.Status === "InvalidCredentials") {
+        return (
+            <strong className="text-warning fs-4">
+                <Icon icon="cancel" />
+                Invalid credentials
+            </strong>
+        );
+    }
+
+    if (usage.data?.Status === "Success") {
+        const remaining = Math.round(100 - usage.data.UsagePercentage);
+
+        return (
+            <div>
+                <div className="fs-4">
+                    <strong>{remaining}%</strong> remaining
+                </div>
+                <ProgressBar now={remaining} className="tokens-usage-progress-bar" />
+            </div>
+        );
+    }
+
+    return null;
+}
+
+function ConsentStatusItem({
+    consentStatus,
+}: {
+    consentStatus: loadableData<CheckConsentAiAssistantResultDto["Status"]>;
+}) {
+    if (consentStatus.status === "loading") {
+        return (
+            <strong className="fs-4">
+                <Spinner size="sm" variant="progress" className="me-1" />
+                Checking consent...
+            </strong>
+        );
+    }
+
+    if (consentStatus.status === "failure") {
+        return (
+            <strong className="text-danger fs-4">
+                <Icon icon="cancel" />
+                Failed to check consent
+            </strong>
+        );
+    }
+
+    if (consentStatus.data === "ConsentRequired") {
+        return (
+            <strong className="text-warning fs-4">
+                <Icon icon="cancel" />
+                Not accepted
+            </strong>
+        );
+    }
+
+    if (consentStatus.data === "InvalidCredentials") {
+        return (
+            <strong className="text-warning fs-4">
+                <Icon icon="cancel" />
+                Invalid credentials
+            </strong>
+        );
+    }
+
+    if (consentStatus.data === "Success") {
+        return (
+            <strong className="text-success fs-4">
+                <Icon icon="check" />
+                Accepted
+            </strong>
+        );
+    }
+
+    return null;
 }

@@ -43,8 +43,11 @@ interface AboutPageStoryProps {
 }
 
 function commonInit(props: AboutPageStoryProps) {
-    const { licenseService } = mockServices;
+    const { licenseService, aiAssistantService } = mockServices;
     const { license, accessManager, cluster } = mockStore;
+
+    aiAssistantService.withCheckConsent();
+    aiAssistantService.withCheckUsage();
 
     accessManager.with_securityClearance(props.securityClearance);
     cluster.with_ClientVersion();

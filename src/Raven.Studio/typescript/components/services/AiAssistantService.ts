@@ -1,5 +1,6 @@
 import aiAssistantAssistCommand from "commands/aiAssistant/assistAiAssistantCommand";
 import checkConsentAiAssistantCommand from "commands/aiAssistant/checkConsentAiAssistantCommand";
+import checkUsageAiAssistantCommand from "commands/aiAssistant/checkUsageAiAssistantCommand";
 import giveConsentAiAssistantCommand from "commands/aiAssistant/giveConsentAiAssistantCommand";
 
 export default class AiAssistantService {
@@ -13,5 +14,9 @@ export default class AiAssistantService {
 
     async giveConsent(...args: ConstructorParameters<typeof giveConsentAiAssistantCommand>) {
         return new giveConsentAiAssistantCommand(...args).execute();
+    }
+
+    async checkUsage(...args: ConstructorParameters<typeof checkUsageAiAssistantCommand>) {
+        return new checkUsageAiAssistantCommand(...args).execute();
     }
 }

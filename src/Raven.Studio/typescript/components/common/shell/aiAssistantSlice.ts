@@ -4,13 +4,17 @@ import { loadableData } from "components/models/common";
 import { createFailureState, createIdleState, createSuccessState } from "components/utils/common";
 import { services } from "components/hooks/useServices";
 import messagePublisher from "common/messagePublisher";
+import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
+import { CheckUsageAiAssistantResultDto } from "commands/aiAssistant/checkUsageAiAssistantCommand";
 
 interface AiAssistantState {
-    consentStatus: loadableData<AiAssistantResponseStatus>;
+    consentStatus: loadableData<CheckConsentAiAssistantResultDto["Status"]>;
+    usage: loadableData<CheckUsageAiAssistantResultDto>;
 }
 
 const initialState: AiAssistantState = {
     consentStatus: createIdleState("ConsentRequired"),
+    usage: createIdleState(),
 };
 
 export const aiAssistantSlice = createSlice({
@@ -26,14 +30,29 @@ export const aiAssistantSlice = createSlice({
                 state.consentStatus = createFailureState(action.error.message);
             })
             .addCase(checkConsent.fulfilled, (state, action) => {
+                console.log("kalczur action", action);
                 state.consentStatus = createSuccessState(action.payload.Status);
+            })
+            .addCase(checkUsage.pending, (state) => {
+                state.usage.status = "loading";
+            })
+            .addCase(checkUsage.rejected, (state, action) => {
+                state.usage = createFailureState(action.error.message);
+            })
+            .addCase(checkUsage.fulfilled, (state, action) => {
+                state.usage = createSuccessState(action.payload);
             });
     },
 });
 
 const checkConsent = createAsyncThunk(
     aiAssistantSlice.name + "/checkConsent",
-    services.aiAssistantService.checkConsent
+    async () => await services.aiAssistantService.checkConsent()
+);
+
+const checkUsage = createAsyncThunk(
+    aiAssistantSlice.name + "/checkUsage",
+    async () => await services.aiAssistantService.checkUsage()
 );
 
 const giveConsent = createAsyncThunk(aiAssistantSlice.name + "/giveConsent", async () => {
@@ -56,8 +75,10 @@ export const aiAssistantActions = {
     ...aiAssistantSlice.actions,
     checkConsent,
     giveConsent,
+    checkUsage,
 };
 
 export const aiAssistantSelectors = {
     consentStatus: (store: RootState) => store.aiAssistant.consentStatus,
+    usage: (store: RootState) => store.aiAssistant.usage,
 };

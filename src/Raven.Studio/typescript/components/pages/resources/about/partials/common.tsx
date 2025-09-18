@@ -5,14 +5,15 @@ import IconName from "../../../../../../typings/server/icons";
 
 interface OverallInfoItemProps {
     icon: IconName;
-    label: string;
+    label: ReactNode;
     children: string | ReactNode | ReactNode[];
+    isFullWidth?: boolean;
 }
 
 export function OverallInfoItem(props: OverallInfoItemProps) {
-    const { icon, label, children } = props;
+    const { icon, label, children, isFullWidth } = props;
     return (
-        <Col sm={7}>
+        <Col sm={isFullWidth ? 12 : 7}>
             <div className="d-flex">
                 <Icon icon={icon} className="fs-1" margin="me-3 mt-1" />
                 <div className="vstack">

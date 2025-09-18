@@ -9,9 +9,8 @@ import { ReactNode, useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { aiAssistantActions, aiAssistantSelectors } from "../shell/aiAssistantSlice";
 import useBoolean from "components/hooks/useBoolean";
-import Modal from "components/common/Modal";
-import { Checkbox } from "../Checkbox";
 import RichAlert from "../RichAlert";
+import { AiAssistantEulaModal } from "./AiAssistantEulaModal";
 
 interface AiAssistWindowProps {
     closeWindow: () => void;
@@ -91,6 +90,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                     Checking consent... Please wait.
                 </div>
             )}
+            {consentStatus.status === "failure" && <RichAlert variant="danger">Failed to check consent.</RichAlert>}
             {consentStatus.data === "InvalidCredentials" && (
                 <RichAlert variant="danger">
                     Invalid credentials. Please check your credentials and try again.
@@ -106,7 +106,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                             <Icon icon="open-modal" margin="ms-1" />
                         </Button>
                     </div>
-                    {isEulaOpen && <EulaModal close={toggleEulaOpen} />}
+                    {isEulaOpen && <AiAssistantEulaModal close={toggleEulaOpen} />}
                 </div>
             )}
             {isConsentSuccess && asyncAssist.loading && (
@@ -115,6 +115,7 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                     Text refine in progress... Please wait.
                 </div>
             )}
+            {asyncAssist.error && <RichAlert variant="danger">Failed to assist. Please try again.</RichAlert>}
             {asyncAssist.result?.Status === "InvalidData" && (
                 <RichAlert variant="danger">Invalid data. Please check your data and try again.</RichAlert>
             )}
@@ -143,58 +144,5 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                 </div>
             )}
         </div>
-    );
-}
-
-interface EulaModalProps {
-    close: () => void;
-}
-
-function EulaModal({ close }: EulaModalProps) {
-    const dispatch = useAppDispatch();
-
-    const { value: isAccepted, toggle: toggleAccepted } = useBoolean(false);
-
-    const handleConsent = () => {
-        dispatch(aiAssistantActions.giveConsent());
-        close();
-    };
-
-    return (
-        <Modal show onHide={close} contentClassName="modal-border bulge-primary" size="lg">
-            <Modal.Header closeButton onCloseClick={close} className="pb-0">
-                <h3>
-                    <Icon icon="license" />
-                    Review the consent
-                </h3>
-            </Modal.Header>
-            <Modal.Body className="py-1 vstack gap-3">
-                <div>
-                    To use our built-in AI features, such as <i>AI Assistant</i>, you need to provide consent. If you do
-                    not accept, the feature will remain unavailable until you do.
-                </div>
-                <Checkbox selected={isAccepted} toggleSelection={toggleAccepted} color="primary">
-                    I accept the{" "}
-                    <a href="#TODO" target="_blank">
-                        RavenDB AI Assistant EULA
-                    </a>
-                </Checkbox>
-                <RichAlert variant="info">
-                    If you wish to revert your consent,{" "}
-                    <a href="#TODO" target="_blank">
-                        contact our support team
-                    </a>
-                    .
-                </RichAlert>
-            </Modal.Body>
-            <Modal.Footer>
-                <Button variant="link" onClick={close} className="link-muted rounded-pill">
-                    Cancel
-                </Button>
-                <Button variant="primary" onClick={handleConsent} className="rounded-pill" disabled={!isAccepted}>
-                    I consent
-                </Button>
-            </Modal.Footer>
-        </Modal>
     );
 }

@@ -3,6 +3,7 @@ import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import AiAssistantWindow from "./AiAssistantWindow";
 import { mockServices } from "test/mocks/services/MockServices";
 import { useState } from "react";
+import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
 
 export default {
     title: "Bits/AI Assistant Window",
@@ -10,7 +11,7 @@ export default {
 } satisfies Meta;
 
 interface AiAssistantWindowStoryArgs {
-    consentStatus: AiAssistantResponseStatus;
+    consentStatus: CheckConsentAiAssistantResultDto["Status"];
     assistStatus: AiAssistantResponseStatus;
 }
 
