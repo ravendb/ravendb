@@ -224,105 +224,111 @@ namespace Voron.Data.BTrees
         
         public void MultiAdd(Slice key, Slice value)
         {
+            int maxNodeSize = Llt.DataPager.NodeMaxSize;
             if (!value.HasValue)
                 throw new ArgumentNullException(nameof(value));
 
-            int maxNodeSize = Llt.DataPager.NodeMaxSize;
             if (value.Size > maxNodeSize)
                 throw new ArgumentException("Cannot add a value to child tree that is over " + maxNodeSize + " bytes in size", nameof(value));
             if (value.Size == 0)
                 throw new ArgumentException("Cannot add empty value to child tree");
-
+            
             if ((State.Header.Flags & TreeFlags.MultiValueTrees) != TreeFlags.MultiValueTrees)
             {
                 ref var state = ref State.Modify();
                 state.Flags |= TreeFlags.MultiValueTrees;
             }
-
-            var page = FindPageFor(key, out _);
-            if (page == null || page.LastMatch != 0)
-            {
-                MultiAddOnNewValue(key, value, maxNodeSize);
-                return;
-            }
-
-
-            var item = page.GetNode(page.LastSearchPosition);
-            // already was turned into a multi tree, not much to do here
-            if (item->Flags == TreeNodeFlags.MultiValuePageRef)
-            {
-                var existingTree = OpenMultiValueTree(key, item);
-                if (existingTree.Exists(value) == false)
-                    existingTree.DirectAdd(value, 0,out _).Dispose();
-                return;
-            }
             
-            if (item->Flags == TreeNodeFlags.PageRef)
-                throw new InvalidOperationException("Multi trees don't use overflows");
-
-            var nestedPagePtr = DirectAccessFromHeader(item);
-
-            var nestedPage = new TreePage(nestedPagePtr, (ushort)GetDataSize(item));
-
-            var existingItem = nestedPage.Search(_llt, value);
-            if (nestedPage.LastMatch != 0)
-                existingItem = null;// not an actual match, just greater than
-
-            if (existingItem != null)
-            {
-                using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, existingItem, out Slice tmpKey))
+            { 
+                var page = FindPageFor(key, out _);
+                if (page == null || page.LastMatch != 0)
                 {
-                    if (SliceComparer.Equals(tmpKey, value))
-                        return; // already there, turning into a no-op
-                }
-            }
-            
-            page = ModifyPage(page);
-            item = page.GetNode(page.LastSearchPosition);
-            nestedPage = new TreePage(nestedPagePtr, (ushort)GetDataSize(item));
-
-            if (nestedPage.HasSpaceFor(_llt, value, 0))
-            {
-                // we are now working on top of the modified root page, we can just modify the memory directly
-                nestedPage.AddDataNode(nestedPage.LastSearchPosition, value, 0);
-                return;
-            }
-
-            if (page.HasSpaceFor(_llt, value, 0))
-            {
-                // page has space for an additional node in nested page ...
-
-                var requiredSpace = nestedPage.PageSize + // existing page
-                                    nestedPage.GetRequiredSpace(value, 0); // new node
-
-                if (requiredSpace + Constants.Tree.NodeHeaderSize <= maxNodeSize)
-                {
-                    // ... and it won't require to create an overflow, so we can just expand the current value, no need to create a nested tree yet
-
-                    EnsureNestedPagePointer(page, item, ref nestedPage, ref nestedPagePtr);
-
-                    var newPageSize = (ushort)Math.Min(Bits.PowerOf2(requiredSpace), maxNodeSize - Constants.Tree.NodeHeaderSize);
-
-                    ExpandMultiTreeNestedPageSize(key, value, nestedPagePtr, newPageSize, nestedPage.PageSize);
+                    MultiAddOnNewValue(key, value, maxNodeSize);
                     return;
                 }
-            }
-
-            EnsureNestedPagePointer(page, item, ref nestedPage, ref nestedPagePtr);
-
-            // we now have to convert this into a tree instance, instead of just a nested page
-            var tree = Create(_llt, _tx, key, TreeFlags.MultiValue);
-            for (int i = 0; i < nestedPage.NumberOfEntries; i++)
-            {
-                using (nestedPage.GetNodeKey(_llt, i, out Slice existingValue))
+                
+                var item = page.GetNode(page.LastSearchPosition);
+                // already was turned into a multi tree, not much to do here
+                if (item->Flags == TreeNodeFlags.MultiValuePageRef)
                 {
-                    tree.DirectAdd(existingValue, 0,out byte* _).Dispose();
+                    var existingTree = OpenMultiValueTree(key, item);
+                    if (existingTree.Exists(value) == false)
+                        existingTree.DirectAdd(value, 0, out _).Dispose();
+                    return;
+                }
+
+                if (item->Flags == TreeNodeFlags.PageRef)
+                    throw new InvalidOperationException("Multi trees don't use overflows");
+
+                var nestedPagePtr = DirectAccessFromHeader(item);
+
+                var nestedPage = new TreePage(nestedPagePtr, (ushort)GetDataSize(item));
+
+                var existingItem = nestedPage.Search(_llt, value);
+                if (nestedPage.LastMatch != 0)
+                    existingItem = null; // not an actual match, just greater than
+
+                if (existingItem != null)
+                {
+                    using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, existingItem, out Slice tmpKey))
+                    {
+                        if (SliceComparer.Equals(tmpKey, value))
+                            return; // already there, turning into a no-op
+                    }
                 }
             }
-            tree.DirectAdd(value, 0,out byte* _).Dispose();
-            _tx.AddMultiValueTree(this, key, tree);
-            // we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
-            DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef,out byte* _).Dispose();
+
+            {
+                var page = FindPageFor(key, out _);
+                page = ModifyPage(page);
+                var item = page.GetNode(page.LastSearchPosition);
+                var nestedPagePtr = DirectAccessFromHeader(item);
+                var nestedPage = new TreePage(nestedPagePtr, (ushort)GetDataSize(item));
+
+                if (nestedPage.HasSpaceFor(_llt, value, 0))
+                {
+                    // we are now working on top of the modified root page, we can just modify the memory directly
+                    nestedPage.AddDataNode(nestedPage.LastSearchPosition, value, 0);
+                    return;
+                }
+
+                if (page.HasSpaceFor(_llt, value, 0))
+                {
+                    // page has space for an additional node in nested page ...
+
+                    var requiredSpace = nestedPage.PageSize + // existing page
+                                        nestedPage.GetRequiredSpace(value, 0); // new node
+
+                    if (requiredSpace + Constants.Tree.NodeHeaderSize <= maxNodeSize)
+                    {
+                        // ... and it won't require to create an overflow, so we can just expand the current value, no need to create a nested tree yet
+
+                        EnsureNestedPagePointer(page, item, ref nestedPage, ref nestedPagePtr);
+
+                        var newPageSize = (ushort)Math.Min(Bits.PowerOf2(requiredSpace), maxNodeSize - Constants.Tree.NodeHeaderSize);
+
+                        ExpandMultiTreeNestedPageSize(key, value, nestedPagePtr, newPageSize, nestedPage.PageSize);
+                        return;
+                    }
+                }
+
+                EnsureNestedPagePointer(page, item, ref nestedPage, ref nestedPagePtr);
+
+                // we now have to convert this into a tree instance, instead of just a nested page
+                var tree = Create(_llt, _tx, key, TreeFlags.MultiValue);
+                for (int i = 0; i < nestedPage.NumberOfEntries; i++)
+                {
+                    using (nestedPage.GetNodeKey(_llt, i, out Slice existingValue))
+                    {
+                        tree.DirectAdd(existingValue, 0, out byte* _).Dispose();
+                    }
+                }
+
+                tree.DirectAdd(value, 0, out byte* _).Dispose();
+                _tx.AddMultiValueTree(this, key, tree);
+                // we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
+                DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef, out byte* _).Dispose();
+            }
         }
 
         private void ExpandMultiTreeNestedPageSize(Slice key, Slice value, byte* nestedPagePtr, ushort newSize, int currentSize)
