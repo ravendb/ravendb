@@ -38,7 +38,6 @@ export default function VertexSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
             GoogleCredentialsJson: formValues.vertexSettings.googleCredentialsJson,
             Model: formValues.vertexSettings.model,
             Location: formValues.vertexSettings.location,
-            ProjectId: formValues.vertexSettings.projectId,
         });
     });
 
@@ -98,16 +97,6 @@ export default function VertexSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     </PopoverWithHoverWrapper>
                 </FormLabel>
                 <FormInput control={control} name="vertexSettings.location" type="text" />
-            </div>
-
-            <div className="mb-2">
-                <FormLabel>
-                    Project ID
-                    <PopoverWithHoverWrapper message="The Google Cloud project ID that owns the Vertex AI resource.">
-                        <Icon icon="info" color="info" margin="ms-1" />
-                    </PopoverWithHoverWrapper>
-                </FormLabel>
-                <FormInput control={control} name="vertexSettings.projectId" type="text" />
             </div>
 
             <EmbeddingsMaxConcurrentBatches baseName="vertexSettings" />

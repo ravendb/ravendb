@@ -287,7 +287,6 @@ export function mapAiConnectionStringToDto(connection: AiConnection): Connection
                       Location: connection.vertexSettings.location,
                       Model: connection.vertexSettings.model,
                       AiVersion: connection.vertexSettings.aiVersion,
-                      ProjectId: connection.vertexSettings.projectId,
                       EmbeddingsMaxConcurrentBatches: mapEmbeddingsMaxConcurrentBatchesToDto(connection),
                   }
                 : null,

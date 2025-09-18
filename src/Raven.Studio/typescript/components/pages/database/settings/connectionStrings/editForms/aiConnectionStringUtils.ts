@@ -265,13 +265,6 @@ const schema = yupObjectSchema<FormData>({
                 is: "vertexSettings",
                 then: (schema) => schema.trim().required(),
             }),
-        projectId: yup
-            .string()
-            .nullable()
-            .when("$connectorType", {
-                is: "vertexSettings",
-                then: (schema) => schema.trim().required(),
-            }),
         embeddingsMaxConcurrentBatches: getEmbeddingsMaxConcurrentBatchesSchema("vertexSettings"),
     }),
     mistralAiSettings: yupObjectSchema<FormData["mistralAiSettings"]>({
@@ -357,7 +350,6 @@ function getDefaultValues(initialConnection: AiConnection, isForNewConnection: b
                 googleCredentialsJson: null,
                 location: null,
                 model: null,
-                projectId: null,
                 embeddingsMaxConcurrentBatches: null,
             } satisfies Required<FormData["vertexSettings"]>,
             mistralAiSettings: {

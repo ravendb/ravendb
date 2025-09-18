@@ -189,7 +189,6 @@ export interface AiConnection extends ConnectionBase {
         googleCredentialsJson?: string;
         location?: string;
         model?: string;
-        projectId?: string;
         embeddingsMaxConcurrentBatches?: number;
     };
 }

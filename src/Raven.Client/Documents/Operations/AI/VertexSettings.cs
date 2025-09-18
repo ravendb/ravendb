@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
 using Sparrow.Json.Parsing;
 
 namespace Raven.Client.Documents.Operations.AI;
@@ -10,28 +12,40 @@ public sealed class VertexSettings : AbstractAiSettings
         // deserialization
     }
     
-    public VertexSettings(string model, string googleCredentialsJson, string location, string projectId, VertexAIVersion? aiVersion = null)
+    public VertexSettings(string model, string googleCredentialsJson, string location, VertexAIVersion? aiVersion = null)
     {
         Model = model;
         GoogleCredentialsJson = googleCredentialsJson;
         Location = location;
-        ProjectId = projectId;
         AiVersion = aiVersion;
     }
+    
+    private const string ProjectIdPropertyName = "project_id";
     
     /// <summary>
     /// The model ID for the Vertex AI service.
     /// </summary>
     public string Model { get; set; }
-    
-    public string GoogleCredentialsJson { get; set; }
-    
+
+    public string GoogleCredentialsJson
+    {
+        get;
+        set
+        {
+            field = value;
+
+            var credentialJsonType = JObject.Parse(value);
+            if (credentialJsonType.TryGetValue(ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase, out var projectIdValue))
+                ProjectId = projectIdValue.Value<string>();
+        }
+    }
+
     public VertexAIVersion? AiVersion { get; set; }
     
     public string Location { get; set; }
     
-    public string ProjectId { get; set; }
-    
+    internal string ProjectId { get; set; }
+
     public override void ValidateFields(List<string> errors)
     {
         if (string.IsNullOrWhiteSpace(Model))
@@ -42,9 +56,6 @@ public sealed class VertexSettings : AbstractAiSettings
         
         if (string.IsNullOrWhiteSpace(Location))
             errors.Add($"Value of `{nameof(Location)}` field cannot be empty.");
-        
-        if (string.IsNullOrWhiteSpace(ProjectId))
-            errors.Add($"Value of `{nameof(ProjectId)}` field cannot be empty.");
     }
 
     public override AiSettingsCompareDifferences Compare(AbstractAiSettings other)

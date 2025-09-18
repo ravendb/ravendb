@@ -5,28 +5,26 @@ namespace Tests.Infrastructure.ConnectionString.AI;
 
 public class EmbeddingsVertexConnectorForTesting : AbstractEmbeddingsConnectorForTesting<EmbeddingsVertexConnectorForTesting>
 {
-    private const string EnvironmentVariableApiKey = "RAVEN_AI_INTEGRATION_VERTEX_API_KEY";
+    private const string EnvironmentVariableGoogleCredentialsJson = "RAVEN_AI_INTEGRATION_VERTEX_GOOGLE_CREDENTIALS_JSON";
     private const string EnvironmentVariableLocation = "RAVEN_AI_INTEGRATION_VERTEX_LOCATION";
-    private const string EnvironmentVariableProjectId = "RAVEN_AI_INTEGRATION_VERTEX_PROJECT_ID";
     private const string Model = "text-embedding-005";
 
     public EmbeddingsVertexConnectorForTesting()
     {
-        RequiredEnvironmentVariables = [EnvironmentVariableApiKey, EnvironmentVariableLocation, EnvironmentVariableProjectId];
+        RequiredEnvironmentVariables = [EnvironmentVariableGoogleCredentialsJson, EnvironmentVariableLocation];
     }
     
     public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.Vertex);
 
     protected override AiConnectionString CreateAiConnectionStringImpl()
     {
-        var apiKey = Environment.GetEnvironmentVariable(EnvironmentVariableApiKey);
+        var googleCredentialsJson = Environment.GetEnvironmentVariable(EnvironmentVariableGoogleCredentialsJson);
         var location = Environment.GetEnvironmentVariable(EnvironmentVariableLocation);
-        var projectId = Environment.GetEnvironmentVariable(EnvironmentVariableProjectId);
         
         return new AiConnectionString
         {
             ModelType = AiModelType.TextEmbeddings,
-            VertexSettings = new VertexSettings(Model, apiKey, location, projectId, VertexAIVersion.V1)
+            VertexSettings = new VertexSettings(Model, googleCredentialsJson, location, VertexAIVersion.V1)
         };
     }
 }

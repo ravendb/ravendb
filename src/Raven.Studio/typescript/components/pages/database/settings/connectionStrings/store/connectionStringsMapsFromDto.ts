@@ -430,7 +430,6 @@ export function mapAiConnectionsFromDto(
                     googleCredentialsJson: connection.VertexSettings?.GoogleCredentialsJson,
                     location: connection.VertexSettings?.Location,
                     model: connection.VertexSettings?.Model,
-                    projectId: connection.VertexSettings?.ProjectId,
                     embeddingsMaxConcurrentBatches: connection.VertexSettings?.EmbeddingsMaxConcurrentBatches,
                 },
             }) satisfies AiConnection
