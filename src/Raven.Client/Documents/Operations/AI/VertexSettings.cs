@@ -34,7 +34,7 @@ public sealed class VertexSettings : AbstractAiSettings
     
     public string Location { get; set; }
 
-    public string GetProjectId()
+    internal string GetProjectId()
     {
         var credentialJsonType = JObject.Parse(GoogleCredentialsJson);
         if (credentialJsonType.TryGetValue(ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase, out var projectIdValue))
@@ -51,9 +51,9 @@ public sealed class VertexSettings : AbstractAiSettings
         if (string.IsNullOrWhiteSpace(GoogleCredentialsJson))
             errors.Add($"Value of `{nameof(GoogleCredentialsJson)}` field cannot be empty.");
         
-        var credentialJsonType = JObject.Parse(GoogleCredentialsJson);
-        if (credentialJsonType.TryGetValue(ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase, out var projectIdValue) == false)
-            errors.Add($"`{nameof(GoogleCredentialsJson)}` has to contain `{ProjectIdPropertyName}` property.");
+        var projectId = GetProjectId();
+        if (string.IsNullOrWhiteSpace(projectId))
+            errors.Add($"Value of `{ProjectIdPropertyName}` field in `{nameof(GoogleCredentialsJson)}` cannot be empty.");
         
         if (string.IsNullOrWhiteSpace(Location))
             errors.Add($"Value of `{nameof(Location)}` field cannot be empty.");

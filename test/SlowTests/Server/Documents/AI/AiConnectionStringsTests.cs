@@ -157,7 +157,6 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.Model);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.AiVersion, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.AiVersion);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.Location, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.Location);
-                    Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.ProjectId, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.ProjectId);
                     break;
                 
                 default:
