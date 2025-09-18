@@ -8,9 +8,9 @@ import ReactAce from "react-ace";
 import Code from "components/common/Code";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import useBoolean from "components/hooks/useBoolean";
-import Button from "react-bootstrap/Button";
-import AiAssistantWindow from "components/common/aiAssistantWindow/AiAssistantWindow";
+import AiAssistantWindow from "components/common/aiAssistant/AiAssistantWindow";
 import { EditGenAiTaskFormData } from "../../utils/editGenAiTaskValidation";
+import AiAssistantButton from "components/common/aiAssistant/AiAssistantButton";
 
 export default function EditGenAiTaskModelFields() {
     const { control, setValue } = useFormContext<EditGenAiTaskFormData>();
@@ -57,19 +57,7 @@ export default function EditGenAiTaskModelFields() {
                         }}
                     />
                     {formValues.prompt?.length > 0 && (
-                        <Button
-                            variant="primary"
-                            className="rounded-pill position-absolute"
-                            onClick={toggleIsAiAssistOpen}
-                            style={{
-                                right: "44px",
-                                bottom: "10px",
-                                zIndex: 5,
-                            }}
-                        >
-                            <Icon icon="refine-ai" />
-                            AI Assistant
-                        </Button>
+                        <AiAssistantButton handleClick={toggleIsAiAssistOpen} right="48px" />
                     )}
                     {isAiAssistOpen && (
                         <AiAssistantWindow

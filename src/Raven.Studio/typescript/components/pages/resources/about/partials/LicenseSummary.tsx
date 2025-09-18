@@ -25,10 +25,9 @@ import Button from "react-bootstrap/Button";
 import OverlayTrigger from "react-bootstrap/OverlayTrigger";
 import Tooltip from "react-bootstrap/Tooltip";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
-import { AiAssistantEulaModal } from "components/common/aiAssistantWindow/AiAssistantEulaModal";
+import { AiAssistantEulaModal } from "components/common/aiAssistant/AiAssistantEulaModal";
 import useBoolean from "components/hooks/useBoolean";
 import { aiAssistantActions, aiAssistantSelectors } from "components/common/shell/aiAssistantSlice";
-import Spinner from "react-bootstrap/Spinner";
 import { CheckUsageAiAssistantResultDto } from "commands/aiAssistant/checkUsageAiAssistantCommand";
 import { loadableData } from "components/models/common";
 import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
@@ -473,10 +472,9 @@ function AiAssistantConsentButton() {
 function TokensUsageItem({ usage }: { usage: loadableData<CheckUsageAiAssistantResultDto> }) {
     if (usage.status === "loading") {
         return (
-            <strong className="fs-4">
-                <Spinner size="sm" variant="progress" className="me-1" />
-                Checking usage...
-            </strong>
+            <LazyLoad active>
+                <strong className="fs-4">Checking usage...</strong>
+            </LazyLoad>
         );
     }
 
@@ -521,10 +519,9 @@ function ConsentStatusItem({
 }) {
     if (consentStatus.status === "loading") {
         return (
-            <strong className="fs-4">
-                <Spinner size="sm" variant="progress" className="me-1" />
-                Checking consent...
-            </strong>
+            <LazyLoad active>
+                <strong className="fs-4">Checking consent...</strong>
+            </LazyLoad>
         );
     }
 

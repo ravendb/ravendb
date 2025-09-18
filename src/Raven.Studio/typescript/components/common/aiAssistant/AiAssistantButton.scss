@@ -1,0 +1,16 @@
+@use "Content/scss/colors";
+
+.ai-assistant-button {
+    background-color: colors.$panel-bg-1-var !important;
+    background: linear-gradient(
+        270deg,
+        rgba(56, 142, 233, 0) 25%,
+        rgba(86, 115, 243, 0.1) 75%,
+        rgba(123, 81, 255, 0.2) 100%
+    );
+
+    &:hover {
+        background-color: colors.$gray-100 !important;
+        color: colors.$gray-900 !important;
+    }
+}

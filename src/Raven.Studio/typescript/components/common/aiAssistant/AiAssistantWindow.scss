@@ -1,0 +1,16 @@
+@use "Content/scss/colors";
+
+.ai-assistant-window {
+    padding: 1px;
+    background: linear-gradient(135.89deg, #388ee9 0%, #7b51ff 85.4%);
+
+    .ai-assistant-window-inner {
+        background-color: colors.$panel-bg-1-var !important;
+        background: linear-gradient(
+            270deg,
+            rgba(56, 142, 233, 0) 25%,
+            rgba(86, 115, 243, 0.1) 75%,
+            rgba(123, 81, 255, 0.2) 100%
+        );
+    }
+}

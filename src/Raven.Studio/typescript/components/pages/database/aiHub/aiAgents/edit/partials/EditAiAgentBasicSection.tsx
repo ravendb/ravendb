@@ -20,7 +20,8 @@ import Code from "components/common/Code";
 import Collapse from "react-bootstrap/Collapse";
 import EditAiAgentCollapseButton from "./EditAiAgentCollapseButton";
 import EditAiAgentErrorIcon from "./EditAiAgentErrorIcon";
-import AiAssistantWindow from "components/common/aiAssistantWindow/AiAssistantWindow";
+import AiAssistantWindow from "components/common/aiAssistant/AiAssistantWindow";
+import AiAssistantButton from "components/common/aiAssistant/AiAssistantButton";
 
 interface EditAiAgentBasicSectionProps {
     isEditAiAgent: boolean;
@@ -200,19 +201,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                                     rows={7}
                                 />
                                 {formValues.systemPrompt?.length > 0 && (
-                                    <Button
-                                        variant="primary"
-                                        className="rounded-pill position-absolute"
-                                        onClick={toggleIsAiAssistOpen}
-                                        style={{
-                                            right: "10px",
-                                            bottom: "10px",
-                                            zIndex: 5,
-                                        }}
-                                    >
-                                        <Icon icon="refine-ai" />
-                                        AI Assistant
-                                    </Button>
+                                    <AiAssistantButton handleClick={toggleIsAiAssistOpen} />
                                 )}
                                 {isAiAssistOpen && (
                                     <AiAssistantWindow

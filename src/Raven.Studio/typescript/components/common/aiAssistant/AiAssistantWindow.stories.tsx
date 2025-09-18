@@ -1,5 +1,5 @@
 import { Meta, StoryObj } from "@storybook/react";
-import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
+import { withStorybookContexts, withBootstrap5, withForceRerender } from "test/storybookTestUtils";
 import AiAssistantWindow from "./AiAssistantWindow";
 import { mockServices } from "test/mocks/services/MockServices";
 import { useState } from "react";
@@ -7,7 +7,7 @@ import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkCons
 
 export default {
     title: "Bits/AI Assistant Window",
-    decorators: [withStorybookContexts, withBootstrap5],
+    decorators: [withStorybookContexts, withBootstrap5, withForceRerender],
 } satisfies Meta;
 
 interface AiAssistantWindowStoryArgs {
