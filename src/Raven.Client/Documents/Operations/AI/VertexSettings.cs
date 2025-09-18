@@ -29,16 +29,18 @@ public sealed class VertexSettings : AbstractAiSettings
 
     public string GoogleCredentialsJson
     {
-        get;
+        get => _googleCredentialsJson;
         set
         {
-            field = value;
+            _googleCredentialsJson = value;
 
             var credentialJsonType = JObject.Parse(value);
             if (credentialJsonType.TryGetValue(ProjectIdPropertyName, StringComparison.OrdinalIgnoreCase, out var projectIdValue))
                 ProjectId = projectIdValue.Value<string>();
         }
     }
+    
+    private string _googleCredentialsJson;
 
     public VertexAIVersion? AiVersion { get; set; }
     
