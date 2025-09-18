@@ -17,14 +17,22 @@ import { useAppSelector } from "components/store";
 import { useAsyncCallback } from "react-async-hook";
 import { useFormContext, useWatch } from "react-hook-form";
 import EmbeddingsMaxConcurrentBatches from "./EmbeddingsMaxConcurrentBatchesField";
+import Button from "react-bootstrap/Button";
+import useBoolean from "hooks/useBoolean";
+import classNames from "classnames";
 
 type FormData = ConnectionFormData<AiConnection>;
 
-export default function VertexSettings({ isUsedByAnyTask }: { isUsedByAnyTask: boolean }) {
+interface VertexSettingsProps {
+    isUsedByAnyTask: boolean;
+    isForNewConnection: boolean;
+}
+
+export default function VertexSettings({ isUsedByAnyTask, isForNewConnection }: VertexSettingsProps) {
     const { control, trigger } = useFormContext<FormData>();
     const { tasksService } = useServices();
     const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-
+    const { value: isCredentialsJsonVisible, toggle: toggleCredentialsJsonVisible } = useBoolean(isForNewConnection);
     const formValues = useWatch({ control });
 
     const asyncTest = useAsyncCallback(async () => {
@@ -74,9 +82,21 @@ export default function VertexSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                     control={control}
                     name="vertexSettings.googleCredentialsJson"
                     type="textarea"
+                    placeholder={googleCredentialsJsonPlaceholder}
+                    autoComplete="off"
                     as="textarea"
-                    rows={10}
+                    rows={15}
+                    className={classNames({ "d-none": !isCredentialsJsonVisible })}
                 />
+                <Button
+                    type="button"
+                    variant="secondary"
+                    className="w-fit-content mt-2"
+                    onClick={toggleCredentialsJsonVisible}
+                >
+                    <Icon icon={isCredentialsJsonVisible ? "preview-off" : "preview"} />
+                    {isCredentialsJsonVisible ? "Hide" : "Show"} credentials
+                </Button>
             </div>
 
             <div className="mb-2">
@@ -122,6 +142,20 @@ export default function VertexSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
         </>
     );
 }
+
+const googleCredentialsJsonPlaceholder = `e.g.
+{
+    "type": "service_account",
+    "project_id": "test-raven-237012",
+    "private_key_id": "12345678123412341234123456789101",
+    "private_key": "-----BEGIN PRIVATE KEY-----\\abCse=-----END PRIVATE KEY-----",
+    "client_email": "raven@test-raven-237012-237012.iam.gserviceaccount.com",
+    "client_id": "111390682349634407434",
+    "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+    "token_uri": "https://oauth2.googleapis.com/token",
+    "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+    "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/viewonly%40test-raven-237012.iam.gserviceaccount.com"
+}`;
 
 const modelOptions: SelectOption[] = [
     "gemini-embedding-001",

@@ -172,7 +172,9 @@ export default function AiConnectionString({ initialConnection, isForNewConnecti
                 {connectorType === "embeddedSettings" && <EmbeddedSettings />}
                 {connectorType === "openAiSettings" && <OpenAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
                 {connectorType === "mistralAiSettings" && <MistralAiSettings isUsedByAnyTask={isUsedByAnyTask} />}
-                {connectorType === "vertexSettings" && <VertexSettings isUsedByAnyTask={isUsedByAnyTask} />}
+                {connectorType === "vertexSettings" && (
+                    <VertexSettings isUsedByAnyTask={isUsedByAnyTask} isForNewConnection={isForNewConnection} />
+                )}
 
                 {isUsedByAnyTask && (
                     <RichAlert variant="info">
