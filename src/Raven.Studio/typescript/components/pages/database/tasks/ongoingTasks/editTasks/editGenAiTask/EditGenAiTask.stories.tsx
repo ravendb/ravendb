@@ -24,7 +24,7 @@ export default {
 export const Basic: StoryObj = {
     render: () => {
         const { cluster, collectionsTracker, license } = mockStore;
-        const { tasksService } = mockServices;
+        const { tasksService, aiAssistantService } = mockServices;
 
         cluster.with_Single();
         collectionsTracker.with_Collections();
@@ -32,6 +32,9 @@ export const Basic: StoryObj = {
         tasksService.withTestAiConnectionString();
         tasksService.withConnectionStrings();
         tasksService.withTestGenAi();
+
+        aiAssistantService.withCheckConsent();
+        aiAssistantService.withAssist();
 
         license.with_License({
             HasGenAi: true,

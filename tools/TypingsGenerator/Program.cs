@@ -64,6 +64,8 @@ using Raven.Server.Dashboard;
 using Raven.Server.Dashboard.Cluster;
 using Raven.Server.Dashboard.Cluster.Notifications;
 using Raven.Server.Documents;
+using Raven.Server.Documents.AI.AiAssistant;
+using Raven.Server.Documents.AI.AiAssistant.Requests;
 using Raven.Server.Documents.Commands.Replication;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.AI.Embeddings.Stats;
@@ -608,6 +610,9 @@ namespace TypingsGenerator
 
             // AI
             scripter.AddType(typeof(AiModelsRequest));
+            scripter.AddType(typeof(AiAssistantOperationType));
+            scripter.AddType(typeof(RefineGenAiPromptRequest));
+            scripter.AddType(typeof(RefineTextRequest));
 
             // AI Agent
             scripter.AddType(typeof(AiAgentConfiguration));

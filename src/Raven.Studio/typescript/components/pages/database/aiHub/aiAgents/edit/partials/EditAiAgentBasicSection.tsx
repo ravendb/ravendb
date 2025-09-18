@@ -20,6 +20,7 @@ import Code from "components/common/Code";
 import Collapse from "react-bootstrap/Collapse";
 import EditAiAgentCollapseButton from "./EditAiAgentCollapseButton";
 import EditAiAgentErrorIcon from "./EditAiAgentErrorIcon";
+import AiAssistantWindow from "components/common/AiAssistantWindow";
 
 interface EditAiAgentBasicSectionProps {
     isEditAiAgent: boolean;
@@ -38,6 +39,7 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
 
     const { value: isNewConnectionStringOpen, toggle: toggleIsNewConnectionStringOpen } = useBoolean(false);
     const { value: isPanelOpen, setValue: setIsPanelOpen, toggle: toggleIsPanelOpen } = useBoolean(true);
+    const { value: isAiAssistOpen, toggle: toggleIsAiAssistOpen } = useBoolean(false);
 
     const asyncGetConnectionStringsOptions = useAsync(async () => {
         const result = await tasksService.getConnectionStrings(databaseName);
@@ -188,14 +190,39 @@ export default function EditAiAgentBasicSection({ isEditAiAgent }: EditAiAgentBa
                                     <Icon icon="info-new" />
                                 </PopoverWithHoverWrapper>
                             </FormLabel>
-                            <FormInput
-                                type="textarea"
-                                as="textarea"
-                                control={control}
-                                name="systemPrompt"
-                                placeholder={agentDescriptionPlaceholder}
-                                rows={7}
-                            />
+                            <div className="position-relative">
+                                <FormInput
+                                    type="textarea"
+                                    as="textarea"
+                                    control={control}
+                                    name="systemPrompt"
+                                    placeholder={agentDescriptionPlaceholder}
+                                    rows={7}
+                                />
+                                {formValues.systemPrompt?.length > 0 && (
+                                    <Button
+                                        variant="primary"
+                                        className="rounded-pill position-absolute"
+                                        onClick={toggleIsAiAssistOpen}
+                                        style={{
+                                            right: "10px",
+                                            bottom: "10px",
+                                            zIndex: 5,
+                                        }}
+                                    >
+                                        <Icon icon="refine-ai" />
+                                        AI Assistant
+                                    </Button>
+                                )}
+                                {isAiAssistOpen && (
+                                    <AiAssistantWindow
+                                        data={{ OperationType: "RefineText", Text: formValues.systemPrompt }}
+                                        acceptResult={(text) => setValue("systemPrompt", text)}
+                                        successMessage="AI refined your prompt based on your input."
+                                        closeWindow={toggleIsAiAssistOpen}
+                                    />
+                                )}
+                            </div>
                         </FormGroup>
                         <SampleObjectAndSchemaFields
                             control={control}

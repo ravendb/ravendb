@@ -7,13 +7,19 @@ import AceEditor from "components/common/ace/AceEditor";
 import ReactAce from "react-ace";
 import Code from "components/common/Code";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
+import useBoolean from "components/hooks/useBoolean";
+import Button from "react-bootstrap/Button";
+import AiAssistantWindow from "components/common/AiAssistantWindow";
+import { EditGenAiTaskFormData } from "../../utils/editGenAiTaskValidation";
 
 export default function EditGenAiTaskModelFields() {
-    const { control, setValue } = useFormContext();
+    const { control, setValue } = useFormContext<EditGenAiTaskFormData>();
 
     const formValues = useWatch({ control });
 
     const promptRef = useRef<ReactAce>(null);
+
+    const { value: isAiAssistOpen, toggle: toggleIsAiAssistOpen } = useBoolean(false);
 
     return (
         <>
@@ -32,23 +38,54 @@ export default function EditGenAiTaskModelFields() {
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
-                <FormAceEditor
-                    aceRef={promptRef}
-                    control={control}
-                    name="prompt"
-                    mode="text"
-                    actions={[
-                        { component: <AceEditor.FullScreenAction /> },
-                        {
-                            component: <AceEditor.HelpAction message={<PromptSyntaxHelp />} />,
-                            position: "bottom",
-                        },
-                    ]}
-                    wrapEnabled
-                    setOptions={{
-                        indentedSoftWrap: false,
-                    }}
-                />
+                <div className="position-relative">
+                    <FormAceEditor
+                        aceRef={promptRef}
+                        control={control}
+                        name="prompt"
+                        mode="text"
+                        actions={[
+                            { component: <AceEditor.FullScreenAction /> },
+                            {
+                                component: <AceEditor.HelpAction message={<PromptSyntaxHelp />} />,
+                                position: "bottom",
+                            },
+                        ]}
+                        wrapEnabled
+                        setOptions={{
+                            indentedSoftWrap: false,
+                        }}
+                    />
+                    {formValues.prompt?.length > 0 && (
+                        <Button
+                            variant="primary"
+                            className="rounded-pill position-absolute"
+                            onClick={toggleIsAiAssistOpen}
+                            style={{
+                                right: "44px",
+                                bottom: "10px",
+                                zIndex: 5,
+                            }}
+                        >
+                            <Icon icon="refine-ai" />
+                            AI Assistant
+                        </Button>
+                    )}
+                    {isAiAssistOpen && (
+                        <AiAssistantWindow
+                            data={{
+                                OperationType: "RefineGenAiPrompt",
+                                ContextGenerationScript: formValues.script,
+                                OutputStructure: formValues.jsonSchema || formValues.sampleObject || "",
+                                SourceCollectionName: formValues.collectionName,
+                                Prompt: formValues.prompt,
+                            }}
+                            acceptResult={(text) => setValue("prompt", text)}
+                            successMessage="AI refined your prompt based on your input and information from the previous steps."
+                            closeWindow={toggleIsAiAssistOpen}
+                        />
+                    )}
+                </div>
             </FormGroup>
             <SampleObjectAndSchemaFields
                 control={control}
