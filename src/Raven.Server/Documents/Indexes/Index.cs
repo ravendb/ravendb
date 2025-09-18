@@ -3335,7 +3335,8 @@ namespace Raven.Server.Documents.Indexes
             IndexQueryServerSide query,
             QueryOperationContext queryContext,
             bool pulseDocsReadingTransaction,
-            OperationCancelToken token)
+            OperationCancelToken token,
+            [CallerMemberName] string caller = null)
             where TQueryResult : QueryResultServerSide<Document>
         {
             QueryInternalPreparation(query);
@@ -3350,6 +3351,8 @@ namespace Raven.Server.Documents.Indexes
 
                 var stalenessScope = query.Timings?.For(nameof(QueryTimingsScope.Names.Staleness), start: false);
 
+                var docsTxOpenCount = 0;
+                
                 while (true)
                 {
                     AssertIndexState();
@@ -3363,8 +3366,14 @@ namespace Raven.Server.Documents.Indexes
                     using (_contextPool.AllocateOperationContext(out TransactionOperationContext indexContext))
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
+                        docsTxOpenCount++;
+                        
                         if (queryContext.AreTransactionsOpened() == false)
+                        {
                             resultToFill.ReadTransactionDispose = queryContext.OpenReadTransaction();
+                            queryContext.Documents?.Transaction?.InnerTransaction?.LowLevelTransaction?.DebugInfo_Add($"Query internal caller: {caller} (tx count: {docsTxOpenCount})");
+                            queryContext.Documents?.Transaction?.InnerTransaction?.LowLevelTransaction?.DebugInfo_Add($"Query: {query.Metadata.Query}, params: {query.QueryParameters?.ToString()}");
+                        }
 
                         // we have to open read tx for mapResults _after_ we open index tx
 
@@ -3377,6 +3386,8 @@ namespace Raven.Server.Documents.Indexes
                             isStale = IsStale(queryContext, indexContext, cutoffEtag?.DocEtag, cutoffEtag?.ReferenceEtag, cutoffEtag?.CompareExchangeReferenceEtag);
                             if (WillResultBeAcceptable(isStale, query, wait) == false)
                             {
+                                queryContext.Documents?.Transaction?.InnerTransaction?.LowLevelTransaction?.DebugInfo_Add("About to close transaction");
+                                
                                 resultToFill.ReadTransactionDispose?.Dispose();
                                 resultToFill.ReadTransactionDispose = null;
                                 queryContext.CloseTransaction();
@@ -3547,6 +3558,8 @@ namespace Raven.Server.Documents.Indexes
                                 }
                                 catch (Exception e)
                                 {
+                                    queryContext.Documents?.Transaction?.InnerTransaction?.LowLevelTransaction?.DebugInfo_Add($"Query execution exception: {e}");
+                                    
                                     if (resultToFill.SupportsExceptionHandling == false)
                                         throw;
 
@@ -3585,6 +3598,8 @@ namespace Raven.Server.Documents.Indexes
                             }
                         }
 
+                        queryContext.Documents?.Transaction?.InnerTransaction?.LowLevelTransaction?.DebugInfo_Add($"Query processing completed");
+                        
                         return;
                     }
                 }
