@@ -71,7 +71,7 @@ export default function VertexSettings({ isUsedByAnyTask }: { isUsedByAnyTask: b
                         <Icon icon="info" color="info" margin="ms-1" />
                     </PopoverWithHoverWrapper>
                 </FormLabel>
-                <FormInput control={control} name="vertexSettings.googleCredentialsJson" type="password" passwordPreview />
+                <FormInput control={control} name="vertexSettings.googleCredentialsJson" type="textarea" as="textarea" rows={10} />
             </div>
 
             <div className="mb-2">
