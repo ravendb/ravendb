@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using Raven.Client;
 using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Indexes;
@@ -32,10 +33,10 @@ namespace Raven.Server.Documents.Indexes.Static
         private readonly Func<string, SpatialField> _getSpatialField;
 
         /// [collection: [key: [referenceKeys]]]
-        public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollection;
+        public Dictionary<string, ReferenceContainer> ReferencesByCollection;
 
         /// [collection: [key: [referenceKeys]]]
-        public Dictionary<string, Dictionary<Slice, HashSet<Slice>>> ReferencesByCollectionForCompareExchange;
+        public Dictionary<string, ReferenceContainer> ReferencesByCollectionForCompareExchange;
 
         public List<Slice> ReferencesToDelete;
 
@@ -413,32 +414,20 @@ namespace Raven.Server.Documents.Indexes.Static
             Current = null;
         }
 
-        private HashSet<Slice> GetReferencesForItem(Slice key)
+        private List<Slice> GetReferencesForItem(Slice key)
         {
-            if (ReferencesByCollection == null)
-                ReferencesByCollection = new Dictionary<string, Dictionary<Slice, HashSet<Slice>>>(StringComparer.OrdinalIgnoreCase);
-
-            if (ReferencesByCollection.TryGetValue(SourceCollection, out Dictionary<Slice, HashSet<Slice>> referencesByCollection) == false)
-                ReferencesByCollection.Add(SourceCollection, referencesByCollection = new Dictionary<Slice, HashSet<Slice>>(SliceComparer.Instance));
-
-            if (referencesByCollection.TryGetValue(key, out HashSet<Slice> references) == false)
-                referencesByCollection.Add(key, references = new HashSet<Slice>(SliceComparer.Instance));
-
-            return references;
+            ReferencesByCollection ??= new(StringComparer.OrdinalIgnoreCase);
+            ref var container = ref CollectionsMarshal.GetValueRefOrAddDefault(ReferencesByCollection, SourceCollection, out _);
+            container ??= new ReferenceContainer();
+            return container.GetOrCreateValuesContainer(key);
         }
 
-        private HashSet<Slice> GetCompareExchangeReferencesForItem(Slice key)
+        private List<Slice> GetCompareExchangeReferencesForItem(Slice key)
         {
-            if (ReferencesByCollectionForCompareExchange == null)
-                ReferencesByCollectionForCompareExchange = new Dictionary<string, Dictionary<Slice, HashSet<Slice>>>(StringComparer.OrdinalIgnoreCase);
-
-            if (ReferencesByCollectionForCompareExchange.TryGetValue(SourceCollection, out Dictionary<Slice, HashSet<Slice>> referencesByCollection) == false)
-                ReferencesByCollectionForCompareExchange.Add(SourceCollection, referencesByCollection = new Dictionary<Slice, HashSet<Slice>>());
-
-            if (referencesByCollection.TryGetValue(key, out HashSet<Slice> references) == false)
-                referencesByCollection.Add(key, references = new HashSet<Slice>(SliceComparer.Instance));
-
-            return references;
+            ReferencesByCollectionForCompareExchange ??= new(StringComparer.OrdinalIgnoreCase);
+            ref var container = ref CollectionsMarshal.GetValueRefOrAddDefault(ReferencesByCollectionForCompareExchange, SourceCollection, out _);
+            container ??= new ReferenceContainer();
+            return container.GetOrCreateValuesContainer(key);
         }
     }
 }

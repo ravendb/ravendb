@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Diagnostics;
 using Sparrow;
 using Sparrow.Binary;
@@ -170,11 +170,10 @@ namespace Voron.Data.BTrees
                             ExpandMultiTreeNestedPageSize(key, currentProcessingTerm, nestedPagePtr, newPageSize, nestedPage.PageSize);
                             
                             // We may change the page. Ensure all pointers are valid as well.
-                            page = SearchForPage(key, out _);
+                            page = ModifyPage(SearchForPage(key, out _));
                             keyItem = page.GetNode(page.LastSearchPosition);
                             nestedPagePtr = DirectAccessFromHeader(keyItem); // represents the values for the key
                             nestedPage = new TreePage(nestedPagePtr, (ushort)GetDataSize(keyItem));
-                         
                             
                             continue;
                         }
@@ -206,8 +205,7 @@ namespace Voron.Data.BTrees
         {
             var newItemsIndexes = new ContextBoundNativeList<int>(_tx.Allocator);
             var nestedPagePtr = DirectAccessFromHeader(item);
-            var nestedPage = new TreePage(nestedPagePtr, (ushort)GetDataSize(item));            
-            
+            var nestedPage = new TreePage(nestedPagePtr, (ushort)GetDataSize(item));
             for (int i = 0; i < values.Length; i++)
             {
                 var itemInTree = nestedPage.Search(_tx.LowLevelTransaction, values[i]);
@@ -223,7 +221,6 @@ namespace Voron.Data.BTrees
             
             return newItemsIndexes;
         }
-        
         
         public void MultiAdd(Slice key, Slice value)
         {
@@ -249,18 +246,17 @@ namespace Voron.Data.BTrees
                 return;
             }
 
-            page = ModifyPage(page);
 
             var item = page.GetNode(page.LastSearchPosition);
-
             // already was turned into a multi tree, not much to do here
             if (item->Flags == TreeNodeFlags.MultiValuePageRef)
             {
                 var existingTree = OpenMultiValueTree(key, item);
-                existingTree.DirectAdd(value, 0,out _).Dispose();
+                if (existingTree.Exists(value) == false)
+                    existingTree.DirectAdd(value, 0,out _).Dispose();
                 return;
             }
-
+            
             if (item->Flags == TreeNodeFlags.PageRef)
                 throw new InvalidOperationException("Multi trees don't use overflows");
 
@@ -274,15 +270,16 @@ namespace Voron.Data.BTrees
 
             if (existingItem != null)
             {
-                // maybe same value added twice?
-                using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, item, out Slice tmpKey))
+                using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, existingItem, out Slice tmpKey))
                 {
                     if (SliceComparer.Equals(tmpKey, value))
                         return; // already there, turning into a no-op
                 }
-
-                nestedPage.RemoveNode(nestedPage.LastSearchPosition);
             }
+            
+            page = ModifyPage(page);
+            item = page.GetNode(page.LastSearchPosition);
+            nestedPage = new TreePage(nestedPagePtr, (ushort)GetDataSize(item));
 
             if (nestedPage.HasSpaceFor(_llt, value, 0))
             {
@@ -307,7 +304,6 @@ namespace Voron.Data.BTrees
                     var newPageSize = (ushort)Math.Min(Bits.PowerOf2(requiredSpace), maxNodeSize - Constants.Tree.NodeHeaderSize);
 
                     ExpandMultiTreeNestedPageSize(key, value, nestedPagePtr, newPageSize, nestedPage.PageSize);
-
                     return;
                 }
             }
