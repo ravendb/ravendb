@@ -9,7 +9,7 @@ import Code from "components/common/Code";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import useBoolean from "components/hooks/useBoolean";
 import Button from "react-bootstrap/Button";
-import AiAssistantWindow from "components/common/AiAssistantWindow";
+import AiAssistantWindow from "components/common/aiAssistantWindow/AiAssistantWindow";
 import { EditGenAiTaskFormData } from "../../utils/editGenAiTaskValidation";
 
 export default function EditGenAiTaskModelFields() {

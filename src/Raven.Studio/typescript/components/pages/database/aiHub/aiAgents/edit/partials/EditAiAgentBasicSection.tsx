@@ -20,7 +20,7 @@ import Code from "components/common/Code";
 import Collapse from "react-bootstrap/Collapse";
 import EditAiAgentCollapseButton from "./EditAiAgentCollapseButton";
 import EditAiAgentErrorIcon from "./EditAiAgentErrorIcon";
-import AiAssistantWindow from "components/common/AiAssistantWindow";
+import AiAssistantWindow from "components/common/aiAssistantWindow/AiAssistantWindow";
 
 interface EditAiAgentBasicSectionProps {
     isEditAiAgent: boolean;

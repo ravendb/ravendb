@@ -14,7 +14,7 @@ export default class checkConsentAiAssistantCommand extends commandBase {
         const url = endpoints.global.aiAssistant.assistantCheckConsent;
 
         return this.query<CheckConsentAiAssistantResultDto>(url, null).fail((response: JQueryXHR) =>
-            this.reportError("Failed to check consent for AI assistant", response.responseText, response.statusText)
+            this.reportError("Failed to check consent for AI Assistant", response.responseText, response.statusText)
         );
     }
 }

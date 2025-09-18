@@ -33,7 +33,7 @@ export default class assistAiAssistantCommand extends commandBase {
         const url = endpoints.global.aiAssistant.assistantAssist;
 
         return this.post<AssistAiAssistantResultDto>(url, JSON.stringify(this.dto)).fail((response: JQueryXHR) =>
-            this.reportError("Failed to run AI assistant", response.responseText, response.statusText)
+            this.reportError("Failed to run AI Assistant", response.responseText, response.statusText)
         );
     }
 }

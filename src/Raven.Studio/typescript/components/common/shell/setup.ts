@@ -16,6 +16,7 @@ import buildInfo = require("models/resources/buildInfo");
 import genUtils = require("common/generalUtils");
 import accessManager = require("common/shell/accessManager");
 import { accessManagerActions } from "components/common/shell/accessManagerSlice";
+import { aiAssistantActions } from "./aiAssistantSlice";
 
 let initialized = false;
 
@@ -106,6 +107,14 @@ function initRedux() {
     accessManager.clientCertificateThumbprint.subscribe((clientCertificateThumbprint) =>
         globalDispatch(accessManagerActions.clientCertificateThumbprintSet(clientCertificateThumbprint))
     );
+
+    // ai assistant
+    licenseModel.licenseStatus.subscribe(() => {
+        globalDispatch(aiAssistantActions.checkConsent());
+    });
+    accessManager.clientCertificateThumbprint.subscribe(() => {
+        globalDispatch(aiAssistantActions.checkConsent());
+    });
 }
 
 declare module "yup" {

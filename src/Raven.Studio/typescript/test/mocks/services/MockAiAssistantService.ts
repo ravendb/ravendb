@@ -2,7 +2,6 @@ import { AssistAiAssistantResultDto } from "commands/aiAssistant/assistAiAssista
 import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
 import AiAssistantService from "components/services/AiAssistantService";
 import { AutoMockService, MockedValue } from "test/mocks/services/AutoMockService";
-import { AiAgentStubs } from "test/stubs/AiAgentStubs";
 import { AiAssistantStubs } from "test/stubs/AiAssistantStubs";
 
 export default class MockAiAssistantService extends AutoMockService<AiAssistantService> {
