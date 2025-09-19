@@ -39,6 +39,8 @@ $prefix: "bs-";
     --license-production: #{$color-5};
     --license-enterprise-ai: #{$brand-ai};
 
+    --ai-assistant-button-text-color: #{$ai-assistant-button-text-color};
+
     --#{$prefix}dropdown-item-border-radius: #{$border-radius};
     --#{$prefix}border-radius-md: #{$border-radius-md}; //fix missing size in bootstrap 5.3
 

@@ -109,6 +109,8 @@ $developer: #c7ff6b;
 
 $twofactor: #5537c4;
 
+$ai-assistant-button-text-color: $gray-200;
+
 // Blue Theme
 @if $theme == "blue" {
     $black: #172138;
@@ -184,6 +186,8 @@ $twofactor: #5537c4;
     $ace-constant: $token-operator;
 
     $developer: darken(#c7ff6b, 33%);
+
+    $ai-assistant-button-text-color: $gray-800;
 }
 
 // Light Theme
@@ -269,6 +273,8 @@ $twofactor: #5537c4;
     $row-even-bg: $gray-100;
 
     $developer: darken(#c7ff6b, 33%);
+
+    $ai-assistant-button-text-color: $gray-900;
 }
 
 // Classic Theme

@@ -55,6 +55,7 @@ export default function EditGenAiTaskModelFields() {
                         setOptions={{
                             indentedSoftWrap: false,
                         }}
+                        isFullScreenLabelHidden
                     />
                     {formValues.prompt?.length > 0 && (
                         <AiAssistantButton handleClick={toggleIsAiAssistOpen} right="48px" />
