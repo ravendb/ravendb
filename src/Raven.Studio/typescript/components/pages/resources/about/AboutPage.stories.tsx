@@ -106,9 +106,6 @@ const defaultArgs: AboutPageStoryProps = {
 };
 
 const defaultArgTypes: Partial<ArgTypes<AboutPageStoryProps>> = {
-    subscriptionExpiration: {
-        control: "text",
-    },
     consentStatus: {
         control: "select",
         options: ["Success", "InvalidCredentials", "ConsentRequired"],

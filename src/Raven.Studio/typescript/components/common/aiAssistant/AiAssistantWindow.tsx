@@ -12,6 +12,7 @@ import { aiAssistantActions, aiAssistantSelectors } from "../shell/aiAssistantSl
 import useBoolean from "components/hooks/useBoolean";
 import RichAlert from "../RichAlert";
 import { AiAssistantEulaModal } from "./AiAssistantEulaModal";
+import { aiAssistantConstants } from "./aiAssistantConstants";
 
 interface AiAssistWindowProps {
     closeWindow: () => void;
@@ -92,11 +93,11 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                         Checking consent... Please wait.
                     </div>
                 )}
-                {consentStatus.status === "failure" && <RichAlert variant="danger">Failed to check consent.</RichAlert>}
+                {consentStatus.status === "failure" && (
+                    <RichAlert variant="danger">{aiAssistantConstants.failedToCheckConsent}</RichAlert>
+                )}
                 {consentStatus.data === "InvalidCredentials" && (
-                    <RichAlert variant="danger">
-                        Invalid credentials. Please check your credentials and try again.
-                    </RichAlert>
+                    <RichAlert variant="danger">{aiAssistantConstants.invalidCredentials}</RichAlert>
                 )}
                 {consentStatus.data === "ConsentRequired" && (
                     <div>
@@ -122,12 +123,13 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                     <RichAlert variant="danger">Invalid data. Please check your data and try again.</RichAlert>
                 )}
                 {asyncAssist.result?.Status === "OutOfTokens" && (
-                    <RichAlert variant="danger">Out of tokens. TODO: add some link</RichAlert>
+                    <RichAlert variant="danger">
+                        You have used all your AI Assistant tokens for this month. Your token allowance will be reset at
+                        the beginning of the next month.
+                    </RichAlert>
                 )}
                 {asyncAssist.result?.Status === "InvalidCredentials" && (
-                    <RichAlert variant="danger">
-                        Invalid credentials. Please check your credentials and try again.
-                    </RichAlert>
+                    <RichAlert variant="danger">{aiAssistantConstants.invalidCredentials}</RichAlert>
                 )}
                 {assistResultText && (
                     <div>

@@ -32,6 +32,7 @@ import { CheckUsageAiAssistantResultDto } from "commands/aiAssistant/checkUsageA
 import { loadableData } from "components/models/common";
 import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
 import ProgressBar from "react-bootstrap/ProgressBar";
+import { aiAssistantConstants } from "components/common/aiAssistant/aiAssistantConstants";
 
 interface LicenseSummaryProps {
     asyncCheckLicenseServerConnectivity: AsyncState<ConnectivityStatus>;
@@ -482,7 +483,7 @@ function TokensUsageItem({ usage }: { usage: loadableData<CheckUsageAiAssistantR
         return (
             <strong className="text-danger fs-4">
                 <Icon icon="cancel" />
-                Failed to check usage
+                Failed to check usage. Please try again.
             </strong>
         );
     }
@@ -491,7 +492,7 @@ function TokensUsageItem({ usage }: { usage: loadableData<CheckUsageAiAssistantR
         return (
             <strong className="text-warning fs-4">
                 <Icon icon="cancel" />
-                Invalid credentials
+                {aiAssistantConstants.invalidCredentials}
             </strong>
         );
     }
@@ -529,7 +530,7 @@ function ConsentStatusItem({
         return (
             <strong className="text-danger fs-4">
                 <Icon icon="cancel" />
-                Failed to check consent
+                {aiAssistantConstants.failedToCheckConsent}
             </strong>
         );
     }
@@ -547,7 +548,7 @@ function ConsentStatusItem({
         return (
             <strong className="text-warning fs-4">
                 <Icon icon="cancel" />
-                Invalid credentials
+                {aiAssistantConstants.invalidCredentials}
             </strong>
         );
     }

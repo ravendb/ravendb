@@ -42,7 +42,7 @@ export function AiAssistantEulaModal({ close }: AiAssistantEulaModalProps) {
                 </Checkbox>
                 <RichAlert variant="info">
                     If you wish to revert your consent,{" "}
-                    <a href="#TODO" target="_blank">
+                    <a href="https://ravendb.net/contact" target="_blank">
                         contact our support team
                     </a>
                     .
