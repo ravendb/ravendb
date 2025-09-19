@@ -109,9 +109,26 @@ function initRedux() {
     );
 
     // ai assistant
-    licenseModel.licenseStatus.subscribe(() => {
-        globalDispatch(aiAssistantActions.checkConsent());
-    });
+    let prevLicenseId: string = undefined;
+
+    licenseModel.licenseStatus.subscribe(
+        (value) => {
+            prevLicenseId = value?.Id;
+        },
+        licenseModel.licenseStatus,
+        "beforeChange"
+    );
+
+    licenseModel.licenseStatus.subscribe(
+        (value) => {
+            if (value?.Id !== prevLicenseId) {
+                globalDispatch(aiAssistantActions.checkConsent());
+            }
+        },
+        licenseModel.licenseStatus,
+        "change"
+    );
+
     accessManager.clientCertificateThumbprint.subscribe(() => {
         globalDispatch(aiAssistantActions.checkConsent());
     });
