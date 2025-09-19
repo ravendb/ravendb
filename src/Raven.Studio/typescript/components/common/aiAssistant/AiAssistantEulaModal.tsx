@@ -6,6 +6,8 @@ import { Icon } from "components/common/Icon";
 import Button from "react-bootstrap/Button";
 import RichAlert from "../RichAlert";
 import { aiAssistantActions } from "../shell/aiAssistantSlice";
+import { useAsyncCallback } from "react-async-hook";
+import ButtonWithSpinner from "../ButtonWithSpinner";
 
 interface AiAssistantEulaModalProps {
     close: () => void;
@@ -16,10 +18,10 @@ export function AiAssistantEulaModal({ close }: AiAssistantEulaModalProps) {
 
     const { value: isAccepted, toggle: toggleAccepted } = useBoolean(false);
 
-    const handleConsent = () => {
-        dispatch(aiAssistantActions.giveConsent());
+    const asyncHandleConsent = useAsyncCallback(async () => {
+        await dispatch(aiAssistantActions.giveConsent()).unwrap();
         close();
-    };
+    });
 
     return (
         <Modal show onHide={close} contentClassName="modal-border bulge-primary" size="lg">
@@ -52,9 +54,15 @@ export function AiAssistantEulaModal({ close }: AiAssistantEulaModalProps) {
                 <Button variant="link" onClick={close} className="link-muted rounded-pill">
                     Cancel
                 </Button>
-                <Button variant="primary" onClick={handleConsent} className="rounded-pill" disabled={!isAccepted}>
+                <ButtonWithSpinner
+                    variant="primary"
+                    onClick={asyncHandleConsent.execute}
+                    className="rounded-pill"
+                    disabled={!isAccepted}
+                    isSpinning={asyncHandleConsent.loading}
+                >
                     I consent
-                </Button>
+                </ButtonWithSpinner>
             </Modal.Footer>
         </Modal>
     );

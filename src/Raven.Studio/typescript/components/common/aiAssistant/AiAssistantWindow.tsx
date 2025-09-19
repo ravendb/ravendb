@@ -109,9 +109,9 @@ export default function AiAssistantWindow({ closeWindow, data, acceptResult, suc
                                 <Icon icon="open-modal" margin="ms-1" />
                             </Button>
                         </div>
-                        {isEulaOpen && <AiAssistantEulaModal close={toggleEulaOpen} />}
                     </div>
                 )}
+                {isEulaOpen && <AiAssistantEulaModal close={toggleEulaOpen} />}
                 {isConsentSuccess && asyncAssist.loading && (
                     <div className="hstack align-items-center gap-1">
                         <Spinner size="sm" variant="progress" />
