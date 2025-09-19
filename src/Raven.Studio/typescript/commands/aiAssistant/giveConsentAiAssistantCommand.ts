@@ -2,7 +2,7 @@ import commandBase = require("commands/commandBase");
 import endpoints = require("endpoints");
 
 export interface GiveConsentAiAssistantResultDto {
-    Status: AiAssistantResponseStatus;
+    Status: Extract<AiAssistantResponseStatus, "Success" | "InvalidCredentials">;
 }
 
 export default class giveConsentAiAssistantCommand extends commandBase {

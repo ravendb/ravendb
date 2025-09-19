@@ -6,6 +6,7 @@ import { services } from "components/hooks/useServices";
 import messagePublisher from "common/messagePublisher";
 import { CheckConsentAiAssistantResultDto } from "commands/aiAssistant/checkConsentAiAssistantCommand";
 import { CheckUsageAiAssistantResultDto } from "commands/aiAssistant/checkUsageAiAssistantCommand";
+import { aiAssistantConstants } from "../aiAssistant/aiAssistantConstants";
 
 interface AiAssistantState {
     consentStatus: loadableData<CheckConsentAiAssistantResultDto["Status"]>;
@@ -30,7 +31,6 @@ export const aiAssistantSlice = createSlice({
                 state.consentStatus = createFailureState(action.error.message);
             })
             .addCase(checkConsent.fulfilled, (state, action) => {
-                console.log("kalczur action", action);
                 state.consentStatus = createSuccessState(action.payload.Status);
             })
             .addCase(checkUsage.pending, (state) => {
@@ -41,6 +41,9 @@ export const aiAssistantSlice = createSlice({
             })
             .addCase(checkUsage.fulfilled, (state, action) => {
                 state.usage = createSuccessState(action.payload);
+            })
+            .addCase(giveConsent.fulfilled, (state, action) => {
+                state.consentStatus = createSuccessState(action.payload);
             });
     },
 });
@@ -59,16 +62,12 @@ const giveConsent = createAsyncThunk(aiAssistantSlice.name + "/giveConsent", asy
     const result = await services.aiAssistantService.giveConsent();
 
     if (result.Status === "InvalidCredentials") {
-        messagePublisher.reportError("Failed to give consent to AI Assistant. Invalid credentials.");
-        return;
+        messagePublisher.reportError(
+            `Failed to give consent to AI Assistant. ${aiAssistantConstants.invalidCredentials}`
+        );
     }
 
-    if (result.Status !== "Success") {
-        messagePublisher.reportError("Failed to give consent to AI Assistant.");
-        return;
-    }
-
-    checkConsent();
+    return result.Status;
 });
 
 export const aiAssistantActions = {
