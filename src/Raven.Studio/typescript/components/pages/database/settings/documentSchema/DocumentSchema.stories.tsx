@@ -3,6 +3,7 @@ import { Meta, StoryObj } from "@storybook/react";
 import DocumentSchema from "components/pages/database/settings/documentSchema/DocumentSchema";
 import { mockStore } from "test/mocks/store/MockStore";
 import DocumentSchemaPlayground from "components/pages/database/settings/documentSchema/DocumentSchemaPlayground";
+import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
     title: "Pages/Settings/Document Schema",
@@ -24,11 +25,14 @@ export const DefaultDocumentSchema: StoryObj = {
     name: "Document Schema",
     render: () => {
         const { databases, accessManager, license } = mockStore;
+        const {databasesService} = mockServices
         const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
+        databasesService.withSchemaValidations()
         accessManager.with_databaseAccess({
             [db.name]: "DatabaseAdmin",
         });
+
 
         return <DocumentSchema />;
     },

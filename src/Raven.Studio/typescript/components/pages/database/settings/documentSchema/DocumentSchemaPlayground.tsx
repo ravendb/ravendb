@@ -18,9 +18,14 @@ import { FormGroup, FormLabel } from "components/common/Form";
 import Select from "components/common/select/Select";
 import AceEditor from "components/common/ace/AceEditor";
 import ReactAce from "react-ace/lib/ace";
+import { useAppSelector } from "components/store";
+import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
+import { useAppUrls } from "hooks/useAppUrls";
 
 export default function DocumentSchemaPlayground() {
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
     const aceRef = useRef<ReactAce>(null);
+    const { appUrl } = useAppUrls();
 
     return (
         <div className="content-margin">
@@ -34,10 +39,10 @@ export default function DocumentSchemaPlayground() {
                         </span>
 
                         <div className="mt-5 d-flex align-items-center justify-content-between">
-                            <Button variant="secondary">
+                            <a href={appUrl.forDocumentSchema(databaseName)} className="btn btn-secondary">
                                 <Icon icon="close" />
                                 Cancel
-                            </Button>
+                            </a>
                             <Button className="rounded-pill">
                                 <Icon icon="rocket" />
                                 Run test
@@ -97,7 +102,7 @@ export default function DocumentSchemaPlayground() {
                                             actions={[
                                                 { component: <AceEditor.FullScreenAction /> },
                                                 { component: <AceEditor.FormatAction /> },
-                                                { component: <AceEditor.ToggleNewLinesAction /> },
+                                                { component: <AceEditor.LoadFileAction onLoad={() => {}} /> },
                                             ]}
                                             mode="json"
                                         />
