@@ -10,6 +10,7 @@ using Newtonsoft.Json.Converters;
 using Raven.Client.Documents;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Operations.Indexes;
+using Raven.Client.Exceptions.Documents.Compilation;
 using Raven.Client.Http;
 using Raven.Client.Json.Serialization;
 using Raven.Client.ServerWide.Operations;
@@ -308,7 +309,7 @@ public class RavenDB_22498 : RavenTestBase
                         await store.Maintenance.SendAsync(new PutIndexesOperation(def));
                         await store.Maintenance.SendAsync(new DeleteIndexOperation(def.Name));
                     }
-                    catch
+                    catch (IndexCompilationException)
                     {
                         errorCount++;
                     }
