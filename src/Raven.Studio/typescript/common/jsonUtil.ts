@@ -32,6 +32,10 @@ class jsonUtil {
             return ko.toJSON(object, (k:string, v:string) => ignoredFields.indexOf(k) == -1 ? v : null).replace(/\\r\\n/g, '\\n');
         }
     }
+
+    static formatJson(json: string, indent = 2) {
+        return JSON.stringify(JSON.parse(json), null, indent)
+    }
 } 
 
 export = jsonUtil

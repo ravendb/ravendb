@@ -419,7 +419,7 @@ class appUrl {
         return "#databases/settings/documentsCompression?" + appUrl.getEncodedDbPart(db);
     }
 
-    static forDocumentSchema(db: database): string {
+    static forDocumentSchema(db: database | string): string {
         return "#databases/settings/documentSchema?" + appUrl.getEncodedDbPart(db);
     }
 

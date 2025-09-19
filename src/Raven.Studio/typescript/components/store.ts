@@ -20,6 +20,7 @@ import { editGenAiTaskSlice } from "./pages/database/tasks/ongoingTasks/editTask
 import { editAiAgentSlice } from "./pages/database/aiHub/aiAgents/edit/store/editAiAgentSlice";
 import { chatAiAgentSlice } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentSlice";
 import { chatAiAgentUpdateUrlMiddleware } from "./pages/database/aiHub/aiAgents/chat/store/chatAiAgentMiddleware";
+import { documentSchemaSlice } from "components/pages/database/settings/documentSchema/store/documentSchemaSlice";
 
 const listenerMiddleware = createListenerMiddleware({
     extra: () => services,
@@ -43,6 +44,7 @@ export function createStoreConfiguration() {
             editGenAiTask: editGenAiTaskSlice.reducer,
             editAiAgent: editAiAgentSlice.reducer,
             chatAiAgent: chatAiAgentSlice.reducer,
+            documentSchema: documentSchemaSlice.reducer,
         },
         middleware: (getDefaultMiddleware) =>
             getDefaultMiddleware({

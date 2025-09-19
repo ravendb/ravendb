@@ -205,4 +205,8 @@ export default class MockDatabasesService extends AutoMockService<DatabasesServi
     withDocumentWithMetadata(dto?: MockedValue<any>) {
         return this.mockResolvedValue(this.mocks.getDocumentWithMetadata, dto, new document({ Name: "some-name" }));
     }
+
+    withSchemaValidations(dto?: MockedValue<any>) {
+        return this.mockResolvedValue(this.mocks.getSchemaValidation, dto, DatabasesStubs.schemaValidators());
+    }
 }

@@ -1082,4 +1082,17 @@ return docs[0];`,
             totalResultCount: 2,
         };
     }
+
+    static schemaValidators(): Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration {
+        return {
+            Disabled: false,
+            ValidatorsPerCollection: {
+                TestObjs: {
+                    Disabled: false,
+                    Schema: '{"properties":{"Prop":{"const":"12212213"}}}',
+                    LastModifiedTime: "2025-09-19T14:08:13.2913345Z",
+                },
+            },
+        };
+    }
 }

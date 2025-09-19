@@ -2,10 +2,10 @@ import Col from "react-bootstrap/Col";
 import Row from "react-bootstrap/Row";
 import { AboutViewHeading } from "components/common/AboutView";
 import { Checkbox } from "components/common/Checkbox";
-import React, { useRef } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import Button from "react-bootstrap/Button";
 import { Icon } from "components/common/Icon";
-import Select from "components/common/select/Select";
+import Select, { SelectOption } from "components/common/select/Select";
 import { HrHeader } from "components/common/HrHeader";
 import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 import {
@@ -17,58 +17,63 @@ import {
     RichPanelName,
     RichPanelSelect,
 } from "components/common/RichPanel";
-import { FormGroup, FormLabel } from "components/common/Form";
+import { FormAceEditor, FormGroup, FormLabel, FormSelectCreatable } from "components/common/Form";
 import AceEditor from "components/common/ace/AceEditor";
 import ReactAce from "react-ace/lib/ace";
 import useBoolean from "hooks/useBoolean";
-import { useAppUrls } from "hooks/useAppUrls";
-import { useAppSelector } from "components/store";
+import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { ConditionalPopover } from "components/common/ConditionalPopover";
+import { LazyLoad } from "components/common/LazyLoad";
+import jsonUtil from "common/jsonUtil";
+import * as yup from "yup";
+import { FormProvider, useForm, useFormContext } from "react-hook-form";
+import { yupResolver } from "@hookform/resolvers/yup";
+import { collectionsTrackerSelectors } from "components/common/shell/collectionsTrackerSlice";
+import { documentSchemaActions, DocumentSchemaValidatorConfig } from "./store/documentSchemaSlice";
+import { documentSchemaSelectors } from "./store/documentSchemaSliceSelectors";
+import { useServices } from "hooks/useServices";
+import { useAsync, useAsyncCallback } from "react-async-hook";
+import DocumentSchemaSelectActions from "components/pages/database/settings/documentSchema/DocumentSchemaSelectActions";
+import { documentSchemaUtils } from "components/pages/database/settings/documentSchema/documentSchemaUtils";
+import DocumentSchemaAboutView from "components/pages/database/settings/documentSchema/DocumentSchemaAboutView";
+import DocumentSchemaDeleteModal from "components/pages/database/settings/documentSchema/DocumentSchemaDeleteModal";
+import { EmptySet } from "components/common/EmptySet";
 
 export default function DocumentSchema() {
-    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
-    const aceRef = useRef<ReactAce>(null);
-    const { appUrl } = useAppUrls();
-    const { value: isEditingSchema, toggle: toggleEditingSchema } = useBoolean(false);
+    const {
+        options,
+        filteredValidators,
+        selectedCollections,
+        handleOnSelectCollection,
+        asyncLoadValidators,
+        handleAddNew,
+    } = useDocumentSchema();
+
     return (
         <div className="content-margin">
             <Col>
-                <Row>
+                <Row className="gy-sm">
                     <Col>
                         <AboutViewHeading marginBottom={4} title="Document Schema" icon="document" />
-
-                        <div className="d-flex align-items-center justify-content-between">
-                            <Checkbox
-                                selected={false}
-                                indeterminate={false}
-                                toggleSelection={() => console.log("toggle selection")}
-                                color="primary"
-                                title="Select all or none"
-                                size="lg"
-                            >
-                                <span className="small-label">Select All</span>
-                            </Checkbox>
-
-                            <a
-                                href={appUrl.forDocumentSchemaPlayground(databaseName)}
-                                className="btn btn-secondary rounded-pill"
-                            >
-                                <Icon icon="rocket" />
-                                Schema playground
-                            </a>
-                        </div>
-
+                        <DocumentSchemaSelectActions />
                         <div className="mt-3">
-                            <span className="small-label">Multi</span>
-                            <Select options={options} isMulti value={options} />
+                            <span className="small-label">Filter by collection</span>
+                            <Select
+                                isLoading={asyncLoadValidators.loading}
+                                options={options}
+                                isMulti
+                                value={selectedCollections}
+                                onChange={handleOnSelectCollection}
+                                placeholder="All collections"
+                                isClearable
+                            />
                         </div>
 
                         <div className="mt-4">
                             <HrHeader
-                                count={3}
+                                count={filteredValidators.length}
                                 right={
-                                    <Button size="xs" variant="info" className="rounded-pill">
+                                    <Button size="xs" variant="info" className="rounded-pill" onClick={handleAddNew}>
                                         <Icon icon="plus" />
                                         Add new
                                     </Button>
@@ -80,51 +85,11 @@ export default function DocumentSchema() {
                                     <Icon icon="info" color="info" margin="ms-1" />
                                 </PopoverWithHoverWrapper>
                             </HrHeader>
-                            <RichPanel>
-                                <RichPanelHeader>
-                                    <RichPanelInfo>
-                                        <RichPanelSelect>
-                                            <Checkbox toggleSelection={() => {}} selected={false} />
-                                        </RichPanelSelect>
-                                        <RichPanelName>Orders</RichPanelName>
-                                    </RichPanelInfo>
-                                    <RichPanelActions>
-                                        <ConditionalPopover
-                                            conditions={{
-                                                isActive: isEditingSchema,
-                                                message:
-                                                    " The schema must be saved in order to test it against existing documents.",
-                                            }}
-                                        >
-                                            <Button variant="secondary" disabled={isEditingSchema}>
-                                                <Icon margin="m-0" icon="rocket" />
-                                            </Button>
-                                        </ConditionalPopover>
-
-                                        <Button
-                                            onClick={toggleEditingSchema}
-                                            variant={isEditingSchema ? "success" : "secondary"}
-                                        >
-                                            <Icon margin="m-0" icon={isEditingSchema ? "save" : "edit"} />
-                                            {isEditingSchema && <span className="ms-1">Save</span>}
-                                        </Button>
-                                        {isEditingSchema ? (
-                                            <Button variant="secondary">
-                                                <Icon icon="close" />
-                                                Discard
-                                            </Button>
-                                        ) : (
-                                            <Button variant="danger">
-                                                <Icon margin="m-0" icon="trash" />
-                                            </Button>
-                                        )}
-                                    </RichPanelActions>
-                                </RichPanelHeader>
-
-                                {isEditingSchema && <RichPanelDetailsEditSchema aceRef={aceRef} />}
-                                {!isEditingSchema && <RichPanelDetailsViewSchema aceRef={aceRef} />}
-                            </RichPanel>
+                            <DocumentSchemaBody />
                         </div>
+                    </Col>
+                    <Col sm={12} lg={4}>
+                        <DocumentSchemaAboutView />
                     </Col>
                 </Row>
             </Col>
@@ -132,108 +97,394 @@ export default function DocumentSchema() {
     );
 }
 
+const useDocumentSchema = () => {
+    const dispatch = useAppDispatch();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const validators = useAppSelector(documentSchemaSelectors.allValidators);
+    const allCollectionNames = useAppSelector(documentSchemaSelectors.allCollectionNames);
+    const draftIds = useAppSelector(documentSchemaSelectors.newDraftIds);
+
+    const options: SelectOption[] = allCollectionNames.map((x) => ({ label: x, value: x }));
+    const [selectedCollections, setSelectedCollections] = useState<SelectOption[]>([]);
+
+    const filteredValidators = selectedCollections.length
+        ? validators.filter((v) => selectedCollections.some((o) => o.value === v.Name))
+        : validators;
+
+    const { databasesService } = useServices();
+
+    const asyncLoadValidators = useAsync(async () => {
+        const result = await databasesService.getSchemaValidation(databaseName);
+        dispatch(documentSchemaActions.validatorsLoadedFromServer(result));
+        return result;
+    }, []);
+
+    useEffect(() => {
+        return () => {
+            dispatch(documentSchemaActions.reset());
+        };
+    }, []);
+
+    const handleAddNew = () => {
+        dispatch(documentSchemaActions.draftAdded(undefined));
+    };
+
+    const handleOnSelectCollection = (collectionNames: SelectOption[]) => {
+        setSelectedCollections(collectionNames);
+    };
+
+    const handleCancelNew = (id: string) => {
+        dispatch(documentSchemaActions.draftRemoved(id));
+    };
+
+    const asyncSaveValidators = useAsyncCallback(async (items: DocumentSchemaValidatorConfig[]) => {
+        await databasesService.saveSchemaValidation(
+            databaseName,
+            documentSchemaUtils.mapToSchemaValidationConfigurationDto(items)
+        );
+        dispatch(documentSchemaActions.validatorsSaved());
+    });
+
+    const handleNewSchemaSubmit = async (id: string, data: DocumentSchemaFormData) => {
+        const newItem = documentSchemaUtils.maptoDocumentSchemaValidatorConfigDto(data);
+        dispatch(documentSchemaActions.validatorAdded(newItem));
+        await asyncSaveValidators.execute([...validators.filter((v) => v.Name !== newItem.Name), newItem]);
+        dispatch(documentSchemaActions.draftRemoved(id));
+    };
+
+    return {
+        handleAddNew,
+        selectedCollections,
+        setSelectedCollections,
+        asyncLoadValidators,
+        asyncSaveValidators,
+        filteredValidators,
+        allCollectionNames,
+        draftIds,
+        options,
+        handleOnSelectCollection,
+        handleCancelNew,
+        handleNewSchemaSubmit,
+    };
+};
+
+const DocumentSchemaBody = () => {
+    const {
+        handleCancelNew,
+        handleNewSchemaSubmit,
+        filteredValidators,
+        draftIds,
+        allCollectionNames,
+        asyncLoadValidators,
+    } = useDocumentSchema();
+
+    if (filteredValidators.length === 0 && draftIds.length === 0 && !asyncLoadValidators.loading) {
+        return (
+            <>
+                <EmptySet>There are no collection specific document schemas.</EmptySet>
+                {draftIds.map((id) => (
+                    <NewCollectionSchemaRichPanel
+                        key={id}
+                        schemaValidatorCollections={allCollectionNames}
+                        onSubmit={(data) => handleNewSchemaSubmit(id, data)}
+                        onCancel={() => handleCancelNew(id)}
+                    />
+                ))}
+            </>
+        );
+    }
+
+    return (
+        <>
+            <LazyLoad active={asyncLoadValidators.loading}>
+                {filteredValidators.map((v) => (
+                    <CollectionSchemaRichPanel
+                        schemaValidatorCollections={allCollectionNames}
+                        key={v.Name}
+                        collectionName={v.Name}
+                        schema={v.Schema}
+                    />
+                ))}
+            </LazyLoad>
+            {draftIds.map((id) => (
+                <NewCollectionSchemaRichPanel
+                    key={id}
+                    schemaValidatorCollections={allCollectionNames}
+                    onSubmit={(data) => handleNewSchemaSubmit(id, data)}
+                    onCancel={() => handleCancelNew(id)}
+                />
+            ))}
+        </>
+    );
+};
+
 interface RichPanelDetailsProps {
     aceRef: React.RefObject<ReactAce>;
 }
 
-const RichPanelDetailsViewSchema = ({ aceRef }: RichPanelDetailsProps) => {
+interface CollectionSchemaRichPanelProps {
+    collectionName: string;
+    schema: string;
+    schemaValidatorCollections: string[];
+}
+
+const CollectionSchemaRichPanel = ({
+    collectionName = "",
+    schema = "",
+    schemaValidatorCollections,
+}: CollectionSchemaRichPanelProps) => {
+    const { value: isEditingSchema, toggle: toggleEditingSchema } = useBoolean(false);
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const aceRef = useRef<ReactAce>(null);
+    const dispatch = useAppDispatch();
+    const isSelected = useAppSelector(documentSchemaSelectors.isSelectedCollectionName(collectionName));
+    const validatorsAll = useAppSelector(documentSchemaSelectors.allValidators);
+    const { databasesService } = useServices();
+    const { value: isDeleteModalOpen, toggle: toggleDeleteModal } = useBoolean(false);
+
+    const asyncSaveValidators = useAsyncCallback(async (items: DocumentSchemaValidatorConfig[]) => {
+        await databasesService.saveSchemaValidation(
+            databaseName,
+            documentSchemaUtils.mapToSchemaValidationConfigurationDto(items)
+        );
+        dispatch(documentSchemaActions.validatorsSaved());
+    });
+
+    const form = useForm<DocumentSchemaFormData>({
+        resolver: yupResolver(formSchema),
+        defaultValues: {
+            collection: collectionName,
+            schema: jsonUtil.formatJson(schema),
+        },
+    });
+
+    const {handleSubmit, reset} = form;
+
+    const handleEditSchema = async (data: DocumentSchemaFormData) => {
+        const updatedItem = documentSchemaUtils.maptoDocumentSchemaValidatorConfigDto(data);
+        dispatch(documentSchemaActions.validatorEdited(updatedItem));
+        const next = [...validatorsAll.filter((v) => v.Name !== updatedItem.Name), updatedItem];
+        await asyncSaveValidators.execute(next);
+        toggleEditingSchema();
+    };
+
+    return (
+        <>
+            <FormProvider {...form}>
+                <RichPanel>
+                    <RichPanelHeader>
+                        <RichPanelInfo>
+                            <RichPanelSelect>
+                                <Checkbox
+                                    toggleSelection={() =>
+                                        dispatch(documentSchemaActions.selectedCollectionNameToggled(collectionName))
+                                    }
+                                    selected={isSelected}
+                                />
+                            </RichPanelSelect>
+                            <RichPanelName>{collectionName}</RichPanelName>
+                        </RichPanelInfo>
+                        <RichPanelActions>
+                            {/*For now schema playground is not available.*/}
+                            {/*<ConditionalPopover*/}
+                            {/*    conditions={{*/}
+                            {/*        isActive: isEditingSchema,*/}
+                            {/*        message: "The schema must be saved in order to test it against existing documents.",*/}
+                            {/*    }}*/}
+                            {/*>*/}
+                            {/*    <Button variant="secondary" disabled={isEditingSchema}>*/}
+                            {/*        <Icon margin="m-0" icon="rocket" />*/}
+                            {/*    </Button>*/}
+                            {/*</ConditionalPopover>*/}
+
+                            <Button
+                                onClick={isEditingSchema ? handleSubmit(handleEditSchema) : toggleEditingSchema}
+                                variant={isEditingSchema ? "success" : "secondary"}
+                                disabled={asyncSaveValidators.loading}
+                            >
+                                <Icon margin="m-0" icon={isEditingSchema ? "save" : "edit"} />
+                                {isEditingSchema && <span className="ms-1">Save</span>}
+                            </Button>
+                            {isEditingSchema ? (
+                                <Button
+                                    variant="secondary"
+                                    disabled={asyncSaveValidators.loading}
+                                    onClick={() => {
+                                        reset({ collection: collectionName, schema: jsonUtil.formatJson(schema) });
+                                        toggleEditingSchema();
+                                    }}
+                                >
+                                    <Icon icon="close" />
+                                    Discard
+                                </Button>
+                            ) : (
+                                <Button
+                                    disabled={asyncSaveValidators.loading}
+                                    variant="danger"
+                                    onClick={toggleDeleteModal}
+                                >
+                                    <Icon margin="m-0" icon="trash" />
+                                </Button>
+                            )}
+                        </RichPanelActions>
+                    </RichPanelHeader>
+
+                    {isEditingSchema && (
+                        <RichPanelDetailsEditSchema
+                            schemaValidatorCollections={schemaValidatorCollections}
+                            collectionName={collectionName}
+                            aceRef={aceRef}
+                        />
+                    )}
+                    {!isEditingSchema && <RichPanelDetailsViewSchema aceRef={aceRef} schema={schema} />}
+                </RichPanel>
+            </FormProvider>
+            {isDeleteModalOpen && (
+                <DocumentSchemaDeleteModal collectionName={collectionName} onHide={toggleDeleteModal} />
+            )}
+        </>
+    );
+};
+
+interface RichPanelDetailsProps {
+    aceRef: React.RefObject<ReactAce>;
+    schema?: string;
+}
+
+const RichPanelDetailsViewSchema = ({ aceRef, schema }: RichPanelDetailsProps) => {
     return (
         <RichPanelDetails>
             <FormGroup className="w-100 mt-2">
                 <FormLabel>Document schema (Read only)</FormLabel>
                 <AceEditor
-                    height="300px"
+                    readOnly
                     aceRef={aceRef}
                     isFullScreenLabelHidden
                     actions={[
                         { component: <AceEditor.FullScreenAction /> },
-                        { component: <AceEditor.FormatAction /> },
-                        { component: <AceEditor.ToggleNewLinesAction /> },
                         {
                             component: <AceEditor.HelpAction message={<div>test</div>} />,
                             position: "bottom",
                         },
                     ]}
                     mode="json"
-                    value={JSON.stringify(placeholderValue, null, 4)}
+                    value={jsonUtil.formatJson(schema) ?? ""}
                 />
             </FormGroup>
         </RichPanelDetails>
     );
 };
 
-const RichPanelDetailsEditSchema = ({ aceRef }: RichPanelDetailsProps) => {
+interface RichPanelDetailsEditSchemaProps extends RichPanelDetailsProps {
+    collectionName: string;
+    schemaValidatorCollections: string[];
+}
+
+const RichPanelDetailsEditSchema = ({
+    aceRef,
+    collectionName,
+    schemaValidatorCollections,
+}: RichPanelDetailsEditSchemaProps) => {
+    const { control } = useFormContext<DocumentSchemaFormData>();
+
+    const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
+        (x) => x !== "@empty" && x !== "@hilo" && x !== collectionName && !schemaValidatorCollections.includes(x)
+    );
+
+    const collectionOptions = allCollectionNames.map((x) => ({
+        label: x,
+        value: x,
+    }));
+
     return (
         <RichPanelDetails>
             <FormGroup className="w-100 mt-2">
                 <FormGroup>
                     <FormLabel>Collection</FormLabel>
-                    <Select
+                    <FormSelectCreatable
+                        control={control}
+                        name="collection"
                         placeholder="Select a collection (or enter a new one)"
-                        options={[
-                            {
-                                label: "Orders",
-                                value: "orders",
-                            },
-                        ]}
+                        options={collectionOptions}
                     />
                 </FormGroup>
                 <FormLabel>
                     Document schema <Icon icon="info" color="info" margin="m-0" />
                 </FormLabel>
-                <AceEditor
-                    height="900px"
+                <FormAceEditor
+                    control={control}
+                    name="schema"
+                    height="400px"
                     aceRef={aceRef}
                     isFullScreenLabelHidden
                     actions={[
                         { component: <AceEditor.FullScreenAction /> },
                         { component: <AceEditor.FormatAction /> },
-                        { component: <AceEditor.ToggleNewLinesAction /> },
+                        { component: <AceEditor.LoadFileAction onLoad={() => {}} /> },
                         {
                             component: <AceEditor.HelpAction message={<div>test</div>} />,
                             position: "bottom",
                         },
                     ]}
                     mode="json"
-                    value={JSON.stringify(placeholderValue, null, 4)}
                 />
             </FormGroup>
         </RichPanelDetails>
     );
 };
 
-const options = [
-    { value: "chocolate", label: "Chocolate" },
-    { value: "strawberry", label: "Strawberry" },
-    { value: "vanilla", label: "Vanilla" },
-];
+interface NewCollectionSchemaRichPanelProps {
+    schemaValidatorCollections: string[];
+    onSubmit: (data: DocumentSchemaFormData) => Promise<void>;
+    onCancel: () => void;
+}
 
-const placeholderValue = {
-    type: "object",
-    properties: {
-        name: {
-            type: "string",
-            description: "user name",
-        },
-        age: {
-            type: "integer",
-        },
-        addresses: {
-            type: "array",
-            items: {
-                $ref: "#/definitions/address",
-            },
-        },
-        services: {
-            anyOf: [
-                {
-                    $ref: "#/definitions/service1",
-                },
-                {
-                    $ref: "#/definitions/service2",
-                },
-            ],
-        },
-    },
-    required: ["name"],
+const NewCollectionSchemaRichPanel = ({
+    schemaValidatorCollections,
+    onSubmit,
+    onCancel,
+}: NewCollectionSchemaRichPanelProps) => {
+    const aceRef = useRef<ReactAce>(null);
+    const form = useForm<DocumentSchemaFormData>({
+        resolver: yupResolver(formSchema),
+    });
+
+    const handleSubmit = async (data: DocumentSchemaFormData) => {
+        await onSubmit(data);
+    };
+
+    return (
+        <FormProvider {...form}>
+            <RichPanel>
+                <RichPanelHeader>
+                    <RichPanelInfo>
+                        <RichPanelName>New Collection Schema</RichPanelName>
+                    </RichPanelInfo>
+                    <RichPanelActions>
+                        <Button onClick={form.handleSubmit(handleSubmit)} variant="success">
+                            <Icon margin="m-0" icon="save" />
+                            <span className="ms-1">Save</span>
+                        </Button>
+                        <Button variant="secondary" onClick={onCancel}>
+                            <Icon icon="close" />
+                            Cancel
+                        </Button>
+                    </RichPanelActions>
+                </RichPanelHeader>
+
+                <RichPanelDetailsEditSchema
+                    schemaValidatorCollections={schemaValidatorCollections}
+                    collectionName=""
+                    aceRef={aceRef}
+                />
+            </RichPanel>
+        </FormProvider>
+    );
 };
+
+const formSchema = yup.object({
+    collection: yup.string().required(),
+    schema: yup.string().required(),
+});
+
+export type DocumentSchemaFormData = yup.InferType<typeof formSchema>;

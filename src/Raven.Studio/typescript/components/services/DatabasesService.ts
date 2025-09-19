@@ -74,6 +74,8 @@ import deleteRevisionsForDocumentsCommand = require("commands/database/documents
 import getRevisionsIdsCommand from "commands/database/documents/getRevisionsIdsCommand";
 import getDocumentWithMetadataCommand = require("commands/database/documents/getDocumentWithMetadataCommand");
 import getDocumentsByIDPrefixCommand = require("commands/database/documents/getDocumentsByIDPrefixCommand");
+import getSchemaValidationCommand from "commands/database/settings/getSchemaValidationCommand";
+import saveSchemaValidationCommand from "commands/database/settings/saveSchemaValidationCommand";
 
 export default class DatabasesService {
     async setLockMode(databaseNames: string[], newLockMode: DatabaseLockMode) {
@@ -353,5 +355,13 @@ export default class DatabasesService {
 
     async getDocumentWithMetadata(...args: ConstructorParameters<typeof getDocumentWithMetadataCommand>) {
         return new getDocumentWithMetadataCommand(...args).execute();
+    }
+
+    async getSchemaValidation(...args: ConstructorParameters<typeof getSchemaValidationCommand>) {
+        return new getSchemaValidationCommand(...args).execute();
+    }
+
+    async saveSchemaValidation(...args: ConstructorParameters<typeof saveSchemaValidationCommand>) {
+        return new saveSchemaValidationCommand(...args).execute();
     }
 }
