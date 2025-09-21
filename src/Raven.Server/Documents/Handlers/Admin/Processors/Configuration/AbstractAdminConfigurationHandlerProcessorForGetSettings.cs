@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -39,7 +40,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForGetSettings
         var feature = HttpContext.Features.Get<IHttpAuthenticationFeature>() as RavenServer.AuthenticateConnection;
         var status = feature?.Status ?? RavenServer.AuthenticationStatus.ClusterAdmin;
 
-        DatabaseRecord databaseRecord;
+        Dictionary<string, string> settings;
 
         using (RequestHandler.ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext context))
         {
@@ -52,7 +53,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForGetSettings
                     return;
                 }
 
-                databaseRecord = dbDoc.MaterializedRecord;
+                settings = dbDoc.Settings;
             }
         }
 
@@ -63,7 +64,7 @@ internal abstract class AbstractAdminConfigurationHandlerProcessorForGetSettings
             if (scope.HasValue && scope != configurationEntryMetadata.Scope)
                 continue;
 
-            var entry = new ConfigurationEntryDatabaseValue(GetDatabaseConfiguration(), databaseRecord, configurationEntryMetadata, status);
+            var entry = new ConfigurationEntryDatabaseValue(GetDatabaseConfiguration(), settings, configurationEntryMetadata, status);
             settingsResult.Settings.Add(entry);
         }
 
