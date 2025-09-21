@@ -435,7 +435,6 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 try
                 {
                     await InvokeAndWriteToArchive(archive, context, localEndpointClient, route, path, endpointParameters, token);
-                    debugInfoDict[route.Path] = sw.Elapsed;
                 }
                 catch (Exception e)
                 {
@@ -444,6 +443,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 }
                 finally
                 {
+                    debugInfoDict[route.Path] = sw.Elapsed;
                     if (Logger.IsInfoEnabled)
                         Logger.Info($"Finished gathering debug info from '{route.Path}' for Debug Package '{id}'. Took: {(int)sw.Elapsed.TotalMilliseconds} ms",
                             ex);
