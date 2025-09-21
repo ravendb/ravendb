@@ -73,7 +73,7 @@ internal class AiAgentProcessorForTestConversation : AbstractAiAgentProcessor
 
     public class AiAgentTestRequest
     {
-        public string UserPrompt;
+        public object UserPrompt;
         public BlittableJsonReaderObject CreationOptions;
         public AiAgentConfiguration Configuration;
         public BlittableJsonReaderArray ActionResponses;
