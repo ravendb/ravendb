@@ -19,6 +19,7 @@ using Raven.Server.Json;
 using Raven.Server.Routing;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
+using Raven.Server.Utils;
 using Raven.Server.Web;
 using Sparrow;
 using Sparrow.Exceptions;
@@ -346,7 +347,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
                             foreach (var shard in rawRecord.Sharding.Shards)
                             {
-                                await WriteInfo($"{databaseName}${shard.Key}", rawRecord);
+                                await WriteInfo($"{ShardHelper.ToShardName(databaseName, shard.Key)}", rawRecord);
                             }
                         }
                         else
