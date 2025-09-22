@@ -19,10 +19,10 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         protected override TimeTicks GetData()
         {
             var holder = _store.Server.Certificate;
-            if (holder == null || holder.ServerCertificate == null)
+            if (holder == null || holder.Certificate == null)
                 return null;
 
-            var notAfter = holder.ServerCertificate.NotAfter;
+            var notAfter = holder.Certificate.NotAfter;
 
             var timeLeft = notAfter - SystemTime.UtcNow;
             return SnmpValuesHelper.TimeSpanToTimeTicks(timeLeft.TotalMilliseconds > 0 ? timeLeft : TimeSpan.Zero);
@@ -31,10 +31,10 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         public int GetCurrentMeasurement()
         {
             var holder = _store.Server.Certificate;
-            if (holder == null || holder.ServerCertificate == null)
+            if (holder == null || holder.Certificate == null)
                 return 0;
 
-            var notAfter = holder.ServerCertificate.NotAfter;
+            var notAfter = holder.Certificate.NotAfter;
 
             var timeLeft = notAfter - SystemTime.UtcNow;
             return (int)(timeLeft.TotalMilliseconds > 0 ? timeLeft : TimeSpan.Zero).TotalSeconds;

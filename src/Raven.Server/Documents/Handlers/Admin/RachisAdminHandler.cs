@@ -254,10 +254,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                         [nameof(ClusterTopologyResponse.Etag)] = topology.Etag,
                         [nameof(ClusterTopologyResponse.Leader)] = ServerStore.LeaderTag,
                         [nameof(ClusterTopologyResponseExtraData.LeaderShipDuration)] = ServerStore.Engine.CurrentLeader?.LeaderShipDuration,
-                        [nameof(RachisConsensus.CurrentState)] = ServerStore.CurrentRachisState,
+                        //[nameof(RachisConsensus.CurrentState)] = ServerStore.CurrentRachisState,
                         [nameof(ClusterTopologyResponse.NodeTag)] = nodeTag,
                         [nameof(ClusterTopologyResponse.ServerRole)] = topology.GetServerRoleForTag(nodeTag),
-                        [nameof(ServerStore.Engine.CurrentTerm)] = ServerStore.Engine.CurrentCommittedState.Term,
+                        //[nameof(ServerStore.Engine.CurrentTerm)] = ServerStore.Engine.CurrentCommittedState.Term,
                         [nameof(LicenseLimits.NodeLicenseDetails)] = nodeLicenseDetails,
                         [nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason()
                     };
@@ -346,7 +346,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             Client.ServerWide.Commands.NodeInfo nodeInfo;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(nodeUrl, Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(nodeUrl, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
             {
                 requestExecutor.DefaultTimeout = ServerStore.Engine.OperationTimeout;
 
@@ -452,8 +452,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
 
                         // if it's the same server certificate as our own, we don't want to add it to the cluster
-                        // also we don't want to add client cert used by server, each node has it's own in local state only 
-                        if (Server.IsServerCertificate(certificate) == false)
+                        if (certificate.Thumbprint != Server.Certificate.Certificate.Thumbprint)
                         {
                             using (ctx.OpenReadTransaction())
                             {
@@ -493,7 +492,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
                         nodeTag = possibleNode.HasUrl ? possibleNode.NodeTag : null;
 
-                        if (certificate != null && Server.IsServerCertificate(certificate) == false)
+                        if (certificate != null && certificate.Thumbprint != Server.Certificate.Certificate.Thumbprint)
                         {
                             var modifiedServerCert = JsonDeserializationServer.CertificateDefinition(ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint));
 
@@ -732,7 +731,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
 
                         var cmd = new RemoveEntryFromRaftLogCommand(index);
-                        using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(node.Value, Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
+                        using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(node.Value, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                         {
                             await requestExecutor.ExecuteAsync(cmd, context);
                             nodeList.AddRange(cmd.Result);

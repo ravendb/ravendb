@@ -65,7 +65,7 @@ internal abstract class AbstractHandlerWebSocketProxyProcessor<TRequestHandler, 
         {
             using (var connection = new ProxyWebSocketConnection(webSocket, remoteNodeUrl, remoteEndpointUrl, ServerStore.ContextPool, token.Token))
             {
-                await connection.Establish(RequestHandler.Server.Certificate?.ClientCertificate);
+                await connection.Establish(RequestHandler.Server.Certificate?.Certificate);
 
                 await connection.RelayData();
             }

@@ -18,7 +18,7 @@ namespace FastTests.Server.Documents
     public class DocumentIdWorkerTests : RavenTestBase
     {
         private const int MaxKeySize = 2025;
-        
+
         public DocumentIdWorkerTests(ITestOutputHelper output) : base(output)
         {
         }
@@ -62,7 +62,7 @@ namespace FastTests.Server.Documents
                 }
             }
         }
-        
+
         [RavenFact(RavenTestCategory.Memory)]
         public void GetSliceFromId_WhenEmptyLazyString_ShouldNotThrow()
         {
@@ -105,6 +105,7 @@ namespace FastTests.Server.Documents
                     using (DocumentIdWorker.GetLoweredIdSliceFromId(ctx, "Person@יפתח", out var lowerId))
                     {
                     }
+
                     var after = ctx.AllocatedMemory;
 
                     Assert.Equal(before, after);
@@ -120,9 +121,9 @@ namespace FastTests.Server.Documents
         public static object[][] Ids =>
             new object[][]
             {
-                ["\0{\r\n>"], 
-                [new string('\0', AbstractPager.MaxKeySize / (JsonParserState.ControlCharacterItemSize + 1) - 2) + '\n'], 
-                ['a' + new string('\r', AbstractPager.MaxKeySize / (JsonParserState.EscapePositionItemSize + 1) - 4) + '\n']
+                ["\0{\r\n>"],
+                [new string('\0', MaxKeySize / (JsonParserState.ControlCharacterItemSize + 1) - 2) + '\n'],
+                ['a' + new string('\r', MaxKeySize / (JsonParserState.EscapePositionItemSize + 1) - 4) + '\n']
             };
 
         [RavenTheory(RavenTestCategory.Memory)]
@@ -132,7 +133,7 @@ namespace FastTests.Server.Documents
             const char nonAscii = 'Ć';
 
             var idWithNonAscii = id + nonAscii;
-            
+
             using var context = JsonOperationContext.ShortTermSingleUse();
             using var memoryStream = new MemoryStream();
 
@@ -143,33 +144,33 @@ namespace FastTests.Server.Documents
                 var withoutAsciiLazyString = GetLazyStringValue(context, withoutAsciiSlice);
                 var withAsciiLazyString = GetLazyStringValue(context, withAsciiSlice);
 
-            
+
                 await using (var writer = new AsyncBlittableJsonTextWriter(context, memoryStream))
                 {
-                Assert.True(withAsciiLazyString.StartsWith(withoutAsciiLazyString));
+                    Assert.True(withAsciiLazyString.StartsWith(withoutAsciiLazyString));
 
                     writer.WriteStartObject();
                     writer.WritePropertyName("withoutAsciiSlice");
-                writer.WriteString(withoutAsciiLazyString);
+                    writer.WriteString(withoutAsciiLazyString);
                     writer.WriteComma();
                     writer.WritePropertyName("withAsciiSlice");
-                writer.WriteString(withAsciiLazyString);
+                    writer.WriteString(withAsciiLazyString);
                     writer.WriteEndObject();
-            }
+                }
 
-            memoryStream.Seek(0, SeekOrigin.Begin);
+                memoryStream.Seek(0, SeekOrigin.Begin);
                 using (var reader = await context.ReadForMemoryAsync(memoryStream, "result"))
-            {
+                {
                     Assert.True(reader["withoutAsciiSlice"].Equals(id));
                     Assert.True(reader["withAsciiSlice"].Equals(idWithNonAscii));
-            }
+                }
 
                 using (DocumentIdWorker.GetLoweredIdSliceFromId(allocator, id, out Slice withoutAsciiSlice2))
                 using (DocumentIdWorker.GetLoweredIdSliceFromId(allocator, idWithNonAscii, out Slice withAsciiSlice2))
                 {
                     Assert.Equal(withoutAsciiSliceLower, withoutAsciiSlice2, new SliceComparer());
                     Assert.Equal(withAsciiSliceLower, withAsciiSlice2, new SliceComparer());
-        }
+                }
             }
         }
 
@@ -178,7 +179,7 @@ namespace FastTests.Server.Documents
         public async Task DocumentId_WhenStore_ShouldBeAbleToLoadAndDelete(string id)
         {
             var idWithNonAscii = (char)(DocumentIdWorker.MaxAsciiCodePoint + 1) + id;
-            
+
             using var store = GetDocumentStore();
             using (var session = store.OpenAsyncSession())
             {
@@ -192,13 +193,13 @@ namespace FastTests.Server.Documents
                 Assert.NotNull(await session.LoadAsync<TestObj>(id));
                 Assert.NotNull(await session.LoadAsync<TestObj>(idWithNonAscii));
             }
-            
+
             using (var session = store.OpenAsyncSession())
             {
                 session.Delete(id);
                 session.Delete(idWithNonAscii);
                 await session.SaveChangesAsync();
-        }
+            }
 
             using (var session = store.OpenAsyncSession())
             {

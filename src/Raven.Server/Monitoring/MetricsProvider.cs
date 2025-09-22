@@ -214,9 +214,9 @@ public sealed class MetricsProvider
     {
         var result = new CertificateMetrics();
         var certificateHolder = _serverStore.Server.Certificate;
-        if (certificateHolder?.ServerCertificate != null)
+        if (certificateHolder?.Certificate != null)
         {
-            var notAfter = certificateHolder.ServerCertificate.NotAfter.ToUniversalTime();
+            var notAfter = certificateHolder.Certificate.NotAfter.ToUniversalTime();
             var timeLeft = notAfter - SystemTime.UtcNow;
             result.ServerCertificateExpirationLeftInSec = (timeLeft.TotalSeconds > 0 ? timeLeft : TimeSpan.Zero).TotalSeconds;
         }

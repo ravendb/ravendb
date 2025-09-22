@@ -17,19 +17,17 @@ namespace StressTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task PullReplicationWithoutPrivateKey(bool with2Eku)
+        [RavenFact(RavenTestCategory.Core)]
+        public async Task PullReplicationWithoutPrivateKey()
         {
             var hubSettings = new ConcurrentDictionary<string, string>();
             var sinkSettings = new ConcurrentDictionary<string, string>();
 
             var hubCertificates = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
-            var hubCerts = Certificates.SetupServerAuthentication(hubSettings, certificates: hubCertificates, with2Eku: with2Eku);
+            var hubCerts = Certificates.SetupServerAuthentication(hubSettings, certificates: hubCertificates);
 
             var sinkCertificates = Certificates.GenerateAndSaveSelfSignedCertificate(createNew: true);
-            var sinkCerts = Certificates.SetupServerAuthentication(sinkSettings, certificates: sinkCertificates, with2Eku: with2Eku);
+            var sinkCerts = Certificates.SetupServerAuthentication(sinkSettings, certificates: sinkCertificates);
 
             var hubDB = GetDatabaseName();
             var sinkDB = GetDatabaseName();
@@ -44,13 +42,13 @@ namespace StressTests.Issues
 
             using (var hubStore = GetDocumentStore(new Options
             {
-                ClientCertificate = hubCerts.ServerCertificateForCommunication.Value,
+                ClientCertificate = hubCerts.ServerCertificate.Value,
                 Server = hubServer,
                 ModifyDatabaseName = _ => hubDB
             }))
             using (var sinkStore = GetDocumentStore(new Options
             {
-                ClientCertificate = sinkCerts.ServerCertificateForCommunication.Value,
+                ClientCertificate = sinkCerts.ServerCertificate.Value,
                 Server = sinkServer,
                 ModifyDatabaseName = _ => sinkDB
             }))

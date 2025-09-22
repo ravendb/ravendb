@@ -78,7 +78,7 @@ namespace Raven.Server.Web
             sb.Append(RequestIp);
             sb.Append(", ");
             if (clientCert != null)
-                sb.Append($"CN={clientCert.GetDisplayName()} [{clientCert.Thumbprint}], ");
+                sb.Append($"CN={clientCert.Subject} [{clientCert.Thumbprint}], ");
             else
                 sb.Append("no certificate, ");
 

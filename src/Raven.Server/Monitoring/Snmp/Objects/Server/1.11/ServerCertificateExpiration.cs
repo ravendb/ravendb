@@ -17,10 +17,10 @@ namespace Raven.Server.Monitoring.Snmp.Objects.Server
         protected override OctetString GetData()
         {
             var holder = _store.Server.Certificate;
-            if (holder == null || holder.ServerCertificate == null)
+            if (holder == null || holder.Certificate == null)
                 return null;
 
-            var notAfter = holder.ServerCertificate.NotAfter.ToUniversalTime();
+            var notAfter = holder.Certificate.NotAfter.ToUniversalTime();
 
             return new OctetString(notAfter.ToString("d", CultureInfo.CurrentCulture));
         }

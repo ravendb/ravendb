@@ -41,7 +41,7 @@ namespace StressTests.Server.Encryption
                     Server = leader,
                     ReplicationFactor = 7,
                     ClientCertificate = certificates.ClientCertificate1.Value,
-                    AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+                    AdminCertificate = certificates.ServerCertificate.Value,
                     ModifyDatabaseName = _ => databaseName,
                     Encrypted = true,
                     RunInMemory = false

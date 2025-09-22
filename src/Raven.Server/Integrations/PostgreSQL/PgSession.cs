@@ -64,7 +64,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             if (initialMessage is SSLRequest)
             {
-                if (_serverCertificateHolder.ServerCertificate == null)
+                if (_serverCertificateHolder.Certificate == null)
                 {
                     await writer.WriteAsync(messageBuilder.SSLResponse(false), _token);
                     initialMessage = await messageReader.ReadInitialMessage(reader, _token);
@@ -76,7 +76,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                     await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions
                     {
-                        ServerCertificateContext = _serverCertificateHolder.ServerCertificateContext,
+                        ServerCertificateContext = _serverCertificateHolder.CertificateContext,
                         ClientCertificateRequired = false
                     }, _token);
 
@@ -173,7 +173,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
                 using var transaction = new PgTransaction(database, new MessageReader(), username, this);
 
-                if (_serverCertificateHolder.ServerCertificate != null)
+                if (_serverCertificateHolder.Certificate != null)
                 {
                     // Authentication is required only when running in secured mode
 
@@ -282,7 +282,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             return details;
         }
-        
+
         private void DispatchPostgresQueryMessageToTrafficWatch(Query message, PgErrorException e = null)
         {
             var clientIp = _client.Client.LocalEndPoint?.ToString();
@@ -292,7 +292,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             var twn = new TrafficWatchPostgresChange()
             {
                 TimeStamp = DateTime.UtcNow,
-                DatabaseName = databaseName,  
+                DatabaseName = databaseName,
                 CertificateThumbprint = null,
                 CustomInfo = e is null ? null : $"{e.ErrorCode} - {e.Message}",
                 ClientIP = clientIp,
@@ -301,6 +301,6 @@ namespace Raven.Server.Integrations.PostgreSQL
                 Query = message.QueryString
             };
             TrafficWatchManager.DispatchMessage(twn);
+        }
     }
-}
 }

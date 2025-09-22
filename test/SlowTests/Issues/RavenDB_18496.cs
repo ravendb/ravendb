@@ -24,11 +24,11 @@ namespace SlowTests.Issues
             using (var encryptedStore = GetDocumentStore(new Options(options)
             {
                 ModifyDatabaseName = _ => result.DatabaseName,
-                ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value,
-                AdminCertificate = result.Certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = result.Certificates.ServerCertificate.Value,
+                AdminCertificate = result.Certificates.ServerCertificate.Value,
                 Encrypted = true
             }))
-            using (var store2 = GetDocumentStore(new Options(options) { ClientCertificate = result.Certificates.ServerCertificateForCommunication.Value }))
+            using (var store2 = GetDocumentStore(new Options(options) { ClientCertificate = result.Certificates.ServerCertificate.Value }))
             {
                 const string docId = "users/1";
 

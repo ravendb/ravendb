@@ -37,8 +37,8 @@ namespace SlowTests.Issues
                 Server = hubMentorNode,
                 ReplicationFactor = 1,
                 ModifyDatabaseName = (name) => hubDatabaseName,
-                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
-                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseRecord = r =>
                 {
                     r.Topology = new DatabaseTopology();
@@ -51,8 +51,8 @@ namespace SlowTests.Issues
                 Server = leader,
                 ModifyDatabaseName = (name) => sinkDatabaseName,
                 ReplicationFactor = 3,
-                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
-                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
+                AdminCertificate = certificates.ServerCertificate.Value,
             });
 
             var saveResult = await hubStore.Maintenance.SendAsync(new PutPullReplicationAsHubOperation(new PullReplicationDefinition

@@ -741,7 +741,7 @@ namespace Raven.Server.Documents.Subscriptions
                                         var clusterTopology = ServerStore.GetClusterTopology(ctx);
                                         using (var requester = ClusterRequestExecutor.CreateForShortTermUse(
                                                    clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode),
-                                               ServerStore.Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
+                                               ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
                                         {
                                             await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
                                         }

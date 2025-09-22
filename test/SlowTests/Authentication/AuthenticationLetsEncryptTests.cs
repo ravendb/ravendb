@@ -1,4 +1,10 @@
-﻿using System;
+﻿// -----------------------------------------------------------------------
+//  <copyright file="CanAuthenticate.cs" company="Hibernating Rhinos LTD">
+//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
+//  </copyright>
+// -----------------------------------------------------------------------
+
+using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -32,7 +38,6 @@ using Raven.Server.ServerWide.Context;
 using Raven.Client.Exceptions;
 using System.Runtime.CompilerServices;
 using Raven.Client.Json;
-using Raven.Server.ServerWide;
 using Raven.Client.Util;
 using System.Threading;
 
@@ -44,7 +49,7 @@ namespace SlowTests.Authentication
         {
         }
 
-        [RavenIntegrationRetryFact(delayBetweenRetriesMs: 1000)]
+        [RavenIntegrationRetryFact(delayBetweenRetriesMs: 1000, Skip = "RavenDB-23795")]
         public async Task CanGetPebbleCertificate()
         {
             var acmeUrl = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_URL") ?? string.Empty;
@@ -60,22 +65,20 @@ namespace SlowTests.Authentication
             Server.Dispose();
         }
 
-        [RavenRetryTheory(RavenTestCategory.Certificates, delayBetweenRetriesMs: 1000)]
-        [InlineData(null)]
-        [InlineData("tlsserver")]
-        public async Task CanGetLetsEncryptCertificateAndRenewIt(string acmeProfile)
+        [RavenRetryFact(RavenTestCategory.Certificates, delayBetweenRetriesMs: 1000)]
+        public async Task CanGetLetsEncryptCertificateAndRenewIt()
         {
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
 
             SetupLocalServer();
-            TestingSetupInfo setupInfo = await SetupClusterInfo(acmeUrl, acmeProfile);
+            TestingSetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
             // this is needed because we simulate running server inside GetCertificateFromLetsEncrypt
             Server.ForTestingPurposesOnly().OnSimulateRunningServerFinally = port =>
             {
                 setupInfo.Sockets[0] = ReservePort(port).Socket;
             };
             Server._forTestingPurposes.ReservedSockets = new List<Socket> { setupInfo.Sockets[0], setupInfo.Sockets[1] };
-            var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl, acmeProfile);
+            var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
             var firstServerCertThumbprint = serverCert.Thumbprint;
             Server.Dispose();
 
@@ -92,28 +95,24 @@ namespace SlowTests.Authentication
             }
         }
 
-        [RavenIntegrationRetryFact(delayBetweenRetriesMs: 1000)]
+        [RavenIntegrationRetryFact(delayBetweenRetriesMs: 1000, Skip = "RavenDB-23795")]
         public async Task CanGetLetsEncryptCertificateAndRenewAfterFailurePebble()
         {
             var acmeUrl = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_URL") ?? string.Empty;
             Assert.NotEmpty(acmeUrl);
 
-            await CanGetLetsEncryptCertificateAndRenewAfterFailure_Act(acmeUrl);
+            await CanGetLetsEncryptCertificateAndRenewAfterFailure(acmeUrl);
         }
 
-        [RavenRetryTheory(RavenTestCategory.Certificates, delayBetweenRetriesMs: 1000)]
-        [InlineData(null)]
-        [InlineData("tlsserver")]
-        public async Task CanGetLetsEncryptCertificateAndRenewAfterFailure(string acmeProfile)
+        [RavenRetryFact(RavenTestCategory.Certificates, delayBetweenRetriesMs: 1000)]
+        public async Task CanGetLetsEncryptCertificateAndRenewAfterFailure()
         {
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
-            await CanGetLetsEncryptCertificateAndRenewAfterFailure_Act(acmeUrl, acmeProfile);
+            await CanGetLetsEncryptCertificateAndRenewAfterFailure(acmeUrl);
         }
 
-        [RavenRetryTheory(RavenTestCategory.Certificates, delayBetweenRetriesMs: 1000)]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task ReplaceCertificateWithPrivateKey(bool with2Eku)
+        [RavenRetryFact(RavenTestCategory.Certificates, delayBetweenRetriesMs: 1000)]
+        public async Task ReplaceCertificateWithPrivateKey()
         {
             var acmeUrl = "https://acme-staging-v02.api.letsencrypt.org/directory";
 
@@ -131,11 +130,10 @@ namespace SlowTests.Authentication
             var mre = new AsyncManualResetEvent();
             Server.ServerCertificateChanged += (sender, args) => mre.Set();
 
-            var ct = Certificates.GenerateAndSaveSelfSignedCertificate(with2Eku);
-            var first = Server.Certificate.ServerCertificate.Thumbprint;
-            var certForCommunication = Server.Certificate.ClientCertificate;
+            var ct = Certificates.GenerateAndSaveSelfSignedCertificate();
+            var first = Server.Certificate.Certificate.Thumbprint;
 
-            using (var store = GetDocumentStore(new Options { AdminCertificate = certForCommunication, ClientCertificate = certForCommunication }))
+            using (var store = GetDocumentStore(new Options { AdminCertificate = serverCert, ClientCertificate = serverCert }))
             {
                 var bytesWithoutPrivateKey = ct.ServerCertificate.Value.RawData;
                 var op = new ReplaceClusterCertificateOperation(bytesWithoutPrivateKey, replaceImmediately: true);
@@ -148,19 +146,18 @@ namespace SlowTests.Authentication
             }
 
             await mre.WaitAsync(TimeSpan.FromSeconds(15));
-            Assert.NotEqual(first, Server.Certificate.ServerCertificate.Thumbprint);
+            Assert.NotEqual(first, Server.Certificate.Certificate.Thumbprint);
         }
 
-        [RavenTheory(RavenTestCategory.Certificates)]
-        [InlineData(true)]
-        [InlineData(false)]
-        public async Task ReplaceCertificateWithPassword(bool with2Eku)
+        [RavenFact(RavenTestCategory.Certificates)]
+        public async Task ReplaceCertificateWithPassword()
         {
             const string password = "mysecretpassword";
 
-            var (_, leader, certificates) = await CreateRaftClusterWithSsl(1, with2Eku: with2Eku);
+            var (_, leader, certificates) = await CreateRaftClusterWithSsl(1);
 
-            using (var store = GetDocumentStore(new Options { Server = leader, CreateDatabase = false, ClientCertificate = certificates.ServerCertificateForCommunication.Value }))
+            X509Certificate2 certificateWithPassword;
+            using (var store = GetDocumentStore(new Options { Server = leader, CreateDatabase = false, ClientCertificate = certificates.ServerCertificate.Value }))
             {
                 var rawData = certificates.ServerCertificate.Value.Export(X509ContentType.Pkcs12, password);
                 var certificateDefinition = new CertificateDefinition { Certificate = Convert.ToBase64String(rawData), Password = password };
@@ -179,7 +176,7 @@ namespace SlowTests.Authentication
                 certificateWithPassword = CertificateLoaderUtil.CreateCertificateFromAny(rawData, password);
             }
 
-            using (var store = GetDocumentStore(new Options { Server = leader, CreateDatabase = true, ClientCertificate = certificates.ServerCertificateForCommunication.Value }))
+            using (var store = GetDocumentStore(new Options { Server = leader, CreateDatabase = true, ClientCertificate = certificateWithPassword }))
             {
                 using (var session = store.OpenAsyncSession())
                 {
@@ -189,18 +186,18 @@ namespace SlowTests.Authentication
             }
         }
 
-        private async Task CanGetLetsEncryptCertificateAndRenewAfterFailure_Act(string acmeUrl, string acmeProfile = null)
+        private async Task CanGetLetsEncryptCertificateAndRenewAfterFailure(string acmeUrl)
         {
             RemoveAcmeCache(acmeUrl);
 
             SetupLocalServer();
-            TestingSetupInfo setupInfo = await SetupClusterInfo(acmeUrl, acmeProfile);
+            TestingSetupInfo setupInfo = await SetupClusterInfo(acmeUrl);
             Server.ForTestingPurposesOnly().OnSimulateRunningServerFinally = port =>
             {
                 setupInfo.Sockets[0] = ReservePort(port).Socket;
             };
             Server._forTestingPurposes.ReservedSockets = new List<Socket> { setupInfo.Sockets[0], setupInfo.Sockets[1] };
-            var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl, acmeProfile);
+            var serverCert = await GetCertificateFromLetsEncrypt(setupInfo, acmeUrl);
             var firstServerCertThumbprint = serverCert.Thumbprint;
             Server.Dispose();
 
@@ -234,7 +231,7 @@ namespace SlowTests.Authentication
             UseNewLocalServer(customConfigPath: settingPath);
         }
 
-        private async Task<X509Certificate2> GetCertificateFromLetsEncrypt(TestingSetupInfo info, string acmeUrl, string acmeProfile = null)
+        private async Task<X509Certificate2> GetCertificateFromLetsEncrypt(TestingSetupInfo info, string acmeUrl)
         {
             X509Certificate2 serverCert;
             using (var store = GetDocumentStoreForServerOnly())
@@ -288,8 +285,7 @@ namespace SlowTests.Authentication
                     [RavenConfiguration.GetKey(x => x.Core.ServerUrls)] = serverUrl,
                     [RavenConfiguration.GetKey(x => x.Core.SetupMode)] = setupMode.ToString(),
                     [RavenConfiguration.GetKey(x => x.Core.ExternalIp)] = externalIp,
-                    [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = acmeUrl,
-                    [RavenConfiguration.GetKey(x => x.Core.AcmeProfile)] = acmeProfile
+                    [RavenConfiguration.GetKey(x => x.Core.AcmeUrl)] = acmeUrl
                 };
 
                 DoNotReuseServer(customSettings);
@@ -304,16 +300,12 @@ namespace SlowTests.Authentication
             // It only works because in the TestBase ctor we do:
             // RequestExecutor.ServerCertificateCustomValidationCallback += (msg, cert, chain, errors) => true;
 
-            var serverCertificateForCommunication = SecretProtection.HasCertificateClientAuthEnhancedKeyUsage(serverCert)
-                ? serverCert
-                : CertificateUtils.CreateClientCertificateFromServerCertificate(serverCert, out _);
-
-            using (var store = GetDocumentStoreForServerOnly(serverCertificateForCommunication))
+            using (var store = GetDocumentStoreForServerOnly(serverCert))
             using (var commands = store.Commands())
             using (Server.ServerStore.ContextPool.AllocateOperationContext(out JsonOperationContext context))
             {
                 await Server.ServerStore.EnsureNotPassiveAsync();
-                Assert.Equal(firstServerCertThumbprint, Server.Certificate.ServerCertificate.Thumbprint);
+                Assert.Equal(firstServerCertThumbprint, Server.Certificate.Certificate.Thumbprint);
 
                 Server.Time.UtcDateTime = () => DateTime.UtcNow.AddDays(80);
 
@@ -344,7 +336,7 @@ namespace SlowTests.Authentication
 
                 Assert.True(result, "Refresh task didn't complete. Waited too long for the cluster cert to be replaced");
 
-                Assert.NotEqual(firstServerCertThumbprint, Server.Certificate.ServerCertificate.Thumbprint);
+                Assert.NotEqual(firstServerCertThumbprint, Server.Certificate.Certificate.Thumbprint);
 
                 var r = await clusterReplacementConfirmed.WaitAsync(TimeSpan.FromMinutes(2));
                 Assert.True(r, "missing ConfirmServerCertificateReplacedCommand");
@@ -357,12 +349,10 @@ namespace SlowTests.Authentication
             public List<Socket> Sockets;
         }
 
-        private async Task<TestingSetupInfo> SetupClusterInfo(string acmeUrl, string profile = null)
+        private async Task<TestingSetupInfo> SetupClusterInfo(string acmeUrl)
         {
             Server.Configuration.Core.AcmeUrl = acmeUrl;
             Server.ServerStore.Configuration.Core.SetupMode = SetupMode.Initial;
-            if (string.IsNullOrEmpty(profile) == false)
-                Server.Configuration.Core.AcmeProfile = profile;
 
             var domain = "RavenClusterTest" + Environment.MachineName.Replace("-", "");
             string email;
@@ -417,7 +407,7 @@ namespace SlowTests.Authentication
                 DebuggerAttachedTimeout.DisableLongTimespan = true;
                 var clusterSize = 3;
                 var (leader, nodes, serverCert) = await CreateLetsEncryptCluster(clusterSize, acmeStagingUrl);
-                Assert.Equal(serverCert.Thumbprint, nodes[0].Certificate.ServerCertificate.Thumbprint);
+                Assert.Equal(serverCert.Thumbprint, nodes[0].Certificate.Certificate.Thumbprint);
                 var databaseName = GetDatabaseName();
 
                 var options = Sharding.GetOptionsForCluster(leader, clusterSize, shardReplicationFactor: 1, orchestratorReplicationFactor: 1);
@@ -465,10 +455,10 @@ namespace SlowTests.Authentication
                     //make sure all cluster nodes have the new server cert
                     foreach (var node in nodes)
                     {
-                        Assert.NotEqual(serverCert.Thumbprint, node.Certificate.ServerCertificate.Thumbprint);
+                        Assert.NotEqual(serverCert.Thumbprint, node.Certificate.Certificate.Thumbprint);
                     }
 
-                    newCert = nodes[0].Certificate.ClientCertificate;
+                    newCert = nodes[0].Certificate.Certificate;
                 }
 
                 using (var store = new DocumentStore()

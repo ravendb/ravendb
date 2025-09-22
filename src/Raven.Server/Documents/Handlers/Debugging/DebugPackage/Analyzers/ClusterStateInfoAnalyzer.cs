@@ -39,17 +39,17 @@ public class ClusterStateInfoAnalyzer(DebugPackageAnalyzeErrors errors, DebugPac
             TopologyEntry = topologyEntry,
         };
 
-        if (serverEntries.TryGetValue<RachisAdminHandler, RachisState?>(x => x.GetClusterTopology(),
-                nameof(RachisConsensus.CurrentState), out var currentState))
-        {
-            ClusterNodeStateInfo.CurrentState = currentState;
-        }
-        
-        if (serverEntries.TryGetValue<RachisAdminHandler, long?>(x => x.GetClusterTopology(),
-                nameof(ServerStore.Engine.CurrentTerm), out var currentTerm))
-        {
-            ClusterNodeStateInfo.CurrentTerm = currentTerm;
-        }
+        // if (serverEntries.TryGetValue<RachisAdminHandler, RachisState?>(x => x.GetClusterTopology(),
+        //         nameof(RachisConsensus.CurrentState), out var currentState))
+        // {
+        //     ClusterNodeStateInfo.CurrentState = currentState;
+        // }
+        //
+        // if (serverEntries.TryGetValue<RachisAdminHandler, long?>(x => x.GetClusterTopology(),
+        //         nameof(ServerStore.Engine.CurrentTerm), out var currentTerm))
+        // {
+        //     ClusterNodeStateInfo.CurrentTerm = currentTerm;
+        // }
         
         if (serverEntries.TryGetValue<RachisAdminHandler, string>(x => x.GetClusterTopology(),
                 nameof(ServerStore.Engine.LastStateChangeReason), out var lastStateChangeReason))

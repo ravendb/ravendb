@@ -4,8 +4,8 @@
         <id>Raven.PAL</id>
         <version>NUGET_PACKAGE_VERSION</version>
         <title>RavenDB Platform Abstraction Layer</title>
-        <authors>Hibernating Rhinos</authors>
-        <owners>Hibernating Rhinos</owners>
+        <authors>RavenDB</authors>
+        <owners>RavenDB</owners>
         <description>RavenDB Platform Abstraction Layer library - internal use only</description>
         <repository type="git" url="https://github.com/ravendb/ravendb" />
         <contentFiles>

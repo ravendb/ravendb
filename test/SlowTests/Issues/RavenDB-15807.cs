@@ -23,19 +23,17 @@ namespace SlowTests.Issues
         {
         }
 
-        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task ChangeCertificateTypeInPullReplication(bool with2Eku)
+        [RavenFact(RavenTestCategory.Certificates | RavenTestCategory.Replication)]
+        public async Task ChangeCertificateTypeInPullReplication()
         {
             var hubSettings = new ConcurrentDictionary<string, string>();
             var sinkSettings = new ConcurrentDictionary<string, string>();
 
             var hubCertificates = Certificates.GenerateAndSaveSelfSignedCertificate();
-            Certificates.SetupServerAuthentication(hubSettings, certificates: hubCertificates, with2Eku: with2Eku);
+            Certificates.SetupServerAuthentication(hubSettings, certificates: hubCertificates);
 
             var sinkCertificates = Certificates.GenerateAndSaveSelfSignedCertificate();
-            var sinkCerts = Certificates.SetupServerAuthentication(sinkSettings, certificates: sinkCertificates, with2Eku: with2Eku);
+            var sinkCerts = Certificates.SetupServerAuthentication(sinkSettings, certificates: sinkCertificates);
 
             var hubDB = GetDatabaseName();
             var sinkDB = GetDatabaseName();
@@ -49,14 +47,14 @@ namespace SlowTests.Issues
 
             using (var hubStore = GetDocumentStore(new Options
             {
-                ClientCertificate = sinkCerts.ServerCertificateForCommunication.Value,
+                ClientCertificate = sinkCerts.ServerCertificate.Value,
                 Server = hubServer,
                 ModifyDatabaseName = _ => hubDB,
                 ModifyDocumentStore = s => s.Conventions.DisposeCertificate = false
             }))
             using (var sinkStore = GetDocumentStore(new Options
             {
-                ClientCertificate = sinkCerts.ServerCertificateForCommunication.Value,
+                ClientCertificate = sinkCerts.ServerCertificate.Value,
                 Server = sinkServer,
                 ModifyDatabaseName = _ => sinkDB,
                 ModifyDocumentStore = s => s.Conventions.DisposeCertificate = false

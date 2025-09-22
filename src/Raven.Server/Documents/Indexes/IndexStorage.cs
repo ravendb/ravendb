@@ -409,7 +409,7 @@ namespace Raven.Server.Documents.Indexes
             if (lastQueryTimeSlice == null)
                 return null;
 
-            return new TimeSpan(ticks: lastQueryTimeSlice.Reader.ReadLittleEndianInt64());
+            return new TimeSpan(ticks: lastQueryTimeSlice.Reader.Read<long>());
         }
 
         public void WriteElapsedSinceQueried(TimeSpan value)

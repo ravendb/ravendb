@@ -69,11 +69,10 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.Replication)]
-        [InlineData(false, false)]
-        [InlineData(true, false)]
-        [InlineData(true, true)]
-        public async Task EnsureDocumentsReplication(bool useSsl, bool with2Eku)
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task EnsureDocumentsReplication(bool useSsl)
         {
             var clusterSize = 5;
             var databaseName = GetDatabaseName();
@@ -84,11 +83,11 @@ namespace RachisTests.DatabaseCluster
 
             if (useSsl)
             {
-                var result = await CreateRaftClusterWithSsl(clusterSize, false, with2Eku: with2Eku);
+                var result = await CreateRaftClusterWithSsl(clusterSize, false);
                 leader = result.Leader;
 
-                adminCertificate = Certificates.RegisterClientCertificate(result.Certificates.ServerCertificateForCommunication.Value, result.Certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
-                clientCertificate = Certificates.RegisterClientCertificate(result.Certificates.ServerCertificateForCommunication.Value, result.Certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+                adminCertificate = Certificates.RegisterClientCertificate(result.Certificates.ServerCertificate.Value, result.Certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+                clientCertificate = Certificates.RegisterClientCertificate(result.Certificates.ServerCertificate.Value, result.Certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
                 {
                     [databaseName] = DatabaseAccess.Admin
                 }, server: leader);
@@ -290,11 +289,10 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.Replication)]
-        [InlineData(false, false)]
-        [InlineData(true, false)]
-        [InlineData(true, true)]
-        public async Task EnsureReplicationToWatchers(bool useSsl, bool with2Eku)
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task EnsureReplicationToWatchers(bool useSsl)
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
@@ -304,7 +302,7 @@ namespace RachisTests.DatabaseCluster
 
             if (useSsl)
             {
-                var result = await CreateRaftClusterWithSsl(clusterSize, with2Eku: with2Eku);
+                var result = await CreateRaftClusterWithSsl(clusterSize);
                 leader = result.Leader;
 
                 adminCertificate = Certificates.RegisterClientCertificate(result.Certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
@@ -635,11 +633,10 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.Replication)]
-        [InlineData(false, false)]
-        [InlineData(true, false)]
-        [InlineData(true, true)]
-        public async Task DoNotReplicateBack(bool useSsl, bool with2Eku)
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task DoNotReplicateBack(bool useSsl)
         {
             var clusterSize = 5;
             var databaseName = GetDatabaseName();
@@ -649,7 +646,7 @@ namespace RachisTests.DatabaseCluster
 
             if (useSsl)
             {
-                var result = await CreateRaftClusterWithSsl(clusterSize, with2Eku: with2Eku);
+                var result = await CreateRaftClusterWithSsl(clusterSize);
                 leader = result.Leader;
 
                 adminCertificate = Certificates.RegisterClientCertificate(result.Certificates, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
@@ -709,11 +706,10 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.Replication)]
-        [InlineData(false, false)]
-        [InlineData(true, false)]
-        [InlineData(true, true)]
-        public async Task AddGlobalChangeVectorToNewDocument(bool useSsl, bool with2Eku)
+        [RavenTheory(RavenTestCategory.ClusterTransactions)]
+        [InlineData(false)]
+        [InlineData(true)]
+        public async Task AddGlobalChangeVectorToNewDocument(bool useSsl)
         {
             var clusterSize = 3;
             var databaseName = GetDatabaseName();
@@ -724,11 +720,11 @@ namespace RachisTests.DatabaseCluster
 
             if (useSsl)
             {
-                var result = await CreateRaftClusterWithSsl(clusterSize, true, 0, with2Eku: with2Eku);
+                var result = await CreateRaftClusterWithSsl(clusterSize, true, 0);
                 leader = result.Leader;
 
-                adminCertificate = Certificates.RegisterClientCertificate(result.Certificates.ServerCertificateForCommunication.Value, result.Certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
-                clientCertificate = Certificates.RegisterClientCertificate(result.Certificates.ServerCertificateForCommunication.Value, result.Certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
+                adminCertificate = Certificates.RegisterClientCertificate(result.Certificates.ServerCertificate.Value, result.Certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+                clientCertificate = Certificates.RegisterClientCertificate(result.Certificates.ServerCertificate.Value, result.Certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>
                 {
                     [databaseName] = DatabaseAccess.Admin
                 }, server: leader);
@@ -752,7 +748,6 @@ namespace RachisTests.DatabaseCluster
                 }
             }.Initialize())
             {
-                WaitForUserToContinueTheTest(Server.WebUrl, true, adminCertificate);
                 var databaseResult = await store.Maintenance.Server.SendAsync(new CreateDatabaseOperation(doc, clusterSize));
                 var topology = databaseResult.Topology;
                 Assert.Equal(clusterSize, topology.AllNodes.Count());
@@ -859,15 +854,13 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task ReplicateToWatcherWithAuth(bool with2Eku)
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ReplicateToWatcherWithAuth()
         {
-            var certificates = Certificates.SetupServerAuthentication(with2Eku: with2Eku);
+            var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var opCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var opCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
 
             using (var store1 = GetDocumentStore(new Options
             {
@@ -897,16 +890,14 @@ namespace RachisTests.DatabaseCluster
             }
         }
 
-        [RavenTheory(RavenTestCategory.Replication | RavenTestCategory.Certificates)]
-        [InlineData(false)]
-        [InlineData(true)]
-        public async Task ReplicateToWatcherWithInvalidAuth(bool with2Eku)
+        [RavenFact(RavenTestCategory.ClusterTransactions)]
+        public async Task ReplicateToWatcherWithInvalidAuth()
         {
-            var certificates = Certificates.SetupServerAuthentication(with2Eku: with2Eku);
+            var certificates = Certificates.SetupServerAuthentication();
             var dbName = GetDatabaseName();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
-            var userCert1 = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
-            var userCert2 = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates.ClientCertificate3.Value, new Dictionary<string, DatabaseAccess>
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
+            var userCert1 = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate2.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.Operator);
+            var userCert2 = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates.ClientCertificate3.Value, new Dictionary<string, DatabaseAccess>
             {
                 [dbName + "otherstuff"] = DatabaseAccess.Admin
             });

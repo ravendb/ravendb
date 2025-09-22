@@ -504,7 +504,9 @@ namespace Raven.Server.Routing
             }
             else
             {
-                var name = certificate.GetDisplayName();
+                var name = certificate.FriendlyName;
+                if (string.IsNullOrWhiteSpace(name))
+                    name = certificate.Subject;
                 if (string.IsNullOrWhiteSpace(name))
                     name = certificate.ToString(false);
 

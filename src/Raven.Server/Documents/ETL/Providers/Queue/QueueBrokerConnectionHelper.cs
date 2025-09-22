@@ -55,9 +55,9 @@ public static class QueueBrokerConnectionHelper
     public static void SetupKafkaClientConfig(ClientConfig config, KafkaConnectionSettings settings,
         CertificateUtils.CertificateHolder certificateHolder = null)
     {
-        if (settings.UseRavenCertificate && certificateHolder?.ClientCertificate != null)
+        if (settings.UseRavenCertificate && certificateHolder?.Certificate != null)
         {
-            config.SslCertificatePem = ExportAsPem(new PemObject("CERTIFICATE", certificateHolder.ClientCertificate.RawData));
+            config.SslCertificatePem = ExportAsPem(new PemObject("CERTIFICATE", certificateHolder.Certificate.RawData));
             config.SslKeyPem = ExportAsPem(certificateHolder.PrivateKey.Key);
             config.SecurityProtocol = SecurityProtocol.Ssl;
         }

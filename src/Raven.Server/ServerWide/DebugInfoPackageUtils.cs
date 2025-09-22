@@ -48,7 +48,7 @@ namespace Raven.Server.ServerWide
 
             foreach (var route in routes)
             {
-                if (server.Certificate.ServerCertificate != null)
+                if (server.Certificate.Certificate != null)
                 {
                     Debug.Assert(feature != null);
                     if (server.Router.CanAccessRoute(route, httpContext, databaseName, feature))

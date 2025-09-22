@@ -29,9 +29,9 @@ public sealed class KafkaQueueSink : QueueSinkProcess
         var settings = Configuration.Connection.KafkaConnectionSettings;
         var certificateHolder = Database.ServerStore.Server.Certificate;
 
-        if (settings.UseRavenCertificate && certificateHolder?.ClientCertificate != null)
+        if (settings.UseRavenCertificate && certificateHolder?.Certificate != null)
         {
-            consumerConfig.SslCertificatePem = ExportAsPem(new PemObject("CERTIFICATE", certificateHolder.ClientCertificate.RawData));
+            consumerConfig.SslCertificatePem = ExportAsPem(new PemObject("CERTIFICATE", certificateHolder.Certificate.RawData));
             consumerConfig.SslKeyPem = ExportAsPem(certificateHolder.PrivateKey.Key);
             consumerConfig.SecurityProtocol = SecurityProtocol.Ssl;
         }

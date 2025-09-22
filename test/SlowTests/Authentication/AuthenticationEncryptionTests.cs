@@ -35,8 +35,8 @@ namespace SlowTests.Authentication
 
             using (var store = GetDocumentStore(new Options
             {
-                AdminCertificate = certificates.ServerCertificateForCommunication.Value,
-                ClientCertificate = certificates.ServerCertificateForCommunication.Value,
+                AdminCertificate = certificates.ServerCertificate.Value,
+                ClientCertificate = certificates.ServerCertificate.Value,
                 ModifyDatabaseName = s => dbName,
                 ModifyDatabaseRecord = record => {
                     record.Settings[RavenConfiguration.GetKey(x => x.Indexing.AutoIndexingEngineType)] = configuration.SearchEngine.ToString();
