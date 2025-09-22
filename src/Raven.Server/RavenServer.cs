@@ -19,12 +19,14 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Hosting.Server;
 using Microsoft.AspNetCore.Hosting.Server.Features;
 using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Http.Features.Authentication;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
 using Newtonsoft.Json;
 using NLog.Web;
@@ -103,9 +105,9 @@ namespace Raven.Server
 
         public readonly ServerStore ServerStore;
 
-        private IWebHost _webHost;
+        private IHost _webHost;
 
-        private IWebHost _redirectingWebHost;
+        private IHost _redirectingWebHost;
 
         private readonly RavenLogger _tcpLogger;
         private bool _openTelemetryInitialized;
@@ -271,12 +273,15 @@ namespace Raven.Server
                     _forTestingPurposes?.UnbindSocketForPort(ListenEndpoints.Port);
                 }
 
-                var webHostBuilder = new WebHostBuilder()
-                    .CaptureStartupErrors(captureStartupErrors: true)
-                    .UseKestrel(ConfigureKestrel)
-                    .UseUrls(Configuration.Core.ServerUrls)
-                    .UseStartup<RavenServerStartup>()
-                    .UseShutdownTimeout(TimeSpan.FromSeconds(1))
+                var webHostBuilder = new HostBuilder()
+                    .ConfigureWebHost(configure =>
+                    {
+                        configure.CaptureStartupErrors(captureStartupErrors: true)
+                            .UseKestrel(ConfigureKestrel)
+                            .UseUrls(Configuration.Core.ServerUrls)
+                            .UseStartup<RavenServerStartup>()
+                            .UseShutdownTimeout(TimeSpan.FromSeconds(1));
+                    })
                     .ConfigureServices(services =>
                     {
                         ConfigureOpenTelemetry(services);
@@ -341,7 +346,8 @@ namespace Raven.Server
             {
                 _webHost.Start();
 
-                var serverAddressesFeature = _webHost.ServerFeatures.Get<IServerAddressesFeature>();
+                var server = _webHost.Services.GetService<IServer>();
+                var serverAddressesFeature = server.Features.Get<IServerAddressesFeature>();
                 WebUrl = GetWebUrl(serverAddressesFeature.Addresses.First()).TrimEnd('/');
 
                 if (Certificate.Certificate != null)
@@ -1022,11 +1028,14 @@ namespace Raven.Server
                 if (Logger.IsInfoEnabled)
                     Logger.Info($"HTTPS is on. Setting up a new web host to redirect incoming HTTP traffic on port 80 to HTTPS on port 443. The new web host is listening to {string.Join(", ", serverUrlsToRedirect)}");
 
-                var webHostBuilder = new WebHostBuilder()
-                    .UseKestrel()
-                    .UseUrls(serverUrlsToRedirect)
-                    .UseStartup<RedirectServerStartup>()
-                    .UseShutdownTimeout(TimeSpan.FromSeconds(1));
+                var webHostBuilder = new HostBuilder()
+                    .ConfigureWebHost(configure =>
+                    {
+                        configure.UseKestrel()
+                            .UseUrls(serverUrlsToRedirect)
+                            .UseStartup<RedirectServerStartup>()
+                            .UseShutdownTimeout(TimeSpan.FromSeconds(1));
+                    });
 
                 _redirectingWebHost = webHostBuilder.Build();
 
