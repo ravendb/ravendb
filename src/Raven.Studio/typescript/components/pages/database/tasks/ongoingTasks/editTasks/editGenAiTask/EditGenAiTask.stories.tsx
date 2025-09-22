@@ -1,9 +1,9 @@
 import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import EditGenAiTask from "./EditGenAiTask";
 import { mockStore } from "test/mocks/store/MockStore";
 import { mockServices } from "test/mocks/services/MockServices";
-import { userEvent } from "@storybook/test";
+import { userEvent } from "storybook/test";
 import { EditGenAiTaskStepId } from "./hooks/useEditGenAiTaskSteps";
 import { Canvas } from "storybook/internal/csf";
 

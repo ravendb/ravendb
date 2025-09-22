@@ -1,4 +1,4 @@
-import { resetAllMocks } from "@storybook/test";
+import { resetAllMocks } from "storybook/test";
 import { useState } from "react";
 import { createStoreConfiguration } from "../typescript/components/store";
 import { setEffectiveTestStore } from "../typescript/components/storeCompat";

@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 import { rtlRender } from "test/rtlTestUtils";
 import * as stories from "./DataArchival.stories";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
