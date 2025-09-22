@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withStorybookContexts, withBootstrap5, databaseAccessArgType } from "test/storybookTestUtils";
 import AiAgents from "./AiAgents";
 import { mockServices } from "test/mocks/services/MockServices";

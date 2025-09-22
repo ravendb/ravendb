@@ -25,10 +25,10 @@ public sealed class KafkaQueueSink : QueueSinkProcess
             // we are using Earliest option because we want to be able to see messages which are present before consumer is connected
             AutoOffsetReset = AutoOffsetReset.Earliest
         };
-        
+
         var settings = Configuration.Connection.KafkaConnectionSettings;
         var certificateHolder = Database.ServerStore.Server.Certificate;
-        
+
         if (settings.UseRavenCertificate && certificateHolder?.Certificate != null)
         {
             consumerConfig.SslCertificatePem = ExportAsPem(new PemObject("CERTIFICATE", certificateHolder.Certificate.RawData));
@@ -63,13 +63,13 @@ public sealed class KafkaQueueSink : QueueSinkProcess
 
         return new KafkaSinkConsumer(consumer);
     }
-    
+
     private static string ExportAsPem(object @object)
     {
         using (var sw = new StringWriter())
         {
             var pemWriter = new PemWriter(sw);
-            
+
             pemWriter.WriteObject(@object);
 
             return sw.ToString();

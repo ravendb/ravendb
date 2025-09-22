@@ -15,7 +15,8 @@
             "DOM",
             "es6",
             "es2017",
-            "ES2020"
+            "ES2020",
+            "ES2022"
         ],
         "typeRoots": [
             "./node_modules/@types",

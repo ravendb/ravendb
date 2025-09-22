@@ -5,7 +5,7 @@ import {
     withBootstrap5,
     withStorybookContexts,
 } from "test/storybookTestUtils";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { AboutPage as AboutPageComponent } from "./AboutPage";
 import React from "react";
 import { mockServices } from "test/mocks/services/MockServices";

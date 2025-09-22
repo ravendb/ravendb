@@ -23,6 +23,11 @@ public class GenAiTestScriptResult : TestEtlScriptResult
 
     public PatchStatus Status;
 
+    public GenAiTestScriptResult()
+    {
+        // for deserialization
+    }
+
     public override DynamicJsonValue ToJson(JsonOperationContext context)
     {
         var json = base.ToJson(context);

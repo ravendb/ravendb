@@ -567,6 +567,7 @@ namespace Raven.Server
         private void UpdateCertificateExpirationAlert()
         {
             var remainingDays = (Certificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
+            var daysToRenewBeforeExpiration = CalculateDaysToRenewBeforeExpiration(Certificate.Certificate);
             if (remainingDays <= 0)
             {
                 string msg = $"The server certificate has expired on {Certificate.Certificate.NotAfter.ToShortDateString()}.";
@@ -581,7 +582,7 @@ namespace Raven.Server
                 if (Logger.IsErrorEnabled)
                     Logger.Error(msg);
             }
-            else if (remainingDays <= 20)
+            else if (remainingDays <= daysToRenewBeforeExpiration)
             {
                 string msg = $"The server certificate will expire on {Certificate.Certificate.NotAfter.ToShortDateString()}. There are only {(int)remainingDays} days left for renewal.";
 
@@ -609,6 +610,12 @@ namespace Raven.Server
             {
                 ServerStore.NotificationCenter.Dismiss(AlertRaised.GetKey(AlertType.Certificates_Expiration, null));
             }
+        }
+        
+        private double CalculateDaysToRenewBeforeExpiration(X509Certificate2 serverCertificate)
+        {
+            // 30% of the certificate lifetime
+            return Math.Floor((serverCertificate.NotAfter - serverCertificate.NotBefore).TotalDays * 0.3);
         }
 
         private void OnServerCertificateChanged(object sender, EventArgs e)
@@ -1420,12 +1427,13 @@ namespace Raven.Server
                 return (true, DateTime.UtcNow.Date);
 
             var remainingDays = (currentCertificate.Certificate.NotAfter - Time.GetUtcNow().ToLocalTime()).TotalDays;
-            if (remainingDays <= 20)
+            var daysToRenewBeforeExpiration = CalculateDaysToRenewBeforeExpiration(Certificate.Certificate);
+            if (remainingDays <= daysToRenewBeforeExpiration)
             {
                 return (true, DateTime.UtcNow.Date);
             }
 
-            var firstPossibleDate = currentCertificate.Certificate.NotAfter.ToUniversalTime().AddDays(-30);
+            var firstPossibleDate = currentCertificate.Certificate.NotAfter.ToUniversalTime().AddDays(-daysToRenewBeforeExpiration);
 
             // We can do this because saturday is last in the DayOfWeek enum
             var daysUntilSaturday = DayOfWeek.Saturday - firstPossibleDate.DayOfWeek;

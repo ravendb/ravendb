@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="InflectorTests.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using FastTests;
+﻿using FastTests;
 using Raven.Client.Documents.Conventions;
 using Tests.Infrastructure;
 using Xunit;

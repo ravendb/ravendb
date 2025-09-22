@@ -127,6 +127,7 @@ export default function EditGenAiTaskPlayground() {
     const handleProvideContentManually = async () => {
         if (await handleEditModeToggle(!isPlaygroundEditMode)) {
             setValue("playgroundDocument", "{}", { shouldValidate: true });
+            setValue("documentId", null);
         }
     };
 

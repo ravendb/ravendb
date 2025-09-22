@@ -121,7 +121,7 @@
                     </div>
                 </div>
                 <div data-bind="if: backupOperation === 'periodic'">
-                    <div class="row margin-bottom">
+                    <div class="row">
                         <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
                             <div class="toggle">
                                 <div class="toggle" data-placement="right" data-toggle="tooltip" data-bind="attr: { title: $root.db.isSharded() ? 'Not supported in sharded databases' : 'Toggle on to set a responsible node for the task'  }"
@@ -134,6 +134,24 @@
                     </div>
                     <div data-bind="compose: $root.taskResponsibleNodeSectionView"></div>
                     
+                </div>
+                <div class="margin-bottom">
+                    <div class="row">
+                        <div class="col-sm-4 col-sm-offset-4 col-lg-offset-2">
+                            <div class="toggle">
+                                <div class="toggle" data-placement="right" data-toggle="tooltip" title="This setting is used to limit the impact of backup operations on the database performance.">
+                                    <input id="isSetMaxReadOpsPerSecond" type="checkbox" data-bind="checked: isSetMaxReadOpsPerSecond">
+                                    <label for="isSetMaxReadOpsPerSecond">Set max read operations per second</label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row" data-bind="validationElement: maxReadOpsPerSecond, collapse: isSetMaxReadOpsPerSecond">
+                        <label class="control-label col-sm-4 col-lg-2">Max Read Operations Per Second</label>
+                        <div class="col-sm-4">
+                            <input type="number" data-bind="numericInput: maxReadOpsPerSecond" class="form-control" placeholder="Enter the max read operations per second" min="1" />
+                        </div>
+                    </div>
                 </div>
                 <div data-bind="collapse: isSnapshot, with: snapshot">
                     <div class="row margin-bottom">

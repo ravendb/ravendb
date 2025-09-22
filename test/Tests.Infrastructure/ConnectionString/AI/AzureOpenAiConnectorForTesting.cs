@@ -23,10 +23,42 @@ public sealed class EmbeddingsAzureOpenAiConnectorForTesting : AbstractEmbedding
         var endpoint = Environment.GetEnvironmentVariable(EnvironmentVariableDeploymentEndpoint);
         var deploymentName = Environment.GetEnvironmentVariable(EnvironmentVariableDeploymentName);
 
+        return AzureOpenAiConnectorHelper.CreateAiConnectionString(apiKey, endpoint, Model, deploymentName, AiModelType.TextEmbeddings);
+    }
+}
+
+public class GenAiAzureOpenAiConnectorForTesting : AbstractGenAiConnectorForTesting<GenAiAzureOpenAiConnectorForTesting>
+{
+    private const string EnvironmentVariableApiKey = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_API_KEY";
+    private const string EnvironmentVariableDeploymentEndpoint = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_DEPLOYMENT_ENDPOINT";
+    private const string EnvironmentVariableDeploymentName = "RAVEN_AI_INTEGRATION_AZURE_OPENAI_CHAT_DEPLOYMENT_NAME";
+    private const string Model = "gpt-4.1-mini";
+
+    public GenAiAzureOpenAiConnectorForTesting()
+    {
+        RequiredEnvironmentVariables = [EnvironmentVariableApiKey, EnvironmentVariableDeploymentEndpoint, EnvironmentVariableDeploymentName];
+    }
+
+    public override Lazy<AiConnectorType> AiConnectorType { get; init; } = new(Raven.Client.Documents.Operations.AI.AiConnectorType.AzureOpenAi);
+
+    protected override AiConnectionString CreateAiConnectionStringImpl()
+    {
+        var apiKey = Environment.GetEnvironmentVariable(EnvironmentVariableApiKey);
+        var endpoint = Environment.GetEnvironmentVariable(EnvironmentVariableDeploymentEndpoint);
+        var deploymentName = Environment.GetEnvironmentVariable(EnvironmentVariableDeploymentName);
+
+        return AzureOpenAiConnectorHelper.CreateAiConnectionString(apiKey, endpoint, Model, deploymentName, AiModelType.Chat);
+    }
+}
+
+internal static class AzureOpenAiConnectorHelper
+{
+    public static AiConnectionString CreateAiConnectionString(string apiKey, string endpoint, string model, string deploymentName, AiModelType modelType)
+    {
         return new AiConnectionString
         {
-            ModelType = AiModelType.TextEmbeddings,
-            AzureOpenAiSettings = new AzureOpenAiSettings(apiKey, endpoint, Model, deploymentName) { Temperature = 0 }
+            ModelType = modelType,
+            AzureOpenAiSettings = new AzureOpenAiSettings(apiKey, endpoint, model, deploymentName) { Temperature = 0 }
         };
     }
 }

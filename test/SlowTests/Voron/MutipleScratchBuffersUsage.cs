@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="MutipleScratchBuffersHandling.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using FastTests.Voron;
+﻿using FastTests.Voron;
 using Tests.Infrastructure;
 using Voron;
 using Voron.Global;

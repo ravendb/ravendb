@@ -54,6 +54,8 @@ namespace Raven.Server.Dashboard
         public long GenAiCount { get; set; }
 
 
+        public long Total { get; set; }
+
         public DynamicJsonValue ToJson()
         {
             return new DynamicJsonValue

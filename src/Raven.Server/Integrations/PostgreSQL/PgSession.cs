@@ -282,7 +282,7 @@ namespace Raven.Server.Integrations.PostgreSQL
 
             return details;
         }
-        
+
         private void DispatchPostgresQueryMessageToTrafficWatch(Query message, PgErrorException e = null)
         {
             var clientIp = _client.Client.LocalEndPoint?.ToString();
@@ -292,7 +292,7 @@ namespace Raven.Server.Integrations.PostgreSQL
             var twn = new TrafficWatchPostgresChange()
             {
                 TimeStamp = DateTime.UtcNow,
-                DatabaseName = databaseName,  
+                DatabaseName = databaseName,
                 CertificateThumbprint = null,
                 CustomInfo = e is null ? null : $"{e.ErrorCode} - {e.Message}",
                 ClientIP = clientIp,
@@ -301,6 +301,6 @@ namespace Raven.Server.Integrations.PostgreSQL
                 Query = message.QueryString
             };
             TrafficWatchManager.DispatchMessage(twn);
+        }
     }
-}
 }

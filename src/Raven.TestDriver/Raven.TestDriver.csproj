@@ -5,7 +5,7 @@
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <Title>RavenDB TestDriver</Title>
     <Product>RavenDB TestDriver</Product>
-    <Authors>Hibernating Rhinos</Authors>
+    <Authors>RavenDB</Authors>
     <AssemblyName>Raven.TestDriver</AssemblyName>
     <PackageId>RavenDB.TestDriver</PackageId>
     <PackageTags>ravendb;client;database;nosql;doc db</PackageTags>

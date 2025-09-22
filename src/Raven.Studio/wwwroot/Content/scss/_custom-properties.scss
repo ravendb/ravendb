@@ -81,13 +81,10 @@ $prefix: "bs-";
 }
 
 .wizard-content,
-.wizard-sidebar {
+.wizard-sidebar,
+.ai-agents-config,
+.ai-agents {
     color: #{$base-text-color};
-
-    .form-control::placeholder {
-        color: #{$text-muted-color};
-        opacity: 0.5;
-    }
 
     .input-group-text {
         --panel-bg-2: #{$panel-bg-2};
@@ -130,5 +127,9 @@ $prefix: "bs-";
                 --text-emphasis: #{$text-emphasis-color};
             }
         }
+    }
+
+    .text-muted {
+        color: var(--text-muted) !important;
     }
 }

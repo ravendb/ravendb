@@ -1,9 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="Reference.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-namespace Raven.Server.Utils
+﻿namespace Raven.Server.Utils
 {
     /// <summary>
     /// A reference that can be used with lambda expression

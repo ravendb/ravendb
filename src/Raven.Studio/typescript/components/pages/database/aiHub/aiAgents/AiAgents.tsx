@@ -52,7 +52,7 @@ export default function AiAgents() {
     }
 
     return (
-        <div className="content-padding">
+        <div className="content-padding ai-agents">
             <div className="hstack justify-content-between align-items-start">
                 <AboutViewHeading title="AI Agents" icon="ai-agents" marginBottom={4} />
                 <AiAgentsInfoHub />

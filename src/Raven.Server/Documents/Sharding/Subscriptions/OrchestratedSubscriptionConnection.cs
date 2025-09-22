@@ -1,10 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="ShardedSubscriptionConnection.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// ----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
@@ -40,7 +34,8 @@ namespace Raven.Server.Documents.Sharding.Subscriptions
                 tcpConnection.DatabaseContext.DatabaseShutdown)
         {
             _databaseContext = tcpConnection.DatabaseContext;
-            _tokenRegisterDisposable = CancellationTokenSource.Token.Register(() => _processor?.CurrentBatch?.SetCancel());
+            _tokenRegisterDisposable =
+                CancellationTokenSource.Token.Register(static (state) => ((OrchestratedSubscriptionConnection)state)._processor?.CurrentBatch?.SetCancel(), this);
             _dbIdsToRemove = new HashSet<string>(StringComparer.OrdinalIgnoreCase) { _databaseContext.DatabaseRecord.Sharding.DatabaseId };
         }
 

@@ -130,7 +130,6 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         using (_connection)
         using (_tx)
         {
-
         }
     }
 
@@ -154,7 +153,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
             sp.Restart();
 
             using (var cmd = GetInsertCommand(tableName, pkName, itemToReplicate))
-            using (token.Register(cmd.Cancel))
+            using (token.Register(static state => ((DbCommand)state).Cancel(), cmd))
             {
                 token.ThrowIfCancellationRequested();
                 commandCallback?.Invoke(cmd);
@@ -242,7 +241,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         for (int i = 0; i < toDelete.Count; i += maxParams)
         {
             using (var cmd = GetDeleteCommand(tableName, pkName, toDelete, i, parameterize, maxParams, out int countOfDeletes))
-            using (token.Register(cmd.Cancel))
+            using (token.Register(static state => ((DbCommand)state).Cancel(), cmd))
             {
                 commandCallback?.Invoke(cmd);
 
@@ -322,9 +321,9 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
     protected abstract void SetPrimaryKeyParamValue(RelationalDatabaseItem itemToReplicate, DbParameter pkParam);
 
     protected abstract (string StartSyntax, string EndSyntax) GetSyntaxAroundParameters(RelationalDatabaseItem itemToReplicate);
-    
+
     protected abstract string GetPostDeleteSyntax(RelationalDatabaseItem itemToDelete);
-        
+
     protected abstract string GetAfterDeleteWhereIdentifierBeforeInExtraSyntax();
 
     public RelationalDatabaseWriteStats Write(RelationalDatabaseTableWithRecords table, List<DbCommand> commands, CancellationToken token)
@@ -470,7 +469,7 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
     public DbCommand GetInsertCommand(string tableName, string pkName, RelationalDatabaseItem itemToReplicate)
     {
         var cmd = CreateCommand();
-        
+
         var sb = new StringBuilder("INSERT INTO ")
             .Append(GetTableNameString(tableName))
             .Append(" (")
@@ -565,4 +564,3 @@ public abstract class RelationalDatabaseWriterBase<TRelationalConnectionString, 
         return cmd;
     }
 }
-

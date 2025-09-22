@@ -1,5 +1,5 @@
 ﻿import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { Meta } from "@storybook/react";
+import { Meta } from "@storybook/react-webpack5";
 import { DropdownPanel, UncontrolledButtonWithDropdownPanel } from "./DropdownPanel";
 import React, { useCallback, useState } from "react";
 import Button from "react-bootstrap/Button";

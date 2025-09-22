@@ -1,5 +1,7 @@
 import { virtualTableConstants } from "components/common/virtualTable/utils/virtualTableConstants";
 
+const { defaultRowHeightInPx, headerHeightInPx, paddingInPx, scrollbarWidthInPx } = virtualTableConstants;
+
 interface TableBodyWidthOptions {
     isWithoutTablePadding?: boolean;
     isWithoutTableScrollbar?: boolean;
@@ -15,10 +17,10 @@ function getTableBodyWidth(containerWidth = 0, options: TableBodyWidthOptions = 
 
     if (isWithoutTablePadding) {
         // left and right padding
-        containerWidth -= virtualTableConstants.paddingInPx;
+        containerWidth -= paddingInPx;
     }
     if (isWithoutTableScrollbar) {
-        containerWidth -= virtualTableConstants.scrollbarWidthInPx;
+        containerWidth -= scrollbarWidthInPx;
     }
     if (isWithRightSpace) {
         containerWidth -= 20; // some space to avoid horizontal scroll
@@ -35,7 +37,15 @@ function getCellSizeProvider(tableWidthInPx = 0) {
     return (percentage: number) => Math.floor((tableWidthInPx * percentage) / 100);
 }
 
+function getHeightInPx(rowsCount: number, maxHeightInPx: number): number {
+    const calculatedHeightInPx =
+        Math.max(defaultRowHeightInPx, rowsCount * defaultRowHeightInPx) + paddingInPx + headerHeightInPx;
+
+    return Math.min(calculatedHeightInPx, maxHeightInPx);
+}
+
 export const virtualTableUtils = {
     getCellSizeProvider,
     getTableBodyWidth,
+    getHeightInPx,
 };

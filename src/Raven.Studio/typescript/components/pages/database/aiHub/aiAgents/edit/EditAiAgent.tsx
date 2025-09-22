@@ -50,7 +50,7 @@ function FormBody({ maxWidth, aiAgentEditor }: FormBodyProps) {
     });
 
     return (
-        <div className="hstack h-100" style={{ position: "relative" }}>
+        <div className="hstack h-100 ai-agents-config" style={{ position: "relative" }}>
             <div
                 className="vstack h-100"
                 style={{

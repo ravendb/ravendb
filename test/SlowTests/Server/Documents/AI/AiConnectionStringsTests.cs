@@ -1,13 +1,20 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Net.Http;
 using System.Threading;
 using FastTests;
 using Microsoft.Extensions.AI;
 using Microsoft.SemanticKernel.Embeddings;
+using Raven.Client.Documents.Conventions;
+using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Client.Exceptions;
+using Raven.Client.Http;
+using Raven.Client.Json;
 using Raven.Server.Documents.AI;
+using Raven.Server.Web.System;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
@@ -44,6 +51,7 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.OpenAiSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings.ApiKey);
@@ -58,7 +66,8 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
-
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
+                    
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.AzureOpenAiSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings.ApiKey);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.AzureOpenAiSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings.Model);
@@ -72,6 +81,7 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.OllamaSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings.Model);
@@ -85,6 +95,7 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].EmbeddedSettings);
                     break;
@@ -96,6 +107,7 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].EmbeddedSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.GoogleSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings.ApiKey);
@@ -109,7 +121,8 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].EmbeddedSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
-
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
+                    
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.HuggingFaceSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings.ApiKey);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.HuggingFaceSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings.Model);
@@ -122,16 +135,60 @@ public class AiConnectionStringsTests : RavenTestBase
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].EmbeddedSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
                     Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
 
                     Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.MistralAiSettings.ApiKey, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings.ApiKey);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.MistralAiSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings.Model);
                     Assert.Equal(embeddingsGenerationConfiguration.Connection.MistralAiSettings.Endpoint, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings.Endpoint);
                     break;
-
+                
+                case AiConnectorType.Vertex:
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].AzureOpenAiSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].OllamaSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].EmbeddedSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].GoogleSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].HuggingFaceSettings);
+                    Assert.Null(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].MistralAiSettings);
+                    
+                    Assert.NotNull(aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.GoogleCredentialsJson, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.GoogleCredentialsJson);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.Model, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.Model);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.AiVersion, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.AiVersion);
+                    Assert.Equal(embeddingsGenerationConfiguration.Connection.VertexSettings.Location, aiConnectionStringsDictionary[embeddingsGenerationConfiguration.Connection.Name].VertexSettings.Location);
+                    break;
+                
                 default:
                     throw new ArgumentOutOfRangeException(nameof(embeddingsGenerationConfiguration.AiConnectorType), embeddingsGenerationConfiguration.AiConnectorType, null);
             }
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenGenAiData(IntegrationType = RavenAiIntegration.AzureOpenAI | RavenAiIntegration.OpenAi | RavenAiIntegration.Ollama, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    public void CanTestAiChatConnectionString(Options options, GenAiConfiguration configuration)
+    {
+        using (var store = GetDocumentStore())
+        {
+            var op = new TestAiConnectionStringOperation(configuration.Connection);
+            var r = store.Maintenance.Send(op);
+            Assert.True(r.Error == null, r.Error);
+            Assert.True(r.Success);
+        }
+    }
+
+    [RavenTheory(RavenTestCategory.Ai)]
+    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.HuggingFace, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false, Skip = "fix me")]
+    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI | RavenAiIntegration.Ollama | RavenAiIntegration.Onnx | RavenAiIntegration.Google | RavenAiIntegration.MistralAi | RavenAiIntegration.Vertex, DatabaseMode = RavenDatabaseMode.Single, CheckCanConnect = false, NightlyBuildRequired = false)]
+    public void CanTestAiEmbeddingsConnectionString(Options options, EmbeddingsGenerationConfiguration configuration)
+    {
+        using (var store = GetDocumentStore())
+        {
+            var op = new TestAiConnectionStringOperation(configuration.Connection);
+            var r = store.Maintenance.Send(op);
+            Assert.True(r.Error == null, r.Error);
+            Assert.True(r.Success);
         }
     }
 
@@ -160,7 +217,11 @@ public class AiConnectionStringsTests : RavenTestBase
             case AiConnectorType.MistralAi:
                 embeddingsGenerationConfiguration.Connection.MistralAiSettings.Model = string.Empty;
                 break;
+            case AiConnectorType.Vertex:
+                embeddingsGenerationConfiguration.Connection.VertexSettings.Model = string.Empty;
+                break;
         }
+
         using (var store = GetDocumentStore())
         {
             var exception = Assert.Throws<BadRequestException>(() => store.Maintenance.Send(new PutConnectionStringOperation<AiConnectionString>(embeddingsGenerationConfiguration.Connection)));
@@ -185,7 +246,7 @@ public class AiConnectionStringsTests : RavenTestBase
 
     [RavenTheory(RavenTestCategory.Etl | RavenTestCategory.Ai)]
     [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.OpenAi | RavenAiIntegration.AzureOpenAI | RavenAiIntegration.Google)]
-    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.Ollama | RavenAiIntegration.HuggingFace | RavenAiIntegration.MistralAi | RavenAiIntegration.Onnx, Skip = "This provider does not support dimensionality yet.")]
+    [RavenAiEmbeddingsData(IntegrationType = RavenAiIntegration.Ollama | RavenAiIntegration.HuggingFace | RavenAiIntegration.MistralAi | RavenAiIntegration.Onnx | RavenAiIntegration.Vertex, Skip = "This provider does not support dimensionality yet.")]
     public void SemanticKernel_ShouldRespect_Dimensionality(Options options, EmbeddingsGenerationConfiguration embeddingsGenerationConfiguration)
     {
         const int dimensions = 5;
@@ -196,7 +257,8 @@ public class AiConnectionStringsTests : RavenTestBase
             var embeddings = service.GenerateAsync(_testValuesList, cancellationToken: cts.Token).GetAwaiter().GetResult();
 
             for (var i = 0; i < _testValuesList.Count; i++)
-                Assert.False(embeddings[i].Vector.Length == dimensions, $"{_testValuesList[i]}: Dimensionality hasn't been configured yet, but embeddings were generated with '{embeddings[i].Vector.Length}' dimensions, which should be different from {dimensions} to test it when it is configured.");
+                Assert.False(embeddings[i].Vector.Length == dimensions,
+                    $"{_testValuesList[i]}: Dimensionality hasn't been configured yet, but embeddings were generated with '{embeddings[i].Vector.Length}' dimensions, which should be different from {dimensions} to test it when it is configured.");
 
             embeddings = null;
             Assert.Null(embeddings);
@@ -219,6 +281,58 @@ public class AiConnectionStringsTests : RavenTestBase
 
             for (var i = 0; i < _testValuesList.Count; i++)
                 Assert.True(embeddings[i].Vector.Length == dimensions, $"{_testValuesList[i]}: Dimensionality was configured to {dimensions}, but embeddings were generated with {embeddings[i].Vector.Length} dimensions.");
+        }
+    }
+
+    
+    private class TestAiConnectionStringOperation : IMaintenanceOperation<NodeConnectionTestResult>
+    {
+        private readonly AiConnectionString _connectionString;
+
+        public TestAiConnectionStringOperation(AiConnectionString connectionString)
+        {
+            _connectionString = connectionString;
+        }
+
+        public RavenCommand<NodeConnectionTestResult> GetCommand(DocumentConventions conventions, JsonOperationContext context)
+        {
+            return new TestAiConnectionStringCommand(_connectionString);
+        }
+
+        private class TestAiConnectionStringCommand : RavenCommand<NodeConnectionTestResult>
+        {
+            private readonly AiConnectionString _connectionString;
+
+            public TestAiConnectionStringCommand(AiConnectionString connectionString)
+            {
+                _connectionString = connectionString;
+            }
+
+            public override bool IsReadRequest => false;
+
+            public override HttpRequestMessage CreateRequest(JsonOperationContext ctx, ServerNode node, out string url)
+            {
+                url = $"{node.Url}/databases/{node.Database}/admin/ai/test-connection?type={_connectionString.GetActiveProvider()}&modelType={_connectionString.ModelType}";
+                return new HttpRequestMessage
+                {
+                    RequestUri = new Uri(url),
+                    Method = HttpMethod.Post,
+                    Content = new BlittableJsonContent(async stream =>
+                    {
+                        await ctx.WriteAsync(stream, ctx.ReadObject(ctx.ReadObject(_connectionString.GetActiveProviderInstance().ToJson(), "connection"), "connection"));
+                    }, DocumentConventions.Default)
+                };
+            }
+
+
+            private static Func<BlittableJsonReaderObject, NodeConnectionTestResult> NodeConnectionTestResult = JsonDeserializationBase.GenerateJsonDeserializationRoutine<NodeConnectionTestResult>();
+            public override void SetResponse(JsonOperationContext context, BlittableJsonReaderObject response, bool fromCache)
+            {
+                if (response == null)
+                    throw new InvalidOperationException("Response is null");
+
+                Result = NodeConnectionTestResult(response);
+            }
         }
     }
 }

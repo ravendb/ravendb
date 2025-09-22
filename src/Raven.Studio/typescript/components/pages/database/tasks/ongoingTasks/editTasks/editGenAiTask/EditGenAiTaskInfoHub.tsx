@@ -24,7 +24,7 @@ export default function EditGenAiTaskInfoHub() {
     });
 
     return (
-        <AboutViewFloating>
+        <AboutViewFloating defaultOpen={hasGenAi ? null : "licensing"}>
             <AccordionItemWrapper
                 icon="about"
                 color="info"

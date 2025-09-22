@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="DocumentSession.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-namespace Raven.Client.Documents.Session
+﻿namespace Raven.Client.Documents.Session
 {
     public partial class DocumentSession
     {

@@ -276,6 +276,10 @@ export class TasksStubs {
                 MinimumBackupAgeToKeep: "1.00:00:00",
             },
             PinToMentorNode: false,
+            FullBackupFrequency: "0 2 * * 0",
+            IncrementalBackupFrequency: "0 2 * * *",
+            BackupUploadMode: "Default",
+            HasCloudBackup: false,
         };
     }
 
@@ -388,6 +392,7 @@ export class TasksStubs {
                     {
                         Path: "Name",
                         ChunkingOptions: {
+                            OverlapTokens: 0,
                             ChunkingMethod: "PlainTextSplit",
                             MaxTokensPerChunk: 2048,
                         },
@@ -397,6 +402,7 @@ export class TasksStubs {
                 Quantization: "Single",
                 EmbeddingsCacheExpiration: "90.00:00:00",
                 ChunkingOptionsForQuerying: {
+                    OverlapTokens: 0,
                     ChunkingMethod: "PlainTextSplit",
                     MaxTokensPerChunk: 2048,
                 },
@@ -818,8 +824,23 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "MWoEsxOgGzl1OZarcxjlIki5ELBagYJjX/uIPHEFcxA=",
+                        Attachments: [
+                            {
+                                Name: "heart.png",
+                                Type: "image/png",
+                                Source: "FromAttachment",
+                                Data: "[Hash:'FLNK25A3VOpVPIiusBEZMwUU5mWqSZR7T2OqYF4nBfA=']",
+                            },
+                            {
+                                Name: "transactions.csv",
+                                Type: "text/plain",
+                                Source: "FromAttachment",
+                                Data: "Date,Description,Category,Amount\r\n2025-01-01,Grocery Store,food,45.32\r\n2025-01-02,Utility Bill,Ut...",
+                            },
+                        ],
                     },
                     ModelOutput: null,
+                    DocumentId: null,
                 },
                 {
                     ContextOutput: {
@@ -830,8 +851,23 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "tDRYDLQP/Q7sNmY6ZCRCcMUwwGdD1Lp05/Evybr7C0s=",
+                        Attachments: [
+                            {
+                                Name: "heart.png",
+                                Type: "image/png",
+                                Source: "FromAttachment",
+                                Data: "[Hash:'FLNK25A3VOpVPIiusBEZMwUU5mWqSZR7T2OqYF4nBfA=']",
+                            },
+                            {
+                                Name: "transactions.csv",
+                                Type: "text/plain",
+                                Source: "FromAttachment",
+                                Data: "Date,Description,Category,Amount\r\n2025-01-01,Grocery Store,food,45.32\r\n2025-01-02,Utility Bill,Ut...",
+                            },
+                        ],
                     },
                     ModelOutput: null,
+                    DocumentId: null,
                 },
             ],
         };
@@ -871,6 +907,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "MWoEsxOgGzl1OZarcxjlIki5ELBagYJjX/uIPHEFcxA=",
+                        Attachments: [],
                     },
                     ModelOutput: {
                         Usage: {
@@ -884,6 +921,7 @@ namespace Orders
                             Reason: "Spam detected",
                         },
                     },
+                    DocumentId: null,
                 },
                 {
                     ContextOutput: {
@@ -894,6 +932,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "tDRYDLQP/Q7sNmY6ZCRCcMUwwGdD1Lp05/Evybr7C0s=",
+                        Attachments: [],
                     },
                     ModelOutput: {
                         Usage: {
@@ -907,6 +946,7 @@ namespace Orders
                             Reason: "No spam found",
                         },
                     },
+                    DocumentId: null,
                 },
             ],
         };
@@ -955,6 +995,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "MWoEsxOgGzl1OZarcxjlIki5ELBagYJjX/uIPHEFcxA=",
+                        Attachments: [],
                     },
                     ModelOutput: {
                         Usage: {
@@ -968,6 +1009,7 @@ namespace Orders
                             Reason: "Spam detected",
                         },
                     },
+                    DocumentId: null,
                 },
                 {
                     ContextOutput: {
@@ -978,6 +1020,7 @@ namespace Orders
                         },
                         IsCached: true,
                         AiHash: "tDRYDLQP/Q7sNmY6ZCRCcMUwwGdD1Lp05/Evybr7C0s=",
+                        Attachments: [],
                     },
                     ModelOutput: {
                         Usage: {
@@ -991,6 +1034,7 @@ namespace Orders
                             Reason: "No spam found",
                         },
                     },
+                    DocumentId: null,
                 },
             ],
         };

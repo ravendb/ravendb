@@ -1,3 +1,5 @@
+using System;
+using System.Collections.Generic;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -8,14 +10,37 @@ public class ChunkingOptions : IDynamicJsonValueConvertible
     public ChunkingMethod ChunkingMethod { get; set; }
 
     public int MaxTokensPerChunk { get; set; } = 512;
-    
+
+    public int OverlapTokens { get; set; } = 0;
+
+    internal static readonly HashSet<ChunkingMethod> MethodsSupportingOverlapTokens = [ChunkingMethod.MarkDownSplitParagraphs, ChunkingMethod.PlainTextSplitParagraphs];
+
     public DynamicJsonValue ToJson()
     {
         return new DynamicJsonValue
         {
             [nameof(ChunkingMethod)] = ChunkingMethod, 
-            [nameof(MaxTokensPerChunk)] = MaxTokensPerChunk
+            [nameof(MaxTokensPerChunk)] = MaxTokensPerChunk,
+            [nameof(OverlapTokens)] = OverlapTokens
         };
+    }
+
+    public bool Validate(string path, List<string> errors)
+    {
+        if (MaxTokensPerChunk <= 0)
+            errors.Add($"Path '{path}': {nameof(MaxTokensPerChunk)} value has to be greater than 0.");
+        
+        if (OverlapTokens < 0)
+            errors.Add($"Path '{path}': {nameof(OverlapTokens)} value cannot be negative.");
+        
+        if (OverlapTokens > MaxTokensPerChunk)
+            errors.Add($"Path '{path}': {nameof(OverlapTokens)} cannot be greater than {nameof(MaxTokensPerChunk)}.");
+        
+        if (OverlapTokens > 0 &&
+            MethodsSupportingOverlapTokens.Contains(ChunkingMethod) == false)
+            errors.Add($"Path '{path}': {nameof(OverlapTokens)} option is only supported for the following chunking methods: {string.Join(", ", MethodsSupportingOverlapTokens)}.");
+        
+        return true;
     }
 }
 

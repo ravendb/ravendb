@@ -490,4 +490,5 @@ public enum RavenTestCategory : long
     /// REQUIREMENTS: Often requires multiple RavenDB versions, special test infrastructure
     /// </summary>
     Interversion = 1L << 52,
+    Debug = 1L << 52,
 }

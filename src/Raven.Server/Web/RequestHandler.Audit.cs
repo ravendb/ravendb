@@ -5,6 +5,7 @@ using System.Text;
 using Raven.Server.Logging;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
+using Raven.Server.Utils;
 using Sparrow.Logging;
 
 namespace Raven.Server.Web

@@ -1,9 +1,4 @@
-﻿// -----------------------------------------------------------------------
-//  <copyright file="DetailedStorageReport.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using Sparrow;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -18,6 +13,19 @@ namespace Voron.Debugging
         public long TempBuffersInBytes { get; set; }
     }
 
+    public class EnvironmentStorageReport
+    {
+        public string BasePath { get; set; }
+        public List<DatabaseStorageComponentReport> Results { get; set; }
+    }
+
+    public class DatabaseStorageComponentReport
+    {
+        public string Name { get; set; }
+        public string Type { get; set; }
+        public StorageReport Report { get; set; }
+    }
+    
     public sealed class StorageReport
     {
         public DataFileReport DataFile { get; set; }

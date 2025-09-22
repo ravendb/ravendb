@@ -70,7 +70,7 @@ function LicenseTable(props: LicenseTableProps) {
     const [viewMode, setViewMode] = useState<"showDiff" | "showAll">("showAll");
 
     const licenseStatus = useAppSelector(licenseSelectors.status);
-    const { columns, current: currentColumn } = getColumns(licenseType);
+    const { columns, current: currentColumn } = getColumnsData(licenseType, licenseStatus.IsCloud);
 
     const developerLicenseLink = useRavenLink({ hash: "ZOVGRA", isDocs: false });
 
@@ -112,11 +112,19 @@ function LicenseTable(props: LicenseTableProps) {
         iconName: "license",
     };
 
-    const showUpgradeButton = licenseType !== "EnterpriseAi";
+    const showUpgradeButton = licenseStatus.IsCloud ? licenseType !== "Enterprise" : licenseType !== "EnterpriseAi";
 
-    const getColumnHeader = (column: LicenseColumn) => {
+    const getLicenseTypeName = (column: LicenseColumn) => {
         if (column === "community" && licenseType === "Essential") {
             return "Essential";
+        }
+
+        if (column === "community" && licenseStatus.IsCloud) {
+            return "Free";
+        }
+
+        if (column === "enterprise" && licenseStatus.IsCloud) {
+            return "Production";
         }
 
         if (column === "enterpriseAi") {
@@ -155,12 +163,12 @@ function LicenseTable(props: LicenseTableProps) {
                             <th>License type</th>
                             {columns.map((column) => (
                                 <th key={column} className={classNames({ "bg-current": column === currentColumn })}>
-                                    <h4 className="fw-bolder text-uppercase m-0">{getColumnHeader(column)}</h4>
+                                    <h4 className="fw-bolder text-uppercase m-0">{getLicenseTypeName(column)}</h4>
                                     {column === currentColumn && <div className="text-primary">Current</div>}
                                 </th>
                             ))}
                         </tr>
-                        {showUpgradeButton && <UpgradeRow licenseType={licenseType} />}
+                        {showUpgradeButton && <UpgradeRow columns={columns} current={currentColumn} />}
                     </thead>
                     <tbody>
                         {filteredSections.length === 0 && (
@@ -260,84 +268,6 @@ function LicenseTable(props: LicenseTableProps) {
     );
 }
 
-function UpgradeRow({ licenseType }: { licenseType: Raven.Server.Commercial.LicenseType }) {
-    if (licenseType === "EnterpriseAi") {
-        return null;
-    }
-
-    if (licenseType === "None" || licenseType === "Invalid") {
-        return (
-            <tr>
-                <th></th>
-                <th className="bg-current"></th>
-                <th></th>
-                <th colSpan={3} className="px-3">
-                    <UpgradeButton />
-                </th>
-            </tr>
-        );
-    }
-
-    if (licenseType === "Developer") {
-        return (
-            <tr>
-                <th></th>
-                <th></th>
-                <th colSpan={3} className="px-3">
-                    <UpgradeButton />
-                </th>
-                <th className="bg-current"></th>
-            </tr>
-        );
-    }
-
-    if (licenseType === "Professional") {
-        return (
-            <tr>
-                <th></th>
-                <th className="bg-current"></th>
-                <th colSpan={2} className="px-3">
-                    <UpgradeButton />
-                </th>
-            </tr>
-        );
-    }
-
-    if (licenseType === "Enterprise") {
-        return (
-            <tr>
-                <th></th>
-                <th className="bg-current"></th>
-                <th className="px-3">
-                    <UpgradeButton />
-                </th>
-            </tr>
-        );
-    }
-
-    return (
-        <tr>
-            <th></th>
-            <th className="bg-current"></th>
-            <th colSpan={3} className="px-3">
-                <UpgradeButton />
-            </th>
-        </tr>
-    );
-}
-
-function UpgradeButton() {
-    const upgradeLicenseBtnHandler = () => {
-        window.open(`https://ravendb.net/buy`, "_blank");
-    };
-
-    return (
-        <Button variant="primary" className="w-100 rounded-pill" onClick={upgradeLicenseBtnHandler}>
-            <Icon icon="upgrade-arrow" />
-            Upgrade license
-        </Button>
-    );
-}
 const availableEverywhere = {
     agpl: { value: true },
     community: { value: true },
@@ -1288,42 +1218,55 @@ const featureAvailabilityData: FeatureAvailabilitySection[] = [
 
 type LicenseColumn = "agpl" | "community" | "professional" | "enterprise" | "developer" | "enterpriseAi";
 
-function getColumns(license: Raven.Server.Commercial.LicenseType): {
+interface ColumnsData {
     columns: LicenseColumn[];
     current: LicenseColumn;
-} {
+}
+
+function getColumnsData(license: Raven.Server.Commercial.LicenseType, isCloud: boolean): ColumnsData {
+    const columnsData: ColumnsData = {
+        columns: [],
+        current: null,
+    };
+
     switch (license) {
+        case "Invalid":
+            columnsData.columns = ["community", "professional", "enterprise", "enterpriseAi"];
+            columnsData.current = null;
+            break;
         case "None":
-            return {
-                columns: ["agpl", "community", "professional", "enterprise", "enterpriseAi"],
-                current: "agpl",
-            };
+            columnsData.columns = ["agpl", "community", "professional", "enterprise", "enterpriseAi"];
+            columnsData.current = "agpl";
+            break;
         case "Developer":
-            return {
-                columns: ["community", "professional", "enterprise", "enterpriseAi", "developer"],
-                current: "developer",
-            };
+            columnsData.columns = ["community", "professional", "enterprise", "enterpriseAi", "developer"];
+            columnsData.current = "developer";
+            break;
         case "Professional":
-            return {
-                columns: ["professional", "enterprise", "enterpriseAi"],
-                current: "professional",
-            };
+            columnsData.columns = ["professional", "enterprise", "enterpriseAi"];
+            columnsData.current = "professional";
+            break;
         case "Enterprise":
-            return {
-                columns: ["enterprise", "enterpriseAi"],
-                current: "enterprise",
-            };
+            columnsData.columns = ["enterprise", "enterpriseAi"];
+            columnsData.current = "enterprise";
+            break;
         case "EnterpriseAi":
-            return {
-                columns: ["enterpriseAi"],
-                current: "enterpriseAi",
-            };
+            columnsData.columns = ["enterpriseAi"];
+            columnsData.current = "enterpriseAi";
+            break;
         default:
-            return {
-                columns: ["community", "professional", "enterprise", "enterpriseAi"],
-                current: "community",
-            };
+            columnsData.columns = ["community", "professional", "enterprise", "enterpriseAi"];
+            columnsData.current = "community";
+            break;
     }
+
+    if (isCloud) {
+        columnsData.columns = columnsData.columns.filter(
+            (column) => column !== "professional" && column !== "enterpriseAi"
+        );
+    }
+
+    return columnsData;
 }
 
 function filterFeatureAvailabilitySection(
@@ -1431,4 +1374,54 @@ type AvailabilityValue = boolean | number | string;
 interface ValueData {
     value: AvailabilityValue;
     overwrittenValue?: AvailabilityValue;
+}
+
+function UpgradeRow({ columns, current }: ColumnsData) {
+    const isCloud = useAppSelector(licenseSelectors.statusValue("IsCloud"));
+
+    const data = columns.map((column) => ({
+        column,
+        isUpgradeable:
+            column !== current && (column === "professional" || column === "enterprise" || column === "enterpriseAi"),
+    }));
+
+    return (
+        <tr>
+            <th className="pt-0"></th>
+            {data.map((item) => (
+                <th
+                    key={item.column}
+                    className={classNames(
+                        "pt-0",
+                        { "bg-current": item.column === current },
+                        { "px-3": item.isUpgradeable }
+                    )}
+                >
+                    {item.isUpgradeable && (
+                        <>
+                            {isCloud ? (
+                                <a
+                                    href="https://cloud.ravendb.net/pricing"
+                                    target="_blank"
+                                    className="btn btn-cloud rounded-pill"
+                                >
+                                    <Icon icon="cloud" />
+                                    Cloud pricing
+                                </a>
+                            ) : (
+                                <a
+                                    href="https://ravendb.net/buy"
+                                    target="_blank"
+                                    className="btn btn-primary rounded-pill"
+                                >
+                                    <Icon icon="upgrade-arrow" />
+                                    Upgrade license
+                                </a>
+                            )}
+                        </>
+                    )}
+                </th>
+            ))}
+        </tr>
+    );
 }

@@ -74,7 +74,7 @@ namespace Raven.Server.Rachis
                 throw new InvalidOperationException($"Task with the id '{id}' was not found.");
             }
 
-            await using (token.Register(() => task.TrySetCanceled()))
+            await using (token.Register(static (state) => ((TaskCompletionSource<T>)state).TrySetCanceled(), task))
             {
                 return await task.Task.ConfigureAwait(false);
             }

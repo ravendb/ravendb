@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="RavenDB-14342.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Net.Http;

@@ -67,7 +67,7 @@ namespace Raven.Server.Documents.Patch
             if (runIfMissing != null)
                 runIfMissing.DebugMode = _debugMode;
 
-            using (DocumentIdWorker.GetSliceFromId(context.Allocator, id, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context.Allocator, id, out Slice lowerId))
             {
                 _database.DocumentsStorage.ValidateId(context, lowerId, type: DocumentChangeTypes.Put);
             }

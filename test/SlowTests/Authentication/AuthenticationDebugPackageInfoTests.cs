@@ -172,7 +172,7 @@ namespace SlowTests.Authentication
                     .Select(route => GetFileNameWithoutExtension(route, store.Database)).ToList();
                 allDatabaseEntries.Add($"{store.Database}/database-record");
                 var allServerEntries = DebugInfoPackageUtils.Routes.Where(route => route.TypeOfRoute == RouteInformation.RouteType.None && _routesToSkip.Contains(route.Path) == false)
-                    .Select(route => GetFileNameWithoutExtension(route, ServerWideDebugInfoPackageHandler._serverWidePrefix)).ToArray();
+                    .Select(route => GetFileNameWithoutExtension(route, ServerWideDebugInfoPackageHandler.ServerWidePrefix)).ToArray();
                 var allExistingRouteEntries = allDatabaseEntries.Concat(allServerEntries).ToHashSet();
 
                 AssertArchiveContainsAllEntriesAndOnlyThem(allExistingRouteEntries, archive);
@@ -205,7 +205,7 @@ namespace SlowTests.Authentication
                 databaseEntries.Add($"{store.Database}/database-record");
                 var serverEntries = DebugInfoPackageUtils.Routes
                     .Where(route => route.TypeOfRoute == RouteInformation.RouteType.None && OperatorAccess(route) && _routesToSkip.Contains(route.Path) == false)
-                    .Select(route => GetFileNameWithoutExtension(route, ServerWideDebugInfoPackageHandler._serverWidePrefix)).ToArray();
+                    .Select(route => GetFileNameWithoutExtension(route, ServerWideDebugInfoPackageHandler.ServerWidePrefix)).ToArray();
 
                 var routeEntries = databaseEntries.Concat(serverEntries).ToHashSet();
 

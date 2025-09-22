@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="NumberUtil.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System.Globalization;
+﻿using System.Globalization;
 
 namespace Raven.Client.Documents.Indexes
 {

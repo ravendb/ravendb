@@ -1,6 +1,6 @@
 ﻿import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./AdminJsConsole.stories";
 
 const { DefaultAdminJSConsole } = composeStories(stories);

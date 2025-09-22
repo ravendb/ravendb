@@ -4,7 +4,7 @@ import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { mockServices } from "test/mocks/services/MockServices";
 import { TasksStubs } from "test/stubs/TasksStubs";
 import MockTasksService from "test/mocks/services/MockTasksService";
-import { Meta, StoryFn } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react-webpack5";
 import { mockStore } from "test/mocks/store/MockStore";
 import activeDatabaseTracker from "common/shell/activeDatabaseTracker";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";

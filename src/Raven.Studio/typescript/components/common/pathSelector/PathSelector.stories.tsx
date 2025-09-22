@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
 import PathSelector, { PathSelectorProps } from "./PathSelector";
 import React from "react";

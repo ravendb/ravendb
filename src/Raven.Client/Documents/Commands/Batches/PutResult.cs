@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="PutResult.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-namespace Raven.Client.Documents.Commands.Batches
+﻿namespace Raven.Client.Documents.Commands.Batches
 {
     /// <summary>
     /// The result of a PUT operation

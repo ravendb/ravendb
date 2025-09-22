@@ -286,7 +286,7 @@ namespace Raven.Server.ServerWide.Maintenance
                         var tcpClient = connection.TcpClient;
                         var stream = connection.Stream;
                         using (tcpClient)
-                        using (_cts.Token.Register(tcpClient.Dispose))
+                        using (_cts.Token.Register(static (state) => ((TcpClient)state).Dispose(), tcpClient))
                         using (_contextPool.AllocateOperationContext(out JsonOperationContext contextForParsing))
                         using (_contextPool.AllocateOperationContext(out JsonOperationContext contextForBuffer))
                         using (contextForBuffer.GetMemoryBuffer(out var readBuffer))

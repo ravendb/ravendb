@@ -25,6 +25,18 @@ class licenseModel {
         }
 
         if (licenseStatus.IsCloud) {
+            if (licenseType === "Community") {
+                return "Cloud Free";
+            }
+
+            if (licenseType === "Developer") {
+                return "Cloud Developer";
+            }
+
+            if (licenseType === "Enterprise") {
+                return "Cloud Production";
+            }
+
             return "Cloud";
         }
 
@@ -46,26 +58,7 @@ class licenseModel {
             return "AGPL";
         }
         
-        if (licenseStatus.Type === "Invalid") {
-            return "Invalid";
-        }
-        
-        switch (licenseStatus.Type) {
-            case "EnterpriseAi":
-                return "AI";
-            case "Enterprise":
-                return "Enterprise";
-            case "Professional":
-                return "Professional";
-            case "Community":
-                return "Community";
-            case "Developer":
-                return "Developer";
-            case "Essential":
-                return "Essential";
-            default:
-                return licenseStatus.Type;
-        }
+        return licenseModel.licenseTypeTextProvider(licenseStatus);
     }
     
     

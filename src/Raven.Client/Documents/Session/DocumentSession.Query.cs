@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="DocumentSession.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq;
 using Raven.Client.Documents.Queries.Highlighting;

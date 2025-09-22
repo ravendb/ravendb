@@ -32,6 +32,7 @@ using Raven.Server.Exceptions;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.Utils;
 using Sparrow.Collections;
+using Sparrow.Json;
 using Tests.Infrastructure;
 using Tests.Infrastructure.Operations;
 using Xunit;
@@ -145,10 +146,12 @@ namespace FastTests
                         return true;
                 }
             }
+
             if (ex != null)
             {
                 throw ex;
             }
+
             return false;
         }
 
@@ -195,7 +198,7 @@ namespace FastTests
                     // if path is defined we run in a persistent way
                     // so we run in memory only when no path is defined _and_ RunInMemory is true
                     var runInMemory = options.RunInMemory && pathToUse == null;
-                    
+
                     var numOfServers = servers.Count;
                     if (numOfServers == 0)
                     {
@@ -331,6 +334,7 @@ namespace FastTests
                             {
                                 result = DeleteDatabase(serverOperationStore, serverToUse, name, hardDelete);
                             }
+
                             if (servers.Count > 1 && result != null)
                             {
                                 var timeout = options.DeleteTimeout ?? TimeSpan.FromSeconds(Debugger.IsAttached ? 150 : 15);
@@ -345,7 +349,7 @@ namespace FastTests
                             throw;
                         }
                     };
-                    
+
                     CreatedStores.Add(store);
                     if (adminStore != null)
                         CreatedStores.Add(adminStore);
@@ -360,29 +364,29 @@ namespace FastTests
         }
 
         public static bool IsRavenTestCategoryTest(Context context, RavenTestCategory flags)
-                    {
-                        try
-                        {
+        {
+            try
+            {
                 var testMethod = context?.Test?.TestCase?.TestMethod?.Method as ReflectionMethodInfo;
-                            if (testMethod == null)
-                                return false;
+                if (testMethod == null)
+                    return false;
 
-                            var ravenFactAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenFactAttribute>();
-                            if (ravenFactAttribute != null)
+                var ravenFactAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenFactAttribute>();
+                if (ravenFactAttribute != null)
                     return (ravenFactAttribute.Category & flags) != 0;
 
-                            var ravenTheoryAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenTheoryAttribute>();
-                            if (ravenTheoryAttribute != null)
+                var ravenTheoryAttribute = testMethod.MethodInfo.GetCustomAttribute<RavenTheoryAttribute>();
+                if (ravenTheoryAttribute != null)
                     return (ravenTheoryAttribute.Category & flags) != 0;
 
-                            return false;
-                        }
-                        catch
-                        {
-                            // if we can't determine if it's a compression test, we assume it's not 
-                            return false;
-                        }
-                    }
+                return false;
+            }
+            catch
+            {
+                // if we can't determine if it's a compression test, we assume it's not 
+                return false;
+            }
+        }
 
         private static readonly List<string> TestsToSkipForMissingAttachments =
         [
@@ -398,7 +402,7 @@ namespace FastTests
             if (TestsToSkipForMissingAttachments.Contains(caller))
             {
                 return;
-                }
+            }
 
             try
             {
@@ -416,16 +420,18 @@ namespace FastTests
                         foreach (AttachmentHandler.MissingAttachmentInfo attachment in kvp.Value)
                         {
                             sb.AppendLine($"Name: {attachment.Name}, Hash: {attachment.Hash}, MissingType: {attachment.MissingSource}, AttachmentType: {attachment.AttachmentType}");
-            }
+                        }
                     }
+
                     foreach (var kvp in missingAttachments.Revisions)
-            {
+                    {
                         sb.AppendLine($"Collection: {kvp.Key}");
                         foreach (AttachmentHandler.MissingAttachmentInfo attachment in kvp.Value)
                         {
                             sb.AppendLine($"Name: {attachment.Name}, Hash: {attachment.Hash}, MissingType: {attachment.MissingSource}, AttachmentType: {attachment.AttachmentType}");
-            }
-        }
+                        }
+                    }
+
                     throw new MissingAttachmentException(sb.ToString());
                 }
             }
@@ -442,7 +448,6 @@ namespace FastTests
 
         protected virtual void OnCreatingNewDatabase(DatabaseRecord databaseRecord)
         {
-            
         }
 
         private static void CheckIfDatabaseExists(RavenServer server, string name)
@@ -462,6 +467,7 @@ namespace FastTests
                 AsyncHelpers.RunSync(() => ApplySkipDrainAllRequestsToShardedDatabaseAsync(serverToUse, name));
                 return;
             }
+
             AsyncHelpers.RunSync(() => ApplySkipDrainAllRequestsToDatabaseAsync(serverToUse, name));
         }
 
@@ -469,7 +475,7 @@ namespace FastTests
         {
             try
             {
-                await foreach (var shard in Sharding.GetShardsDocumentDatabaseInstancesFor(name, new List<RavenServer>{ serverToUse }))
+                await foreach (var shard in Sharding.GetShardsDocumentDatabaseInstancesFor(name, new List<RavenServer> { serverToUse }))
                 {
                     shard.ForTestingPurposesOnly().SkipDrainAllRequests = true;
                 }
@@ -534,6 +540,7 @@ namespace FastTests
 
                 throw;
             }
+
             return null;
         }
 
@@ -543,6 +550,7 @@ namespace FastTests
             Assert.Single(ret);
             return ret;
         }
+
         protected static async Task<TC> AssertWaitForCountAsync<TC>(Func<Task<TC>> act, int count, int timeout = 15000, int interval = 100) where TC : ICollection
         {
             var ret = await WaitForCountAsync(act, count, timeout, interval);
@@ -552,6 +560,7 @@ namespace FastTests
 
         protected static async Task<TC> WaitForSingleAsync<TC>(Func<Task<TC>> act, int timeout = 15000, int interval = 100) where TC : ICollection =>
             await WaitForCountAsync(act, 1, timeout, interval);
+
         protected static async Task<TC> WaitForCountAsync<TC>(Func<Task<TC>> act, int count, int timeout = 15000, int interval = 100) where TC : ICollection =>
             await WaitForPredicateAsync(a => a != null && a.Count == count, act, timeout, interval);
 
@@ -566,6 +575,12 @@ namespace FastTests
         protected static async Task<T> WaitForGreaterThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable =>
             await WaitForPredicateAsync(a => a.CompareTo(val) > 0, act, timeout, interval);
 
+        protected static async Task<T> WaitForLessThanAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable =>
+            await WaitForPredicateAsync(a => a.CompareTo(val) < 0, act, timeout, interval);
+
+        protected static async Task<T> WaitForNotEqualsAsync<T>(Func<Task<T>> act, T val, int timeout = 15000, int interval = 100) where T : IComparable =>
+            await WaitForPredicateAsync(a => a.CompareTo(val) != 0, act, timeout, interval);
+
         protected static async Task AssertWaitForTrueAsync(Func<Task<bool>> act, int timeout = 15000, int interval = 100)
         {
             Assert.True(await WaitForValueAsync(act, true, timeout, interval));
@@ -579,7 +594,7 @@ namespace FastTests
         }
 
         protected static async Task<T> WaitForValueAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) =>
-             await WaitForPredicateAsync(a => (a == null && expectedVal == null) || (a != null && a.Equals(expectedVal)), act, timeout, interval);
+            await WaitForPredicateAsync(a => (a == null && expectedVal == null) || (a != null && a.Equals(expectedVal)), act, timeout, interval);
 
         protected static async Task AssertWaitForExceptionAsync<T>(Func<Task> act, int timeout = 15000, int interval = 100)
             where T : class
@@ -673,6 +688,20 @@ namespace FastTests
             return actualValue;
         }
 
+        protected static async Task<T> WaitAndAssertForLessThanAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
+        {
+            var actualValue = await WaitForLessThanAsync(act, expectedVal, timeout, interval);
+            Assert.True(actualValue.CompareTo(expectedVal) < 0, $"expectedVal:{expectedVal}, actualValue: {actualValue}");
+            return actualValue;
+        }
+
+        protected static async Task<T> WaitAndAssertForNotEqualsAsync<T>(Func<Task<T>> act, T expectedVal, int timeout = 15000, int interval = 100) where T : IComparable
+        {
+            var actualValue = await WaitForNotEqualsAsync(act, expectedVal, timeout, interval);
+            Assert.True(actualValue.CompareTo(expectedVal) != 0, $"expectedVal:{expectedVal}, actualValue: {actualValue}");
+            return actualValue;
+        }
+
         protected async Task WaitAndAssertForValueAsync<T>(Func<T> act, T expectedVal, int timeout = 15000, int interval = 100)
         {
             var val = await WaitForPredicateAsync(t => t.Equals(expectedVal), () => Task.FromResult(act.Invoke()), timeout, interval);
@@ -700,6 +729,7 @@ namespace FastTests
                         throw;
                     }
                 }
+
                 await Task.Delay(interval);
             }
         }
@@ -719,6 +749,7 @@ namespace FastTests
                     {
                         return currentVal;
                     }
+
                     if (sw.ElapsedMilliseconds > timeout)
                     {
                         return currentVal;
@@ -731,6 +762,7 @@ namespace FastTests
                         throw;
                     }
                 }
+
                 await Task.Delay(interval);
             } while (true);
         }
@@ -758,6 +790,7 @@ namespace FastTests
                     {
                         return currentVal;
                     }
+
                     if (sw.ElapsedMilliseconds > timeout)
                     {
                         return currentVal;
@@ -795,7 +828,7 @@ namespace FastTests
             {
                 var documentsPage = url + "/studio/index.html";
 
-                OpenBrowser(documentsPage);// start the server
+                OpenBrowser(documentsPage); // start the server
 
                 do
                 {
@@ -840,7 +873,7 @@ namespace FastTests
                 var databaseNameEncoded = Uri.EscapeDataString(database ?? documentStore.Database);
                 var documentsPage = urls.First() + "/studio/index.html#databases/documents?&database=" + databaseNameEncoded + "&withStop=true&disableAnalytics=true";
 
-                OpenBrowser(documentsPage);// start the server
+                OpenBrowser(documentsPage); // start the server
 
                 do
                 {
@@ -885,6 +918,7 @@ namespace FastTests
 
                 exceptionAggregator.Execute(store.Dispose);
             }
+
             CreatedStores.Clear();
         }
 
@@ -937,7 +971,7 @@ namespace FastTests
 
             public static Options ForSearchEngine(RavenSearchEngineMode mode, bool includeScoresAndDistances = false)
             {
-                var config = new RavenTestParameters() {SearchEngine = mode};
+                var config = new RavenTestParameters() { SearchEngine = mode };
                 var options = ForSearchEngine(config);
                 return includeScoresAndDistances
                     ? IncludeDistancesAndScores(options)
@@ -955,7 +989,7 @@ namespace FastTests
                 return options;
             }
 
-        public static Options ForSearchEngine(RavenTestParameters config)
+            public static Options ForSearchEngine(RavenTestParameters config)
             {
                 return new Options()
                 {
@@ -996,9 +1030,9 @@ namespace FastTests
                             {
                                 Shards = new Dictionary<int, DatabaseTopology>()
                                 {
-                                    {0, new DatabaseTopology()},
-                                    {1, new DatabaseTopology()},
-                                    {2, new DatabaseTopology()}
+                                    { 0, new DatabaseTopology() },
+                                    { 1, new DatabaseTopology() },
+                                    { 2, new DatabaseTopology() }
                                 }
                             };
                         };
@@ -1194,6 +1228,7 @@ namespace FastTests
                 return new Options(this);
             }
         }
+
         public (int Port, Socket Socket) ReservePort(int port = 0)
         {
             Socket socket = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp);
@@ -1237,12 +1272,36 @@ namespace FastTests
                     {
                         break;
                     }
+
                     ms.Write(buffer.Array, buffer.Offset, result.Count);
-                }
-                while (!result.EndOfMessage);
+                } while (!result.EndOfMessage);
+
                 ms.Seek(0, SeekOrigin.Begin);
 
                 return new StreamReader(ms, Encoding.UTF8).ReadToEnd();
+            }
+        }
+
+        public static bool ValidateErrorNotification(DocumentDatabase db, string err, string id = null)
+        {
+            using (db.NotificationCenter.GetStored(out var actions))
+            {
+                var jsonAlerts = actions.ToList();
+                if (jsonAlerts.Count == 0)
+                    return false;
+                var bjro = jsonAlerts.First().Json;
+
+                if (bjro.TryGet("Details", out BlittableJsonReaderObject details) &&
+                    details.TryGet("Errors", out BlittableJsonReaderArray errors) &&
+                    errors.Length > 0)
+                {
+                    var firstErr = errors.First() as BlittableJsonReaderObject;
+                    return firstErr != null &&
+                           (id == null || (firstErr.TryGet("DocumentId", out string documentId) && documentId == id)) &&
+                           firstErr.TryGet("Error", out string error) && error.Contains(err);
+                }
+
+                return false;
             }
         }
     }

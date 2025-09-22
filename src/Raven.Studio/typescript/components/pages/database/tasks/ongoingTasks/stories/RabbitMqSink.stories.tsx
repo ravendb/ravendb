@@ -1,10 +1,10 @@
 import { mockServices } from "test/mocks/services/MockServices";
 import { TasksStubs } from "test/stubs/TasksStubs";
 import { OngoingTasksPage } from "components/pages/database/tasks/ongoingTasks/OngoingTasksPage";
-import { userEvent, within } from "@storybook/test";
+import { userEvent, within } from "storybook/test";
 import React from "react";
 import { commonInit } from "components/pages/database/tasks/ongoingTasks/stories/common";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
 import OngoingTaskQueueSinkListView = Raven.Client.Documents.Operations.OngoingTasks.OngoingTaskQueueSink;
 import { MockedValue } from "test/mocks/services/AutoMockService";

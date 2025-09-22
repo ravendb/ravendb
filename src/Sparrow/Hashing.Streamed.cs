@@ -1,6 +1,10 @@
 using Sparrow.Binary;
 using System;
 using System.Runtime.CompilerServices;
+#if NET8_0_OR_GREATER
+using System.Runtime.Intrinsics;
+using System.Runtime.Intrinsics.X86;
+#endif
 
 namespace Sparrow
 {
@@ -8,8 +12,6 @@ namespace Sparrow
     {
         internal static class Streamed
         {
-            
-
             internal unsafe struct XXHash64Context
             {
                 public ulong Seed;
@@ -47,26 +49,47 @@ namespace Sparrow
 
                     if (context.BufferSize + size >= Alignment)
                     {
-                        ulong v1 = context.Current.V1;
-                        ulong v2 = context.Current.V2;
-                        ulong v3 = context.Current.V3;
-                        ulong v4 = context.Current.V4;
-
+#if NET8_0_OR_GREATER
+                    if (AdvInstructionSet.X86.IsSupportedAvx512Basic)
+                    {
+                        Vector256<ulong> v = Vector256.LoadUnsafe(ref context.Current.V1);
                         while (buffer <= limit)
                         {
-                            v1 = Bits.RotateLeft64(v1 + ((ulong*)buffer)[0] * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
-                            v2 = Bits.RotateLeft64(v2 + ((ulong*)buffer)[1] * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
-                            v3 = Bits.RotateLeft64(v3 + ((ulong*)buffer)[2] * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
-                            v4 = Bits.RotateLeft64(v4 + ((ulong*)buffer)[3] * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
-
+                            v = Vector256.Multiply(
+                                Avx512F.VL.RotateLeft(
+                                    Vector256.Add(
+                                        Vector256.Multiply(Vector256.LoadUnsafe(ref Unsafe.AsRef<ulong>(buffer)), XXHash64Constants.PRIME64_2), v), 31),
+                                XXHash64Constants.PRIME64_1);
                             buffer += 4 * sizeof(ulong);
                             context.BufferSize += Alignment;
                         }
+                        
+                        v.StoreUnsafe(ref context.Current.V1);
+                    }
+                    else
+#endif
+                        {
+                            ulong v1 = context.Current.V1;
+                            ulong v2 = context.Current.V2;
+                            ulong v3 = context.Current.V3;
+                            ulong v4 = context.Current.V4;
 
-                        context.Current.V1 = v1;
-                        context.Current.V2 = v2;
-                        context.Current.V3 = v3;
-                        context.Current.V4 = v4;
+                            while (buffer <= limit)
+                            {
+                                v1 = Bits.RotateLeft64(v1 + ((ulong*)buffer)[0] * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+                                v2 = Bits.RotateLeft64(v2 + ((ulong*)buffer)[1] * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+                                v3 = Bits.RotateLeft64(v3 + ((ulong*)buffer)[2] * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+                                v4 = Bits.RotateLeft64(v4 + ((ulong*)buffer)[3] * XXHash64Constants.PRIME64_2, 31) * XXHash64Constants.PRIME64_1;
+
+                                buffer += 4 * sizeof(ulong);
+                                context.BufferSize += Alignment;
+                            }
+
+                            context.Current.V1 = v1;
+                            context.Current.V2 = v2;
+                            context.Current.V3 = v3;
+                            context.Current.V4 = v4;
+                        }
                     }
 
                     for (int i = 0; i < context.LeftoverCount; i++)
@@ -125,13 +148,13 @@ namespace Sparrow
 
                             if (buffer + 4 <= bEnd)
                             {
-                                h64 = Bits.RotateLeft64(h64 ^(*(uint*)buffer * XXHash64Constants.PRIME64_1), 23) * XXHash64Constants.PRIME64_2 + XXHash64Constants.PRIME64_3;
+                                h64 = Bits.RotateLeft64(h64 ^ (*(uint*)buffer * XXHash64Constants.PRIME64_1), 23) * XXHash64Constants.PRIME64_2 + XXHash64Constants.PRIME64_3;
                                 buffer += 4;
                             }
 
                             while (buffer < bEnd)
                             {
-                                h64 = Bits.RotateLeft64(h64 ^(*buffer * XXHash64Constants.PRIME64_5), 11) * XXHash64Constants.PRIME64_1;
+                                h64 = Bits.RotateLeft64(h64 ^ (*buffer * XXHash64Constants.PRIME64_5), 11) * XXHash64Constants.PRIME64_1;
                                 buffer++;
                             }
                         }

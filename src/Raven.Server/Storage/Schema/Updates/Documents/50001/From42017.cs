@@ -167,7 +167,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         private static unsafe void UpdateDocumentCounters(UpdateStep step, DocumentsOperationContext context, string docId, CollectionName collection)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, docId, out Slice lowerDocId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, docId, out Slice lowerDocId))
             {
                 var table = step.WriteTx.OpenTable(DocsSchemaBase, collection.GetTableName(CollectionTableType.Documents));
                 if (table.ReadByKey(lowerDocId, out var tvr) == false)
@@ -274,7 +274,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
                 yield break;
             }
 
-            using (DocumentIdWorker.GetSliceFromId(ctx, prefix, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(ctx, prefix, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
             {
                 if (table.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out var reader))
                 {
@@ -295,7 +295,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
 
         private unsafe void PutCounters(DocumentsOperationContext context, UpdateStep step, string documentId, string changeVector, BlittableJsonReaderObject sourceData, CollectionName collection)
         {
-            using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice lowerId))
+            using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice lowerId))
             {
                 var docsTable = new Table(DocsSchemaBase, step.ReadTx);
                 if (docsTable.ReadByKey(lowerId, out _) == false)
@@ -310,7 +310,7 @@ namespace Raven.Server.Storage.Schema.Updates.Documents
             {
                 var table = step.DocumentsStorage.CountersStorage.GetOrCreateTable(step.WriteTx, CountersSchemaBase, collection, CollectionTableType.CounterGroups);
 
-                using (DocumentIdWorker.GetSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                using (DocumentIdWorker.GetLoweredIdSliceFromId(context, documentId, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                 {
                     if (sourceData.TryGet(Values, out BlittableJsonReaderObject sourceCounters) == false)
                     {

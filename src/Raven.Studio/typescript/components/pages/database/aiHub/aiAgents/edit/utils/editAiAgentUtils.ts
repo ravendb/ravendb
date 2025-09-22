@@ -44,6 +44,8 @@ function mapFromDto(
             dto.Queries?.map((x) => ({
                 name: x.Name,
                 description: x.Description,
+                isAllowModelQueries: x.Options?.AllowModelQueries ?? null,
+                isAddToInitialContext: x.Options?.AddToInitialContext ?? null,
                 query: x.Query,
                 parametersSchema: x.ParametersSchema ?? "",
                 parametersSampleObject: x.ParametersSampleObject ?? "",
@@ -104,6 +106,10 @@ function mapToDto(formData: EditAiAgentFormData): Raven.Client.Documents.Operati
                 Query: x.query,
                 ParametersSampleObject: x.parametersSampleObject || null,
                 ParametersSchema: x.parametersSchema || null,
+                Options: {
+                    AddToInitialContext: x.isAddToInitialContext,
+                    AllowModelQueries: x.isAllowModelQueries,
+                },
             })) ?? [],
         Actions:
             formData.actions?.map((x) => ({

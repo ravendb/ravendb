@@ -32,6 +32,7 @@ using Raven.Client.Exceptions.Documents.Indexes;
 using Raven.Client.Http;
 using Raven.Client.ServerWide;
 using Raven.Client.ServerWide.Commands.Cluster;
+using Raven.Client.ServerWide.Operations;
 using Raven.Client.ServerWide.Operations.Configuration;
 using Raven.Client.ServerWide.Sharding;
 using Raven.Client.Util;
@@ -1069,7 +1070,7 @@ public class MyAnalyzer2 : Analyzer
         public async Task Prevent_Put_Dynamic_Node_Distribution()
         {
             DoNotReuseServer();
-            var (_, leader) = await CreateRaftCluster(3);
+            var (nodes, leader) = await CreateRaftCluster(3);
             var options = Options.ForMode(RavenDatabaseMode.Sharded);
             options.Server = leader;
             options.ModifyDatabaseRecord = record =>
@@ -1084,6 +1085,29 @@ public class MyAnalyzer2 : Analyzer
 
             using (var store = GetDocumentStore(options))
             {
+                await WaitForValueAsync(async () =>
+                {
+                    var sum = 0;
+                    foreach (var node in nodes)
+                    {
+                        using var perNodeStore = new DocumentStore
+                        {
+                            Urls = new[] { node.WebUrl },
+                            Database = store.Database,
+                            Conventions = store.Conventions
+                        }.Initialize();
+
+                        var recored = await perNodeStore.Maintenance.Server.SendAsync(
+                            new GetDatabaseRecordOperation(store.Database));
+
+                        if (recored.Topology.DynamicNodesDistribution)
+                            sum++;
+                    }
+                    return sum;
+                }, 3, timeout: 30_000);
+
+
+
                 var exception = await Assert.ThrowsAsync<LicenseLimitException>(async () =>
                 {
                     await PutLicense(leader, RL_COMM);

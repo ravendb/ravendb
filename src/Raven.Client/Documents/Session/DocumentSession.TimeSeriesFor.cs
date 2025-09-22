@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="DocumentSession.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using Raven.Client.Documents.Operations.TimeSeries;
+﻿using Raven.Client.Documents.Operations.TimeSeries;
 using Raven.Client.Documents.Session.TimeSeries;
 using Raven.Client.Documents.TimeSeries;
 

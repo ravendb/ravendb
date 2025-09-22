@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="DocumentSessionAttachmentsBase.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.IO;
 using Raven.Client.Documents.Commands.Batches;
 using Raven.Client.Documents.Operations.Attachments;
@@ -22,6 +16,11 @@ namespace Raven.Client.Documents.Session
         {
         }
 
+        /// <summary>
+        /// Returns the attachments info of a document
+        /// </summary>
+        /// <param name="entity">The entity instance for which to retrieve attachment information</param>
+        /// <returns>Array of attachment names and their metadata</returns>
         public AttachmentName[] GetNames(object entity)
         {
             if (entity == null)
@@ -45,6 +44,13 @@ namespace Raven.Client.Documents.Session
             return results;
         }
 
+        /// <summary>
+        /// Stores attachment to be sent in the session
+        /// </summary>
+        /// <param name="documentId">The document identifier</param>
+        /// <param name="name">The attachment name</param>
+        /// <param name="stream">The attachment content stream</param>
+        /// <param name="contentType">The content type of the attachment</param>
         public void Store(string documentId, string name, Stream stream, string contentType = null)
         {
             if (string.IsNullOrWhiteSpace(documentId))
@@ -71,6 +77,13 @@ namespace Raven.Client.Documents.Session
             Defer(new PutAttachmentCommandData(documentId, name, stream, contentType, null));
         }
 
+        /// <summary>
+        /// Stores attachment to be sent in the session
+        /// </summary>
+        /// <param name="entity">The entity instance to attach the attachment to</param>
+        /// <param name="name">The attachment name</param>
+        /// <param name="stream">The attachment content stream</param>
+        /// <param name="contentType">The content type of the attachment</param>
         public void Store(object entity, string name, Stream stream, string contentType = null)
         {
             if (Session.DocumentsByEntity.TryGetValue(entity, out var document) == false)
@@ -89,6 +102,11 @@ namespace Raven.Client.Documents.Session
             throw new ArgumentException($"{entity} is not associated with the session. You need to track the entity in the session.", nameof(entity));
         }
 
+        /// <summary>
+        /// Marks the specified document's attachment for deletion. The attachment will be deleted when SaveChanges is called
+        /// </summary>
+        /// <param name="entity">The entity instance whose attachment to delete</param>
+        /// <param name="name">The attachment name</param>
         public void Delete(object entity, string name)
         {
             if (Session.DocumentsByEntity.TryGetValue(entity, out var document) == false)
@@ -97,6 +115,11 @@ namespace Raven.Client.Documents.Session
             Delete(document.Id, name);
         }
 
+        /// <summary>
+        /// Marks the specified document's attachment for deletion. The attachment will be deleted when SaveChanges is called
+        /// </summary>
+        /// <param name="documentId">The document identifier</param>
+        /// <param name="name">The attachment name</param>
         public void Delete(string documentId, string name)
         {
             if (string.IsNullOrWhiteSpace(documentId))
@@ -121,16 +144,35 @@ namespace Raven.Client.Documents.Session
             Defer(new DeleteAttachmentCommandData(documentId, name, null));
         }
 
+        /// <summary>
+        /// Marks the specified document's attachment for rename. The attachment will be renamed when SaveChanges is called
+        /// </summary>
+        /// <param name="documentId">The document identifier</param>
+        /// <param name="name">The current attachment name</param>
+        /// <param name="newName">The new attachment name</param>
         public void Rename(string documentId, string name, string newName)
         {
             Move(documentId, name, documentId, newName);
         }
 
+        /// <summary>
+        /// Marks the specified document's attachment for rename. The attachment will be renamed when SaveChanges is called
+        /// </summary>
+        /// <param name="entity">The entity instance whose attachment to rename</param>
+        /// <param name="name">The current attachment name</param>
+        /// <param name="newName">The new attachment name</param>
         public void Rename(object entity, string name, string newName)
         {
             Move(entity, name, entity, newName);
         }
 
+        /// <summary>
+        /// Moves specified source document attachment to destination document. The operation will be executed when SaveChanges is called
+        /// </summary>
+        /// <param name="sourceEntity">The source entity instance which holds the attachment</param>
+        /// <param name="sourceName">The source attachment name</param>
+        /// <param name="destinationEntity">The destination entity instance to which the attachment will be moved</param>
+        /// <param name="destinationName">The destination attachment name</param>
         public void Move(object sourceEntity, string sourceName, object destinationEntity, string destinationName)
         {
             if (sourceEntity == null)
@@ -148,6 +190,13 @@ namespace Raven.Client.Documents.Session
             Move(sourceDocument.Id, sourceName, destinationDocument.Id, destinationName);
         }
 
+        /// <summary>
+        /// Moves specified source document attachment to destination document. The operation will be executed when SaveChanges is called
+        /// </summary>
+        /// <param name="sourceDocumentId">The source document identifier which holds the attachment</param>
+        /// <param name="sourceName">The source attachment name</param>
+        /// <param name="destinationDocumentId">The destination document identifier to which the attachment will be moved</param>
+        /// <param name="destinationName">The destination attachment name</param>
         public void Move(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName)
         {
             if (string.IsNullOrWhiteSpace(sourceDocumentId))
@@ -183,6 +232,13 @@ namespace Raven.Client.Documents.Session
             Defer(new MoveAttachmentCommandData(sourceDocumentId, sourceName, destinationDocumentId, destinationName, null));
         }
 
+        /// <summary>
+        /// Copies specified source document attachment to destination document. The operation will be executed when SaveChanges is called
+        /// </summary>
+        /// <param name="sourceEntity">The source entity instance which holds the attachment</param>
+        /// <param name="sourceName">The source attachment name</param>
+        /// <param name="destinationEntity">The destination entity instance to which the attachment will be copied</param>
+        /// <param name="destinationName">The destination attachment name</param>
         public void Copy(object sourceEntity, string sourceName, object destinationEntity, string destinationName)
         {
             if (sourceEntity == null)
@@ -199,6 +255,13 @@ namespace Raven.Client.Documents.Session
             Copy(sourceDocument.Id, sourceName, destinationDocument.Id, destinationName);
         }
 
+        /// <summary>
+        /// Copies specified source document attachment to destination document. The operation will be executed when SaveChanges is called
+        /// </summary>
+        /// <param name="sourceDocumentId">The source document identifier which holds the attachment</param>
+        /// <param name="sourceName">The source attachment name</param>
+        /// <param name="destinationDocumentId">The destination document identifier to which the attachment will be copied</param>
+        /// <param name="destinationName">The destination attachment name</param>
         public void Copy(string sourceDocumentId, string sourceName, string destinationDocumentId, string destinationName)
         {
             if (string.IsNullOrWhiteSpace(sourceDocumentId))

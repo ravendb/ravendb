@@ -1,5 +1,5 @@
 ﻿import React from "react";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
 import clusterTopologyManager from "common/shell/clusterTopologyManager";
 import { mockServices } from "test/mocks/services/MockServices";

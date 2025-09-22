@@ -45,7 +45,7 @@ namespace Raven.Client.Util
                                                 WebSocketMessageType.Text, 
                                                 false,_cancellationToken);
             _activeWriteTasks.Add(sendTask);
-            sendTask.ContinueWith(t => _activeWriteTasks.TryRemove(t), _cancellationToken);
+            sendTask.ContinueWith(static (t, active) => ((ConcurrentSet<Task>)(active)).TryRemove(t), _activeWriteTasks, _cancellationToken);
         }
 
         /// <exception cref="ArgumentNullException"><paramref name="buffer"/> is <see langword="null" />.</exception>

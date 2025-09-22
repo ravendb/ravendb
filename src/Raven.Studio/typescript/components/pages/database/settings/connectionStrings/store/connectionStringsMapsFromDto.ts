@@ -359,6 +359,9 @@ export function mapAiConnectionsFromDto(
         if (connection.MistralAiSettings) {
             return "mistralAiSettings";
         }
+        if (connection.VertexSettings) {
+            return "vertexSettings";
+        }
         return null;
     };
 
@@ -378,6 +381,8 @@ export function mapAiConnectionsFromDto(
                     deploymentName: connection.AzureOpenAiSettings?.DeploymentName,
                     dimensions: connection.AzureOpenAiSettings?.Dimensions,
                     embeddingsMaxConcurrentBatches: connection.AzureOpenAiSettings?.EmbeddingsMaxConcurrentBatches,
+                    isSetTemperature: connection.AzureOpenAiSettings?.Temperature != null,
+                    temperature: connection.AzureOpenAiSettings?.Temperature ?? null,
                 },
                 googleSettings: {
                     aiVersion: connection.GoogleSettings?.AiVersion,
@@ -398,7 +403,7 @@ export function mapAiConnectionsFromDto(
                     think: connection.OllamaSettings?.Think,
                     embeddingsMaxConcurrentBatches: connection.OllamaSettings?.EmbeddingsMaxConcurrentBatches,
                     isSetTemperature: connection.OllamaSettings?.Temperature != null,
-                    temperature: connection.OllamaSettings?.Temperature,
+                    temperature: connection.OllamaSettings?.Temperature ?? null,
                 },
                 embeddedSettings: {
                     embeddingsMaxConcurrentBatches: connection.EmbeddedSettings?.EmbeddingsMaxConcurrentBatches,
@@ -411,12 +416,21 @@ export function mapAiConnectionsFromDto(
                     projectId: connection.OpenAiSettings?.ProjectId,
                     dimensions: connection.OpenAiSettings?.Dimensions,
                     embeddingsMaxConcurrentBatches: connection.OpenAiSettings?.EmbeddingsMaxConcurrentBatches,
+                    isSetTemperature: connection.OpenAiSettings?.Temperature != null,
+                    temperature: connection.OpenAiSettings?.Temperature ?? null,
                 },
                 mistralAiSettings: {
                     apiKey: connection.MistralAiSettings?.ApiKey,
                     endpoint: connection.MistralAiSettings?.Endpoint,
                     model: connection.MistralAiSettings?.Model,
                     embeddingsMaxConcurrentBatches: connection.MistralAiSettings?.EmbeddingsMaxConcurrentBatches,
+                },
+                vertexSettings: {
+                    aiVersion: connection.VertexSettings?.AiVersion,
+                    googleCredentialsJson: connection.VertexSettings?.GoogleCredentialsJson,
+                    location: connection.VertexSettings?.Location,
+                    model: connection.VertexSettings?.Model,
+                    embeddingsMaxConcurrentBatches: connection.VertexSettings?.EmbeddingsMaxConcurrentBatches,
                 },
             }) satisfies AiConnection
     );

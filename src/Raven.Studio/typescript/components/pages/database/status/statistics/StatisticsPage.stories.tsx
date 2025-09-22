@@ -1,5 +1,5 @@
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { Meta } from "@storybook/react";
+import { Meta } from "@storybook/react-webpack5";
 import { StatisticsPage } from "./StatisticsPage";
 import { DatabasesStubs } from "test/stubs/DatabasesStubs";
 import { mockServices } from "test/mocks/services/MockServices";
