@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="AsyncDocumentSession.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -35,6 +29,12 @@ namespace Raven.Client.Documents.Session
             GenerateDocumentIdsOnStore = false;
         }
 
+        /// <summary>
+        /// Check if document exists without loading it asynchronously
+        /// </summary>
+        /// <param name="id">Document id</param>
+        /// <param name="token">The cancellation token</param>
+        /// <returns>A task that represents the asynchronous operation. The task result contains true if the document exists; otherwise, false</returns>
         public async Task<bool> ExistsAsync(string id, CancellationToken token = default)
         {
             using (AsyncTaskHolder())
@@ -55,6 +55,13 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        /// <summary>
+        /// Refreshes the specified entity from Raven server asynchronously
+        /// </summary>
+        /// <typeparam name="T">The type of the entity</typeparam>
+        /// <param name="entity">The entity to refresh</param>
+        /// <param name="token">The cancellation token</param>
+        /// <returns>A task that represents the asynchronous refresh operation</returns>
         public async Task RefreshAsync<T>(T entity, CancellationToken token = default(CancellationToken))
         {
             using (AsyncTaskHolder())
@@ -71,6 +78,13 @@ namespace Raven.Client.Documents.Session
             }
         }
 
+        /// <summary>
+        /// Refreshes the specified entities from Raven server asynchronously
+        /// </summary>
+        /// <typeparam name="T">The type of the entities</typeparam>
+        /// <param name="entities">The entities to refresh</param>
+        /// <param name="token">The cancellation token</param>
+        /// <returns>A task that represents the asynchronous refresh operation</returns>
         public async Task RefreshAsync<T>(IEnumerable<T> entities, CancellationToken token = default)
         {
             using (AsyncTaskHolder())
@@ -113,16 +127,31 @@ namespace Raven.Client.Documents.Session
             return Conventions.GenerateDocumentIdAsync(DatabaseName, entity);
         }
 
+        /// <summary>
+        /// Access the eager session operations for loading entities immediately
+        /// </summary>
         public IAsyncEagerSessionOperations Eagerly => this;
 
+        /// <summary>
+        /// Access the lazy session operations for deferred loading of entities
+        /// </summary>
         public IAsyncLazySessionOperations Lazily => this;
 
+        /// <summary>
+        /// Access the async attachments operations for this session
+        /// </summary>
         public IAttachmentsSessionOperationsAsync Attachments => _attachments ?? (_attachments = new DocumentSessionAttachmentsAsync(this));
         private IAttachmentsSessionOperationsAsync _attachments;
 
+        /// <summary>
+        /// Access the async revisions operations for this session
+        /// </summary>
         public IRevisionsSessionOperationsAsync Revisions => _revisions ?? (_revisions = new DocumentSessionRevisionsAsync(this));
         private IRevisionsSessionOperationsAsync _revisions;
 
+        /// <summary>
+        /// Access the async cluster-wide transaction operations for this session
+        /// </summary>
         public IClusterTransactionOperationsAsync ClusterTransaction => _clusterTransaction ?? (_clusterTransaction = new ClusterTransactionOperationsAsync(this));
         private IClusterTransactionOperationsAsync _clusterTransaction;
 

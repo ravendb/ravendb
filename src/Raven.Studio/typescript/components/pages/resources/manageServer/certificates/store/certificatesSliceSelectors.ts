@@ -137,6 +137,8 @@ export const certificatesSelectors = {
     wellKnownAdminCerts: (state: RootState) => state.certificates.wellKnownAdminCerts,
     wellKnownIssuers: (state: RootState) => state.certificates.wellKnownIssuers,
     serverCertificateThumbprint: (state: RootState) => state.certificates.serverCertificateThumbprint,
+    serverCertificateForCommunicationThumbprint: (state: RootState) =>
+        state.certificates.serverCertificateForCommunicationThumbprint,
     serverCertificateSetupMode: (state: RootState) => state.certificates.serverCertificateSetupMode,
     serverCertificateRenewalDate: (state: RootState) => state.certificates.serverCertificateRenewalDate,
     nameOrThumbprintFilter: (state: RootState) => state.certificates.nameOrThumbprintFilter,

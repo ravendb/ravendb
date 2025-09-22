@@ -1,6 +1,16 @@
+import { yupObjectSchema } from "components/utils/yupUtils";
 import * as yup from "yup";
 
 export type GenAiStartingPoint = "Beginning of Time" | "Latest Document" | "Change Vector";
+
+const attachmentsSchema = yup.array().of(
+    yupObjectSchema<Raven.Server.Documents.ETL.Providers.AI.AiAttachment>({
+        Data: yup.string(),
+        Name: yup.string(),
+        Source: yup.string<Raven.Server.Documents.ETL.Providers.AI.AiAttachmentSource>(),
+        Type: yup.string(),
+    }).nullable()
+);
 
 export const editGenAiTaskSchema = yup.object({
     // basic step
@@ -67,10 +77,18 @@ export const editGenAiTaskSchema = yup.object({
             value: yup.string(),
             aiHash: yup.string(),
             isCached: yup.boolean(),
+            attachments: attachmentsSchema,
         })
     ),
-    playgroundModelOutputs: yup.array().of(yup.object({ idx: yup.number().nullable(), value: yup.string() })),
+    playgroundModelOutputs: yup.array().of(
+        yup.object({
+            idx: yup.number().nullable(),
+            value: yup.string(),
+            attachments: attachmentsSchema,
+        })
+    ),
     isForceSendingCachedObjects: yup.boolean(),
 });
 
 export type EditGenAiTaskFormData = yup.InferType<typeof editGenAiTaskSchema>;
+export type GenAiAiAttachment = yup.InferType<typeof attachmentsSchema>[number];

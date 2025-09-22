@@ -212,17 +212,19 @@ namespace Raven.Server.Documents.PeriodicBackup.Aws
                         StartAfter = startAfter
                     }, _cancellationToken);
 
-                var result = new ListObjectsResult 
+                var result = new ListObjectsResult
                 {
                     ContinuationToken = response.NextContinuationToken,
                 };
 
                 if (listFolders)
                 {
-                    result.FileInfoDetails = response
-                        .CommonPrefixes
-                        .Select(x => new S3FileInfoDetails { FullPath = x })
-                        .ToList();
+                    if (response.CommonPrefixes != null)
+                    {
+                        result.FileInfoDetails = response
+                            .CommonPrefixes.Select(x => new S3FileInfoDetails { FullPath = x })
+                            .ToList();
+                    }
                 }
                 else
                 {

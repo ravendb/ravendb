@@ -2,6 +2,7 @@ import { Column, Table as TanstackTable, flexRender } from "@tanstack/react-tabl
 import classNames from "classnames";
 import "./VirtualTableHead.scss";
 import ColumnSettings from "components/common/virtualTable/partials/VirtualTableColumnSettings";
+import { virtualTableConstants } from "../utils/virtualTableConstants";
 
 interface VirtualTableHeadProps<T> {
     table: TanstackTable<T>;
@@ -9,7 +10,7 @@ interface VirtualTableHeadProps<T> {
 
 export default function VirtualTableHead<T>({ table }: VirtualTableHeadProps<T>) {
     return (
-        <thead>
+        <thead style={{ height: virtualTableConstants.headerHeightInPx }}>
             {table.getHeaderGroups().map((headerGroup) => (
                 <tr key={headerGroup.id} className="d-flex">
                     {headerGroup.headers.map((header) => (

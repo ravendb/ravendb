@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="ChecksumMismatchAfterRecovery.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.IO;
 using Tests.Infrastructure;
 using Voron;

@@ -1,5 +1,5 @@
 import React from "react";
-import { Meta, StoryFn } from "@storybook/react";
+import { Meta, StoryFn } from "@storybook/react-webpack5";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import StudioDatabaseConfiguration from "./StudioDatabaseConfiguration";
 import { mockStore } from "test/mocks/store/MockStore";

@@ -285,7 +285,7 @@ static readonly embeddingsGenerationSampleText =
     Name: this.Name,
     Note: text.split(this.Note, 2048),
     Description: text.splitLines(this.Description, 2048),
-    Paragraphs: text.splitParagraphs(this.Paragraphs, 2048)
+    Paragraphs: text.splitParagraphs(this.Paragraphs, 2048, 128)
 });`;
 
 embeddingsGenerationSampleMarkdownHighlighted = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleMarkdown);
@@ -293,7 +293,7 @@ embeddingsGenerationSampleMarkdownHighlighted = transformationScriptSyntax.highl
 static readonly embeddingsGenerationSampleMarkdown =
 `embeddings.generate({ 
     MarkdownDescription: markdown.splitLines(this.MarkdownDescription, 2048),
-    MarkdownSections: markdown.splitParagraphs(this.MarkdownSections, 1024)
+    MarkdownSections: markdown.splitParagraphs(this.MarkdownSections, 1024, 64)
 });`
 
 embeddingsGenerationSampleHtmlHighlighted = transformationScriptSyntax.highlightJavascript(transformationScriptSyntax.embeddingsGenerationSampleHtml);

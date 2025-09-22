@@ -33,7 +33,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 {
     public sealed class ServerWideDebugInfoPackageHandler : ServerRequestHandler
     {
-        internal const string _serverWidePrefix = "server-wide";
+        internal const string ServerWidePrefix = "server-wide";
 
         internal static readonly string[] FieldsThatShouldBeExposedForDebug = new string[]
         {
@@ -158,7 +158,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
         private async Task WriteDebugInfoPackageForNodeAsync(JsonOperationContext context, ZipArchive archive, string tag, string url, OperationCancelToken clusterOperationToken, int timeoutInSecPerNode, StringValues databases, DebugInfoPackageContentType contentType)
         {
             //note : theoretically GetDebugInfoFromNodeAsync() can throw, error handling is done at the level of WriteDebugInfoPackageForNodeAsync() calls
-            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(url, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(url, Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
             {
                 var nextOperationId = new GetNextServerOperationIdCommand();
                 await requestExecutor.ExecuteAsync(nextOperationId, context);
@@ -248,7 +248,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private static async Task WriteLogFile(ZipArchive archive, CancellationToken token)
         {
-            var prefix = $"{_serverWidePrefix}/{DateTime.UtcNow:yyyy-MM-dd H-mm-ss}.log";
+            var prefix = $"{ServerWidePrefix}/{DateTime.UtcNow:yyyy-MM-dd H-mm-ss}.log";
             var entry = archive.CreateEntry(prefix, CompressionLevel.Optimal);
             entry.ExternalAttributes = (int)(FilePermissions.S_IRUSR | FilePermissions.S_IWUSR) << 16;
             await using (var entryStream = entry.Open())
@@ -395,7 +395,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
 
         private async Task WriteServerInfo(ZipArchive archive, JsonOperationContext jsonOperationContext, LocalEndpointClient localEndpointClient, CancellationToken token = default)
         {
-            await WriteForServerOrDatabase(archive, jsonOperationContext, localEndpointClient, RouteInformation.RouteType.None, _serverWidePrefix, null, null, token);
+            await WriteForServerOrDatabase(archive, jsonOperationContext, localEndpointClient, RouteInformation.RouteType.None, ServerWidePrefix, null, null, token);
         }
 
         private async Task WriteForServerOrDatabase(ZipArchive archive, JsonOperationContext context, LocalEndpointClient localEndpointClient, RouteInformation.RouteType routeType, string path, string databaseName, Dictionary<string, StringValues> endpointParameters = null, CancellationToken token = default)

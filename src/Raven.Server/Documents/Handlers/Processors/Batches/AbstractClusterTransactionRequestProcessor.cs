@@ -67,8 +67,8 @@ public abstract class AbstractClusterTransactionRequestProcessor<TRequestHandler
         var clusterTransactionCommand = CreateClusterTransactionCommand(parsedCommands, options, raftRequestId);
         clusterTransactionCommand.Timeout = Timeout.InfiniteTimeSpan; // we rely on the http token to cancel the command
 
-        using (RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(id: options.TaskId, out var tcs))
-        await using (token.Register(() => tcs.TrySetCanceled()))
+        using (RequestHandler.ServerStore.Cluster.ClusterTransactionWaiter.CreateTask(id: options.TaskId, out TaskCompletionSource<HashSet<string>> tcs))
+        await using (token.Register(static state => ((TaskCompletionSource<HashSet<string>>)state).TrySetCanceled(), tcs))
         {
             (long index, object result) = await RequestHandler.ServerStore.SendToLeaderAsync(clusterTransactionCommand, token);
             var array = await GetClusterTransactionDatabaseCommandsResults(result, clusterTransactionCommand.DatabaseCommandsCount, index, options, tcs.Task, token);

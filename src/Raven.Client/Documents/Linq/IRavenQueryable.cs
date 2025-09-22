@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="IRavenQueryable.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Linq;
 using System.Linq.Expressions;
 using Raven.Client.Documents.Queries.Highlighting;

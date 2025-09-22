@@ -14,6 +14,7 @@ interface InitialState {
     isInitialLoad: boolean;
     loadStatus: loadStatus;
     serverCertificateThumbprint: string;
+    serverCertificateForCommunicationThumbprint: string;
     serverCertificateRenewalDate: string;
     serverCertificateSetupMode: Raven.Server.Commercial.SetupMode;
     wellKnownAdminCerts: string[];
@@ -35,6 +36,7 @@ const initialState: InitialState = {
     loadStatus: "idle",
     isInitialLoad: true,
     serverCertificateThumbprint: null,
+    serverCertificateForCommunicationThumbprint: null,
     serverCertificateRenewalDate: null,
     serverCertificateSetupMode: null,
     wellKnownAdminCerts: [],
@@ -116,6 +118,7 @@ export const certificatesSlice = createSlice({
             state.serverCertificateRenewalDate = serverCertificateRenewalDate;
             state.serverCertificateSetupMode = serverCertificateSetupMode;
             state.serverCertificateThumbprint = certificatesDto.LoadedServerCert;
+            state.serverCertificateForCommunicationThumbprint = certificatesDto.LoadedServerCertForCommunication;
             state.wellKnownAdminCerts = certificatesDto.WellKnownAdminCerts ?? [];
             state.wellKnownIssuers = certificatesDto.WellKnownIssuers ?? [];
 

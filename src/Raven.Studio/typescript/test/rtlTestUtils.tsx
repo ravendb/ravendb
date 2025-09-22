@@ -22,7 +22,7 @@ import { Provider as ReduxProvider } from "react-redux";
 import { setEffectiveTestStore } from "components/storeCompat";
 import { DirtyFlagProvider } from "components/hooks/useDirtyFlag";
 import { ConfirmDialogProvider } from "components/common/ConfirmDialog";
-import userEvent from "@testing-library/user-event";
+import { userEvent } from "storybook/internal/test";
 import { DialogProvider } from "components/common/Dialog";
 
 let needsTestMock = true;

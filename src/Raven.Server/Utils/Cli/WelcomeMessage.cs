@@ -36,7 +36,7 @@ namespace Raven.Server.Utils.Cli
             ConsoleWriteWithColor(new ConsoleText { Message = " Built with ", ForegroundColor = ConsoleColor.Gray },
                 new ConsoleText { Message = "love ", ForegroundColor = ConsoleColor.Red },
                 new ConsoleText { Message = "by ", ForegroundColor = ConsoleColor.Gray },
-                new ConsoleText { Message = "Hibernating Rhinos ", ForegroundColor = ConsoleColor.Yellow },
+                new ConsoleText { Message = "RavenDB Ltd. ", ForegroundColor = ConsoleColor.Yellow },
                 new ConsoleText { Message = "and awesome contributors!", ForegroundColor = ConsoleColor.Gray, IsNewLinePostPended = true });
             _tw.WriteLine(lineBorder);
         }

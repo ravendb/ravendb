@@ -1,0 +1,20 @@
+@use "Content/scss/bs5variables";
+@use "Content/scss/colors";
+@use "Content/scss/sizes";
+
+.gradient-top {
+    border-radius: sizes.$border-radius-sm;
+
+    &::before {
+        content: "";
+        position: absolute;
+        top: -#{sizes.$gutter-sm};
+        left: 0;
+        right: 0;
+        height: 36px;
+        z-index: 4;
+        background: linear-gradient(0deg, var(--bs-body-bg) 0%, transparent 1000%);
+        filter: blur(sizes.$gutter-xxs);
+        margin: 0 -#{sizes.$gutter-sm};
+    }
+}

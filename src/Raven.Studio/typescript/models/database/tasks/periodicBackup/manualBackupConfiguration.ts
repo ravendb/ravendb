@@ -27,7 +27,9 @@ class manualBackupConfiguration extends backupConfiguration {
             this.backupType,
             this.backupUploadMode,
             this.encryptionSettings().dirtyFlag().isDirty,
-            this.anyBackupTypeIsDirty
+            this.anyBackupTypeIsDirty,
+            this.isSetMaxReadOpsPerSecond,
+            this.maxReadOpsPerSecond
         ], false, jsonUtil.newLineNormalizingHashFunction);
     }
 
@@ -61,7 +63,8 @@ class manualBackupConfiguration extends backupConfiguration {
             GlacierSettings: this.glacierSettings().toDto(),
             AzureSettings: this.azureSettings().toDto(),
             GoogleCloudSettings: this.googleCloudSettings().toDto(),
-            FtpSettings: this.ftpSettings().toDto()
+            FtpSettings: this.ftpSettings().toDto(),
+            MaxReadOpsPerSecond: this.isSetMaxReadOpsPerSecond() ? this.maxReadOpsPerSecond() : null
         }
     }
 

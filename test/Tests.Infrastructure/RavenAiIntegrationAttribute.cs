@@ -20,9 +20,10 @@ public enum RavenAiIntegration
     Google = 1 << 5,
     HuggingFace = 1 << 6,
     MistralAi = 1 << 7,
+    Vertex = 1 << 8,
 
-    All = OpenAi | AzureOpenAI | Ollama | Onnx | Google | HuggingFace | MistralAi,
-    NonInternal = OpenAi | AzureOpenAI | Ollama | Google | HuggingFace | MistralAi
+    All = OpenAi | AzureOpenAI | Ollama | Onnx | Google | HuggingFace | MistralAi | Vertex,
+    NonInternal = OpenAi | AzureOpenAI | Ollama | Google | HuggingFace | MistralAi | Vertex
 }
 
 public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDataAttributeBase
@@ -56,8 +57,8 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
             {
                 using (SetSkipValueIfNightlyBuildRequired())
                 using (SetSkipValueIfShardedDbOnX86(databaseMode))
+                using (SetSkipValueIfNoRequiredEnvVariablesDefined(aiConnectionStringForTesting))
                 using (SetSkipValueIfUnableConnectToAi(aiConnectionStringForTesting))
-                using (SetSkipValueIfNoApiKeyDefined(aiConnectionStringForTesting))
                 {
                     var aiIntegrationConfiguration = aiConnectionStringForTesting.GetAiConfiguration();
 
@@ -89,15 +90,15 @@ public abstract class AbstractRavenAiIntegrationDataAttribute<TConfig> : RavenDa
     }
     
     
-    private DisposableAction SetSkipValueIfNoApiKeyDefined(IAiConnectorForTesting<TConfig> aiConnectorForTesting)
+    private DisposableAction SetSkipValueIfNoRequiredEnvVariablesDefined(IAiConnectorForTesting<TConfig> aiConnectorForTesting)
     {
         if (string.IsNullOrEmpty(Skip) == false)
             return null;
 
-        if (aiConnectorForTesting.MissingRequiredApiKey(out var envVar) is false)
+        if (aiConnectorForTesting.MissingRequiredEnvVariables(out var envVar) is false)
             return null;
         
-        Skip = $"API Key is required for {aiConnectorForTesting.AiConnectorType}, but was not specified using: {envVar}";
+        Skip = $"The environment variable {envVar} is required for {aiConnectorForTesting.AiConnectorType}, but was not set.";
         return new DisposableAction(() => Skip = null);
     }
 
@@ -153,6 +154,9 @@ public class RavenGenAiDataAttribute : AbstractRavenAiIntegrationDataAttribute<G
 
         if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
             yield return GenAiOllamaConnectorForTesting.CreateNewInstance(testMethodName);
+
+        if (aiIntegration.HasFlag(RavenAiIntegration.AzureOpenAI))
+            yield return GenAiAzureOpenAiConnectorForTesting.CreateNewInstance(testMethodName);
     }
 
     public override IEnumerable<IAiConnectorForTesting<GenAiConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration)
@@ -162,6 +166,9 @@ public class RavenGenAiDataAttribute : AbstractRavenAiIntegrationDataAttribute<G
 
         if (aiIntegration.HasFlag(RavenAiIntegration.Ollama))
             yield return GenAiOllamaConnectorForTesting.Instance;
+
+        if (aiIntegration.HasFlag(RavenAiIntegration.AzureOpenAI))
+            yield return GenAiAzureOpenAiConnectorForTesting.Instance;
     }
 }
 
@@ -189,6 +196,9 @@ public class RavenAiEmbeddingsDataAttribute : AbstractRavenAiIntegrationDataAttr
         
         if (aiIntegration.HasFlag(RavenAiIntegration.MistralAi))
             yield return EmbeddingsMistralAiConnectorForTesting.CreateNewInstance(testMethodName);
+        
+        if (aiIntegration.HasFlag(RavenAiIntegration.Vertex))
+            yield return EmbeddingsVertexConnectorForTesting.CreateNewInstance(testMethodName);
     }
 
     public override IEnumerable<IAiConnectorForTesting<EmbeddingsGenerationConfiguration>> GetAiConnectionStringsSingleton(RavenAiIntegration aiIntegration)
@@ -213,6 +223,9 @@ public class RavenAiEmbeddingsDataAttribute : AbstractRavenAiIntegrationDataAttr
         
         if (aiIntegration.HasFlag(RavenAiIntegration.MistralAi))
             yield return EmbeddingsMistralAiConnectorForTesting.Instance;
+        
+        if (aiIntegration.HasFlag(RavenAiIntegration.Vertex)) 
+            yield return EmbeddingsVertexConnectorForTesting.Instance;
     }
 }
 

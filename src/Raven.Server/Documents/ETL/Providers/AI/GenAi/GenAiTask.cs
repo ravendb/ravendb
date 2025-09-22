@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Raven.Client;
+using Raven.Client.Documents.Attachments;
 using Raven.Client.Documents.Operations;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.AI.Agents;
@@ -154,7 +155,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         if (exceptions?.Count > 0)
         {
             _maxConcurrency = 1;
-            throw new AggregateException(exceptions);
+            throw new AggregateException(exceptions).ExtractSingleInnerException();
         }
 
         // we had no errors, re-raise max concurrency slowly
@@ -197,7 +198,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 Task<(string Result, AiUsage Usage)> task;
                 try
                 {
-                    task = _chatCompletionClient.CompleteAsync(Configuration.Prompt, json, Schema, CancellationToken);
+                    task = _chatCompletionClient.CompleteAsync(Configuration.Prompt, json,Schema, item.ContextOutput.Attachments, CancellationToken);
                 }
                 catch (Exception e)
                 {
@@ -250,7 +251,7 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
             item.ModelOutput = new ModelOutput
             {
-                Output = context.Sync.ReadForMemory(result, item.DocId)
+                Output = context.Sync.ReadForMemory(result, item.DocumentId)
             };
 
             statsScope.Usage ??= new AiUsage();
@@ -284,11 +285,11 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                     // item again in the future.
                     item.UpdateHash = true;
                     var msg =
-                        $"Model call failed for context in document '{item.DocId}' ({singleEx.GetType().Name}). {Environment.NewLine}" +
+                        $"Model call failed for context in document '{item.DocumentId}' ({singleEx.GetType().Name}). {Environment.NewLine}" +
                         $"Context was: {item.ContextOutput.Context}{Environment.NewLine}" +
                         $"{singleEx}";
 
-                    Statistics.RecordPartialLoadError(msg, item.DocId);
+                    Statistics.RecordPartialLoadError(msg, item.DocumentId);
                     Logger.Warn(msg);
                     return null;
                 default:
@@ -333,7 +334,20 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         {
             case TestStage.CreateContextObjects:
             case TestStage.ApplyUpdateScript:
-                if (testGenAiScript.Document != null)
+
+                if (testGenAiScript.Document == null && string.IsNullOrEmpty(testGenAiScript.DocumentId))
+                    throw new InvalidOperationException("Document or DocumentId must be provided to run GenAI test");
+
+                if (testGenAiScript.Document != null && string.IsNullOrEmpty(testGenAiScript.DocumentId) == false)
+                {
+                    context.OpenReadTransaction();
+                    document = context.DocumentDatabase.DocumentsStorage.Get(context, testGenAiScript.DocumentId, DocumentFields.Id | DocumentFields.LowerId | DocumentFields.ChangeVector);
+                    if (document == null)
+                        throw new InvalidOperationException($"Document {testGenAiScript.DocumentId} does not exist");
+
+                    document.Data = testGenAiScript.Document;
+                }
+                else if (testGenAiScript.Document != null)
                 {
                     document = new Document
                     {
@@ -344,9 +358,6 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
                 }
                 else
                 {
-                    if (string.IsNullOrEmpty(testGenAiScript.DocumentId))
-                        throw new InvalidOperationException("Document or DocumentId must be provided to run GenAI test");
-
                     context.OpenReadTransaction();
                     document = context.DocumentDatabase.DocumentsStorage.Get(context, testGenAiScript.DocumentId)?.Clone(context);
                     if (document == null)
@@ -368,17 +379,24 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
 
                 var genAiItem = new GenAiItem(document, Configuration.Collection);
                 var transformedResults = Transform([genAiItem], context, scope, new EtlProcessState());
+
                 items = PrepareItemsBeforeSendingToModel(transformedResults);
 
                 context.CloseTransaction();
+
                 break;
             case TestStage.SendToModel:
-                _chatCompletionClient ??= GetClient();
                 items = testGenAiScript.Input;
+                using (context.OpenReadTransaction())
+                    ReloadAttachmentsData(context, items);
+
+                _chatCompletionClient ??= GetClient();
                 List<Exception> exceptions = SendToModel(items, context, scope);
                 if (exceptions is not null)
                     throw new AggregateException(exceptions);
 
+                // Remove ContextOutputs (as they're unnecessary for the next stage)
+                items.ForEach(item => item.ContextOutput.Attachments = null );
                 break;
             case TestStage.ApplyUpdateScript:
                 {
@@ -471,6 +489,26 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         };
     }
 
+    private void ReloadAttachmentsData(DocumentsOperationContext context, IEnumerable<GenAiResultItem> items)
+    {
+        // load the attachments data again and replace the summary(preview) with it
+        foreach (var item in items)
+        {
+            if (item.ContextOutput.Attachments.IsNullOrEmpty())
+                continue;
+
+            foreach (var genAtt in item.ContextOutput.Attachments.Where(a => a.Source == AiAttachmentSource.FromAttachment))
+            {
+                // try to reload again every loaded/not-found attachment
+                var attachment = Database.DocumentsStorage.AttachmentsStorage.GetAttachment(context, item.DocumentId, genAtt.Name, AttachmentType.Document, changeVector: null);
+                if (attachment == null)
+                    throw new InvalidOperationException($"The document '{item.DocumentId}' has no attachment with name '{genAtt.Name}' from type '{genAtt.Type}' anymore");
+                
+                genAtt.Data = GenAiScriptTransformer.GetAttachmentDataAsBase64(attachment, genAtt.Type);
+            }
+        }
+    }
+
     private static void FilterMetadataProperties(DocumentsOperationContext context, Document document)
     {
         if (document!.Data.TryGet(Constants.Documents.Metadata.Key, out BlittableJsonReaderObject metadata))
@@ -507,13 +545,14 @@ public sealed class GenAiTask : EtlProcess<GenAiItem, GenAiScriptResult, GenAiCo
         {
             var item = new GenAiResultItem
             {
-                DocId = scriptResult.DocumentId,
+                DocumentId = scriptResult.DocumentId,
 
                 ContextOutput = new ContextOutput
                 {
                     Context = scriptResult.Context,
                     IsCached = scriptResult.IsCached,
-                    AiHash = scriptResult.AiHash
+                    AiHash = scriptResult.AiHash,
+                    Attachments = scriptResult.Attachments
                 }
             };
 

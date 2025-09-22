@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="IndexQuery.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using Raven.Client.Documents.Conventions;
 using Raven.Client.Json.Serialization;
 using Sparrow.Json;

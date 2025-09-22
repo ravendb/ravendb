@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using Lextm.SharpSnmpLib;
+using Raven.Client;
 using Raven.Server.Platform.Posix;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -18,7 +19,7 @@ namespace Raven.Server.Monitoring.Snmp
         {
         }
 
-        public const string Root = "1.3.6.1.4.1.45751.1.1.";
+        public const string Root = Constants.Monitoring.Snmp.SnmpRootOid + ".";
 
         public sealed class Server
         {
@@ -105,6 +106,18 @@ namespace Raven.Server.Monitoring.Snmp
             [SnmpDataType(SnmpType.Integer32)]
             [Description("Number of open file descriptors for Server (Linux only)")]
             public const string ProcessOpenFileDescriptors = "1.5.5";
+
+            [SnmpDataType(SnmpType.OctetString)]
+            [Description("Load average over 1 minute for Machine (Linux only)")]
+            public const string MachineLoadAverage1M = "1.5.6.1";
+
+            [SnmpDataType(SnmpType.OctetString)]
+            [Description("Load average over 5 minutes for Machine (Linux only)")]
+            public const string MachineLoadAverage5M = "1.5.6.2";
+
+            [SnmpDataType(SnmpType.OctetString)]
+            [Description("Load average over 15 minutes for Machine (Linux only)")]
+            public const string MachineLoadAverage15M = "1.5.6.3";
             
             [SnmpDataType(SnmpType.Gauge32)]
             [Description("Server allocated memory in MB")]

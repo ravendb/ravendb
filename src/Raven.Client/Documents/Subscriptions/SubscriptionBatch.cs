@@ -28,7 +28,7 @@ namespace Raven.Client.Documents.Subscriptions
         internal override ValueTask InitializeAsync(BatchFromServer batch)
         {
             _sessionOpened = false;
-
+            _converter = _requestExecutor.Conventions.Serialization.CreateConverter(this);
             return base.InitializeAsync(batch);
         }
 
@@ -155,6 +155,11 @@ namespace Raven.Client.Documents.Subscriptions
             {
                 foreach (var item in _timeSeriesIncludes)
                     s.RegisterTimeSeries(item);
+            }
+
+            if (_requestExecutor.Conventions.PreserveDocumentPropertiesNotFoundOnModel)
+            {
+                s.JsonConverter.MissingProperties = _converter.MissingProperties;
             }
 
             foreach (var item in Items)

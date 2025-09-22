@@ -7,13 +7,20 @@ import { useAppSelector } from "components/store";
 
 export default function CertificatesClientList() {
     const serverCertificateThumbprint = useAppSelector(certificatesSelectors.serverCertificateThumbprint);
+    const serverCertificateForCommunicationThumbprint = useAppSelector(
+        certificatesSelectors.serverCertificateForCommunicationThumbprint
+    );
 
     const allClientCertsCount = useAppSelector(certificatesSelectors.certificates).filter(
-        (cert) => !cert.Thumbprints.includes(serverCertificateThumbprint)
+        (cert) =>
+            !cert.Thumbprints.includes(serverCertificateThumbprint) &&
+            !cert.Thumbprints.includes(serverCertificateForCommunicationThumbprint)
     ).length;
 
     const filteredCertificates = useAppSelector(certificatesSelectors.filteredCertificates).filter(
-        (cert) => !cert.Thumbprints.includes(serverCertificateThumbprint)
+        (cert) =>
+            !cert.Thumbprints.includes(serverCertificateThumbprint) &&
+            !cert.Thumbprints.includes(serverCertificateForCommunicationThumbprint)
     );
 
     return (

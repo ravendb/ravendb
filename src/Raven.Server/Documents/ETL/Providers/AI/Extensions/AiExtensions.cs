@@ -10,6 +10,7 @@ using Raven.Client.Documents.Operations.AI;
 using Raven.Server.Documents.Indexes.VectorSearch;
 using Raven.Server.ServerWide;
 using GoogleApiVersion = Raven.Client.Documents.Operations.AI.GoogleAIVersion;
+using VertexApiVersion = Raven.Client.Documents.Operations.AI.VertexAIVersion;
 
 #pragma warning disable SKEXP0001
 #pragma warning disable SKEXP0010
@@ -29,6 +30,19 @@ public static class AiExtensions
                 return Microsoft.SemanticKernel.Connectors.Google.GoogleAIVersion.V1_Beta;
             default:
                 throw new ArgumentOutOfRangeException(nameof(googleApiVersion), googleApiVersion, null);
+        }
+    }
+    
+    public static Microsoft.SemanticKernel.Connectors.Google.VertexAIVersion ToVertexApiVersion(this VertexApiVersion vertexApiVersion)
+    {
+        switch (vertexApiVersion)
+        {
+            case VertexApiVersion.V1:
+                return Microsoft.SemanticKernel.Connectors.Google.VertexAIVersion.V1;
+            case VertexApiVersion.V1_Beta:
+                return Microsoft.SemanticKernel.Connectors.Google.VertexAIVersion.V1_Beta;
+            default:
+                throw new ArgumentOutOfRangeException(nameof(vertexApiVersion), vertexApiVersion, null);
         }
     }
 
@@ -66,7 +80,7 @@ public static class AiExtensions
                 var apiKey = new ApiKeyCredential(openAiSettings.ApiKey);
                 var openAiOptions = new OpenAIClientOptions
                 {
-                    Endpoint = new Uri(openAiSettings.Endpoint),
+                    Endpoint = openAiSettings.GetBaseEndpointUri(),
                     ProjectId = openAiSettings.ProjectId,
                     UserAgentApplicationId = $"RavenDB-{ServerVersion.Version}"
                 };
@@ -80,7 +94,7 @@ public static class AiExtensions
 
                 kernelBuilder.AddAzureOpenAIEmbeddingGenerator(
                     azureOpenAiSettings.DeploymentName,
-                    azureOpenAiSettings.Endpoint,
+                    azureOpenAiSettings.GetBaseEndpointUri().ToString(),
                     azureOpenAiSettings.ApiKey,
                     modelId: azureOpenAiSettings.Model,
                     dimensions: azureOpenAiSettings.Dimensions);
@@ -88,7 +102,7 @@ public static class AiExtensions
 
             case AiConnectorType.Ollama:
                 var ollamaSettings = connectionString.OllamaSettings;
-                var ollamaApiConfig = new OllamaApiClient.Configuration { Uri = new Uri(ollamaSettings.Uri), Model = ollamaSettings.Model };
+                var ollamaApiConfig = new OllamaApiClient.Configuration { Uri = ollamaSettings.GetBaseEndpointUri(), Model = ollamaSettings.Model };
                 
                 var ollamaApiClient = new OllamaApiClient(ollamaApiConfig);
 
@@ -116,6 +130,31 @@ public static class AiExtensions
                         googleSettings.Model,
                         googleSettings.ApiKey,
                         dimensions: googleSettings.Dimensions);
+                }
+
+                break;
+            
+            case AiConnectorType.Vertex:
+                var vertexSettings = connectionString.VertexSettings;
+                var tokenProvider = new VertexBearerTokenProvider(vertexSettings);
+                var projectId = vertexSettings.GetProjectId();
+
+                if (vertexSettings.AiVersion.HasValue)
+                {
+                    kernelBuilder.AddVertexAIEmbeddingGenerator(
+                        vertexSettings.Model,
+                        tokenProvider.BearerTokenProvider,
+                        vertexSettings.Location,
+                        projectId,
+                        vertexSettings.AiVersion.Value.ToVertexApiVersion());
+                }
+                else
+                {
+                    kernelBuilder.AddVertexAIEmbeddingGenerator(
+                        vertexSettings.Model,
+                        tokenProvider.BearerTokenProvider,
+                        vertexSettings.Location,
+                        projectId);
                 }
 
                 break;

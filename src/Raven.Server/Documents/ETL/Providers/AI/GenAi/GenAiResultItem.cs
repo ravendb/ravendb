@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using Raven.Client.Documents.Operations.AI;
-using Raven.Client.Documents.Operations.AI.Agents;
-using Raven.Server.Documents.AI;
+using System.Linq;
 using Sparrow.Json;
 using Sparrow.Json.Parsing;
 
@@ -13,7 +12,7 @@ public class GenAiResultItem
 
     public ContextOutput ContextOutput { get; set; }
 
-    internal string DocId { get; set; }
+    public string DocumentId { get; set; }
 
     internal bool UpdateHash { get; set; } = true;
 
@@ -22,7 +21,8 @@ public class GenAiResultItem
         return new DynamicJsonValue
         {
             [nameof(ContextOutput)] = ContextOutput?.ToJson(),
-            [nameof(ModelOutput)] = ModelOutput?.ToJson()
+            [nameof(ModelOutput)] = ModelOutput?.ToJson(),
+            [nameof(DocumentId)] = DocumentId
         };
     }
 }
@@ -42,13 +42,22 @@ public class ModelOutput
 public class ContextOutput
 {
     public BlittableJsonReaderObject Context { get; set; }
+    
+    public List<AiAttachment> Attachments;
     public bool IsCached { get; set; }
     public string AiHash { get; set; }
 
-    public DynamicJsonValue ToJson() => new()
+    public DynamicJsonValue ToJson()
     {
-        [nameof(Context)] = Context, 
-        [nameof(IsCached)] = IsCached, 
-        [nameof(AiHash)] = AiHash
-    };
+        var json = new DynamicJsonValue
+        {
+            [nameof(Context)] = Context, 
+            [nameof(IsCached)] = IsCached, 
+            [nameof(AiHash)] = AiHash
+        };
+        if (Attachments != null)
+            json[nameof(Attachments)] = new DynamicJsonArray(Attachments.Select(x => x.ToJson()));
+
+        return json;
+    }
 }

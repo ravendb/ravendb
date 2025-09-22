@@ -253,24 +253,33 @@ namespace Raven.Server.Documents.Handlers.Admin
                         [nameof(ClusterTopologyResponse.Topology)] = topology.ToSortedJson(),
                         [nameof(ClusterTopologyResponse.Etag)] = topology.Etag,
                         [nameof(ClusterTopologyResponse.Leader)] = ServerStore.LeaderTag,
-                        ["LeaderShipDuration"] = ServerStore.Engine.CurrentLeader?.LeaderShipDuration,
-                        ["CurrentState"] = ServerStore.CurrentRachisState,
+                        [nameof(ClusterTopologyResponseExtraData.LeaderShipDuration)] = ServerStore.Engine.CurrentLeader?.LeaderShipDuration,
+                        [nameof(RachisConsensus.CurrentState)] = ServerStore.CurrentRachisState,
                         [nameof(ClusterTopologyResponse.NodeTag)] = nodeTag,
                         [nameof(ClusterTopologyResponse.ServerRole)] = topology.GetServerRoleForTag(nodeTag),
-                        ["CurrentTerm"] = ServerStore.Engine.CurrentCommittedState.Term,
-                        ["NodeLicenseDetails"] = nodeLicenseDetails,
+                        [nameof(ServerStore.Engine.CurrentTerm)] = ServerStore.Engine.CurrentCommittedState.Term,
+                        [nameof(LicenseLimits.NodeLicenseDetails)] = nodeLicenseDetails,
                         [nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason()
                     };
                     var clusterErrors = ServerStore.GetClusterErrors();
                     if (clusterErrors.Count > 0)
-                        json["Errors"] = clusterErrors;
+                        json[nameof(ClusterTopologyResponseExtraData.Errors)] = clusterErrors;
 
                     var nodesStatues = ServerStore.GetNodesStatuses();
-                    json["Status"] = DynamicJsonValue.Convert(nodesStatues);
+                    json[nameof(ClusterTopologyResponseExtraData.Status)] = DynamicJsonValue.Convert(nodesStatues);
 
                     context.Write(writer, json);
                 }
             }
+        }
+
+        internal class ClusterTopologyResponseExtraData
+        {
+            public DynamicJsonArray Errors { get; set; }
+            
+            public DynamicJsonValue Status { get; set; }
+            
+            public long LeaderShipDuration { get; set; }
         }
 
         [RavenAction("/admin/cluster/maintenance-stats", "GET", AuthorizationStatus.Operator)]
@@ -337,7 +346,7 @@ namespace Raven.Server.Documents.Handlers.Admin
 
             Client.ServerWide.Commands.NodeInfo nodeInfo;
             using (ServerStore.ContextPool.AllocateOperationContext(out TransactionOperationContext ctx))
-            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(nodeUrl, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+            using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(nodeUrl, Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
             {
                 requestExecutor.DefaultTimeout = ServerStore.Engine.OperationTimeout;
 
@@ -443,7 +452,8 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
 
                         // if it's the same server certificate as our own, we don't want to add it to the cluster
-                        if (certificate.Thumbprint != Server.Certificate.Certificate.Thumbprint)
+                        // also we don't want to add client cert used by server, each node has it's own in local state only 
+                        if (Server.IsServerCertificate(certificate) == false)
                         {
                             using (ctx.OpenReadTransaction())
                             {
@@ -483,7 +493,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         possibleNode = clusterTopology.TryGetNodeTagByUrl(nodeUrl);
                         nodeTag = possibleNode.HasUrl ? possibleNode.NodeTag : null;
 
-                        if (certificate != null && certificate.Thumbprint != Server.Certificate.Certificate.Thumbprint)
+                        if (certificate != null && Server.IsServerCertificate(certificate) == false)
                         {
                             var modifiedServerCert = JsonDeserializationServer.CertificateDefinition(ServerStore.Cluster.GetCertificateByThumbprint(ctx, certificate.Thumbprint));
 
@@ -722,7 +732,7 @@ namespace Raven.Server.Documents.Handlers.Admin
                         }
 
                         var cmd = new RemoveEntryFromRaftLogCommand(index);
-                        using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(node.Value, Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+                        using (var requestExecutor = ClusterRequestExecutor.CreateForShortTermUse(node.Value, Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
                         {
                             await requestExecutor.ExecuteAsync(cmd, context);
                             nodeList.AddRange(cmd.Result);

@@ -1,4 +1,4 @@
-﻿import { Meta } from "@storybook/react";
+﻿import { Meta } from "@storybook/react-webpack5";
 import { Checkbox, Radio, Switch } from "./Checkbox";
 import useBoolean from "hooks/useBoolean";
 import React from "react";

@@ -1,10 +1,4 @@
-//-----------------------------------------------------------------------
-// <copyright file="Basic.cs" company="Hibernating Rhinos LTD">
-//     Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-// </copyright>
-//-----------------------------------------------------------------------
-
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using FastTests;
 using System.Linq;
 using Raven.Client.ServerWide;

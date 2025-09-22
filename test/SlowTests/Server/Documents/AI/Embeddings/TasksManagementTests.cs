@@ -25,7 +25,7 @@ public class TasksManagementTests : RavenTestBase
         {
             Name = "ai-task-testing",
             ConnectionStringName = "ai-service-connection",
-            EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "PostContent" }, new EmbeddingPathConfiguration(){ Path = "Comments", ChunkingOptions = DefaultChunkingOptions }],
+            EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "PostContent", ChunkingOptions = DefaultChunkingOptions }, new EmbeddingPathConfiguration(){ Path = "Comments", ChunkingOptions = DefaultChunkingOptions }],
             Collection = "Posts",
             ChunkingOptionsForQuerying = DefaultChunkingOptions
         };
@@ -55,7 +55,7 @@ public class TasksManagementTests : RavenTestBase
         {
             Name = "ai-task-testing",
             ConnectionStringName = "ai-service-connection",
-            EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "PostContent" }, new EmbeddingPathConfiguration() { Path = "Comments", ChunkingOptions = DefaultChunkingOptions }],
+            EmbeddingsPathConfigurations = [new EmbeddingPathConfiguration() { Path = "PostContent", ChunkingOptions = DefaultChunkingOptions }, new EmbeddingPathConfiguration() { Path = "Comments", ChunkingOptions = DefaultChunkingOptions }],
             Collection = "Posts",
             ChunkingOptionsForQuerying = DefaultChunkingOptions
         };

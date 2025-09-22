@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="AsyncHelpers.cs" company="Hibernating Rhinos LTD">
-//      Copyright (coffee) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
@@ -280,6 +274,26 @@ namespace Raven.Client.Util
             {
                 return this;
             }
+        }
+
+        /// <summary>
+        /// Registers <paramref name="tcs"/> <see cref="TaskCompletionSource{TResult}.TrySetCanceled"/> on <paramref name="token"/> cancellation.
+        /// </summary>
+        internal static CancellationTokenRegistration RegisterTryCancelOnToken<TResult>(this TaskCompletionSource<TResult> tcs, CancellationToken token)
+        {
+            #if NETSTANDARD
+
+            return token.Register(() => tcs.TrySetCanceled(token));
+
+            #else
+
+            // Pass the tcs via the state
+            return token.Register(static (state, t) =>
+            {
+                ((TaskCompletionSource<TResult>)state).TrySetCanceled(t);
+            }, tcs);
+
+            #endif
         }
     }
 }

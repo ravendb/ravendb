@@ -30,6 +30,10 @@ import generalUtils = require("common/generalUtils");
 
 const minimumCommunityDeleteFrequencyInSec = TimeInSeconds.TimeInSeconds.Day * 36;
 
+const {
+    aiConnectionStringUtils: { getConnectorType, mapAiConnectionStringToSettingsDto },
+} = aiConnectionStringUtils;
+
 class editEmbeddingsGenerationTask extends shardViewModelBase {
     
     view = require("views/database/tasks/editEmbeddingsGenerationTask.html");
@@ -224,6 +228,13 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
                               The options below apply to the search term used in the query.
                           </small>`
             });
+
+        popoverUtils.longWithHover($(".overlap-tokens"),
+            {
+                content: `<small class="margin-top-xs no-padding-left">
+                              This value will be used as the default when no specific value is set in the script.
+                          </small>`
+            });
     }    
 
     toggleIsNewConnectionStringOpen() {
@@ -365,7 +376,7 @@ class editEmbeddingsGenerationTask extends shardViewModelBase {
             return;
         }
 
-        new testAiConnectionStringCommand(this.db, aiConnectionStringUtils.getConnectorType(connectionString), "TextEmbeddings", aiConnectionStringUtils.mapAiConnectionStringToSettingsDto(connectionString))
+        new testAiConnectionStringCommand(this.db, getConnectorType(connectionString), "TextEmbeddings", mapAiConnectionStringToSettingsDto(connectionString))
             .execute()
             .done((testResult) => this.testConnectionResult(testResult))
             .always(() => this.spinners.testConnection(false));

@@ -40,7 +40,7 @@ namespace StressTests.Issues
         public async Task Sinks_should_not_update_hubs_change_vector_with_conflicts()
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var hubStore = GetDocumentStore(new Options
@@ -179,7 +179,7 @@ namespace StressTests.Issues
         public async Task Sinks_should_not_update_hubs_change_vector_with_conflicts2()
         {
             var certificates = Certificates.SetupServerAuthentication();
-            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificate.Value, certificates
+            var adminCert = Certificates.RegisterClientCertificate(certificates.ServerCertificateForCommunication.Value, certificates
                 .ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin);
 
             using var hubStore = GetDocumentStore(new Options

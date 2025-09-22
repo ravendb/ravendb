@@ -1,6 +1,6 @@
 import { RtlScreen, rtlRender } from "test/rtlTestUtils";
 import * as Stories from "./CreateDatabase.stories";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 
 const { DefaultCreateDatabase } = composeStories(Stories);
 

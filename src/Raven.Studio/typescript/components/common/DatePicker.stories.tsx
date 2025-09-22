@@ -1,4 +1,4 @@
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import React, { ComponentProps, useState } from "react";
 import { withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import DatePicker from "./DatePicker";

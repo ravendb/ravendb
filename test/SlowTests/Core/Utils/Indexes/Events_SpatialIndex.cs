@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="QueryResultsStreaming.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// ---------------------------------------------------------------------
-
-using System.Linq;
+﻿using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Event = SlowTests.Core.Utils.Entities.Event;
 

@@ -1,10 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="Users_ByName.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// -----------------------------------------------------------------------
-
-using System.Linq;
+﻿using System.Linq;
 using Raven.Client.Documents.Indexes;
 using Raven.Client.Documents.Linq.Indexing;
 using User = SlowTests.Core.Utils.Entities.User;

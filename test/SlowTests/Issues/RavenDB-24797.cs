@@ -446,7 +446,7 @@ namespace SlowTests.Issues
                 {
                     var readTable = new Table(db.DocumentsStorage.CountersStorage.CountersSchema, context.Transaction.InnerTransaction);
                     TableValueReader tvr;
-                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                     {
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
@@ -551,7 +551,7 @@ namespace SlowTests.Issues
                 {
                     var readTable = new Table(db.DocumentsStorage.CountersStorage.CountersSchema, context.Transaction.InnerTransaction);
                     TableValueReader tvr;
-                    using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                    using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                     {
                         Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                     }
@@ -625,7 +625,7 @@ namespace SlowTests.Issues
             {
                 var readTable = new Table(database.DocumentsStorage.CountersStorage.CountersSchema, context.Transaction.InnerTransaction);
                 TableValueReader tvr;
-                using (DocumentIdWorker.GetSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
+                using (DocumentIdWorker.GetLoweredIdSliceFromId(context, id, out Slice documentKeyPrefix, separator: SpecialChars.RecordSeparator))
                 {
                     Assert.True(readTable.SeekOnePrimaryKeyPrefix(documentKeyPrefix, out tvr));
                 }

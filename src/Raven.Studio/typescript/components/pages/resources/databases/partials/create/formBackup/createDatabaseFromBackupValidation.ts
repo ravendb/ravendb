@@ -156,6 +156,14 @@ const sourceStepSchema = yup.object({
     isDisableOngoingTasksAfterRestore: yup.boolean(),
     isSkipIndexes: yup.boolean(),
     isEncrypted: yup.boolean(),
+    isSetMaxReadOpsPerSecond: yup.boolean(),
+    maxReadOpsPerSecond: yup
+        .number()
+        .nullable()
+        .when("isSetMaxReadOpsPerSecond", {
+            is: true,
+            then: (schema) => schema.min(1).integer().required(),
+        }),
     sourceType: yup.string<RestoreSource>().nullable().required(),
     sourceData: yup.object({
         local: localSource,

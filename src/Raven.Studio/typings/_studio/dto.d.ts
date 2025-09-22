@@ -1088,8 +1088,9 @@ type CertificateDto = Partial<Raven.Client.ServerWide.Operations.Certificates.Ce
 type CertificatesResponseDto = {
     Certificates: CertificateDto[],
     LoadedServerCert: string,
+    LoadedServerCertForCommunication?: string,
     WellKnownAdminCerts: string[],
-    WellKnownIssuers: string[]
+    WellKnownIssuers: string[],
 }
 
 interface TrafficWatchPostgresChange extends Raven.Client.Documents.Changes.TrafficWatchChangeBase {
@@ -1105,7 +1106,8 @@ type AiConnectionStringsSettings =
     | Raven.Client.Documents.Operations.AI.EmbeddedSettings
     | Raven.Client.Documents.Operations.AI.GoogleSettings
     | Raven.Client.Documents.Operations.AI.HuggingFaceSettings
-    | Raven.Client.Documents.Operations.AI.MistralAiSettings;
+    | Raven.Client.Documents.Operations.AI.MistralAiSettings
+    | Raven.Client.Documents.Operations.AI.VertexSettings;
 
 interface AiModelsRequestDto {
     ConnectorType: Extract<Raven.Client.Documents.Operations.AI.AiConnectorType, "Ollama" | "OpenAi" | "AzureOpenAi">;

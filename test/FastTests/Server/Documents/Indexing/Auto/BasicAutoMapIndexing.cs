@@ -310,7 +310,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(0, batchStats.MapErrors);
 
                         var now = SystemTime.UtcNow;
-                        index._indexStorage.UpdateStats(now, batchStats);
+                        index._indexStorage.UpdateStats(now, TimeSpan.Zero, batchStats);
 
                         var stats = index.GetStats();
                         Assert.Equal(index.Name, stats.Name);
@@ -356,7 +356,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(0, batchStats.MapErrors);
 
                         now = SystemTime.UtcNow;
-                        index._indexStorage.UpdateStats(now, batchStats);
+                        index._indexStorage.UpdateStats(now, TimeSpan.Zero, batchStats);
 
                         stats = index.GetStats();
 
@@ -393,7 +393,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         Assert.Equal(0, batchStats.MapErrors);
 
                         now = SystemTime.UtcNow;
-                        index._indexStorage.UpdateStats(now, batchStats);
+                        index._indexStorage.UpdateStats(now, TimeSpan.Zero, batchStats);
 
                         stats = index.GetStats();
                         Assert.Equal(index.Name, stats.Name);
@@ -899,7 +899,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         var now = DateTime.Parse(times[i]);
                         stats.Errors[0].Timestamp = now;
                         stats.Errors[1].Timestamp = now;
-                        index._indexStorage.UpdateStats(now, stats);
+                        index._indexStorage.UpdateStats(now, TimeSpan.Zero, stats);
                     }
                 }
             }
@@ -918,7 +918,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     database))
                 {
                     var stats = new IndexingRunStats();
-                    index._indexStorage.UpdateStats(SystemTime.UtcNow, stats);
+                    index._indexStorage.UpdateStats(SystemTime.UtcNow, TimeSpan.Zero, stats);
 
                     Assert.Equal(0, index.GetErrors().Count);
                     Assert.Equal(0, index.GetErrorCount());
@@ -926,7 +926,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                     stats.AddWriteError(new IndexWriteException());
                     stats.AddAnalyzerError(new IndexAnalyzerException());
 
-                    index._indexStorage.UpdateStats(SystemTime.UtcNow, stats);
+                    index._indexStorage.UpdateStats(SystemTime.UtcNow, TimeSpan.Zero, stats);
 
                     var errors = index.GetErrors();
                     Assert.Equal(2, errors.Count);
@@ -938,7 +938,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
                         var now = SystemTime.UtcNow.AddMinutes(1);
                         stats.Errors[0].Timestamp = now;
                         stats.Errors[1].Timestamp = now;
-                        index._indexStorage.UpdateStats(now, stats);
+                        index._indexStorage.UpdateStats(now, TimeSpan.Zero, stats);
                     }
 
                     errors = index.GetErrors();

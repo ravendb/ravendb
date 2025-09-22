@@ -123,7 +123,7 @@ public static class SetupWizardUtils
                 Domain = domain,
                 CertBytes = certBytes,
                 ServerCertBytes = serverCertBytes,
-                ServerCert = serverCertificateHolder.Certificate,
+                ServerCert = serverCertificateHolder.ServerCertificate,
                 PublicServerUrl = publicServerUrl,
                 ClientCert = clientCert,
                 CertificateDefinition = certificateDefinition

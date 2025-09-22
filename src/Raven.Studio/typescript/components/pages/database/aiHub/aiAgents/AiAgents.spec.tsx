@@ -1,6 +1,6 @@
 import { rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import * as Stories from "./AiAgents.stories";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 
 const { AiAgentsStory } = composeStories(Stories);
 

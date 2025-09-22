@@ -76,14 +76,14 @@ namespace Voron.Util
                 {
                     // nothing to do here, we'll let the cleanup of the read transactions to move it for us.
                 }
-                return true;
 
+                return true;
             }
 
             while (tx.Id <= oldTx)
             {
                 var currentOldest = _activeTxs.ScanOldest(); // This is non-thread safe call (therefor from time to time we ForceRecheckingOldestTransactionByFlusherThread)
-                if (currentOldest == tx.Id)// another tx with same id, they can cleanup after us
+                if (currentOldest == tx.Id) // another tx with same id, they can cleanup after us
                     break;
                 var result = Interlocked.CompareExchange(ref _oldestTransaction, currentOldest, oldTx);
                 if (result == oldTx)
@@ -155,6 +155,7 @@ namespace Voron.Util
                     list.Add(item);
                 }
             }
+
             return list;
         }
 
@@ -196,6 +197,7 @@ namespace Voron.Util
                     {
                         newArray[i] = new Node();
                     }
+
                     if (Interlocked.CompareExchange(ref _array, newArray, copy) == copy)
                         return true;
                 }
@@ -205,12 +207,12 @@ namespace Voron.Util
                 {
                     Interlocked.CompareExchange(ref copy[i].Value, null, InvalidLowLevelTransaction);
                 }
-
             }
             finally
             {
                 _compactionInProgress.Lower();
             }
+
             return true;
         }
 
@@ -234,6 +236,7 @@ namespace Voron.Util
                             return;
                         }
                     }
+
                     if (value == InvalidLowLevelTransaction)
                     {
                         compactionInProgress = true;
@@ -244,7 +247,7 @@ namespace Voron.Util
                 {
                     // let the Remove() a chance to do its work
                     Thread.Yield();
-                    copy = Volatile.Read(ref _array);// refresh the instance
+                    copy = Volatile.Read(ref _array); // refresh the instance
                     continue;
                 }
 
@@ -255,6 +258,7 @@ namespace Voron.Util
                 {
                     newArray[i] = new Node();
                 }
+
                 newArray[copy.Length].Value = item;
                 var result = Interlocked.CompareExchange(ref _array, newArray, copy);
                 if (result == copy)
@@ -262,6 +266,7 @@ namespace Voron.Util
                     item.ActiveTransactionNode = newArray[copy.Length];
                     return;
                 }
+
                 copy = result;
             }
         }
@@ -275,11 +280,13 @@ namespace Voron.Util
             for (int i = 0; i < copy.Length; i++)
             {
                 var item = copy[i].Value;
-                if (item is null || item == InvalidLowLevelTransaction) 
-                    continue;
-                if (val > item.Id)
-                    val = item.Id;
+                if (item != null && item != InvalidLowLevelTransaction)
+                {
+                    if (val > item.Id)
+                        val = item.Id;
+                }
             }
+
             if (val == long.MaxValue)
                 return 0;
             return val;

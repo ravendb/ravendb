@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
-using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -22,6 +21,8 @@ using Raven.Client.Documents.Conventions;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Http;
 using Raven.Client.Json;
+using Raven.Server.Documents.AI.Settings;
+using Raven.Server.Documents.ETL.Providers.AI;
 using Raven.Server.Documents.Handlers.AI.Agents;
 using Raven.Server.Json;
 using Raven.Server.Utils;
@@ -35,22 +36,12 @@ namespace Raven.Server.Documents.AI;
 
 internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClientForTesting
 {
-    internal sealed class ChatCompletionClientOptions
-    {
-        public bool? Think { get; init; }
-        public double? Temperature { get; init; }
-    }
-    
     public static readonly string EmptySchema = GetSchemaFromSampleObject("{}");
 
-    private readonly string _model;
-    private readonly string _organizationId;
-    private readonly string _projectId;
-    private readonly ChatCompletionClientOptions _options;
+    private readonly AbstractChatCompletionClientSettings _settings;
     private readonly HttpClientCacheKey _httpClientCacheKey;
     private readonly HttpClient _client;
     private readonly IMemoryContextPool _contextPool;
-    private readonly string _apiKey;
 
     public static readonly DocumentConventions ConventionsToUse = new DocumentConventions
     {
@@ -69,44 +60,35 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
     public static ChatCompletionClient CreateChatCompletionClient(IMemoryContextPool contextPool, AiConnectionString connection)
     {
-        if (connection.TryGetParameters(out var uri, out var apiKey, out var model, out var organizationId, out var projectId, out var think, out var temperature) == false)
+        if (AbstractChatCompletionClientSettings.TryGetParameters(connection, out var settings) == false)
         {
             var connectorType = connection.GetActiveProvider();
             throw new NotSupportedException($"The specified provider (\"{connectorType.ToString()}\") is not supported.");
         }
 
-        var options = new ChatCompletionClientOptions
-        {
-            Think = think,
-            Temperature = temperature
-        };
-
-        return new ChatCompletionClient(contextPool, uri, apiKey, model, organizationId, projectId, options, ConventionsToUse);
+        return new ChatCompletionClient(contextPool, settings, ConventionsToUse);
     }
 
-    internal ChatCompletionClient(IMemoryContextPool contextPool, string baseUri, string apiKey, string model, string organizationId, string projectId, ChatCompletionClientOptions options = null, DocumentConventions conventions = null)
+    internal ChatCompletionClient(IMemoryContextPool contextPool, AbstractChatCompletionClientSettings settings, DocumentConventions conventions = null)
     {
-        _model = model;
-        _organizationId = organizationId;
-        _projectId = projectId;
-        _options = options;
+        _settings = settings ?? throw new ArgumentNullException(nameof(settings));
 
         conventions ??= ConventionsToUse;
+
+        var baseUri = settings.GetBaseEndpointUri();
 
         _httpClientCacheKey = HttpClientCacheKey.Create(conventions.UseHttpDecompression,
             conventions.HasExplicitlySetDecompressionUsage, conventions.HttpPooledConnectionLifetime,
             conventions.HttpPooledConnectionIdleTimeout, conventions.GlobalHttpClientTimeout,
-            baseUri, conventions.ConfigureHttpMessageHandler);
+            baseUri.ToString(), conventions.ConfigureHttpMessageHandler);
 
         _client = DefaultRavenHttpClientFactory.Instance.GetHttpClient(_httpClientCacheKey, handler => new HttpClient(handler)
         {
-            BaseAddress = new Uri(baseUri),
+            BaseAddress = baseUri
         });
 
         _contextPool = contextPool;
-        _apiKey = apiKey;
     }
-
 
     private struct ToolCallState
     {
@@ -369,7 +351,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         {
             if (responseContent.TryGet(Constants.ResponseFields.Choices, out BlittableJsonReaderArray choices) == false || choices.Length == 0)
             {
-                throw new UnexpectedResponseException("No choices in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+                throw UnexpectedResponseException.Create(message: "No choices in response", response, responseContent);
             }
 
             _choice0 = (BlittableJsonReaderObject)choices[0];
@@ -377,11 +359,11 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             if (_choice0.TryGet(Constants.ResponseFields.Message, out Message) == false ||
                 Message.TryGet(Constants.ResponseFields.Content, out _content) == false)
             {
-                throw new UnexpectedResponseException("No message/content property in choice: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+                throw UnexpectedResponseException.Create(message: "No message/content property in choice", response, responseContent);
             }
 
             if (responseContent.TryGet(Constants.ResponseFields.Usage, out BlittableJsonReaderObject usageJson) == false)
-                throw new UnexpectedResponseException("No choices property in response: " + responseContent) { RequestId = GetRequestId(response.Headers) };
+                throw UnexpectedResponseException.Create(message: "No usage in response content", response, responseContent);
 
             usage.UpdateFrom(usageJson);
         }
@@ -401,10 +383,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                     call.TryGet(Constants.ResponseFields.Function, out BlittableJsonReaderObject function) is false ||
                     function.TryGet(Constants.ResponseFields.Name, out string name) is false ||
                     function.TryGet(Constants.ResponseFields.Arguments, out string args) is false)
-                    throw new UnexpectedResponseException("Invalid function call: " + call)
-                    {
-                        RequestId = GetRequestId(response.Headers)
-                    };
+                    throw UnexpectedResponseException.Create(message: "Invalid function call: " + call, response, responseContent);
                 toolCalls.Add(new AiToolCall(callId, name, args));
             }
 
@@ -416,12 +395,9 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             if (string.IsNullOrEmpty(_content))
             {
                 _choice0.TryGet(Constants.ResponseFields.FinishReason, out string finishReason);
-                _choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal);
-                //TODO: full output if we get here?
-                throw new RefusedToAnswerException("The request was refused by the model")
-                {
-                    Refusal = refusal, FinishReason = finishReason, RequestId = GetRequestId(response.Headers)
-                };
+                _ = _choice0.TryGet(Constants.ResponseFields.Refusal, out string refusal) || Message.TryGet(Constants.ResponseFields.Refusal, out refusal);
+
+                RefusedToAnswerException.Throw(refusal, responseContent.ToString(), finishReason, GetRequestId(response.Headers));
             }
 
             return context.Sync.ReadForMemory(_content, "ai/output");
@@ -432,7 +408,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
     protected virtual Task<HttpResponseMessage> SendStreamingRequestAsync(HttpRequestMessage request, CancellationToken token) => _client.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, token);
 
-    public async Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, CancellationToken token)
+    public async Task<(string Result, AiUsage Usage)> CompleteAsync(string systemPrompt, string userPrompt, string schema, List<AiAttachment> attachments, CancellationToken token)
     {
         if (_forTestingPurposes?.SimulateFailureAsync != null)
             await _forTestingPurposes.SimulateFailureAsync(userPrompt);
@@ -450,13 +426,76 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             [Constants.RequestFields.Content] = userPrompt
         };
 
-        var messages = new List<BlittableJsonReaderObject>() { ctx.ReadObject(msg1, "system/msg"), ctx.ReadObject(msg2, "user/msg") };
+        var messages = new List<BlittableJsonReaderObject>() { ctx.ReadObject(msg1, "system/msg"), ctx.ReadObject(msg2, "user/msg")};
+
+        if (attachments?.Count > 0)
+        {
+            var msg3 = new DynamicJsonValue
+            {
+                [Constants.RequestFields.Role] = Constants.RequestFields.RoleUserValue,
+                [Constants.RequestFields.Content] = CreateContentWithAttachments(attachments)
+            };
+            messages.Add(ctx.ReadObject(msg3, "user/msg"));
+        }
+
         using var request = CreateCompletionRequest(ctx, messages, schema);
         var usage = new AiUsage();
         var results = await CompleteAsync(ctx, request, usage, token);
 
         return (results.Result.ToString(), usage);
     }
+
+
+    private DynamicJsonArray CreateContentWithAttachments(List<AiAttachment> attachments)
+    {
+        var content = new DynamicJsonArray();
+
+        foreach (var attachment in attachments)
+        {
+            if (attachment.Source == AiAttachmentSource.NotFound)
+            {
+                content.Add(new DynamicJsonValue
+                {
+                    [Constants.AttachmentsRequestFields.Type] = Constants.AttachmentsRequestFields.TypeText,
+                    [Constants.AttachmentsRequestFields.TypeText] = $"File '{attachment.Name}' (of type '{attachment.Type}') could not be loaded: attachment not found"
+                });
+                continue;
+            }
+
+            content.Add(attachment.Type switch
+            {
+                Constants.AttachmentsRequestFields.MediaTypeTextPlain => new DynamicJsonValue
+                {
+                    [Constants.AttachmentsRequestFields.Type] = Constants.AttachmentsRequestFields.TypeText,
+                    [Constants.AttachmentsRequestFields.TypeText] = attachment.Data
+                },
+                Constants.AttachmentsRequestFields.MediaTypeApplicationPdf => new DynamicJsonValue
+                {
+                    [Constants.AttachmentsRequestFields.Type] = Constants.AttachmentsRequestFields.File,
+                    [Constants.AttachmentsRequestFields.File] = new DynamicJsonValue
+                    {
+                        [Constants.AttachmentsRequestFields.FileName] = attachment.Name,
+                        [Constants.AttachmentsRequestFields.FileData] = "data:application/pdf;base64," + attachment.Data
+                    }
+                },
+                Constants.AttachmentsRequestFields.MediaTypeImageJpeg or
+                    Constants.AttachmentsRequestFields.MediaTypeImagePng or
+                    Constants.AttachmentsRequestFields.MediaTypeImageGif or
+                    Constants.AttachmentsRequestFields.MediaTypeImageWebp => new DynamicJsonValue
+                    {
+                        [Constants.AttachmentsRequestFields.Type] = Constants.AttachmentsRequestFields.ImageUrl,
+                        [Constants.AttachmentsRequestFields.ImageUrl] = new DynamicJsonValue
+                        {
+                            [Constants.AttachmentsRequestFields.Url] = "data:" + attachment.Type + ";base64," + attachment.Data
+                        }
+                    },
+                _ => throw new InvalidOperationException($"Attachment '{attachment.Name}' has unknown type: {attachment.Type}")
+            });
+        }
+
+        return content;
+    }
+
 
     public HttpRequestMessage CreateCompletionRequest(JsonOperationContext ctx, List<BlittableJsonReaderObject> messages, string schema) => CreateCompletionRequest(ctx, messages, tools: null, useTools: false, streaming: false, schema);
 
@@ -467,8 +506,8 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         bool streaming,
         string schema)
     {
-        if (_model is null)
-            throw new ArgumentNullException(nameof(_model));
+        if (_settings.Model is null)
+            throw new ArgumentNullException(nameof(_settings.Model));
 
         var content = new BlittableJsonContent(async stream =>
         {
@@ -490,7 +529,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         {
             Method = HttpMethod.Post,
             Content = content,
-            RequestUri = new Uri(Constants.RequestFields.DefaultRelativeUri, UriKind.Relative)
+            RequestUri = new Uri(_settings.GetRelativeCompletionUri(), UriKind.Relative)
         };
 
         return request;
@@ -501,7 +540,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         writer.WriteStartObject();
 
         writer.WritePropertyName(Constants.RequestFields.Model);
-        writer.WriteString(_model);
+        writer.WriteString(_settings.Model);
         writer.WriteComma();
 
         List<LazyStringValue> filterProperties = [ctx.GetLazyString(ConversationDocument.DateProperty), ctx.GetLazyString(ConversationDocument.UsageProperty)];
@@ -550,22 +589,8 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             writer.WriteEndObject();
         }
 
-        // Add Ollama-specific "think" parameter if specified
-        if (_options?.Think.HasValue == true)
-        {
-            writer.WriteComma();
-            writer.WritePropertyName(Constants.RequestFields.Think);
-            writer.WriteBool(_options.Think.Value);
-        }
-
-        // Add Ollama-specific "temperature" parameter if specified
-        if (_options?.Temperature.HasValue == true)
-        {
-            writer.WriteComma();
-            writer.WritePropertyName(Constants.RequestFields.Temperature);
-            writer.WriteDouble(_options.Temperature.Value);
-        }
-
+        _settings.HandleCompletionRequestPayload(writer);
+        
         writer.WriteEndObject();
         return;
 
@@ -583,7 +608,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         using var request = new HttpRequestMessage
         {
             Method = HttpMethod.Get,
-            RequestUri = new Uri(Constants.RequestFields.ModelsUri, UriKind.Relative)
+            RequestUri = new Uri(_settings.GetRelativeModelsUri(), UriKind.Relative)
         };
 
         AddDefaultHeaders(request);
@@ -598,13 +623,9 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
     private void AddDefaultHeaders(HttpRequestMessage request)
     {
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(Constants.RequestFields.MediaTypeApplicationJson));
-        request.Headers.Authorization = string.IsNullOrEmpty(_apiKey) ? null : new AuthenticationHeaderValue(Constants.RequestFields.AuthorizationApiKeyProperty, _apiKey);
+        request.Headers.Authorization = string.IsNullOrEmpty(_settings.ApiKey) ? null : new AuthenticationHeaderValue(Constants.RequestFields.AuthorizationApiKeyProperty, _settings.ApiKey);
 
-        if (string.IsNullOrEmpty(_organizationId) == false)
-            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiOrganization, _organizationId);
-
-        if (string.IsNullOrEmpty(_projectId) == false)
-            request.Headers.TryAddWithoutValidation(Constants.RequestFields.OpenAiProject, _projectId);
+        _settings.AddHeaders(request);
     }
 
     public async Task<BlittableJsonReaderObject> GetResponseContentAsync(JsonOperationContext context, HttpResponseMessage response, CancellationToken token)
@@ -613,6 +634,7 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         await using (var ms = RecyclableMemoryStreamFactory.GetRecyclableStream())
         {
             await responseStream.CopyToAsync(ms, token);
+            var contentLength = (int)ms.Position;
             ms.Position = 0;
             try
             {
@@ -621,11 +643,8 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
             catch (Exception e)
             {
                 ms.Position = 0;
-                string content = Encoding.UTF8.GetString(ms.GetMemory().Span);
-                throw new UnexpectedResponseException($"Got unrecognized response from the server: {content}. {response.StatusCode}", e)
-                {
-                    RequestId = GetRequestId(response.Headers)
-                };
+                string content = Encoding.UTF8.GetString(ms.GetMemory().Span[..contentLength]);
+                throw UnexpectedResponseException.Create(message: "Received an unrecognized response from the server", response, content, e);
             }
         }
     }
@@ -637,20 +656,14 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
         var reqId = GetRequestId(headers);
 
         if (responseContent.TryGet(Constants.ResponseFields.Error, out BlittableJsonReaderObject errBjo) is false || errBjo.TryGet(Constants.ResponseFields.Message, out string message) is false)
-            throw new UnexpectedResponseException("Unexpected response: " + responseContent)
-            {
-                RequestId = reqId
-            };
+            throw UnexpectedResponseException.Create(message: "Unexpected response", response, responseContent);
 
         switch (response.StatusCode)
         {
             case HttpStatusCode.TooManyRequests:
 
                 if (errBjo.TryGet(Constants.ResponseFields.ErrorType, out string type) == false)
-                    throw new UnexpectedResponseException($"No type specified (status {HttpStatusCode.TooManyRequests}): " + responseContent)
-                    {
-                        RequestId = reqId
-                    };
+                    throw UnexpectedResponseException.Create(message: "No type specified", response, responseContent);
 
                 switch (type)
                 {
@@ -704,14 +717,12 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
                         };
                 }
             default:
-                throw new UnsuccessfulRequestException(message, response.StatusCode)
-                {
-                    RequestId = reqId
-                };
+                UnsuccessfulRequestException.Throw(message, response.StatusCode, reqId);
+                break;
         }
     }
 
-    private static string GetRequestId(HttpResponseHeaders headers)
+    internal static string GetRequestId(HttpResponseHeaders headers)
     {
         if (headers.TryGetValues(Constants.Headers.RequestId, out var values) == false || values.IsNullOrEmpty())
         {
@@ -1001,17 +1012,32 @@ internal class ChatCompletionClient : IChatCompletionClient, IChatCompletionClie
 
             // HTTP headers
             public const string HeaderContentType = "Content-Type";
-            public const string OpenAiOrganization = "OpenAI-Organization";
-            public const string OpenAiProject = "OpenAI-Project";
             public const string MediaTypeApplicationJson = "application/json";
-
-            public const string DefaultRelativeUri = "/v1/chat/completions";
-            public const string ModelsUri = "/v1/models";
+            
             public const string AuthorizationApiKeyProperty = "Bearer";
             
             public const string Stream = "stream";
             public const string StreamOptions = "stream_options";
             public const string IncludeUsage = "include_usage";
         }
+
+        public static class AttachmentsRequestFields
+        {
+            public const string Type = "type";
+            public const string File = "file";
+            public const string FileName = "filename";
+            public const string FileData = "file_data";
+            public const string ImageUrl = "image_url";
+            public const string Url = "url";
+
+            public const string TypeText = "text";
+
+            public const string MediaTypeTextPlain = "text/plain";
+            public const string MediaTypeApplicationPdf = "application/pdf";
+            public const string MediaTypeImageJpeg = "image/jpeg";
+            public const string MediaTypeImagePng = "image/png";
+            public const string MediaTypeImageGif = "image/gif";
+            public const string MediaTypeImageWebp = "image/webp";
     }
+}
 }

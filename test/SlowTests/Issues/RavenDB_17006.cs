@@ -25,7 +25,7 @@ namespace SlowTests.Issues
 
             RavenServer leader = result.Leader;
 
-            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(result.Certificates.ServerCertificate.Value, result.Certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
+            X509Certificate2 clientCertificate = Certificates.RegisterClientCertificate(result.Certificates.ServerCertificateForCommunication.Value, result.Certificates.ClientCertificate1.Value, new Dictionary<string, DatabaseAccess>(), SecurityClearance.ClusterAdmin, server: leader);
 
             var localNode = result.Nodes[0];
             var remoteNode = result.Nodes[1];
@@ -34,7 +34,7 @@ namespace SlowTests.Issues
 
             using (var connection = new ProxyWebSocketConnection(null, remoteNodeUrl, $"/admin/cluster-dashboard/remote/watch?thumbprint={clientCertificate.Thumbprint}", localNode.ServerStore.ContextPool, localNode.ServerStore.ServerShutdown))
             {
-                await connection.Establish(Server.Certificate?.Certificate);
+                await connection.Establish(Server.Certificate?.ClientCertificate);
             }
         }
     }

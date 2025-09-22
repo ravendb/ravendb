@@ -408,7 +408,7 @@ namespace FastTests.Server.Documents.Indexing.Auto
             using (var db = CreateDocumentDatabaseForSearchEngine(config))
             using (var index = AutoMapReduceIndex.CreateNew(GetUsersCountByLocationIndexDefinition(), db))
             {
-                index._indexStorage.UpdateStats(SystemTime.UtcNow, new IndexingRunStats
+                index._indexStorage.UpdateStats(SystemTime.UtcNow, TimeSpan.Zero, new IndexingRunStats
                 {
                     ReduceAttempts = 1000,
                     ReduceSuccesses = 900,

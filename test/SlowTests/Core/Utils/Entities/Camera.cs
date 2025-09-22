@@ -1,9 +1,4 @@
-// -----------------------------------------------------------------------
-//  <copyright file="QueryResultsStreaming.cs" company="Hibernating Rhinos LTD">
-//      Copyright (c) Hibernating Rhinos LTD. All rights reserved.
-//  </copyright>
-// ----------------------------------------------------------------------
-namespace SlowTests.Core.Utils.Entities
+﻿namespace SlowTests.Core.Utils.Entities
 {
     public class Camera
     {

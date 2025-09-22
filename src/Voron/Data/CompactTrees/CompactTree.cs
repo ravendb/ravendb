@@ -333,6 +333,16 @@ public sealed partial class CompactTree : IPrepareForCommit
 
         return lookup.ContainerId;
     }
+    
+    public long Add(CompactKeyLookup key, long value)
+    {
+        Debug.Assert(key.Key.Dictionary == _inner.State.DictionaryId);
+        AssertValueAndKeySize(key.Key, value);
+        
+        CompactTreeDumper.WriteAddition(this, ref key, value);
+        _inner.Add(ref key, value);
+        return key.ContainerId;
+    }
 
     public void PrepareForCommit()
     {

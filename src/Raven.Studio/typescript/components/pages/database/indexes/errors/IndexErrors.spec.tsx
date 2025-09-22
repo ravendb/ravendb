@@ -1,5 +1,5 @@
 import { rtlRender } from "test/rtlTestUtils";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 import * as stories from "./IndexErrors.stories";
 import { within } from "@testing-library/dom";
 import { IndexesStubs } from "test/stubs/IndexesStubs";

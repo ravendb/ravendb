@@ -1,7 +1,7 @@
 import savedQueriesStorage from "common/storage/savedQueriesStorage";
 import AceEditor from "components/common/ace/AceEditor";
 import Code from "components/common/Code";
-import { FormInput, FormAceEditor, FormGroup, FormLabel } from "components/common/Form";
+import { FormInput, FormAceEditor, FormGroup, FormLabel, FormSelect } from "components/common/Form";
 import SampleObjectAndSchemaFields from "components/common/sampleObjectAndSchemaFields/SampleObjectAndSchemaFields";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
 import useRqlLanguageService from "components/hooks/useRqlLanguageService";
@@ -13,6 +13,8 @@ import ReactAce from "react-ace";
 import Button from "react-bootstrap/Button";
 import { useFormContext, useWatch } from "react-hook-form";
 import { EditAiAgentFormData } from "../utils/editAiAgentValidation";
+import { SelectOption } from "components/common/select/Select";
+import PopoverWithHoverWrapper from "components/common/PopoverWithHoverWrapper";
 
 interface EditAiAgentQueryToolItemProps {
     index: number;
@@ -117,6 +119,53 @@ export default function EditAiAgentQueryToolItem({ index, remove, save, edit }: 
                     name={`queries.${index}.description`}
                     placeholder={queryFieldDescriptionPlaceholder}
                     rows={4}
+                />
+            </FormGroup>
+            <FormGroup>
+                <FormLabel>
+                    Allow model queries
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                When true, the model is allowed to execute this query on demand based on its own
+                                judgment.
+                                <br />
+                                <br />
+                                When false, the model cannot call this query (unless executed as part of initial
+                                context).
+                            </>
+                        }
+                    >
+                        <Icon icon="info-new" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
+                </FormLabel>
+                <FormSelect
+                    control={control}
+                    name={`queries.${index}.isAllowModelQueries`}
+                    options={isAllowModelQueriesOptions}
+                />
+            </FormGroup>
+            <FormGroup>
+                <FormLabel>
+                    Add to initial context
+                    <PopoverWithHoverWrapper
+                        message={
+                            <>
+                                When true, the query will be executed during the initial context build and its results
+                                provided to the model.
+                                <br />
+                                <br />
+                                When false, the query will not be executed for the initial context.
+                            </>
+                        }
+                    >
+                        <Icon icon="info-new" margin="ms-1" />
+                    </PopoverWithHoverWrapper>
+                </FormLabel>
+                <FormSelect
+                    control={control}
+                    name={`queries.${index}.isAddToInitialContext`}
+                    options={isAddToInitialContextOptions}
                 />
             </FormGroup>
             <FormGroup>
@@ -250,3 +299,15 @@ const QueryFieldJsonSchemaSyntaxHelp = () => {
         </div>
     );
 };
+
+const isAllowModelQueriesOptions: SelectOption<boolean>[] = [
+    { label: "Default", value: null },
+    { label: "True", value: true },
+    { label: "False", value: false },
+];
+
+const isAddToInitialContextOptions: SelectOption<boolean>[] = [
+    { label: "Default", value: null },
+    { label: "True", value: true },
+    { label: "False", value: false },
+];

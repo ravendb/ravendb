@@ -1,16 +1,19 @@
 ﻿using System;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using FastTests;
 using Newtonsoft.Json;
 using Raven.Client;
+using Raven.Client.Documents;
 using Raven.Client.Documents.Operations.AI;
 using Raven.Client.Documents.Operations.ConnectionStrings;
 using Raven.Server.Documents.AI;
 using Raven.Server.Documents.ETL;
 using Raven.Server.Documents.ETL.Providers.AI.GenAi;
+using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.NotificationCenter.Notifications.Details;
 using Sparrow.Json;
 using Sparrow.Server;
@@ -342,17 +345,13 @@ this.Comments[idx].IsBlocked = $output.Blocked;";
         }
 
         EtlErrorInfo error = null;
-        var value = await WaitForValueAsync(async () =>
+        var gotError = await WaitForValueAsync(async () =>
         {
             error = await Etl.TryGetLoadErrorAsync(store.Database, config);
             return error != null;
         }, true, timeout: 60_000);
 
-
-        Assert.True(value);
-        Assert.NotNull(error);
-
-        Assert.Contains("rate limit", error.Error);
+        Assert.True(gotError && error.Error.Contains("rate limit"), await AddDebugInfo(store, config));
 
         using (var session = store.OpenSession())
         {
@@ -540,4 +539,23 @@ this.Comments[idx].IsSpam = $output.Blocked;";
         Assert.True(lastProcessedEtag > 0);
     }
 
+    private async Task<string> AddDebugInfo(IDocumentStore store, GenAiConfiguration config)
+    {
+        var database = await GetDocumentDatabaseInstanceFor(store);
+        var perfStats = Etl.GetEtlPerformanceStatsForDatabase(database);
+
+        var sb = new StringBuilder();
+        sb.AppendLine("ETL performance stats:").AppendLine(perfStats);
+
+        var loadAlert = database.NotificationCenter.EtlNotifications.GetAlert<EtlErrorsDetails>(
+            GenAiTask.GenAiTaskTag, $"{config.Name}/{config.Transforms.First().Name}", AlertType.Etl_LoadError);
+
+        if (loadAlert?.Details is EtlErrorsDetails details)
+        {
+            sb.AppendLine("Etl error details:")
+                .AppendLine(string.Join(',', details.Errors.Select(e => e.Error)));
+        }
+
+        return sb.ToString();
+    }
 }

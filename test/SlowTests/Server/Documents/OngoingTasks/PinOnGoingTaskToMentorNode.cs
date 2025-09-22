@@ -331,7 +331,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
         const int clusterSize = 3;
 
         var (hubNodes, hubLeader, hubCertificatesHolder) = await CreateRaftClusterWithSsl(clusterSize, watcherCluster: true, shouldRunInMemory: true);
-        var adminHubClusterCert = hubCertificatesHolder.ServerCertificate.Value;
+        var adminHubClusterCert = hubCertificatesHolder.ServerCertificateForCommunication.Value;
 
         var mentorNodes = hubNodes.Where(s => s.ServerStore.NodeTag != hubLeader.ServerStore.NodeTag).ToList();
 
@@ -425,7 +425,7 @@ public class PinOnGoingTaskToMentorNode : ReplicationTestBase
         const int clusterSize = 3;
 
         var (hubNodes, hubLeader, hubCertificatesHolder) = await CreateRaftClusterWithSsl(clusterSize, watcherCluster: true, shouldRunInMemory: true);
-        var adminHubClusterCert = hubCertificatesHolder.ServerCertificate.Value;
+        var adminHubClusterCert = hubCertificatesHolder.ServerCertificateForCommunication.Value;
 
         var mentorNodes = hubNodes.Where(s => s.ServerStore.NodeTag != hubLeader.ServerStore.NodeTag).ToList();
 

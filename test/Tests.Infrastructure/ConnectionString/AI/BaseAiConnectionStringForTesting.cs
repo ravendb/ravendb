@@ -22,7 +22,7 @@ where TConfig : EtlConfiguration<AiConnectionString>
     TConfig GetAiConfiguration();
     Lazy<bool> CanConnect { get; }
     Lazy<AiConnectorType> AiConnectorType { get; }
-    bool MissingRequiredApiKey(out string environmentVariableName);
+    bool MissingRequiredEnvVariables(out string environmentVariableName);
 }
 
 public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTesting<TConfig>
@@ -43,7 +43,7 @@ public abstract class BaseAiConnectorForTesting<T, TConfig> : IAiConnectorForTes
 
     protected string[] RequiredEnvironmentVariables = [];
 
-    public virtual bool MissingRequiredApiKey(out string environmentVariableName)
+    public virtual bool MissingRequiredEnvVariables(out string environmentVariableName)
     {
         foreach (var envVar in RequiredEnvironmentVariables)
         {
@@ -181,7 +181,7 @@ public abstract class AbstractGenAiConnectorForTesting<T> : BaseAiConnectorForTe
         using (var client = ChatCompletionClient.CreateChatCompletionClient(contextPool, configuration.Connection))
         {
             logger = null;
-            var result = client.CompleteAsync(systemPrompt: "Reply with exact word only: raven", "", schema, token).GetAwaiter().GetResult();
+            var result = client.CompleteAsync(systemPrompt: "Reply with exact word only: raven", "", schema, null, token).GetAwaiter().GetResult();
 
             return true;
 

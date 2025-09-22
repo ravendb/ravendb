@@ -65,9 +65,15 @@ namespace Raven.Client.Documents.Operations.AI.Agents
         /// This schema is used to validate and assist the AI in forming correct tool calls.
         /// </summary>
         public string ParametersSchema { get; set; }
+        
+        /// <summary>
+        /// Options for the AI agent tool query.
+        /// </summary>
+        public AiAgentToolQueryOptions Options { get; set; }
+        
         public DynamicJsonValue ToJson()
         {
-            return new DynamicJsonValue
+            var djv = new DynamicJsonValue
             {
                 [nameof(Name)] = Name,
                 [nameof(Description)] = Description,
@@ -75,6 +81,11 @@ namespace Raven.Client.Documents.Operations.AI.Agents
                 [nameof(ParametersSampleObject)] = ParametersSampleObject,
                 [nameof(ParametersSchema)] = ParametersSchema
             };
+            
+            if (Options != null)
+                djv[nameof(Options)] = Options.ToJson();
+
+            return djv;
         }
     }
 

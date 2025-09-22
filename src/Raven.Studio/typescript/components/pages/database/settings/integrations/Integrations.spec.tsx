@@ -1,7 +1,7 @@
 import React from "react";
 import { rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
 import * as Stories from "./Integrations.stories";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 type PostgreSqlUsernames = Raven.Server.Integrations.PostgreSQL.Handlers.PostgreSqlUsernames;
 
 const { IntegrationsStory } = composeStories(Stories);

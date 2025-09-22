@@ -1,5 +1,5 @@
 import { licenseArgType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import FeatureAvailabilitySummaryWrapper, { FeatureAvailabilityValueData } from "./FeatureAvailabilitySummary";
 import React from "react";
 import IconName from "typings/server/icons";

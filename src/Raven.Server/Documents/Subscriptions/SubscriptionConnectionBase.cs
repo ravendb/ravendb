@@ -276,7 +276,6 @@ namespace Raven.Server.Documents.Subscriptions
 
             if (sendingCurrentBatchStopwatch.Elapsed >= ISubscriptionConnection.HeartbeatTimeout)
                 await SendHeartBeatAsync($"Didn't find any documents to send and more then {ISubscriptionConnection.HeartbeatTimeout.TotalMilliseconds}ms passed");
-
         }
 
         protected virtual void OnError(Exception e) { }
@@ -742,7 +741,7 @@ namespace Raven.Server.Documents.Subscriptions
                                         var clusterTopology = ServerStore.GetClusterTopology(ctx);
                                         using (var requester = ClusterRequestExecutor.CreateForShortTermUse(
                                                    clusterTopology.GetUrlFromTag(subscriptionDoesNotBelongException.AppropriateNode),
-                                                   ServerStore.Server.Certificate.Certificate, DocumentConventions.DefaultForServer))
+                                               ServerStore.Server.Certificate.ClientCertificate, DocumentConventions.DefaultForServer))
                                         {
                                             await requester.ExecuteAsync(new WaitForRaftIndexCommand(subscriptionDoesNotBelongException.Index), ctx);
                                         }
@@ -1094,7 +1093,6 @@ namespace Raven.Server.Documents.Subscriptions
 
         protected virtual void DisposeInternal()
         {
-
             using (_copiedBuffer.ReleaseBuffer)
             {
                 try
