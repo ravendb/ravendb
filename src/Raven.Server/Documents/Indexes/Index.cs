@@ -3291,7 +3291,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer,
             IndexQueryServerSide query, QueryOperationContext queryContext, OperationCancelToken token)
         {
-            var result = new StreamDocumentQueryResult(response, writer, queryContext.Documents, Definition.ClusterState.LastIndex, token);
+            using var result = new StreamDocumentQueryResult(response, writer, queryContext.Documents, Definition.ClusterState.LastIndex, token);
             await QueryInternal(result, query, queryContext, pulseDocsReadingTransaction: true, token);
             result.Flush();
 
@@ -3301,7 +3301,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task StreamIndexEntriesQuery(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
             IndexQueryServerSide query, QueryOperationContext queryContext, bool ignoreLimit, OperationCancelToken token)
         {
-            var result = new StreamDocumentIndexQueryResult(response, writer, Definition.ClusterState.LastIndex, token);
+            using var result = new StreamDocumentIndexQueryResult(response, writer, Definition.ClusterState.LastIndex, token);
             await IndexEntriesQueryInternal(result, query, queryContext, ignoreLimit, token);
             result.Flush();
 
