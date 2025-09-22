@@ -11,6 +11,7 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server.Config;
@@ -57,46 +58,50 @@ public sealed class LetsEncryptSimulationHelper
         configuration.Initialize();
         var guid = Guid.NewGuid().ToString();
 
-        IWebHost webHost = null;
+        IHost webHost = null;
         try
         {
             try
             {
                 var responder = new UniqueResponseResponder(guid);
 
-                var webHostBuilder = new WebHostBuilder()
-                    .CaptureStartupErrors(captureStartupErrors: true)
-                    .UseKestrel(options =>
+                var webHostBuilder = new HostBuilder()
+                    .ConfigureWebHost(configure =>
                     {
-                        var httpsConnectionMiddleware = new HttpsConnectionMiddleware(serverStore.Server, options, serverCertificate);
-
-                        if (addresses.Length == 0)
-                        {
-                            var defaultIp = new IPEndPoint(IPAddress.Parse(Constants.Network.AnyIp), port == 0 ? Constants.Network.DefaultSecuredRavenDbHttpPort : port);
-
-                            options.Listen(defaultIp, listenOptions =>
+                        configure
+                            .CaptureStartupErrors(captureStartupErrors: true)
+                            .UseKestrel(options =>
                             {
-                                listenOptions
-                                    .UseHttps()
-                                    .Use(httpsConnectionMiddleware.OnConnectionAsync);
-                            });
-                            if (Logger.IsInfoEnabled)
-                                Logger.Info($"List of ip addresses for node '{nodeTag}' is empty. WebHost listening to {defaultIp}");
-                        }
+                                var httpsConnectionMiddleware = new HttpsConnectionMiddleware(serverStore.Server, options, serverCertificate);
 
-                        foreach (var address in addresses)
-                        {
-                            options.Listen(address, listenOptions =>
-                            {
-                                listenOptions
-                                    .UseHttps()
-                                    .Use(httpsConnectionMiddleware.OnConnectionAsync);
-                            });
-                        }
+                                if (addresses.Length == 0)
+                                {
+                                    var defaultIp = new IPEndPoint(IPAddress.Parse(Constants.Network.AnyIp), port == 0 ? Constants.Network.DefaultSecuredRavenDbHttpPort : port);
+
+                                    options.Listen(defaultIp, listenOptions =>
+                                    {
+                                        listenOptions
+                                            .UseHttps()
+                                            .Use(httpsConnectionMiddleware.OnConnectionAsync);
+                                    });
+                                    if (Logger.IsInfoEnabled)
+                                        Logger.Info($"List of ip addresses for node '{nodeTag}' is empty. WebHost listening to {defaultIp}");
+                                }
+
+                                foreach (var address in addresses)
+                                {
+                                    options.Listen(address, listenOptions =>
+                                    {
+                                        listenOptions
+                                            .UseHttps()
+                                            .Use(httpsConnectionMiddleware.OnConnectionAsync);
+                                    });
+                                }
+                            })
+                            .UseSetting(WebHostDefaults.ApplicationKey, "Setup simulation")
+                            .UseShutdownTimeout(TimeSpan.FromMilliseconds(150));
                     })
-                    .UseSetting(WebHostDefaults.ApplicationKey, "Setup simulation")
-                    .ConfigureServices(collection => { collection.AddSingleton(typeof(IStartup), responder); })
-                    .UseShutdownTimeout(TimeSpan.FromMilliseconds(150));
+                    .ConfigureServices(collection => { collection.AddSingleton(typeof(IStartup), responder); });
 
                 webHost = webHostBuilder.Build();
                 serverStore.Server._forTestingPurposes?.UnbindSocketForPort(port);
