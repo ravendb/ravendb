@@ -1,7 +1,7 @@
 ﻿import { MouseEvent, MouseEventHandler } from "react";
 import { SelectOption } from "components/common/select/Select";
 import { loadableData } from "components/models/common";
-import { StoryFn } from "@storybook/react";
+import { StoryFn } from "@storybook/react-webpack5";
 import typeUtils = require("common/typeUtils");
 
 export function withPreventDefault(action: (...args: any[]) => void): MouseEventHandler<HTMLElement> {

@@ -1,18 +1,20 @@
 import type { StorybookConfig } from "@storybook/react-webpack5";
-const webpackConfigFunc = require("../webpack.config");
-const path = require("path");
-const CopyPlugin = require("copy-webpack-plugin");
-const ForkTsCheckerWebpackPlugin = require("fork-ts-checker-webpack-plugin");
+import type { Configuration } from "webpack";
+import webpackConfigFunc from "../webpack.config.js";
+import path from "path";
+import webpack from "webpack";
+import CopyPlugin from "copy-webpack-plugin";
+import ForkTsCheckerWebpackPlugin from "fork-ts-checker-webpack-plugin";
+import { hooksForAutoMock } from "../typescript/components/hooks/hooksForAutoMock";
 
-const webpackConfig = webpackConfigFunc(null, {
+const webpackConfig: Configuration = webpackConfigFunc(null, {
     mode: "development",
     watch: false,
 });
 
-const customHooksToMock = require("../typescript/components/hooks/hooksForAutoMock.json").hooks;
-const customHooksAliases = {};
+const customHooksAliases: Record<string, string> = {};
 
-customHooksToMock.forEach((name: string) => {
+hooksForAutoMock.forEach((name: string) => {
     customHooksAliases["hooks/" + name] = path.resolve(__dirname, "../typescript/components/hooks/__mocks__/" + name);
 });
 
@@ -24,14 +26,7 @@ const config: StorybookConfig = {
         reactDocgen: false,
     },
     stories: ["../typescript/**/*.stories.tsx"],
-    addons: [
-        "@storybook/addon-links",
-        "@storybook/addon-essentials",
-        "@storybook/addon-interactions",
-        "@storybook/addon-webpack5-compiler-swc",
-        "@storybook/addon-a11y",
-        "@storybook/addon-designs",
-    ],
+    addons: ["@storybook/addon-webpack5-compiler-swc", "@storybook/addon-a11y", "@storybook/addon-designs"],
 
     framework: {
         name: "@storybook/react-webpack5",
@@ -72,7 +67,7 @@ const config: StorybookConfig = {
         config.plugins?.unshift(webpackConfig.plugins.find((x) => x.constructor.name === "ProvidePlugin"));
 
         const incomingRules = webpackConfig.module.rules.filter(
-            (x) =>
+            (x: any) =>
                 (x.use && x.use.indexOf && x.use.indexOf("imports-loader") === 0) ||
                 (x.use && x.use.loader === "html-loader") ||
                 (x.type && x.type === "asset/source") ||
@@ -82,7 +77,7 @@ const config: StorybookConfig = {
                 (x.test && x.test.toString().includes(".tsx") && x.include && x.include[0].includes("components"))
         );
 
-        const scssRule = incomingRules.find((x) => x.test && x.test.toString().includes(".scss"));
+        const scssRule = incomingRules.find((x: any) => x.test && x.test.toString().includes(".scss")) as any;
         scssRule.use[0].options = {
             publicPath: "/",
         };
@@ -108,6 +103,12 @@ const config: StorybookConfig = {
         );
 
         config.module?.rules?.push(...incomingRules);
+
+        config.plugins?.push(
+            new webpack.ProvidePlugin({
+                process: "process/browser",
+            })
+        );
 
         return config;
     },

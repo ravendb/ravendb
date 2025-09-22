@@ -1,6 +1,6 @@
 import React from "react";
 import { supportStatusArgType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { HelpAndResourcesWidget } from "components/common/helpAndResources/HelpAndResourcesWidget";
 import { mockServices } from "test/mocks/services/MockServices";
 import { mockStore } from "test/mocks/store/MockStore";

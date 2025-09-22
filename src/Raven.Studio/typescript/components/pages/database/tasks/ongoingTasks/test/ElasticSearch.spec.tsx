@@ -1,4 +1,4 @@
-import { composeStory } from "@storybook/react";
+import { composeStory } from "@storybook/react-webpack5";
 import * as stories from "components/pages/database/tasks/ongoingTasks/stories/ElasticSearch.stories";
 import { rtlRender } from "test/rtlTestUtils";
 import { within } from "@testing-library/dom";

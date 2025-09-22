@@ -1,6 +1,6 @@
 import * as stories from "./Certificates.stories";
 import { rtlRender, rtlRender_WithWaitForLoad } from "test/rtlTestUtils";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 import { ManageServerStubs } from "test/stubs/ManageServerStubs";
 import moment from "moment";
 

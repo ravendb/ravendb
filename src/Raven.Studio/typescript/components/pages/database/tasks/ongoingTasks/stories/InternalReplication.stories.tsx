@@ -1,10 +1,10 @@
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { mockServices } from "test/mocks/services/MockServices";
 import { OngoingTasksPage } from "components/pages/database/tasks/ongoingTasks/OngoingTasksPage";
 import React from "react";
 import { commonInit } from "components/pages/database/tasks/ongoingTasks/stories/common";
 import { withBootstrap5, withForceRerender, withStorybookContexts } from "test/storybookTestUtils";
-import { userEvent } from "@storybook/test";
+import { userEvent } from "storybook/test";
 
 export default {
     title: "Pages/Tasks/Ongoing tasks/Internal Replication",

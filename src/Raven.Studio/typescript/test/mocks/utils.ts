@@ -1,7 +1,7 @@
 ﻿import { MockedValue, ServiceMocks } from "test/mocks/services/AutoMockService";
 import { mockServices } from "test/mocks/services/MockServices";
 
-import { MockedObject } from "@storybook/test";
+import { MockedObject } from "storybook/internal/test";
 
 export function createValue<T>(value: MockedValue<T>, defaultValue: T): T {
     if (value instanceof Function) {

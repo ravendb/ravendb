@@ -43,7 +43,7 @@ pluginWidget.install({});
 
 import { commonInit } from "components/common/shell/setup";
 
-import { fn } from "@storybook/test";
+import { fn } from "storybook/test";
 window.jest = { fn }
 
 commonInit();

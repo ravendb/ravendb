@@ -1,4 +1,4 @@
-import { composeStory } from "@storybook/react";
+import { composeStory } from "@storybook/react-webpack5";
 import { rtlRender } from "test/rtlTestUtils";
 import { within } from "@testing-library/dom";
 import React from "react";

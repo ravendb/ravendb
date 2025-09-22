@@ -1,7 +1,7 @@
 import React from "react";
 import { RtlScreen, rtlRender, waitForElementToBeRemoved } from "test/rtlTestUtils";
 import * as Stories from "./ConflictResolution.stories";
-import { composeStories } from "@storybook/react";
+import { composeStories } from "@storybook/react-webpack5";
 
 const { DefaultConflictResolution } = composeStories(Stories);
 
