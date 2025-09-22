@@ -1,5 +1,5 @@
 import React from "react";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import { withStorybookContexts, withBootstrap5 } from "test/storybookTestUtils";
 import FeatureNotAvailable from "./FeatureNotAvailable";
 import { Icon } from "./Icon";

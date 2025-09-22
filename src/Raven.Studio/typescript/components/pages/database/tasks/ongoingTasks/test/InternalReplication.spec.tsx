@@ -1,15 +1,14 @@
-import { composeStory } from "@storybook/react";
+import { composeStory } from "@storybook/react-webpack5";
 import * as stories from "components/pages/database/tasks/ongoingTasks/stories/InternalReplication.stories";
 import { rtlRender } from "test/rtlTestUtils";
 import React from "react";
-import { userEvent } from "@storybook/test";
 
 describe("Internal Replication", function () {
     it("can render", async () => {
-        const { hover } = userEvent.setup();
         const Story = composeStory(stories.Default, stories.default);
 
-        const { screen, fireClick } = rtlRender(<Story />);
+        const { screen, fireClick, user } = rtlRender(<Story />);
+        const { hover } = user;
         const container = screen;
         expect(await container.findByRole("heading", { name: /Internal Replication/ })).toBeInTheDocument();
 
