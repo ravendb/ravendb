@@ -26,7 +26,7 @@ namespace Micro.Benchmark.Benchmarks.Parsing
                 {
                     Environment =
                     {
-                        Runtime = CoreRuntime.Core80, 
+                        Runtime = CoreRuntime.Core10_0, 
                         Platform = Platform.X64, 
                         Jit = Jit.RyuJit
                     }
