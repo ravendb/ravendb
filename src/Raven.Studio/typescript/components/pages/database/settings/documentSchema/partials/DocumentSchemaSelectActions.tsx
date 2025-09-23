@@ -7,11 +7,11 @@ import ButtonGroup from "react-bootstrap/ButtonGroup";
 import Button from "react-bootstrap/Button";
 import { useAppSelector } from "components/store";
 import { useDispatch } from "react-redux";
-import { useEventsCollector } from "components/hooks/useEventsCollector";
+import { useEventsCollector } from "hooks/useEventsCollector";
 import { documentSchemaSelectors } from "components/pages/database/settings/documentSchema/store/documentSchemaSliceSelectors";
 import { documentSchemaActions } from "components/pages/database/settings/documentSchema/store/documentSchemaSlice";
 import useBoolean from "hooks/useBoolean";
-import DocumentSchemaDeleteModal from "components/pages/database/settings/documentSchema/DocumentSchemaDeleteModal";
+import DocumentSchemaDeleteModal from "components/pages/database/settings/documentSchema/partials/DocumentSchemaDeleteModal";
 
 export default function DocumentSchemaSelectActions() {
     const dispatch = useDispatch();
@@ -32,7 +32,6 @@ export default function DocumentSchemaSelectActions() {
         dispatch(documentSchemaActions.allSelectedCollectionNamesToggled());
     };
 
-
     return (
         <div className="position-relative">
             <Checkbox
@@ -52,11 +51,7 @@ export default function DocumentSchemaSelectActions() {
                         <strong className="text-emphasis me-1">{selectedCollectionNames.length}</strong> selected
                     </div>
                     <ButtonGroup className="gap-2 flex-wrap justify-content-center">
-                        <Button
-                            variant="danger"
-                            onClick={toggleDeleteModal}
-                            className="rounded-pill flex-grow-0"
-                        >
+                        <Button variant="danger" onClick={toggleDeleteModal} className="rounded-pill flex-grow-0">
                             <Icon icon="trash" /> Delete
                         </Button>
                     </ButtonGroup>

@@ -2,7 +2,7 @@ import { databaseAccessArgType, licenseArgType, withBootstrap5, withStorybookCon
 import { Meta, StoryObj } from "@storybook/react";
 import DocumentSchema from "components/pages/database/settings/documentSchema/DocumentSchema";
 import { mockStore } from "test/mocks/store/MockStore";
-import DocumentSchemaPlayground from "components/pages/database/settings/documentSchema/DocumentSchemaPlayground";
+import DocumentSchemaPlayground from "components/pages/database/settings/documentSchema/partials/DocumentSchemaPlayground";
 import { mockServices } from "test/mocks/services/MockServices";
 
 export default {
