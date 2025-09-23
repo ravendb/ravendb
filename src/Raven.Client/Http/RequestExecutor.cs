@@ -1581,7 +1581,7 @@ namespace Raven.Client.Http
                     else
                     {
                         builder.Append("The certificate ").Append(Certificate.FriendlyName)
-                            .Append(" contains no private key. Constructing the certificate with the 'X509KeyStorageFlags.MachineKeySet' flag may solve this problem. ");
+                            .Append(" contains no private key. Constructing the certificate with the 'X509KeyStorageFlags.UserKeySet' flag may solve this problem. ");
                     }
                     builder.Append("Method: ").Append(request.Method).Append(", Request: ").AppendLine(request.RequestUri.ToString()).Append(msg);
                     throw new AuthorizationException(builder.ToString());
