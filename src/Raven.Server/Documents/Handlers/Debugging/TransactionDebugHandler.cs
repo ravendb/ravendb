@@ -56,19 +56,17 @@ namespace Raven.Server.Documents.Handlers.Debugging
             return new TxInfoResult
             {
                 TransactionId = lowLevelTransaction.Id,
-                //ThreadId = lowLevelTransaction.CurrentTransactionHolder?.ManagedThreadId,
-                //ThreadName = lowLevelTransaction.CurrentTransactionHolder?.Name,
+                ThreadId = lowLevelTransaction.CurrentTransactionIdHolder,
+                ThreadName = NativeMemory.GetByThreadId(lowLevelTransaction.CurrentTransactionIdHolder)?.Name,
                 CallerName = lowLevelTransaction.CallerName,
                 StartTime = lowLevelTransaction.TxStartTime.GetDefaultRavenFormat(isUtc: true),
                 TotalTime = $"{(DateTime.UtcNow - lowLevelTransaction.TxStartTime).TotalMilliseconds} {TotalTimeMSecondsSuffix}",
-                //FlushInProgressLockTaken = lowLevelTransaction.FlushInProgressLockTaken,
+                FlushInProgressLockTaken = lowLevelTransaction.Environment.IsFlushInProgress,
                 Flags = lowLevelTransaction.Flags,
                 IsCloned = lowLevelTransaction.IsCloned,
                 NumberOfModifiedPages = lowLevelTransaction.NumberOfModifiedPages,
                 Committed = lowLevelTransaction.Committed,
-                //TotalAllocatedSize = new Size(lowLevelTransaction.TotalAllocatedInBytes, SizeUnit.Bytes).ToString(),
                 DecompressedBufferSize = new Size(lowLevelTransaction.DecompressedBufferBytes, SizeUnit.Bytes).ToString(),
-                //TotalEncryptionBufferSize = lowLevelTransaction.TotalEncryptionBufferInBytes.ToString(),
                 IsDisposed = lowLevelTransaction.IsDisposed,
             };
         }
@@ -109,9 +107,7 @@ namespace Raven.Server.Documents.Handlers.Debugging
                 [nameof(TxInfoResult.IsCloned)] = txInfo.IsCloned,
                 [nameof(TxInfoResult.NumberOfModifiedPages)] = txInfo.NumberOfModifiedPages,
                 [nameof(TxInfoResult.Committed)] = txInfo.Committed,
-                //[nameof(TxInfoResult.TotalAllocatedSize)] = txInfo.TotalAllocatedSize,
                 [nameof(TxInfoResult.DecompressedBufferSize)] = txInfo.DecompressedBufferSize,
-                //[nameof(TxInfoResult.TotalEncryptionBufferSize)] = txInfo.TotalEncryptionBufferSize,
                 [nameof(TxInfoResult.IsDisposed)] = txInfo.IsDisposed,
             };
         }

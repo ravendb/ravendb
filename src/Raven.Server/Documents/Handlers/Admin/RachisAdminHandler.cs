@@ -254,10 +254,10 @@ namespace Raven.Server.Documents.Handlers.Admin
                         [nameof(ClusterTopologyResponse.Etag)] = topology.Etag,
                         [nameof(ClusterTopologyResponse.Leader)] = ServerStore.LeaderTag,
                         [nameof(ClusterTopologyResponseExtraData.LeaderShipDuration)] = ServerStore.Engine.CurrentLeader?.LeaderShipDuration,
-                        //[nameof(RachisConsensus.CurrentState)] = ServerStore.CurrentRachisState,
+                        [nameof(ClusterTopologyResponseExtraData.CurrentState)] = ServerStore.CurrentRachisState,
                         [nameof(ClusterTopologyResponse.NodeTag)] = nodeTag,
                         [nameof(ClusterTopologyResponse.ServerRole)] = topology.GetServerRoleForTag(nodeTag),
-                        //[nameof(ServerStore.Engine.CurrentTerm)] = ServerStore.Engine.CurrentCommittedState.Term,
+                        [nameof(ClusterTopologyResponseExtraData.CurrentTerm)] = ServerStore.Engine.CurrentCommittedState.Term,
                         [nameof(LicenseLimits.NodeLicenseDetails)] = nodeLicenseDetails,
                         [nameof(ServerStore.Engine.LastStateChangeReason)] = ServerStore.LastStateChangeReason()
                     };
@@ -280,6 +280,10 @@ namespace Raven.Server.Documents.Handlers.Admin
             public DynamicJsonValue Status { get; set; }
             
             public long LeaderShipDuration { get; set; }
+            
+            public RachisState CurrentState { get; set; }
+            
+            public long CurrentTerm { get; set; }
         }
 
         [RavenAction("/admin/cluster/maintenance-stats", "GET", AuthorizationStatus.Operator)]
