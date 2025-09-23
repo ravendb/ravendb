@@ -4,7 +4,8 @@ import { createEntityAdapter, createSlice, EntityState, PayloadAction, nanoid } 
 import SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
 export type CollectionName = string & NonNullable<unknown>;
 
-export interface DocumentSchemaValidatorConfig extends Raven.Client.Documents.Operations.SchemaValidation.SchemaDefinition {
+export interface DocumentSchemaValidatorConfig
+    extends Raven.Client.Documents.Operations.SchemaValidation.SchemaDefinition {
     Name: CollectionName;
 }
 
@@ -33,7 +34,8 @@ export const documentSchemaSlice = createSlice({
     initialState,
     reducers: {
         validatorsLoadedFromServer: (state, { payload }: PayloadAction<SchemaValidationConfiguration>) => {
-            const map = (payload?.ValidatorsPerCollection ?? {}) as SchemaValidationConfiguration["ValidatorsPerCollection"];
+            const map = (payload?.ValidatorsPerCollection ??
+                {}) as SchemaValidationConfiguration["ValidatorsPerCollection"];
 
             const items: DocumentSchemaValidatorConfig[] = Object.keys(map).map((name) => ({
                 Name: name,

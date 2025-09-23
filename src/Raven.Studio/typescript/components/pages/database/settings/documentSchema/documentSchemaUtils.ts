@@ -1,6 +1,4 @@
-import {
-    DocumentSchemaValidatorConfig
-} from "components/pages/database/settings/documentSchema/store/documentSchemaSlice";
+import { DocumentSchemaValidatorConfig } from "components/pages/database/settings/documentSchema/store/documentSchemaSlice";
 import { DocumentSchemaFormData } from "components/pages/database/settings/documentSchema/DocumentSchema";
 import SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
 
