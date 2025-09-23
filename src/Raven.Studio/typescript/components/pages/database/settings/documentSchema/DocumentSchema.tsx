@@ -345,9 +345,17 @@ const RichPanelDetailsEditSchema = ({
                     actions={[
                         { component: <AceEditor.FullScreenAction /> },
                         { component: <AceEditor.FormatAction /> },
-                        { component: <AceEditor.LoadFileAction onLoad={(value) => setValue("schema", value, {
-                            shouldValidate: true
-                            })} /> },
+                        {
+                            component: (
+                                <AceEditor.LoadFileAction
+                                    onLoad={(value) =>
+                                        setValue("schema", value, {
+                                            shouldValidate: true,
+                                        })
+                                    }
+                                />
+                            ),
+                        },
                         {
                             component: <AceEditor.HelpAction message={<div>TODO</div>} />,
                             position: "bottom",
@@ -406,7 +414,10 @@ const NewCollectionSchemaRichPanel = ({
 
 const formSchema = yup.object({
     collection: yup.string().required(),
-    schema: yup.string().required(),
+    schema: yup
+        .string()
+        .required()
+        .test("is-json", "Invalid JSON", (value) => !!value && jsonUtil.isValidJson(value)),
 });
 
 export type DocumentSchemaFormData = yup.InferType<typeof formSchema>;
