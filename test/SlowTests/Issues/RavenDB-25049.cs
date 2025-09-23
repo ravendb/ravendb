@@ -5,7 +5,7 @@ using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
 using System.Threading.Tasks;
 using FastTests;
-using Raven.Client;
+using Raven.Client.Util;
 using Raven.Server.ServerWide;
 using Tests.Infrastructure;
 using Xunit;
@@ -76,7 +76,7 @@ namespace SlowTests.Issues
 
             // Load the returned PFX and CER
             var pfxBytes = Convert.FromBase64String(parsed.Certificate);
-            var cert = new X509Certificate2(pfxBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.UserKeySet);
+            var cert = CertificateLoaderUtil.CreateCertificateFromPfx(pfxBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.UserKeySet);
             Assert.Equal(parsed.Thumbprint, cert.Thumbprint);
 
             // verify NotAfter roughly matches requested validity
@@ -84,7 +84,7 @@ namespace SlowTests.Issues
 
             // PublicKey should match same cert when loaded as CER (no private key)
             var cerBytes = Convert.FromBase64String(parsed.PublicKey);
-            var publicOnly = new X509Certificate2(cerBytes);
+            var publicOnly = CertificateLoaderUtil.CreateCertificateFromPfx(cerBytes);
             Assert.Equal(cert.Thumbprint, publicOnly.Thumbprint);
 
             var hasClientAuthEku = SecretProtection.HasCertificateClientAuthEnhancedKeyUsage(cert);

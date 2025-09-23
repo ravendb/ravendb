@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 using Raven.Client.Documents.AI;
@@ -250,9 +251,17 @@ namespace Raven.Client.Documents
             RequestExecutor.ValidateUrls(Urls, Certificate);
 
             if (Certificate != null && Certificate.HasPrivateKey == false)
+            {
+#if !NET9_0_OR_GREATER
+                const string flagName = nameof(X509KeyStorageFlags.MachineKeySet);
+#else
+                const string flagName = nameof(X509KeyStorageFlags.UserKeySet);
+#endif
+
                 throw new InvalidOperationException(
                     $"The supplied {Certificate.FriendlyName} certificate contains no private key. " +
-                    "Constructing the certificate with the 'X509KeyStorageFlags.UserKeySet' flag may solve this problem.");
+                    $"Constructing the certificate with the 'X509KeyStorageFlags.{flagName}' flag may solve this problem.");
+            }
 
             try
             {

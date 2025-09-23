@@ -51,9 +51,13 @@ internal static class CertificateLoaderUtil
         }
         catch (Exception e)
         {
+#if NET9_0_OR_GREATER
+            throw;
+#else
             exception = e;
             f = AddMachineKeySet(flags);
             collection.Add(CertificateHelper.CreateCertificateFromPfx(rawData, password, f));
+#endif
         }
 
         LogIfNeeded(nameof(ImportPfx), f, exception);
@@ -99,9 +103,13 @@ internal static class CertificateLoaderUtil
         }
         catch (Exception e)
         {
+#if NET9_0_OR_GREATER
+            throw;
+#else
             exception = e;
             f = AddMachineKeySet(flag);
             certificate = creator(f);
+#endif
         }
 
         LogIfNeeded(nameof(CreateCertificateFromPfx), f, exception);
@@ -118,17 +126,19 @@ internal static class CertificateLoaderUtil
 
     private static X509KeyStorageFlags AddMachineKeySet(X509KeyStorageFlags? flag)
     {
-        return (flag ?? X509KeyStorageFlags.DefaultKeySet) | X509KeyStorageFlags.UserKeySet;
+        return (flag ?? X509KeyStorageFlags.DefaultKeySet) | X509KeyStorageFlags.MachineKeySet;
     }
 
     [Conditional("DEBUG")]
     private static void DebugAssertDoesNotContainKeySet(X509KeyStorageFlags? flags)
     {
         const X509KeyStorageFlags keyStorageFlags =
-#if NETCOREAPP3_1_OR_GREATER 
+#if NETCOREAPP3_1_OR_GREATER
             X509KeyStorageFlags.EphemeralKeySet |
 #endif
-            X509KeyStorageFlags.UserKeySet |
+#if !NET9_0_OR_GREATER
+            X509KeyStorageFlags.MachineKeySet |
+#endif
             X509KeyStorageFlags.UserKeySet;
 
         Debug.Assert(flags.HasValue == false || (flags.Value & keyStorageFlags) == 0);
