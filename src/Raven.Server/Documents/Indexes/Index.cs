@@ -3302,7 +3302,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task StreamQuery(HttpResponse response, IStreamQueryResultWriter<Document> writer,
             IndexQueryServerSide query, QueryOperationContext queryContext, OperationCancelToken token)
         {
-            var result = new StreamDocumentQueryResult(response, writer, queryContext.Documents, Definition.ClusterState.LastIndex, token);
+            using var result = new StreamDocumentQueryResult(response, writer, queryContext.Documents, Definition.ClusterState.LastIndex, token);
             await QueryInternal(result, query, queryContext, pulseDocsReadingTransaction: true, token);
             result.Flush();
 
@@ -3312,7 +3312,7 @@ namespace Raven.Server.Documents.Indexes
         public virtual async Task StreamIndexEntriesQuery(HttpResponse response, IStreamQueryResultWriter<BlittableJsonReaderObject> writer,
             IndexQueryServerSide query, QueryOperationContext queryContext, bool ignoreLimit, OperationCancelToken token)
         {
-            var result = new StreamDocumentIndexQueryResult(response, writer, Definition.ClusterState.LastIndex, token);
+            using var result = new StreamDocumentIndexQueryResult(response, writer, Definition.ClusterState.LastIndex, token);
             await IndexEntriesQueryInternal(result, query, queryContext, ignoreLimit, token);
             result.Flush();
 
@@ -3346,7 +3346,8 @@ namespace Raven.Server.Documents.Indexes
             IndexQueryServerSide query,
             QueryOperationContext queryContext,
             bool pulseDocsReadingTransaction,
-            OperationCancelToken token)
+            OperationCancelToken token,
+            [CallerMemberName] string caller = null)
             where TQueryResult : QueryResultServerSide<Document>
         {
             QueryInternalPreparation(query);
@@ -3375,7 +3376,7 @@ namespace Raven.Server.Documents.Indexes
                     using (var indexTx = indexContext.OpenReadTransaction())
                     {
                         if (queryContext.AreTransactionsOpened() == false)
-                            resultToFill.ReadTransactionDispose = queryContext.OpenReadTransaction();
+                            resultToFill.ReadTransactionDispose = queryContext.OpenReadTransaction(caller);
 
                         // we have to open read tx for mapResults _after_ we open index tx
 
