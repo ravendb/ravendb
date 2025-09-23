@@ -1,4 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
+using System.Text.Json.Serialization;
 using Sparrow;
 using Voron.Data;
 using Voron.Data.Tables;
@@ -49,6 +52,13 @@ namespace Voron.Debugging
 
     public sealed class DataFileReport
     {
+        [JsonConstructor]
+        [SetsRequiredMembers]
+        public DataFileReport()
+        {
+            // for deserialization
+        }
+
         public override string ToString()
         {
             return $"{nameof(AllocatedSpaceInBytes)}: {new Size(AllocatedSpaceInBytes,SizeUnit.Bytes)}, {nameof(UsedSpaceInBytes)}: {new Size(UsedSpaceInBytes,SizeUnit.Bytes)}, {nameof(FreeSpaceInBytes)}: {new Size(FreeSpaceInBytes, SizeUnit.Bytes)}";
@@ -87,6 +97,8 @@ namespace Voron.Debugging
     public enum TempBufferType
     {
         Scratch,
+        [Obsolete("It's not used anymore, but we keep it for backward compatibility - deserialization of JSON from debug packages prior to 8.0 version")]
+        RecyclableJournal
     }
 
     public sealed class TreeReport
