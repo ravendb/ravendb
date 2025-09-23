@@ -47,40 +47,4 @@ public static class Program
             }
         }
     }
-
-    private static (RavenTestBase.Options Options, GenAiConfiguration Configuration) GetGenAiConfig(RavenAiIntegration type, RavenDatabaseMode databaseMode = RavenDatabaseMode.Single)
-    {
-        var att = new RavenGenAiDataAttribute();
-        var connector = att.GetAiConnectionStringsNewInstance(type, "").First();
-        var config = connector.GetAiConfiguration();
-        var options = RavenTestBase.Options.ForMode(databaseMode);
-        return (options, config);
-    }
-
-    private static (RavenTestBase.Options Options, EmbeddingsGenerationConfiguration Configuration) GetEmbeddingsConfig(RavenAiIntegration type, RavenDatabaseMode databaseMode = RavenDatabaseMode.Single)
-    {
-        var att = new RavenAiEmbeddingsDataAttribute();
-        var connector = att.GetAiConnectionStringsNewInstance(type, "").First();
-        var config = connector.GetAiConfiguration();
-        var options = RavenTestBase.Options.ForMode(databaseMode);
-        return (options, config);
-    }
-
-    private static void TryRemoveDatabasesFolder()
-    {
-        var p = System.AppDomain.CurrentDomain.BaseDirectory;
-        var dbPath = Path.Combine(p, "Databases");
-        if (Directory.Exists(dbPath))
-        {
-            try
-            {
-                Directory.Delete(dbPath, true);
-                Assert.False(Directory.Exists(dbPath), "Directory.Exists(dbPath)");
-            }
-            catch
-            {
-                Console.WriteLine($"Could not remove Databases folder on path '{dbPath}'");
-            }
-        }
-    }
 }
