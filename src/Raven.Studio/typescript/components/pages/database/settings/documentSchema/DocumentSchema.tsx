@@ -309,7 +309,7 @@ const RichPanelDetailsEditSchema = ({
     collectionName,
     schemaValidatorCollections,
 }: RichPanelDetailsEditSchemaProps) => {
-    const { control } = useFormContext<DocumentSchemaFormData>();
+    const { control, setValue } = useFormContext<DocumentSchemaFormData>();
     const aceRef = useRef<ReactAce>(null);
 
     const allCollectionNames = useAppSelector(collectionsTrackerSelectors.collectionNames).filter(
@@ -345,7 +345,9 @@ const RichPanelDetailsEditSchema = ({
                     actions={[
                         { component: <AceEditor.FullScreenAction /> },
                         { component: <AceEditor.FormatAction /> },
-                        { component: <AceEditor.LoadFileAction onLoad={() => {}} /> },
+                        { component: <AceEditor.LoadFileAction onLoad={(value) => setValue("schema", value, {
+                            shouldValidate: true
+                            })} /> },
                         {
                             component: <AceEditor.HelpAction message={<div>TODO</div>} />,
                             position: "bottom",
