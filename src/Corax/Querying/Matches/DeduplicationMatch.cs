@@ -13,6 +13,7 @@ namespace Corax.Querying.Matches;
 public unsafe struct DeduplicationMatch<TInner> : IQueryMatch
     where TInner : IQueryMatch
 {
+    private bool _isGrowableBitArray = false;
     private TInner _inner;
     private readonly GrowableHashSet<long> _hashset;
     private GrowableBitArray _bitmap;
@@ -37,6 +38,7 @@ public unsafe struct DeduplicationMatch<TInner> : IQueryMatch
         {
             _bitmap = new GrowableBitArray(indexSearcher.Allocator, (int)indexSearcher.LastEntryId);
             _fillFunc = &FillViaBitmap;
+            _isGrowableBitArray = true;
         }
 
         _inner = inner;
@@ -123,6 +125,11 @@ public unsafe struct DeduplicationMatch<TInner> : IQueryMatch
 
     public QueryInspectionNode Inspect()
     {
-        return new QueryInspectionNode(nameof(DeduplicationMatch<TInner>), new List<QueryInspectionNode>() { { new QueryInspectionNode("Inner", [_inner.Inspect()]) } });
+        return new QueryInspectionNode(nameof(DeduplicationMatch<TInner>),
+            parameters: new Dictionary<string, string>()
+            {
+                {"DataStructure", _isGrowableBitArray ? "Bitmap" : "HashSet"}
+            },
+            children: [_inner.Inspect()]);
     }
 }
