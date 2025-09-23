@@ -339,7 +339,7 @@ exit 0";
             X509Certificate2 serverCertificate;
             try
             {
-                serverCertificate = CertificateHelper.CreateCertificateFromPfx(certificates.ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForExport | X509KeyStorageFlags.MachineKeySet);
+                serverCertificate = CertificateHelper.CreateCertificateFromPfx(certificates.ServerCertificatePath, (string)null, CertificateLoaderUtil.FlagsForExport | X509KeyStorageFlags.UserKeySet);
             }
             catch (CryptographicException e)
             {
@@ -409,7 +409,7 @@ exit 0";
             try
             {
                 serverCertificate = CertificateHelper.CreateCertificateFromPfx(certificates.ServerCertificatePath, (string)null,
-                    CertificateLoaderUtil.FlagsForExport | X509KeyStorageFlags.MachineKeySet);
+                    CertificateLoaderUtil.FlagsForExport | X509KeyStorageFlags.UserKeySet);
             }
             catch (CryptographicException e)
             {

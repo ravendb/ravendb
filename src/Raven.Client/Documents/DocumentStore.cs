@@ -252,7 +252,7 @@ namespace Raven.Client.Documents
             if (Certificate != null && Certificate.HasPrivateKey == false)
                 throw new InvalidOperationException(
                     $"The supplied {Certificate.FriendlyName} certificate contains no private key. " +
-                    "Constructing the certificate with the 'X509KeyStorageFlags.MachineKeySet' flag may solve this problem.");
+                    "Constructing the certificate with the 'X509KeyStorageFlags.UserKeySet' flag may solve this problem.");
 
             try
             {

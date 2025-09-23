@@ -96,7 +96,7 @@ namespace SlowTests.Authentication
                 }
 
                 var certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName, "RavenTestsServerReplacementCert");
-                var newServerCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.MachineKeySet);
+                var newServerCert = new X509Certificate2(certBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.PersistKeySet | X509KeyStorageFlags.UserKeySet);
 
                 var mre = new ManualResetEventSlim();
 
@@ -138,8 +138,8 @@ namespace SlowTests.Authentication
             var cert2Path = GenerateAndSaveSelfSignedCertificate(createNew: true);
             var outputFile = Path.Combine(Path.GetTempPath(), Path.ChangeExtension(Guid.NewGuid().ToString(), ".txt"));
 
-            var firstServerCert = new X509Certificate2(certPath, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
-            var newServerCert = new X509Certificate2(cert2Path, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            var firstServerCert = new X509Certificate2(certPath, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.UserKeySet);
+            var newServerCert = new X509Certificate2(cert2Path, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.UserKeySet);
             
             if (PlatformDetails.RunningOnPosix)
             {

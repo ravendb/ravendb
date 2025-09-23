@@ -202,7 +202,7 @@ namespace Raven.Server.Utils
         {
             // Note this is for tests only!
             CreateCertificateAuthorityCertificate(commonNameValue + " CA", out var ca, out var caSubjectName, log);
-            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, DateTime.UtcNow.Date.AddMonths(3), out var certBytes, log: log);
+            CreateSelfSignedCertificateBasedOnPrivateKey(commonNameValue, caSubjectName, ca, false, false, DateTime.UtcNow.Date.AddMonths(3), out var certBytes, log: log, with2Eku: with2Eku);
             var selfSignedCertificateBasedOnPrivateKey = CertificateLoaderUtil.CreateCertificateFromPfx(certBytes);
             selfSignedCertificateBasedOnPrivateKey.Verify();
 

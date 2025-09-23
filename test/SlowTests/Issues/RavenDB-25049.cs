@@ -76,7 +76,7 @@ namespace SlowTests.Issues
 
             // Load the returned PFX and CER
             var pfxBytes = Convert.FromBase64String(parsed.Certificate);
-            var cert = new X509Certificate2(pfxBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.MachineKeySet);
+            var cert = new X509Certificate2(pfxBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.UserKeySet);
             Assert.Equal(parsed.Thumbprint, cert.Thumbprint);
 
             // verify NotAfter roughly matches requested validity

@@ -118,7 +118,7 @@ internal static class CertificateLoaderUtil
 
     private static X509KeyStorageFlags AddMachineKeySet(X509KeyStorageFlags? flag)
     {
-        return (flag ?? X509KeyStorageFlags.DefaultKeySet) | X509KeyStorageFlags.MachineKeySet;
+        return (flag ?? X509KeyStorageFlags.DefaultKeySet) | X509KeyStorageFlags.UserKeySet;
     }
 
     [Conditional("DEBUG")]
@@ -129,7 +129,7 @@ internal static class CertificateLoaderUtil
             X509KeyStorageFlags.EphemeralKeySet |
 #endif
             X509KeyStorageFlags.UserKeySet |
-            X509KeyStorageFlags.MachineKeySet;
+            X509KeyStorageFlags.UserKeySet;
 
         Debug.Assert(flags.HasValue == false || (flags.Value & keyStorageFlags) == 0);
     }
