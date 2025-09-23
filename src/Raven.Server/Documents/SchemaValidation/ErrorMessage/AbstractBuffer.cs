@@ -35,5 +35,7 @@ public abstract class AbstractBuffer<T> : IDisposable
 
     public abstract void CheckAndGrow(int minRequired);
     
+    public void Reset() => Length = 0;
+    
     public abstract void Dispose();
 }

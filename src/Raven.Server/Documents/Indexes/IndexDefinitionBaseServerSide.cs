@@ -5,6 +5,7 @@ using System.IO;
 using System.Text;
 using Raven.Client.Documents.DataArchival;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Extensions;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
@@ -51,6 +52,8 @@ namespace Raven.Server.Documents.Indexes
         // fieldName, string
         public Dictionary<string, string> VectorFieldToEmbeddingGenerationTask;
 
+        public SchemaValidationConfiguration SchemaValidationConfiguration { get; protected set; }
+        
         public void Rename(string name, TransactionOperationContext context, StorageEnvironmentOptions options)
         {
             Name = name;

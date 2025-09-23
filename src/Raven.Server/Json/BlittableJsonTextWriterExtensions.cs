@@ -32,6 +32,7 @@ using Raven.Server.Documents.Sharding.Queries;
 using Raven.Server.Documents.Sharding.Queries.Suggestions;
 using Raven.Server.Documents.Subscriptions;
 using Raven.Server.Documents.Subscriptions.Stats;
+using Raven.Server.Json.Sync;
 using Raven.Server.Utils;
 using Sparrow;
 using Sparrow.Extensions;
@@ -1497,6 +1498,10 @@ namespace Raven.Server.Json
                 writer.WriteString(indexDefinition.ArchivedDataProcessingBehavior?.ToString());
             else
                 writer.WriteNull();
+            writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(indexDefinition.SchemaValidationConfiguration));
+            writer.WriteSchemaValidationConfiguration(indexDefinition.SchemaValidationConfiguration);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.Priority));

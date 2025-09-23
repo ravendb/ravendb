@@ -21,9 +21,17 @@ public class SchemaValidatorCache : IDisposable
     private FrozenDictionary<string, SchemaValidator> _schemaValidatorsPerCollection = EmptyCache;
     private bool _disabled;
 
-    public SchemaValidatorCache(DocumentsContextPool contextPool, RavenLogger logger)
+    public static SchemaValidatorCache Create<T>(JsonContextPoolBase<T> contextPool, RavenLogger logger)
+        where T : JsonOperationContext
     {
-        _context.Return = contextPool.AllocateOperationContext(out _context.Value);
+        var returnContext = contextPool.AllocateOperationContext(out JsonOperationContext context);
+        return new SchemaValidatorCache(returnContext, context, logger);
+    }
+    
+    private SchemaValidatorCache(IDisposable returnCtx, JsonOperationContext ctx, RavenLogger logger)
+    {
+        _context.Return = returnCtx;
+        _context.Value = ctx;
         _logger = logger;
     }
 
@@ -111,29 +119,51 @@ public class SchemaValidatorCache : IDisposable
             blittable = _context.Value.ReadObject(blittable, "modified-schema-validation");
     }
 
-    public void Validate(string collection, BlittableJsonReaderObject document, NonPersistentDocumentFlags nonPersistentFlags, DocumentsOperationContext context)
+    public void Validate(string collection, BlittableJsonReaderObject document, NonPersistentDocumentFlags nonPersistentFlags, JsonOperationContext context)
     {
         // TODO: check if we need to add more flags here
         if (nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromReplication) ||
             nonPersistentFlags.Contain(NonPersistentDocumentFlags.FromResharding))
             return;
 
+        if (Validate(context, collection, document, out var error) == false)
+            throw new SchemaValidationException(error);
+    }
+
+    public bool Validate(JsonOperationContext context, string collection, BlittableJsonReaderObject document, out string error)
+    {
+        error = null;
         if (_schemaValidatorsPerCollection == null || _disabled)
-            return;
+            return true;
 
         if (_schemaValidatorsPerCollection.TryGetValue(collection, out var validator) == false)
-            return;
+            return true;
 
         if (validator.Disabled)
-            return;
+            return true;
 
         using (var errorBuilder = new ErrorBuilder(context))
         {
             if (validator.Validate(document, errorBuilder))
-                return;
+                return true;
 
-            throw new SchemaValidationException(errorBuilder.GetErrors().ToString());
+            error = errorBuilder.GetErrors().ToString();
+            return false;
         }
+    }
+
+    public bool Validate(JsonOperationContext context, string collection, BlittableJsonReaderObject document, ErrorBuilder errorBuilder)
+    {
+        if (_schemaValidatorsPerCollection == null || _disabled)
+            return true;
+
+        if (_schemaValidatorsPerCollection.TryGetValue(collection, out var validator) == false)
+            return true;
+
+        if (validator.Disabled)
+            return true;
+
+        return validator.Validate(document, errorBuilder);
     }
 
     public void Dispose()

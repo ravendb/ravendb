@@ -83,7 +83,7 @@ using Voron.Debugging;
 using Voron.Exceptions;
 using Voron.Impl;
 using Voron.Impl.Compaction;
-using static Raven.Server.Utils.MetricCacher.Keys;
+using Raven.Server.Documents.SchemaValidation;
 using AsyncManualResetEvent = Sparrow.Server.AsyncManualResetEvent;
 using Constants = Raven.Client.Constants;
 using FacetQuery = Raven.Server.Documents.Queries.Facets.FacetQuery;
@@ -287,6 +287,7 @@ namespace Raven.Server.Documents.Indexes
         public bool IsOnBeforeExecuteIndexing { get; private set; }
 
         public TestIndexRun TestRun;
+        internal SchemaValidatorCache _schemaValidatorCache;
         
         private HashSet<string> _fieldsReportedAsComplex = new();
         private bool _newComplexFieldsToReport = false;
@@ -405,6 +406,8 @@ namespace Raven.Server.Documents.Indexes
             exceptionAggregator.Execute(() => { _indexingProcessCancellationTokenSource?.Dispose(); });
 
             exceptionAggregator.Execute(() => { _mre?.Dispose(); });
+            
+            exceptionAggregator.Execute(() => { _schemaValidatorCache?.Dispose(); });
 
             exceptionAggregator.ThrowIfNeeded();
         }
@@ -869,6 +872,12 @@ namespace Raven.Server.Documents.Indexes
 
                 DocumentDatabase.Changes.OnIndexChange += HandleIndexChange;
 
+                if (Definition.SchemaValidationConfiguration != null)
+                {
+                    _schemaValidatorCache = SchemaValidatorCache.Create(_contextPool, _logger);
+                    _schemaValidatorCache.Update(Definition.SchemaValidationConfiguration);
+                }
+                
                 OnInitialization();
 
                 if (LastIndexingTime != null)

@@ -1,6 +1,7 @@
 ﻿using System;
 using Raven.Client;
 using Raven.Client.Documents.Indexes;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Extensions;
 using Raven.Server.Documents;
 using Sparrow.Json;
@@ -31,6 +32,10 @@ namespace Raven.Server.Json.Sync
                 writer.WriteString(indexDefinition.ArchivedDataProcessingBehavior.ToString());
             else
                 writer.WriteNull();
+            writer.WriteComma();
+            
+            writer.WritePropertyName(nameof(indexDefinition.SchemaValidationConfiguration));
+            writer.WriteSchemaValidationConfiguration(indexDefinition.SchemaValidationConfiguration);
             writer.WriteComma();
 
             writer.WritePropertyName(nameof(indexDefinition.LockMode));
@@ -435,5 +440,47 @@ namespace Raven.Server.Json.Sync
             }
             writer.WriteEndObject();
         }
+        
+        public static void WriteSchemaValidationConfiguration(this AbstractBlittableJsonTextWriter writer, SchemaValidationConfiguration configuration)
+        {
+            if (configuration == null)
+            {
+                writer.WriteNull();
+                return;
+            }
+            
+            writer.WriteStartObject();
+            {
+                writer.WritePropertyName(nameof(SchemaValidationConfiguration.ValidatorsPerCollection));
+                writer.WriteStartArray();
+                {
+                    var isFirst = true;
+                    foreach (var keyValue in configuration.ValidatorsPerCollection)
+                    {
+                        if(isFirst == false)
+                            writer.WriteComma();
+
+                        isFirst = false;
+                        writer.WriteStartObject();
+                        {
+                            writer.WritePropertyName(nameof(keyValue.Key));
+                            writer.WriteString(keyValue.Key);
+                            writer.WriteComma();
+                            writer.WritePropertyName(nameof(keyValue.Value));
+                            writer.WriteStartObject();
+                            {
+                                writer.WritePropertyName(nameof(keyValue.Value.SchemaDefinition));
+                                writer.WriteString(keyValue.Value.SchemaDefinition);
+                            }
+                            writer.WriteEndObject();
+                        }
+                        writer.WriteEndObject();
+                    }
+                }
+                writer.WriteEndArray();
+            }
+            writer.WriteEndObject();
+        }
+
     }
 }

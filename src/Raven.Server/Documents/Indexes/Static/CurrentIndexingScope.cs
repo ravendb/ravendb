@@ -10,7 +10,7 @@ using Raven.Server.Documents.ETL.Providers.AI.Embeddings;
 using Raven.Server.Documents.Indexes.Persistence.Lucene.Documents;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Documents.Patch;
-using Raven.Server.Extensions;
+using Raven.Server.Documents.SchemaValidation.ErrorMessage;
 using Raven.Server.ServerWide;
 using Raven.Server.ServerWide.Context;
 using Sparrow;
@@ -28,6 +28,7 @@ namespace Raven.Server.Documents.Indexes.Static
         private IndexingStatsScope _loadAttachmentStats;
         private IndexingStatsScope _loadCompareExchangeValueStats;
         private JavaScriptUtils _javaScriptUtils;
+        private ErrorBuilder _schemaValidationErrorBuilder;
         private readonly DocumentsStorage _documentsStorage;
         public readonly QueryOperationContext QueryContext;
 
@@ -276,6 +277,33 @@ namespace Raven.Server.Documents.Indexes.Static
                 // we can't share one DynamicBlittableJson instance among all documents because we can have multiple LoadDocuments in a single scope
                 return new DynamicBlittableJson(document);
             }
+        }
+
+        public dynamic SchemaValid(BlittableJsonReaderObject doc)
+        {
+            return ValidateSchema(doc, null);
+        }
+        
+        public dynamic SchemaError(BlittableJsonReaderObject doc)
+        {
+            _schemaValidationErrorBuilder ??= new ErrorBuilder(Current.IndexContext);
+            _schemaValidationErrorBuilder.Reset();
+            
+            if (ValidateSchema(doc, _schemaValidationErrorBuilder))
+                return DynamicNullObject.Null;
+
+            //TODO Maybe worth to avoid allocation by creating a LazyStringValue
+            return _schemaValidationErrorBuilder.GetErrors().ToString();
+        }
+
+        private bool ValidateSchema(BlittableJsonReaderObject doc, ErrorBuilder errorBuilder)
+        {
+            var schemaValidators = Current.Index._schemaValidatorCache;
+            if (schemaValidators == null)
+                throw new InvalidOperationException("Schema validation was not configured for this index.");
+
+            var collection = _documentsStorage.ExtractCollectionName(QueryContext.Documents, doc);
+            return schemaValidators.Validate(QueryContext.Documents, collection.Name, doc, errorBuilder);
         }
 
         private Slice GetIdSlice(LazyStringValue id)

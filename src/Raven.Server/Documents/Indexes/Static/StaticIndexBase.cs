@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.IO;
@@ -21,6 +22,7 @@ using Raven.Server.Documents.Indexes.Static.JavaScript;
 using Raven.Server.Documents.Indexes.Static.Spatial;
 using Raven.Server.Logging;
 using Raven.Server.Documents.Indexes.VectorSearch;
+using Raven.Server.Documents.SchemaValidation;
 using Raven.Server.NotificationCenter.Notifications;
 using Raven.Server.Rachis.Commands;
 using Sparrow;
@@ -143,7 +145,7 @@ namespace Raven.Server.Documents.Indexes.Static
             // never hit
             return null;
         }
-        
+
         public dynamic AttachmentsFor(dynamic doc)
         {
             var metadata = MetadataFor(doc);
@@ -176,7 +178,48 @@ namespace Raven.Server.Documents.Indexes.Static
                 ? timeSeries
                 : new DynamicArray(Enumerable.Empty<object>());
         }
+        
+        protected dynamic SchemaValid(dynamic doc)
+        {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException("Indexing scope was not initialized.");
+            
+            //TODO Maybe validate this is a document
+            
+            if (doc is not DynamicBlittableJson json)
+            {
+                if (doc is DynamicNullObject)
+                    return doc;
+                
+                ThrowInvalidDocType(doc, nameof(SchemaValid));
+                // never hit
+                return null;
+            }
 
+            return CurrentIndexingScope.Current.SchemaValid(json.BlittableJson);
+        }
+        
+        protected dynamic SchemaError(dynamic doc)
+        {
+            if (CurrentIndexingScope.Current == null)
+                throw new InvalidOperationException("Indexing scope was not initialized.");
+            
+            //TODO Maybe validate this is a document
+            
+            if (doc is not DynamicBlittableJson json)
+            {
+                if (doc is DynamicNullObject)
+                    return doc;
+                
+                ThrowInvalidDocType(doc, nameof(SchemaValid));
+                // never hit
+                return null;
+            }
+
+            return CurrentIndexingScope.Current.SchemaError(json.BlittableJson);
+        }
+
+        
         [DoesNotReturn]
         private static void ThrowInvalidDocType(dynamic doc, string funcName)
         {

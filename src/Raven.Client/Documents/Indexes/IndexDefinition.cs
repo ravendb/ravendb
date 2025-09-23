@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using Raven.Client.Documents.DataArchival;
-using Raven.Client.Documents.Operations.DataArchival;
+using Raven.Client.Documents.Operations.SchemaValidation;
 using Raven.Client.Extensions;
 
 namespace Raven.Client.Documents.Indexes
@@ -98,6 +98,8 @@ namespace Raven.Client.Documents.Indexes
         }
 
         public virtual ArchivedDataProcessingBehavior? ArchivedDataProcessingBehavior { get; set; }
+        
+        public SchemaValidationConfiguration SchemaValidationConfiguration { get; set; }
 
         public IndexDefinitionCompareDifferences Compare(IndexDefinition other)
         {
@@ -552,6 +554,7 @@ namespace Raven.Client.Documents.Indexes
 
             definition.LockMode = LockMode;
             definition.ArchivedDataProcessingBehavior = ArchivedDataProcessingBehavior;
+            definition.SchemaValidationConfiguration = SchemaValidationConfiguration;
             definition.Fields = fields;
             definition.Name = Name;
             definition.Priority = Priority;

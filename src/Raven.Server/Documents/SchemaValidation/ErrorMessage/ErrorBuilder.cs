@@ -148,6 +148,8 @@ public class ErrorBuilder : IDisposable
         return this;
     }
     
+    public void Reset() => _errorBuffer.Reset();
+    
     public override string ToString() => _errorBuffer?.ToString();
     
     [InterpolatedStringHandler]

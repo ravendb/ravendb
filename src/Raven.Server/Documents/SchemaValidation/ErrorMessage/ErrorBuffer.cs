@@ -75,6 +75,8 @@ public class ErrorBuffer : IErrorBuffer
         return this;
     }
 
+    public void Reset() => _buffer.Reset();
+    
     public override string ToString() => new string(_buffer.AsSpan());
 
     public void Dispose() => _buffer.Dispose();

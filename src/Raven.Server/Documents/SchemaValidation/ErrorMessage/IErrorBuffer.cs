@@ -12,4 +12,5 @@ public interface IErrorBuffer : IDisposable
     IErrorBuffer Append(BlittableJsonReaderObject value);
     IErrorBuffer Append(ISpanFormattable value);
     IErrorBuffer Append(object value);
+    void Reset();
 }
