@@ -24,7 +24,7 @@ export default {
 export const DefaultDocumentSchema: StoryObj = {
     name: "Document Schema",
     render: () => {
-        const { databases, accessManager, license } = mockStore;
+        const { databases, accessManager } = mockStore;
         const {databasesService} = mockServices
         const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
