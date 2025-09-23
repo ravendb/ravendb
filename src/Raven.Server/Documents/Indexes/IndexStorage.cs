@@ -823,11 +823,11 @@ namespace Raven.Server.Documents.Indexes
                 var collectionTree = tx.InnerTransaction.CreateTree(_referenceCollectionPrefix + collection); // #collection
                 references.PrepareForIndexing(out var inverted);
 
-                var referencesIterator =  references.GetEnumerator;
+                var referencesIterator =  references.GetEnumerator();
                 while (referencesIterator.MoveNext())
                     referencesTree.MultiBulkAdd(referencesIterator.CurrentKey, referencesIterator.CurrentValues);
 
-                var collectionIterator = inverted.GetEnumerator;
+                var collectionIterator = inverted.GetEnumerator();
                 while (collectionIterator.MoveNext())
                     collectionTree.MultiBulkAdd(collectionIterator.CurrentKey, collectionIterator.CurrentValues);
                 

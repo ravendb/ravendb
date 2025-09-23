@@ -22,11 +22,11 @@ public sealed class ReferenceContainer
     
     public List<Slice> GetOrCreateValuesContainer(Slice key)
     {
-        ref var values = ref CollectionsMarshal.GetValueRefOrAddDefault(_posById, key, out var exists);
+        ref var valuesIdx = ref CollectionsMarshal.GetValueRefOrAddDefault(_posById, key, out var exists);
         if (exists) 
-            return _values[values];
+            return _values[valuesIdx];
         
-        values = _values.Count;
+        valuesIdx = _values.Count;
         var container = new List<Slice>(1); 
         _values.Add(container);
         _keys.Add(key);
@@ -88,7 +88,7 @@ public sealed class ReferenceContainer
         }
     }
 
-    public Enumerator GetEnumerator => new Enumerator(this);
+    public Enumerator GetEnumerator() => new Enumerator(this);
     
     public ref struct Enumerator(ReferenceContainer container)
     {

@@ -79,6 +79,7 @@ namespace SlowTests.Voron.Compaction
 
         [RavenTheory(RavenTestCategory.Voron)]
         [InlineDataWithRandomSeed()]
+        [InlineData(533466282)]
         public void CompactionMustNotLooseAnyData(int seed)
         {
             var treeNames = new List<string>();

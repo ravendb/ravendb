@@ -127,6 +127,8 @@
     <EmbeddedResource Include="Data\RavenDB_14548\debug-package - Node [A].zip" />
     <None Remove="Data\RavenDB_14548\debug-package - Cluster Wide.zip" />
     <EmbeddedResource Include="Data\RavenDB_14548\debug-package - Cluster Wide.zip" />
+    <None Remove="Data\RavenDB_25033\RavenDB_25033_RDBC_128.txt" />
+    <EmbeddedResource Include="Data\RavenDB_25033\RavenDB_25033_RDBC_128.txt" />
   </ItemGroup>
   <ItemGroup>
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />

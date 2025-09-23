@@ -365,8 +365,14 @@ namespace Voron.Data.BTrees
         {
             return DirectAdd(key, len, TreeNodeFlags.Data, out ptr);
         }
+        
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public DirectAddScope DataDirectAdd(Slice key, int len)
+        {
+            return DirectAdd(key, len, TreeNodeFlags.Data, out _, requiresDataPtr: false);
+        }
 
-        public DirectAddScope DirectAdd(Slice key, int len, TreeNodeFlags nodeType, out byte* ptr)
+        public DirectAddScope DirectAdd(Slice key, int len, TreeNodeFlags nodeType, out byte* ptr, bool requiresDataPtr = true)
         {
             AssertNotDisposed();
 
@@ -377,6 +383,21 @@ namespace Voron.Data.BTrees
                 ThrowInvalidKeySize(key);
 
             var foundPage = FindPageFor(key, node: out TreeNodeHeader* node, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
+
+            if (requiresDataPtr == false && len == 0 && nodeType == TreeNodeFlags.Data && foundPage.LastMatch == 0)
+            {
+#if DEBUG
+                node = foundPage.GetNode(foundPage.LastSearchPosition);
+                using (TreeNodeHeader.ToSlicePtr(_llt.Allocator, node, out Slice nodeCheck))
+                {
+                    Debug.Assert(SliceComparer.Equals(nodeCheck, key));
+                }
+#endif
+                
+                ptr = null;
+                return new(this);
+            }
+            
             var page = ModifyPage(foundPage);
 
             bool? shouldGoToOverflowPage = null;
