@@ -16,7 +16,7 @@ using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests
+namespace SlowTests.Issues
 {
     public class RavenDB_20425 : ReplicationTestBase
     {

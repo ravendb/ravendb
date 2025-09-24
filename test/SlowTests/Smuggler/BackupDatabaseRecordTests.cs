@@ -42,7 +42,6 @@ using Raven.Server.Routing;
 using Raven.Server.ServerWide.Commands;
 using Raven.Server.Smuggler.Migration;
 using Raven.Tests.Core.Utils.Entities;
-using SlowTests.Issues;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

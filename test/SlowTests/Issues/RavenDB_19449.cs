@@ -45,6 +45,6 @@ public class RavenDB_19449 : RavenTestBase
     private static Stream? GetFile(string name)
     {
         var assembly = typeof(RavenDB_19449).Assembly;
-        return assembly.GetManifestResourceStream($"SlowTests.Issues.Data.{nameof(RavenDB_19449)}." + name);
+        return assembly.GetManifestResourceStream($"SlowTests.Data.{nameof(RavenDB_19449)}." + name);
     }
 }
