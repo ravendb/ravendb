@@ -76,7 +76,7 @@ namespace SlowTests.Issues
 
             // Load the returned PFX and CER
             var pfxBytes = Convert.FromBase64String(parsed.Certificate);
-            var cert = CertificateLoaderUtil.CreateCertificateFromPfx(pfxBytes, (string)null, X509KeyStorageFlags.Exportable | X509KeyStorageFlags.UserKeySet);
+            var cert = CertificateLoaderUtil.CreateCertificateFromPfx(pfxBytes, (string)null, X509KeyStorageFlags.Exportable);
             Assert.Equal(parsed.Thumbprint, cert.Thumbprint);
 
             // verify NotAfter roughly matches requested validity
@@ -84,7 +84,7 @@ namespace SlowTests.Issues
 
             // PublicKey should match same cert when loaded as CER (no private key)
             var cerBytes = Convert.FromBase64String(parsed.PublicKey);
-            var publicOnly = CertificateLoaderUtil.CreateCertificateFromPfx(cerBytes);
+            var publicOnly = CertificateLoaderUtil.CreateCertificateFromAny(cerBytes);
             Assert.Equal(cert.Thumbprint, publicOnly.Thumbprint);
 
             var hasClientAuthEku = SecretProtection.HasCertificateClientAuthEnhancedKeyUsage(cert);

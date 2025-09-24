@@ -128,7 +128,7 @@ public partial class RavenTestBase
                 {
                     try
                     {
-                        certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName + "-" + ekuSuffix, "RavenTestsServer", log, with2Eku);
+                        certBytes = CertificateUtils.CreateSelfSignedTestCertificate(Environment.MachineName + "-" + ekuSuffix, "RavenTestsServer", log, with2Eku: with2Eku);
                     }
                     catch (Exception e)
                     {
