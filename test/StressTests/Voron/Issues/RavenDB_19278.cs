@@ -13,7 +13,7 @@ using Voron.Impl.Journal;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Voron.Issues;
+namespace StressTests.Voron.Issues;
 
 public class RavenDB_19278 : StorageTest
 {

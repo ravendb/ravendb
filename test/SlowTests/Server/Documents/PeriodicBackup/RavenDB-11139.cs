@@ -1685,7 +1685,7 @@ namespace SlowTests.Server.Documents.PeriodicBackup
             }
         }
 
-        private static async Task CreateCompareExchangeTombstone(DocumentStore documentStore, string key)
+        internal static async Task CreateCompareExchangeTombstone(DocumentStore documentStore, string key)
         {
             var res = await documentStore.Operations.SendAsync(new PutCompareExchangeValueOperation<int>(key, 1, 0));
             await documentStore.Operations.SendAsync(new DeleteCompareExchangeValueOperation<int>(key, res.Index));
