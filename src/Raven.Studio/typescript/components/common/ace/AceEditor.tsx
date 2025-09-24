@@ -118,6 +118,20 @@ function AceEditor(props: AceEditorProps) {
           ]
         : defaultCommands;
 
+    const handleLoad = (editor: Ace.Editor) => {
+        // (ctrl+k is used for studio search)
+        removeFindNextCommand(editor);
+
+        // react-ace calls onValidate before the load and throws - Cannot read properties of null (reading 'getSession')
+        // also the type 'changeAnnotation' is missing so we need to use 'as any'
+        editor.getSession().on("changeAnnotation" as any, () => {
+            const annotations = editor.getSession().getAnnotations();
+            onValidate(annotations);
+        });
+
+        onLoad?.(editor);
+    };
+
     return (
         <AceEditorContext.Provider value={aceRef}>
             <div className={classNames("ace-editor", { "has-error": errorMessage })}>
@@ -135,13 +149,8 @@ function AceEditor(props: AceEditorProps) {
                         width="100%"
                         height="100%"
                         setOptions={overriddenSetOptions}
-                        onValidate={onValidate}
                         commands={commands}
-                        onLoad={(editor) => {
-                            // (ctrl+k is used for studio search)
-                            removeFindNextCommand(editor);
-                            onLoad?.(editor);
-                        }}
+                        onLoad={handleLoad}
                         {...rest}
                     />
                     {actions.length > 0 && (
