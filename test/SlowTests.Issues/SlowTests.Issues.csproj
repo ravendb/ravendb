@@ -17,9 +17,6 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\SlowTests\Utils\CompareExchangeTombstonCleanerTestHelper.cs">
-      <Link>Utils\CompareExchangeTombstonCleanerTestHelper.cs</Link>
-    </Compile>
     <EmbeddedResource Include="..\SlowTests\Data\RavenDB_19449\RavenDB_19449.zip">
       <Link>Data\RavenDB_19449\RavenDB_19449.zip</Link>
     </EmbeddedResource>

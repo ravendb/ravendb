@@ -1,10 +1,10 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using FastTests;
+using FastTests.Utils;
 using Raven.Client.Documents.Operations.CompareExchange;
 using Raven.Server.ServerWide.Context;
 using Raven.Server.ServerWide.Maintenance;
-using SlowTests.Utils;
 using Tests.Infrastructure;
 using Xunit;
 using Xunit.Abstractions;

@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using FastTests;
 using Raven.Client.ServerWide;
 using Raven.Server;
 using Raven.Server.ServerWide.Commands;
@@ -12,7 +11,7 @@ using Raven.Server.ServerWide.Maintenance;
 using Xunit;
 using Xunit.Abstractions;
 
-namespace SlowTests.Utils;
+namespace FastTests.Utils;
 
 internal abstract class CompareExchangeTombstoneCleanerTestHelper : RavenTestBase
 {
