@@ -17,9 +17,6 @@
     <Compile Include="..\..\src\CommonAssemblyInfo.Linux.cs" Link="Properties\CommonAssemblyInfo.Linux.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="..\SlowTests\Issues\**\*.*">
-      <Link>Issues\%(RecursiveDir)%(FileName)%(Extension)</Link>
-    </Compile>
     <Compile Include="..\SlowTests\Utils\CompareExchangeTombstonCleanerTestHelper.cs">
       <Link>Utils\CompareExchangeTombstonCleanerTestHelper.cs</Link>
     </Compile>
