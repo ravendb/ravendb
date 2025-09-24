@@ -27,7 +27,7 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
         using var store = GetDocumentStore(new Options(){RunInMemory = false});
         dbName = store.Database;
         var db = await GetDatabase(dbName);
-        db.Configuration.Indexing.ElapsedSinceQueriedPersistInterval = new TimeSetting(2, TimeUnit.Seconds);
+        db.Configuration.Indexing.ElapsedSinceQueriedPersistInterval = new TimeSetting(250, TimeUnit.Milliseconds);
 
         using (var session = store.OpenAsyncSession(database: dbName))
         {
@@ -46,7 +46,7 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
 
         // Wait that elapsed time will be increased.
         var elapsed1 = index.GetElapsedTimeFromLastQuery();
-        var elapsed2 = await WaitAndAssertForGreaterThanAsync(() => Task.FromResult(index.GetElapsedTimeFromLastQuery()), elapsed1, timeout: Timeout, interval: Interval);
+        var elapsed2 = await WaitAndAssertForGreaterThanAsync(async () => await GetElapsedTimeFromLastQuery(), elapsed1, timeout: Timeout, interval: Interval);
 
         using (var session = store.OpenAsyncSession())
         {
@@ -56,7 +56,7 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
                 .ToListAsync();
             
             // Wait for changed elapsed time.
-            var currentElapsed = await WaitForNotEqualsAsync(() => Task.FromResult(index.GetElapsedTimeFromLastQuery()), elapsed2, timeout: Timeout, interval: Interval);
+            var currentElapsed = await WaitForNotEqualsAsync(async () => await GetElapsedTimeFromLastQuery(), elapsed2, timeout: Timeout, interval: Interval);
             Assert.True(currentElapsed != elapsed2, $"{currentElapsed} != {elapsed2}");
         }
 
@@ -75,13 +75,23 @@ public class RavenDB_24649(ITestOutputHelper output) : RavenTestBase(output)
         await store.Maintenance.ForDatabase(dbName).SendAsync(new EnableIndexOperation(autoIndexName));
         var elapsedOnInit = index.GetElapsedTimeFromLastQuery();
         
-        //LastQueryingTime on index initialization is InitializationTime - ElapsedSinceQueried. An index on initialization performs indexing batch so that value must be greater than InitializationTime.
+        await GetElapsedTimeFromLastQuery(); // force update the index. 
+        await Indexes.WaitForIndexingAsync(store, dbName);
         var lastQueryTime = await WaitAndAssertForLessThanAsync(() => Task.FromResult(index.GetLastQueryingTime()!.Value), index.LastIndexingTime!.Value, timeout: Timeout, interval: Interval);
         Assert.True(lastQueryTime < index.LastIndexingTime, $"{lastQueryTime} < {index.LastIndexingTime}"); // 
         
         // Wait that elapsed time will be increased.
         var val = await WaitAndAssertForGreaterThanAsync(() => Task.FromResult((index.LastIndexingTime - index.GetLastQueryingTime())!.Value), elapsedOnInit, timeout: Timeout, interval: Interval);
         Assert.True(val > elapsedOnInit, $"{val} > {elapsedOnInit}");
+
+        async Task<TimeSpan> GetElapsedTimeFromLastQuery()
+        {
+            using var session = store.OpenAsyncSession(database: dbName);
+            await session.StoreAsync(new Orders.Order());
+            await session.SaveChangesAsync();
+            await Indexes.WaitForIndexingAsync(store, dbName);
+            return index.GetElapsedTimeFromLastQuery();
+        }
     }
 
     private static string DisableDatabaseToggleResultToString(DisableDatabaseToggleResult result) =>
