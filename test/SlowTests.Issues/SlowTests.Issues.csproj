@@ -25,6 +25,7 @@
     <EmbeddedResource Include="Data\RavenDB_10404\northwind.4.0.0.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_10958.json" />
     <EmbeddedResource Include="Data\RavenDB_10958.txt" />
+    <EmbeddedResource Include="Data\RavenDB_11664\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_12022\counters.4.1.4.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_13291\collection-with-counter-word-4.1.5-nightly.ravendb-snapshot" />
     <EmbeddedResource Include="Data\RavenDB_13468\counters-snapshot-document.json" />
@@ -73,6 +74,7 @@
     <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\RavenDB_9912\1.ravendbdump" />
     <EmbeddedResource Include="Data\RavenDB_9912\2.ravendbdump" />
+    <EmbeddedResource Include="Smuggler\Data\Northwind_3.5.35168.ravendbdump" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="..\xunit.runner.json" Link="xunit.runner.json">

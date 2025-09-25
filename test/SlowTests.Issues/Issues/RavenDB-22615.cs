@@ -197,9 +197,9 @@ public class RavenDB_22615 : RavenTestBase
                 var terms = store.Maintenance.Send(new GetTermsOperation(index.IndexName, nameof(IndexWithDict.IndexEntry.SomeDict), null));
                 
                 Assert.Equal(3, terms.Length);
-                Assert.Equal("{\"name1\":{\"@metadata\":{\"@collection\":\"dtos\",\"raven-clr-type\":\"slowtests.issues.ravendb_22615+dto, slowtests\"},\"names\":[\"name1\",\"name2\"]}}", terms[0]);
-                Assert.Equal("{\"name2\":{\"@metadata\":{\"@collection\":\"dtos\",\"raven-clr-type\":\"slowtests.issues.ravendb_22615+dto, slowtests\"},\"names\":[\"name1\",\"name2\"]}}", terms[1]);
-                Assert.Equal("{\"name3\":{\"@metadata\":{\"@collection\":\"dtos\",\"raven-clr-type\":\"slowtests.issues.ravendb_22615+dto, slowtests\"},\"names\":[\"name3\"]}}", terms[2]);
+                Assert.Equal("{\"name1\":{\"@metadata\":{\"@collection\":\"dtos\",\"raven-clr-type\":\"slowtests.issues.ravendb_22615+dto, slowtests.issues\"},\"names\":[\"name1\",\"name2\"]}}", terms[0]);
+                Assert.Equal("{\"name2\":{\"@metadata\":{\"@collection\":\"dtos\",\"raven-clr-type\":\"slowtests.issues.ravendb_22615+dto, slowtests.issues\"},\"names\":[\"name1\",\"name2\"]}}", terms[1]);
+                Assert.Equal("{\"name3\":{\"@metadata\":{\"@collection\":\"dtos\",\"raven-clr-type\":\"slowtests.issues.ravendb_22615+dto, slowtests.issues\"},\"names\":[\"name3\"]}}", terms[2]);
             }
         }
     }
