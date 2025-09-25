@@ -28,6 +28,13 @@ describe("DocumentSchema", () => {
         expect(screen.getByRole("button", { name: /Add new/i })).toBeInTheDocument();
     });
 
+    it("shows section header and Add new button should be hidden", async () => {
+        const { screen } = rtlRender(<DefaultDocumentSchema databaseAccess="DatabaseRead" />);
+
+        expect(await screen.findByText("Collection specific document schemas")).toBeInTheDocument();
+        expect(screen.queryByRole("button", { name: /Add new/i })).not.toBeInTheDocument();
+    });
+
     it("shows add new collection section card when user click 'add new' button", async () => {
         const { screen, user } = rtlRender(<DefaultDocumentSchema />);
 
