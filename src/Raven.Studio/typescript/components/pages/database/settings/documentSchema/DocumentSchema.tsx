@@ -23,7 +23,6 @@ import ReactAce from "react-ace/lib/ace";
 import useBoolean from "hooks/useBoolean";
 import { useAppDispatch, useAppSelector } from "components/store";
 import { databaseSelectors } from "components/common/shell/databaseSliceSelectors";
-import { LazyLoad } from "components/common/LazyLoad";
 import jsonUtil from "common/jsonUtil";
 import * as yup from "yup";
 import { FormProvider, useForm, useFormContext } from "react-hook-form";
@@ -32,21 +31,37 @@ import { collectionsTrackerSelectors } from "components/common/shell/collections
 import { documentSchemaActions, DocumentSchemaValidatorConfig } from "./store/documentSchemaSlice";
 import { documentSchemaSelectors } from "./store/documentSchemaSliceSelectors";
 import { useServices } from "hooks/useServices";
-import { useAsyncCallback } from "react-async-hook";
+import { useAsync, UseAsyncReturn } from "react-async-hook";
 import DocumentSchemaSelectActions from "components/pages/database/settings/documentSchema/partials/DocumentSchemaSelectActions";
 import { documentSchemaUtils } from "components/pages/database/settings/documentSchema/documentSchemaUtils";
 import DocumentSchemaAboutView from "components/pages/database/settings/documentSchema/partials/DocumentSchemaAboutView";
 import DocumentSchemaDeleteModal from "components/pages/database/settings/documentSchema/partials/DocumentSchemaDeleteModal";
 import { EmptySet } from "components/common/EmptySet";
 import { useDocumentSchema } from "components/pages/database/settings/documentSchema/useDocumentSchema";
+import { accessManagerSelectors } from "components/common/shell/accessManagerSliceSelectors";
+import ButtonWithSpinner from "components/common/ButtonWithSpinner";
+import { LoadError } from "components/common/LoadError";
+import { LoadingView } from "components/common/LoadingView";
+import genUtils from "common/generalUtils";
 
 export default function DocumentSchema() {
+    const dispatch = useAppDispatch();
+    const databaseName = useAppSelector(databaseSelectors.activeDatabaseName);
+    const { databasesService } = useServices();
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
+
+    const asyncLoadValidators = useAsync(async () => {
+        const result = await databasesService.getSchemaValidation(databaseName);
+        dispatch(documentSchemaActions.validatorsLoadedFromServer(result));
+        return result;
+    }, []);
+
     const {
         options,
+        hasAnyValidator,
         filteredValidators,
         selectedCollections,
         handleOnSelectCollection,
-        asyncLoadValidators,
         handleAddNew,
     } = useDocumentSchema();
 
@@ -56,37 +71,47 @@ export default function DocumentSchema() {
                 <Row className="gy-sm">
                     <Col>
                         <AboutViewHeading marginBottom={4} title="Document Schema" icon="document" />
-                        <DocumentSchemaSelectActions />
-                        <div className="mt-3">
-                            <span className="small-label">Filter by collection</span>
-                            <Select
-                                isLoading={asyncLoadValidators.loading}
-                                options={options}
-                                isMulti
-                                value={selectedCollections}
-                                onChange={handleOnSelectCollection}
-                                placeholder="All collections"
-                                isClearable
-                            />
-                        </div>
+                        {hasDatabaseAdminAccess && <DocumentSchemaSelectActions />}
+
+                        {hasAnyValidator && (
+                            <div className="mt-3">
+                                <span className="small-label">Filter by collection</span>
+                                <Select
+                                    isLoading={asyncLoadValidators.loading}
+                                    options={options}
+                                    isMulti
+                                    value={selectedCollections}
+                                    onChange={handleOnSelectCollection}
+                                    placeholder="All collections"
+                                    isClearable
+                                />
+                            </div>
+                        )}
 
                         <div className="mt-4">
                             <HrHeader
                                 count={filteredValidators.length}
                                 right={
-                                    <Button size="xs" variant="info" className="rounded-pill" onClick={handleAddNew}>
-                                        <Icon icon="plus" />
-                                        Add new
-                                    </Button>
+                                    hasDatabaseAdminAccess && (
+                                        <Button
+                                            size="xs"
+                                            variant="info"
+                                            className="rounded-pill"
+                                            onClick={handleAddNew}
+                                        >
+                                            <Icon icon="plus" />
+                                            Add new
+                                        </Button>
+                                    )
                                 }
                             >
                                 <Icon icon="documents" />
                                 <span>Collection specific document schemas</span>
-                                <PopoverWithHoverWrapper message="info">
+                                <PopoverWithHoverWrapper message="TODO: RDoc-3515">
                                     <Icon icon="info" color="info" margin="ms-1" />
                                 </PopoverWithHoverWrapper>
                             </HrHeader>
-                            <DocumentSchemaBody />
+                            <DocumentSchemaBody asyncLoadValidators={asyncLoadValidators} />
                         </div>
                     </Col>
                     <Col sm={12} lg={4}>
@@ -98,15 +123,25 @@ export default function DocumentSchema() {
     );
 }
 
-const DocumentSchemaBody = () => {
-    const {
-        handleCancelNew,
-        handleNewSchemaSubmit,
-        filteredValidators,
-        draftIds,
-        allCollectionNames,
-        asyncLoadValidators,
-    } = useDocumentSchema();
+interface DocumentSchemaBodyProps {
+    asyncLoadValidators: UseAsyncReturn<Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration>;
+}
+const DocumentSchemaBody = ({ asyncLoadValidators }: DocumentSchemaBodyProps) => {
+    const { handleCancelNew, handleNewSchemaSubmit, filteredValidators, draftIds, allCollectionNames } =
+        useDocumentSchema();
+
+    if (asyncLoadValidators.loading) {
+        return <LoadingView />;
+    }
+
+    if (asyncLoadValidators.error) {
+        return (
+            <LoadError
+                error="Failed to load document schemas. Please try again later."
+                refresh={asyncLoadValidators.execute}
+            />
+        );
+    }
 
     if (filteredValidators.length === 0 && draftIds.length === 0 && !asyncLoadValidators.loading) {
         return (
@@ -126,16 +161,14 @@ const DocumentSchemaBody = () => {
 
     return (
         <>
-            <LazyLoad active={asyncLoadValidators.loading}>
-                {filteredValidators.map((v) => (
-                    <CollectionSchemaRichPanel
-                        schemaValidatorCollections={allCollectionNames}
-                        key={v.Name}
-                        collectionName={v.Name}
-                        schema={v.Schema}
-                    />
-                ))}
-            </LazyLoad>
+            {filteredValidators.map((v) => (
+                <CollectionSchemaRichPanel
+                    schemaValidatorCollections={allCollectionNames}
+                    key={v.Name}
+                    collectionName={v.Name}
+                    schema={genUtils.stringify(JSON.parse(v.Schema))}
+                />
+            ))}
             {draftIds.map((id) => (
                 <NewCollectionSchemaRichPanel
                     key={id}
@@ -166,30 +199,31 @@ const CollectionSchemaRichPanel = ({
     const validatorsAll = useAppSelector(documentSchemaSelectors.allValidators);
     const { databasesService } = useServices();
     const { value: isDeleteModalOpen, toggle: toggleDeleteModal } = useBoolean(false);
+    const hasDatabaseAdminAccess = useAppSelector(accessManagerSelectors.getHasDatabaseAdminAccess)();
 
-    const asyncSaveValidators = useAsyncCallback(async (items: DocumentSchemaValidatorConfig[]) => {
+    const asyncSaveValidators = async (items: DocumentSchemaValidatorConfig[]) => {
         await databasesService.saveSchemaValidation(
             databaseName,
             documentSchemaUtils.mapToSchemaValidationConfigurationDto(items)
         );
         dispatch(documentSchemaActions.validatorsSaved());
-    });
+    };
 
     const form = useForm<DocumentSchemaFormData>({
         resolver: yupResolver(formSchema),
         defaultValues: {
             collection: collectionName,
-            schema: jsonUtil.formatJson(schema),
+            schema,
         },
     });
 
     const { handleSubmit, reset } = form;
 
     const handleEditSchema = async (data: DocumentSchemaFormData) => {
-        const updatedItem = documentSchemaUtils.maptoDocumentSchemaValidatorConfigDto(data);
+        const updatedItem = documentSchemaUtils.mapToDocumentSchemaValidatorConfigDto(data);
         dispatch(documentSchemaActions.validatorEdited(updatedItem));
         const next = [...validatorsAll.filter((v) => v.Name !== updatedItem.Name), updatedItem];
-        await asyncSaveValidators.execute(next);
+        await asyncSaveValidators(next);
         toggleEditingSchema();
     };
 
@@ -199,59 +233,64 @@ const CollectionSchemaRichPanel = ({
                 <RichPanel>
                     <RichPanelHeader>
                         <RichPanelInfo>
-                            <RichPanelSelect>
-                                <Checkbox
-                                    toggleSelection={() =>
-                                        dispatch(documentSchemaActions.selectedCollectionNameToggled(collectionName))
-                                    }
-                                    selected={isSelected}
-                                />
-                            </RichPanelSelect>
+                            {hasDatabaseAdminAccess && (
+                                <RichPanelSelect>
+                                    <Checkbox
+                                        toggleSelection={() =>
+                                            dispatch(
+                                                documentSchemaActions.selectedCollectionNameToggled(collectionName)
+                                            )
+                                        }
+                                        selected={isSelected}
+                                    />
+                                </RichPanelSelect>
+                            )}
                             <RichPanelName>{collectionName}</RichPanelName>
                         </RichPanelInfo>
-                        <RichPanelActions>
-                            {/*For now schema playground is not available.*/}
-                            {/*<ConditionalPopover*/}
-                            {/*    conditions={{*/}
-                            {/*        isActive: isEditingSchema,*/}
-                            {/*        message: "The schema must be saved in order to test it against existing documents.",*/}
-                            {/*    }}*/}
-                            {/*>*/}
-                            {/*    <Button variant="secondary" disabled={isEditingSchema}>*/}
-                            {/*        <Icon margin="m-0" icon="rocket" />*/}
-                            {/*    </Button>*/}
-                            {/*</ConditionalPopover>*/}
+                        {hasDatabaseAdminAccess && (
+                            <RichPanelActions>
+                                {/*For now schema playground is not available.*/}
+                                {/*<ConditionalPopover*/}
+                                {/*    conditions={{*/}
+                                {/*        isActive: isEditingSchema,*/}
+                                {/*        message: "The schema must be saved in order to test it against existing documents.",*/}
+                                {/*    }}*/}
+                                {/*>*/}
+                                {/*    <Button variant="secondary" disabled={isEditingSchema}>*/}
+                                {/*        <Icon margin="m-0" icon="rocket" />*/}
+                                {/*    </Button>*/}
+                                {/*</ConditionalPopover>*/}
 
-                            <Button
-                                onClick={isEditingSchema ? handleSubmit(handleEditSchema) : toggleEditingSchema}
-                                variant={isEditingSchema ? "success" : "secondary"}
-                                disabled={asyncSaveValidators.loading}
-                            >
-                                <Icon margin="m-0" icon={isEditingSchema ? "save" : "edit"} />
-                                {isEditingSchema && <span className="ms-1">Save</span>}
-                            </Button>
-                            {isEditingSchema ? (
-                                <Button
-                                    variant="secondary"
-                                    disabled={asyncSaveValidators.loading}
-                                    onClick={() => {
-                                        reset({ collection: collectionName, schema: jsonUtil.formatJson(schema) });
-                                        toggleEditingSchema();
-                                    }}
+                                <ButtonWithSpinner
+                                    onClick={isEditingSchema ? handleSubmit(handleEditSchema) : toggleEditingSchema}
+                                    variant={isEditingSchema ? "success" : "secondary"}
+                                    isSpinning={form.formState.isSubmitting}
+                                    icon={isEditingSchema ? "save" : "edit"}
                                 >
-                                    <Icon icon="close" />
-                                    Discard
-                                </Button>
-                            ) : (
-                                <Button
-                                    disabled={asyncSaveValidators.loading}
-                                    variant="danger"
-                                    onClick={toggleDeleteModal}
-                                >
-                                    <Icon margin="m-0" icon="trash" />
-                                </Button>
-                            )}
-                        </RichPanelActions>
+                                    {isEditingSchema ? <span className="ms-1">Save</span> : null}
+                                </ButtonWithSpinner>
+                                {isEditingSchema ? (
+                                    <Button
+                                        variant="secondary"
+                                        disabled={form.formState.isSubmitting}
+                                        onClick={() => {
+                                            reset({ collection: collectionName, schema });
+                                            toggleEditingSchema();
+                                        }}
+                                    >
+                                        <Icon icon="close" />
+                                        Discard
+                                    </Button>
+                                ) : (
+                                    <ButtonWithSpinner
+                                        isSpinning={form.formState.isSubmitting}
+                                        variant="danger"
+                                        onClick={toggleDeleteModal}
+                                        icon="trash"
+                                    />
+                                )}
+                            </RichPanelActions>
+                        )}
                     </RichPanelHeader>
 
                     {isEditingSchema && (
@@ -288,12 +327,12 @@ const RichPanelDetailsViewSchema = ({ schema }: RichPanelDetailsProps) => {
                     actions={[
                         { component: <AceEditor.FullScreenAction /> },
                         {
-                            component: <AceEditor.HelpAction message={<div>test</div>} />,
+                            component: <AceEditor.HelpAction message={"TODO: RDoc-3515"} />,
                             position: "bottom",
                         },
                     ]}
                     mode="json"
-                    value={jsonUtil.formatJson(schema) ?? ""}
+                    value={genUtils.stringify(JSON.parse(schema)) ?? ""}
                 />
             </FormGroup>
         </RichPanelDetails>
@@ -357,7 +396,7 @@ const RichPanelDetailsEditSchema = ({
                             ),
                         },
                         {
-                            component: <AceEditor.HelpAction message={<div>TODO</div>} />,
+                            component: <AceEditor.HelpAction message={"TODO: RDoc-3515"} />,
                             position: "bottom",
                         },
                     ]}

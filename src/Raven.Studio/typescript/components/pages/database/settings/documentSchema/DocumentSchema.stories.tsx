@@ -1,4 +1,4 @@
-import { databaseAccessArgType, licenseArgType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
+import { databaseAccessArgType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
 import { Meta, StoryObj } from "@storybook/react";
 import DocumentSchema from "components/pages/database/settings/documentSchema/DocumentSchema";
 import { mockStore } from "test/mocks/store/MockStore";
@@ -10,7 +10,6 @@ export default {
     component: DocumentSchema,
     decorators: [withStorybookContexts, withBootstrap5],
     argTypes: {
-        licenseType: licenseArgType,
         databaseAccess: databaseAccessArgType,
     },
     parameters: {
@@ -21,16 +20,20 @@ export default {
     },
 } satisfies Meta;
 
+interface DefaultDocumentSchemaArgs {
+    databaseAccess: databaseAccessLevel;
+}
+
 export const DefaultDocumentSchema: StoryObj = {
     name: "Document Schema",
-    render: () => {
+    render: (args: DefaultDocumentSchemaArgs) => {
         const { databases, accessManager } = mockStore;
         const { databasesService } = mockServices;
         const db = databases.withActiveDatabase_NonSharded_SingleNode();
 
         databasesService.withSchemaValidations();
         accessManager.with_databaseAccess({
-            [db.name]: "DatabaseAdmin",
+            [db.name]: args.databaseAccess,
         });
 
         return <DocumentSchema />;

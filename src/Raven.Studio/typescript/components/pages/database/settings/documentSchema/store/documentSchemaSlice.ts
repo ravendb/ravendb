@@ -1,19 +1,17 @@
 import { createEntityAdapter, createSlice, EntityState, PayloadAction, nanoid } from "@reduxjs/toolkit";
 
-// Raven types
 import SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
-export type CollectionName = string & NonNullable<unknown>;
 
 export interface DocumentSchemaValidatorConfig
     extends Raven.Client.Documents.Operations.SchemaValidation.SchemaDefinition {
-    Name: CollectionName;
+    Name: string;
 }
 
 export interface DocumentSchemaState {
-    selectedCollectionNames: CollectionName[];
+    selectedCollectionNames: string[];
     validators: EntityState<DocumentSchemaValidatorConfig, string>;
     originalValidators: EntityState<DocumentSchemaValidatorConfig, string>;
-    newDraftIds: string[]; // IDs for unsaved draft cards
+    newDraftIds: string[];
 }
 
 const validatorsAdapter = createEntityAdapter<DocumentSchemaValidatorConfig, string>({
@@ -34,8 +32,7 @@ export const documentSchemaSlice = createSlice({
     initialState,
     reducers: {
         validatorsLoadedFromServer: (state, { payload }: PayloadAction<SchemaValidationConfiguration>) => {
-            const map = (payload?.ValidatorsPerCollection ??
-                {}) as SchemaValidationConfiguration["ValidatorsPerCollection"];
+            const map = payload?.ValidatorsPerCollection ?? {};
 
             const items: DocumentSchemaValidatorConfig[] = Object.keys(map).map((name) => ({
                 Name: name,
@@ -56,28 +53,17 @@ export const documentSchemaSlice = createSlice({
                 changes: { ...payload },
             });
         },
-        validatorDeleted: (state, { payload: name }: PayloadAction<CollectionName>) => {
+        validatorDeleted: (state, { payload: name }: PayloadAction<string>) => {
             validatorsAdapter.removeOne(state.validators, name);
-        },
-        validatorStateToggled: (state, { payload: name }: PayloadAction<CollectionName>) => {
-            const disabled = validatorsSelectors.selectById(state.validators, name)?.Disabled;
-            if (typeof disabled === "boolean") {
-                validatorsAdapter.updateOne(state.validators, {
-                    id: name,
-                    changes: {
-                        Disabled: !disabled,
-                    },
-                });
-            }
         },
         allSelectedCollectionNamesToggled: (state) => {
             if (state.selectedCollectionNames.length === 0) {
-                state.selectedCollectionNames = validatorsSelectors.selectIds(state.validators) as CollectionName[];
+                state.selectedCollectionNames = validatorsSelectors.selectIds(state.validators);
             } else {
                 state.selectedCollectionNames = [];
             }
         },
-        selectedCollectionNameToggled: (state, { payload: name }: PayloadAction<CollectionName>) => {
+        selectedCollectionNameToggled: (state, { payload: name }: PayloadAction<string>) => {
             if (state.selectedCollectionNames.includes(name)) {
                 state.selectedCollectionNames = state.selectedCollectionNames.filter((n) => n !== name);
             } else {

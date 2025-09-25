@@ -19,6 +19,19 @@ interface DocumentSchemaDeleteModalProps {
     selectedCollectionNames?: string[];
     onHide: () => void;
 }
+
+function getNamesToDelete(selectedCollectionNames?: string[], collectionName?: string): string[] {
+    if (selectedCollectionNames && selectedCollectionNames.length > 0) {
+        return selectedCollectionNames;
+    }
+
+    if (collectionName) {
+        return [collectionName];
+    }
+
+    return [];
+}
+
 export default function DocumentSchemaDeleteModal({
     collectionName,
     selectedCollectionNames,
@@ -37,12 +50,7 @@ export default function DocumentSchemaDeleteModal({
         dispatch(documentSchemaActions.validatorsSaved());
     });
 
-    const namesToDelete =
-        selectedCollectionNames && selectedCollectionNames.length > 0
-            ? selectedCollectionNames
-            : collectionName
-              ? [collectionName]
-              : [];
+    const namesToDelete = getNamesToDelete(selectedCollectionNames, collectionName);
 
     const isBulk = namesToDelete.length > 1;
 

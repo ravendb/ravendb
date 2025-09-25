@@ -28,7 +28,7 @@ export default function DocumentSchemaSelectActions() {
     const selectionState = genUtils.getSelectionState(allCollectionNames, selectedCollectionNames);
 
     const toggleAll = () => {
-        reportEvent("revisions", "toggle-select-all");
+        reportEvent("document-schema", "toggle-select-all");
         dispatch(documentSchemaActions.allSelectedCollectionNamesToggled());
     };
 

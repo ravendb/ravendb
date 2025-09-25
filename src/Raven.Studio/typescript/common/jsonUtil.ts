@@ -33,10 +33,6 @@ class jsonUtil {
         }
     }
 
-    static formatJson(json: string, indent = 2) {
-        return JSON.stringify(JSON.parse(json), null, indent)
-    }
-
     static isValidJson(json: string) {
         try {
             JSON.parse(json);
