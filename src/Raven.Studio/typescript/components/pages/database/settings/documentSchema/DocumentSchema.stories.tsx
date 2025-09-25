@@ -18,15 +18,18 @@ export default {
             url: "https://www.figma.com/design/dgThwcxBTCe0ABSdm6IxUX/Pages---Document-Schema",
         },
     },
+    args: {
+        databaseAccess: "DatabaseAdmin",
+    },
 } satisfies Meta;
 
 interface DefaultDocumentSchemaArgs {
     databaseAccess: databaseAccessLevel;
 }
 
-export const DefaultDocumentSchema: StoryObj = {
+export const DefaultDocumentSchema: StoryObj<DefaultDocumentSchemaArgs> = {
     name: "Document Schema",
-    render: (args: DefaultDocumentSchemaArgs) => {
+    render: (args) => {
         const { databases, accessManager } = mockStore;
         const { databasesService } = mockServices;
         const db = databases.withActiveDatabase_NonSharded_SingleNode();
@@ -40,7 +43,7 @@ export const DefaultDocumentSchema: StoryObj = {
     },
 };
 
-export const DefaultDocumentSchemaPlayground: StoryObj = {
+export const DefaultDocumentSchemaPlayground: StoryObj<DefaultDocumentSchemaArgs> = {
     name: "Document Schema Playground",
     render: () => {
         const { databases, accessManager } = mockStore;
