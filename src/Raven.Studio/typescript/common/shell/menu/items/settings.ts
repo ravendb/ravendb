@@ -165,7 +165,7 @@ function getSettingsMenuItem(appUrls: computedAppUrls) {
             shardingMode: "allShards",
             title: 'Document Schema',
             nav: true,
-            css: 'icon-document',
+            css: 'icon-document-schema',
             dynamicHash: appUrls.documentSchema,
         }),
         // TODO: For now schema playground is not available. https://issues.hibernatingrhinos.com/issue/RavenDB-22142/Schema-Validation
