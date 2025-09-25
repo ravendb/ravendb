@@ -110,7 +110,7 @@ namespace Voron.Data.BTrees
                     var existingTree = OpenMultiValueTree(key, readonlyKeyItem);
                     for (int i = 0; i < values.Length; i++)
                     {
-                        existingTree.DataDirectAdd(values[i], 0).Dispose();
+                        existingTree.AddKeyOnly(values[i]).Dispose();
                     }
                     return;
                 }
@@ -180,12 +180,12 @@ namespace Voron.Data.BTrees
                     {
                         using (nestedPage.GetNodeKey(_llt, nestedPageItemIdx, out Slice existingValue))
                         {
-                            tree.DataDirectAdd(existingValue, 0).Dispose();
+                            tree.AddKeyOnly(existingValue).Dispose();
                         }
                     }
 
                     for (; i < newItems.Count; i++)
-                        tree.DataDirectAdd(values[newItems[i]], 0).Dispose();
+                        tree.AddKeyOnly(values[newItems[i]]).Dispose();
                     
                     // Register the new tree.
                     _tx.AddMultiValueTree(this, key, tree);
@@ -246,7 +246,7 @@ namespace Voron.Data.BTrees
             if (item->Flags == TreeNodeFlags.MultiValuePageRef)
             {
                 var existingTree = OpenMultiValueTree(key, item);
-                existingTree.DataDirectAdd(value, 0).Dispose();
+                existingTree.AddKeyOnly(value).Dispose();
                 return;
             }
             
@@ -312,11 +312,11 @@ namespace Voron.Data.BTrees
             {
                 using (nestedPage.GetNodeKey(_llt, i, out Slice existingValue))
                 {
-                    tree.DataDirectAdd(existingValue, 0).Dispose();
+                    tree.AddKeyOnly(existingValue).Dispose();
                 }
             }
             
-            tree.DataDirectAdd(value, 0).Dispose();
+            tree.AddKeyOnly(value).Dispose();
             _tx.AddMultiValueTree(this, key, tree);
             // we need to record that we switched to tree mode here, so the next call wouldn't also try to create the tree again
             DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef,out byte* _).Dispose();
@@ -374,7 +374,7 @@ namespace Voron.Data.BTrees
                 DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef,out _).Dispose();
                 
                 foreach (var value in values)
-                    tree.DataDirectAdd(value, 0).Dispose();
+                    tree.AddKeyOnly(value).Dispose();
 
                 return;
             }
@@ -415,7 +415,7 @@ namespace Voron.Data.BTrees
 
                 var tree = Create(_llt, _tx, key, TreeFlags.MultiValue);
 
-                tree.DataDirectAdd(value, 0).Dispose();
+                tree.AddKeyOnly(value).Dispose();
                 _tx.AddMultiValueTree(this, key, tree);
 
                 DirectAdd(key, sizeof(TreeRootHeader), TreeNodeFlags.MultiValuePageRef, out byte* _).Dispose();

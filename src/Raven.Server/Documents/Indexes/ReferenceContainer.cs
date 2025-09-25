@@ -65,31 +65,28 @@ public sealed class ReferenceContainer
         CollectionsMarshal.AsSpan(_keys).Sort(CollectionsMarshal.AsSpan(_values),SliceComparer.Instance);
         foreach (var values in _values)
         {
+            if (values.Count <= 1)
+                continue;
+            
             var valuesAsSpan = CollectionsMarshal.AsSpan(values);
             valuesAsSpan.Sort(SliceComparer.Instance);
             
-            int nextI = 0;
             int outputIdx = 0;
-            while (nextI < valuesAsSpan.Length - 1)
+                    
+            for (int i = 1; i < valuesAsSpan.Length; i++)
             {
-                int i = nextI;
-                nextI++;
-                outputIdx += (SliceComparer.Equals(values[nextI], values[i]) == false).ToInt32();
-                values[outputIdx] = values[nextI];
-            }
-
-            outputIdx++;
-            if (outputIdx != valuesAsSpan.Length)
-            {
-                values[outputIdx] = values[^1];
+                if (SliceComparer.Equals(valuesAsSpan[i], valuesAsSpan[outputIdx]) is false)
+                {
+                    valuesAsSpan[++outputIdx] = valuesAsSpan[i];
+                }
             }
             
-            CollectionsMarshal.SetCount(values, outputIdx);
+            CollectionsMarshal.SetCount(values, outputIdx + 1);
         }
     }
 
     public Enumerator GetEnumerator() => new Enumerator(this);
-    
+        
     public ref struct Enumerator(ReferenceContainer container)
     {
         private readonly ReferenceContainer _container = container;

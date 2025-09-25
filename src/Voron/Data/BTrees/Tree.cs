@@ -367,12 +367,12 @@ namespace Voron.Data.BTrees
         }
         
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public DirectAddScope DataDirectAdd(Slice key, int len)
+        private DirectAddScope AddKeyOnly(Slice key)
         {
-            return DirectAdd(key, len, TreeNodeFlags.Data, out _, requiresDataPtr: false);
+            return DirectAdd(key, 0, TreeNodeFlags.Data, out _, populateDataPtr: false);
         }
 
-        public DirectAddScope DirectAdd(Slice key, int len, TreeNodeFlags nodeType, out byte* ptr, bool requiresDataPtr = true)
+        public DirectAddScope DirectAdd(Slice key, int len, TreeNodeFlags nodeType, out byte* ptr, bool populateDataPtr = true)
         {
             AssertNotDisposed();
 
@@ -384,7 +384,7 @@ namespace Voron.Data.BTrees
 
             var foundPage = FindPageFor(key, node: out TreeNodeHeader* node, cursor: out TreeCursorConstructor cursorConstructor, allowCompressed: true);
 
-            if (requiresDataPtr == false && len == 0 && nodeType == TreeNodeFlags.Data && foundPage.LastMatch == 0)
+            if (populateDataPtr == false && len == 0 && nodeType == TreeNodeFlags.Data && foundPage.LastMatch == 0)
             {
 #if DEBUG
                 node = foundPage.GetNode(foundPage.LastSearchPosition);
