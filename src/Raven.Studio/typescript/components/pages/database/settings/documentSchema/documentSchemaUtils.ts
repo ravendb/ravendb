@@ -1,6 +1,7 @@
 import { DocumentSchemaValidatorConfig } from "components/pages/database/settings/documentSchema/store/documentSchemaSlice";
 import { DocumentSchemaFormData } from "components/pages/database/settings/documentSchema/DocumentSchema";
 import SchemaValidationConfiguration = Raven.Client.Documents.Operations.SchemaValidation.SchemaValidationConfiguration;
+import genUtils from "common/generalUtils";
 
 const mapToSchemaValidationConfigurationDto = (
     formData: DocumentSchemaValidatorConfig[]
@@ -20,13 +21,13 @@ const mapToSchemaValidationConfigurationDto = (
     };
 };
 
-const maptoDocumentSchemaValidatorConfigDto = (formData: DocumentSchemaFormData): DocumentSchemaValidatorConfig => {
+const mapToDocumentSchemaValidatorConfigDto = (formData: DocumentSchemaFormData): DocumentSchemaValidatorConfig => {
     return {
         Name: formData.collection,
         Disabled: false,
-        Schema: formData.schema,
+        Schema: genUtils.stringify(JSON.parse(formData.schema)),
         LastModifiedTime: new Date().toISOString(),
     };
 };
 
-export const documentSchemaUtils = { mapToSchemaValidationConfigurationDto, maptoDocumentSchemaValidatorConfigDto };
+export const documentSchemaUtils = { mapToSchemaValidationConfigurationDto, mapToDocumentSchemaValidatorConfigDto };
