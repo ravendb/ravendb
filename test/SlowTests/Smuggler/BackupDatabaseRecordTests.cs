@@ -1114,7 +1114,7 @@ namespace SlowTests.Smuggler
             }
         }
 
-        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport)]
+        [RavenFact(RavenTestCategory.Smuggler | RavenTestCategory.BackupExportImport, SnowflakeRequired = true)]
         public async Task CanBackupAndRestoreDatabaseRecord()
         {
             var backupPath = NewDataPath(suffix: "BackupFolder");

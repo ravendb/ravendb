@@ -17,7 +17,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Remove="Data\RavenDB_16328\MyAnalyzer.cs" />
-    <Compile Remove="Data\RavenDB_14939\MyAnalyzer.cs" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\Tests.Infrastructure\CommonTestsAssemblyInfo.cs" Link="Properties\CommonTestsAssemblyInfo.cs" />
@@ -49,6 +48,31 @@
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values-2.txt" />
     <EmbeddedResource Include="Data\non-leaf-page-seq-id-large-values.txt" />
     <EmbeddedResource Include="Data\places.txt" />
+    <EmbeddedResource Include="Data\RavenDB_11488\ravendb-11488-artificial-docs-not-included.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_11488\ravendb-11488.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_11664\1.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data-2.zip" />
+    <EmbeddedResource Include="Data\RavenDB_13940\storage-with-reused-journal-and-synced-data.zip" />
+    <EmbeddedResource Include="Data\RavenDB_14939\MyAnalyzer.cs" />
+    <EmbeddedResource Include="Data\RavenDB_15159\12119.smaps.gz" />
+    <EmbeddedResource Include="Data\RavenDB_17070\Precorax\Auto_Orders_ByOrderedAt.zip" />
+    <EmbeddedResource Include="Data\RavenDB_17070\Precorax\Orders_ByOrderBy.zip" />
+    <EmbeddedResource Include="Data\RavenDB_18381\2022-03-27-12-38-05-8912792.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_18864\53AutoIndexCoraxImportTest.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_19723\RavenDB_19723.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_22200\OneDamagedBucket.ravendbdump" />
+    <EmbeddedResource Include="Data\RavenDB_22999\RavenDB-22999.ravendb-snapshot" />
+    <EmbeddedResource Include="Data\RavenDB_24644\Hibernating.pdf" />
+    <EmbeddedResource Include="Data\RavenDB_24644\Raven.pdf" />
+    <EmbeddedResource Include="Data\RavenDB_24645\heart.gif" />
+    <EmbeddedResource Include="Data\RavenDB_24645\heart.jpeg" />
+    <EmbeddedResource Include="Data\RavenDB_24645\heart.png" />
+    <EmbeddedResource Include="Data\RavenDB_24645\heart.webp" />
+    <EmbeddedResource Include="Data\RavenDB_24648\banana.png" />
+    <EmbeddedResource Include="Data\RavenDB_24648\heart.png" />
+    <EmbeddedResource Include="Data\RavenDB_24648\star.png" />
+    <EmbeddedResource Include="Data\RavenDB_8355\MySorter.cs" />
+    <EmbeddedResource Include="Data\RavenDB_8355\MySorterWithDiagnostics.cs" />
     <EmbeddedResource Include="Data\testing.ravendbdump" />
     <EmbeddedResource Include="Data\data.txt" />
     <EmbeddedResource Include="Data\data2.txt" />
