@@ -49,7 +49,7 @@ namespace SlowTests.Authentication
         {
         }
 
-        [RavenIntegrationRetryFact(delayBetweenRetriesMs: 1000, Skip = "RavenDB-23795")]
+        [RavenIntegrationRetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanGetPebbleCertificate()
         {
             var acmeUrl = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_URL") ?? string.Empty;
@@ -95,7 +95,7 @@ namespace SlowTests.Authentication
             }
         }
 
-        [RavenIntegrationRetryFact(delayBetweenRetriesMs: 1000, Skip = "RavenDB-23795")]
+        [RavenIntegrationRetryFact(delayBetweenRetriesMs: 1000)]
         public async Task CanGetLetsEncryptCertificateAndRenewAfterFailurePebble()
         {
             var acmeUrl = Environment.GetEnvironmentVariable("RAVEN_PEBBLE_URL") ?? string.Empty;
