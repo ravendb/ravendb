@@ -70,7 +70,7 @@ export default function DocumentSchema() {
             <Col>
                 <Row className="gy-sm">
                     <Col>
-                        <AboutViewHeading marginBottom={4} title="Document Schema" icon="document" />
+                        <AboutViewHeading marginBottom={4} title="Document Schema" icon="document-schema" />
                         {hasDatabaseAdminAccess && <DocumentSchemaSelectActions />}
 
                         {hasAnyValidator && (
@@ -108,7 +108,7 @@ export default function DocumentSchema() {
                                 <Icon icon="documents" />
                                 <span>Collection specific document schemas</span>
                                 <PopoverWithHoverWrapper message="TODO: RDoc-3515">
-                                    <Icon icon="info" color="info" margin="ms-1" />
+                                    <Icon icon="info-new" margin="ms-1" />
                                 </PopoverWithHoverWrapper>
                             </HrHeader>
                             <DocumentSchemaBody asyncLoadValidators={asyncLoadValidators} />
