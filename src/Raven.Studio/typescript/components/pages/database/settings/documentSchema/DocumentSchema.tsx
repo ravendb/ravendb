@@ -327,7 +327,7 @@ const RichPanelDetailsViewSchema = ({ schema }: RichPanelDetailsProps) => {
                     actions={[
                         { component: <AceEditor.FullScreenAction /> },
                         {
-                            component: <AceEditor.HelpAction message={"TODO: RDoc-3515"} />,
+                            component: <AceEditor.HelpAction message="TODO: RDoc-3515" />,
                             position: "bottom",
                         },
                     ]}
@@ -396,7 +396,7 @@ const RichPanelDetailsEditSchema = ({
                             ),
                         },
                         {
-                            component: <AceEditor.HelpAction message={"TODO: RDoc-3515"} />,
+                            component: <AceEditor.HelpAction message="TODO: RDoc-3515" />,
                             position: "bottom",
                         },
                     ]}

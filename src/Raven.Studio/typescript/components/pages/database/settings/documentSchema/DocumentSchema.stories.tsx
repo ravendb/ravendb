@@ -1,5 +1,5 @@
 import { databaseAccessArgType, withBootstrap5, withStorybookContexts } from "test/storybookTestUtils";
-import { Meta, StoryObj } from "@storybook/react";
+import { Meta, StoryObj } from "@storybook/react-webpack5";
 import DocumentSchema from "components/pages/database/settings/documentSchema/DocumentSchema";
 import { mockStore } from "test/mocks/store/MockStore";
 import DocumentSchemaPlayground from "components/pages/database/settings/documentSchema/partials/DocumentSchemaPlayground";
