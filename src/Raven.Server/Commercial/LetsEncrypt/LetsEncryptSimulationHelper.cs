@@ -11,7 +11,7 @@ using Microsoft.AspNetCore.Connections;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Hosting; 
 using Raven.Client;
 using Raven.Client.Http;
 using Raven.Server.Config;
@@ -63,12 +63,12 @@ public sealed class LetsEncryptSimulationHelper
         {
             try
             {
-                var responder = new UniqueResponseResponder(guid);
-
-                var webHostBuilder = new HostBuilder()
-                    .ConfigureWebHost(configure =>
+                var webHostBuilder = Host.CreateDefaultBuilder()
+                    .ConfigureWebHostDefaults(hostBuilder =>
                     {
-                        configure
+                        var responder = new UniqueResponseResponder(guid);
+                        
+                        hostBuilder
                             .CaptureStartupErrors(captureStartupErrors: true)
                             .UseKestrel(options =>
                             {
@@ -99,9 +99,10 @@ public sealed class LetsEncryptSimulationHelper
                                 }
                             })
                             .UseSetting(WebHostDefaults.ApplicationKey, "Setup simulation")
+                            .ConfigureServices(x => responder.ConfigureServices(x))
+                            .Configure(responder.Configure)
                             .UseShutdownTimeout(TimeSpan.FromMilliseconds(150));
-                    })
-                    .ConfigureServices(collection => { collection.AddSingleton(typeof(IStartup), responder); });
+                    });
 
                 webHost = webHostBuilder.Build();
                 serverStore.Server._forTestingPurposes?.UnbindSocketForPort(port);
