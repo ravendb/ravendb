@@ -441,11 +441,9 @@ namespace Raven.Server
         
         private void StartOpenTelemetry()
         {
-            if (_openTelemetryInitialized == false)
-                return; // since we're not exposing there is no reason to initialize meters itself.
-            
-            MetricsManager = new MetricsManager(ServerStore.Server); 
-            MetricsManager.Execute();
+            MetricsManager = new MetricsManager(ServerStore.Server, _openTelemetryInitialized); 
+            if (_openTelemetryInitialized)
+                MetricsManager.Execute(); // initialize only when OpenTelemetry is configured in `Initialize()`
         }
 
         private void ConfigureOpenTelemetry(IServiceCollection services)
