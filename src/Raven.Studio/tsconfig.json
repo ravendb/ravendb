@@ -32,7 +32,6 @@
             "d3",
             "rbush",
             "requirejs",
-            "jquery.blockui",
             "prismjs",
             "toastr",
             "diff",
